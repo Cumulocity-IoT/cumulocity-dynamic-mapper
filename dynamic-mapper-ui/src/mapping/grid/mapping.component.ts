@@ -91,6 +91,7 @@ import {
   PayloadWrapper
 } from '../shared/mapping.model';
 import { EditorMode } from '../shared/stepper.model';
+import { isCodeOrExtensionTransformation } from '../shared/util';
 import { CommonModule } from '@angular/common';
 import { MappingStepperComponent } from '../stepper-mapping/mapping-stepper.component';
 import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/code-editor-drawer.component';
@@ -566,7 +567,9 @@ export class MappingComponent implements OnInit, OnDestroy {
         mappingTopicSample: '',
         targetAPI: API.MEASUREMENT.name,
         sourceTemplate: '{}',
-        targetTemplate: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
+        targetTemplate: isCodeOrExtensionTransformation(this.transformationType)
+          ? '{}'
+          : SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
         active: false,
         maxFailureCount: 0,
         qos: Qos.AT_LEAST_ONCE,
@@ -594,7 +597,9 @@ export class MappingComponent implements OnInit, OnDestroy {
         // publishTopicSample: '',
         targetAPI: API.MEASUREMENT.name,
         sourceTemplate: '{}',
-        targetTemplate: SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
+        targetTemplate: isCodeOrExtensionTransformation(this.transformationType)
+          ? '{}'
+          : SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
         active: false,
         maxFailureCount: 0,
         qos: Qos.AT_LEAST_ONCE,
@@ -632,7 +637,9 @@ export class MappingComponent implements OnInit, OnDestroy {
       mapping.sourceTemplate = this.explorerPreFill.payload;
       if (this.explorerPreFill.targetAPI) {
         mapping.targetAPI = this.explorerPreFill.targetAPI;
-        mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[this.explorerPreFill.targetAPI] ?? mapping.targetTemplate;
+        mapping.targetTemplate = isCodeOrExtensionTransformation(mapping.transformationType)
+          ? '{}'
+          : SAMPLE_TEMPLATES_C8Y[this.explorerPreFill.targetAPI] ?? mapping.targetTemplate;
       }
       if (this.explorerPreFill.publishTopic) {
         mapping.publishTopic = this.explorerPreFill.publishTopic;

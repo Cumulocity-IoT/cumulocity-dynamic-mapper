@@ -22,6 +22,8 @@ import { API, Direction, Feature, Mapping, MappingType } from './mapping.model';
 import { SharedService } from '../service/shared.service';
 import { inject } from '@angular/core';
 
+// ─── Private template helpers ────────────────────────────────────────────────
+
 const SAMPLE_TIME_PLACEHOLDER = '__SAMPLE_NOW__';
 const HEX_PAYLOAD_PLACEHOLDER = '__HEX_PAYLOAD_NOW__';
 
@@ -51,6 +53,8 @@ function dynamicTemplates<T extends Record<string, string>>(base: T): T {
     }
   });
 }
+
+// ─── Sample templates ─────────────────────────────────────────────────────────
 
 export const SAMPLE_TEMPLATES_C8Y = dynamicTemplates({
   MEASUREMENT: `{
@@ -121,6 +125,8 @@ export const SAMPLE_TEMPLATES_EXTERNAL = dynamicTemplates({
   FLAT_FILE: `{"payload":"165, 14.5, \\"${SAMPLE_TIME_PLACEHOLDER}\\",\\"c8y_FuelMeasurement\\""}`,
   HEX: HEX_PAYLOAD_PLACEHOLDER
 });
+
+// ─── JSON schemas ─────────────────────────────────────────────────────────────
 
 export const SCHEMA_EVENT = {
   definitions: {},
@@ -342,6 +348,8 @@ export const SCHEMA_PAYLOAD = {
   required: []
 };
 
+// ─── Application constants ────────────────────────────────────────────────────
+
 export const MAPPING_TYPE = 'd11r_mapping';
 export const PROCESSOR_EXTENSION_TYPE = 'd11r_processorExtension';
 export const MAPPING_TEST_DEVICE_TYPE = 'd11r_testDevice';
@@ -351,6 +359,16 @@ export const CONNECTOR_FRAGMENT = 'd11r_connector';
 export const MAPPING_GENERATED_TEST_DEVICE = 'd11r_device_generatedType';
 
 export const ALERT_INFO_TIMEOUT = 10000;
+export const COLOR_HIGHLIGHTED: string = 'lightgrey';
+export const UUID_LENGTH = 8;
+
+export const AGENT_ID = 'd11r_mappingService';
+
+export const NODE1 = 'node1';
+export const NODE2 = 'node2';
+export const NODE3 = 'node3';
+
+// ─── URL / path constants ─────────────────────────────────────────────────────
 
 export const BASE_URL = 'service/dynamic-mapper-service';
 export const BASE_AI_URL = 'service/ai';
@@ -372,8 +390,7 @@ export const PATH_MAPPING_ENDPOINT = 'mapping';
 export const PATH_AGENT_ENDPOINT = 'agent';
 export const PATH_EXPLORER_ENDPOINT = 'explorer';
 
-export const AGENT_ID = 'd11r_mappingService';
-export const COLOR_HIGHLIGHTED: string = 'lightgrey';
+// ─── Functions ────────────────────────────────────────────────────────────────
 
 export function getExternalTemplate(mapping: Mapping): any {
   if (
@@ -385,6 +402,7 @@ export function getExternalTemplate(mapping: Mapping): any {
     return SAMPLE_TEMPLATES_EXTERNAL[mapping.targetAPI];
   }
 }
+
 export function getSchema(
   targetAPI: string,
   direction: Direction,
@@ -412,8 +430,6 @@ export function getSchema(
   }
 }
 
-export const UUID_LENGTH = 8;
-
 export function createCustomUuid(): string {
   const id = Math.random().toString(36).slice(-UUID_LENGTH);
   return id;
@@ -422,10 +438,6 @@ export function createCustomUuid(): string {
 export function nextIdAndPad(id: number, padding: number): string {
   return (id + 1).toString(10).padStart(padding, '0');
 }
-
-export const NODE1 = 'node1';
-export const NODE2 = 'node2';
-export const NODE3 = 'node3';
 
 export const featureResolver: ResolveFn<Feature> = async (route, state) => {
   const sharedService = inject(SharedService);

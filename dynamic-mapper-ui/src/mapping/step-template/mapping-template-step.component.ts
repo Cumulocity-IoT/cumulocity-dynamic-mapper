@@ -49,6 +49,7 @@ import {
   checkTransformationType,
   expandC8YTemplate,
   expandExternalTemplate,
+  isCodeOrExtensionTransformation,
   splitTopicExcludingSeparator,
   validateProtectedFields
 } from '../shared/util';
@@ -264,10 +265,14 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   onSampleTargetTemplatesButton(): void {
     let newTarget: any;
     if (this.stepperConfiguration.direction === Direction.INBOUND) {
-      const template = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
-      newTarget = this.stepperConfiguration.allowTemplateExpansion
-        ? expandC8YTemplate(template, this.mapping)
-        : template;
+      if (isCodeOrExtensionTransformation(this.mapping.transformationType)) {
+        newTarget = {};
+      } else {
+        const template = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
+        newTarget = this.stepperConfiguration.allowTemplateExpansion
+          ? expandC8YTemplate(template, this.mapping)
+          : template;
+      }
     } else {
       const levels = splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false);
       const template = JSON.parse(getExternalTemplate(this.mapping));

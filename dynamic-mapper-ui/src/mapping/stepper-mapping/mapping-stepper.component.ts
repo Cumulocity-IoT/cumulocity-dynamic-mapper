@@ -65,6 +65,7 @@ import {
   checkTransformationType,
   expandC8YTemplate,
   expandExternalTemplate,
+  isCodeOrExtensionTransformation,
   reduceSourceTemplate,
   splitTopicExcludingSeparator,
   stringToBase64,
@@ -495,10 +496,14 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
 
   async onSampleTargetTemplatesButton(): Promise<void> {
     if (this.stepperConfiguration.direction === Direction.INBOUND) {
-      const template = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
-      this.targetTemplate = this.stepperConfiguration.allowTemplateExpansion
-        ? expandC8YTemplate(template, this.mapping)
-        : template;
+      if (isCodeOrExtensionTransformation(this.mapping.transformationType)) {
+        this.targetTemplate = {};
+      } else {
+        const template = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
+        this.targetTemplate = this.stepperConfiguration.allowTemplateExpansion
+          ? expandC8YTemplate(template, this.mapping)
+          : template;
+      }
     } else {
       const levels: string[] = splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false);
       const template = JSON.parse(getExternalTemplate(this.mapping));
@@ -825,7 +830,9 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
 
   async onTargetAPIChanged(changedTargetAPI: string): Promise<void> {
     if (this.stepperConfiguration.direction === Direction.INBOUND) {
-      this.mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
+      this.mapping.targetTemplate = isCodeOrExtensionTransformation(this.mapping.transformationType)
+        ? '{}'
+        : SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
       this.mapping.sourceTemplate = getExternalTemplate(this.mapping);
       this.schemaTarget = getSchema(this.mapping.targetAPI, this.mapping.direction, true, false);
     } else {

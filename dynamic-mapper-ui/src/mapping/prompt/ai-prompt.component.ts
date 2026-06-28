@@ -152,30 +152,17 @@ export class AIPromptComponent implements OnInit {
       this.drawerTitle = 'Review / Refine Smart Function';
       this.chatConfig = { ...this.chatConfig, title: 'Review / Refine Smart Function' };
       this.newMessage =
-        `I have an existing ${direction} Smart Function for the following mapping` +
-        (targetAPI ? ` (target: ${targetAPI})` : '') + ". " +
-        "Please review it against these criteria and suggest improvements:\n" +
-        "1. **Time handling** — Is payload time preferred over `msg.time`? Is `new Date().toISOString()` avoided when a better source exists?\n" +
-        "2. **Device identity** — INBOUND: is `externalSource` set correctly? OUTBOUND: is `context.getExternalId()` used?\n" +
-        "3. **API correctness** — Is `context.getClientId()` preferred over `context.getConfig()[\"clientId\"]`?\n" +
-        "4. **Type field** — Is a meaningful business type used (not `\"c8y_object\"`)?\n" +
-        "5. **Coverage** — Are all source fields mapped? Is any important field missing?\n\n" +
-        "Feel free to ask clarifying questions before suggesting changes.\n\n" +
-        "Complete Mapping (including existing code):\n\n" +
+        `Review the existing ${direction} Smart Function` +
+        (targetAPI ? ` (target: ${targetAPI})` : '') + " in the following mapping" +
+        " and suggest improvements.\n\n" +
         "```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
     } else {
       this.drawerTitle = 'Review / Refine Substitutions';
       this.chatConfig = { ...this.chatConfig, title: 'Review / Refine Substitutions' };
       this.newMessage =
-        `I have existing substitutions for this ${direction}` +
-        (targetAPI ? ` ${targetAPI}` : '') + " mapping. " +
-        "Please review them against these criteria and suggest improvements:\n" +
-        "1. **Coverage** — Are all meaningful source fields mapped? Is anything missing?\n" +
-        "2. **Device identity** — Is `_IDENTITY_.externalId` mapped for INBOUND, or `_TOPIC_LEVEL_[N]` for OUTBOUND topics with wildcards?\n" +
-        "3. **Time** — Is a timestamp from the source preferred? Is `$now()` only used as a last resort?\n" +
-        "4. **repairStrategy** — Is `CREATE_IF_MISSING` used whenever `pathTarget` does not exist as a literal key in the target template?\n" +
-        "5. **expandArray** — Is it set to `true` only when a source array should produce multiple output documents?\n\n" +
-        "Feel free to ask clarifying questions before suggesting changes.\n\n" +
+        `Review the existing substitutions for this ${direction}` +
+        (targetAPI ? ` ${targetAPI}` : '') + " mapping" +
+        " and suggest improvements.\n\n" +
         "```json\n" + JSON.stringify({ ...this.mappingForAI, substitutions: this.mapping.substitutions }, null, 2) + "\n```\n";
     }
   }
@@ -187,28 +174,22 @@ export class AIPromptComponent implements OnInit {
     if (this.isCodeMapping) {
       this.drawerTitle = 'Generate Smart Function';
       this.chatConfig = { ...this.chatConfig, title: 'Generate Smart Function' };
+      const targetTemplateIsEmpty = !this.mappingForAI.targetTemplate
+        || JSON.stringify(this.mappingForAI.targetTemplate) === '{}';
       this.newMessage =
         `Generate a ${direction} Smart Function for the following mapping` +
         (targetAPI ? ` (target: ${targetAPI})` : '') + ".\n" +
-        (direction === 'INBOUND'
-          ? `The source is the device payload (sourceTemplate). Return a \`CumulocityObject[]\` for the ${targetAPI} API. ` +
-            "Use `context.getClientId()` to identify the device and map it via `externalSource`.\n"
-          : "The source is a Cumulocity payload. Return a `DeviceMessage` for the device broker. " +
-            "Use `context.getExternalId()` for the device's external ID in the topic.\n") +
-        "Always prefer `payload[\"time\"]` for the timestamp; fall back to `msg.time`.\n\n" +
-        "```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
+        (targetTemplateIsEmpty
+          ? "The targetTemplate is empty — ask the user what kind of Cumulocity object(s) they want to produce" +
+            " (e.g. MEASUREMENT, ALARM, EVENT, INVENTORY) and what fields to map before generating code.\n"
+          : "") +
+        "\n```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
     } else {
       this.drawerTitle = 'Generate Substitutions';
       this.chatConfig = { ...this.chatConfig, title: 'Generate Substitutions' };
       this.newMessage =
         `Generate JSONata substitutions for this ${direction}` +
-        (targetAPI ? ` ${targetAPI}` : '') + " mapping.\n" +
-        (direction === 'INBOUND'
-          ? "Map all meaningful fields from `sourceTemplate` (device payload) to the Cumulocity `targetTemplate`. " +
-            "Ensure `_IDENTITY_.externalId` is mapped for device resolution.\n"
-          : "Map all meaningful fields from the Cumulocity `sourceTemplate` to the device `targetTemplate`. " +
-            "If the topic contains a wildcard (`+`), map the device external ID to the appropriate `_TOPIC_LEVEL_[N]`.\n") +
-        "Use `$now()` for timestamps only when no source timestamp is available.\n\n" +
+        (targetAPI ? ` ${targetAPI}` : '') + " mapping.\n\n" +
         "```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
     }
   }

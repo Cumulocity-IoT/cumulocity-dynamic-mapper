@@ -40,7 +40,7 @@ import { SharedService } from '../../shared';
 import { ExtensionService } from '../../extension';
 import { AIAgentService } from '../core/ai-agent.service';
 import { CodeTemplate, ServiceConfiguration, TemplateType, toTemplateType } from '../../configuration/shared/configuration.model';
-import { base64ToString, stringToBase64, expandC8YTemplate, expandExternalTemplate, splitTopicExcludingSeparator, getTypeOf } from '../shared/util';
+import { base64ToString, stringToBase64, expandC8YTemplate, expandExternalTemplate, isCodeOrExtensionTransformation, splitTopicExcludingSeparator, getTypeOf } from '../shared/util';
 
 @Injectable()
 export class MappingStepperService {
@@ -173,12 +173,16 @@ export class MappingStepperService {
         if (direction === Direction.INBOUND) {
             return {
                 sourceTemplate: expand(JSON.parse(getExternalTemplate(mapping))),
-                targetTemplate: expandTarget(JSON.parse(SAMPLE_TEMPLATES_C8Y[mapping.targetAPI]))
+                targetTemplate: isCodeOrExtensionTransformation(mapping.transformationType)
+                    ? {}
+                    : expandTarget(JSON.parse(SAMPLE_TEMPLATES_C8Y[mapping.targetAPI]))
             };
         } else {
             return {
                 sourceTemplate: expand(JSON.parse(SAMPLE_TEMPLATES_C8Y[mapping.targetAPI])),
-                targetTemplate: expandTarget(JSON.parse(getExternalTemplate(mapping)))
+                targetTemplate: isCodeOrExtensionTransformation(mapping.transformationType)
+                    ? {}
+                    : expandTarget(JSON.parse(getExternalTemplate(mapping)))
             };
         }
     }

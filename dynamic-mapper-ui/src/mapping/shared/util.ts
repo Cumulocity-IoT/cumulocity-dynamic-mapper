@@ -28,10 +28,17 @@ import {
 import { ValidationFormlyError } from './mapping.model';
 import { MappingTokens } from '../core/processor/processor.model';
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 export const CONTEXT_DATA_KEY_NAME = 'key';
 export const CONTEXT_DATA_RETAIN = 'retain';
 export const CONTEXT_DATA_METHOD_NAME = 'method';
 export const CONTEXT_DATA_PUBLISH_TOPIC = 'publishTopic';
+
+export const TOPIC_WILDCARD_MULTI = '#';
+export const TOPIC_WILDCARD_SINGLE = '+';
+
+// ─── Topic string utilities ───────────────────────────────────────────────────
 
 export function splitTopicExcludingSeparator(topic: string, cutOffLeadingSlash: boolean): string[] {
   if (topic) {
@@ -83,6 +90,15 @@ export function deriveSampleTopicFromTopic(topic: string) {
   return nt;
 }
 
+export function isWildcardTopic(topic: string): boolean {
+  const result =
+    topic.includes(TOPIC_WILDCARD_MULTI) ||
+    topic.includes(TOPIC_WILDCARD_SINGLE);
+  return result;
+}
+
+// ─── Mapping validators ───────────────────────────────────────────────────────
+
 export function isMappingTopicUnique(
   mapping: Mapping,
   mappings: Mapping[]
@@ -108,20 +124,7 @@ export function isFilterOutboundUnique(
   return result;
 }
 
-export const TOPIC_WILDCARD_MULTI = '#';
-export const TOPIC_WILDCARD_SINGLE = '+';
-
-export function isWildcardTopic(topic: string): boolean {
-  const result =
-    topic.includes(TOPIC_WILDCARD_MULTI) ||
-    topic.includes(TOPIC_WILDCARD_SINGLE);
-  return result;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-// export function checkTopicsInboundAreValidWithOption(options) {
-//   return checkTopicsInboundAreValid;
-// }
+// ─── Form validators ──────────────────────────────────────────────────────────
 
 export function checkTopicsInboundAreValid(control: AbstractControl) {
   let errors = {};
@@ -253,44 +256,6 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
     }
   }
   return Object.keys(errors).length > 0 ? errors : null;
-}
-
-export function checkTransformationType(transformationType: TransformationType, template: any): boolean {
-  // Check if template is JSONArray - in this case transformationType must be TransformationType.SMART_FUNCTION
-
-  if (isJSONArray(template)) {
-    return transformationType === TransformationType.SMART_FUNCTION;
-  }
-
-  return true;
-}
-
-/**
- * Checks if a value is a valid JSON array (either parsed or string format)
- */
-function isJSONArray(value: any): boolean {
-  // Check if already a parsed array
-  if (Array.isArray(value)) {
-    return true;
-  }
-
-  // Check if it's a string representation of a JSON array
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-
-    if (!trimmed || !trimmed.startsWith('[')) {
-      return false;
-    }
-
-    try {
-      const parsed = JSON.parse(trimmed);
-      return Array.isArray(parsed);
-    } catch (e) {
-      return false;
-    }
-  }
-
-  return false;
 }
 
 export function checkTopicsOutboundAreValid(control: AbstractControl) {
@@ -450,18 +415,56 @@ function findFieldInObject(obj: any, fieldName: string): any {
   return undefined;
 }
 
+// ─── TransformationType predicates ───────────────────────────────────────────
 
-function isTokenExpansionAllowed(mapping: Mapping): boolean {
-  return mapping.transformationType !== TransformationType.SMART_FUNCTION &&
-    mapping.transformationType !== TransformationType.EXTENSION_JAVA;
+export function checkTransformationType(transformationType: TransformationType, template: any): boolean {
+  // Check if template is JSONArray - in this case transformationType must be TransformationType.SMART_FUNCTION
+
+  if (isJSONArray(template)) {
+    return transformationType === TransformationType.SMART_FUNCTION;
+  }
+
+  return true;
 }
+
+function isJSONArray(value: any): boolean {
+  // Check if already a parsed array
+  if (Array.isArray(value)) {
+    return true;
+  }
+
+  // Check if it's a string representation of a JSON array
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+
+    if (!trimmed || !trimmed.startsWith('[')) {
+      return false;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      return Array.isArray(parsed);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  return false;
+}
+
+export function isCodeOrExtensionTransformation(transformationType: TransformationType): boolean {
+  return transformationType === TransformationType.SMART_FUNCTION
+    || transformationType === TransformationType.EXTENSION_JAVA;
+}
+
+// ─── Template expansion ───────────────────────────────────────────────────────
 
 export function expandExternalTemplate(
   template: object,
   mapping: Mapping,
   levels: string[]
 ): object {
-  if (Array.isArray(template) || !isTokenExpansionAllowed(mapping)) {
+  if (Array.isArray(template) || isCodeOrExtensionTransformation(mapping.transformationType)) {
     return template;
   } else {
     // Define the context data with specific values
@@ -490,7 +493,7 @@ export function expandExternalTemplate(
 }
 
 export function expandC8YTemplate(template: object, mapping: Mapping): object {
-  if (!isTokenExpansionAllowed(mapping)) {
+  if (isCodeOrExtensionTransformation(mapping.transformationType)) {
     return template;
   }
   let result;
@@ -552,6 +555,8 @@ export function expandC8YTemplate(template: object, mapping: Mapping): object {
   return result;
 }
 
+// ─── Template testing ─────────────────────────────────────────────────────────
+
 export function randomIdAsString() {
   return Math.floor(100000 + Math.random() * 900000).toString()
 }
@@ -561,14 +566,13 @@ export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
   _.set(template, API[mapping.targetAPI].identifier, identifier);
   // For SMART_FUNCTION and EXTENSION_JAVA the source template must stay clean (allowSourceExpansion=false):
   // no MappingTokens should appear in source or target templates
-  const allowSourceExpansion =
-    mapping.transformationType !== TransformationType.SMART_FUNCTION &&
-    mapping.transformationType !== TransformationType.EXTENSION_JAVA;
-  if (allowSourceExpansion) {
+  if (!isCodeOrExtensionTransformation(mapping.transformationType)) {
     _.set(template, `${MappingTokens.IDENTITY}.c8ySourceId`, identifier);
     _.set(template, `${MappingTokens.CONTEXT_DATA}.publishTopic`, mapping.publishTopic);
   }
 }
+
+// ─── Template reduction ───────────────────────────────────────────────────────
 
 export function reduceSourceTemplate(
   template: object,
@@ -596,9 +600,11 @@ export function reduceTargetTemplate(
   return tt;
 }
 
+// ─── General utilities ────────────────────────────────────────────────────────
+
 export function isExpression(path) {
   const containsSpecialChars = (str: string): boolean => {
-    // IMPORTANT: here all special characters that are part of an expression must be listed, as they cause the editor to crash 
+    // IMPORTANT: here all special characters that are part of an expression must be listed, as they cause the editor to crash
     // when the path is used in a selection, e.g. 2 * c8yTemperature.T.value
     const regex = /[\$\(\)&\s\+\-\/\*\=]/;
     return regex.test(str);
@@ -631,6 +637,8 @@ export function getTypeOf(object) {
   }
 }
 
+// ─── Base64 / encoding utilities ──────────────────────────────────────────────
+
 export function base64ToString(base64) {
   const binString = atob(base64);
   return new TextDecoder().decode(Uint8Array.from(binString, (m) => m.codePointAt(0)));
@@ -649,6 +657,15 @@ export function base64ToBytes(base64) {
   return Uint8Array.from(binString, (m) => m.codePointAt(0));
 }
 
+export function bytesToBase64(bytes) {
+  const binString = Array.from(bytes, (byte: any) =>
+    String.fromCodePoint(byte),
+  ).join("");
+  return btoa(binString);
+}
+
+// ─── String / template utilities ─────────────────────────────────────────────
+
 /**
  * Removes template-metadata-only JSDoc tag lines from a code string.
  * The tags @defaultTemplate, @internal and @readonly are meaningful on stored
@@ -660,12 +677,7 @@ export function stripTemplateMetadataTags(code: string): string {
   return code.replace(/^\s*\*\s*@(?:defaultTemplate|internal|readonly)\b[^\n]*\n?/gm, '');
 }
 
-export function bytesToBase64(bytes) {
-  const binString = Array.from(bytes, (byte: any) =>
-    String.fromCodePoint(byte),
-  ).join("");
-  return btoa(binString);
-}
+// ─── Object utilities ─────────────────────────────────────────────────────────
 
 export /**
 * Creates a new object with sorted keys, optionally placing specified keys at the end
@@ -719,4 +731,3 @@ export /**
 
   return sortedObj;
 }
-
