@@ -295,7 +295,7 @@ public class NotificationSubscriber {
             boolean isValid = currentConnectorIds.stream()
                     .anyMatch(connId -> rest.equals(connId + currentSuffix));
             if (!isValid) {
-                //log.info("{} - Deleting orphaned Device subscriber '{}' from '{}'", tenant, subscriber, subscriptionName);
+                log.info("{} - Deleting orphaned Device subscriber '{}' from '{}'", tenant, subscriber, subscriptionName);
                 try {
                     messagingManagementService.deleteSubscriber(tenant, subscriptionName, subscriber);
                     cleaned++;

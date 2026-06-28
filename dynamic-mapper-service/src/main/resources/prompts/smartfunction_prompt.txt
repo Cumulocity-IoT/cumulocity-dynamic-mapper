@@ -280,7 +280,24 @@ interface CumulocityObject {
      * Device identity. At least one entry required for non-custom types.
      * The runtime resolves (and optionally creates) the device from this.
      */
-    externalSource?: Array<{ type: string; externalId: string }>;
+    externalSource?: Array<{
+        /** External ID value (e.g. MQTT client ID, serial number) */
+        externalId: string;
+        /** External ID type (e.g. "c8y_Serial") */
+        type: string;
+        /** Whether to auto-create the device MO if it does not exist yet (default: true) */
+        autoCreateDeviceMO?: boolean;
+        /** Parent device internal C8Y ID — used when creating a child device hierarchy */
+        parentId?: string;
+        /** How to link to the parent: "device" | "asset" | "addition" */
+        childReference?: "device" | "asset" | "addition";
+        /**
+         * Transport/MQTT client ID to store on the created device managed object.
+         * Required so that outbound messages can later target this specific client.
+         * Typically set to the same value as `externalId` when clientId == externalId.
+         */
+        clientId?: string;
+    }>;
 
     /**
      * Explicitly route the result to a specific internal C8Y device ID.

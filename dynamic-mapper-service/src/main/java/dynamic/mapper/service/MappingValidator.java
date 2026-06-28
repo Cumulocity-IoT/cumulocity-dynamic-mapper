@@ -236,7 +236,8 @@ public class MappingValidator {
             }
 
             // If not a separator or wildcard, values must match
-            if (!"/".equals(topicPart) && !"+".equals(topicPart) && !topicPart.equals(samplePart)) {
+            if (!"/".equals(topicPart) && !"+".equals(topicPart) && !"#".equals(topicPart)
+                    && !topicPart.equals(samplePart)) {
                 errors.add(
                         ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
                 break;

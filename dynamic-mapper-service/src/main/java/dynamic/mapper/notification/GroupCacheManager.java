@@ -78,7 +78,8 @@ public class GroupCacheManager {
         if (entry == null) {
             return new HashSet<>();
         }
-        return entry.getSubscribedDeviceIds();
+        // H4: return a defensive copy so callers cannot mutate internal state
+        return new HashSet<>(entry.getSubscribedDeviceIds());
     }
 
     /**
@@ -152,8 +153,9 @@ public class GroupCacheManager {
     }
 
     private void cleanupExpiredEntries() {
-        // disabled as this breaks functionality to detect changes in group membership
-        //LocalDateTime expiredBefore = LocalDateTime.now().minusHours(24);
+        // L6: expiry-based cleanup intentionally disabled — removing entries would miss group
+        // membership changes that arrive while the entry is absent. Scheduler kept for future use.
+        log.debug("{} - Cache expiry cleanup disabled; skipping scheduled run", tenant);
         int removedCount = 0;
         
         // Iterator<Map.Entry<String, CachedGroup>> iterator = groupCache.entrySet().iterator();

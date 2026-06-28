@@ -559,6 +559,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       relativeTo: this.route,
       state: {
         fromExplorer: true,
+        sessionTopic: this.sessionTopic,
         topic: msg.topic,
         payload: msg.payload,
         mappingType: mappingResult.mappingType,

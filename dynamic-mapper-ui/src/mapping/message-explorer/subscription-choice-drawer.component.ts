@@ -76,7 +76,7 @@ export interface DeviceGroupInfo {
                 <c8y-li-body>
                   <strong translate>By device type</strong>
                   <p class="text-muted m-b-0 m-t-4 text-12" translate>
-                    All devices of this type will be subscribed automatically.
+                    Newly created devices of this type will be subscribed automatically.
                   </p>
                   @if (deviceType) {
                     <span class="badge badge--primary m-t-4">{{ deviceType }}</span>

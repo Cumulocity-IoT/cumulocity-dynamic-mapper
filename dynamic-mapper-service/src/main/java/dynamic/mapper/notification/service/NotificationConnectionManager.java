@@ -273,9 +273,15 @@ public class NotificationConnectionManager {
 
         } catch (InterruptedException e) {
             log.error("{} - Interrupted while initializing management client", tenant);
+            // M3: clean up pre-registered callbacks so they don't leak on failure
+            managementCallbacks.remove(tenant);
+            cacheInventoryCallbacks.remove(tenant);
             Thread.currentThread().interrupt();
         } catch (ExecutionException | TimeoutException | URISyntaxException e) {
             log.error("{} - Error initializing management client: {}", tenant, e.getMessage(), e);
+            // M3: clean up pre-registered callbacks so they don't leak on failure
+            managementCallbacks.remove(tenant);
+            cacheInventoryCallbacks.remove(tenant);
         } finally {
             lock.release();
         }
@@ -523,7 +529,8 @@ public class NotificationConnectionManager {
         return tenant != null ? cacheInventoryWSStatusCodes.get(tenant) : null;
     }
 
-    public void startReconnectScheduler() {
+    // H5: synchronized so concurrent callers can't each pass the null-check and create duplicate schedulers
+    public synchronized void startReconnectScheduler() {
         if (reconnectExecutor == null || reconnectExecutor.isShutdown()) {
             reconnectExecutor = Executors.newScheduledThreadPool(1, r -> {
                 Thread t = new Thread(r, "websocket-reconnect");
@@ -715,7 +722,11 @@ public class NotificationConnectionManager {
             configurationRegistry.getC8yAgent().sendNotificationLifecycle(
                     tenant, ConnectorStatus.CONNECTING, null);
 
-            String webSocketBaseUrl = baseUrl.replace("http", "ws");
+            // L3: replace("http","ws") corrupts any hostname that contains "http" as a substring;
+            // only the scheme prefix must be replaced
+            String webSocketBaseUrl = baseUrl.startsWith("https://")
+                    ? "wss://" + baseUrl.substring("https://".length())
+                    : "ws://" + baseUrl.substring("http://".length());
             URI webSocketUrl = new URI(webSocketBaseUrl + Utils.WEBSOCKET_PATH + token);
 
             CustomWebSocketClient client = new CustomWebSocketClient(
@@ -750,8 +761,9 @@ public class NotificationConnectionManager {
                             return retryClient;
                         }
                         if (!retryClient.isConflict()) {
+                            // L4: tenant must be first arg to match the "{}" prefix slot
                             log.error("{} - WebSocket retry {}/{} failed for connector {} (not a conflict)",
-                                    attempt, Utils.CONFLICT_RETRY_COUNT, tenant, connectorId.getName());
+                                    tenant, attempt, Utils.CONFLICT_RETRY_COUNT, connectorId.getName());
                             return null;
                         }
                     }
@@ -873,7 +885,7 @@ public class NotificationConnectionManager {
                             (deviceWSStatusCodes.get(tenant) != null && deviceWSStatusCodes.get(tenant) == 401)) {
                         log.info("{} - Re-initializing static device client", tenant);
                         initializeStaticDeviceClient(tenant);
-                        break;
+                        // M6: don't break — continue so remaining CLOSED clients are also reconnected
                     } else {
                         client.reconnect();
                         reconnectedCount++;
@@ -903,7 +915,8 @@ public class NotificationConnectionManager {
                             (deviceWSStatusCodes.get(tenant) != null && deviceWSStatusCodes.get(tenant) == 401)) {
                         log.info("{} - Re-initializing dynamic device client", tenant);
                         initializeDynamicDeviceClient(tenant);
-                        break;
+                        // L5: don't break — initializeDynamic covers all connectors in one call,
+                        // but continue so any remaining stale-state clients are also inspected
                     } else {
                         client.reconnect();
                         reconnectedCount++;

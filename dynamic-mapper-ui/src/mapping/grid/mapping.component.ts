@@ -136,7 +136,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   mappingType!: MappingType;
   transformationType!: TransformationType;
   private readonly destroy$ = new Subject<void>();
-  private explorerPreFill: { topic: string; payload: string; targetAPI?: string; publishTopic?: string; publishTopicSample?: string } | null = null;
+  private explorerPreFill: { sessionTopic?: string; topic: string; payload: string; targetAPI?: string; publishTopic?: string; publishTopicSample?: string } | null = null;
 
   pagination: Pagination = {
     pageSize: 30,
@@ -223,6 +223,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       const navState = history.state;
       if (navState?.fromExplorer) {
         this.explorerPreFill = {
+          sessionTopic: navState.sessionTopic,
           topic: navState.topic ?? '',
           payload: navState.payload ?? '{}',
           targetAPI: navState.targetAPI,
@@ -631,7 +632,10 @@ export class MappingComponent implements OnInit, OnDestroy {
     // Apply pre-fill from Message Explorer (topic + payload + targetAPI)
     if (this.explorerPreFill) {
       if (this.stepperConfiguration.direction === Direction.INBOUND) {
-        mapping.mappingTopic = this.explorerPreFill.topic;
+        // sessionTopic is the subscription pattern (e.g. fridge/#); topic is the
+        // concrete received topic (e.g. fridge/sensor-ny-99). Use the pattern as
+        // mappingTopic so wildcards are preserved, and the concrete topic as sample.
+        mapping.mappingTopic = this.explorerPreFill.sessionTopic ?? this.explorerPreFill.topic;
         mapping.mappingTopicSample = this.explorerPreFill.topic;
       }
       mapping.sourceTemplate = this.explorerPreFill.payload;

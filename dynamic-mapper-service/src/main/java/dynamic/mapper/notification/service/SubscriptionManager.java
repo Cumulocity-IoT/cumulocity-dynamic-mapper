@@ -69,8 +69,9 @@ public class SubscriptionManager {
         this.configurationRegistry = configurationRegistry;
     }
 
-    // Circuit breaker
-    private final Set<String> processingDevices = Collections.synchronizedSet(new HashSet<>());
+    // H1+H2: use ConcurrentHashMap.newKeySet() so each add() is atomic (no separate contains)
+    // and keys are tenant-scoped to avoid cross-tenant collisions.
+    private final Set<String> processingDevices = ConcurrentHashMap.newKeySet();
 
     // === Public API ===
 
@@ -99,14 +100,13 @@ public class SubscriptionManager {
         }
 
         String deviceId = mor.getId().getValue();
+        String processingKey = tenant + ":" + deviceId;  // H2: tenant-scoped key
 
-        // Prevent duplicate processing
-        if (processingDevices.contains(deviceId)) {
+        // H1: single atomic add() — returns false if already present, eliminating the race
+        if (!processingDevices.add(processingKey)) {
             log.debug("{} - Device {} already being processed", tenant, deviceId);
             return CompletableFuture.completedFuture(null);
         }
-
-        processingDevices.add(deviceId);
 
         return virtualThreadPool.submit(() -> {
             try {
@@ -139,7 +139,7 @@ public class SubscriptionManager {
                 log.error("{} - Error subscribing device {}: {}", tenant, deviceId, e.getMessage(), e);
                 throw new RuntimeException("Failed to subscribe device: " + e.getMessage(), e);
             } finally {
-                processingDevices.remove(deviceId);
+                processingDevices.remove(processingKey);
             }
         });
     }
@@ -323,28 +323,36 @@ public class SubscriptionManager {
     public NotificationSubscriptionResponse updateSubscriptionByType(String tenant, List<String> types) {
         return subscriptionsService.callForTenant(tenant, () -> {
             try {
-                // Get and delete existing subscription
+                // M1: read existing metadata but do NOT delete yet — create new first so that a
+                // failed create leaves the old subscription intact (rollback-safe order).
                 NotificationSubscriptionRepresentation existing = findExistingTypeSubscription();
                 String existingTypeFilter = null;
                 if (existing != null && existing.getSubscriptionFilter() != null) {
                     existingTypeFilter = existing.getSubscriptionFilter().getTypeFilter();
-                    subscriptionAPI.delete(existing);
-                    log.info("{} - Deleted existing type subscription", tenant);
                 }
 
-                // Create new subscription
                 String newTypeFilter = Utils.createChangedTypeFilter(types, existingTypeFilter);
                 NotificationSubscriptionResponse.NotificationSubscriptionResponseBuilder responseBuilder = NotificationSubscriptionResponse
                         .builder()
                         .subscriptionName(Utils.MANAGEMENT_SUBSCRIPTION);
 
                 if (newTypeFilter != null && !newTypeFilter.trim().isEmpty()) {
+                    // Create new subscription first — only delete old on success
                     NotificationSubscriptionRepresentation nsr = createTypeSubscription(newTypeFilter);
+                    if (existing != null) {
+                        subscriptionAPI.delete(existing);
+                        log.info("{} - Deleted old type subscription after successful create", tenant);
+                    }
                     responseBuilder.types(new ArrayList<>(Utils.parseTypesFromFilter(newTypeFilter)))
                             .subscriptionId(nsr.getId().getValue())
                             .status(NotificationSubscriptionResponse.SubscriptionStatus.ACTIVE);
                     log.info("{} - Created type subscription with {} types", tenant, types.size());
                 } else {
+                    // No new filter — safe to just delete the existing one
+                    if (existing != null) {
+                        subscriptionAPI.delete(existing);
+                        log.info("{} - Deleted type subscription (no replacement needed)", tenant);
+                    }
                     responseBuilder.types(new ArrayList<>())
                             .status(NotificationSubscriptionResponse.SubscriptionStatus.INACTIVE);
                 }
@@ -486,11 +494,9 @@ public class SubscriptionManager {
                                     .byContext("tenant"))
                     .get().allPages().iterator();
 
-            while (subIt.hasNext()) {
-                NotificationSubscriptionRepresentation nsr = subIt.next();
-                if ("tenant".equals(nsr.getContext())) {
-                    return nsr;
-                }
+            // L7: byContext("tenant") filter already guarantees context; return first match
+            if (subIt.hasNext()) {
+                return subIt.next();
             }
         } catch (Exception e) {
             log.warn("Error finding existing type subscription: {}", e.getMessage());

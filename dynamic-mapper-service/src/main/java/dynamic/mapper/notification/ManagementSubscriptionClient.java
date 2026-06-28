@@ -143,7 +143,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
     public void onClose(int statusCode, String reason) {
         log.info("{} - WebSocket closed: status={}, reason={}", tenant, statusCode, reason);
         
-        if (reason != null && reason.contains("401")) {
+        if (statusCode == 401) {
             notificationSubscriber.setManagementConnectionStatus(tenant, 401);
         } else {
             notificationSubscriber.setManagementConnectionStatus(tenant, null);

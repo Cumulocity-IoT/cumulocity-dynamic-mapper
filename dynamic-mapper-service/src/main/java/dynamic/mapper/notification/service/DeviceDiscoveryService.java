@@ -32,6 +32,7 @@ import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PreDestroy;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Service for discovering devices and their relationships.
@@ -50,7 +51,8 @@ public class DeviceDiscoveryService {
     }
 
     // Circuit breaker for preventing infinite recursion
-    private final Set<String> processingDevices = Collections.synchronizedSet(new HashSet<>());
+    // L10: keyed by "tenant:deviceId" to prevent cross-tenant false collisions; atomic add
+    private final Set<String> processingDevices = ConcurrentHashMap.newKeySet();
     private final ThreadLocal<Integer> recursionDepth = ThreadLocal.withInitial(() -> 0);
 
     // === Public API ===
@@ -75,7 +77,8 @@ public class DeviceDiscoveryService {
         // Check recursion depth to prevent stack overflow
         Integer depth = recursionDepth.get();
         if (depth >= MAX_RECURSION_DEPTH) {
-            log.warn("{} - Maximum recursion depth reached at device {}", tenant, mor.getId().getValue());
+            String id = mor.getId() != null ? mor.getId().getValue() : "unknown";
+            log.warn("{} - Maximum recursion depth reached at device {}", tenant, id);
             return devices != null ? devices : new ArrayList<>();
         }
 
@@ -88,13 +91,12 @@ public class DeviceDiscoveryService {
 
             String deviceId = mor.getId().getValue();
 
-            // Prevent infinite recursion with circular references
-            if (processingDevices.contains(deviceId)) {
+            // L10: tenant-scoped key prevents cross-tenant false collisions; atomic add is the guard
+            String processingKey = tenant + ":" + deviceId;
+            if (!processingDevices.add(processingKey)) {
                 log.debug("{} - Circular reference detected for device {}, skipping", tenant, deviceId);
                 return devices;
             }
-
-            processingDevices.add(deviceId);
 
             try {
                 if (isDevice(mor, isChildDevice)) {
@@ -106,7 +108,7 @@ public class DeviceDiscoveryService {
                     log.debug("{} - ManagedObject {} is neither device nor group, skipping", tenant, deviceId);
                 }
             } finally {
-                processingDevices.remove(deviceId);
+                processingDevices.remove(processingKey);
             }
         } finally {
             recursionDepth.set(depth);

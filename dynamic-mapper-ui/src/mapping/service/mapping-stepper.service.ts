@@ -214,7 +214,9 @@ export class MappingStepperService {
 
         return {
             sourceTemplate: expand(JSON.parse(mapping.sourceTemplate)),
-            targetTemplate: expandTarget(JSON.parse(mapping.targetTemplate))
+            targetTemplate: isCodeOrExtensionTransformation(mapping.transformationType)
+                ? {}
+                : expandTarget(JSON.parse(mapping.targetTemplate))
         };
     }
 

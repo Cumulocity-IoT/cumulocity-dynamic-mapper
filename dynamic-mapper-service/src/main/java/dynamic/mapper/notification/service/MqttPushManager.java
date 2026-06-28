@@ -36,6 +36,8 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PreDestroy;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
@@ -89,12 +91,15 @@ public class MqttPushManager {
             return;
         }
 
-        // Check if already connected
+        // M9: return early for ANY existing entry — not just connected ones.
+        // A pending/disconnected client still in the map must not be overwritten
+        // by a second call; that would silently leak the original client.
         Map<String, Mqtt3Client> tenantConnections = activePushConnections.get(tenant);
         if (tenantConnections != null && tenantConnections.containsKey(deviceId)) {
             Mqtt3Client existing = tenantConnections.get(deviceId);
-            if (existing != null && existing.getState().isConnected()) {
-                log.debug("{} - MQTT already connected for device {}", tenant, deviceId);
+            if (existing != null) {
+                log.debug("{} - MQTT client already present for device {} (state: {}), skipping duplicate activation",
+                        tenant, deviceId, existing.getState());
                 return;
             }
         }
@@ -245,10 +250,12 @@ public class MqttPushManager {
         if (baseUrl == null) {
             throw new IllegalArgumentException("Base URL cannot be null");
         }
-        return baseUrl.replace("http://", "")
-                .replace("https://", "")
-                .replace(":8111", "")
-                .replace(":8111/", "");
+        // L9: chained replace() leaves path segments and only strips port 8111; use URI to get pure hostname
+        try {
+            return new URI(baseUrl).getHost();
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("Invalid base URL: " + baseUrl, e);
+        }
     }
 
     private void logMqttError(String tenant, String deviceId, Throwable throwable) {

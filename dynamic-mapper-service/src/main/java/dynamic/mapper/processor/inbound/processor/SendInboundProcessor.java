@@ -314,13 +314,19 @@ public class SendInboundProcessor extends BaseProcessor {
                 if (sourceId != null) {
                     request.setSourceId(sourceId.getManagedObject().getId().getValue());
 
-                    // Add source field to payload JSON
+                    // Add source field to payload JSON — but only for non-MEASUREMENT collection payloads.
+                    // MEASUREMENT payloads are already wrapped in { "measurements": [...] } by
+                    // FlowResultInboundProcessor, with source.id injected inside each individual
+                    // measurement. Adding source at the collection root would create a spurious outer
+                    // "source" key that the C8Y API does not expect.
                     String payloadJson = request.getRequest();
                     Map<String, Object> payloadMap = objectMapper.readValue(payloadJson, new TypeReference<Map<String, Object>>() {});
-                    Map<String, Object> source = new HashMap<>();
-                    source.put("id", request.getSourceId());
-                    payloadMap.put("source", source);
-                    request.setRequest(objectMapper.writeValueAsString(payloadMap));
+                    if (!payloadMap.containsKey("measurements")) {
+                        Map<String, Object> source = new HashMap<>();
+                        source.put("id", request.getSourceId());
+                        payloadMap.put("source", source);
+                        request.setRequest(objectMapper.writeValueAsString(payloadMap));
+                    }
 
                     // Cache the mapping of device to client ID
                     if (context.getClientId() != null) {
