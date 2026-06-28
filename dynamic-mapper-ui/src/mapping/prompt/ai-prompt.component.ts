@@ -174,15 +174,20 @@ export class AIPromptComponent implements OnInit {
     if (this.isCodeMapping) {
       this.drawerTitle = 'Generate Smart Function';
       this.chatConfig = { ...this.chatConfig, title: 'Generate Smart Function' };
+      const isOutbound = direction === 'OUTBOUND';
       const targetTemplateIsEmpty = !this.mappingForAI.targetTemplate
         || JSON.stringify(this.mappingForAI.targetTemplate) === '{}';
+      const missingContextHint = isOutbound && targetTemplateIsEmpty
+        ? "The targetTemplate is empty — ask the user what device message format or protocol structure" +
+          " is expected (field names, units, nesting) before generating code.\n"
+        : !isOutbound && !targetAPI
+          ? "The targetAPI is not set — ask the user what kind of Cumulocity object to produce" +
+            " (e.g. MEASUREMENT, ALARM, EVENT, INVENTORY) before generating code.\n"
+          : "";
       this.newMessage =
         `Generate a ${direction} Smart Function for the following mapping` +
         (targetAPI ? ` (target: ${targetAPI})` : '') + ".\n" +
-        (targetTemplateIsEmpty
-          ? "The targetTemplate is empty — ask the user what kind of Cumulocity object(s) they want to produce" +
-            " (e.g. MEASUREMENT, ALARM, EVENT, INVENTORY) and what fields to map before generating code.\n"
-          : "") +
+        missingContextHint +
         "\n```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
     } else {
       this.drawerTitle = 'Generate Substitutions';

@@ -242,6 +242,20 @@ public class MappingRepository {
                     mapping.getName(), moId), MigrationNotice.OPERATION_EVENT);
         }
 
+        // Migrate non-JSONATA mappings: targetTemplate is only used by JSONATA; reset it to "{}"
+        // for all other transformation types so it no longer contains stale C8Y sample payloads.
+        if (mapping.getTransformationType() != null
+                && !TransformationType.JSONATA.equals(mapping.getTransformationType())
+                && !TransformationType.DEFAULT.equals(mapping.getTransformationType())
+                && (mapping.getTargetTemplate() == null || !mapping.getTargetTemplate().equals("{}"))) {
+            log.info("{} - Migrating mapping {} ({}): resetting targetTemplate to {{}} for transformationType {}",
+                    tenant, moId, mapping.getName(), mapping.getTransformationType());
+            mapping.setTargetTemplate("{}");
+            return new Migration(String.format(
+                    "Mapping %s [%s] was automatically migrated: targetTemplate reset to {} for transformationType %s",
+                    mapping.getName(), moId, mapping.getTransformationType()), MigrationNotice.OPERATION_EVENT);
+        }
+
         return null;
     }
 
