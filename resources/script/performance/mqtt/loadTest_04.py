@@ -5,7 +5,7 @@ import paho.mqtt.client as mqtt_client
 import logging
 import os, time, random, json, signal, sys
 from ratelimit import limits, sleep_and_retry
-from datetime import datetime, timezone
+from datetime import timezone
 
 
 logger = logging.getLogger("")
