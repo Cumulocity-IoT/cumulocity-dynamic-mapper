@@ -135,9 +135,7 @@ public class MappingValidator {
                 .count();
 
         // Skip device identifier validation for certain mapping types and conditions
-        boolean skipDeviceIdentifierValidation = mapping.getSnoopStatus() == SnoopStatus.ENABLED ||
-                mapping.getSnoopStatus() == SnoopStatus.STARTED ||
-                mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL ||
+        boolean skipDeviceIdentifierValidation = mapping.getMappingType() == MappingType.PROTOBUF_INTERNAL ||
                 mapping.getMappingType() == MappingType.ANY_PAYLOAD ||
                 mapping.getMappingType() == MappingType.SPARKPLUGB ||
                 mapping.getTransformationType() == TransformationType.EXTENSION_JAVA ||
@@ -238,7 +236,8 @@ public class MappingValidator {
             }
 
             // If not a separator or wildcard, values must match
-            if (!"/".equals(topicPart) && !"+".equals(topicPart) && !topicPart.equals(samplePart)) {
+            if (!"/".equals(topicPart) && !"+".equals(topicPart) && !"#".equals(topicPart)
+                    && !topicPart.equals(samplePart)) {
                 errors.add(
                         ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name);
                 break;

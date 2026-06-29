@@ -18,6 +18,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="22. C8Y Event → MQTT broker"
+
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 DEVICE_NAME="dmtest-out-evt-$(date +%s)"
 DEVICE_TYPE="dmtest-out-type"
@@ -32,15 +34,17 @@ cleanup() {
     [ -n "$DEVICE_ID" ] && dm_delete_device "$DEVICE_ID" || true
 }
 
-[[ "${1:-}" == "--cleanup" ]] && trap cleanup EXIT
+dm_parse_args "$@"
+dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Outbound C8Y Event → MQTT Broker"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
 dm_require_mqtt_broker
 dm_verify_mqtt_connector_ready
+dm_validate_only_exit
 
 dm_step "Creating test device ..."
 dm_create_device "$DEVICE_NAME" "$DEVICE_TYPE"
@@ -79,9 +83,7 @@ MAPPING_JSON=$(cat <<EOF
   "debug": false,
   "useExternalId": true,
   "externalIdType": "c8y_Serial",
-  "qos": "AT_LEAST_ONCE",
-  "snoopStatus": "NONE",
-  "snoopedTemplates": []
+  "qos": "AT_LEAST_ONCE"
 }
 EOF
 )
@@ -107,5 +109,5 @@ dm_wait 8
 dm_step "Asserting messagesReceived increased ..."
 dm_assert_mapping_received_gt "Outbound event processed" "$MAPPING_ID" "$BASELINE"
 
-dm_done "Outbound C8Y Event → MQTT Broker"
+dm_done "$TEST_TITLE"
 dm_print_summary

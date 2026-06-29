@@ -21,6 +21,8 @@
 
 package dynamic.mapper.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,7 +34,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingState;
 import dynamic.mapper.processor.model.RoutingContext;
@@ -63,49 +64,31 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
      */
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
 
         // Extract focused contexts at entry point
         RoutingContext routing = context.getRoutingContext();
         ProcessingState state = context.getProcessingState();
-        OutputCollector output = new OutputCollector();
 
         String tenant = routing.getTenant();
         Mapping mapping = context.getMapping();
 
         try {
-            processFlowResults(routing, state, output, context);
-            postProcessFlowResults(state, output, context);
-
-            // Sync back to context for backward compatibility
-            syncOutputToContext(output, context);
+            processFlowResults(routing, state, context);
+            postProcessFlowResults(state, context);
         } catch (Exception e) {
             handleProcessingError(e, context, tenant, mapping);
         }
     }
 
     /**
-     * Sync OutputCollector contents back to ProcessingContext for backward compatibility.
-     * Can be removed once all callers migrate to reading from OutputCollector directly.
-     */
-    private void syncOutputToContext(OutputCollector output, ProcessingContext<?> context) {
-        if (!output.getRequests().isEmpty()) {
-            context.getRequests().addAll(output.getRequests());
-        }
-        if (!output.getWarnings().isEmpty()) {
-            context.getWarnings().addAll(output.getWarnings());
-        }
-    }
-
-    /**
      * Process flow results - common logic for both inbound and outbound.
      * Normalizes flow result to a list and processes each message.
-     * NEW: Uses focused contexts internally.
+     * Writes requests and warnings directly to context.
      */
     private void processFlowResults(
             RoutingContext routing,
             ProcessingState state,
-            OutputCollector output,
             ProcessingContext<?> context) throws ProcessingException {
         Object flowResult = context.getFlowResult();
         String tenant = routing.getTenant();
@@ -127,12 +110,12 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
         // Allow subclasses to reorder (e.g. device-creation items first)
         messagesToProcess = reorderMessages(messagesToProcess);
 
-        // Process each message using focused contexts
+        int requestCountBefore = context.getRequests().size();
         for (Object message : messagesToProcess) {
-            processMessage(message, routing, state, output, context);
+            processMessage(message, routing, state, context);
         }
 
-        handleEmptyRequests(output, state, tenant);
+        handleEmptyRequests(requestCountBefore, state, context, tenant);
     }
 
     /**
@@ -163,14 +146,17 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
 
     /**
      * Handle case where no requests were generated from flow results.
-     * NEW: Uses focused contexts.
+     * Compares request count before and after the batch loop to detect whether
+     * this processing step produced anything.
      */
-    private void handleEmptyRequests(OutputCollector output, ProcessingState state, String tenant) {
-        if (output.getRequests().isEmpty()) {
+    private void handleEmptyRequests(int requestCountBefore, ProcessingState state,
+                                     ProcessingContext<?> context, String tenant) {
+        int added = context.getRequests().size() - requestCountBefore;
+        if (added == 0) {
             log.info("{} - No requests generated from flow result", tenant);
             state.setIgnoreFurtherProcessing(true);
         } else {
-            log.info("{} - Generated {} requests from flow result", tenant, output.getRequests().size());
+            log.info("{} - Generated {} requests from flow result", tenant, added);
         }
     }
 
@@ -211,45 +197,27 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
     }
 
     /**
-     * NEW: Process a single message using focused contexts.
-     * Subclasses must implement this to handle their specific message types.
-     *
-     * @param message The message to process
-     * @param routing Immutable routing information
-     * @param state Thread-safe mutable state
-     * @param output Thread-safe output collector
-     * @param context Legacy context for any remaining needs
-     * @throws ProcessingException if processing fails
+     * Process a single message. Implementations write requests and warnings
+     * directly to {@code context} (via {@code context.addRequest()} /
+     * {@code context.getWarnings().add()}).
      */
     protected abstract void processMessage(
             Object message,
             RoutingContext routing,
             ProcessingState state,
-            OutputCollector output,
             ProcessingContext<?> context) throws ProcessingException;
 
     /**
-     * NEW: Hook for subclass-specific post-processing using focused contexts.
+     * Hook for subclass-specific post-processing.
      * Default implementation does nothing.
-     *
-     * @param state Thread-safe mutable state
-     * @param output Thread-safe output collector
-     * @param context Legacy context for any remaining needs
-     * @throws ProcessingException if post-processing fails
      */
-    protected void postProcessFlowResults(ProcessingState state, OutputCollector output,
+    protected void postProcessFlowResults(ProcessingState state,
                                          ProcessingContext<?> context) throws ProcessingException {
         // Default: no post-processing
     }
 
     /**
      * Handle processing errors in a subclass-specific way.
-     * Subclasses must implement this to provide their error handling strategy.
-     *
-     * @param e The exception that occurred
-     * @param context The processing context
-     * @param tenant The tenant identifier
-     * @param mapping The mapping being processed
      */
     protected abstract void handleProcessingError(Exception e, ProcessingContext<?> context,
                                                  String tenant, Mapping mapping);

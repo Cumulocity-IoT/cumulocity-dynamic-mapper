@@ -30,7 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.IdentityResolutionService;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,7 +55,6 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.CumulocityType;
 import dynamic.mapper.processor.model.ExternalId;
@@ -92,7 +91,7 @@ class FlowResultInboundProcessorTest {
     private ServiceConfiguration serviceConfiguration;
 
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private IdentityResolutionService identityResolutionService;
 
     @Mock
     private MappingResolverService mappingResolverService;
@@ -111,7 +110,7 @@ class FlowResultInboundProcessorTest {
     @BeforeEach
     void setUp() throws Exception {
         // Create testable processor with default device ID
-        processor = new TestableFlowResultInboundProcessor(mappingService, c8yAgent, configurationRegistry, objectMapper)
+        processor = new TestableFlowResultInboundProcessor(mappingService, c8yAgent, objectMapper, identityResolutionService)
                 .withDefaultDeviceId(TEST_DEVICE_ID);
 
         mapping = createSampleMapping();
@@ -122,7 +121,7 @@ class FlowResultInboundProcessorTest {
                 Direction.INBOUND,
                 "test/topic",
                 "output/topic",
-                0L, 0L, 0L, 0L, 0L, null);
+                0L, 0L, 0L, null);
 
         processingContext = createProcessingContext();
 
@@ -154,12 +153,6 @@ class FlowResultInboundProcessorTest {
         setupC8YAgentMocks();
     }
 
-    private void injectDependencies() throws Exception {
-        ProcessorTestHelper.injectField(processor, "mappingService", mappingService);
-        ProcessorTestHelper.injectField(processor, "c8yAgent", c8yAgent);
-        ProcessorTestHelper.injectField(processor, "objectMapper", objectMapper);
-    }
-
     private void setupC8YAgentMocks() {
         ManagedObjectRepresentation mockDevice = new ManagedObjectRepresentation();
         GId deviceGId = new GId(TEST_DEVICE_ID);
@@ -183,8 +176,6 @@ class FlowResultInboundProcessorTest {
                 .direction(Direction.INBOUND)
                 .debug(true)
                 .active(true)
-                .snoopStatus(SnoopStatus.NONE)
-                .snoopedTemplates(new ArrayList<>())
                 .qos(Qos.AT_MOST_ONCE)
                 .useExternalId(true)
                 .externalIdType(TEST_EXTERNAL_ID_TYPE)
@@ -224,7 +215,7 @@ class FlowResultInboundProcessorTest {
         processor.process(exchange);
 
         // Then
-        assertFalse(processingContext.getIgnoreFurtherProcessing(),
+        assertFalse(processingContext.isIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
         assertFalse(processingContext.getRequests().isEmpty(),
                 "Should have created C8Y requests");
@@ -251,7 +242,7 @@ class FlowResultInboundProcessorTest {
         processor.process(exchange);
 
         // Then
-        assertFalse(processingContext.getIgnoreFurtherProcessing(),
+        assertFalse(processingContext.isIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
         assertEquals(2, processingContext.getRequests().size(),
                 "Should have created two requests");
@@ -302,7 +293,7 @@ class FlowResultInboundProcessorTest {
         processor.process(exchange);
 
         // Then
-        log.info("Ignore further processing: {}", processingContext.getIgnoreFurtherProcessing());
+        log.info("Ignore further processing: {}", processingContext.isIgnoreFurtherProcessing());
         log.info("Created requests: {}", processingContext.getRequests().size());
         
         processingContext.getRequests().forEach(req -> 
@@ -310,7 +301,7 @@ class FlowResultInboundProcessorTest {
                 req.getApi(), req.getMethod(), req.getSourceId())
         );
         
-        assertFalse(processingContext.getIgnoreFurtherProcessing(),
+        assertFalse(processingContext.isIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
         assertEquals(2, processingContext.getRequests().size(),
                 "Should have created two requests (ignoring non-CumulocityObject)");

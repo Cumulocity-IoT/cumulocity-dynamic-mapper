@@ -24,29 +24,19 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 @Component({
   selector: 'd11r-mapping-renderer-status',
   template: `
-      @if (context.value.debug) {
-        <div class="d-flex flex-col">
-        <span class="text-12 label label-success" [attr.data-cy]="'dm-mapping-status-debug-' + context.item.id">debug</span>
+      <div class="d-flex a-i-center" style="gap:4px;white-space:nowrap">
+        @if (context.value.version) {
+          <span class="text-12 label label-default" [attr.data-cy]="'dm-mapping-status-version-' + context.item.id"
+            title="Active version">v{{ context.value.version }}</span>
+        }
+        @if (context.value.debug) {
+          <span class="text-12 label label-success" [attr.data-cy]="'dm-mapping-status-debug-' + context.item.id">debug</span>
+        }
+        @if (context.value.draftDirty) {
+          <span class="text-12 label label-info" [attr.data-cy]="'dm-mapping-status-draft-' + context.item.id"
+            title="This mapping has unpublished draft changes">draft</span>
+        }
       </div>
-      }
-      @switch (context.value.snoopStatus) {
-        @case ('STARTED') {
-          <div class="d-flex flex-col">
-            <span class="text-12 label label-success" [attr.data-cy]="'dm-mapping-status-' + context.item.id">snoop: started</span>
-          </div>
-        }
-        @case ('STOPPED') {
-          <div class="d-flex flex-col">
-            <span class="text-12 label label-success" [attr.data-cy]="'dm-mapping-status-' + context.item.id">snoop: stopped</span>
-          </div>
-        }
-        @case ('ENABLED') {
-          <div class="d-flex flex-col">
-            <span class="text-12 label label-success" [attr.data-cy]="'dm-mapping-status-' + context.item.id">snoop: pending</span>
-          </div>
-        }
-
-      }
     `,
   standalone: true,
   imports: [CoreModule]

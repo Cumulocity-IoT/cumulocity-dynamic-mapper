@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.model.ID;
@@ -36,6 +35,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.cache.InventoryCache;
+import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer;
 import dynamic.mapper.processor.model.ExternalId;
 import lombok.extern.slf4j.Slf4j;
@@ -44,11 +44,19 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class InventoryCacheEnrichmentService {
 
-    @Autowired
-    private CacheManager cacheManager;
+    private final CacheManager cacheManager;
+    private final TenantRegistry tenantRegistry;
+    private final NotificationSubscriber notificationSubscriber;
+
+    public InventoryCacheEnrichmentService(CacheManager cacheManager, TenantRegistry tenantRegistry,
+            NotificationSubscriber notificationSubscriber) {
+        this.cacheManager = cacheManager;
+        this.tenantRegistry = tenantRegistry;
+        this.notificationSubscriber = notificationSubscriber;
+    }
 
     public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, ExternalId externalId,
-            Boolean testing, IdentityResolver identityResolver, ConfigurationRegistry configurationRegistry) {
+            Boolean testing, IdentityResolver identityResolver) {
         if (externalId == null || externalId.getExternalId() == null || externalId.getType() == null) {
             return null;
         }
@@ -56,19 +64,19 @@ public class InventoryCacheEnrichmentService {
         ExternalIDRepresentation sourceId = identityResolver.resolveExternalId2GlobalId(tenant, identity, testing);
         if (sourceId != null) {
             return getMOFromInventoryCache(tenant, sourceId.getManagedObject().getId().getValue(), testing,
-                    identityResolver, configurationRegistry);
+                    identityResolver);
         }
         return null;
     }
 
     public Map<String, Object> updateMOInInventoryCache(String tenant, String sourceId, Map<String, Object> updates,
-            Boolean testing, IdentityResolver identityResolver, ConfigurationRegistry configurationRegistry) {
+            Boolean testing, IdentityResolver identityResolver) {
         InventoryCache inventoryCache = cacheManager.getInventoryCache(tenant);
 
         final Map<String, Object> newMO = new HashMap<>();
         inventoryCache.putMO(sourceId, newMO);
 
-        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        ServiceConfiguration serviceConfiguration = tenantRegistry.getServiceConfiguration(tenant);
         List<String> effectiveFragments = buildEffectiveFragmentList(serviceConfiguration);
         // Check if assetParents is requested in fragments to cache
         boolean withParents = effectiveFragments.stream()
@@ -88,7 +96,7 @@ public class InventoryCacheEnrichmentService {
     }
 
     public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId, Boolean testing,
-            IdentityResolver identityResolver, ConfigurationRegistry configurationRegistry) {
+            IdentityResolver identityResolver) {
         if (sourceId == null) {
             return null;
         }
@@ -99,20 +107,20 @@ public class InventoryCacheEnrichmentService {
             return result;
         }
 
-        final Map<String, Object> newMO = new HashMap<>();
-        inventoryCache.putMO(sourceId, newMO);
+        // Subscribe BEFORE fetching so update notifications that arrive while the
+        // REST call is in flight are not missed.
         ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
         mor.setId(new GId(sourceId));
+        notificationSubscriber.subscribeMOForInventoryCacheUpdates(tenant, mor);
 
-        configurationRegistry.getNotificationSubscriber().subscribeMOForInventoryCacheUpdates(tenant, mor);
-
-        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        ServiceConfiguration serviceConfiguration = tenantRegistry.getServiceConfiguration(tenant);
         List<String> effectiveFragments = buildEffectiveFragmentList(serviceConfiguration);
         // Check if assetParents is requested in fragments to cache
         boolean withParents = effectiveFragments.stream()
                 .anyMatch(frag -> "assetParents".equals(frag.trim()));
 
         ManagedObjectRepresentation device = getManagedObjectFromResolver(tenant, sourceId, testing, identityResolver, withParents);
+        final Map<String, Object> newMO = new HashMap<>();
         if (device != null) {
             Map<String, Object> attrs = device.getAttrs();
 
@@ -121,6 +129,10 @@ public class InventoryCacheEnrichmentService {
             });
         }
 
+        // Store the fully-populated map. A concurrent thread that resolved the same
+        // sourceId may already have stored its own copy — the last write wins, but
+        // both contain equivalent data so correctness is preserved.
+        inventoryCache.putMO(sourceId, newMO);
         return newMO;
     }
 
@@ -150,11 +162,7 @@ public class InventoryCacheEnrichmentService {
 
     private ManagedObjectRepresentation getManagedObjectFromResolver(String tenant, String deviceId,
             Boolean testing, IdentityResolver identityResolver, boolean withParents) {
-        // Since IdentityResolver is implemented by C8YAgent, we can cast it
-        if (identityResolver instanceof C8YAgent) {
-            return ((C8YAgent) identityResolver).getManagedObjectForId(tenant, deviceId, testing, withParents);
-        }
-        return null;
+        return identityResolver.getManagedObjectForId(tenant, deviceId, testing, withParents);
     }
 
     private void processFragment(String frag, String sourceId, ManagedObjectRepresentation device,

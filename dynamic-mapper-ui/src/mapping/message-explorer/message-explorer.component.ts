@@ -30,10 +30,14 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import {
+  ActionControl,
   AlertService,
   BottomDrawerService,
+  Column,
+  ColumnDataType,
   CoreModule,
-  CountdownIntervalComponent
+  CountdownIntervalComponent,
+  Pagination
 } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
@@ -44,15 +48,19 @@ import { ConnectorConfigurationService } from '../../shared/service/connector-co
 import { PollingInterval } from '../../shared/connector-configuration/connector.model';
 import { ExplorerMessage, MessageExplorerService, SessionExpiredError } from './message-explorer.service';
 
-export type IndexedMessage = ExplorerMessage & { seqNo: number };
+export type IndexedMessage = ExplorerMessage & { id: number; seqNo: number };
 import {
+  ExplorerSessionSnapshot,
   ExplorerStartResult,
   MessageExplorerDrawerComponent
 } from './message-explorer-drawer.component';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
 import { SubscriptionChoiceDrawerComponent } from './subscription-choice-drawer.component';
 import { ALERT_INFO_TIMEOUT, Direction } from '../../shared';
-import { JsonEditorComponent } from '../../shared/component/json-editor/jsoneditor.component';
+import {
+  MessageExplorerDateRendererComponent,
+  MessageExplorerPayloadRendererComponent
+} from './message-explorer-payload.renderer.component';
 
 @Component({
   selector: 'd11r-message-explorer',
@@ -60,23 +68,89 @@ import { JsonEditorComponent } from '../../shared/component/json-editor/jsonedit
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CommonModule, ReactiveFormsModule, JsonEditorComponent]
+  imports: [CoreModule, CommonModule, ReactiveFormsModule]
 })
 export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // ---- state ----------------------------------------------------------------
   sessionId: string | null = null;
   connectorName: string = '';
+  sessionConnectorIdentifier: string = '';
   sessionTopic: string = '';
   sessionDirection: 'INBOUND' | 'OUTBOUND' = 'INBOUND';
+  sessionMaxMessages: number = 50;
+  sessionTTLMinutes: number = 10;
   sessionDeviceType: string | null = null;
   sessionSourceId: string | null = null;
+  sessionDeviceTypeFilter: string | null = null;
   messages: IndexedMessage[] = [];
   paused: boolean = false;
-  expandedIndex: number | null = null;
   private nextSeqNo = 1;
-  // Pre-parsed payload for the expanded row — avoids calling JSON.parse on every CD cycle
-  expandedPayload: { isJson: boolean; parsed: any; raw: string } | null = null;
+
+  private static readonly SESSION_STORAGE_KEY = 'd11r-explorer-session';
+
+  columns: Column[] = [
+    {
+      name: 'seqNo',
+      header: '#',
+      path: 'seqNo',
+      dataType: ColumnDataType.TextShort,
+      sortable: false,
+      filterable: false,
+      gridTrackSize: '60px'
+    },
+    {
+      name: 'receivedAt',
+      header: 'Received at',
+      path: 'receivedAt',
+      dataType: ColumnDataType.TextShort,
+      sortable: true,
+      filterable: false,
+      cellRendererComponent: MessageExplorerDateRendererComponent,
+      gridTrackSize: '200px'
+    },
+    {
+      name: 'clientId',
+      header: 'Client ID',
+      path: 'clientId',
+      dataType: ColumnDataType.TextShort,
+      sortable: false,
+      filterable: false,
+      gridTrackSize: '140px'
+    },
+    {
+      name: 'topic',
+      header: 'Topic',
+      path: 'topic',
+      dataType: ColumnDataType.TextShort,
+      sortable: false,
+      filterable: true,
+      gridTrackSize: '220px'
+    },
+    {
+      name: 'payload',
+      header: 'Payload',
+      path: 'payload',
+      dataType: ColumnDataType.TextShort,
+      sortable: false,
+      filterable: false,
+      cellRendererComponent: MessageExplorerPayloadRendererComponent
+    }
+  ];
+
+  actionControls: ActionControl[] = [
+    {
+      text: 'Create mapping',
+      type: 'CREATE_MAPPING',
+      icon: 'plus-circle',
+      callback: (item: object) => this.onCreateMappingFromMessage(item as IndexedMessage)
+    }
+  ];
+
+  pagination: Pagination = {
+    pageSize: 50,
+    currentPage: 1
+  };
 
   // ---- countdown / polling (mirrors connector-grid.component.ts) ------------
   toggleIntervalForm: FormGroup;
@@ -89,15 +163,6 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   countdownIntervalComponent!: CountdownIntervalComponent;
 
   private readonly destroy$ = new Subject<void>();
-
-  readonly editorOptionsPayload = {
-    mode: 'tree',
-    removeModes: ['text', 'table'],
-    mainMenuBar: false,
-    navigationBar: false,
-    readOnly: true,
-    statusBar: false
-  };
 
   // ---- DI -------------------------------------------------------------------
   private readonly fb = inject(FormBuilder);
@@ -131,19 +196,78 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
           this.resetCountdown();
         });
       });
+
+    this.tryResumeSession();
   }
 
   ngAfterViewInit(): void {
     setTimeout(() => this.startCountdown());
   }
 
+  private persistSession(): void {
+    const state = {
+      sessionId: this.sessionId,
+      connectorName: this.connectorName,
+      sessionTopic: this.sessionTopic,
+      sessionDirection: this.sessionDirection,
+      sessionDeviceType: this.sessionDeviceType,
+      sessionSourceId: this.sessionSourceId
+    };
+    localStorage.setItem(MessageExplorerComponent.SESSION_STORAGE_KEY, JSON.stringify(state));
+  }
+
+  private clearPersistedSession(): void {
+    localStorage.removeItem(MessageExplorerComponent.SESSION_STORAGE_KEY);
+  }
+
+  private async tryResumeSession(): Promise<void> {
+    const raw = localStorage.getItem(MessageExplorerComponent.SESSION_STORAGE_KEY);
+    if (!raw) return;
+    let state: any;
+    try {
+      state = JSON.parse(raw);
+    } catch {
+      this.clearPersistedSession();
+      return;
+    }
+    if (!state?.sessionId) {
+      this.clearPersistedSession();
+      return;
+    }
+    try {
+      const msgs = await this.explorerService.getMessages(state.sessionId);
+      this.sessionId = state.sessionId;
+      this.connectorName = state.connectorName ?? '';
+      this.sessionTopic = state.sessionTopic ?? '';
+      this.sessionDirection = state.sessionDirection ?? 'INBOUND';
+      this.sessionDeviceType = state.sessionDeviceType ?? null;
+      this.sessionSourceId = state.sessionSourceId ?? null;
+      const indexed: IndexedMessage[] = msgs.map(m => {
+        const seqNo = this.nextSeqNo++;
+        return { ...m, id: seqNo, seqNo };
+      });
+      this.messages = indexed.slice().reverse();
+      // Defer countdown start — @ViewChild is not available until ngAfterViewInit
+      setTimeout(() => {
+        this.nextTriggerCountdown$.next(this.currentPollingInterval);
+        if (this.shouldRefreshAutomatic) {
+          this.countdownIntervalComponent?.start();
+        }
+      });
+      // this.alertService.add({ text: 'Explorer session resumed.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
+    } catch (e) {
+      this.clearPersistedSession();
+      if (!(e instanceof SessionExpiredError)) {
+        console.warn('Explorer session resume failed:', e);
+      }
+    }
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    // Stop any active session when navigating away
-    if (this.sessionId) {
-      this.explorerService.stopSession(this.sessionId).catch(() => {});
-    }
+    // Do NOT stop the backend session here — navigating away and back should resume the session.
+    // The backend TTL expires idle sessions automatically. Explicit stop is handled by onStopSession().
   }
 
   // ---- polling --------------------------------------------------------------
@@ -166,11 +290,12 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       const msgs = await this.explorerService.getMessages(this.sessionId);
       // Identify which messages are new (not yet indexed) and assign consecutive seqNos.
       // Existing messages keep their seqNo even when the backend drops old ones from the buffer.
-      const existingKeys = new Set(this.messages.map(m => `${m.receivedAt}|${m.topic}|${m.connectorIdentifier}`));
       const indexed: IndexedMessage[] = msgs.map(m => {
         const key = `${m.receivedAt}|${m.topic}|${m.connectorIdentifier}`;
         const existing = this.messages.find(em => `${em.receivedAt}|${em.topic}|${em.connectorIdentifier}` === key);
-        return existing ?? { ...m, seqNo: this.nextSeqNo++ };
+        if (existing) return existing;
+        const seqNo = this.nextSeqNo++;
+        return { ...m, id: seqNo, seqNo };
       });
       this.messages = indexed.slice().reverse();
     } catch (e) {
@@ -181,8 +306,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         this.sessionTopic = '';
         this.messages = [];
         this.paused = false;
-        this.expandedIndex = null;
         this.countdownIntervalComponent?.stop();
+        this.clearPersistedSession();
         this.alertService.warning('Explorer session has expired. Start a new session.');
       } else {
         // Transient network error — leave session alive, try again next tick
@@ -221,20 +346,24 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         connectorIdentifier: result.connectorIdentifier,
         topic: result.topic,
         maxMessages: result.maxMessages,
+        sessionTTLMinutes: result.sessionTTLMinutes,
         direction: result.direction,
         sourceId: result.sourceId,
         deviceType: result.deviceTypeFilter
       });
       this.connectorName = result.connectorName;
+      this.sessionConnectorIdentifier = result.connectorIdentifier;
       this.sessionTopic = result.topic;
       this.sessionDirection = result.direction;
+      this.sessionMaxMessages = result.maxMessages;
+      this.sessionTTLMinutes = result.sessionTTLMinutes;
       this.sessionDeviceType = result.deviceType ?? null;
       this.sessionSourceId = result.sourceId ?? null;
+      this.sessionDeviceTypeFilter = result.deviceTypeFilter ?? null;
       this.nextSeqNo = 1;
       this.paused = false;
-      this.expandedIndex = null;
-      this.expandedPayload = null;
       this.messages = [];
+      this.persistSession();
 
       this.nextTriggerCountdown$.next(this.currentPollingInterval);
       if (this.shouldRefreshAutomatic) {
@@ -244,6 +373,61 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.alertService.success(`${result.direction === 'OUTBOUND' ? 'Outbound' : 'Inbound'}: exploring "${result.topic}" on "${result.connectorName}"${deviceLabel}`);
     } catch (e: any) {
       this.alertService.danger(`Failed to start explorer session: ${e.message}`);
+    }
+  }
+
+  async onEditSession(): Promise<void> {
+    if (!this.sessionId) return;
+    const snapshot: ExplorerSessionSnapshot = {
+      connectorIdentifier: this.sessionConnectorIdentifier,
+      topic: this.sessionTopic,
+      maxMessages: this.sessionMaxMessages,
+      sessionTTLMinutes: this.sessionTTLMinutes,
+      direction: this.sessionDirection,
+      sourceId: this.sessionSourceId ?? undefined,
+      deviceTypeFilter: this.sessionDeviceTypeFilter ?? undefined
+    };
+    const drawer = this.bottomDrawerService.openDrawer(MessageExplorerDrawerComponent, {
+      initialState: { activeSessionId: this.sessionId, editSnapshot: snapshot }
+    });
+    const result: ExplorerStartResult | null = await drawer.instance.result;
+    if (!result) return;
+
+    // Stop the current session before starting the updated one
+    await this.explorerService.stopSession(this.sessionId).catch(() => {});
+    this.sessionId = null;
+    this.messages = [];
+
+    try {
+      this.sessionId = await this.explorerService.startSession({
+        connectorIdentifier: result.connectorIdentifier,
+        topic: result.topic,
+        maxMessages: result.maxMessages,
+        sessionTTLMinutes: result.sessionTTLMinutes,
+        direction: result.direction,
+        sourceId: result.sourceId,
+        deviceType: result.deviceTypeFilter
+      });
+      this.connectorName = result.connectorName;
+      this.sessionConnectorIdentifier = result.connectorIdentifier;
+      this.sessionTopic = result.topic;
+      this.sessionDirection = result.direction;
+      this.sessionMaxMessages = result.maxMessages;
+      this.sessionTTLMinutes = result.sessionTTLMinutes;
+      this.sessionDeviceType = result.deviceType ?? null;
+      this.sessionSourceId = result.sourceId ?? null;
+      this.sessionDeviceTypeFilter = result.deviceTypeFilter ?? null;
+      this.nextSeqNo = 1;
+      this.paused = false;
+      this.persistSession();
+
+      this.nextTriggerCountdown$.next(this.currentPollingInterval);
+      if (this.shouldRefreshAutomatic) {
+        this.countdownIntervalComponent?.start();
+      }
+      this.alertService.add({ text: 'Explorer session updated.', type: 'success', timeout: ALERT_INFO_TIMEOUT });
+    } catch (e: any) {
+      this.alertService.danger(`Failed to update explorer session: ${e.message}`);
     }
   }
 
@@ -263,12 +447,17 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     this.sessionId = null;
     this.messages = [];
     this.connectorName = '';
+    this.sessionConnectorIdentifier = '';
     this.sessionTopic = '';
     this.sessionDirection = 'INBOUND';
+    this.sessionMaxMessages = 50;
+    this.sessionTTLMinutes = 10;
+    this.sessionDeviceType = null;
+    this.sessionSourceId = null;
+    this.sessionDeviceTypeFilter = null;
     this.paused = false;
-    this.expandedIndex = null;
-    this.expandedPayload = null;
     this.countdownIntervalComponent?.stop();
+    this.clearPersistedSession();
     this.alertService.add({ text: 'Explorer session stopped.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
   }
 
@@ -277,26 +466,6 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       await this.explorerService.clearMessages(this.sessionId).catch(() => {});
     }
     this.messages = [];
-    this.expandedIndex = null;
-    this.expandedPayload = null;
-  }
-
-  toggleExpand(index: number, payload: string): void {
-    if (this.expandedIndex === index) {
-      this.expandedIndex = null;
-      this.expandedPayload = null;
-    } else {
-      this.expandedIndex = index;
-      try {
-        this.expandedPayload = { isJson: true, parsed: JSON.parse(payload), raw: payload };
-      } catch {
-        this.expandedPayload = { isJson: false, parsed: null, raw: payload };
-      }
-    }
-  }
-
-  truncate(text: string, maxLen = 120): string {
-    return text && text.length > maxLen ? text.substring(0, maxLen) + '…' : text;
   }
 
   // ---- create mapping from captured message ---------------------------------
@@ -349,7 +518,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         }
       }
       const subDrawer = this.bottomDrawerService.openDrawer(SubscriptionChoiceDrawerComponent, {
-        initialState: { deviceType, deviceGroups }
+        initialState: { deviceId: effectiveDeviceId ?? null, deviceType, deviceGroups }
       });
       const subResult = await subDrawer.instance.result;
       if (subResult === null) return; // user cancelled
@@ -390,11 +559,11 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       relativeTo: this.route,
       state: {
         fromExplorer: true,
+        sessionTopic: this.sessionTopic,
         topic: msg.topic,
         payload: msg.payload,
         mappingType: mappingResult.mappingType,
         transformationType: mappingResult.transformationType,
-        snoop: mappingResult.snoop,
         codeTemplate: mappingResult.codeTemplate,
         targetAPI,
         publishTopic,

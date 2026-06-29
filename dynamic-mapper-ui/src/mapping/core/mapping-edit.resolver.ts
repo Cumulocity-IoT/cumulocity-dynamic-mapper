@@ -57,27 +57,39 @@ export const mappingEditResolver: ResolveFn<MappingEditData> = async (route) => 
     throw new Error(`Mapping with identifier ${identifier} not found`);
   }
 
-  // Deprecated SUBSTITUTION_AS_CODE mappings are always read-only (export/delete only)
+  // Edits go to the line's draft (D-8). If a draft already exists, continue editing it
+  // (preserving its optimistic-concurrency token); otherwise start from the active config.
+  const draft = await mappingService.getDraft(mapping.id);
+  const editable = draft ?? mapping;
+  // The draft carries the version that was active when it was last saved, which may be stale
+  // if a different version was activated since then. Always show the runnable mapping's
+  // version so the editor footer reflects the true current active version.
+  if (draft) {
+    editable.version = mapping.version;
+  }
+
+  // Deprecated SUBSTITUTION_AS_CODE mappings are always read-only (export/delete only).
+  // Active mappings are no longer read-only: editing them saves to a draft and never
+  // changes the running configuration until the draft is published and activated.
   // eslint-disable-next-line deprecation/deprecation
   const isDeprecated = mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE;
 
   const context: StepperConfigurationContext = {
-    mappingType: mapping.mappingType,
-    transformationType: mapping.transformationType,
+    mappingType: editable.mappingType,
+    transformationType: editable.transformationType,
     direction,
-    editorMode: (mapping.active || isDeprecated) ? EditorMode.READ_ONLY : EditorMode.UPDATE,
-    substitutionsAsCode: isSubstitutionsAsCode(mapping),
-    snoopStatus: mapping.snoopStatus,
+    editorMode: isDeprecated ? EditorMode.READ_ONLY : EditorMode.UPDATE,
+    substitutionsAsCode: isSubstitutionsAsCode(editable),
     hasDeployedConnector: deploymentMapEntry.connectors.length > 0
   };
 
   const stepperConfiguration = StepperConfigurationResolver.resolve(
-    MappingTypeDescriptionMap[mapping.mappingType].stepperConfiguration,
+    MappingTypeDescriptionMap[editable.mappingType].stepperConfiguration,
     context
   );
 
   return {
-    mapping: structuredClone(mapping),
+    mapping: structuredClone(editable),
     stepperConfiguration,
     deploymentMapEntry
   };

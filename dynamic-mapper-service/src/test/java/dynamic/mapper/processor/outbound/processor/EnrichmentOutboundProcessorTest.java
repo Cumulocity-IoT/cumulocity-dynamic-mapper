@@ -24,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -44,12 +43,12 @@ import org.mockito.quality.Strictness;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.MappingType;
@@ -87,6 +86,9 @@ class EnrichmentOutboundProcessorTest {
 
     @Mock
     private ProcessingContext<Object> processingContext;
+
+    @Mock
+    private GraalVMContextService graalVMContextService;
 
     @Mock
     private Engine graalEngine;
@@ -154,8 +156,9 @@ class EnrichmentOutboundProcessorTest {
         when(serviceConfiguration.getCodeTemplates()).thenReturn(createCodeTemplates());
 
         // Setup configuration registry defaults
-        when(configurationRegistry.getGraalEngine(anyString())).thenReturn(graalEngine);
-        when(configurationRegistry.getHostAccess()).thenReturn(hostAccess);
+        when(configurationRegistry.getGraalVMContextService()).thenReturn(graalVMContextService);
+        when(graalVMContextService.getGraalEngine(anyString())).thenReturn(graalEngine);
+        when(graalVMContextService.getHostAccess()).thenReturn(hostAccess);
     }
 
     private C8YMessage createC8YMessage() {
@@ -185,7 +188,6 @@ class EnrichmentOutboundProcessorTest {
                 .transformationType(TransformationType.DEFAULT)
                 .debug(false)
                 .active(true)
-                .snoopStatus(SnoopStatus.NONE)
                 .qos(Qos.AT_MOST_ONCE)
                 .lastUpdate(System.currentTimeMillis())
                 .sourceTemplate("{\"id\":\"string\",\"time\":\"string\"}")
@@ -217,8 +219,6 @@ class EnrichmentOutboundProcessorTest {
                 0L, // messagesReceived
                 0L, // errors
                 0L, // currentFailureCount
-                0L, // snoopedTemplatesActive
-                0L, // snoopedTemplatesTotal
                 null // loadingError
         );
     }
@@ -239,33 +239,6 @@ class EnrichmentOutboundProcessorTest {
         templates.put(TemplateType.OUTBOUND_SMART_FUNCTION.name(), smartTemplate);
 
         return templates;
-    }
-
-    private void injectDependencies() throws Exception {
-        injectField("configurationRegistry", configurationRegistry);
-        injectField("mappingService", mappingService);
-    }
-
-    private void injectField(String fieldName, Object value) throws Exception {
-        Field field = findField(processor.getClass(), fieldName);
-        if (field != null) {
-            field.setAccessible(true);
-            field.set(processor, value);
-            log.info("Successfully injected {} into {}", fieldName, processor.getClass().getSimpleName());
-        } else {
-            log.warn("Field {} not found in {}", fieldName, processor.getClass().getSimpleName());
-        }
-    }
-
-    private Field findField(Class<?> clazz, String fieldName) {
-        while (clazz != null) {
-            try {
-                return clazz.getDeclaredField(fieldName);
-            } catch (NoSuchFieldException e) {
-                clazz = clazz.getSuperclass();
-            }
-        }
-        return null;
     }
 
     @Test
@@ -371,14 +344,10 @@ class EnrichmentOutboundProcessorTest {
         // Given
         when(processingContext.getMapping()).thenReturn(null);
 
-        // When & Then - if the processor should handle null gracefully
-        try {
-            processor.process(exchange);
-            fail("Should have thrown NullPointerException");
-        } catch (NullPointerException e) {
-            // Expected - verify it's the mapping that's null
-            assertTrue(true, "Correctly threw NPE for null mapping");
-        }
+        // When & Then - a null mapping is a programming error and must fail fast
+        // rather than silently producing an empty/invalid context.
+        assertThrows(NullPointerException.class, () -> processor.process(exchange),
+                "a null mapping must fail fast with a NullPointerException");
     }
 
     @Test
@@ -403,13 +372,13 @@ class EnrichmentOutboundProcessorTest {
         mapping.setCode("function onMessage(message) { return message; }");
 
         // The mocked engine will cause GraalVM context creation to fail
-        when(configurationRegistry.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
+        when(graalVMContextService.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
 
         // When
         processor.process(exchange);
 
         // Then - Verify configuration registry was called (GraalVM setup attempted)
-        verify(configurationRegistry).getGraalEngine(TEST_TENANT);
+        verify(graalVMContextService).getGraalEngine(TEST_TENANT);
 
         // In test environment, GraalVM setup will fail with mocked Engine
         assertTrue(mappingStatus.errors >= 1L,
@@ -432,13 +401,13 @@ class EnrichmentOutboundProcessorTest {
         mapping.setCode("function onMessage(message) { return message; }");
 
         // GraalVM Engine mock will cause context creation to fail
-        when(configurationRegistry.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
+        when(graalVMContextService.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
 
         // When
         processor.process(exchange);
 
         // Then - Verify error handling
-        verify(configurationRegistry).getGraalEngine(TEST_TENANT);
+        verify(graalVMContextService).getGraalEngine(TEST_TENANT);
 
         assertTrue(mappingStatus.errors >= 1L,
                 "Should have recorded GraalVM setup error");
@@ -459,13 +428,13 @@ class EnrichmentOutboundProcessorTest {
         when(serviceConfiguration.getLogPayload()).thenReturn(true);
 
         // GraalVM Engine mock will cause context creation to fail
-        when(configurationRegistry.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
+        when(graalVMContextService.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
 
         // When
         processor.process(exchange);
 
         // Then - Verify GraalVM setup was attempted and error was handled
-        verify(configurationRegistry).getGraalEngine(TEST_TENANT);
+        verify(graalVMContextService).getGraalEngine(TEST_TENANT);
 
         assertTrue(mappingStatus.errors >= 1L,
                 "Should have recorded GraalVM setup error");
@@ -502,7 +471,7 @@ class EnrichmentOutboundProcessorTest {
         verify(processingContext, never()).setFlowContext(any());
 
         // Should not call GraalVM-related methods
-        verify(configurationRegistry, never()).getGraalEngine(anyString());
+        verify(graalVMContextService, never()).getGraalEngine(anyString());
 
         log.info("✅ Default transformation test passed - no GraalVM setup required");
     }
@@ -523,7 +492,7 @@ class EnrichmentOutboundProcessorTest {
 
         // Verify no GraalVM context was set up
         verify(processingContext, never()).setGraalContext(any());
-        verify(configurationRegistry, never()).getGraalEngine(anyString());
+        verify(graalVMContextService, never()).getGraalEngine(anyString());
 
         log.info("✅ Code with non-matching transformation type test passed");
     }
@@ -549,7 +518,7 @@ class EnrichmentOutboundProcessorTest {
         verify(processingContext, atLeastOnce()).getTopic();
 
         // Verify no GraalVM setup was needed/attempted
-        verify(configurationRegistry, never()).getGraalEngine(anyString());
+        verify(graalVMContextService, never()).getGraalEngine(anyString());
         verify(processingContext, never()).setGraalContext(any());
 
         log.info("✅ Complete outbound flow test passed:");
@@ -568,7 +537,7 @@ class EnrichmentOutboundProcessorTest {
         mapping.setCode("function transform(input) { return input; }");
 
         // Force an exception from the configuration registry
-        when(configurationRegistry.getGraalEngine(TEST_TENANT))
+        when(graalVMContextService.getGraalEngine(TEST_TENANT))
                 .thenThrow(new RuntimeException("GraalVM setup failed"));
 
         // When
@@ -592,7 +561,7 @@ class EnrichmentOutboundProcessorTest {
         mapping.setCode("function transform(input) { return input; }");
 
         // GraalVM Engine mock will cause context creation to fail
-        when(configurationRegistry.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
+        when(graalVMContextService.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
 
         // When - Process twice
         processor.process(exchange);
@@ -611,7 +580,7 @@ class EnrichmentOutboundProcessorTest {
                 "Second call should also fail with mocked Engine");
 
         // Should call getGraalEngine twice (once per process call)
-        verify(configurationRegistry, times(2)).getGraalEngine(TEST_TENANT);
+        verify(graalVMContextService, times(2)).getGraalEngine(TEST_TENANT);
 
         log.info("✅ GraalContext builder reuse test passed");
         log.info("   - Consistent error handling across multiple calls");

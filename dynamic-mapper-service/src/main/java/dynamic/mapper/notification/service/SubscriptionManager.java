@@ -34,7 +34,6 @@ import dynamic.mapper.model.NotificationSubscriptionResponse;
 import dynamic.mapper.notification.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -49,31 +48,30 @@ import java.util.concurrent.*;
 @Service
 public class SubscriptionManager {
 
-    @Autowired
-    private NotificationSubscriptionApi subscriptionAPI;
+    private final NotificationSubscriptionApi subscriptionAPI;
+    private final MicroserviceSubscriptionsService subscriptionsService;
+    private final NotificationConnectionManager connectionManager;
+    private final MqttPushManager mqttPushManager;
+    private final ExecutorService virtualThreadPool;
+    private final ConfigurationRegistry configurationRegistry;
 
-    @Autowired
-    private MicroserviceSubscriptionsService subscriptionsService;
-
-    @Autowired
-    private NotificationConnectionManager connectionManager;
-
-    @Autowired
-    private MqttPushManager mqttPushManager;
-
-    @Autowired
-    @Qualifier("virtualThreadPool")
-    private ExecutorService virtualThreadPool;
-
-    private ConfigurationRegistry configurationRegistry;
-
-    @Autowired
-    public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
+    public SubscriptionManager(NotificationSubscriptionApi subscriptionAPI,
+                                MicroserviceSubscriptionsService subscriptionsService,
+                                NotificationConnectionManager connectionManager,
+                                MqttPushManager mqttPushManager,
+                                @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool,
+                                @Lazy ConfigurationRegistry configurationRegistry) {
+        this.subscriptionAPI = subscriptionAPI;
+        this.subscriptionsService = subscriptionsService;
+        this.connectionManager = connectionManager;
+        this.mqttPushManager = mqttPushManager;
+        this.virtualThreadPool = virtualThreadPool;
         this.configurationRegistry = configurationRegistry;
     }
 
-    // Circuit breaker
-    private final Set<String> processingDevices = Collections.synchronizedSet(new HashSet<>());
+    // H1+H2: use ConcurrentHashMap.newKeySet() so each add() is atomic (no separate contains)
+    // and keys are tenant-scoped to avoid cross-tenant collisions.
+    private final Set<String> processingDevices = ConcurrentHashMap.newKeySet();
 
     // === Public API ===
 
@@ -102,14 +100,13 @@ public class SubscriptionManager {
         }
 
         String deviceId = mor.getId().getValue();
+        String processingKey = tenant + ":" + deviceId;  // H2: tenant-scoped key
 
-        // Prevent duplicate processing
-        if (processingDevices.contains(deviceId)) {
+        // H1: single atomic add() — returns false if already present, eliminating the race
+        if (!processingDevices.add(processingKey)) {
             log.debug("{} - Device {} already being processed", tenant, deviceId);
             return CompletableFuture.completedFuture(null);
         }
-
-        processingDevices.add(deviceId);
 
         return virtualThreadPool.submit(() -> {
             try {
@@ -127,8 +124,10 @@ public class SubscriptionManager {
                     NotificationSubscriptionRepresentation nsr = createSubscriptionByMO(
                             tenant, mor, api, subscription);
 
-                    // Initialize connections if needed
-                    connectionManager.initializeConnectionsIfNeeded(tenant);
+                    // Reconnect existing static WebSocket clients so they immediately receive
+                    // notifications from the newly created device subscription without waiting
+                    // for the 60-second reconnect cycle.
+                    connectionManager.reconnectStaticDeviceClientsForNewSubscription(tenant);
 
                     // Activate push connectivity
                     mqttPushManager.activatePushConnectivityForDevice(tenant, mor);
@@ -140,7 +139,7 @@ public class SubscriptionManager {
                 log.error("{} - Error subscribing device {}: {}", tenant, deviceId, e.getMessage(), e);
                 throw new RuntimeException("Failed to subscribe device: " + e.getMessage(), e);
             } finally {
-                processingDevices.remove(deviceId);
+                processingDevices.remove(processingKey);
             }
         });
     }
@@ -296,11 +295,25 @@ public class SubscriptionManager {
 
         subscriptionsService.runForTenant(tenant, () -> {
             try {
-                subscriptionAPI.deleteByFilter(
-                        new NotificationSubscriptionFilter().bySubscription(Utils.STATIC_DEVICE_SUBSCRIPTION));
-                subscriptionAPI.deleteByFilter(
-                        new NotificationSubscriptionFilter().bySubscription(Utils.DYNAMIC_DEVICE_SUBSCRIPTION));
-                log.info("{} - Successfully unsubscribed all devices", tenant);
+                Iterator<NotificationSubscriptionRepresentation> staticIt = subscriptionAPI
+                    .getSubscriptionsByFilter(
+                        new NotificationSubscriptionFilter().bySubscription(Utils.STATIC_DEVICE_SUBSCRIPTION))
+                    .get().allPages().iterator();
+                int deletedCount = 0;
+                while (staticIt.hasNext()) {
+                    subscriptionAPI.delete(staticIt.next());
+                    deletedCount++;
+                }
+
+                Iterator<NotificationSubscriptionRepresentation> dynamicIt = subscriptionAPI
+                    .getSubscriptionsByFilter(
+                        new NotificationSubscriptionFilter().bySubscription(Utils.DYNAMIC_DEVICE_SUBSCRIPTION))
+                    .get().allPages().iterator();
+                while (dynamicIt.hasNext()) {
+                    subscriptionAPI.delete(dynamicIt.next());
+                    deletedCount++;
+                }
+                log.info("{} - Successfully unsubscribed {} devices", tenant, deletedCount);
             } catch (Exception e) {
                 log.error("{} - Error unsubscribing all devices: {}", tenant, e.getMessage(), e);
             }
@@ -310,28 +323,39 @@ public class SubscriptionManager {
     public NotificationSubscriptionResponse updateSubscriptionByType(String tenant, List<String> types) {
         return subscriptionsService.callForTenant(tenant, () -> {
             try {
-                // Get and delete existing subscription
                 NotificationSubscriptionRepresentation existing = findExistingTypeSubscription();
                 String existingTypeFilter = null;
                 if (existing != null && existing.getSubscriptionFilter() != null) {
                     existingTypeFilter = existing.getSubscriptionFilter().getTypeFilter();
-                    subscriptionAPI.delete(existing);
-                    log.info("{} - Deleted existing type subscription", tenant);
                 }
 
-                // Create new subscription
                 String newTypeFilter = Utils.createChangedTypeFilter(types, existingTypeFilter);
                 NotificationSubscriptionResponse.NotificationSubscriptionResponseBuilder responseBuilder = NotificationSubscriptionResponse
                         .builder()
                         .subscriptionName(Utils.MANAGEMENT_SUBSCRIPTION);
 
                 if (newTypeFilter != null && !newTypeFilter.trim().isEmpty()) {
+                    // DELETE first, then CREATE.
+                    // C8Y subscriptions are keyed by (subscription-name, context): only one
+                    // "DynamicMapperManagementSubscription / tenant" entry may exist at a time.
+                    // Creating a new one while the old one is still present always returns 409,
+                    // which caused createTypeSubscription() to return the stale existing NSR —
+                    // followed by deleting it — leaving zero types registered.
+                    if (existing != null) {
+                        subscriptionAPI.delete(existing);
+                        log.info("{} - Deleted old type subscription before re-creating with new filter", tenant);
+                    }
                     NotificationSubscriptionRepresentation nsr = createTypeSubscription(newTypeFilter);
                     responseBuilder.types(new ArrayList<>(Utils.parseTypesFromFilter(newTypeFilter)))
                             .subscriptionId(nsr.getId().getValue())
                             .status(NotificationSubscriptionResponse.SubscriptionStatus.ACTIVE);
                     log.info("{} - Created type subscription with {} types", tenant, types.size());
                 } else {
+                    // No new filter — just delete the existing one
+                    if (existing != null) {
+                        subscriptionAPI.delete(existing);
+                        log.info("{} - Deleted type subscription (no replacement needed)", tenant);
+                    }
                     responseBuilder.types(new ArrayList<>())
                             .status(NotificationSubscriptionResponse.SubscriptionStatus.INACTIVE);
                 }
@@ -473,11 +497,9 @@ public class SubscriptionManager {
                                     .byContext("tenant"))
                     .get().allPages().iterator();
 
-            while (subIt.hasNext()) {
-                NotificationSubscriptionRepresentation nsr = subIt.next();
-                if ("tenant".equals(nsr.getContext())) {
-                    return nsr;
-                }
+            // L7: byContext("tenant") filter already guarantees context; return first match
+            if (subIt.hasNext()) {
+                return subIt.next();
             }
         } catch (Exception e) {
             log.warn("Error finding existing type subscription: {}", e.getMessage());

@@ -34,7 +34,6 @@ import {
   StepperConfiguration,
   TransformationType,
   MappingType,
-  SnoopStatus,
   DeploymentMapEntry,
   Feature,
   Qos
@@ -79,8 +78,6 @@ describe('MappingStepperComponent', () => {
     mappingType: MappingType.JSON,
     transformationType: TransformationType.DEFAULT,
     substitutions: [],
-    snoopedTemplates: [],
-    snoopStatus: SnoopStatus.NONE,
     sourceTemplate: '{}',
     targetTemplate: '{}',
     mappingTopic: 'test/topic',
@@ -141,7 +138,6 @@ describe('MappingStepperComponent', () => {
         'updateSubstitutionValidity',
         'expandTemplates',
         'expandExistingTemplates',
-        'parseSnoopedTemplate',
         'evaluateFilterExpression',
         'checkAIAgentDeployment',
         'loadCodeTemplates',
@@ -232,7 +228,6 @@ describe('MappingStepperComponent', () => {
       expect(component.templateForm).toBeDefined();
       expect(component.templateForm.get('extensionName')).toBeTruthy();
       expect(component.templateForm.get('eventName')).toBeTruthy();
-      expect(component.templateForm.get('snoopedTemplateIndex')).toBeTruthy();
     });
 
     it('loads features, service configuration and AI-agent status on init', async () => {
@@ -260,12 +255,6 @@ describe('MappingStepperComponent', () => {
       await component.ngOnInit();
       expect(component.schemaSource).toBeDefined();
       expect(component.schemaTarget).toBeDefined();
-    });
-
-    it('offers a "Start snooping" label when snooping is not running', async () => {
-      component.mapping = buildMapping({ snoopStatus: SnoopStatus.NONE });
-      await component.ngOnInit();
-      expect(component.labels.custom).toBe('Start snooping');
     });
 
     it('sets code-editor help/label text for Smart Function mappings', async () => {
@@ -535,35 +524,6 @@ describe('MappingStepperComponent', () => {
       });
 
       component.onCommitButton();
-    });
-  });
-
-  describe('Snooped templates', () => {
-    beforeEach(async () => {
-      await component.ngOnInit();
-    });
-
-    it('parses a snooped template and stops snooping', async () => {
-      component.mapping = buildMapping({ snoopedTemplates: ['{"x":1}'], snoopStatus: SnoopStatus.STARTED });
-      component.snoopedTemplateCounter = 0;
-      mockStepperService.parseSnoopedTemplate.and.returnValue({ x: 1 });
-
-      await component.onSnoopedSourceTemplates();
-
-      expect(mockStepperService.parseSnoopedTemplate).toHaveBeenCalledWith('{"x":1}');
-      expect(component.sourceTemplate).toEqual({ x: 1 });
-      expect(component.mapping.snoopStatus).toBe(SnoopStatus.STOPPED);
-      expect(component.snoopedTemplateCounter).toBe(1);
-    });
-
-    it('wraps the counter back to zero when it exceeds the template count', async () => {
-      component.mapping = buildMapping({ snoopedTemplates: ['{"x":1}'] });
-      component.snoopedTemplateCounter = 5; // out of range
-      mockStepperService.parseSnoopedTemplate.and.returnValue({ x: 1 });
-
-      await component.onSnoopedSourceTemplates();
-
-      expect(mockStepperService.parseSnoopedTemplate).toHaveBeenCalledWith('{"x":1}');
     });
   });
 

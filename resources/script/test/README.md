@@ -1,15 +1,18 @@
 # Dynamic Mapper Integration Tests
 
-This directory contains bash-based integration tests for the Dynamic Mapper's inbound and outbound transformation pipelines. All tests use the public HiveMQ MQTT broker by default.
+This directory contains bash-based integration tests for the Dynamic Mapper's inbound and outbound transformation pipelines. By default they use the public HiveMQ MQTT broker; the same MQTT tests can also be driven through the **Cumulocity MQTT Service** (`CUMULOCITY_MQTT_SERVICE_PULSAR` connector, X.509 cert auth) — see [Running against the Cumulocity MQTT Service](#running-against-the-cumulocity-mqtt-service).
 
 ## Quick Start
 
 ```bash
-# Validate environment (no test data modified)
+# Validate environment only — exits before any test data is created
 bash test-inbound-json-smartfunction.sh --validate-only
 
-# Run a single test with auto-cleanup
-bash test-inbound-json-smartfunction.sh --cleanup
+# Run a single test (created data is cleaned up by default)
+bash test-inbound-json-smartfunction.sh
+
+# Keep created test data for debugging (skip cleanup)
+bash test-inbound-json-smartfunction.sh --keep
 
 # Run all inbound tests
 bash run-tests.sh inbound
@@ -17,9 +20,24 @@ bash run-tests.sh inbound
 # Run all tests
 bash run-tests.sh
 
-# Keep test data on failure (for debugging)
-bash test-inbound-json-smartfunction.sh --keep
+# Pick suite + connector: g = generic MQTT (default), m = Cumulocity MQTT Service
+bash run-tests.sh inbound m       # inbound suite against the MQTT Service
+bash run-tests.sh all g           # everything against the public broker
 ```
+
+The runner takes two parameters — `[SUITE] [CONNECTOR]`. See
+[Running against the Cumulocity MQTT Service](#running-against-the-cumulocity-mqtt-service).
+
+### Standard flags
+
+Every test script accepts the same flags (parsed by `dm_parse_args` in the
+harness):
+
+| Flag | Effect |
+|------|--------|
+| _(none)_ / `--cleanup` | Run the test and delete created data on exit (default). |
+| `--keep` | Run the test but retain created data for post-mortem debugging. |
+| `--validate-only` | Run environment validation, then exit `0` before creating data. |
 
 ## Architecture & Best Practices
 
@@ -151,7 +169,7 @@ All tests use this default broker configuration:
 MQTT_HOST=${MQTT_HOST:-broker.hivemq.com}
 MQTT_PORT=${MQTT_PORT:-1883}
 MQTT_TLS=${MQTT_TLS:-false}
-MQTT_INSECURE=${MQTT_INSECURE:-true}
+MQTT_INSECURE=${MQTT_INSECURE:-false}
 ```
 
 Override via environment variables:
@@ -162,6 +180,98 @@ export MQTT_PORT=8883
 export MQTT_TLS=true
 bash test-inbound-json-smartfunction.sh
 ```
+
+## Running against the Cumulocity MQTT Service
+
+The MQTT tests can run against the **Cumulocity MQTT Service** instead of a public
+broker. The service exposes a standard MQTT interface to clients (TLS port **9883**)
+and is backed by a `CUMULOCITY_MQTT_SERVICE_PULSAR` connector inside the mapper. The
+public-broker path is unchanged and remains the default — this is an additive,
+opt-in mode.
+
+### Selecting the connector
+
+Pick the broker with the runner's second parameter, or with `DM_BROKER_MODE`:
+
+```bash
+# via run-tests.sh — second token g (generic) | m (Cumulocity MQTT Service)
+bash run-tests.sh inbound m
+bash run-tests.sh 1 3 5 m          # menu items 1/3/5 against the MQTT Service
+
+# via environment (a single script, or your own lane)
+export DM_BROKER_MODE=c8y-mqtt-service
+bash test-inbound-json-default.sh
+```
+
+| `DM_BROKER_MODE` | Broker | Auth |
+|---|---|---|
+| `public` _(default)_ | public HiveMQ/EMQX (or your `MQTT_HOST`) | `MQTT_USER`/`MQTT_PASS` (optional) |
+| `c8y-mqtt-service` | Cumulocity MQTT Service on `:9883` (TLS) | X.509 client certificate |
+
+In `c8y-mqtt-service` mode the harness presets the endpoint from the active c8y
+session (`MQTT_HOST=$C8Y_DOMAIN`, `MQTT_PORT=9883`, `MQTT_TLS=true`) — override with
+`DM_C8Y_MQTT_HOST` / `DM_C8Y_MQTT_PORT` if needed.
+
+### How it works (handled automatically by the harness)
+
+`dm_require_mqtt_broker` (called by every MQTT test) does the following in
+`c8y-mqtt-service` mode:
+
+1. **Connector** — resolves the singleton `CUMULOCITY_MQTT_SERVICE_PULSAR` connector,
+   **creating** it (`dmmqttsvc`, or `DM_C8Y_MQTT_CONNECTOR_ID`) if absent, and ensures
+   it is `CONNECTED`.
+2. **Certificate** — generates a self-signed cert (`CN == clientId`) and uploads it as
+   a trusted (trust-anchor) certificate via
+   `c8y devicemanagement certificates create --autoRegistrationEnabled`.
+3. **Publish/subscribe** — `dm_mqtt_publish` / `dm_mqtt_subscribe_one` automatically add
+   `--cert/--key`, `-i <clientId>` and `-u <tenant>`.
+4. **Teardown** — the trust anchor is deleted on exit (honours `--keep`).
+
+So the test scripts themselves need no changes — the same file runs against either
+broker.
+
+### Prerequisites
+
+- An active **c8y session** (`C8Y_DOMAIN` / `C8Y_TENANT` exported) with the
+  **_Mqtt service_** permission and the right to manage trusted certificates.
+- `mosquitto_pub` / `mosquitto_sub`, `openssl`, and a system **CA bundle** for TLS
+  server verification (auto-discovered; set `MQTT_CAFILE` to override, or
+  `MQTT_INSECURE=true` to skip — not recommended).
+- Network egress to `<tenant-domain>:9883`.
+
+If any of these is missing the MQTT-Service tests **fail loudly** (they do not skip),
+so a misconfiguration is never silently ignored.
+
+### Constraints of the MQTT Service (vs a public broker)
+
+| Aspect | Rule |
+|---|---|
+| Port / TLS | `9883`, TLS required (no plaintext on shared public tenants) |
+| Auth | X.509 cert; **cert CN must equal the MQTT clientId**; tenant id in the username |
+| QoS | **0 and 1 only** — QoS 2 is rejected (the harness fails fast on QoS 2) |
+| Retained | not allowed |
+| Clean session | required |
+| Reserved topics | `$...` and Core-MQTT (`s/`, `t/`, `measurement/…`) are off-limits — tests use `dmtest/...` |
+| Concurrent clients | the clientId is fixed to the cert CN, so only **one** mosquitto client (publish *or* subscribe) at a time per run |
+
+### Migrated subset
+
+These tests are verified to run against **both** brokers with no per-file changes:
+
+- `test-inbound-json-default` — inbound JSON → MEASUREMENT (cert-authenticated publish)
+- `test-outbound-measurement` — outbound MEASUREMENT (asserts the mapper processed it)
+- `test-outbound-static-subscription` — outbound subscription management
+- `test-outbound-topic-resolution` — outbound EVENT with a dynamic topic; also
+  subscribes with `mosquitto_sub` to verify the **actual broker round-trip** (in `m`
+  mode this exercises real MQTT Service delivery — best-effort, since service-side
+  delivery is scoped to the publishing device's identity; see ENHANCEMENT.md)
+
+Other tests may run against `m` too, but those that need broker-specific features
+(HTTP connector, Kafka/Sparkplug extensions, multi-connector) are not expected to pass.
+
+See [ENHANCEMENT.md](ENHANCEMENT.md) for the full design and
+[test-c8y-mqtt-service-spike.sh](test-c8y-mqtt-service-spike.sh) for a standalone
+end-to-end cert-auth round-trip spike.
 
 ### Smart Function Test Pattern
 
@@ -195,9 +305,11 @@ function onMessage(msg, ctx) {
         externalSource: [{ type: 'c8y_Serial', externalId: externalId }]
     }];
 }
-export { onMessage };
 EOF
 )
+
+# Append `export { onMessage }` only when the tenant runs in ESM mode:
+SF_CODE=$(dm_wrap_onmessage_code "$SF_CODE")
 ```
 
 **Key points for Smart Functions:**
@@ -205,7 +317,9 @@ EOF
 - Must call `msg.getPayload()` to access deserialized JSON
 - Must return array of Cumulocity objects (even if empty)
 - Each object must have `cumulocityType`, `action`, `payload`, and `externalSource`
-- Must export function explicitly: `export { onMessage };`
+- The `export { onMessage };` line is **only** required in ESM mode. Don't hardcode
+  it — wrap the source with `dm_wrap_onmessage_code` (in the harness), which appends
+  the export only when the tenant's `supportESM` is `true`.
 - Topic levels accessible via `config.topic.split('/')` or `sourceObject._TOPIC_LEVEL_` array
 
 ### Debugging Failed Tests
@@ -236,16 +350,68 @@ EOF
 
 ## Test Inventory
 
-| Test | Type | Purpose |
-|------|------|---------|
-| `test-inbound-json-smartfunction.sh` | Smart Func | JavaScript transformation (temperature JSON → measurement) |
-| `test-inbound-json-jsonata.sh` | JSONata | JSONata expression (JSON payload → measurement) |
-| `test-inbound-json-default.sh` | Default | No transformation (raw JSON passthrough) |
-| `test-inbound-flatfile.sh` | Flat File | CSV parsing via substitution |
-| `test-inbound-hex.sh` | Binary HEX | HEX decoding via Smart Function → event |
-| `test-inbound-implicit-device.sh` | Implicit Device | Auto-create device from external ID |
-| `test-inbound-multi-device.sh` | Array Expansion | JSON array → multiple measurements |
-| `test-inbound-http-connector.sh` | HTTP Connector | HTTP webhook inbound transformation |
+The authoritative catalogue lives in [run-tests.sh](run-tests.sh) (the `TESTS`
+array) and drives the interactive menu. The categories below mirror it:
+
+### Inbound (payload)
+| Test | Purpose |
+|------|---------|
+| `test-inbound-json-default` | JSON / DEFAULT → MEASUREMENT |
+| `test-inbound-json-jsonata` | JSON / JSONATA → EVENT |
+| `test-inbound-json-smartfunction` | JSON / Smart Function → MEASUREMENT |
+| `test-inbound-flatfile` | FLAT_FILE / CSV → MEASUREMENT |
+| `test-inbound-hex` | HEX → EVENT |
+| `test-inbound-http-connector` | HTTP connector → MEASUREMENT |
+| `test-inbound-implicit-device` | Implicit device auto-creation |
+| `test-inbound-multi-device` | Array payload → multiple devices |
+| `test-inbound-alarm` | JSON / DEFAULT → ALARM |
+| `test-inbound-operation` | JSON / DEFAULT → OPERATION |
+| `test-inbound-inventory` | JSON / DEFAULT → INVENTORY — updates **device metadata** (type + custom fragment) on an existing managed object (`updateExistingDevice: true`) |
+
+### Inbound (Smart Function patterns)
+| Test | Purpose |
+|------|---------|
+| `test-inbound-smartfunction-02` | Topic-based external ID + sensor filter |
+| `test-inbound-smartfunction-04` | Dual payload type + deduplication |
+
+### Inbound (Java extensions)
+| Test | Purpose |
+|------|---------|
+| `test-inbound-extension-custom-measurement` | Extension: JSON → Measurement |
+| `test-inbound-extension-custom-alarm` | Extension: JSON → Alarm |
+| `test-inbound-extension-custom-event` | Extension: Protobuf → Event |
+| `test-inbound-extension-sparkplugb-measurement` | Extension: Sparkplug B → Measurement |
+
+### Outbound (payload + subscriptions)
+| Test | Purpose |
+|------|---------|
+| `test-outbound-measurement` | C8Y Measurement → MQTT broker |
+| `test-outbound-event` | C8Y Event → MQTT broker |
+| `test-outbound-alarm` | C8Y Alarm → MQTT broker |
+| `test-outbound-operation` | C8Y Operation → MQTT broker |
+| `test-outbound-inventory` | C8Y managed-object change (**device metadata**) → MQTT broker |
+| `test-outbound-filter` | `filterMapping` — selective forwarding |
+| `test-outbound-topic-resolution` | Dynamic publish topic resolution |
+| `test-outbound-json-smartfunction` | Smart Function: Measurement → MQTT JSON |
+| `test-outbound-smartfunction-externalsource` | Smart Function `externalSource` resolves the `_externalId_` topic token — verified by a real broker round-trip (`mosquitto_sub -v`) |
+| `test-outbound-static-subscription` | Static subscription management |
+| `test-outbound-type-subscription` | Dynamic type subscription |
+| `test-outbound-group-subscription` | Dynamic group subscription |
+| `test-outbound-group-subscription-removal` | Group subscription removal |
+| `test-outbound-subscription-persistence` | Subscription persistence after restart |
+| `test-outbound-extension-alarm-to-sparkplugb` | Extension: Alarm → Sparkplug B DCMD |
+
+### Reliability
+| Test | Purpose |
+|------|---------|
+| `test-multi-tenant` | Mapping CRUD / tenant isolation |
+| `test-multi-connector` | Multiple connector status check |
+| `test-reconnect` | Connector disconnect / reconnect cycle |
+| `test-cumulocity-mqtt-service` | Cumulocity MQTT Service connector: delete → create → connect → disconnect |
+
+> **Note:** `test-outbound-group-subscription` hands off state to
+> `test-outbound-group-subscription-removal`; when run via `run-tests.sh` the
+> former is invoked with `--keep` so its group/device survive for the latter.
 
 ## Test Execution Order
 

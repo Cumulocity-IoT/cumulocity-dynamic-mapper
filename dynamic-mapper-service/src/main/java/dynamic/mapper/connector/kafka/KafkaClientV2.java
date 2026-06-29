@@ -400,7 +400,7 @@ public class KafkaClientV2 extends AConnectorClient {
         KafkaConsumerWrapper wrapper = topicConsumers.remove(topic);
         if (wrapper != null) {
             try {
-                wrapper.getConsumer().close(Duration.ofSeconds(5));
+                wrapper.getConsumer().close();
                 log.info("{} - Successfully unsubscribed from Kafka topic: [{}]", tenant, topic);
                 sendSubscriptionEvents(topic, "Unsubscribed");
             } catch (Exception e) {
@@ -479,7 +479,7 @@ public class KafkaClientV2 extends AConnectorClient {
         ProcessingResultWrapper<?> processedResults = dispatcher.onMessage(connectorMessage);
 
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
-        int timeout = processedResults.getMaxCPUTimeMS();
+        int timeout = processedResults.getPipelineTimeoutMS();
 
         if (mappingQos > 0) {
             virtualThreadPool.submit(() -> processMessageWithQos(record, processedResults, timeout));
@@ -656,7 +656,7 @@ public class KafkaClientV2 extends AConnectorClient {
             // Close consumers
             topicConsumers.values().forEach(wrapper -> {
                 try {
-                    wrapper.getConsumer().close(Duration.ofSeconds(10));
+                    wrapper.getConsumer().close();
                 } catch (Exception e) {
                     log.warn("{} - Error closing Kafka consumer: {}", tenant, e.getMessage());
                 }

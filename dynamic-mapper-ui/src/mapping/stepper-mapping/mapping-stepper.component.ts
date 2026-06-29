@@ -23,7 +23,6 @@ import {
   AfterViewInit,
   ChangeDetectorRef,
   Component,
-  ElementRef,
   EventEmitter,
   inject,
   Input,
@@ -42,7 +41,6 @@ import { debounceTime, distinctUntilChanged, map, Observable, ReplaySubject, sha
 import { Mode } from 'vanilla-jsoneditor';
 import {
   API,
-  COLOR_HIGHLIGHTED,
   DeploymentMapEntry,
   Direction,
   Extension,
@@ -54,30 +52,26 @@ import {
   RepairStrategy,
   SAMPLE_TEMPLATES_C8Y,
   SharedService,
-  SnoopStatus,
   StepperConfiguration,
   Feature,
   isSubstitutionsAsCode,
   TransformationType,
   MappingTypeLabels,
-  ContentChanges,
-  MappingTypeDescriptions,
   Substitution
 } from '../../shared';
-import { ValidationError } from '../shared/mapping.model';
 import { createCompletionProviderFlowFunction, EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
 import {
   base64ToString,
   checkTransformationType,
   expandC8YTemplate,
   expandExternalTemplate,
+  isCodeOrExtensionTransformation,
   reduceSourceTemplate,
   splitTopicExcludingSeparator,
   stringToBase64,
   stripTemplateMetadataTags,
   validateProtectedFields
 } from '../shared/util';
-import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, toTemplateType } from '../../configuration/shared/configuration.model';
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
 import { AIPromptComponent } from '../prompt/ai-prompt.component';
@@ -137,11 +131,8 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
 
   @ViewChild('templateStep', { static: false }) templateStepRef!: MappingTemplateStepComponent;
   @ViewChild('mappingTestingStep', { static: false }) mappingTestingStep!: MappingStepTestingComponent;
-  @ViewChild(SubstitutionRendererComponent, { static: false }) substitutionChild!: SubstitutionRendererComponent;
   @ViewChild('stepper', { static: false }) stepper!: C8yStepper;
   @ViewChild('codeEditor', { static: false }) codeEditor!: EditorComponent;
-  @ViewChild('substitutionModelSourceExpression') substitutionModelSourceExpression!: ElementRef<HTMLTextAreaElement>;
-  @ViewChild('substitutionModelTargetExpression') substitutionModelTargetExpression!: ElementRef<HTMLTextAreaElement>;
 
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly bsModalService = inject(BsModalService);
@@ -151,16 +142,12 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   private readonly stepperService = inject(MappingStepperService);
   private readonly substitutionService = inject(SubstitutionManagementService);
 
-  readonly ValidationError = ValidationError;
   readonly checkTransformationType = checkTransformationType;
   readonly validateProtectedFields = validateProtectedFields;
   readonly MappingTypeLabels = MappingTypeLabels;
   readonly Direction = Direction;
-  readonly COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
   readonly TransformationType = TransformationType;
   readonly EditorMode = EditorMode;
-  readonly SnoopStatus = SnoopStatus;
-  readonly MappingTypeDescriptions = MappingTypeDescriptions;
 
   updateTestingTemplate = new ReplaySubject<Mapping>(1);
   schemaSource: any;
@@ -168,7 +155,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
 
   templateForm!: FormGroup;
   templateModel: { stepperConfiguration?: StepperConfiguration; mapping?: Mapping } = {};
-  substitutionFormly = new FormGroup({});
   filterFormly = new FormGroup({});
   filterFormlyFields!: FormlyFieldConfig[];
   substitutionModel: SubstitutionModel = {};
@@ -203,22 +189,10 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   extensionEventItems$: Observable<{ label: string; value: string }[]>;
   /** True when the selected extension event has a parameter block defined */
   hasExtensionParameter = false;
-  snoopedTemplateItems: Array<{label: string, value: string}> = [];
   codeTemplateItems: Array<{label: string, value: string}> = [];
 
   private updateExtensionItems(): void {
     this.extensionItems = Array.from(this.extensions.keys());
-  }
-
-  private updateSnoopedTemplateItems(): void {
-    if (!this.mapping?.snoopedTemplates) {
-      this.snoopedTemplateItems = [];
-      return;
-    }
-    this.snoopedTemplateItems = Array.from({ length: this.mapping.snoopedTemplates.length }, (_, i) => ({
-      label: `Template - ${i}`,
-      value: String(i)
-    }));
   }
 
   private updateCodeTemplateItems(): void {
@@ -249,27 +223,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     readOnly: false
   };
 
-  editorOptionsSourceSubstitution = {
-    mode: Mode.tree,
-    removeModes: ['text', 'table'],
-    mainMenuBar: true,
-    navigationBar: false,
-    statusBar: false,
-    readOnly: true,
-    name: 'message'
-  };
-
-  editorOptionsTargetSubstitution = {
-    mode: Mode.tree,
-    removeModes: ['text', 'table'],
-    mainMenuBar: true,
-    navigationBar: false,
-    readOnly: true,
-    statusBar: true
-  };
-
-  selectedSubstitution = -1;
-  snoopedTemplateCounter = -1;
   step?: string;
   expertMode = false;
   templatesInitialized = false;
@@ -300,11 +253,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       ),
       shareReplay(1)
     );
-    this.updateSnoopedTemplateItems();
-
-    if (this.mapping.snoopStatus === SnoopStatus.NONE || this.mapping.snoopStatus === SnoopStatus.STOPPED) {
-      this.labels = { ...this.labels, custom: 'Start snooping' } as const;
-    }
 
     this.targetSystem = this.mapping.direction === Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem = this.mapping.direction === Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
@@ -337,8 +285,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
 
     this.feature = await this.sharedService.getFeatures();
     if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
-      this.editorOptionsSourceSubstitution.readOnly = true;
-      this.editorOptionsTargetSubstitution.readOnly = true;
       this.editorOptionsSourceTemplate.readOnly = true;
       this.editorOptionsTargetTemplate.readOnly = true;
     }
@@ -439,12 +385,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
         value: this.configurationToYaml(this.mapping?.extension?.parameter),
         disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
       }),
-      snoopedTemplateIndex: new FormControl({
-        value: '-1',
-        disabled: !this.stepperConfiguration.showEditorSource ||
-          this.mapping.snoopedTemplates.length === 0 ||
-          this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
-      }),
       sampleTargetTemplatesButton: new FormControl({
         value: !this.stepperConfiguration.showEditorSource ||
           this.stepperConfiguration.editorMode === EditorMode.READ_ONLY,
@@ -492,21 +432,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
         }
       });
 
-    // Subscribe to snooped template selection changes
-    this.templateForm.get('snoopedTemplateIndex')?.valueChanges
-      .pipe(
-        distinctUntilChanged(),
-        debounceTime(100),
-        takeUntil(this.destroy$)
-      )
-      .subscribe(selected => {
-        // c8y-select with labelProperty binds the entire object {label, value}
-        const index = selected?.value ?? selected;
-        if (index !== null && index !== undefined && index !== '-1') {
-          this.onSelectSnoopedSourceTemplate(null as any);
-        }
-      });
-
     this.isSubstitutionValid$.pipe(takeUntil(this.destroy$)).subscribe(valid => {
       if (valid) {
         this.templateForm.setErrors(null);
@@ -529,10 +454,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       this.isButtonDisabled$.next(isDisabled);
       this.cdr.markForCheck();
     });
-  }
-
-  isSubstitutionValid(): boolean {
-    return this.substitutionService.isSubstitutionValid(this.substitutionModel);
   }
 
   onTestingSourceTemplateChanged(template: any): void {
@@ -575,10 +496,14 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
 
   async onSampleTargetTemplatesButton(): Promise<void> {
     if (this.stepperConfiguration.direction === Direction.INBOUND) {
-      const template = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
-      this.targetTemplate = this.stepperConfiguration.allowTemplateExpansion
-        ? expandC8YTemplate(template, this.mapping)
-        : template;
+      if (isCodeOrExtensionTransformation(this.mapping.transformationType)) {
+        this.targetTemplate = {};
+      } else {
+        const template = JSON.parse(SAMPLE_TEMPLATES_C8Y[this.mapping.targetAPI]);
+        this.targetTemplate = this.stepperConfiguration.allowTemplateExpansion
+          ? expandC8YTemplate(template, this.mapping)
+          : template;
+      }
     } else {
       const levels: string[] = splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false);
       const template = JSON.parse(getExternalTemplate(this.mapping));
@@ -754,9 +679,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       this.mappingCode = stripTemplateMetadataTags(base64ToString(this.mapping.code));
     }
 
-    // Update snooped template items in case new templates were added
-    this.updateSnoopedTemplateItems();
-
     // Trigger extension event filtering if extension is already selected
     // This handles the case when navigating to step 3 with a pre-selected extension
     if (this.mapping?.extension?.extensionName && this.extensions) {
@@ -789,7 +711,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       this.currentStepIndex,
       this.stepperConfiguration.showCodeEditor
     );
-    this.onSelectSubstitution(0);
 
     const testMapping = structuredClone(this.mapping);
     testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
@@ -810,6 +731,9 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   private updateTemplatesInEditors(): void {
     if (this.templateStepRef?.sourceTemplateUpdated) {
       this.sourceTemplate = this.templateStepRef.sourceTemplateUpdated;
+    }
+    if (this.templateStepRef?.targetTemplateUpdated) {
+      this.targetTemplate = this.templateStepRef.targetTemplateUpdated;
     }
   }
 
@@ -904,57 +828,11 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     this.targetTemplate = templates.targetTemplate;
   }
 
-  async onSnoopedSourceTemplates(): Promise<void> {
-    if (this.snoopedTemplateCounter >= this.mapping.snoopedTemplates.length) {
-      this.snoopedTemplateCounter = 0;
-    }
-
-    this.sourceTemplate = this.stepperService.parseSnoopedTemplate(
-      this.mapping.snoopedTemplates[this.snoopedTemplateCounter]
-    );
-
-    if (this.stepperConfiguration.allowTemplateExpansion) {
-      if (this.stepperConfiguration.direction === Direction.INBOUND) {
-        this.sourceTemplate = expandExternalTemplate(
-          this.sourceTemplate,
-          this.mapping, splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false)
-        );
-      } else {
-        this.sourceTemplate = expandC8YTemplate(this.sourceTemplate, this.mapping);
-      }
-    }
-
-    this.mapping.snoopStatus = SnoopStatus.STOPPED;
-    this.snoopedTemplateCounter++;
-  }
-
-  async onSelectSnoopedSourceTemplate(event: Event): Promise<void> {
-    const selected = this.templateForm.get('snoopedTemplateIndex')?.value;
-    // c8y-select with labelProperty binds the entire object {label, value}
-    const indexValue = selected?.value ?? selected;
-    const index = typeof indexValue === 'string' ? parseInt(indexValue, 10) : indexValue;
-    this.sourceTemplate = this.stepperService.parseSnoopedTemplate(
-      this.mapping.snoopedTemplates[index]
-    );
-
-    if (this.stepperConfiguration.allowTemplateExpansion) {
-      if (this.stepperConfiguration.direction === Direction.INBOUND) {
-        this.sourceTemplate = expandExternalTemplate(
-          this.sourceTemplate,
-          this.mapping,
-          splitTopicExcludingSeparator(this.mapping.mappingTopicSample, false)
-        );
-      } else {
-        this.sourceTemplate = expandC8YTemplate(this.sourceTemplate, this.mapping);
-      }
-    }
-
-    this.mapping.snoopStatus = SnoopStatus.STOPPED;
-  }
-
   async onTargetAPIChanged(changedTargetAPI: string): Promise<void> {
     if (this.stepperConfiguration.direction === Direction.INBOUND) {
-      this.mapping.targetTemplate = SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
+      this.mapping.targetTemplate = isCodeOrExtensionTransformation(this.mapping.transformationType)
+        ? '{}'
+        : SAMPLE_TEMPLATES_C8Y[changedTargetAPI];
       this.mapping.sourceTemplate = getExternalTemplate(this.mapping);
       this.schemaTarget = getSchema(this.mapping.targetAPI, this.mapping.direction, true, false);
     } else {
@@ -1084,7 +962,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
             });
           }
 
-          this.alertService.success('Generated JavaScript code successfully.');
         } else {
           // this.raiseAlert({ type: 'warning', text: 'No valid JavaScript code was generated.' });
         }
@@ -1119,22 +996,4 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     this.isGenerateSubstitutionOpen = false;
   }
 
-  onSelectSubstitution(_selected: number): void {
-    // no-op: selection state is managed entirely within MappingSubstitutionStepComponent
-  }
-
-  private manualResize(source: string): void {
-    let element;
-
-    if (source === 'substitutionModelSourceExpression' && this.substitutionModelSourceExpression?.nativeElement) {
-      element = this.substitutionModelSourceExpression.nativeElement;
-    } else if (source === 'substitutionModelTargetExpression' && this.substitutionModelTargetExpression?.nativeElement) {
-      element = this.substitutionModelTargetExpression.nativeElement;
-    }
-
-    if (element) {
-      element.style.height = '32px';
-      element.style.height = element.scrollHeight + 'px';
-    }
-  }
 }

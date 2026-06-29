@@ -119,7 +119,7 @@ public abstract class CommonProcessor implements Processor {
             // Use C8YAgent to resolve external ID to global ID
             var globalId = c8yAgent.resolveExternalId2GlobalId(tenant,
                     new ID(externalSource.getType(), externalSource.getExternalId()),
-                    context.getTesting());
+                    context.isTesting());
             context.setExternalId(externalSource.getExternalId());
 
             if (globalId != null) {
@@ -156,7 +156,7 @@ public abstract class CommonProcessor implements Processor {
         ExternalId externalSource = externalSources.get(0);
 
         // check if setup of externalId is required
-        if (context.getTesting() && context.getSourceId() != null) {
+        if (context.isTesting() && context.getSourceId() != null) {
             if (externalSource.getExternalId() == null || externalSource.getExternalId().isEmpty()) {
                 externalSource.setExternalId("implicit-device-" + Utils.createCustomUuid());
             }
@@ -175,7 +175,7 @@ public abstract class CommonProcessor implements Processor {
             // Use C8YAgent to resolve external ID to global ID
             var externalId = c8yAgent.resolveGlobalId2ExternalId(tenant, gid,
                     externalSource.getType(),
-                    context.getTesting());
+                    context.isTesting());
             context.setExternalId(externalSource.getExternalId());
 
             if (externalId != null) {

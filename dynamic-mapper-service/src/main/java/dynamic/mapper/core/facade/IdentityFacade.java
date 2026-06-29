@@ -21,9 +21,9 @@
 
 package dynamic.mapper.core.facade;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableObject;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.cumulocity.model.ID;
@@ -39,15 +39,13 @@ import java.util.concurrent.Semaphore;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class IdentityFacade {
 
     public static final int PAGE_SIZE = 100;
 
-    @Autowired
-    private MockIdentity identityMock;
-
-    @Autowired
-    private IdentityApi identityApi;
+    private final MockIdentity identityMock;
+    private final IdentityApi identityApi;
 
     public ExternalIDRepresentation create(ManagedObjectRepresentation mor, ID id, Boolean testing) {
         ExternalIDRepresentation externalIDRepresentation = new ExternalIDRepresentation();
@@ -62,7 +60,7 @@ public class IdentityFacade {
     }
 
     public ExternalIDRepresentation resolveExternalId2GlobalId(ID externalID, Boolean testing, Semaphore c8ySemaphore) {
-        if (!testing) {
+        if (testing == null || !testing) {
             try {
                 c8ySemaphore.acquire();
                 return identityApi.getExternalId(externalID);
@@ -95,7 +93,7 @@ public class IdentityFacade {
             } finally {
                 c8ySemaphore.release();
             }
-            return result.getValue();
+            return result.get();
         } else {
             return identityMock.getExternalIdsOfGlobalId(gid);
         }

@@ -21,6 +21,8 @@
 
 package dynamic.mapper.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import java.nio.charset.StandardCharsets;
@@ -71,7 +73,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext",
+        ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT,
                 ProcessingContext.class);
 
         if (context == null) {
@@ -89,7 +91,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
 
         // Extract additional info from headers if available
-        String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
+        String connectorIdentifier = exchange.getIn().getHeader(CamelHeaders.CONNECTOR_IDENTIFIER, String.class);
 
         // Hook for subclass-specific setup (e.g., QoS determination)
         performPreEnrichmentSetup(context, connectorIdentifier);
@@ -99,12 +101,17 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         if (mapping.getCode() != null
                 && TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
             try {
-                var graalEngine = configurationRegistry.getGraalEngine(tenant);
+                var graalVMContextService = configurationRegistry.getGraalVMContextService();
+                var graalEngine = graalVMContextService.getGraalEngine(tenant);
                 var graalContext = createGraalContext(graalEngine, supportESM);
 
+                // Register release callback so GraalVMContextService can close a retired
+                // Engine once all its in-flight Contexts have drained.
+                context.setEngineReleaseAction(() -> graalVMContextService.releaseEngine(graalEngine));
+
                 // Set cached Source objects for performance
-                context.setSharedSource(configurationRegistry.getGraalsSourceShared(tenant));
-                context.setSystemSource(configurationRegistry.getGraalsSourceSystem(tenant));
+                context.setSharedSource(graalVMContextService.getGraalsSourceShared(tenant));
+                context.setSystemSource(graalVMContextService.getGraalsSourceSystem(tenant));
 
                 // Keep Base64 strings for backward compatibility if needed
                 CodeTemplate sharedTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SHARED.name());
@@ -125,7 +132,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 Map<String, Object> initialState = flowStateStore.loadState(tenant, mapping.getIdentifier());
                 context.setFlowContext(new SmartFunctionContext(graalContext, tenant,
                         (InventoryEnrichmentClient) configurationRegistry.getC8yAgent(),
-                        context.getTesting(), flowStateStore, mapping.getIdentifier(), initialState));
+                        context.isTesting(), flowStateStore, mapping.getIdentifier(), initialState));
             } catch (Exception e) {
                 handleGraalVMError(tenant, mapping, e, context);
                 return;
@@ -156,7 +163,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         Context.Builder builder = Context.newBuilder("js")
                 .engine(graalEngine)
                 .option("js.text-encoding", "true")
-                .allowHostAccess(configurationRegistry.getHostAccess())
+                .allowHostAccess(configurationRegistry.getGraalVMContextService().getHostAccess())
                 .allowHostClassLookup(className ->
                 // Allow only the specific SubstitutionContext class
                 className.equals("dynamic.mapper.processor.model.SubstitutionContext")
@@ -202,7 +209,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                     tenant, context.getTopic(), connectorIdentifier, mapping.getName(),
                     mapping.getQos().ordinal(), ppLog);
         } else {
-            log.info(
+            log.debug(
                     "{} - PROCESSING message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}",
                     tenant, context.getTopic(), connectorIdentifier, mapping.getName(),
                     mapping.getQos().ordinal());

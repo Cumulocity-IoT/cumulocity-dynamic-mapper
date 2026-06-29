@@ -27,6 +27,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="33. Dynamic group subscription"
+
 GROUP_NAME="auto-group"
 DEVICE_NAME="test-group-device-01"
 DEVICE_TYPE="test-group-type"
@@ -53,11 +55,11 @@ cleanup() {
     echo "Cleanup done."
 }
 
-if [ "${1}" = "--cleanup" ]; then
-    trap cleanup EXIT
-fi
+dm_parse_args "$@"
+dm_register_cleanup cleanup
+dm_validate_only_exit
 
-dm_banner "Outbound Dynamic Subscription by Device Group"
+dm_banner "$TEST_TITLE"
 
 # Step 1: Create device group
 dm_step 1 "Create device group '$GROUP_NAME'"
@@ -115,6 +117,6 @@ if [ "${GROUP_MATCH:-0}" -eq 0 ]; then
 fi
 
 dm_print_summary
-dm_done "Outbound Dynamic Subscription by Device Group"
+dm_done "$TEST_TITLE"
 echo " State saved to: $STATE_FILE"
 echo " Run test-case-IV.sh to test group removal."

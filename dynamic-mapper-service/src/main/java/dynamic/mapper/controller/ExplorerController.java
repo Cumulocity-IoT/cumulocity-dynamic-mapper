@@ -35,9 +35,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.RequiredArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -50,16 +50,14 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/explorer")
 @Tag(name = "Message Explorer Controller", description = "API for live exploration of raw inbound messages from broker connectors")
 public class ExplorerController {
 
-    @Autowired
-    private ExplorerService explorerService;
-
-    @Autowired
-    private ContextService<UserCredentials> contextService;
+    private final ExplorerService explorerService;
+    private final ContextService<UserCredentials> contextService;
 
     // ---- DTOs ---------------------------------------------------------------
 
@@ -84,6 +82,9 @@ public class ExplorerController {
 
         @Schema(description = "C8Y device type filter (OUTBOUND only; optional). When set, only messages from devices whose type matches this value are captured.", example = "c8y_MQTTDevice")
         private String deviceType;
+
+        @Schema(description = "Session TTL in minutes. Overrides the tenant-wide default. Sessions expire when not polled for longer than this value.", example = "10")
+        private Integer sessionTTLMinutes;
     }
 
     // ---- Endpoints ----------------------------------------------------------
@@ -100,6 +101,7 @@ public class ExplorerController {
     @PostMapping(value = "/session", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> startSession(@Valid @RequestBody StartSessionRequest request) {
         String tenant = contextService.getContext().getTenant();
+        String userId = contextService.getContext().getUsername();
         // connectorIdentifier is required for INBOUND sessions
         boolean isOutbound = "OUTBOUND".equalsIgnoreCase(request.getDirection());
         if (!isOutbound && (request.getConnectorIdentifier() == null || request.getConnectorIdentifier().isBlank())) {
@@ -108,12 +110,14 @@ public class ExplorerController {
         try {
             String sessionId = explorerService.startSession(
                     tenant,
+                    userId,
                     request.getConnectorIdentifier(),
                     request.getTopic(),
                     request.getMaxMessages(),
                     request.getDirection(),
                     request.getSourceId(),
-                    request.getDeviceType());
+                    request.getDeviceType(),
+                    request.getSessionTTLMinutes());
             log.info("{} - Explorer session created: {}", tenant, sessionId);
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("sessionId", sessionId));
         } catch (ConnectorRegistryException e) {

@@ -25,12 +25,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import dynamic.mapper.core.IdentityResolutionService;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,7 +54,6 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.MappingType;
@@ -88,7 +86,10 @@ class SubstitutionResultInboundProcessorTest {
     private C8YAgent c8yAgent;
 
         @Mock
-        private ConfigurationRegistry configurationRegistry;
+    private ConfigurationRegistry configurationRegistry;
+
+    @Mock
+    private IdentityResolutionService identityResolutionService;
 
     @Mock
     private MappingResolverService mappingResolverService;
@@ -106,13 +107,12 @@ class SubstitutionResultInboundProcessorTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        processor = new SubstitutionResultInboundProcessor();
-        injectDependencies();
+        processor = new SubstitutionResultInboundProcessor(c8yAgent, mappingService, configurationRegistry, identityResolutionService);
 
         mapping = createCompleteMapping();
         mappingStatus = new MappingStatus(
                 "test-id", "Test Mapping", "test-mapping", Direction.INBOUND,
-                "test/topic", "output/topic", 0L, 0L, 0L, 0L, 0L, null);
+                "test/topic", "output/topic", 0L, 0L, 0L, null);
 
         processingContext = createProcessingContext();
 
@@ -149,18 +149,6 @@ class SubstitutionResultInboundProcessorTest {
         )).thenReturn(true);
     }
 
-    private void injectDependencies() throws Exception {
-        injectField("mappingService", mappingService);
-        injectField("c8yAgent", c8yAgent);
-                injectField("configurationRegistry", configurationRegistry);
-    }
-
-    private void injectField(String fieldName, Object value) throws Exception {
-        Field field = SubstitutionResultInboundProcessor.class.getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(processor, value);
-    }
-
     private Mapping createCompleteMapping() {
         return Mapping.builder()
                 .id("test-mapping-id")
@@ -172,8 +160,6 @@ class SubstitutionResultInboundProcessorTest {
                 .direction(Direction.INBOUND)
                 .debug(true)
                 .active(true)
-                .snoopStatus(SnoopStatus.NONE)
-                .snoopedTemplates(new ArrayList<>())
                 .qos(Qos.AT_MOST_ONCE)
                 .useExternalId(true)
                 .externalIdType(TEST_EXTERNAL_ID_TYPE)

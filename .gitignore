@@ -64,3 +64,4 @@ resources/test-env/hivemq/hivemq-conf/keystore.jks
 CLAUDE.md
 .vscode/mcp.json
 attic
+resources/script/test/tmp

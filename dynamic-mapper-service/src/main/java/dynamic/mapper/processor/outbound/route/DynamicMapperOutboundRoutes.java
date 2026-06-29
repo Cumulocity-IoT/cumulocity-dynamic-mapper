@@ -20,6 +20,8 @@
  */
 package dynamic.mapper.processor.outbound.route;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -41,7 +43,6 @@ import dynamic.mapper.processor.outbound.processor.ExtensibleOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.JSONataOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.EnrichmentOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.SendOutboundProcessor;
-import dynamic.mapper.processor.outbound.processor.SnoopingOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.SubstitutionResultOutboundProcessor;
 import dynamic.mapper.processor.util.ProcessingContextAggregationStrategy;
 import dynamic.mapper.processor.util.ConsolidationProcessor;
@@ -68,9 +69,6 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
 
     @Autowired
     private SubstitutionResultOutboundProcessor substitutionOutboundProcessor;
-
-    @Autowired
-    private SnoopingOutboundProcessor snoopingOutboundProcessor;
 
     @Autowired
     private DeserializationOutboundProcessor deserializationOutboundProcessor;
@@ -118,11 +116,10 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                     log.error("Full Stack Trace: ", cause);
 
                     ProcessingResultWrapper<Object> result = ProcessingResultWrapper.builder()
-                            .error(cause)
-                            .maxCPUTimeMS(0)
+                            .pipelineTimeoutMS(0)
                             .build();
 
-                    exchange.getIn().setHeader("processingResult", result);
+                    exchange.getIn().setHeader(CamelHeaders.PROCESSING_RESULT, result);
                 })
                 .to("direct:outboundErrorHandling");
 
@@ -130,10 +127,10 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
         from("direct:processOutboundMessage")
                 .routeId("outbound-message-processor")
                 .choice()
-                .when(header("mappings").isNull())
+                .when(header(CamelHeaders.MAPPINGS).isNull())
                 .process(exchange -> {
                     // No mappings found - return empty contexts list
-                    exchange.getIn().setHeader("processedContexts", new ArrayList<ProcessingContext<Object>>());
+                    exchange.getIn().setHeader(CamelHeaders.PROCESSED_CONTEXTS, new ArrayList<ProcessingContext<Object>>());
                 })
                 .stop()
                 .otherwise()
@@ -145,21 +142,21 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .process(exchange -> {
                     // Filter mappings before splitting: active and deployed
                     @SuppressWarnings("unchecked")
-                    List<Mapping> allMappings = exchange.getIn().getHeader("mappings", List.class);
-                    String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
-                    String tenant = exchange.getIn().getHeader("tenant", String.class);
+                    List<Mapping> allMappings = exchange.getIn().getHeader(CamelHeaders.MAPPINGS, List.class);
+                    String connectorIdentifier = exchange.getIn().getHeader(CamelHeaders.CONNECTOR_IDENTIFIER, String.class);
+                    String tenant = exchange.getIn().getHeader(CamelHeaders.TENANT, String.class);
 
                     if (allMappings != null) {
                         List<Mapping> validMappings = allMappings.stream()
                                 .filter(mapping -> isValidMapping(tenant, mapping, connectorIdentifier))
                                 .collect(java.util.stream.Collectors.toList());
 
-                        exchange.getIn().setHeader("mappings", validMappings);
+                        exchange.getIn().setHeader(CamelHeaders.MAPPINGS, validMappings);
                         log.debug("Filtered {} outbound mappings to {} valid mappings",
                                 allMappings.size(), validMappings.size());
                     }
                 })
-                .split(header("mappings"))
+                .split(header(CamelHeaders.MAPPINGS))
                 .parallelProcessing(true)
                 .executorService(virtualThreadPool)
                 .aggregationStrategy(processingContextAggregationStrategy)
@@ -172,7 +169,9 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 // 0. Common processing for all
                 .process(deserializationOutboundProcessor)
                 .process(enrichmentProcessor)
-
+                // Note: outbound has no topic/payload filter step (FilterInboundProcessor is
+                // inbound-only). Outbound filtering is entirely handled by the connector's
+                // subscription topic, not by a post-enrichment predicate.
 
                 // Check if further processing should be ignored after enrichment
                 .choice()
@@ -184,10 +183,6 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
 
                 // 1. Branch based on processing type
                 .choice()
-                // 1a. Snooping path
-                .when(exchange -> isSnooping(exchange))
-                .to("direct:processOutboundSnooping")
-
                 // 1b. Extension processing path
                 .when(exchange -> isExtension(exchange))
                 .to("direct:processOutboundExtension")
@@ -200,17 +195,19 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .when(exchange -> isJSONataExtraction(exchange))
                 .to("direct:processOutboundJSONataExtraction")
 
-                // Default fallback
+                // Default fallback — unknown/unmatched TransformationType
                 .otherwise()
+                .process(exchange -> {
+                    ProcessingContext<?> ctx = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT,
+                            ProcessingContext.class);
+                    log.warn("{} - No matching transformation type for mapping '{}' (type={}), falling back to JSONata",
+                            ctx != null ? ctx.getTenant() : "unknown",
+                            ctx != null && ctx.getMapping() != null ? ctx.getMapping().getName() : "unknown",
+                            ctx != null && ctx.getMapping() != null ? ctx.getMapping().getTransformationType() : "null");
+                })
                 .to("direct:processOutboundJSONataExtraction") // Default to JSONata
                 .end();
 
-        // 1a. Snooping processing route
-        from("direct:processOutboundSnooping")
-                .routeId("outbound-snooping-processor")
-                .process(snoopingOutboundProcessor)
-                .to("log:outbound-snooping-message?level=DEBUG&showBody=false")
-                .process(consolidationProcessor);
 
         // 1b. Extension processing route
         from("direct:processOutboundExtension")

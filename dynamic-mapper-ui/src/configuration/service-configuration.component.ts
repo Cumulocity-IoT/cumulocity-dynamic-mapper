@@ -67,8 +67,12 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     inventoryCacheSize: 0,
     inventoryCacheRetention: 0,
     flowStateRetention: 1440,
+    mappingVersionRetention: 10,
     inventoryFragmentsToCache: ['type'],  // always add type
     maxCPUTimeMS: 5000,  // 5 seconds
+    pipelineTimeoutMS: 8000,  // 8 seconds
+    engineRotationThreshold: 100,
+    engineMaxAgeMinutes: 0,
     jsonataAgent: undefined,
     javaScriptAgent: undefined,
     smartFunctionAgent: undefined,
@@ -136,7 +140,11 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       inventoryCacheRetention: [''],
       inventoryCacheSize: [''],
       flowStateRetention: [''],
+      mappingVersionRetention: [''],
       maxCPUTimeMS: [''],
+      pipelineTimeoutMS: [''],
+      engineRotationThreshold: [''],
+      engineMaxAgeMinutes: [''],
       supportESM: [''],
       jsonataAgent: [{ value: '', disabled: true }],
       javaScriptAgent: [{ value: '', disabled: true }],
@@ -196,6 +204,17 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
 
   async clickedClearFlowStateCache() {
     await this.clearCache('FLOW_STATE_CACHE');
+  }
+
+  async clickedRotateGraalVMEngine() {
+    const response = await this.sharedService.runOperation({
+      operation: Operation.ROTATE_GRAALVM_ENGINE,
+    });
+    if (response.status === HttpStatusCode.Created) {
+      this.alertService.success(gettext('GraalVM Engine rotation triggered.'));
+    } else {
+      this.alertService.danger(gettext('Failed to rotate GraalVM Engine!'));
+    }
   }
 
   private async clearCache(cacheId: string): Promise<void> {

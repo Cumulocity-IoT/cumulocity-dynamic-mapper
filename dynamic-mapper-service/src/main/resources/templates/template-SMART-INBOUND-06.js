@@ -31,13 +31,15 @@
 */
 
 function onMessage(msg, context) {
-    var payload = msg.getPayload();
+    var payload = msg.payload;
 
     console.log("Processing message with sourceId override");
     console.log("Payload messageId: " + payload["messageId"]);
 
-    // Get clientId from context first, fall back to payload
-    var clientId = context.getConfig()["clientId"] || payload["clientId"];
+    // Prefer context clientId (MQTT client id), fall back to payload field
+    var clientId = context.getClientId() || payload["clientId"];
+    // Prefer timestamp from payload; fall back to connector receive time
+    var time = payload["time"] || msg.time;
 
     // Lookup the originating device using external ID
     var originatingDevice = context.getManagedObjectByExternalId({
@@ -68,7 +70,7 @@ function onMessage(msg, context) {
         cumulocityType: "measurement",
         action: "create",
         payload: {
-            "time":  new Date().toISOString(),
+            "time":  time,
             "type": "c8y_TemperatureMeasurement",
             "c8y_Steam": {
                 "Temperature": {

@@ -62,7 +62,6 @@ A Cumulocity web plugin providing a full UI for:
 - **Mapping configuration** — stepper wizard and unified editor for creating mappings
 - **Monitoring** — real-time status of the mapper and all connectors
 - **Message Explorer** — inspect live inbound/outbound broker messages and create mappings from them
-- **Snoop Explorer** — review payloads captured during a snoop session
 - **Mapping Tree** — hierarchical view of all active mappings
 - **Test Device** — simulate a device to test mappings end-to-end
 - **AI-assisted mapping** — generate mapping substitutions from a natural-language prompt
@@ -103,7 +102,7 @@ The mapper processes messages in both directions:
 Inbound processing pipeline:
 
 ```
-AConnectorClient → CamelDispatcherInbound → deserialize → snoop → enrich → substitute/eval → emit to C8Y
+AConnectorClient → CamelDispatcherInbound → deserialize → enrich → substitute/eval → emit to C8Y
 ```
 
 <p align="center">

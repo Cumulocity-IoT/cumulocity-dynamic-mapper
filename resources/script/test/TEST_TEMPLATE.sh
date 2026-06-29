@@ -21,25 +21,14 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
 # ── Script-specific configuration ──────────────────────────────────────────────
-KEEP_ON_FAILURE=false
 EXT_ID="dmtest-template-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
 
-# Parse command-line flags
-for arg in "$@"; do
-    case "$arg" in
-        --keep) KEEP_ON_FAILURE=true ;;
-        --cleanup) trap cleanup EXIT ;;
-    esac
-done
+dm_parse_args "$@"
 
 # ── Cleanup function (always runs unless --keep is set) ───────────────────────
 cleanup() {
-    if [ "$KEEP_ON_FAILURE" = "true" ]; then
-        dm_warn "Skipping cleanup (--keep flag set)"
-        return 0
-    fi
     
     dm_info "Cleaning up test resources ..."
     [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" 2>/dev/null || true
@@ -57,7 +46,7 @@ cleanup() {
     dm_info "Cleanup complete"
 }
 
-trap cleanup EXIT
+dm_register_cleanup cleanup
 
 # ── Main test flow ────────────────────────────────────────────────────────────
 dm_banner "Test Template: Inbound JSON Example"
@@ -66,6 +55,7 @@ dm_step 1 "Validating environment"
 dm_validate_tools
 dm_wait_for_service
 dm_require_mqtt_broker
+dm_validate_only_exit
 
 dm_step 2 "Creating mapping"
 MAPPING_JSON=$(jq -cn \

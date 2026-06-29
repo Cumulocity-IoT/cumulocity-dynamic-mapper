@@ -27,15 +27,6 @@ export enum EditorMode {
   COPY = 'COPY'
 }
 
-export enum AdvisorAction {
-  CONTINUE = 'CONTINUE',
-  CANCEL = 'CANCEL',
-  STOP_SNOOPING_AND_EDIT = 'STOP_SNOOPING_AND_EDIT',
-  CONTINUE_SNOOPING = 'CONTINUE_SNOOPING',
-  EDIT = 'EDIT',
-  VIEW = 'VIEW',
-}
-
 export const STEP_SELECT_CONNECTOR = 0;
 export const STEP_GENERAL_SETTINGS = 1;
 export const STEP_SELECT_TEMPLATES = 2;
@@ -182,10 +173,12 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
       properties: [
         { name: 'payload', type: 'Record<string, any>', documentation: 'Pre-deserialized JSON payload. Dynamic Mapper automatically deserializes JSON payloads to objects. Use bracket notation to access properties: payload["key"].\n\n**ANY_PAYLOAD (SparkPlugB, Protobuf, XML):** Base64-encoded binary string. Decode with a pure-JS Base64 decoder, for example:\n```js\nfunction decodeBase64(base64) {\n  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";\n  const clean = base64.replace(/=+$/, "");\n  const bytes = [];\n  let buffer = 0;\n  let bits = 0;\n\n  for (let i = 0; i < clean.length; i++) {\n    const value = chars.indexOf(clean.charAt(i));\n    if (value < 0) { continue; }\n    buffer = (buffer << 6) | value;\n    bits += 6;\n    if (bits >= 8) { bits -= 8; bytes.push((buffer >> bits) & 0xff); }\n  }\n  return new Uint8Array(bytes);\n}\nconst bytes = decodeBase64(msg.payload);\n```' },
         { name: 'topic', type: 'string', documentation: 'The broker topic on which the message arrived (e.g. MQTT topic).' },
-        { name: 'clientId', type: 'string', documentation: 'Transport/MQTT client ID of the sender.' },
-        { name: 'transportId', type: 'string', documentation: 'Identifier for the source/destination transport (e.g. "mqtt", "kafka").' },
-        { name: 'transportFields', type: 'Record<string, string>', documentation: 'Transport-specific fields/properties/headers.' },
-        { name: 'time', type: 'Date', documentation: 'Timestamp of the incoming message.' }
+        { name: 'clientId', type: 'string | undefined', documentation: 'Transport/MQTT client ID of the sender. Set for inbound messages; undefined for outbound.' },
+        { name: 'sourceId', type: 'string | undefined', documentation: 'Internal Cumulocity device ID of the originating device. Set for outbound messages; undefined for inbound.' },
+        { name: 'cumulocityType', type: 'string | undefined', documentation: 'Lowercase C8y object type string (e.g. "measurement", "alarm"). Set by the outbound processor; undefined for inbound messages.' },
+        { name: 'time', type: 'string | undefined', documentation: 'ISO-8601 timestamp captured when the message was received by the connector. Use as a reliable receive-time fallback: `var time = payload["time"] ?? msg.time;`' },
+        { name: 'transportId', type: 'string | undefined', documentation: 'Identifier of the connector that delivered this message (e.g. "my-mqtt-connector"). Set for inbound messages; undefined for outbound.' },
+        { name: 'transportFields', type: 'Record<string, string>', documentation: 'Transport-specific key/value pairs (e.g. Kafka record headers, MQTT 5 user properties). Empty map when no transport fields are available.' }
       ],
       methods: [],
       documentation: 'Inbound device message passed to the Smart Function as the first argument (`msg`). Payloads are pre-deserialized from JSON for convenience — use bracket notation: msg.payload["key"].'
@@ -700,10 +693,10 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
             `- \`msg: DynamicMapperDeviceMessage\` — Pre-deserialized broker message:\n` +
             `  - \`msg.payload\` — JSON payload as a plain object. Access fields: \`msg.payload["temperature"]\`\n` +
             `  - \`msg.topic\` — The broker topic on which the message arrived\n` +
-            `  - \`msg.clientId\` — Transport/MQTT client ID of the sender\n` +
-            `  - \`msg.transportId\` — Source transport identifier (e.g. \`"mqtt"\`, \`"kafka"\`)\n` +
-            `  - \`msg.transportFields\` — Transport-specific headers/properties\n` +
-            `  - \`msg.time\` — Timestamp of the incoming message\n` +
+            `  - \`msg.clientId\` — Transport/MQTT client ID of the sender (inbound only)\n` +
+            `  - \`msg.time\` — ISO-8601 receive timestamp set by the connector\n` +
+            `  - \`msg.transportId\` — Connector identifier (e.g. \`"my-mqtt-connector"\`, \`"kafka-prod"\`)\n` +
+            `  - \`msg.transportFields\` — Transport-specific key/value pairs (e.g. Kafka headers)\n` +
             `- \`context: SmartFunctionContext\` — Runtime context with state, config, and device lookups\n\n` +
             `**Returns** \`CumulocityObject | CumulocityObject[]\` with these fields:\n` +
             `- \`cumulocityType\` — Target C8Y API: \`"measurement"\`, \`"event"\`, \`"alarm"\`, \`"operation"\`, \`"managedObject"\`, \`"custom"\`\n` +

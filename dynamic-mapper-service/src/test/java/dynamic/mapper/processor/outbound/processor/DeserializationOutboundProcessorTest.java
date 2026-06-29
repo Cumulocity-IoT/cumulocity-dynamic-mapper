@@ -45,7 +45,6 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.MappingType;
@@ -57,6 +56,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
+@SuppressWarnings({ "rawtypes", "unchecked" })
 class DeserializationOutboundProcessorTest {
 
     @Mock
@@ -181,8 +181,6 @@ class DeserializationOutboundProcessorTest {
                 .autoAckOperation(true)
                 .useExternalId(true)
                 .externalIdType(TEST_EXTERNAL_ID_TYPE)
-                .snoopStatus(SnoopStatus.NONE)
-                .snoopedTemplates(new ArrayList<>())
                 .filterMapping("")
                 .filterInventory("")
                 .maxFailureCount(0)
@@ -471,7 +469,6 @@ class DeserializationOutboundProcessorTest {
         assertEquals(complexPayload, capturedContext.getPayload(), "Should use parsed payload");
 
         // Verify nested structure is maintained
-        @SuppressWarnings("unchecked")
         Map<String, Object> payloadMap = (Map<String, Object>) capturedContext.getPayload();
         assertTrue(payloadMap.containsKey("measurements"), "Should contain measurements array");
         assertTrue(payloadMap.containsKey("metadata"), "Should contain metadata object");

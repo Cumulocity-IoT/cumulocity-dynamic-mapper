@@ -31,18 +31,36 @@ import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
 import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
 import dynamic.mapper.core.ConfigurationRegistry;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PreDestroy;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 
 /**
- * Manages MQTT push connectivity for devices.
+ * Manages outbound MQTT push connectivity for devices against the Cumulocity MQTT broker.
+ *
+ * <p>The service maintains a per-tenant map of persistent HiveMQ MQTT 3 client connections
+ * (TLS, port 8883). It is used by {@link dynamic.mapper.notification.service.SubscriptionManager}
+ * and {@link dynamic.mapper.notification.NotificationSubscriber} to activate or deactivate
+ * MQTT push sessions for individual devices whenever they are registered or removed from
+ * the Cumulocity notification subsystem.
+ *
+ * <p>Each device connection:
+ * <ul>
+ *   <li>authenticates using the tenant's microservice credentials,</li>
+ *   <li>subscribes to the SmartREST downstream topic {@code s/ds},</li>
+ *   <li>uses automatic reconnect and a configurable connection timeout.</li>
+ * </ul>
+ *
+ * <p>All connections for a tenant can be torn down at once via {@link #disconnectAll(String)},
+ * which is called during tenant unsubscription. The Spring {@code @PreDestroy} hook
+ * ensures all connections are closed on application shutdown.
  */
 @Slf4j
 @Service
@@ -50,13 +68,12 @@ public class MqttPushManager {
 
     private static final int CONNECTION_TIMEOUT_SECONDS = 30;
 
-    @Autowired
-    private MicroserviceSubscriptionsService subscriptionsService;
+    private final MicroserviceSubscriptionsService subscriptionsService;
+    private final ConfigurationRegistry configurationRegistry;
 
-    private ConfigurationRegistry configurationRegistry;
-
-    @Autowired
-    public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
+    public MqttPushManager(MicroserviceSubscriptionsService subscriptionsService,
+                           @Lazy ConfigurationRegistry configurationRegistry) {
+        this.subscriptionsService = subscriptionsService;
         this.configurationRegistry = configurationRegistry;
     }
 
@@ -74,12 +91,15 @@ public class MqttPushManager {
             return;
         }
 
-        // Check if already connected
+        // M9: return early for ANY existing entry — not just connected ones.
+        // A pending/disconnected client still in the map must not be overwritten
+        // by a second call; that would silently leak the original client.
         Map<String, Mqtt3Client> tenantConnections = activePushConnections.get(tenant);
         if (tenantConnections != null && tenantConnections.containsKey(deviceId)) {
             Mqtt3Client existing = tenantConnections.get(deviceId);
-            if (existing != null && existing.getState().isConnected()) {
-                log.debug("{} - MQTT already connected for device {}", tenant, deviceId);
+            if (existing != null) {
+                log.debug("{} - MQTT client already present for device {} (state: {}), skipping duplicate activation",
+                        tenant, deviceId, existing.getState());
                 return;
             }
         }
@@ -136,18 +156,22 @@ public class MqttPushManager {
                                 });
                     });
 
-            // Handle connection errors
-            connectionFuture.exceptionally(throwable -> {
-                logMqttError(tenant, deviceId, throwable);
-                return null;
-            });
-
-            // Add timeout
+            // Handle errors and timeout in a single handler to avoid duplicate log entries.
+            // orTimeout() completes the future exceptionally with TimeoutException, which would
+            // otherwise trigger both an exceptionally() handler and this whenComplete().
             connectionFuture.orTimeout(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                     .whenComplete((result, throwable) -> {
                         if (throwable instanceof TimeoutException) {
-                            log.warn("{} - MQTT connection timeout for device {}", tenant, deviceId);
+                            log.debug("{} - MQTT connection timeout for device {} — removing stale entry",
+                                    tenant, deviceId);
                             client.disconnect();
+                            // Remove from map so future activatePushConnectivity calls can retry cleanly.
+                            Map<String, Mqtt3Client> connections = activePushConnections.get(tenant);
+                            if (connections != null) {
+                                connections.remove(deviceId, client);
+                            }
+                        } else if (throwable != null) {
+                            logMqttError(tenant, deviceId, throwable);
                         }
                     });
 
@@ -232,10 +256,12 @@ public class MqttPushManager {
         if (baseUrl == null) {
             throw new IllegalArgumentException("Base URL cannot be null");
         }
-        return baseUrl.replace("http://", "")
-                .replace("https://", "")
-                .replace(":8111", "")
-                .replace(":8111/", "");
+        // L9: chained replace() leaves path segments and only strips port 8111; use URI to get pure hostname
+        try {
+            return new URI(baseUrl).getHost();
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("Invalid base URL: " + baseUrl, e);
+        }
     }
 
     private void logMqttError(String tenant, String deviceId, Throwable throwable) {

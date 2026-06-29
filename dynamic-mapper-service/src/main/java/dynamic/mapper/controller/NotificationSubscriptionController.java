@@ -100,7 +100,8 @@ public class NotificationSubscriptionController {
         }
     }
 
-    @Operation(summary = "Update static device notification subscription")
+    @Operation(summary = "Update device notification subscription",
+            description = "Updates static or dynamic device subscriptions. Pass ?subscription=DynamicMapperDynamicDeviceSubscription to target the dynamic bucket.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Subscription updated successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request"),
@@ -111,14 +112,15 @@ public class NotificationSubscriptionController {
     @PreAuthorize(ADMIN_CREATE_ROLES)
     @PutMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<NotificationSubscriptionResponse> updateSubscription(
-            @Valid @RequestBody NotificationSubscriptionRequest request) {
+            @Valid @RequestBody NotificationSubscriptionRequest request,
+            @RequestParam(value = "subscription", defaultValue = Utils.STATIC_DEVICE_SUBSCRIPTION) String subscription) {
 
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
 
         try {
-            NotificationSubscriptionResponse response = subscriptionService.updateDeviceSubscription(tenant, request);
-            log.info("{} - Successfully updated subscription", tenant);
+            NotificationSubscriptionResponse response = subscriptionService.updateDeviceSubscription(tenant, request, subscription);
+            log.info("{} - Successfully updated {} subscription", tenant, subscription);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("{} - Error updating subscription: {}", tenant, e.getMessage(), e);

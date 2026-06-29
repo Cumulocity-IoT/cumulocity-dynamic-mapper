@@ -24,6 +24,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="26. filterMapping — selective forwarding"
+
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 DEVICE_NAME="dmtest-out-filter-$(date +%s)"
 DEVICE_TYPE="dmtest-out-type"
@@ -40,15 +42,17 @@ cleanup() {
     [ -n "$DEVICE_ID" ] && dm_delete_device "$DEVICE_ID" || true
 }
 
-[[ "${1:-}" == "--cleanup" ]] && trap cleanup EXIT
+dm_parse_args "$@"
+dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Outbound filterMapping — Selective Event Forwarding"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
 dm_require_mqtt_broker
 dm_verify_mqtt_connector_ready
+dm_validate_only_exit
 
 dm_step "Creating test device ..."
 dm_create_device "$DEVICE_NAME" "$DEVICE_TYPE"
@@ -88,9 +92,7 @@ MAPPING_A_JSON=$(cat <<EOF
   "debug": false,
   "useExternalId": true,
   "externalIdType": "c8y_Serial",
-  "qos": "AT_LEAST_ONCE",
-  "snoopStatus": "NONE",
-  "snoopedTemplates": []
+  "qos": "AT_LEAST_ONCE"
 }
 EOF
 )
@@ -121,9 +123,7 @@ MAPPING_B_JSON=$(cat <<EOF
   "debug": false,
   "useExternalId": true,
   "externalIdType": "c8y_Serial",
-  "qos": "AT_LEAST_ONCE",
-  "snoopStatus": "NONE",
-  "snoopedTemplates": []
+  "qos": "AT_LEAST_ONCE"
 }
 EOF
 )
@@ -165,5 +165,5 @@ dm_wait 8
 dm_assert_mapping_received_gt "Mapping A should process bus event" "$MAPPING_A_ID" "$BASELINE_A2"
 dm_assert_mapping_received_gt "Mapping B should process bus event" "$MAPPING_B_ID" "$BASELINE_B2"
 
-dm_done "Outbound filterMapping — Selective Event Forwarding"
+dm_done "$TEST_TITLE"
 dm_print_summary

@@ -186,12 +186,12 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   ngAfterViewChecked(): void {
     if (!this.highlightApplied) {
+      this.highlightApplied = true;
       setTimeout(() => {
         document.querySelectorAll('pre code').forEach((block) => {
           hljs.highlightElement(block as HTMLElement);
         });
         this.addCopyButtons();
-        this.highlightApplied = true;
       }, 100);
     }
   }

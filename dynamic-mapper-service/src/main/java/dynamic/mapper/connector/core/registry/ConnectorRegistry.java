@@ -32,7 +32,6 @@ import dynamic.mapper.connector.amqp.AMQP10Client;
 import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.connector.kafka.KafkaClientV2;
 import dynamic.mapper.connector.mqtt.MQTT3Client;
-import dynamic.mapper.connector.mqtt.MQTTServiceClient;
 import dynamic.mapper.connector.pulsar.MQTTServicePulsarClient;
 import dynamic.mapper.connector.pulsar.PulsarConnectorClient;
 import dynamic.mapper.connector.webhook.WebHook;
@@ -205,8 +204,6 @@ public class ConnectorRegistry {
 
     public void registerConnectors() throws ConnectorRegistryException, ConnectorException {
         connectorSpecificationMap.put(ConnectorType.MQTT, new MQTT3Client().getConnectorSpecification());
-        connectorSpecificationMap.put(ConnectorType.CUMULOCITY_MQTT_SERVICE,
-                new MQTTServiceClient().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.KAFKA, new KafkaClientV2().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.WEB_HOOK, new WebHook().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.WEB_HOOK_INTERNAL, new WebHookInternal().getConnectorSpecification());

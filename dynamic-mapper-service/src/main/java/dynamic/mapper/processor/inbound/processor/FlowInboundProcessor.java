@@ -1,7 +1,11 @@
 package dynamic.mapper.processor.inbound.processor;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 
 import org.graalvm.polyglot.Context;
@@ -13,9 +17,9 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractFlowProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.CumulocityObject;
-import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
+import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,8 +31,8 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class FlowInboundProcessor extends AbstractFlowProcessor {
 
-    public FlowInboundProcessor(MappingService mappingService) {
-        super(mappingService);
+    public FlowInboundProcessor(MappingService mappingService, GraalVMContextService graalVMContextService) {
+        super(mappingService, graalVMContextService);
     }
 
     @Override
@@ -50,31 +54,33 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
         if (payload instanceof byte[] && mappingType != null && "ANY_PAYLOAD".equals(mappingType.toString())) {
             payload = Base64.getEncoder().encodeToString((byte[]) payload);
         }
+        Map<String, String> transportFields = Collections.emptyMap();
+        if (context.getKey() != null) {
+            transportFields = new HashMap<>();
+            transportFields.put(Mapping.CONTEXT_DATA_KEY_NAME, context.getKey());
+        }
         return graalContext.asValue(new dynamic.mapper.processor.model.InputMessage(
                 payload,
                 context.getTopic(),
                 context.getClientId(),
-                null));
+                null,
+                null,
+                Instant.now().toString(),
+                context.getConnectorIdentifier(),
+                transportFields));
     }
 
     @Override
     protected void processResult(Value result, ProcessingContext<?> context, String tenant) {
-        // Use thread-safe OutputCollector internally
-        OutputCollector output = new OutputCollector();
-
-        // Extract warnings and logs using thread-safe methods
-        extractWarnings(context.getFlowContext(), output, tenant);
-        extractLogs(context.getFlowContext(), output, tenant);
+        extractWarnings(context.getFlowContext(), context.getWarnings(), tenant);
+        extractLogs(context.getFlowContext(), context.getLogs(), tenant);
 
         // Check if result is null or undefined
         if (result == null || result.isNull()) {
             log.warn("{} - onMessage function did not return any transformation result (null)", tenant);
-            output.addWarning("onMessage function did not return any transformation result");
+            context.getWarnings().add("onMessage function did not return any transformation result");
             context.setFlowResult(new ArrayList<>());
             context.setIgnoreFurtherProcessing(true);
-
-            // Sync back to context for backward compatibility
-            syncOutputToContext(output, context);
             return;
         }
 
@@ -89,22 +95,16 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
             } else {
                 log.warn("{} - onMessage function returned unexpected result type: {} ({})",
                         tenant, result.getClass().getSimpleName(), result.getMetaObject());
-                output.addWarning("onMessage function returned unexpected result type: " + result.getMetaObject());
+                context.getWarnings().add("onMessage function returned unexpected result type: " + result.getMetaObject());
                 context.setFlowResult(new ArrayList<>());
                 context.setIgnoreFurtherProcessing(true);
-
-                // Sync back to context for backward compatibility
-                syncOutputToContext(output, context);
                 return;
             }
         } catch (Exception e) {
             log.error("{} - Error processing onMessage result: {}", tenant, e.getMessage(), e);
-            output.addWarning("Error processing onMessage result: " + e.getMessage());
+            context.getWarnings().add("Error processing onMessage result: " + e.getMessage());
             context.setFlowResult(new ArrayList<>());
             context.setIgnoreFurtherProcessing(true);
-
-            // Sync back to context for backward compatibility
-            syncOutputToContext(output, context);
             return;
         }
 
@@ -113,20 +113,14 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
 
         if (outputMessages.isEmpty()) {
             log.info("{} - No valid messages produced from onMessage function", tenant);
-            output.addWarning("No valid messages produced from onMessage function");
+            context.getWarnings().add("No valid messages produced from onMessage function");
             context.setIgnoreFurtherProcessing(true);
-
-            // Sync back to context for backward compatibility
-            syncOutputToContext(output, context);
             return;
         }
 
         if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
             log.info("{} - onMessage function returned {} complete message(s)", tenant, outputMessages.size());
         }
-
-        // Sync back to context for backward compatibility
-        syncOutputToContext(output, context);
     }
 
     @Override
@@ -138,7 +132,7 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
             context.addError(new ProcessingException(errorMessage, e));
         }
 
-        if (!context.getTesting()) {
+        if (!context.isTesting()) {
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             mappingStatus.errors++;
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
@@ -198,16 +192,4 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
         }
     }
 
-    /**
-     * Sync OutputCollector contents back to ProcessingContext for backward compatibility.
-     * Can be removed once all callers migrate to reading from OutputCollector directly.
-     */
-    private void syncOutputToContext(OutputCollector output, ProcessingContext<?> context) {
-        if (!output.getWarnings().isEmpty()) {
-            context.getWarnings().addAll(output.getWarnings());
-        }
-        if (!output.getLogs().isEmpty()) {
-            context.getLogs().addAll(output.getLogs());
-        }
-    }
 }

@@ -214,6 +214,14 @@ public class HttpClient extends AConnectorClient {
     }
 
     @Override
+    protected boolean isPassiveReceiver() {
+        // The HTTP connector has no broker connection — it is driven by incoming
+        // REST requests. Inbound mapping (deploy/activate) updates must take effect
+        // immediately, without requiring the connector to be "connected" first.
+        return true;
+    }
+
+    @Override
     public Boolean supportsWildcardInTopic(Direction direction) {
         if (direction == Direction.INBOUND) {
             return Boolean.parseBoolean(

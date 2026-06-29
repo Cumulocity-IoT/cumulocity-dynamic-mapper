@@ -21,10 +21,19 @@
 
 package dynamic.mapper.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import org.apache.camel.Exchange;
+import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
@@ -34,9 +43,9 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.flow.JavaScriptConsole;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import dynamic.mapper.processor.model.DataPrepContext;
-import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -49,15 +58,51 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public abstract class AbstractFlowProcessor extends CommonProcessor {
 
-    protected final MappingService mappingService;
+    /**
+     * Polyfill for browser-standard atob() / btoa() functions.
+     * GraalVM's JS engine is ECMAScript-only — it does not include Web APIs.
+     * The polyfill uses the already-sandboxed java.util.Base64 host class so no
+     * additional host-class permissions are required.
+     */
+    private static final Source BASE64_POLYFILL_SOURCE = Source.newBuilder("js", """
+            (function() {
+              var _Base64   = Java.type('java.util.Base64');
+              var _JString  = Java.type('java.lang.String');
+              var _Charsets = Java.type('java.nio.charset.StandardCharsets');
+              var _Arrays   = Java.type('java.util.Arrays');
+              globalThis.atob = function(encoded) {
+                return new _JString(_Base64.getDecoder().decode(encoded), _Charsets.UTF_8);
+              };
+              globalThis.btoa = function(plain) {
+                // String.getBytes(Charset) has overload-resolution issues in GraalVM;
+                // use Charset.encode(String) → ByteBuffer and extract exact bytes via Arrays.copyOfRange.
+                var buf = _Charsets.UTF_8.encode(plain);
+                return _Base64.getEncoder().encodeToString(
+                  _Arrays.copyOfRange(buf.array(), buf.position(), buf.limit()));
+              };
+            })();
+            """, "__base64_polyfill__.js")
+            .cached(true)
+            .buildLiteral();
 
-    protected AbstractFlowProcessor(MappingService mappingService) {
+    private static final ScheduledExecutorService JS_TIMEOUT_SCHEDULER =
+            Executors.newScheduledThreadPool(2, r -> {
+                Thread t = new Thread(r, "js-cpu-timeout");
+                t.setDaemon(true);
+                return t;
+            });
+
+    protected final MappingService mappingService;
+    protected final GraalVMContextService graalVMContextService;
+
+    protected AbstractFlowProcessor(MappingService mappingService, GraalVMContextService graalVMContextService) {
         this.mappingService = mappingService;
+        this.graalVMContextService = graalVMContextService;
     }
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
@@ -66,7 +111,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
         // TimeoutException in the MQTT callback can forcibly stop JS execution via
         // Context.close(cancelIfExecuting=true) — plain thread interruption is ignored by GraalVM.
         dynamic.mapper.processor.model.ProcessingResultWrapper<?> wrapper =
-                exchange.getIn().getHeader("processingResultWrapper",
+                exchange.getIn().getHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER,
                         dynamic.mapper.processor.model.ProcessingResultWrapper.class);
 
         // ── Early-exit: cancellation was requested before this processor was even reached.
@@ -113,9 +158,17 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
             processSmartMapping(context);
             log.debug("{} - processSmartMapping completed successfully", tenant);
         } catch (Exception e) {
+            // isCancelled() = killed by Context.close(true) (CPU timeout or wall-clock cancel)
+            // isResourceExhausted() = future ResourceLimits enforcement; treat the same way
+            boolean isKilled = e instanceof PolyglotException
+                    && (((PolyglotException) e).isCancelled()
+                            || ((PolyglotException) e).isResourceExhausted());
+
             // Salvage any console.log() messages written before the exception so they
             // are included in the test/error response even when processing fails.
-            if (context.getFlowContext() != null) {
+            // Skip when the context was forcibly killed — the GraalVM context is already
+            // closed and any call into it (including getState()) throws another PolyglotException.
+            if (!isKilled && context != null && context.getFlowContext() != null) {
                 OutputCollector salvage = new OutputCollector();
                 extractLogs(context.getFlowContext(), salvage, tenant);
                 if (!salvage.getLogs().isEmpty()) {
@@ -125,8 +178,14 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
 
             int lineNumber = extractJsLineNumber(e);
             String errorMessage = String.format("%s, line %s", e.getMessage(), lineNumber);
-            log.error("{} - Error in {} for mapping {}: {}", tenant, getProcessorName(), mapping.getName(),
-                    errorMessage, e);
+
+            if (isKilled) {
+                log.warn("{} - JS execution forcibly stopped in {} for mapping {}: {}",
+                        tenant, getProcessorName(), mapping.getName(), errorMessage);
+            } else {
+                log.error("{} - Error in {} for mapping {}: {}", tenant, getProcessorName(), mapping.getName(),
+                        errorMessage, e);
+            }
 
             handleProcessingError(e, errorMessage, context, tenant, mapping);
         } finally {
@@ -235,6 +294,9 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                             .buildLiteral();
                 }
 
+                graalVMContextService.recordCompilation(tenant, source.getName(),
+                        source.getCharacters().toString());
+
                 if (supportESM) {
                     Value exports = graalContext.eval(source);
                     onMessageFunction = exports.getMember(Mapping.SMART_FUNCTION_NAME);
@@ -270,8 +332,48 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                      return;
                  }
 
-                 // Execute the JavaScript function
-                 result = onMessageFunction.execute(inputMessage, context.getFlowContext());
+                 // Enforce maxCPUTimeMS: schedule a hard kill via Context.close(true) so an
+                 // infinite loop or runaway script cannot exceed the configured budget.
+                 // Context.close(true) is the only reliable interrupt for CPU-bound GraalVM JS;
+                 // plain thread interruption is ignored by the Truffle engine.
+                 int maxCPUTimeMS = serviceConfiguration.getMaxCPUTimeMS() != null
+                         ? serviceConfiguration.getMaxCPUTimeMS() : 0;
+                 ScheduledFuture<?> cpuTimeoutFuture = null;
+                 // Mutual exclusion between the timer and the finally-block: exactly one of
+                 // the two will win the compareAndSet(false→true). Only the timer calls
+                 // close(true) when it wins; if execute() completes first the timer sees
+                 // true and skips. This prevents a false PolyglotException(isCancelled=true)
+                 // in processResult() when JS finishes just as the deadline fires.
+                 final java.util.concurrent.atomic.AtomicBoolean executionWindowClosed =
+                         new java.util.concurrent.atomic.AtomicBoolean(false);
+                 if (maxCPUTimeMS > 0) {
+                     final Context graalCtxRef = graalContext;
+                     final dynamic.mapper.processor.model.ProcessingResultWrapper<?> wrapperRef =
+                             context.getProcessingResultWrapper();
+                     cpuTimeoutFuture = JS_TIMEOUT_SCHEDULER.schedule(() -> {
+                         if (!executionWindowClosed.compareAndSet(false, true)) return;
+                         log.warn("{} - JS CPU time limit exceeded ({}ms), closing GraalVM context for mapping: {}",
+                                 tenant, maxCPUTimeMS, mapping.getName());
+                         // Signal cancellation so post-JS C8Y calls in SendInboundProcessor
+                         // and C8YAgent.createMEAO() skip their requests.
+                         if (wrapperRef != null) {
+                             wrapperRef.getCancellationRequested().set(true);
+                         }
+                         try {
+                             graalCtxRef.close(true);
+                         } catch (Exception ex) {
+                             log.debug("{} - GraalVM close(true) on CPU timeout threw: {}", tenant, ex.getMessage());
+                         }
+                     }, maxCPUTimeMS, TimeUnit.MILLISECONDS);
+                 }
+                 try {
+                     result = onMessageFunction.execute(inputMessage, context.getFlowContext());
+                 } finally {
+                     executionWindowClosed.compareAndSet(false, true);
+                     if (cpuTimeoutFuture != null) {
+                         cpuTimeoutFuture.cancel(false);
+                     }
+                 }
 
                 // Task 2: Extracting the result
                 processResult(result, context, tenant);
@@ -290,6 +392,9 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
      * Load shared and system code into GraalVM context using cached Sources - OPTIMIZED!
      */
     protected void loadSharedCode(Context graalContext, ProcessingContext<?> context) {
+        // Inject atob()/btoa() — GraalVM is ECMAScript-only; these are Web APIs not in the spec.
+        graalContext.eval(BASE64_POLYFILL_SOURCE);
+
         // Use pre-cached Source if available - no decoding or parsing needed
         if (context.getSharedSource() != null) {
             graalContext.eval(context.getSharedSource());
@@ -302,63 +407,71 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
     }
 
     /**
-     * Extract warnings from the flow context using thread-safe OutputCollector.
-     * NEW: Thread-safe version that uses focused contexts.
+     * Extract warnings from the flow context into a List target.
      */
-    protected void extractWarnings(DataPrepContext flowContext, OutputCollector output, String tenant) {
+    protected void extractWarnings(DataPrepContext flowContext, List<String> target, String tenant) {
         Value warnings = null;
         try {
             warnings = flowContext.getState(DataPrepContext.WARNINGS);
             if (warnings != null && warnings.hasArrayElements()) {
                 long size = warnings.getArraySize();
-
                 for (long i = 0; i < size; i++) {
                     Value warningElement = null;
                     try {
                         warningElement = warnings.getArrayElement(i);
                         if (warningElement != null && warningElement.isString()) {
-                            output.addWarning(warningElement.asString());
+                            target.add(warningElement.asString());
                         }
                     } finally {
                         warningElement = null;
                     }
                 }
-
-                log.debug("{} - Collected {} warning(s) from flow execution", tenant, output.getWarnings().size());
+                log.debug("{} - Collected {} warning(s) from flow execution", tenant, target.size());
             }
         } finally {
             warnings = null;
         }
     }
 
+    /** Overload for callers that accumulate into an OutputCollector. */
+    protected void extractWarnings(DataPrepContext flowContext, OutputCollector output, String tenant) {
+        List<String> temp = new ArrayList<>();
+        extractWarnings(flowContext, temp, tenant);
+        temp.forEach(output::addWarning);
+    }
+
     /**
-     * Extract logs from the flow context using thread-safe OutputCollector.
-     * NEW: Thread-safe version that uses focused contexts.
+     * Extract logs from the flow context into a List target.
      */
-    protected void extractLogs(DataPrepContext flowContext, OutputCollector output, String tenant) {
+    protected void extractLogs(DataPrepContext flowContext, List<String> target, String tenant) {
         Value logs = null;
         try {
             logs = flowContext.getState(DataPrepContext.LOGS);
             if (logs != null && logs.hasArrayElements()) {
                 long size = logs.getArraySize();
-
                 for (long i = 0; i < size; i++) {
                     Value logElement = null;
                     try {
                         logElement = logs.getArrayElement(i);
                         if (logElement != null && logElement.isString()) {
-                            output.addLog(logElement.asString());
+                            target.add(logElement.asString());
                         }
                     } finally {
                         logElement = null;
                     }
                 }
-
-                log.debug("{} - Collected {} logs from flow execution", tenant, output.getLogs().size());
+                log.debug("{} - Collected {} logs from flow execution", tenant, target.size());
             }
         } finally {
             logs = null;
         }
+    }
+
+    /** Overload for callers that accumulate into an OutputCollector. */
+    protected void extractLogs(DataPrepContext flowContext, OutputCollector output, String tenant) {
+        List<String> temp = new ArrayList<>();
+        extractLogs(flowContext, temp, tenant);
+        temp.forEach(output::addLog);
     }
 
     /**

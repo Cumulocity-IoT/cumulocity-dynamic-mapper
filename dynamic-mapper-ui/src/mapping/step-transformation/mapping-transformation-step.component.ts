@@ -146,6 +146,21 @@ export class MappingSubstitutionStepComponent implements OnInit {
     };
   }
 
+  private static readonly JSONATA_DESCRIPTION = `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
+          in your expressions:
+          <ol>
+            <li>to convert a UNIX timestamp to ISO date format use:
+              <code>$fromMillis($number(deviceTimestamp))</code>
+            </li>
+            <li>to concat strings use "&"
+            </li>
+            <li>to join substring starting at position 5 of property <code>txt</code> with
+              device
+              identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>
+            <li>function chaining using <code>~</code> is supported. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
+              becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
+          </ol>`;
+
   private initializeFormlyFields(): void {
     this.substitutionFormlyFieldsSource = [
       {
@@ -159,20 +174,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
           disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
             !this.stepperConfiguration.allowDefiningSubstitutions,
           placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',
-          description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
-          in your expressions:
-          <ol>
-            <li>to convert a UNIX timestamp to ISO date format use:
-              <code>$fromMillis($number(deviceTimestamp))</code>
-            </li>
-            <li>to concat strings use "&"
-            </li>
-            <li>to join substring starting at position 5 of property <code>txt</code> with
-              device
-              identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>
-            <li>function chaining using <code>~</code> is supported. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
-              becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
-          </ol>`,
+          description: MappingSubstitutionStepComponent.JSONATA_DESCRIPTION,
           required: true,
           customMessage: this.sourceCustomMessage$
         },
@@ -212,20 +214,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
           class: 'input-sm',
           disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
             !this.stepperConfiguration.allowDefiningSubstitutions,
-          description: `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
-          in your expressions:
-          <ol>
-            <li>to convert a UNIX timestamp to ISO date format use:
-              <code>$fromMillis($number(deviceTimestamp))</code>
-            </li>
-            <li>to concat strings use "&"
-            </li>
-            <li>to join substring starting at position 5 of property <code>txt</code> with
-              device
-              identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>
-            <li>function chaining using <code>~</code> is supported. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
-              becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
-          </ol>`,
+          description: MappingSubstitutionStepComponent.JSONATA_DESCRIPTION,
           required: true,
           customMessage: this.targetCustomMessage$
         },
@@ -311,13 +300,13 @@ export class MappingSubstitutionStepComponent implements OnInit {
     this.substitutionModel = { ...this.substitutionModel };
   }
 
-  async onSelectedPathSourceChanged(path: string): Promise<void> {
+  onSelectedPathSourceChanged(path: string): void {
     this.substitutionFormly.get('pathSource').setValue(path);
     this.substitutionModel.pathSource = path;
     this.substitutionModel.pathSourceIsExpression = isExpression(path);
   }
 
-  async onSelectedPathTargetChanged(path: string): Promise<void> {
+  onSelectedPathTargetChanged(path: string): void {
     this.substitutionFormly.get('pathTarget').setValue(path);
     this.substitutionModel.pathTarget = path;
   }
@@ -336,7 +325,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
       this.mapping,
       this.stepperConfiguration,
       this.expertMode,
-      () => this.stepperService.updateSubstitutionValidity(this.mapping, this.stepperConfiguration.allowNoDefinedIdentifier, this.currentStepIndex, this.stepperConfiguration.showCodeEditor)
+      this.refreshSubstitutionValidity
     );
 
     this.selectedSubstitution = -1;
@@ -348,7 +337,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
       this.substitutionModel,
       this.mapping,
       this.stepperConfiguration,
-      () => this.stepperService.updateSubstitutionValidity(this.mapping, this.stepperConfiguration.allowNoDefinedIdentifier, this.currentStepIndex, this.stepperConfiguration.showCodeEditor)
+      this.refreshSubstitutionValidity
     );
   }
 
@@ -356,9 +345,18 @@ export class MappingSubstitutionStepComponent implements OnInit {
     this.substitutionService.deleteSubstitution(
       selected,
       this.mapping,
-      () => this.stepperService.updateSubstitutionValidity(this.mapping, this.stepperConfiguration.allowNoDefinedIdentifier, this.currentStepIndex, this.stepperConfiguration.showCodeEditor)
+      this.refreshSubstitutionValidity
     );
   }
+
+  private readonly refreshSubstitutionValidity = (): void => {
+    this.stepperService.updateSubstitutionValidity(
+      this.mapping,
+      this.stepperConfiguration.allowNoDefinedIdentifier,
+      this.currentStepIndex,
+      this.stepperConfiguration.showCodeEditor
+    );
+  };
 
   async onSelectSubstitution(selected: number): Promise<void> {
     if (selected < 0 || selected >= this.mapping.substitutions.length) return;
@@ -395,7 +393,6 @@ export class MappingSubstitutionStepComponent implements OnInit {
       if (isSubstitutionsAsCode(this.mapping)) {
         if (typeof resultOf === 'string' && resultOf.trim()) {
           this.mappingCodeChange.emit(resultOf);
-          this.alertService.success('Generated JavaScript code successfully.');
         } else {
           this.alertService.warning('No valid JavaScript code was generated.');
         }
@@ -409,7 +406,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
               this.mapping,
               this.stepperConfiguration,
               this.expertMode,
-              () => this.stepperService.updateSubstitutionValidity(this.mapping, this.stepperConfiguration.allowNoDefinedIdentifier, this.currentStepIndex, this.stepperConfiguration.showCodeEditor)
+              this.refreshSubstitutionValidity
             );
           });
         } else {

@@ -2,18 +2,20 @@
 #
 # run-tests.sh — Dynamic Mapper integration test runner
 #
-# Usage:
-#   ./run-tests.sh                   # interactive menu
-#   ./run-tests.sh all               # run every test
-#   ./run-tests.sh inbound           # all inbound tests
-#   ./run-tests.sh outbound          # all outbound + subscription tests
-#   ./run-tests.sh reliability       # reliability tests
-#   ./run-tests.sh <script-name>     # single test, e.g. test-inbound-json-default
-#   ./run-tests.sh <n> [n2 ...]      # one or more menu numbers
+# Usage:  ./run-tests.sh [SUITE ...] [CONNECTOR]
+#   SUITE      a/all i/inbound o/outbound e/extension s/smartfunc r/reliability,
+#             a <script-name>, menu number(s), or omit for the interactive menu.
+#   CONNECTOR  g = generic MQTT (public broker, default)
+#             m = Cumulocity MQTT Service (CUMULOCITY_MQTT_SERVICE_PULSAR, cert auth)
+#   The g/m token may appear in any position. Examples:
+#     ./run-tests.sh                 # interactive (prompts for suite + connector)
+#     ./run-tests.sh inbound m       # inbound suite against the MQTT Service
+#     ./run-tests.sh 1 3 5 g         # menu items 1/3/5 against the public broker
+#     ./run-tests.sh all             # every test, generic MQTT
 #
 # Environment:
 #   DM_SERVICE          Base path to dynamic mapper (default /service/dynamic-mapper-service)
-#   MQTT_HOST           MQTT broker host  (default localhost)
+#   MQTT_HOST           MQTT broker host  (default broker.hivemq.com)
 #   MQTT_PORT           MQTT broker port  (default 1883)
 #   MQTT_USER           MQTT username     (optional)
 #   MQTT_PASS           MQTT password     (optional)
@@ -32,6 +34,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Run c8y CLI non-interactively: suppress all confirmation prompts and spinners.
 export C8Y_SETTINGS_CI=true
+
+# Reserved exit code a test uses to signal "skipped" (prerequisite absent).
+# Kept in sync with DM_EXIT_SKIP in test-harness.sh.
+DM_SKIP_EXIT_CODE="${DM_EXIT_SKIP:-42}"
 
 # ── ANSI colours ───────────────────────────────────────────────────────────────
 if [ -t 1 ]; then
@@ -60,34 +66,40 @@ declare -a TESTS=(
     "inbound|test-inbound-multi-device|Array payload → multiple devices"
     "inbound|test-inbound-alarm|JSON / DEFAULT → ALARM"
     "inbound|test-inbound-operation|JSON / DEFAULT → OPERATION"
+    "inbound|test-inbound-inventory|JSON / DEFAULT → INVENTORY (device metadata update)"
     # ── Inbound (Smart Function patterns) ──────────────────────────────────────
-    "smartfunction|test-inbound-smartfunction-02|Pattern 02: Topic-based external ID + sensor filter"
-    "smartfunction|test-inbound-smartfunction-04|Pattern 04: Dual payload type + deduplication"
-    # ── Inbound (Java Extensions) ─────────────────────────────────────────────
+    "smartfunction|test-inbound-smartfunction-02|Inbound: Pattern 02: Topic-based external ID + sensor filter"
+    "smartfunction|test-inbound-smartfunction-03|Inbound: Pattern 03: getManagedObjectByExternalId — MO enrichment"
+    "smartfunction|test-inbound-smartfunction-04|Inbound: Pattern 04: Dual payload type + deduplication"
+    "smartfunction|test-inbound-smartfunction-05|Inbound: Pattern 11: Per-device running statistics (device ID from context)"
+    # ── Extensions (Inbound + Outbound) ──────────────────────────────────────
     "extension|test-inbound-extension-custom-measurement|Extension: JSON → Measurement"
     "extension|test-inbound-extension-custom-alarm|Extension: JSON → Alarm"
     "extension|test-inbound-extension-custom-event|Extension: Protobuf → Event"
     "extension|test-inbound-extension-sparkplugb-measurement|Extension: Sparkplug B → Measurement"
+    "extension|test-outbound-extension-alarm-to-sparkplugb|Extension: Alarm → Sparkplug B DCMD"
     # ── Outbound (payload) ────────────────────────────────────────────────────
     "outbound|test-outbound-measurement|C8Y Measurement → MQTT broker"
     "outbound|test-outbound-event|C8Y Event → MQTT broker"
     "outbound|test-outbound-alarm|C8Y Alarm → MQTT broker"
     "outbound|test-outbound-operation|C8Y Operation → MQTT broker"
+    "outbound|test-outbound-inventory|C8Y managed-object change → MQTT broker (metadata)"
     "outbound|test-outbound-filter|filterMapping — selective forwarding"
     "outbound|test-outbound-topic-resolution|Dynamic publish topic resolution"
     "outbound|test-outbound-json-smartfunction|Smart Function: Measurement → MQTT JSON"
+    "outbound|test-outbound-smartfunction-externalsource|Smart Function externalSource → _externalId_ topic (broker round-trip)"
+    "outbound|test-outbound-smartfunction-molookup|Smart Function outbound: Pattern 03 — getManagedObjectByExternalId — MO enrichment"
     # ── Outbound (subscription management) ────────────────────────────────────
     "outbound|test-outbound-static-subscription|Static subscription management"
     "outbound|test-outbound-type-subscription|Dynamic type subscription"
     "outbound|test-outbound-group-subscription|Dynamic group subscription"
     "outbound|test-outbound-group-subscription-removal|Group subscription removal"
     "outbound|test-outbound-subscription-persistence|Subscription persistence after restart"
-    # ── Outbound (Extensions/Protocols) ───────────────────────────────────────
-    "extension|test-outbound-extension-alarm-to-sparkplugb|Extension: Alarm → Sparkplug B DCMD"
     # ── Reliability ───────────────────────────────────────────────────────────
     "reliability|test-multi-tenant|Mapping CRUD / tenant isolation"
     "reliability|test-multi-connector|Multiple connector status check"
     "reliability|test-reconnect|Connector disconnect / reconnect cycle"
+    "reliability|test-cumulocity-mqtt-service|Cumulocity MQTT Service connector lifecycle"
 )
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -97,6 +109,40 @@ _cat_of()  { echo "${1%%|*}"; }
 _name_of() { local rest="${1#*|}"; echo "${rest%%|*}"; }
 _desc_of() { echo "${1##*|}"; }
 
+# Returns 0 if the token is a bare number or an N-M range.
+_is_index_like() { [[ "$1" =~ ^[0-9]+$ ]] || [[ "$1" =~ ^[0-9]+-[0-9]+$ ]]; }
+
+# Prints the expanded list of menu indices for a number or N-M range token.
+_expand_index_token() {
+    local token="$1"
+    if [[ "$token" =~ ^[0-9]+$ ]]; then
+        echo "$token"
+    elif [[ "$token" =~ ^([0-9]+)-([0-9]+)$ ]]; then
+        local lo="${BASH_REMATCH[1]}" hi="${BASH_REMATCH[2]}"
+        if [ "$lo" -gt "$hi" ]; then
+            printf '%sERROR: invalid range %s (start > end)%s\n' \
+                "${C_RED}" "$token" "${C_RESET}" >&2
+            exit 1
+        fi
+        seq "$lo" "$hi"
+    fi
+}
+
+# Run all tests identified by one index-like token (number or N-M range).
+_run_index_token() {
+    local num idx
+    while IFS= read -r num; do
+        idx=$(( num - 1 ))
+        if [ "$idx" -ge 0 ] && [ "$idx" -lt "$_n_tests" ]; then
+            _run_one "${TESTS[$idx]}"
+        else
+            printf "${C_RED}ERROR: index %s out of range (1–%d)${C_RESET}\n" \
+                "$num" "$_n_tests"
+            exit 1
+        fi
+    done < <(_expand_index_token "$1")
+}
+
 _print_header() {
     printf "\n${C_BOLD}%s${C_RESET}\n" "Dynamic Mapper — Integration Test Runner"
     printf "${C_DIM}Scripts: %s${C_RESET}\n\n" "$SCRIPT_DIR"
@@ -105,7 +151,7 @@ _print_header() {
 _print_menu() {
     _print_header
     local idx=1 cat prev_cat=""
-    printf "  ${C_BOLD}%-4s %-14s %s${C_RESET}\n" "#" "Category" "Test"
+    printf "  ${C_BOLD}%-4s %-16s %s${C_RESET}\n" "#" "Category" "Test"
     printf "  %s\n" "$(printf '─%.0s' {1..60})"
     for entry in "${TESTS[@]}"; do
         cat=$(_cat_of "$entry")
@@ -113,18 +159,20 @@ _print_menu() {
             printf "\n  ${C_CYAN}${C_BOLD}%s${C_RESET}\n" "── $(echo "$cat" | tr '[:lower:]' '[:upper:]') ──"
             prev_cat="$cat"
         fi
-        printf "  ${C_BOLD}%2d${C_RESET}  %-14s %s\n" \
+        printf "  ${C_BOLD}%2d${C_RESET}  %-16s %s\n" \
             "$idx" "[$cat]" "$(_desc_of "$entry")"
         idx=$((idx + 1))
     done
     echo ""
-    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "a"  "[all]"         "Run all tests"
-    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "i"  "[inbound]"     "Run all inbound tests"
-    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "o"  "[outbound]"    "Run all outbound tests"
-    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "e"  "[extension]"   "Run extension tests"
-    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "s"  "[smartfunc]"   "Run Smart Function pattern tests"
-    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "r"  "[reliability]" "Run reliability tests"
-    printf "  ${C_BOLD}%2s${C_RESET}  %-14s %s\n" "q"  ""              "Quit"
+    printf "  ${C_BOLD}%2s${C_RESET}  %-16s %s\n" "a"  "[all]"           "Run all tests"
+    printf "  ${C_BOLD}%2s${C_RESET}  %-16s %s\n" "i"  "[inbound]"       "Run all inbound tests"
+    printf "  ${C_BOLD}%2s${C_RESET}  %-16s %s\n" "o"  "[outbound]"      "Run all outbound tests"
+    printf "  ${C_BOLD}%2s${C_RESET}  %-16s %s\n" "e"  "[extension]"     "Run extension tests"
+    printf "  ${C_BOLD}%2s${C_RESET}  %-16s %s\n" "s"  "[smartfunc]"     "Run Smart Function pattern tests"
+    printf "  ${C_BOLD}%2s${C_RESET}  %-16s %s\n" "r"  "[reliability]"   "Run reliability tests"
+    printf "  ${C_BOLD}%2s${C_RESET}  %-16s %s\n" "q"  "[quit]"          "Quit"
+    echo ""
+    printf "  ${C_DIM}After selecting tests you'll choose a connector: g=generic MQTT, m=Cumulocity MQTT Service${C_RESET}\n"
     echo ""
 }
 
@@ -133,23 +181,52 @@ _print_help() {
 Dynamic Mapper integration test runner
 
 Usage:
-    ./run-tests.sh                   Interactive menu
-    ./run-tests.sh all               Run every test
-    ./run-tests.sh inbound           Run all inbound tests
-    ./run-tests.sh outbound          Run all outbound tests
-    ./run-tests.sh reliability       Run reliability tests
-    ./run-tests.sh <script-name>     Run one script (with or without .sh)
-    ./run-tests.sh <n> [n2 ...]      Run one or more menu indices
-    ./run-tests.sh --help            Show this help
+    ./run-tests.sh [SUITE ...] [CONNECTOR]
+
+  SUITE — which tests to run:
+    a | all                          Run every test
+    i | inbound                      Run all inbound tests
+    o | outbound                     Run all outbound tests
+    e | extension                    Run all extension tests
+    s | smartfunc                    Run all Smart Function pattern tests
+    r | reliability                  Run reliability tests
+    <script-name>                    Run one script (with or without .sh)
+    <n> [n2 ...]                     Run one or more menu indices
+    <n>-<m>                          Run a range of menu indices (e.g. 3-7)
+    (omit)                           Pick interactively
+
+  CONNECTOR — which broker the MQTT tests drive (default g):
+    g                                Generic MQTT (public broker)
+    m                                Cumulocity MQTT Service
+                                     (CUMULOCITY_MQTT_SERVICE_PULSAR, TLS :9883,
+                                     X.509 cert auth → DM_BROKER_MODE=c8y-mqtt-service)
+
+Examples:
+    ./run-tests.sh inbound m         All inbound tests against the MQTT Service
+    ./run-tests.sh 1 3 5 g           Menu items 1/3/5 against the public broker
+    ./run-tests.sh all               Everything, generic MQTT (default)
+    ./run-tests.sh m                 Interactive suite pick, MQTT Service connector
+
+Category shortcuts (single letters a/i/o/e/s/r) match the interactive menu;
+the connector token (g/m) may appear in any position.
 
 Environment variables:
     DM_SERVICE
         Base Dynamic Mapper API path.
         Default: /service/dynamic-mapper-service
 
+    DM_BROKER_MODE
+        Which broker the MQTT helpers drive.
+        Values: public | c8y-mqtt-service
+        Default: public
+        In c8y-mqtt-service mode the helpers target the Cumulocity MQTT Service
+        on TLS :9883 with X.509 client-certificate auth (clientId == cert CN,
+        tenant id in the username). The 'c' lane sets this automatically.
+        Honours DM_C8Y_MQTT_HOST / DM_C8Y_MQTT_PORT / DM_C8Y_MQTT_CONNECTOR_ID.
+
     MQTT_HOST
         MQTT broker host used by test publish/subscribe helpers.
-        Default: localhost
+        Default: broker.hivemq.com (c8y-mqtt-service mode: tenant domain)
 
     MQTT_PORT
         MQTT broker port used by test publish/subscribe helpers.
@@ -192,6 +269,14 @@ Environment variables:
         Values: 1 to enable
         Default: continue on failures
 
+    DM_REUSE_MQTT_CERT
+        Reuse a single X.509 client certificate across all tests in a suite
+        when DM_BROKER_MODE=c8y-mqtt-service. The cert is provisioned once
+        before the first test and deleted after the last. This avoids the
+        5 s per-test registration wait and reduces API churn on the tenant.
+        Values: true (default) | false
+        Set false to provision a fresh cert for each individual test.
+
 Notes:
     - Inbound MQTT tests require an enabled Dynamic Mapper MQTT connector that
         matches MQTT_HOST and MQTT_PORT.
@@ -223,7 +308,7 @@ _check_c8y_session() {
     # 'c8y sessions current' may exit 0 even when no session is loaded, so
     # we check for an actual non-empty host value in the JSON output.
     local _host
-    _host=$(c8y sessions current --output json 2>/dev/null \
+    _host=$(c8y sessions current --output json </dev/null 2>/dev/null \
         | jq -r '.host // empty' 2>/dev/null || true)
     [ -n "${_host:-}" ] && return 0
     printf '%sERROR: No active c8y session.%s\n' "${C_RED}" "${C_RESET}" >&2
@@ -244,7 +329,7 @@ _suite_health_check() {
     local _retries=24 _interval=3 _i
     for _i in $(seq 1 "$_retries"); do
         if c8y api --method GET --url "${_DM_SERVICE}/mapping" \
-                --output json >/dev/null 2>&1; then
+                --output json </dev/null >/dev/null 2>&1; then
             printf "%sService is UP — health check will be skipped per test.%s\n" \
                 "${C_GREEN}" "${C_RESET}"
             export DM_SKIP_HEALTH_CHECK=1
@@ -259,11 +344,77 @@ _suite_health_check() {
     exit 1
 }
 
+# ── Suite-level MQTT Service cert (shared across tests) ───────────────────────
+# When DM_BROKER_MODE=c8y-mqtt-service and DM_REUSE_MQTT_CERT != false, one
+# X.509 client cert is provisioned before the first test and reused by all
+# subsequent tests. Test scripts detect the exported DM_MQTT_SVC_* variables
+# and skip their own per-test provisioning and 5 s registration wait.
+_SUITE_CERT_PROVISIONED=0
+
+_suite_provision_mqtt_service_cert() {
+    command -v openssl >/dev/null 2>&1 \
+        || { printf '%sERROR: openssl is required to provision an MQTT Service cert%s\n' "${C_RED}" "${C_RESET}" >&2; exit 1; }
+
+    printf "\n%s── Pre-suite: provisioning shared MQTT Service cert ──%s\n" "${C_BOLD}" "${C_RESET}"
+
+    local _client_id="dmtest$$"
+    local _cert_dir; _cert_dir=$(mktemp -d)
+    local _key="${_cert_dir}/${_client_id}.key"
+    local _cert="${_cert_dir}/${_client_id}.pem"
+
+    openssl req -x509 -newkey rsa:2048 -nodes \
+        -keyout "$_key" -out "$_cert" \
+        -days 2 -subj "/CN=${_client_id}" >/dev/null 2>&1 \
+        || { printf '%sERROR: Failed to generate suite MQTT Service cert%s\n' "${C_RED}" "${C_RESET}" >&2; exit 1; }
+
+    if ! c8y devicemanagement certificates create \
+            --name "$_client_id" --file "$_cert" \
+            --autoRegistrationEnabled \
+            --force --output json </dev/null >/dev/null 2>&1; then
+        printf '%sERROR: Failed to upload suite trusted certificate — check user has Mqtt service permission%s\n' "${C_RED}" "${C_RESET}" >&2
+        exit 1
+    fi
+
+    export DM_MQTT_SVC_CLIENT_ID="$_client_id"
+    export DM_MQTT_SVC_CERT="$_cert"
+    export DM_MQTT_SVC_KEY="$_key"
+    export DM_MQTT_SVC_CERT_NAME="$_client_id"
+    export DM_MQTT_SVC_CERT_DIR="$_cert_dir"
+    _SUITE_CERT_PROVISIONED=1
+
+    printf "%sSuite MQTT cert provisioned: CN=%s — waiting 5s for registration ...%s\n" \
+        "${C_CYAN}" "$_client_id" "${C_RESET}"
+    sleep 5
+}
+
+_suite_cleanup_mqtt_service_cert() {
+    [ "${_SUITE_CERT_PROVISIONED:-0}" -eq 0 ] && return 0
+    if [ -n "${DM_MQTT_SVC_CERT_NAME:-}" ]; then
+        c8y devicemanagement certificates delete --id "$DM_MQTT_SVC_CERT_NAME" \
+            --force </dev/null >/dev/null 2>&1 || true
+        printf "Deleted suite MQTT trusted certificate: %s\n" "$DM_MQTT_SVC_CERT_NAME"
+    fi
+    [ -n "${DM_MQTT_SVC_CERT_DIR:-}" ] && rm -rf "$DM_MQTT_SVC_CERT_DIR" 2>/dev/null || true
+}
+
+_ensure_suite_mqtt_cert() {
+    [ "${_SUITE_CERT_PROVISIONED:-0}" -eq 1 ] && return 0
+    [ "${DM_BROKER_MODE:-public}" = "c8y-mqtt-service" ] || return 0
+    [ "${DM_REUSE_MQTT_CERT:-true}" = "false" ] && return 0
+    _suite_provision_mqtt_service_cert
+}
+
+_dm_suite_on_exit() {
+    _suite_cleanup_mqtt_service_cert || true
+}
+trap _dm_suite_on_exit EXIT
+
 # ── Per-test execution ─────────────────────────────────────────────────────────
 _SUITE_PASS=0
 _SUITE_FAIL=0
 _SUITE_SKIP=0
 declare -a _FAILED_TESTS=()
+declare -a _SKIPPED_TESTS=()
 
 _run_one() {   # <entry-from-TESTS>
     local name script exit_code _cleanup_flag
@@ -277,27 +428,33 @@ _run_one() {   # <entry-from-TESTS>
     fi
 
     _suite_health_check
+    _ensure_suite_mqtt_cert
 
     printf "\n${C_BOLD}══ Running: %s ══${C_RESET}\n" "$name"
     _cleanup_flag="--cleanup"
     if [ "$name" = "test-outbound-group-subscription" ]; then
         # Stateful handoff: test-outbound-group-subscription-removal consumes
-        # the state emitted by this test. Running with --cleanup here deletes
-        # the group/device before the removal test can validate unassign logic.
-        _cleanup_flag=""
+        # the state emitted by this test. Tests now clean up by default, so we
+        # pass --keep here to retain the group/device for the removal test.
+        _cleanup_flag="--keep"
     fi
     set +e
-    if [ -n "$_cleanup_flag" ]; then
-        bash "$script" "$_cleanup_flag"
-    else
-        bash "$script"
-    fi
+    # </dev/null: when _run_one is called from _run_index_token's `while read`
+    # loop, stdin is a process-substitution pipe. go-c8y-cli detects non-terminal
+    # stdin and enters "pipeline mode", causing c8y commands with no explicit
+    # --data to silently produce no output. /dev/null is not a FIFO so go-c8y-cli
+    # stays out of pipeline mode — all test-script c8y calls behave correctly.
+    bash "$script" "$_cleanup_flag" </dev/null
     exit_code=$?
     set -e
 
     if [ "$exit_code" -eq 0 ]; then
         printf "${C_GREEN}PASS${C_RESET}  %s\n" "$name"
         _SUITE_PASS=$((_SUITE_PASS + 1))
+    elif [ "$exit_code" -eq "$DM_SKIP_EXIT_CODE" ]; then
+        printf "${C_YELLOW}SKIP${C_RESET}  %s  (prerequisite absent)\n" "$name"
+        _SUITE_SKIP=$((_SUITE_SKIP + 1))
+        _SKIPPED_TESTS+=("$name")
     else
         printf "${C_RED}FAIL${C_RESET}  %s  (exit %d)\n" "$name" "$exit_code"
         _SUITE_FAIL=$((_SUITE_FAIL + 1))
@@ -321,15 +478,40 @@ _run_all() {
     done
 }
 
+# Map the connector selector ($1: g|m) to DM_BROKER_MODE for the child test
+# scripts and announce it. g = generic MQTT (public broker, default);
+# m = Cumulocity MQTT Service (CUMULOCITY_MQTT_SERVICE_PULSAR, X.509 cert auth).
+_apply_connector_selection() {   # <g|m>
+    case "${1:-g}" in
+        g|generic|public)
+            export DM_BROKER_MODE=public
+            printf "${C_DIM}Connector: generic MQTT (public broker)${C_RESET}\n" ;;
+        m|mqtt-service|c8y-mqtt-service)
+            export DM_BROKER_MODE=c8y-mqtt-service
+            printf "${C_CYAN}Connector: Cumulocity MQTT Service — CUMULOCITY_MQTT_SERVICE_PULSAR (TLS :9883, cert auth)${C_RESET}\n" ;;
+        *)
+            printf "${C_RED}ERROR: unknown connector '%s' — use g (generic MQTT) or m (Cumulocity MQTT Service)${C_RESET}\n" "$1"
+            exit 1 ;;
+    esac
+}
+
 _print_suite_summary() {
     local total=$((_SUITE_PASS + _SUITE_FAIL + _SUITE_SKIP))
     echo ""
     printf "${C_BOLD}%s${C_RESET}\n" "══════════════════════════════════════════════"
-    printf "${C_BOLD} Suite results: %d/%d passed" "$_SUITE_PASS" "$total"
-    [ "$_SUITE_SKIP" -gt 0 ] && printf ", %d skipped" "$_SUITE_SKIP"
-    [ "$_SUITE_FAIL" -gt 0 ] && printf "${C_RED}, %d FAILED${C_RESET}" "$_SUITE_FAIL" \
-        || printf "${C_GREEN} ✓${C_RESET}"
+    printf "${C_BOLD} Suite results: %d passed" "$_SUITE_PASS"
+    [ "$_SUITE_SKIP" -gt 0 ] && printf "${C_YELLOW}, %d skipped${C_RESET}${C_BOLD}" "$_SUITE_SKIP"
+    [ "$_SUITE_FAIL" -gt 0 ] && printf "${C_RED}, %d FAILED${C_RESET}${C_BOLD}" "$_SUITE_FAIL"
+    printf " (of %d)" "$total"
+    [ "$_SUITE_FAIL" -eq 0 ] && printf "${C_GREEN} ✓${C_RESET}"
     printf "${C_BOLD}\n%s${C_RESET}\n" "══════════════════════════════════════════════"
+    if [ "${#_SKIPPED_TESTS[@]}" -gt 0 ]; then
+        printf "${C_YELLOW}Skipped tests (prerequisite absent):${C_RESET}\n"
+        for t in "${_SKIPPED_TESTS[@]}"; do
+            printf "  ${C_YELLOW}–${C_RESET}  %s\n" "$t"
+        done
+        echo ""
+    fi
     if [ "${#_FAILED_TESTS[@]}" -gt 0 ]; then
         printf "${C_RED}Failed tests:${C_RESET}\n"
         for t in "${_FAILED_TESTS[@]}"; do
@@ -344,25 +526,22 @@ _dispatch_args() {
     local arg="$1"
     case "$arg" in
         -h|--help|help) _print_help ; exit 0 ;;
-        all)         _run_all ;;
-        inbound)     _run_category "inbound" ;;
-        outbound)    _run_category "outbound" ;;
-        extension)   _run_category "extension" ;;
-        smartfunc|smartfunction) _run_category "smartfunction" ;;
-        reliability) _run_category "reliability" ;;
+        a|all)         _run_all ;;
+        i|inbound)     _run_category "inbound" ;;
+        o|outbound)    _run_category "outbound" ;;
+        e|extension)   _run_category "extension" ;;
+        s|smartfunc|smartfunction) _run_category "smartfunction" ;;
+        r|reliability) _run_category "reliability" ;;
         *)
-            # Numeric index(es): already handled by caller
-            # Script name (with or without .sh)
+            # Numeric index(es): already handled by caller.
+            # Script name (with or without .sh): run via _run_one so PASS/SKIP/FAIL
+            # classification, the group-subscription --keep handoff, and the suite
+            # tallies all apply uniformly.
             local script
             script=$(_resolve_script "$arg")
             if [ -n "$script" ]; then
-                _suite_health_check
-                if [ "$arg" = "test-outbound-group-subscription" ] || [ "$arg" = "test-outbound-group-subscription.sh" ]; then
-                    bash "$script"
-                else
-                    bash "$script" --cleanup
-                fi
-                return $?
+                _run_one "single|${arg%.sh}|"
+                return 0
             fi
             printf "${C_RED}Unknown argument: %s${C_RESET}\n" "$arg"
             exit 1
@@ -373,9 +552,17 @@ _dispatch_args() {
 # ── Interactive selection ──────────────────────────────────────────────────────
 _interactive() {
     _print_menu
-    printf "Select tests (e.g. 1 3 5, or a/i/o/e/s/r): "
+    printf "Select tests (e.g. 1 3 5, 3-7, or a/i/o/e/s/r): "
     read -r REPLY
     echo ""
+
+    # Choose the connector for this run unless one was already preset on the CLI.
+    if [ "${_CONN_PRESET:-false}" != "true" ]; then
+        printf "Connector  [g] generic MQTT (default)   [m] Cumulocity MQTT Service: "
+        read -r _conn_reply
+        echo ""
+        _apply_connector_selection "${_conn_reply:-g}"
+    fi
 
     case "$REPLY" in
         q|Q) exit 0 ;;
@@ -390,14 +577,17 @@ _interactive() {
             # shellcheck disable=SC2206
             selections=($REPLY)
             for sel in "${selections[@]}"; do
-                if [[ "$sel" =~ ^[0-9]+$ ]]; then
-                    local idx=$(( sel - 1 ))
-                    if [ "$idx" -ge 0 ] && [ "$idx" -lt "$_n_tests" ]; then
-                        _run_one "${TESTS[$idx]}"
-                    else
-                        printf "${C_YELLOW}WARN: %s is out of range (1–%d)${C_RESET}\n" \
-                            "$sel" "$_n_tests"
-                    fi
+                if _is_index_like "$sel"; then
+                    local num idx
+                    while IFS= read -r num; do
+                        idx=$(( num - 1 ))
+                        if [ "$idx" -ge 0 ] && [ "$idx" -lt "$_n_tests" ]; then
+                            _run_one "${TESTS[$idx]}"
+                        else
+                            printf "${C_YELLOW}WARN: %s is out of range (1–%d)${C_RESET}\n" \
+                                "$num" "$_n_tests"
+                        fi
+                    done < <(_expand_index_token "$sel")
                 else
                     printf "${C_YELLOW}WARN: unrecognised selection '%s'${C_RESET}\n" "$sel"
                 fi
@@ -407,28 +597,49 @@ _interactive() {
 }
 
 # ── Entry point ────────────────────────────────────────────────────────────────
-if [ $# -eq 0 ]; then
+# Two parameters:
+#   1. the test SUITE  — a category (a/i/o/e/s/r), one or more menu indices, or a
+#                        script name. Omit to pick interactively.
+#   2. the CONNECTOR   — g (generic MQTT, default) or m (Cumulocity MQTT Service).
+# The connector token (g/m) may appear in any position; everything else is the
+# suite selection. Example:  ./run-tests.sh inbound m   /   ./run-tests.sh 1 3 m
+
+# Help short-circuits before anything else.
+for arg in "$@"; do
+    case "$arg" in -h|--help|help) _print_help; exit 0 ;; esac
+done
+
+# Split args into the connector selector and the suite selection.
+_CONN_PRESET=false
+_conn_token="g"
+_suite_args=()
+for arg in "$@"; do
+    case "$arg" in
+        g|m|generic|mqtt-service|c8y-mqtt-service|public)
+            _conn_token="$arg"; _CONN_PRESET=true ;;
+        *)
+            _suite_args+=("$arg") ;;
+    esac
+done
+
+# Apply the connector now (interactive mode skips its own prompt when preset).
+[ "$_CONN_PRESET" = "true" ] && _apply_connector_selection "$_conn_token"
+
+if [ "${#_suite_args[@]}" -eq 0 ]; then
     _interactive
 else
-    # All args could be numbers (menu indices) or keywords / script names
+    # Suite args could be numbers/ranges (menu indices) or keywords / script names.
     all_numeric=true
-    for arg in "$@"; do
-        [[ "$arg" =~ ^[0-9]+$ ]] || { all_numeric=false; break; }
+    for arg in "${_suite_args[@]}"; do
+        _is_index_like "$arg" || { all_numeric=false; break; }
     done
 
     if $all_numeric; then
-        for num in "$@"; do
-            idx=$(( num - 1 ))
-            if [ "$idx" -ge 0 ] && [ "$idx" -lt "$_n_tests" ]; then
-                _run_one "${TESTS[$idx]}"
-            else
-                printf "${C_RED}ERROR: index %s out of range (1–%d)${C_RESET}\n" \
-                    "$num" "$_n_tests"
-                exit 1
-            fi
+        for tok in "${_suite_args[@]}"; do
+            _run_index_token "$tok"
         done
     else
-        for arg in "$@"; do
+        for arg in "${_suite_args[@]}"; do
             _dispatch_args "$arg"
         done
     fi

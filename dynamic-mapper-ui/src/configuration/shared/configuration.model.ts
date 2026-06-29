@@ -35,9 +35,11 @@ export interface ServiceConfiguration {
   inventoryCacheSize: number;
   inventoryCacheRetention: number;
   flowStateRetention: number;
+  mappingVersionRetention?: number;
   inventoryFragmentsToCache?: string[];
   codeTemplates?: any;
   maxCPUTimeMS: number;
+  pipelineTimeoutMS?: number;
   jsonataAgent: string;
   javaScriptAgent: string;
   smartFunctionAgent: string;
@@ -46,6 +48,9 @@ export interface ServiceConfiguration {
   supportESM?: boolean;
   cacheAliasMaps?: boolean;
   externalIdBinding?: boolean;
+  explorerSessionTTLMinutes?: number;
+  engineRotationThreshold?: number;
+  engineMaxAgeMinutes?: number;
 }
 
 export enum TemplateType {

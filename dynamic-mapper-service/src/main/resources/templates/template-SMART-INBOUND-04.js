@@ -30,13 +30,15 @@
 */
 
 function onMessage(msg, context) {
-    var payload = msg.getPayload();
+    var payload = msg.payload;
 
     console.log("Payload Raw:" + payload);
     console.log("Payload messageId: " + payload["messageId"]);
 
-    // Get externalId from context first, fall back to payload
-    var externalId = context.getConfig()["clientId"] || payload["externalId"];
+    // Prefer context clientId (MQTT client id), fall back to payload field
+    var externalId = context.getClientId() || payload["externalId"];
+    // Prefer timestamp from payload; fall back to connector receive time
+    var time = payload["time"] || msg.time;
 
     // --- Load persistent state ---
     var telemetryCount = context.getState("telemetryCount") || 0;
@@ -57,7 +59,7 @@ function onMessage(msg, context) {
             cumulocityType: "measurement",
             action: "create",
             payload: {
-                "time": new Date().toISOString(),
+                "time": time,
                 "type": "c8y_TemperatureMeasurement",
                 "c8y_Steam": {
                     "Temperature": {
@@ -90,7 +92,7 @@ function onMessage(msg, context) {
             cumulocityType: "event",
             action: "create",
             payload: {
-                "time":     new Date().toISOString(),
+                "time":     time,
                 "type":     "c8y_ErrorEvent",
                 "text":     currentErrorMsg,
                 "severity": "MAJOR",

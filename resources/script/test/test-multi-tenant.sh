@@ -19,18 +19,22 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="36. Mapping CRUD / tenant isolation"
+
 MAPPING_ID=""
 
 cleanup() {
     [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" 2>/dev/null || true
 }
-trap cleanup EXIT
+dm_parse_args "$@"
+dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Mapping CRUD / Tenant Isolation"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
+dm_validate_only_exit
 
 MAPPING_JSON=$(cat <<EOF
 {
@@ -52,9 +56,7 @@ MAPPING_JSON=$(cat <<EOF
   "createNonExistingDevice": false,
   "useExternalId": true,
   "externalIdType": "c8y_Serial",
-  "qos": "AT_LEAST_ONCE",
-  "snoopStatus": "NONE",
-  "snoopedTemplates": []
+  "qos": "AT_LEAST_ONCE"
 }
 EOF
 )
@@ -100,5 +102,5 @@ COUNT2=$(dm_api_json_array GET /mapping \
       ' 2>/dev/null || echo 0)
 dm_assert_eq "Mapping is no longer listed" "0" "$COUNT2"
 
-dm_done "Mapping CRUD / Tenant Isolation"
+dm_done "$TEST_TITLE"
 dm_print_summary

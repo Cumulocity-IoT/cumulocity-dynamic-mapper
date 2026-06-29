@@ -19,6 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="21. C8Y Measurement → MQTT broker"
+
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 DEVICE_NAME="dmtest-out-mea-$(date +%s)"
 DEVICE_TYPE="dmtest-out-type"
@@ -33,15 +35,17 @@ cleanup() {
     [ -n "$DEVICE_ID" ] && dm_delete_device "$DEVICE_ID" || true
 }
 
-[[ "${1:-}" == "--cleanup" ]] && trap cleanup EXIT
+dm_parse_args "$@"
+dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Outbound C8Y Measurement → MQTT Broker"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
 dm_require_mqtt_broker
 dm_verify_mqtt_connector_ready
+dm_validate_only_exit
 
 dm_step "Creating test device ..."
 dm_create_device "$DEVICE_NAME" "$DEVICE_TYPE"
@@ -53,7 +57,7 @@ c8y identity create \
   --name "$EXT_ID" \
   --type "c8y_Serial" \
   --device "$DEVICE_ID" \
-  --output json >/dev/null 2>&1 || dm_warn "External id may already exist: $EXT_ID"
+  --output json </dev/null >/dev/null 2>&1 || dm_warn "External id may already exist: $EXT_ID"
 
 dm_step "Creating static subscription for device ..."
 dm_create_static_subscription_must "MEASUREMENT" "$DEVICE_ID" "$DEVICE_NAME"
@@ -82,9 +86,7 @@ MAPPING_JSON=$(cat <<EOF
   "debug": false,
   "useExternalId": true,
   "externalIdType": "c8y_Serial",
-  "qos": "AT_LEAST_ONCE",
-  "snoopStatus": "NONE",
-  "snoopedTemplates": []
+  "qos": "AT_LEAST_ONCE"
 }
 EOF
 )
@@ -102,7 +104,7 @@ c8y measurements create \
     --device "$DEVICE_ID" \
     --type "c8y_TemperatureMeasurement" \
     --data '{"c8y_TemperatureMeasurement":{"T":{"value":42.0,"unit":"C"}}}' \
-    --output json >/dev/null
+    --output json </dev/null >/dev/null
 
 dm_step "Waiting for outbound processing ..."
 dm_wait 12
@@ -110,5 +112,5 @@ dm_wait 12
 dm_step "Asserting messagesReceived increased ..."
 dm_assert_mapping_received_gt "Outbound measurement processed" "$MAPPING_ID" "$BASELINE"
 
-dm_done "Outbound C8Y Measurement → MQTT Broker"
+dm_done "$TEST_TITLE"
 dm_print_summary

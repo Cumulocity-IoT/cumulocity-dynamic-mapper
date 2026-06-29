@@ -25,11 +25,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import dynamic.mapper.service.ConnectorConfigurationService;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.ServiceConfigurationService;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -50,8 +45,6 @@ import com.cumulocity.microservice.security.service.SecurityUserDetails;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.http.HttpClient;
-import dynamic.mapper.core.BootstrapService;
-import dynamic.mapper.core.C8YAgent;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -64,33 +57,17 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@RequiredArgsConstructor
 @RestController
 @Tag(name = "HTTP Connector Controller", description = "HTTP endpoint for receiving data from external systems via HTTP/HTTPS. Acts as a webhook receiver that processes incoming messages and routes them through the dynamic mapping system.")
 public class HttpConnectorController {
 
-    @Autowired
-    ConnectorRegistry connectorRegistry;
-
-    @Autowired
-    MappingService mappingService;
-
-    @Autowired
-    ConnectorConfigurationService connectorConfigurationService;
-
-    @Autowired
-    ServiceConfigurationService serviceConfigurationService;
-
-    @Autowired
-    BootstrapService bootstrapService;
-
-    @Autowired
-    C8YAgent c8YAgent;
-
-    @Autowired
-    private ContextService<UserCredentials> contextService;
+    private final ConnectorRegistry connectorRegistry;
+    private final ContextService<UserCredentials> contextService;
 
     @Operation(
         summary = "Process HTTP connector message",

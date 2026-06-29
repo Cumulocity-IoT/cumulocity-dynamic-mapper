@@ -34,9 +34,7 @@ import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
-import dynamic.mapper.core.*;
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -47,11 +45,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.MappingTreeNode;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.ServiceConfigurationService;
 import dynamic.mapper.model.ConnectorStatusEvent;
 import dynamic.mapper.model.MappingStatus;
 
@@ -64,31 +62,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
+@RequiredArgsConstructor
 @RequestMapping("/monitoring")
 @RestController
 @Tag(name = "Monitoring Controller", description = "API for monitoring connector status, mapping statistics, and system health")
 public class MonitoringController {
 
-    @Autowired
-    ConnectorRegistry connectorRegistry;
-
-    @Autowired
-    MappingService mappingService;
-
-    @Autowired
-    ConnectorConfigurationService connectorConfigurationService;
-
-    @Autowired
-    ServiceConfigurationService serviceConfigurationService;
-
-    @Autowired
-    BootstrapService bootstrapService;
-
-    @Autowired
-    C8YAgent c8YAgent;
-
-    @Autowired
-    private ContextService<UserCredentials> contextService;
+    private final ConnectorRegistry connectorRegistry;
+    private final MappingService mappingService;
+    private final ConnectorConfigurationService connectorConfigurationService;
+    private final ContextService<UserCredentials> contextService;
 
     @Value("${APP.externalExtensionsEnabled}")
     private Boolean externalExtensionsEnabled;
@@ -107,9 +90,33 @@ public class MonitoringController {
             String tenant = contextService.getContext().getTenant();
             AConnectorClient client = connectorRegistry.getClientForTenant(tenant,
                     connectorIdentifier);
-            ConnectorStatusEvent st = client.getConnectionStateManager().getConnectorStatus().get();
-            log.info("{} - Get status for connector: {}: {}", tenant, connectorIdentifier, st);
-            return new ResponseEntity<>(st, HttpStatus.OK);
+
+            // An active client is registered — return its live status.
+            if (client != null) {
+                ConnectorStatusEvent st = client.getConnectionStateManager().getConnectorStatus().get();
+                log.debug("{} - Get status for connector: {}: {}", tenant, connectorIdentifier, st);
+                return new ResponseEntity<>(st, HttpStatus.OK);
+            }
+
+            // No active client (e.g. the connector is configured/enabled but not yet
+            // connected, or has been disconnected). Mirror the aggregate status
+            // endpoint's fallback instead of dereferencing a null client (which
+            // previously caused a NullPointerException -> 500):
+            //   1. last-remembered status from the registry status map, else
+            //   2. an UNKNOWN status derived from the configuration, else
+            //   3. 404 if no such connector is configured at all.
+            Map<String, ConnectorStatusEvent> registryStatusMap = connectorRegistry.getConnectorStatusMap(tenant);
+            if (registryStatusMap != null && registryStatusMap.get(connectorIdentifier) != null) {
+                return new ResponseEntity<>(registryStatusMap.get(connectorIdentifier), HttpStatus.OK);
+            }
+
+            ConnectorConfiguration conf = connectorConfigurationService.getConnectorConfiguration(connectorIdentifier,
+                    tenant);
+            if (conf == null) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+            return new ResponseEntity<>(ConnectorStatusEvent.unknown(conf.getName(), conf.getIdentifier()),
+                    HttpStatus.OK);
         } catch (ConnectorRegistryException e) {
             throw new RuntimeException(e);
         }
@@ -211,7 +218,7 @@ public class MonitoringController {
         }
     }
 
-    @Operation(summary = "Get mapping statistics", description = "Retrieves statistics for all mappings including message counts, error counts, snooping status, and loading errors. Useful for monitoring mapping performance and health.")
+    @Operation(summary = "Get mapping statistics", description = "Retrieves statistics for all mappings including message counts, error counts, and loading errors. Useful for monitoring mapping performance and health.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Mapping statistics retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(type = "array", description = "List of mapping statistics", implementation = MappingStatus.class))),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
@@ -264,7 +271,7 @@ public class MonitoringController {
             Map<String, MutableInt> as = client.getCountSubscriptionsPerTopicInbound();
             Map<String, Integer> result = as.entrySet().stream()
                     .map(entry -> new AbstractMap.SimpleEntry<String, Integer>(entry.getKey(),
-                            entry.getValue().getValue()))
+                            entry.getValue().intValue()))
                     .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
 
             log.debug("{} - Getting active subscriptions!", tenant);

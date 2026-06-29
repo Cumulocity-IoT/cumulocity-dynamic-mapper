@@ -13,23 +13,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-KEEP_ON_FAILURE=false
+TEST_TITLE="19. Extension: Sparkplug B → Measurement"
+
 EXT_ID="dmtest-sparkplug-measure-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
 
-for arg in "$@"; do
-    case "$arg" in
-        --keep) KEEP_ON_FAILURE=true ;;
-        --cleanup) trap cleanup EXIT ;;
-    esac
-done
+dm_parse_args "$@"
 
 cleanup() {
-    if [ "$KEEP_ON_FAILURE" = "true" ]; then
-        dm_warn "Skipping cleanup (--keep flag set)"
-        return 0
-    fi
     dm_info "Cleaning up test resources ..."
     [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" 2>/dev/null || true
     if [ -n "${DEVICE_ID:-}" ]; then
@@ -39,21 +31,21 @@ cleanup() {
     dm_info "Cleanup complete"
 }
 
-trap cleanup EXIT
+dm_register_cleanup cleanup
 
-dm_banner "Test: Inbound Sparkplug B Measurement (protobuf → c8y_VoltageMeasurement)"
+dm_banner "$TEST_TITLE"
 
 dm_step 1 "Validating environment"
-dm_validate_tools
-dm_wait_for_service
-dm_require_mqtt_broker
-dm_verify_mqtt_connector_ready
+dm_test_setup_and_validate
+dm_validate_only_exit
+dm_require_extension "SparkplugBMeasurement" "INBOUND"
 
 dm_step 2 "Creating mapping with Sparkplug B extension"
 MAPPING_JSON=$(jq -cn \
     --arg name       "test-sparkplugb-measure-$$" \
     --arg identifier "sparkplugb-measure-$$" \
     --arg extId      "$EXT_ID" \
+    --argjson extension "$_DM_RESOLVED_EXTENSION" \
     '{
       name: $name,
       identifier: $identifier,
@@ -63,13 +55,7 @@ MAPPING_JSON=$(jq -cn \
       direction: "INBOUND",
       mappingType: "PROTOBUF_INTERNAL",
       transformationType: "EXTENSION_JAVA",
-      extension: {
-        extensionName: "sparkplugb-measurement-extension",
-        eventName: "SparkplugBMeasurement",
-        fqnClassName: "dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionSparkplugBMeasurement",
-        extensionType: "EXTENSION_INBOUND",
-        direction: "INBOUND"
-      },
+      extension: $extension,
       sourceTemplate: "{}",
       targetTemplate: "{}",
       active: false,
@@ -108,11 +94,12 @@ MAPPING_CONFIG=$(dm_api GET "/mapping/$MAPPING_ID" 2>/dev/null || echo '{}')
 EXT_EVENT=$(echo "$MAPPING_CONFIG" | jq -r '.extension.eventName // empty')
 EXT_FQN=$(echo "$MAPPING_CONFIG" | jq -r '.extension.fqnClassName // empty')
 
+_ext_match=false
 if [ "$EXT_EVENT" = "SparkplugBMeasurement" ] || [[ "$EXT_FQN" == *".ProcessorExtensionSparkplugBMeasurement" ]]; then
-    dm_success "Extension correctly configured: ${EXT_EVENT:-$EXT_FQN}"
-else
-    dm_warn "Extension mismatch: event=${EXT_EVENT:-n/a} fqn=${EXT_FQN:-n/a}"
+    _ext_match=true
 fi
+dm_assert_eq "Sparkplug B extension configured (event=${EXT_EVENT:-n/a} fqn=${EXT_FQN:-n/a})" "true" "$_ext_match"
 
-dm_done "Inbound Extension Sparkplug B Measurement"
+dm_done "$TEST_TITLE"
 dm_info "Note: Full protobuf payload testing requires binary message generation"
+dm_print_summary

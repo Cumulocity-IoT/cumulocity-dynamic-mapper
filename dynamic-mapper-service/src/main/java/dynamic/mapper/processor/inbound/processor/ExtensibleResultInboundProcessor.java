@@ -148,7 +148,7 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
         // Check inventory filter condition if specified
         if (mapping.getFilterInventory() != null) {
             boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
-                    context.getSourceId(), context.getTesting());
+                    context.getSourceId(), context.isTesting());
             if (context.getSourceId() == null || !filterInventory) {
                 if (mapping.getDebug()) {
                     log.info(
@@ -175,7 +175,7 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
             context.addError(new ProcessingException(errorMessage, e));
         }
 
-        if (!context.getTesting()) {
+        if (!context.isTesting()) {
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             mappingStatus.errors++;
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);

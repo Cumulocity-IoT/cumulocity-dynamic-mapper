@@ -12,8 +12,6 @@
       - [Define topic properties](#define-topic-properties)
       - [Subscription Topic](#subscription-topic)
       - [Mapping Topic](#mapping-topic)
-      - [Snooping payloads on source topic](#snooping-payloads-on-source-topic)
-      - [Enable snooping payloads on source topic](#enable-snooping-payloads-on-source-topic)
       - [Map Device Identifier](#map-device-identifier)
       - [Define templates and substitutions for source and target payload](#define-templates-and-substitutions-for-source-and-target-payload)
       - [Defining the payload transformation using a Smart Function (JavaScript)](#defining-the-payload-transformation-using-a-smart-function-javascript)
@@ -21,7 +19,6 @@
     - [Apply a filter for a mapping](#apply-a-filter-for-a-mapping)
     - [Test transformation from source to target format](#test-transformation-from-source-to-target-format)
     - [Send transformed test message to test device in Cumulocity](#send-transformed-test-message-to-test-device-in-cumulocity)
-    - [Use snooped payloads in source templates](#use-snooped-payloads-in-source-templates)
     - [Update existing Mapping](#update-existing-mapping)
     - [Import & Export Mappings](#import---export-mappings)
   - [Configuration](#configuration)
@@ -62,7 +59,6 @@ The mapper supports the following connectors:
           <th style="width: 26%;">Connector</th>
           <th class="text-center" style="width: 12%;">Direction: Inbound</th>
           <th class="text-center" style="width: 12%;">Direction: Outbound</th>
-          <th class="text-center" style="width: 12%;">Supports Snoop</th>
           <th class="text-center" style="width: 12%;">Supports JavaScript</th>
           <th style="width: 26%;">Supported Mapping Types</th>
         </tr>
@@ -73,13 +69,11 @@ The mapper supports the following connectors:
               isolation, only one instance per tenant exists)</small></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
           <td>JSON, Flat File, Hex, SparkPlugB (partially), Any Payload</td>
         </tr>
         <tr class="table-light">
           <td><strong>Generic MQTT</strong></td>
-          <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
@@ -90,14 +84,12 @@ The mapper supports the following connectors:
               exists)</small></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center text-muted">-</td>
-          <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
           <td>JSON, Flat File, Hex, Any Payload</td>
         </tr>
         <tr class="table-light">
           <td><strong>Webhook</strong><br></td>
           <td class="text-center text-muted">-</td>
-          <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
           <td>JSON</td>
@@ -106,13 +98,11 @@ The mapper supports the following connectors:
           <td><strong>Cumulocity API</strong></td>
           <td class="text-center text-muted">-</td>
           <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
           <td>JSON</td>
         </tr>
         <tr>
           <td><strong>Apache Pulsar </strong><small class="text-muted"></small></td>
-          <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
@@ -122,7 +112,6 @@ The mapper supports the following connectors:
           <td><strong>Kafka</strong></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
           <td>JSON, Flat File, Hex, Any Payload</td>
         </tr>
@@ -130,13 +119,11 @@ The mapper supports the following connectors:
           <td><strong>AMQP 0.9.1</strong><br><small class="text-muted">(RabbitMQ, etc.)</small></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
           <td>JSON, Flat File, Hex, Any Payload</td>
         </tr>
         <tr>
           <td><strong>AMQP 1.0.0</strong><br><small class="text-muted">(Azure Service Bus, Artemis, Solace, etc.)</small></td>
-          <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
@@ -321,8 +308,6 @@ $number(message) & " C"
 2. Define the templates for the source and target, in JSON format. The source payload can be in any custom JSON format. the target format has to follow the schemsa for Alarm, Events, Measurements or Inventory, [see Cumulocity OpenAPI](https://cumulocity.com/api/).
 3. Test the mapping by applying the transformation and send the result to a test device.
 
-Also you can decide if you want to start with snooping messages on specific topics before defining your mapping in detail by checking `Start snoop`.
-
 #### Connector selection
 
 As a next step you need to create or select the connectors the mapping should be deployed to.
@@ -400,25 +385,6 @@ The levels of the Mapping Topic are split and added to the payload:
 
 The entries in the `_TOPIC_LEVEL_` can be used to resolve the external device identifier to the internal Cumulocity Id.
 The additional property `_TOPIC_LEVEL_` is added to the source template shown in the next wizard step. It must not be deleted when editing the JSON source template.
-
-#### Snooping payloads on source topic
-
-Very often you want to use the payloads of existing JSON messages as a sample to define the source template. This can be achieved by listening and recording - **snooping** - messages on a topic.
-
-In order to record JSON payloads on the defined topic a subscription records the payloads and saves them for later use in a source template.
-
-The snooping process goes through the steps **ENABLED** -> **STARTED** -> **STOPPED**.
-
-If a payload is found the status moves to **STARTED**. This is indicated in the last column of the mapping table, where the number of payloads snooped so far is shown.
-
-#### Enable snooping payloads on source topic
-
-To enable snooping select `ENABLED` in the drop down as shown in the screenshot below. This starts the snooping process and the microservice subscribes to the related topic and records the received payloads.
-
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Snooping_Enable.png"  style="width: 70%;" />
-</p>
-<br/>
 
 #### Map Device Identifier
 
@@ -760,16 +726,6 @@ To send the transformed payload to a test device, press the button `Send test me
 
 <p align="center">
 <img src="resources/image/Dynamic_Mapper_Mapping_Stepper_SendTestMessage.png"  style="width: 70%;" />
-</p>
-<br/>
-
-### Use snooped payloads in source templates
-
-In order to use a previously snooped payload click the button
-`Snooped templates`. Multiples activation of this button iterates over all the recorded templates.
-
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png"  style="width: 70%;" />
 </p>
 <br/>
 

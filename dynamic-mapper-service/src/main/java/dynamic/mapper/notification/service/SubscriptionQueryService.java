@@ -33,7 +33,6 @@ import dynamic.mapper.model.Device;
 import dynamic.mapper.model.NotificationSubscriptionResponse;
 import dynamic.mapper.notification.Utils;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -50,22 +49,20 @@ import java.util.stream.Collectors;
 @Service
 public class SubscriptionQueryService {
 
-    @Autowired
-    private NotificationSubscriptionApi subscriptionAPI;
+    private final NotificationSubscriptionApi subscriptionAPI;
+    private final MicroserviceSubscriptionsService subscriptionsService;
+    private final ConfigurationRegistry configurationRegistry;
+    private final ExecutorService virtualThreadPool;
 
-    @Autowired
-    private MicroserviceSubscriptionsService subscriptionsService;
-
-    private ConfigurationRegistry configurationRegistry;
-
-    @Autowired
-    public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
+    public SubscriptionQueryService(NotificationSubscriptionApi subscriptionAPI,
+                                     MicroserviceSubscriptionsService subscriptionsService,
+                                     @Lazy ConfigurationRegistry configurationRegistry,
+                                     @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool) {
+        this.subscriptionAPI = subscriptionAPI;
+        this.subscriptionsService = subscriptionsService;
         this.configurationRegistry = configurationRegistry;
+        this.virtualThreadPool = virtualThreadPool;
     }
-
-    @Autowired
-    @Qualifier("virtualThreadPool")
-    private ExecutorService virtualThreadPool;
 
     // === Public API ===
 
@@ -94,11 +91,10 @@ public class SubscriptionQueryService {
                         .getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
 
                 while (subIt.hasNext()) {
+                    // L7: byContext("mo") filter already guarantees context; check removed
                     NotificationSubscriptionRepresentation nsr = subIt.next();
-                    if (!"tenant".equals(nsr.getContext())) {
-                        log.debug("{} - Retrieved device subscription: {}", tenant, nsr.getId().getValue());
-                        deviceSubList.add(nsr);
-                    }
+                    log.debug("{} - Retrieved device subscription: {}", tenant, nsr.getId().getValue());
+                    deviceSubList.add(nsr);
                 }
             } catch (Exception e) {
                 log.error("{} - Error retrieving device subscriptions: {}", tenant, e.getMessage(), e);
@@ -133,11 +129,10 @@ public class SubscriptionQueryService {
                         .getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
 
                 while (subIt.hasNext()) {
+                    // L7: byContext("mo") filter already guarantees context; check removed
                     NotificationSubscriptionRepresentation nsr = subIt.next();
-                    if (!"tenant".equals(nsr.getContext())) {
-                        log.debug("{} - Retrieved management subscription: {}", tenant, nsr.getId().getValue());
-                        managementSubList.add(nsr);
-                    }
+                    log.debug("{} - Retrieved management subscription: {}", tenant, nsr.getId().getValue());
+                    managementSubList.add(nsr);
                 }
             } catch (Exception e) {
                 log.error("{} - Error retrieving management subscriptions: {}", tenant, e.getMessage(), e);
@@ -161,12 +156,11 @@ public class SubscriptionQueryService {
                 Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
                         .getSubscriptionsByFilter(filter).get().allPages().iterator();
 
-                while (subIt.hasNext()) {
+                // L7: byContext("tenant") filter already guarantees context; return first match
+                if (subIt.hasNext()) {
                     NotificationSubscriptionRepresentation nsr = subIt.next();
-                    if ("tenant".equals(nsr.getContext())) {
-                        log.debug("{} - Retrieved type subscription: {}", tenant, nsr.getId().getValue());
-                        return nsr;
-                    }
+                    log.debug("{} - Retrieved type subscription: {}", tenant, nsr.getId().getValue());
+                    return nsr;
                 }
                 return null;
             } catch (Exception e) {
@@ -207,10 +201,8 @@ public class SubscriptionQueryService {
                         .getSubscriptionsByFilter(finalFilter).get().allPages().iterator();
 
                 while (subIt.hasNext()) {
-                    NotificationSubscriptionRepresentation nsr = subIt.next();
-                    if (!"tenant".equals(nsr.getContext())) {
-                        processDeviceSubscription(tenant, nsr, devices, responseBuilder);
-                    }
+                    // L7: byContext("mo") filter already guarantees context; check removed
+                    processDeviceSubscription(tenant, subIt.next(), devices, responseBuilder);
                 }
             } catch (Exception e) {
                 log.error("{} - Error getting device subscriptions: {}", tenant, e.getMessage(), e);
@@ -242,10 +234,8 @@ public class SubscriptionQueryService {
                         .getSubscriptionsByFilter(filter).get().allPages().iterator();
 
                 while (subIt.hasNext()) {
-                    NotificationSubscriptionRepresentation nsr = subIt.next();
-                    if (!"tenant".equals(nsr.getContext())) {
-                        processDeviceSubscription(tenant, nsr, devices, responseBuilder);
-                    }
+                    // L7: byContext("mo") filter already guarantees context; check removed
+                    processDeviceSubscription(tenant, subIt.next(), devices, responseBuilder);
                 }
             } catch (Exception e) {
                 log.error("{} - Error getting group subscriptions: {}", tenant, e.getMessage(), e);
@@ -331,16 +321,21 @@ public class SubscriptionQueryService {
                     device.setGroups(groups);
                 }
             } else {
-                log.warn("{} - Device {} in subscription does not exist, deleting stale subscription {}",
+                log.warn("{} - Device {} in subscription does not exist; scheduling async cleanup of stale subscription {}",
                         tenant, device.getId(), nsr.getId().getValue());
-                try {
-                    subscriptionAPI.delete(nsr);
-                    log.info("{} - Deleted stale subscription {} for non-existent device {}",
-                            tenant, nsr.getId().getValue(), device.getId());
-                } catch (Exception deleteEx) {
-                    log.warn("{} - Failed to delete stale subscription {} for device {}: {}",
-                            tenant, nsr.getId().getValue(), device.getId(), deleteEx.getMessage());
-                }
+                // M10: don't mutate state inside a read path — schedule the deletion asynchronously
+                final NotificationSubscriptionRepresentation staleNsr = nsr;
+                final String deviceIdForLog = device.getId();
+                virtualThreadPool.submit(() -> {
+                    try {
+                        subscriptionsService.runForTenant(tenant, () -> subscriptionAPI.delete(staleNsr));
+                        log.info("{} - Deleted stale subscription {} for non-existent device {}",
+                                tenant, staleNsr.getId().getValue(), deviceIdForLog);
+                    } catch (Exception deleteEx) {
+                        log.warn("{} - Failed to delete stale subscription {} for device {}: {}",
+                                tenant, staleNsr.getId().getValue(), deviceIdForLog, deleteEx.getMessage());
+                    }
+                });
                 return;
             }
         } catch (Exception e) {

@@ -88,7 +88,6 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
             log.error("{} - Error processing inventory cache update: {}", tenant, e.getMessage(), e);
             return ProcessingResultWrapper.builder()
                 .consolidatedQos(Qos.AT_LEAST_ONCE)
-                .error(e)
                 .build();
         }
     }
@@ -102,7 +101,7 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
     public void onClose(int statusCode, String reason) {
         log.info("{} - WebSocket closed: status={}, reason={}", tenant, statusCode, reason);
 
-        if (reason != null && reason.contains("401")) {
+        if (statusCode == 401) {
             notificationSubscriber.setCacheInventoryConnectionStatus(tenant, 401);
         } else {
             notificationSubscriber.setCacheInventoryConnectionStatus(tenant, null);

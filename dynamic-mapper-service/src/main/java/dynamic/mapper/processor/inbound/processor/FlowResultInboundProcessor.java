@@ -21,14 +21,13 @@ import dynamic.mapper.processor.model.CumulocityType;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.ExternalIdInfo;
-import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingState;
 import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.processor.util.APITopicUtil;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.IdentityResolutionService;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,17 +37,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
 
     private final C8YAgent c8yAgent;
-    private final ConfigurationRegistry configurationRegistry;
+    private final IdentityResolutionService identityResolutionService;
 
     @Autowired
     public FlowResultInboundProcessor(
             MappingService mappingService,
             C8YAgent c8yAgent,
-            ConfigurationRegistry configurationRegistry,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            IdentityResolutionService identityResolutionService) {
         super(mappingService, objectMapper);
         this.c8yAgent = c8yAgent;
-        this.configurationRegistry = configurationRegistry;
+        this.identityResolutionService = identityResolutionService;
     }
 
     /**
@@ -84,13 +83,12 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             Object message,
             RoutingContext routing,
             ProcessingState state,
-            OutputCollector output,
             ProcessingContext<?> context) throws ProcessingException {
         String tenant = routing.getTenant();
         Mapping mapping = context.getMapping();
 
         if (message instanceof CumulocityObject) {
-            processCumulocityObject((CumulocityObject) message, routing, state, output, context, tenant, mapping);
+            processCumulocityObject((CumulocityObject) message, routing, state, context, tenant, mapping);
         } else {
             log.debug("{} - Message is not a CumulocityObject, skipping: {}", tenant,
                     message.getClass().getSimpleName());
@@ -98,7 +96,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
     }
 
     @Override
-    protected void postProcessFlowResults(ProcessingState state, OutputCollector output,
+    protected void postProcessFlowResults(ProcessingState state,
                                          ProcessingContext<?> context) throws ProcessingException {
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
@@ -106,7 +104,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
         // Check inventory filter condition if specified
         if (mapping.getFilterInventory() != null) {
             boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
-                    context.getSourceId(), context.getTesting());
+                    context.getSourceId(), context.isTesting());
             if (context.getSourceId() == null || !filterInventory) {
                 if (mapping.getDebug()) {
                     log.info(
@@ -133,21 +131,17 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             context.addError(new ProcessingException(errorMessage, e));
         }
 
-        if (!context.getTesting()) {
+        if (!context.isTesting()) {
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             mappingStatus.errors++;
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
     }
 
-    /**
-     * NEW: Process CumulocityObject using focused contexts.
-     */
     private void processCumulocityObject(
             CumulocityObject cumulocityMessage,
             RoutingContext routing,
             ProcessingState state,
-            OutputCollector output,
             ProcessingContext<?> context,
             String tenant,
             Mapping mapping) throws ProcessingException {
@@ -167,7 +161,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                         .pathCumulocity(targetPath)
                         .request(objectMapper.writeValueAsString(cumulocityMessage.getPayload()))
                         .build();
-                output.addRequest(customRequest);
+                context.addRequest(customRequest);
                 log.debug("{} - Created CUSTOM route request: path={}, method={}",
                         tenant, targetPath, customRequest.getMethod());
                 return;
@@ -178,7 +172,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                 String warnMsg = String.format(
                         "CumulocityObject missing cumulocityType, cannot derive API for mapping '%s', skipping message", mapping.getIdentifier());
                 log.warn("{} - {}", tenant, warnMsg);
-                output.addWarning(warnMsg);
+                context.getWarnings().add(warnMsg);
                 return;
             }
             API targetAPI = APITopicUtil.deriveAPIFromTopic(cumulocityMessage.getCumulocityType().toString());
@@ -187,7 +181,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                         "CumulocityObject has unrecognized cumulocityType '%s' for mapping '%s', skipping message",
                         cumulocityMessage.getCumulocityType(), mapping.getIdentifier());
                 log.warn("{} - {}", tenant, warnMsgType);
-                output.addWarning(warnMsgType);
+                context.getWarnings().add(warnMsgType);
                 return;
             }
 
@@ -275,7 +269,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                         ID identity = new ID(externalId.getType(),
                                 externalId.getExternalId());
                         // Use thread-safe method to prevent race condition
-                        String sourceId = configurationRegistry.getOrCreateDeviceThreadSafe(
+                        String sourceId = identityResolutionService.getOrCreateDeviceThreadSafe(
                                 tenant, externalId.getType(), externalId.getExternalId(), identity, context);
                         if (sourceId != null) {
                             context.setSourceId(sourceId);
@@ -292,7 +286,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                                     "Failed to create implicit device for externalId '%s' (type '%s') for mapping '%s'.",
                                     externalId.getExternalId(), externalId.getType(), mapping.getIdentifier());
                             log.warn("{} - {}", tenant, warnMsg);
-                            output.addWarning(warnMsg);
+                            context.getWarnings().add(warnMsg);
                             return; // Don't create a request
                         }
                     }
@@ -305,7 +299,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                             externalId != null ? externalId.getType() : "unknown",
                             mapping.getIdentifier());
                     log.warn("{} - {}", tenant, warnMsg);
-                    output.addWarning(warnMsg);
+                    context.getWarnings().add(warnMsg);
                     return; // Don't create a request
                 }
             } else {
@@ -313,7 +307,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                         "Cannot process message: no externalSource provided for mapping '%s'. Set externalId in the returned CumulocityObject.",
                         mapping.getIdentifier());
                 log.warn("{} - {}", tenant, warnMsg);
-                output.addWarning(warnMsg);
+                context.getWarnings().add(warnMsg);
                 return; // Don't create a request
             }
 
@@ -355,7 +349,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                 dynamicMapperRequest.setSourceId(resolvedDeviceId);
                 dynamicMapperRequest.setExternalId(externalIdInfo.getExternalId());
                 dynamicMapperRequest.setExternalIdType(externalIdInfo.getExternalType());
-                output.addRequest(dynamicMapperRequest);
+                context.addRequest(dynamicMapperRequest);
                 return;
             }
 
@@ -377,7 +371,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                         req.setSourceId(resolvedDeviceId);
                         req.setExternalId(externalIdInfo.getExternalId());
                         req.setExternalIdType(externalIdInfo.getExternalType());
-                        output.addRequest(req);
+                        context.addRequest(req);
                     }
                     log.debug("{} - Fanned out {} event request(s) for device {}", tenant, events.size(), resolvedDeviceId);
                     return;
@@ -400,7 +394,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                         req.setSourceId(resolvedDeviceId);
                         req.setExternalId(externalIdInfo.getExternalId());
                         req.setExternalIdType(externalIdInfo.getExternalType());
-                        output.addRequest(req);
+                        context.addRequest(req);
                     }
                     log.debug("{} - Fanned out {} alarm request(s) for device {}", tenant, alarms.size(), resolvedDeviceId);
                     return;
@@ -424,8 +418,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             dynamicMapperRequest.setExternalId(externalIdInfo.getExternalId());
             dynamicMapperRequest.setExternalIdType(externalIdInfo.getExternalType());
 
-            // Add to output collector (thread-safe), will be synced back to context
-            output.addRequest(dynamicMapperRequest);
+            context.addRequest(dynamicMapperRequest);
 
             log.debug("{} - Created C8Y request: API={}, action={}, deviceId={}",
                     tenant, targetAPI.name, cumulocityMessage.getAction(), resolvedDeviceId);

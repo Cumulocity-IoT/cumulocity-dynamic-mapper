@@ -36,7 +36,6 @@ The Dynamic Mapper supports the following connectors:
         <th style="width: 26%;">Connector</th>
         <th class="text-center" style="width: 12%;">Direction: Inbound</th>
         <th class="text-center" style="width: 12%;">Direction: Outbound</th>
-        <th class="text-center" style="width: 12%;">Supports Snoop</th>
         <th class="text-center" style="width: 12%;">Supports JavaScript</th>
         <th style="width: 26%;">Supported Mapping Types</th>
         </tr>
@@ -47,13 +46,11 @@ The Dynamic Mapper supports the following connectors:
             isolation, only one instance per tenant exists)</small></td>
         <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong></td>
-        <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong><br></td>
         <td>JSON, Hex, Protobuf, Extension</td>
         </tr>
         <tr class="table-light">
         <td><strong>Generic MQTT</strong></td>
-        <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong><br></td>
@@ -64,7 +61,6 @@ The Dynamic Mapper supports the following connectors:
             exists)</small></td>
         <td class="text-center"><strong>X</strong></td>
         <td class="text-center text-muted">-</td>
-        <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong><br></td>
         <td>JSON, Hex, Protobuf, Extension</td>
         </tr>
@@ -72,13 +68,11 @@ The Dynamic Mapper supports the following connectors:
         <td><strong>Webhook</strong><br><small class="text-muted">(including Cumulocity Rest API)</small></td>
         <td class="text-center text-muted">-</td>
         <td class="text-center"><strong>X</strong></td>
-        <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong><br></td>
         <td>JSON, Hex</td>
         </tr>
         <tr>
         <td><strong>Apache Pulsar </strong><small class="text-muted"></small></td>
-        <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong><br></td>
@@ -88,14 +82,12 @@ The Dynamic Mapper supports the following connectors:
         <td><strong>Kafka</strong></td>
         <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong></td>
-        <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong><br></td>
         <td>JSON, Hex, Protobuf, Extension</td>
         </tr>
         <tr>
         <!-- <td><strong>Cumulocity MQTT Service - deprecated </strong><small class="text-muted">(tenant
             isolation, only one instance per tenant exists)</small></td>
-        <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong></td>
         <td class="text-center"><strong>X</strong><br></td>

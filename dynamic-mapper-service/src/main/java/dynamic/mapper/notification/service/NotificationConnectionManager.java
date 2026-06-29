@@ -38,7 +38,6 @@ import dynamic.mapper.notification.websocket.NotificationCallback;
 import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
 import lombok.extern.slf4j.Slf4j;
 import org.java_websocket.enums.ReadyState;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -56,25 +55,24 @@ import java.util.concurrent.*;
 @Service
 public class NotificationConnectionManager {
 
-    @Autowired
-    private MicroserviceSubscriptionsService subscriptionsService;
+    private final MicroserviceSubscriptionsService subscriptionsService;
+    private final TokenManager tokenManager;
+    private final MqttPushManager mqttPushManager;
+    private final ConnectorRegistry connectorRegistry;
+    private final SubscriptionQueryService queryService;
+    private final ConfigurationRegistry configurationRegistry;
 
-    @Autowired
-    private TokenManager tokenManager;
-
-    @Autowired
-    private MqttPushManager mqttPushManager;
-
-    @Autowired
-    private ConnectorRegistry connectorRegistry;
-
-    @Autowired
-    private SubscriptionQueryService queryService;
-
-    private ConfigurationRegistry configurationRegistry;
-
-    @Autowired
-    public void setConfigurationRegistry(@Lazy ConfigurationRegistry configurationRegistry) {
+    public NotificationConnectionManager(MicroserviceSubscriptionsService subscriptionsService,
+                                          TokenManager tokenManager,
+                                          MqttPushManager mqttPushManager,
+                                          ConnectorRegistry connectorRegistry,
+                                          SubscriptionQueryService queryService,
+                                          @Lazy ConfigurationRegistry configurationRegistry) {
+        this.subscriptionsService = subscriptionsService;
+        this.tokenManager = tokenManager;
+        this.mqttPushManager = mqttPushManager;
+        this.connectorRegistry = connectorRegistry;
+        this.queryService = queryService;
         this.configurationRegistry = configurationRegistry;
     }
 
@@ -275,11 +273,55 @@ public class NotificationConnectionManager {
 
         } catch (InterruptedException e) {
             log.error("{} - Interrupted while initializing management client", tenant);
+            // M3: clean up pre-registered callbacks so they don't leak on failure
+            managementCallbacks.remove(tenant);
+            cacheInventoryCallbacks.remove(tenant);
             Thread.currentThread().interrupt();
         } catch (ExecutionException | TimeoutException | URISyntaxException e) {
             log.error("{} - Error initializing management client: {}", tenant, e.getMessage(), e);
+            // M3: clean up pre-registered callbacks so they don't leak on failure
+            managementCallbacks.remove(tenant);
+            cacheInventoryCallbacks.remove(tenant);
         } finally {
             lock.release();
+        }
+    }
+
+    /**
+     * Reconnects existing static device WebSocket clients so they pick up pending
+     * notifications from a newly created device subscription without waiting for the
+     * 60-second {@link #reconnectAll()} cycle.  Calls {@code client.reconnect()} on
+     * each open client — the same lightweight path used by the scheduler — so C8Y
+     * delivers any queued messages (including the new subscription's events) as
+     * initial messages after the reconnect completes.
+     */
+    public void reconnectStaticDeviceClientsForNewSubscription(String tenant) {
+        if (tenant == null) {
+            return;
+        }
+        Map<String, CustomWebSocketClient> clients = staticDeviceClients.get(tenant);
+        if (clients == null || clients.isEmpty()) {
+            // No existing clients yet — initialize from scratch
+            try {
+                initializeStaticDeviceConnections(tenant);
+            } catch (URISyntaxException e) {
+                log.error("{} - Error initializing static device connections after subscription: {}", tenant,
+                        e.getMessage(), e);
+            }
+            return;
+        }
+        for (Map.Entry<String, CustomWebSocketClient> entry : clients.entrySet()) {
+            CustomWebSocketClient client = entry.getValue();
+            if (client != null && client.isOpen()) {
+                try {
+                    client.reconnect();
+                    log.info("{} - Triggered static device WebSocket reconnect for connector {} after new subscription",
+                            tenant, entry.getKey());
+                } catch (Exception e) {
+                    log.warn("{} - Error reconnecting static device client after subscription: {}", tenant,
+                            e.getMessage());
+                }
+            }
         }
     }
 
@@ -487,7 +529,8 @@ public class NotificationConnectionManager {
         return tenant != null ? cacheInventoryWSStatusCodes.get(tenant) : null;
     }
 
-    public void startReconnectScheduler() {
+    // H5: synchronized so concurrent callers can't each pass the null-check and create duplicate schedulers
+    public synchronized void startReconnectScheduler() {
         if (reconnectExecutor == null || reconnectExecutor.isShutdown()) {
             reconnectExecutor = Executors.newScheduledThreadPool(1, r -> {
                 Thread t = new Thread(r, "websocket-reconnect");
@@ -679,7 +722,11 @@ public class NotificationConnectionManager {
             configurationRegistry.getC8yAgent().sendNotificationLifecycle(
                     tenant, ConnectorStatus.CONNECTING, null);
 
-            String webSocketBaseUrl = baseUrl.replace("http", "ws");
+            // L3: replace("http","ws") corrupts any hostname that contains "http" as a substring;
+            // only the scheme prefix must be replaced
+            String webSocketBaseUrl = baseUrl.startsWith("https://")
+                    ? "wss://" + baseUrl.substring("https://".length())
+                    : "ws://" + baseUrl.substring("http://".length());
             URI webSocketUrl = new URI(webSocketBaseUrl + Utils.WEBSOCKET_PATH + token);
 
             CustomWebSocketClient client = new CustomWebSocketClient(
@@ -714,8 +761,9 @@ public class NotificationConnectionManager {
                             return retryClient;
                         }
                         if (!retryClient.isConflict()) {
+                            // L4: tenant must be first arg to match the "{}" prefix slot
                             log.error("{} - WebSocket retry {}/{} failed for connector {} (not a conflict)",
-                                    attempt, Utils.CONFLICT_RETRY_COUNT, tenant, connectorId.getName());
+                                    tenant, attempt, Utils.CONFLICT_RETRY_COUNT, connectorId.getName());
                             return null;
                         }
                     }
@@ -837,7 +885,7 @@ public class NotificationConnectionManager {
                             (deviceWSStatusCodes.get(tenant) != null && deviceWSStatusCodes.get(tenant) == 401)) {
                         log.info("{} - Re-initializing static device client", tenant);
                         initializeStaticDeviceClient(tenant);
-                        break;
+                        // M6: don't break — continue so remaining CLOSED clients are also reconnected
                     } else {
                         client.reconnect();
                         reconnectedCount++;
@@ -867,7 +915,8 @@ public class NotificationConnectionManager {
                             (deviceWSStatusCodes.get(tenant) != null && deviceWSStatusCodes.get(tenant) == 401)) {
                         log.info("{} - Re-initializing dynamic device client", tenant);
                         initializeDynamicDeviceClient(tenant);
-                        break;
+                        // L5: don't break — initializeDynamic covers all connectors in one call,
+                        // but continue so any remaining stale-state clients are also inspected
                     } else {
                         client.reconnect();
                         reconnectedCount++;

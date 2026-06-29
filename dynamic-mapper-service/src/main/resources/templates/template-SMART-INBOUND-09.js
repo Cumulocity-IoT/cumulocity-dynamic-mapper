@@ -7,7 +7,7 @@
  * @direction INBOUND
  */
 function onMessage(msg, context) {
-    var payload = msg.getPayload();
+    var payload = msg.payload;
 
     console.log("Payload Raw: " + JSON.stringify(payload));
 
@@ -95,7 +95,7 @@ function onMessage(msg, context) {
         var rawTimestamp = metric["timestamp"] || messageTimestamp;
         var isoTimestamp = rawTimestamp
             ? new Date(rawTimestamp).toISOString()
-            : new Date().toISOString();
+            : msg.time;
 
         // Build a safe fragment name from the metric name
         // e.g. "Primary Variable" -> "c8y_PrimaryVariable"

@@ -20,6 +20,8 @@
  */
 package dynamic.mapper.processor.outbound.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import org.apache.camel.Exchange;
 import org.springframework.stereotype.Component;
 
@@ -35,19 +37,19 @@ public class DeserializationOutboundProcessor extends BaseProcessor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        C8YMessage c8yMessage = exchange.getIn().getHeader("c8yMessage", C8YMessage.class);
+        C8YMessage c8yMessage = exchange.getIn().getHeader(CamelHeaders.C8Y_MESSAGE, C8YMessage.class);
 
         String tenant = c8yMessage.getTenant();
         Mapping mapping = exchange.getIn().getBody(Mapping.class);
-        Boolean testing = exchange.getIn().getHeader("testing", Boolean.class);
+        Boolean testing = exchange.getIn().getHeader(CamelHeaders.TESTING, Boolean.class);
 
-        ServiceConfiguration serviceConfiguration = exchange.getIn().getHeader("serviceConfiguration",
+        ServiceConfiguration serviceConfiguration = exchange.getIn().getHeader(CamelHeaders.SERVICE_CONFIGURATION,
                 ServiceConfiguration.class);
 
         ProcessingContext<Object> context = createProcessingContextAsObject(tenant, mapping, c8yMessage,
                 serviceConfiguration, testing);
 
-        exchange.getIn().setHeader("processingContext", context);
+        exchange.getIn().setHeader(CamelHeaders.PROCESSING_CONTEXT, context);
 
     }
 

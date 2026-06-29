@@ -56,11 +56,6 @@ public class CustomWebSocketClient extends WebSocketClient {
      */
     private static final int MAX_CONSECUTIVE_FAILURES = 5;
 
-    /**
-     * Maximum time a mapping can use CPU-time to process end to end. Only used in error cases,
-     * otherwise configured timeout is used.
-     */
-    private static final int MAX_PROCESSING_TIMEOUT = 30000;
 
     private final NotificationCallback callback;
     private ScheduledExecutorService executorService = null;
@@ -123,15 +118,8 @@ public class CustomWebSocketClient extends WebSocketClient {
             return;
         }
         int mappingQos = processedResults.getConsolidatedQos().ordinal();
-        int timeout = processedResults.getMaxCPUTimeMS();
-        //TODO Do we really need this log? as it is not logging any payload.
-        /*
-        if (serviceConfiguration.getLogPayload()) {
-            log.info(
-                    "{} - PREPARING_RESULTS: message on connector InternalWebSocket (notification 2.0) for outbound connector {}, API: {}, Operation: {}, QoS mappings: {}",
-                    tenant, connectorId.getIdentifier(), notification.getApi(), notification.getOperation(), mappingQos);
-        }
-         */
+        int timeout = processedResults.getPipelineTimeoutMS();
+
         if (mappingQos > 0) {
             // Use the provided virtualThreadPool instead of creating a new thread
             virtualThreadPool.submit(() -> {
@@ -149,7 +137,8 @@ public class CustomWebSocketClient extends WebSocketClient {
                         int attempt = failureCountPerMessage.getOrDefault(messageId, new AtomicInteger(0)).get();
                         effectiveTimeout = Math.min(
                                 (long) timeout * (attempt + 1),
-                                MAX_PROCESSING_TIMEOUT);
+                                serviceConfiguration.getPipelineTimeoutMS() != null
+                                        ? serviceConfiguration.getPipelineTimeoutMS() : 30_000);
                         if (attempt > 0) {
                             log.info("{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
                                     tenant, attempt + 1, effectiveTimeout, timeout, connectorId.getIdentifier());
@@ -158,6 +147,17 @@ public class CustomWebSocketClient extends WebSocketClient {
                                 TimeUnit.MILLISECONDS);
                     } else if(processedResults.getProcessingResult() != null) {
                         results = processedResults.getProcessingResult().get();
+                    }
+
+                    // JS CPU timeout may have fired and closed the GraalVM context before the
+                    // wall-clock timeout expired. In that case the future completes early with
+                    // cancellationRequested=true. We must NOT ACK — treat it like a TimeoutException
+                    // so the broker retransmits the unACKed message.
+                    if (processedResults.getCancellationRequested().get()) {
+                        log.warn("{} - JS CPU timeout fired: processing cancelled before wall-clock timeout, not ACKing. connector: {}",
+                                tenant, connectorId.getIdentifier());
+                        handleFailureOrRetransmit(notification, messageId);
+                        return null;
                     }
 
                     // Check for errors in results
@@ -224,25 +224,40 @@ public class CustomWebSocketClient extends WebSocketClient {
                     // cancelProcessing() calls Future.cancel(true) to interrupt IO-blocked threads
                     // AND closes any active GraalVM context via Context.close(cancelIfExecuting=true)
                     // — the only reliable way to stop CPU-bound JS execution.
-                    //log.warn("{} - Timeout occurred, initiating cancellation of processing task, connector {}", tenant, connectorId.getName());
+                    log.warn("{} - Timeout occurred, initiating cancellation of processing task, connector {}", tenant, connectorId.getName());
                     var cancelResult = processedResults.cancelProcessing();
-                    //log.info("{} - Cancellation result: future was cancelled={}, connector {}", tenant, cancelResult, connectorId.getName());
+                    log.info("{} - Cancellation result: future was cancelled={}, connector {}", tenant, cancelResult, connectorId.getName());
 
-                    // Give the cancellation a brief moment to take effect (interrupt flag propagation,
-                    // GraalVM context closure).
-                    try {
-                        Thread.sleep(50); //NOSONAR intentional wait for cancellation to take effect
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
+                    // Wait for the future to actually terminate after cancellation.
+                    // The active cancellation checks in C8YAgent.createMEAO() should prevent any new HTTP calls,
+                    // allowing threads to exit quickly. We wait up to 2 seconds as a fail-safe in case a thread
+                    // is already mid-flight in an HTTP call that cannot be interrupted immediately.
+                    boolean futureCompleted = false;
+                    int maxWaitIterations = 20; // 20 × 100ms = 2 seconds
+                    for (int i = 0; i < maxWaitIterations; i++) {
+                        if (processedResults.getProcessingResult().isDone()) {
+                            futureCompleted = true;
+                            log.info("{} - Future completed after {}ms wait, connector {}", tenant, (i + 1) * 100, connectorId.getName());
+                            break;
+                        }
+                        try {
+                            Thread.sleep(100); //NOSONAR intentional wait for future completion
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            log.warn("{} - Interrupted while waiting for future completion, connector {}", tenant, connectorId.getName());
+                            break;
+                        }
                     }
 
-                    if (!cancelResult && processedResults.getCancellationRequested().get()) {
-                        log.warn("{} - Future was already running when cancellation was requested. Waiting for it to complete or be interrupted, connector {}.", tenant, connectorId.getIdentifier());
+                    if (!futureCompleted) {
+                        log.error("{} - Future did NOT complete within 2 seconds after cancellation! " +
+                                "This indicates that a thread is stuck in a blocking operation that cannot be interrupted. " +
+                                "Check for long-running HTTP calls or other blocking I/O. connector: {}", tenant, connectorId.getName());
                     }
 
                     log.warn(
-                            "{} - END: Processing timed out after {}ms, triggering WebSocket reconnect for retransmission. connector: {}, cancel result: {}",
-                            tenant, effectiveTimeout, connectorId.getIdentifier(), cancelResult);
+                            "{} - END: Processing timed out after {}ms, triggering WebSocket reconnect for retransmission. connector: {}, cancel result: {}, future completed: {}",
+                            tenant, effectiveTimeout, connectorId.getIdentifier(), cancelResult, futureCompleted);
                     handleFailureOrRetransmit(notification, messageId);
                 } catch (Exception e) {
                     // Handle other exceptions

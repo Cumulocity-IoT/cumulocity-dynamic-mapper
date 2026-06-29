@@ -40,59 +40,59 @@
      │ Transformation Type? │          │
      └───────────┬──────────┘          │
                  │                     │
-    ┌────────────┼──────────┬────────┬─┤
-    │            │          │        │ │
-    ▼            ▼          ▼        ▼ ▼
-┌────────┐  ┌─────────┐ ┌──────┐ ┌───────┐
-│Snooping│  │Flow     │ │Code  │ │JSONata│
-│        │  │Function │ │Sub   │ │       │
-└───┬────┘  └────┬────┘ └──┬───┘ └───┬───┘
-    │          │           │         │
-    │          ▼           │         │
-    │   ┌─────────────────┐│         │
-    │   │Flow Processor   ││         │
-    │   │• Execute JS     ││         │
-    │   │  onMessage()    ││         │
-    │   │• Create Flow    ││         │
-    │   │  Context        ││         │
-    │   └─────────┬───────┘│         │
-    │             │        │         │
-    │      ┌─────────────┐ │         │
-    │      │Ignore Check?│ │         │
-    │      └──┬────────┬─┘ │         │
-    │         │Yes     │No │         │
-    │         │        ▼   │         │
-    │         │ ┌─────────────────┐  │
-    │         │ │Flow Result      │  │
-    │         │ │Processor        │  │
-    │         │ │                 │  │
-    │         │ │• Parse Results  │  │
-    │         │ │• Handle Lists   │  │
-    │         │ │• Process        │  │
-    │         │ │  CumulocityMsg  │  │
-    │         │ │• Resolve Device │  │
-    │         │ │• Create API     │  │
-    │         │ │  Requests       │  │
-    │         │ │• Set Payload    │  │
-    │         │ │  Hierarchically │  │
-    │         │ └─────────┬───────┘  │
-    │         │           │          │
-    │         ▼           ▼          ▼
-    │   ┌─────────────────────────────────┐
-    │   │     Traditional Processing      │
-    │   │                                 │
-    │   │ Code:    JS Code Extraction     │
-    │   │ JSONata: JSONata Extraction     │
-    │   │                                 │
-    │   └─────────────┬───────────────────┘
-    │                 │
-    │                 ▼
-    │        ┌─────────────────┐
-    │        │   Substitution  │
-    │        │   Processor     │
-    │        └─────────┬───────┘
-    │                  │
-    ▼                  ▼
+        ┌────────┼────────┬──────────┬─┤
+        │        │        │          │ │
+        ▼        ▼        ▼          ▼ ▼
+   ┌─────────┐ ┌──────┐ ┌───────┐    │
+   │Flow     │ │Code  │ │JSONata│    │
+   │Function │ │Sub   │ │       │    │
+   └────┬────┘ └──┬───┘ └───┬───┘    │
+        │         │         │        │
+        ▼         │         │        │
+ ┌─────────────────┐        │        │
+ │Flow Processor   │        │        │
+ │• Execute JS     │        │        │
+ │  onMessage()    │        │        │
+ │• Create Flow    │        │        │
+ │  Context        │        │        │
+ └─────────┬───────┘        │        │
+           │                │        │
+    ┌─────────────┐         │        │
+    │Ignore Check?│         │        │
+    └──┬────────┬─┘         │        │
+       │Yes     │No         │        │
+       │        ▼           │        │
+       │ ┌─────────────────┐│        │
+       │ │Flow Result      ││        │
+       │ │Processor        ││        │
+       │ │                 ││        │
+       │ │• Parse Results  ││        │
+       │ │• Handle Lists   ││        │
+       │ │• Process        ││        │
+       │ │  CumulocityMsg  ││        │
+       │ │• Resolve Device ││        │
+       │ │• Create API     ││        │
+       │ │  Requests       ││        │
+       │ │• Set Payload    ││        │
+       │ │  Hierarchically ││        │
+       │ └─────────┬───────┘│        │
+       │           │        │        │
+       ▼           ▼        ▼        │
+ ┌─────────────────────────────────┐ │
+ │     Traditional Processing      │ │
+ │                                 │ │
+ │ Code:    JS Code Extraction     │ │
+ │ JSONata: JSONata Extraction     │ │
+ │                                 │ │
+ └─────────────┬───────────────────┘ │
+               │                     │
+               ▼                     │
+      ┌─────────────────┐            │
+      │   Substitution  │            │
+      │   Processor     │            │
+      └─────────┬───────┘            │
+                │                    │
+                ▼                    ▼
 ┌─────────────────────────────────────┐
 │         Final Processing            │
 │                                     │

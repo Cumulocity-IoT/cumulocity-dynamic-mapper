@@ -54,6 +54,7 @@ import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -64,6 +65,9 @@ class FlowOutboundProcessorTest {
 
     @Mock
     private MappingService mappingService;
+
+    @Mock
+    private GraalVMContextService graalVMContextService;
 
     @Mock
     private Exchange exchange;
@@ -102,7 +106,7 @@ class FlowOutboundProcessorTest {
         mapping = createSmartFunctionOutboundMapping();
         mappingStatus = new MappingStatus(
                 "47266329", "Mapping - 54", "6ecyap6t", Direction.OUTBOUND,
-                "smart/#", "external/topic", 0L, 0L, 0L, 0L, 0L, null);
+                "smart/#", "external/topic", 0L, 0L, 0L, null);
 
         processingContext = createProcessingContext();
 
@@ -182,7 +186,9 @@ class FlowOutboundProcessorTest {
             processor.process(exchange);
 
             // Then
-            List<Object> flowResult = (List<Object>) processingContext.getFlowResult();
+            Object flowResultObj = processingContext.getFlowResult();
+            assertTrue(flowResultObj instanceof List<?>, "Flow result should be a list");
+            List<?> flowResult = (List<?>) flowResultObj;
             assertNotNull(flowResult, "Should have set flow result");
             assertEquals(1, flowResult.size(), "Should have one result");
 
@@ -202,7 +208,7 @@ class FlowOutboundProcessorTest {
         processor.process(exchange);
 
         // Then - Should ignore further processing
-        assertTrue(processingContext.getIgnoreFurtherProcessing(),
+        assertTrue(processingContext.isIgnoreFurtherProcessing(),
                 "Should ignore further processing for empty result");
 
         log.info("✅ Empty result test passed");
@@ -217,7 +223,7 @@ class FlowOutboundProcessorTest {
         processor.process(exchange);
 
         // Then - Should ignore further processing
-        assertFalse(processingContext.getIgnoreFurtherProcessing(),
+        assertFalse(processingContext.isIgnoreFurtherProcessing(),
                 "Should not ignore further processing for non-array result");
 
         log.info("✅ Non-array result test passed");
@@ -249,7 +255,9 @@ class FlowOutboundProcessorTest {
             processor.process(exchange);
 
             // Then - Should process all messages
-            List<Object> flowResult = (List<Object>) processingContext.getFlowResult();
+            Object flowResultObj = processingContext.getFlowResult();
+            assertTrue(flowResultObj instanceof List<?>, "Flow result should be a list");
+            List<?> flowResult = (List<?>) flowResultObj;
             assertNotNull(flowResult, "Flow result should not be null");
             assertEquals(2, flowResult.size(), "Should have processed two messages");
 
@@ -274,8 +282,8 @@ class FlowOutboundProcessorTest {
         // When
         processor.process(exchange);
 
-        // Then - Should load shared code (main code + shared code = 2 eval calls)
-        verify(graalContext, times(2)).eval(any(Source.class));
+        // Then - polyfill + shared code + main code = 3 eval calls
+        verify(graalContext, times(3)).eval(any(Source.class));
 
         log.info("✅ Shared code test passed");
     }
@@ -289,8 +297,8 @@ class FlowOutboundProcessorTest {
         // When
         processor.process(exchange);
 
-        // Then - Should load system code
-        verify(graalContext, times(1)).eval(any(Source.class)); // Main code, system code is not called
+        // Then - polyfill + main code = 2 eval calls (system code cached as Source, no separate eval)
+        verify(graalContext, times(2)).eval(any(Source.class));
 
         log.info("✅ System code test passed");
     }
@@ -381,7 +389,7 @@ class FlowOutboundProcessorTest {
             processor.process(exchange);
 
             // Then - Should handle null gracefully
-            assertTrue(processingContext.getIgnoreFurtherProcessing(),
+            assertTrue(processingContext.isIgnoreFurtherProcessing(),
                     "Should ignore further processing for null result");
             assertFalse(processingContext.getWarnings().isEmpty(),
                     "Should have warning about null result");
@@ -400,7 +408,7 @@ class FlowOutboundProcessorTest {
             processor.process(exchange);
 
             // Then - Should handle undefined gracefully
-            assertTrue(processingContext.getIgnoreFurtherProcessing(),
+            assertTrue(processingContext.isIgnoreFurtherProcessing(),
                     "Should ignore further processing for undefined result");
 
             log.info("✅ Undefined result test passed");
@@ -419,7 +427,7 @@ class FlowOutboundProcessorTest {
             processor.process(exchange);
 
             // Then - Should handle empty object gracefully
-            assertTrue(processingContext.getIgnoreFurtherProcessing(),
+            assertTrue(processingContext.isIgnoreFurtherProcessing(),
                     "Should ignore further processing for empty object");
 
             log.info("✅ Empty object test passed");
@@ -451,8 +459,8 @@ class FlowOutboundProcessorTest {
             // When
             processor.process(exchange);
 
-            // Then - Should load both codes (main + shared + system = 3 eval calls)
-            verify(graalContext, times(3)).eval(any(Source.class));
+            // Then - polyfill + shared + system + main = 4 eval calls
+            verify(graalContext, times(4)).eval(any(Source.class));
 
             log.info("✅ Both shared and system code test passed");
         }
@@ -476,7 +484,9 @@ class FlowOutboundProcessorTest {
             processor.process(exchange);
 
             // Then - Should skip null and process valid message
-            List<Object> flowResult = (List<Object>) processingContext.getFlowResult();
+            Object flowResultObj = processingContext.getFlowResult();
+            assertTrue(flowResultObj instanceof List<?>, "Flow result should be a list");
+            List<?> flowResult = (List<?>) flowResultObj;
             assertEquals(1, flowResult.size(), "Should have processed only one valid message");
 
             log.info("✅ Null element handling test passed");

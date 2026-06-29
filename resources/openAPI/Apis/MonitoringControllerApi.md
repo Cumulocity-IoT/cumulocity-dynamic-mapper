@@ -119,7 +119,7 @@ No authorization required
 
 Get mapping statistics
 
-    Retrieves statistics for all mappings including message counts, error counts, snooping status, and loading errors. Useful for monitoring mapping performance and health.
+    Retrieves statistics for all mappings including message counts, error counts, and loading errors. Useful for monitoring mapping performance and health.
 
 ### Parameters
 This endpoint does not need any parameter.

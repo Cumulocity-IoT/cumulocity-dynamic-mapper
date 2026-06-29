@@ -21,7 +21,6 @@
 
 package dynamic.mapper.controller;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,8 +44,6 @@ import dynamic.mapper.core.ExtensionManager;
 import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -62,10 +59,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.LoggingEventType;
-import dynamic.mapper.model.SnoopStatus;
 import org.joda.time.DateTime;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
@@ -84,62 +81,27 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
+@RequiredArgsConstructor
 @RequestMapping("/operation")
 @RestController
 @Tag(name = "Operation Controller", description = "API for executing various administrative and operational tasks on the dynamic mapper service")
 public class OperationController {
 
-    @Autowired
-    ConnectorRegistry connectorRegistry;
-
-    @Autowired
-    MappingService mappingService;
-
-    @Autowired
-    ConnectorConfigurationService connectorConfigurationService;
-
-    @Autowired
-    ServiceConfigurationService serviceConfigurationService;
-
-    @Autowired
-    BootstrapService bootstrapService;
-
-    @Autowired
-    C8YAgent c8YAgent;
-
-    @Autowired
-    private ContextService<UserCredentials> contextService;
-
-    @Autowired
-    private ConfigurationRegistry configurationRegistry;
-
-    @Value("${APP.externalExtensionsEnabled}")
-    private Boolean externalExtensionsEnabled;
-
-    @Autowired
-    private DeploymentMapService deploymentMapService;
-
-    @Autowired
-    private MappingStatusService mappingStatusService;
-
-    @Autowired
-    private IdentityFacade identityFacade;
-
-    @Autowired
-    private InventoryFacade inventoryFacade;
-
-    @Autowired
-    private dynamic.mapper.service.cache.FlowStateStore flowStateStore;
-
-    @Autowired
-    private ExtensionManager extensionManager;
-
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    public void setObjectMapper(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
+    private final ConnectorRegistry connectorRegistry;
+    private final MappingService mappingService;
+    private final ConnectorConfigurationService connectorConfigurationService;
+    private final ServiceConfigurationService serviceConfigurationService;
+    private final BootstrapService bootstrapService;
+    private final C8YAgent c8YAgent;
+    private final ContextService<UserCredentials> contextService;
+    private final ConfigurationRegistry configurationRegistry;
+    private final DeploymentMapService deploymentMapService;
+    private final MappingStatusService mappingStatusService;
+    private final IdentityFacade identityFacade;
+    private final InventoryFacade inventoryFacade;
+    private final dynamic.mapper.service.cache.FlowStateStore flowStateStore;
+    private final ExtensionManager extensionManager;
+    private final ObjectMapper objectMapper;
 
     @io.swagger.v3.oas.annotations.Operation(summary = "Execute a service operation", description = """
             Executes various administrative and operational tasks such as reloading mappings, connecting/disconnecting connectors, managing caches, and other maintenance operations. Different operations require different permission levels.
@@ -149,13 +111,10 @@ public class OperationController {
             - `RELOAD_MAPPINGS`: Reloads all mappings for the current tenant.
             - `ACTIVATE_MAPPING`: Activates or deactivates a mapping.
             - `APPLY_MAPPING_FILTER`: Applies a filter to a mapping.
-            - `UPDATE_CODE`: UPdate code for Smart Function or Substitution as Code.
+            - `UPDATE_CODE`: Update code for Smart Function or Substitution as Code.
             - `DEBUG_MAPPING`: Enables or disables debug mode for a mapping.
-            - `SNOOP_MAPPING`: Enables or disables snooping for a mapping.
-            - `SNOOP_RESET`: Resets snooping for a mapping.
             - `REFRESH_STATUS_MAPPING`: Refreshes the status of all mappings.
             - `ADD_SAMPLE_MAPPINGS`: Adds sample mappings for inbound or outbound direction.
-            - `COPY_SNOOPED_SOURCE_TEMPLATE`: Copies the source template from a snooped mapping.
 
 
             `ROLE_DYNAMIC_MAPPER_ADMIN` Operations:
@@ -285,18 +244,6 @@ public class OperationController {
                                 "User does not have permission to debug mappings");
                     }
                     return handleDebugMapping(tenant, parameters);
-                case SNOOP_MAPPING:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to snoop mappings");
-                    }
-                    return handleSnoopMapping(tenant, parameters);
-                case SNOOP_RESET:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to reset snoop");
-                    }
-                    return handleSnoopReset(tenant, parameters);
                 case REFRESH_NOTIFICATIONS_SUBSCRIPTIONS:
                     if (!Utils.userHasMappingAdminRole()) {
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -309,12 +256,6 @@ public class OperationController {
                                 "User does not have permission to clear cache");
                     }
                     return handleClearCache(tenant, parameters);
-                case COPY_SNOOPED_SOURCE_TEMPLATE:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to copy snooped source template");
-                    }
-                    return handleCopySnoopedSourceTemplate(tenant, parameters);
                 case ADD_SAMPLE_MAPPINGS:
                     if (!Utils.userHasMappingCreateRole()) {
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -333,6 +274,13 @@ public class OperationController {
                                 "User does not have permission to clear device-to-client cache");
                     }
                     return handleClearCacheDeviceToClient(tenant, parameters);
+                case ROTATE_GRAALVM_ENGINE:
+                    if (!Utils.userHasMappingAdminRole()) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "User does not have permission to rotate GraalVM engine");
+                    }
+                    configurationRegistry.getGraalVMContextService().rotateEngine(tenant);
+                    return ResponseEntity.status(HttpStatus.CREATED).build();
                 default:
                     throw new IllegalArgumentException("Unknown operation: " + operationType);
             }
@@ -422,34 +370,21 @@ public class OperationController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    private ResponseEntity<?> handleCopySnoopedSourceTemplate(String tenant, Map<String, String> parameters)
-            throws Exception {
-        String id = parameters.get("id");
-        String indexParam = parameters.get("index");
-        if (indexParam == null || indexParam.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'index' is required");
-        }
-        Integer index = Integer.parseInt(indexParam);
-        mappingService.updateSourceTemplate(tenant, id, index);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
-
     private ResponseEntity<?> handleReloadMappings(String tenant) throws ConnectorRegistryException {
         // Rebuild all caches at once
         mappingService.rebuildMappingCaches(tenant, ConnectorId.INTERNAL);
 
-        // Get the updated mappings from cache
-        List<Mapping> updatedMappingsInbound = new ArrayList<>(
-                mappingService.getCacheMappingInbound(tenant).values());
-        List<Mapping> updatedMappingsOutbound = new ArrayList<>(
-                mappingService.getCacheOutboundMappings(tenant).values());
-
-        // Update connector subscriptions
+        // Reconcile each connector against the freshly rebuilt caches and the deployment map.
+        // This (un)subscribes inbound mappings and rebuilds the effective outbound set, so that
+        // mappings removed/un-deployed since the last reload are also dropped (not just added).
         Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
         connectorMap.values().forEach(client -> {
-            // We always start with a cleanSession in case we reload the mappings
-            client.initializeSubscriptionsInbound(updatedMappingsInbound, false);
-            updatedMappingsOutbound.forEach(mapping -> client.updateSubscriptionForOutbound(mapping, false, false));
+            try {
+                client.reconcileSubscriptions();
+            } catch (Exception e) {
+                log.error("{} - Error reloading mappings for connector {}",
+                        tenant, client.getConnectorIdentifier(), e);
+            }
         });
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -460,16 +395,13 @@ public class OperationController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    private ResponseEntity<?> handleSnoopReset(String tenant, Map<String, String> parameters) throws Exception {
-        String id = parameters.get("id");
-        mappingService.resetSnoop(tenant, id);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
-
     private ResponseEntity<?> handleActivateMapping(String tenant, Map<String, String> parameters) throws Exception {
         String id = parameters.get("id");
         Boolean activation = Boolean.parseBoolean(parameters.get("active"));
-        Mapping updatedMapping = mappingService.setActivationMapping(tenant, id, activation);
+        String versionParam = parameters.getOrDefault("version",
+                parameters.get("versionNumber")); // backward-compat alias
+        String version = (versionParam != null && !versionParam.isBlank()) ? versionParam.trim() : null;
+        Mapping updatedMapping = mappingService.setActivationMapping(tenant, id, activation, version);
         Map<String, AConnectorClient> connectorMap = connectorRegistry
                 .getClientsForTenant(tenant);
         // subscribe/unsubscribe respective mappingTopic of mapping only for
@@ -531,17 +463,6 @@ public class OperationController {
 
     private ResponseEntity<?> handleRefreshNotifications(String tenant) throws Exception {
         configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
-
-    private ResponseEntity<?> handleSnoopMapping(String tenant, Map<String, String> parameters) throws Exception {
-        String id = parameters.get("id");
-        String snoopStatusParam = parameters.get("snoopStatus");
-        if (snoopStatusParam == null || snoopStatusParam.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'snoopStatus' is required");
-        }
-        SnoopStatus newSnoop = SnoopStatus.valueOf(snoopStatusParam);
-        mappingService.setSnoopStatusMapping(tenant, id, newSnoop);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

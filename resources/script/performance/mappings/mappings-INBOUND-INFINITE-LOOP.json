@@ -1,0 +1,30 @@
+[
+  {
+    "id": "78836459",
+    "identifier": "brxyysdn",
+    "name": "Mapping - infinite loop - CPU timeout test",
+    "mappingTopic": "testmapper/infiniteLoop",
+    "mappingTopicSample": "testmapper/infiniteLoop",
+    "targetAPI": "EVENT",
+    "direction": "INBOUND",
+    "sourceTemplate": "{\"externalId\":\"test-device-01\",\"value\":42}",
+    "targetTemplate": "{\"source\":{\"id\":\"909090\"},\"text\":\"Infinite loop test\",\"time\":\"2024-01-01T00:00:00.000Z\",\"type\":\"c8y_InfiniteLoopTest\"}",
+    "mappingType": "JSON",
+    "transformationType": "SMART_FUNCTION",
+    "substitutions": [],
+    "active": false,
+    "debug": true,
+    "eventWithAttachment": false,
+    "createNonExistingDevice": false,
+    "updateExistingDevice": false,
+    "autoAckOperation": true,
+    "useExternalId": true,
+    "externalIdType": "c8y_Serial",
+    "maxFailureCount": 0,
+    "qos": "AT_MOST_ONCE",
+    "code": "LyoqCiAqIEBuYW1lIEluZmluaXRlIExvb3AgVGVzdCAtIENQVSBUaW1lb3V0CiAqIEBkZXNjcmlwdGlvbiBUZXN0IG1hcHBpbmcgd2l0aCBhbiBpbnRlbnRpb25hbCBpbmZpbml0ZSBsb29wIHRvIHZlcmlmeSBDUFUgdGltZW91dAogKiAgICAgICAgICAgICAgZW5mb3JjZW1lbnQgdmlhIEpTX1RJTUVPVVRfU0NIRURVTEVSIC8gbWF4Q1BVVGltZU1TLgogKiAgICAgICAgICAgICAgVGhlIEdyYWFsVk0gY29udGV4dCBzaG91bGQgYmUgZm9yY2libHkgY2xvc2VkIGFmdGVyIG1heENQVVRpbWVNUyBtcywKICogICAgICAgICAgICAgIGFuZCBhIFBvbHlnbG90RXhjZXB0aW9uIChpc0NhbmNlbGxlZD10cnVlKSBzaG91bGQgYmUgdGhyb3duLgogKiBAdGVtcGxhdGVUeXBlIElOQk9VTkQKICovCgpmdW5jdGlvbiBvbk1lc3NhZ2UobXNnLCBjb250ZXh0KSB7CiAgICB2YXIgcGF5bG9hZCA9IG1zZy5wYXlsb2FkOwoKICAgIC8vIEludGVudGlvbmFsIENQVS1ib3VuZCBpbmZpbml0ZSBsb29wIOKAlCBuZXZlciB5aWVsZHMsIG5ldmVyIHRlcm1pbmF0ZXMuCiAgICAvLyBFeHBlY3RlZCBiZWhhdmlvdXI6IEpTX1RJTUVPVVRfU0NIRURVTEVSIGZpcmVzIGFmdGVyIG1heENQVVRpbWVNUyAoZS5nLiA1MDAwIG1zKSwKICAgIC8vIGNhbGxzIGdyYWFsQ29udGV4dC5jbG9zZSh0cnVlKSwgYW5kIEFic3RyYWN0Rmxvd1Byb2Nlc3NvciBjYXRjaGVzIFBvbHlnbG90RXhjZXB0aW9uCiAgICAvLyB3aXRoIGlzQ2FuY2VsbGVkKCk9dHJ1ZSBhbmQgbG9ncyBhIFdBUk4gaW5zdGVhZCBvZiBhbiBFUlJPUi4KICAgIGxldCBjb3VudGVyID0gMDsKICAgIHdoaWxlICh0cnVlKSB7CiAgICAgICAgY291bnRlcisrOwogICAgICAgIGlmIChjb3VudGVyICUgMTAwMDAgPT09IDApIHsKICAgICAgICAgICAgY29uc29sZS5sb2coJ0luZmluaXRlIGxvb3AgaXRlcmF0aW9uOiAnICsgY291bnRlcik7CiAgICAgICAgfQogICAgfQoKICAgIC8vIFVucmVhY2hhYmxlIOKAlCBrZXB0IHNvIHRoZSBmdW5jdGlvbiBoYXMgYSBub21pbmFsIHJldHVybiB0eXBlCiAgICBjb25zb2xlLmxvZygnTmV2ZXIgcmVhY2hlZCcpOwogICAgcmV0dXJuIFt7fV07Cn0KZXhwb3J0IHtvbk1lc3NhZ2V9",
+    "lastUpdate": 1782474337699,
+    "versionNumber": 4,
+    "draftDirty": false
+  }
+]

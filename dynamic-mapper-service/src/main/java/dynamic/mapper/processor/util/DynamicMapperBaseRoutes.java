@@ -28,7 +28,6 @@ import org.springframework.stereotype.Component;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
@@ -42,33 +41,13 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
     public abstract void configure() throws Exception;
 
     /**
-     * Check if this is snooping mode
-     */
-    protected boolean isSnooping(Exchange exchange) {
-        try {
-            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-            if (context != null && context.getMapping() != null && context.getMapping().getSnoopStatus() != null) {
-                // Never snoop in test mode — test messages must go through the normal
-                // processing pipeline so the JS function is executed and results are returned.
-                if (Boolean.TRUE.equals(context.getTesting())) {
-                    return false;
-                }
-                return context.getMapping().getSnoopStatus().equals(SnoopStatus.ENABLED)
-                        || context.getMapping().getSnoopStatus().equals(SnoopStatus.STARTED);
-            }
-            return false;
-        } catch (Exception e) {
-            log.warn("Error checking snooping mode: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Check if this uses JSONata extraction
+     * Check if this uses JSONata extraction.
+     * Returns false on exception so the caller's otherwise() branch handles it
+     * explicitly rather than silently routing to JSONata and masking the real bug.
      */
     protected boolean isJSONataExtraction(Exchange exchange) {
         try {
-            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+            ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
             if (context != null && context.getMapping() != null) {
                 // Default processing or explicitly JSONata
                 TransformationType transformationType = context.getMapping().getTransformationType();
@@ -76,22 +55,26 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
                         TransformationType.DEFAULT.equals(transformationType) ||
                         TransformationType.JSONATA.equals(transformationType);
             }
-            return true; // Default fallback
+            return false;
         } catch (Exception e) {
             log.warn("Error checking JSONata extraction: {}", e.getMessage());
-            return true;
+            return false;
         }
     }
 
     /**
-     * Check if this is extension processing
+     * Check if this is extension processing.
+     * Requires BOTH a non-null extension object AND TransformationType.EXTENSION_JAVA so that
+     * mappings which carry a leftover extension field from a previous type are not accidentally
+     * routed to the extension path.
      */
     protected boolean isExtension(Exchange exchange) {
         try {
-            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+            ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
             return context != null &&
                     context.getMapping() != null &&
-                    (context.getMapping().getExtension() != null);
+                    context.getMapping().getExtension() != null &&
+                    TransformationType.EXTENSION_JAVA.equals(context.getMapping().getTransformationType());
         } catch (Exception e) {
             log.warn("Error checking extension: {}", e.getMessage());
             return false;
@@ -103,7 +86,7 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
      */
     protected boolean isInternalProtobuf(Exchange exchange) {
         try {
-            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+            ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
             return context != null &&
                     context.getMapping() != null &&
                     (MappingType.PROTOBUF_INTERNAL.equals(context.getMapping().getMappingType()));
@@ -118,7 +101,7 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
      */
     protected boolean isFlowFunction(Exchange exchange) {
         try {
-            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+            ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
             if (context != null && context.getMapping() != null) {
                 TransformationType transformationType = context.getMapping().getTransformationType();
                 boolean isFlow = TransformationType.SMART_FUNCTION.equals(transformationType);
@@ -161,7 +144,7 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
 
             // Check if mapping is deployed (you'll need to get connector info)
             if (connectorIdentifier != null && !isMappingDeployed(tenant, mapping, connectorIdentifier)) {
-                log.debug("Mapping {} not deployed for connector {}, skipping",
+                log.info("Mapping {} not deployed for connector {}, skipping",
                         mapping.getName(), connectorIdentifier);
                 return false;
             }
@@ -179,8 +162,8 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
      */
     protected boolean shouldIgnoreFurtherProcessing(Exchange exchange) {
         try {
-            ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-            return context != null && context.getIgnoreFurtherProcessing();
+            ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
+            return context != null && context.isIgnoreFurtherProcessing();
         } catch (Exception e) {
             log.warn("Error checking ignore further processing: {}", e.getMessage());
             return false;

@@ -1162,6 +1162,297 @@ function metric(name, type, value) &#123;
             [routerLink]="ROUTE_CODE_TEMPLATES_INBOUND_SMART_FUNCTION"> Code Templates
           </a> to see comprehensive JavaScript Smart Function samples.
         </div>
+
+        <h4 class="p-t-24 p-b-8" id="graalvm-metaspace">GraalVM Engine and Metaspace Management</h4>
+        <div class="p-b-8 text-16">
+          Every Smart Function is executed inside a <strong>GraalVM Polyglot Engine</strong>. The Engine JIT-compiles
+          your JavaScript to native code and stores the result in the JVM <strong>Metaspace</strong> — a native memory
+          region that sits outside the Java heap and is not subject to normal garbage collection. Over time, as more
+          mapping contexts are created, Metaspace grows. The Dynamic Mapper manages this automatically through a
+          two-trigger <strong>Engine rotation</strong> mechanism.
+        </div>
+
+        <h5 class="p-t-8 p-b-4">Engine Rotation</h5>
+        <div class="p-b-8 text-16">
+          Each tenant has its own GraalVM Engine. The Engine is replaced (rotated) when either of the following
+          conditions is met:
+        </div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped table-layout-fixed">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 30%;">Trigger</th>
+                <th style="width: 70%;">Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Compilation-based (primary)</strong></td>
+                <td>The Engine is rotated after <strong>100 unique JS source compilations</strong>
+                  (configurable via <code>engineRotationThreshold</code>, default: 100). A compilation
+                  is counted only when a new (sourceName, contentHash) pair is evaluated — repeated
+                  execution of the same code is a GraalVM source-cache hit and does not count.
+                  Warmup compilations at Engine creation are registered but do not count toward the
+                  threshold, so only code changes after startup drive rotation.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Time-based (opt-in)</strong></td>
+                <td>Disabled by default (<code>engineMaxAgeMinutes = 0</code>). When set to a
+                  positive value the Engine is rotated after that many minutes regardless of
+                  compilation count. Use only as an additional safeguard on top of the
+                  compilation-count trigger.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="p-b-8 text-16">
+          When rotation fires, the old Engine is <em>retired</em> — no new contexts are created against it, but
+          any in-flight messages continue to completion. The old Engine's Metaspace is reclaimed by the JVM once
+          the last in-flight context closes. A replacement Engine is created immediately and pre-warmed
+          with all active SmartFunction mapping codes before the first real message arrives.
+        </div>
+
+        <h5 class="p-t-8 p-b-4">What Grows Metaspace</h5>
+        <div class="p-b-8 text-16">
+          Not all usage patterns stress Metaspace equally. Four distinct scenarios drive growth:
+        </div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped table-layout-fixed">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 30%;">Scenario</th>
+                <th style="width: 30%;">Growth pattern</th>
+                <th style="width: 40%;">Primary rotation trigger</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>High message volume — same mapping, same code</strong></td>
+                <td>
+                  Bounded. The source cache is hit on every call (same content hash → same compiled
+                  code). Growth occurs only as the JIT escalates through optimization tiers (interpreter
+                  → partial eval → full optimization). Once fully optimised, Metaspace usage for that
+                  mapping plateaus.
+                </td>
+                <td><em>No rotation triggered.</em> Repeated execution of the same code is a cache hit
+                  and does not increment the compilation counter.</td>
+              </tr>
+              <tr>
+                <td><strong>Mapping iteration — delete &amp; recreate with new JS code</strong></td>
+                <td>
+                  Unbounded until rotation. Every unique code string produces a new GraalVM
+                  <code>Source</code> (different content hash), which is compiled to a new native
+                  code block in Metaspace. The compiled code from deleted or superseded mappings
+                  remains in Metaspace for the lifetime of the Engine — even a single character
+                  edit creates a new compilation.
+                </td>
+                <td>Compilation-based (<code>engineRotationThreshold</code>) — each unique code
+                  version increments the counter. Rotation fires once the threshold is reached.</td>
+              </tr>
+              <tr>
+                <td><strong>Editing an existing mapping's JS code</strong></td>
+                <td>
+                  Unbounded until rotation. Each save of a modified mapping produces a new content
+                  hash and therefore a new native code block in Metaspace. The block compiled from
+                  the previous version remains resident for the lifetime of the Engine. A mapping
+                  edited 20 times before going to production has accumulated 20 compiled blocks, of
+                  which 19 are permanently unreachable.
+                </td>
+                <td>Compilation-based (<code>engineRotationThreshold</code>) — every code edit
+                  increments the counter, making development sessions the primary driver of rotation.</td>
+              </tr>
+              <tr>
+                <td><strong>Activate / deactivate a mapping</strong></td>
+                <td>
+                  <em>No additional Metaspace</em> if the code is unchanged. On reactivation the
+                  Engine's source cache is hit (same content hash → same compiled block reused). If
+                  the code was edited between deactivation and reactivation, one new block is
+                  compiled and the old one remains — equivalent to a single code edit.
+                </td>
+                <td>Activate/deactivate alone does not increment the compilation counter. Only a
+                  code change paired with reactivation adds to the count.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="admonition info">
+          <div class="title">Info — Code churn is the primary Metaspace risk</div>
+          <div class="content">
+            Active development on SmartFunction code — whether through edits to existing mappings,
+            delete-and-recreate cycles, or deactivate-edit-reactivate workflows — is the dominant
+            driver of Metaspace growth. Each unique code version leaves a permanent compiled block
+            until the Engine is rotated. The compilation counter tracks exactly this: it increments
+            only when a new (sourceName, contentHash) pair is compiled, not on repeated execution
+            of unchanged code. Tune <code>engineRotationThreshold</code> to control how many code
+            changes accumulate before a rotation is triggered.
+          </div>
+        </div>
+
+        <h5 class="p-t-8 p-b-4">Reading the Metaspace Logs</h5>
+        <div class="p-b-8 text-16">
+          The service emits a <strong>baseline</strong> Metaspace reading every time an Engine is created, and
+          the current usage at the moment of every rotation. Comparing the two shows exactly how much Metaspace
+          was accumulated over the Engine's lifetime.
+        </div>
+        <pre><code># Engine created — baseline reading (before any JS is compiled)
+t2050305588 - GraalVM Engine created — baseline Metaspace 112 MB (no max set)
+
+# After warm-up and pre-compilation of 39 mappings
+t2050305588 - GraalVM JIT warm-up complete
+t2050305588 - GraalVM pre-compiled 39 mapping JavaScript source(s)
+
+# 100 contexts later — rotation fires, current usage logged
+t2050305588 - Rotating GraalVM Engine to release Metaspace
+              (0 retired engine(s) pending drain) — Metaspace 287 MB (no max set)
+
+# New Engine baseline immediately after rotation
+t2050305588 - GraalVM Engine created — baseline Metaspace 287 MB (no max set)</code></pre>
+        <div class="admonition info">
+          <div class="title">Info — Interpreting the delta</div>
+          <div class="content">
+            The difference between the baseline at creation and the value at rotation is the Metaspace consumed
+            by the Engine over its lifetime. In the example above: <strong>287 − 112 = 175 MB</strong> across
+            39 pre-warmed mappings plus subsequent code changes. If this delta grows between rotations over time,
+            consider lowering <code>engineRotationThreshold</code> (in <strong>Service Configuration → General</strong>) or setting an explicit
+            <code>-XX:MaxMetaspaceSize</code> JVM flag.
+          </div>
+        </div>
+        <div class="admonition caution">
+          <div class="title">Caution — "no max set"</div>
+          <div class="content">
+            When the log shows <code>(no max set)</code>, the JVM Metaspace is unbounded. The JVM will
+            allocate native memory until the OS refuses. In container environments (Kubernetes) this can
+            cause the pod to be OOM-killed without a clear Java-side exception. Set
+            <code>-XX:MaxMetaspaceSize=512m</code> (or a value appropriate for your workload) in the
+            microservice JVM flags to make the boundary explicit.
+          </div>
+        </div>
+
+        <h5 class="p-t-8 p-b-4">Tuning Recommendations</h5>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped table-layout-fixed">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 35%;">Symptom / Situation</th>
+                <th style="width: 65%;">Recommended Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Metaspace delta per rotation is large (&gt; 200 MB)</td>
+                <td>Lower <code>engineRotationThreshold</code> (e.g. to 50) in <strong>Service Configuration → General</strong> so rotation fires more
+                  frequently and reclaims Metaspace earlier.</td>
+              </tr>
+              <tr>
+                <td>Metaspace baseline keeps rising after each rotation</td>
+                <td>The old Engine is not being fully released. Check for long-running SmartFunction
+                  executions that keep the retired Engine's contexts open. Review the
+                  <code>retired engine(s) pending drain</code> count in the rotation log line.</td>
+              </tr>
+              <tr>
+                <td>Pod OOM-killed without a Java exception</td>
+                <td>Add <code>-XX:MaxMetaspaceSize=512m</code> to JVM flags. This produces a Java
+                  <code>OutOfMemoryError: Metaspace</code> with a stack trace instead of a silent
+                  OS-level kill, and makes the problem diagnosable.</td>
+              </tr>
+              <tr>
+                <td>Low message volume, Metaspace growing over days (active development)</td>
+                <td>The compilation counter handles this — each code change increments it regardless
+                  of message volume. If rotation is still too infrequent, lower
+                  <code>engineRotationThreshold</code>. As a last resort, enable the time-based
+                  trigger by setting <code>engineMaxAgeMinutes</code> to a positive value in
+                  <strong>Service Configuration → General</strong>.</td>
+              </tr>
+              <tr>
+                <td>High message volume, rotation fires too often</td>
+                <td>Increase <code>engineRotationThreshold</code> in <strong>Service Configuration → General</strong>. Each rotation briefly pauses
+                  context creation for the tenant while the new Engine warms up.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h5 class="p-t-8 p-b-4">Pre-compilation Warnings</h5>
+        <div class="p-b-8 text-16">
+          At startup (and after each Engine rotation), the service pre-compiles all active SmartFunction
+          mapping codes into the new Engine's source cache. If a mapping code cannot be pre-compiled, a
+          <code>WARN</code> log entry is emitted. The mapping still executes correctly at runtime — the
+          warning only means the first message after rotation pays the full JIT cold-start cost instead of
+          hitting the pre-warmed cache.
+        </div>
+        <pre><code>WARN - Failed to pre-compile mapping onMessage_qxvjgxmt.js:
+       SyntaxError: Variable "globalConfig" has already been declared
+WARN - Failed to pre-compile mapping onMessage_7ut3z0c4.js:
+       SyntaxError: onMessage_7ut3z0c4.js:79:0 Expected an operand but found export
+WARN - Failed to pre-compile mapping onMessage_d02ac8a9.js:
+       SyntaxError: Variable "MeasurementSchema" has already been declared
+WARN - Failed to pre-compile mapping onMessage_0rjfc8vj.js:
+       SyntaxError: Variable "onMessage" has already been declared</code></pre>
+        <div class="p-b-8 text-16">
+          The mapping identifier in the file name (e.g. <code>qxvjgxmt</code>) corresponds directly to the
+          <strong>Identifier</strong> field shown in the mapping grid. Use it to locate the affected mapping.
+        </div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped table-layout-fixed">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 40%;">Warning message</th>
+                <th style="width: 60%;">Cause and fix</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>Variable "globalConfig" has already been declared</code><br />
+                  (or any other name from the Shared Code template)</td>
+                <td>
+                  The mapping code bundles a library (e.g. Zod) that also declares
+                  <code>const globalConfig</code> — the same name that the Shared Code template
+                  already defines. At <em>runtime</em> the IIFE wrapper isolates the mapping's
+                  declarations, so execution is unaffected. To also fix the pre-compilation warning,
+                  remove the bundled library from the mapping code and rely on the Shared Code
+                  template to provide it globally instead.
+                </td>
+              </tr>
+              <tr>
+                <td><code>Expected an operand but found export</code></td>
+                <td>
+                  The mapping code contains an ES module <code>export</code> statement at the
+                  top level (e.g. <code>export default onMessage</code>) and the
+                  <strong>Support ESM modules</strong> setting is <em>disabled</em>. In flat-script
+                  mode the pre-compiler does not strip <code>export</code> keywords. Either enable
+                  ESM mode in <strong>Configuration → Service Configuration → General</strong>, or
+                  remove the <code>export</code> lines from the mapping code (the runtime strips them
+                  automatically, but the pre-compiler does not).
+                </td>
+              </tr>
+              <tr>
+                <td><code>Variable "onMessage" has already been declared</code><br />
+                  (or <code>"MeasurementSchema"</code> or similar)</td>
+                <td>
+                  During pre-compilation all mapping codes are evaluated sequentially in a single
+                  GraalVM context. A <code>var</code> declaration in one mapping's code leaks into
+                  the global scope and collides with the same name in a later mapping. At
+                  <em>runtime</em> each message gets a fresh context so there is no collision. To
+                  fix the warning: change top-level <code>var</code> declarations in your mapping
+                  code to <code>const</code> or <code>let</code>, or wrap them in a self-executing
+                  function so they are not exposed globally.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="admonition info">
+          <div class="title">Info — Pre-compilation warnings do not affect correctness</div>
+          <div class="content">
+            A mapping that fails to pre-compile still executes correctly on every real message.
+            The only consequence is a slightly slower first execution after Engine rotation
+            (typically an extra 1–2 seconds for GraalVM JIT cold-start). Fix the warnings to
+            restore optimal warm-up performance, but treat them as low-priority unless
+            cold-start latency is a concern.
+          </div>
+        </div>
       </div>
     </div>
   </div>

@@ -48,14 +48,12 @@ These tests exercise individual processor steps in isolation using Mockito mocks
 | `DeserializationInboundProcessorTest` | JSON, FlatFile, Hex deserialization; encoding variants |
 | `DeserializationInboundProcessorErrorHandlingTest` | Null payload, malformed JSON, unknown format |
 | `EnrichmentInboundProcessorTest` | Device lookup, topic-level extraction, `_IDENTITY_` resolution |
-| `SnoopingInboundProcessorTest` | Snoop enable/start/stop lifecycle, payload capture |
 | `FlowInboundProcessorTest` | Camel route dispatch, mapping lookup by topic |
 | `FlowResultInboundProcessorTest` | Result collection, error accumulation |
 | `JSONataInboundProcessorTest` | JSONata expression evaluation on source payload |
 | `SubstitutionResultInboundProcessorTest` | Substitution application to target template |
 | `DeserializationOutboundProcessorTest` | C8Y notification deserialization |
 | `EnrichmentOutboundProcessorTest` | External ID resolution, `_IDENTITY_` outbound |
-| `SnoopingOutboundProcessorTest` | Outbound snoop capture |
 | `FlowOutboundProcessorTest` | Outbound Camel route dispatch |
 | `FlowResultOutboundProcessorTest` | Outbound result collection |
 | `JSONataOutboundProcessorTest` | JSONata on C8Y payload, `filterMapping` evaluation |
@@ -209,10 +207,10 @@ These wire the full Apache Camel pipeline with a mocked `C8YAgent`.
 | ~~ANY_PAYLOAD outbound~~ | 🚫 Not supported | — |
 | ANY_PAYLOAD inbound (SMART_FUNCTION + EXTENSION_JAVA) | ✅ Implemented | `AnyPayloadInboundTest` |
 | SPARKPLUGB inbound deserialization | ✅ Implemented | `SparkplugBDeserializerTest` |
-| GraalVM sandbox security | ✅ Implemented | `GraalVMSandboxSecurityTest` |
+| GraalVM sandbox security | ✅ Implemented | `TenantRegistryGraalVMSandboxSecurityTest` |
 | Multi-tenancy isolation | ✅ Implemented | `MultiTenancyIsolationTest` |
 | Connector retry / reconnect | ✅ Implemented | `ConnectorRetryReconnectTest` |
-| Kafka producer configuration | ✅ Implemented | `KafkaConnectorUnitTest` |
+| Kafka producer configuration | ✅ Implemented | `KafkaTestClientTest` |
 
 ---
 
@@ -253,7 +251,6 @@ These wire the full Apache Camel pipeline with a mocked `C8YAgent`.
 | Delete mapping | Confirmation, removed from table |
 | Import mappings | Upload JSON, verify rows appear |
 | Export mappings | Download triggered, valid JSON |
-| Snoop enable → payload captured | Status column shows snooped count |
 
 #### Mapping Stepper Steps
 
@@ -274,7 +271,6 @@ These wire the full Apache Camel pipeline with a mocked `C8YAgent`.
 | Monitoring tab | Processed / error counts visible |
 | Mapping Tree | Tree renders for active inbound mappings |
 | Message Explorer | Live message list updates |
-| Snoop Explorer | Snooped payloads browsable |
 | Test Device tab | Generated test devices listed, deletable |
 
 #### Configuration
@@ -362,7 +358,6 @@ cypress/e2e/
     table/
       activate-deactivate.cy.ts
       import-export.cy.ts
-      snoop.cy.ts
     stepper/
       connector-selection.cy.ts
       topic-definition.cy.ts
@@ -372,7 +367,6 @@ cypress/e2e/
     monitoring-tab.cy.ts
     mapping-tree.cy.ts
     message-explorer.cy.ts
-    snoop-explorer.cy.ts
   configuration/
     service-config.cy.ts
     extension-upload.cy.ts

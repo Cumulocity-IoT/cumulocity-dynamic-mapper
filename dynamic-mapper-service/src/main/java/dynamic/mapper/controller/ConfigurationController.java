@@ -37,7 +37,6 @@ import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.*;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -59,6 +58,7 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Feature;
 import dynamic.mapper.service.ConnectorConfigurationService;
@@ -84,6 +84,7 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
+@RequiredArgsConstructor
 @RequestMapping("/configuration")
 @RestController
 @SecurityScheme(type = SecuritySchemeType.HTTP, name = "basicAuth", scheme = "basic", in = SecuritySchemeIn.HEADER, description = "Basic Authentication using Cumulocity IoT credentials")
@@ -102,32 +103,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Configuration Management", description = "Core configuration endpoints for connectors, service settings, and code templates")
 public class ConfigurationController {
 
-    @Autowired
-    ConnectorRegistry connectorRegistry;
-
-    @Autowired
-    MappingService mappingService;
-
-    @Autowired
-    ConnectorConfigurationService connectorConfigurationService;
-
-    @Autowired
-    ServiceConfigurationService serviceConfigurationService;
-
-    @Autowired
-    BootstrapService bootstrapService;
-
-    @Autowired
-    C8YAgent c8YAgent;
-
-    @Autowired
-    private ContextService<UserCredentials> contextService;
-
-    @Autowired
-    private ConfigurationRegistry configurationRegistry;
-
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ConnectorRegistry connectorRegistry;
+    private final MappingService mappingService;
+    private final ConnectorConfigurationService connectorConfigurationService;
+    private final ServiceConfigurationService serviceConfigurationService;
+    private final BootstrapService bootstrapService;
+    private final ContextService<UserCredentials> contextService;
+    private final ConfigurationRegistry configurationRegistry;
+    private final ObjectMapper objectMapper;
 
     @Value("${APP.externalExtensionsEnabled}")
     private Boolean externalExtensionsEnabled;
@@ -338,6 +321,7 @@ public class ConfigurationController {
             @ApiResponse(responseCode = "200", description = "Connector configuration deleted successfully", content = @Content),
             @ApiResponse(responseCode = "400", description = "Connector is enabled or cannot be deleted", content = @Content),
             @ApiResponse(responseCode = "403", description = "Insufficient permissions", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Connector configuration not found", content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
@@ -349,6 +333,12 @@ public class ConfigurationController {
         try {
             ConnectorConfiguration configuration = connectorConfigurationService.getConnectorConfiguration(identifier,
                     tenant);
+            if (configuration == null) {
+                // Idempotent / defensive: nothing to delete. Avoids a NullPointerException
+                // (and a misleading 500) when deleting an already-removed connector.
+                log.info("{} - Connector {} not found, nothing to delete", tenant, identifier);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Connector not found: " + identifier);
+            }
             if (configuration.getConnectorType().equals(ConnectorType.HTTP)) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Can't delete a HttpConnector!");
             }
@@ -357,37 +347,51 @@ public class ConfigurationController {
             boolean needsReconnect = wasDisabled &&
                 (configuration.getConnectorType().equals(ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR));
 
-            // For Pulsar connectors that are disabled, temporarily enable them to delete subscriptions
-            if (needsReconnect) {
-                log.info("{} - Temporarily enabling connector {} to delete Pulsar subscription", tenant, identifier);
-                configuration.setEnabled(true);
-                connectorConfigurationService.saveConnectorConfiguration(configuration);
+            // The teardown below MUST always run — even if the (optional) temporary
+            // re-enable + reconnect or the resource cleanup fails. Otherwise a failed
+            // delete of a disabled Pulsar connector would leave it persisted with
+            // enabled=true (resurrected and reconnected) instead of being removed.
+            try {
+                // For Pulsar connectors that are disabled, temporarily enable them so the
+                // broker subscription can be removed. This briefly persists enabled=true;
+                // the finally block guarantees the configuration is still deleted.
+                if (needsReconnect) {
+                    log.info("{} - Temporarily enabling connector {} to delete Pulsar subscription", tenant, identifier);
+                    configuration.setEnabled(true);
+                    connectorConfigurationService.saveConnectorConfiguration(configuration);
 
-                ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-                Future<?> connectTask = bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
+                    ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
+                    Future<?> connectTask = bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
 
-                // Wait for connector to connect (with timeout)
-                try {
-                    connectTask.get(10, java.util.concurrent.TimeUnit.SECONDS);
-                } catch (Exception e) {
-                    log.warn("{} - Could not reconnect connector {} for subscription cleanup: {}", tenant, identifier, e.getMessage());
-                    // Continue anyway - deleteResources() has fallback logic
+                    // Wait for connector to connect (with timeout)
+                    try {
+                        connectTask.get(10, java.util.concurrent.TimeUnit.SECONDS);
+                    } catch (Exception e) {
+                        log.warn("{} - Could not reconnect connector {} for subscription cleanup: {}", tenant, identifier, e.getMessage());
+                        // Continue anyway - deleteResources() has fallback logic
+                    }
                 }
+
+                // Delete connector-specific resources (e.g., Pulsar subscriptions)
+                bootstrapService.deleteConnectorResources(tenant, identifier);
+            } finally {
+                // Best-effort teardown: one failing step must not skip the others or
+                // leave the connector configuration behind.
+                try {
+                    bootstrapService.disableConnector(tenant, identifier);
+                } catch (Exception e) {
+                    log.warn("{} - Error disabling connector {} during delete: {}", tenant, identifier, e.getMessage());
+                }
+                try {
+                    // Clean up Notification 2.0 subscriptions
+                    bootstrapService.shutdownAndRemoveConnector(tenant, identifier);
+                } catch (Exception e) {
+                    log.warn("{} - Error shutting down connector {} during delete: {}", tenant, identifier, e.getMessage());
+                }
+                connectorConfigurationService.deleteConnectorConfiguration(identifier);
+                mappingService.removeConnectorFromDeploymentMap(tenant, identifier);
+                connectorRegistry.removeClientFromStatusMap(tenant, identifier);
             }
-
-            // Delete connector-specific resources (e.g., Pulsar subscriptions)
-            bootstrapService.deleteConnectorResources(tenant, identifier);
-
-            // Disable the connector if it's enabled (either originally or temporarily)
-            if (configuration.getEnabled()) {
-                bootstrapService.disableConnector(tenant, identifier);
-            }
-
-            // Clean up Notification 2.0 subscriptions
-            bootstrapService.shutdownAndRemoveConnector(tenant, identifier);
-            connectorConfigurationService.deleteConnectorConfiguration(identifier);
-            mappingService.removeConnectorFromDeploymentMap(tenant, identifier);
-            connectorRegistry.removeClientFromStatusMap(tenant, identifier);
         } catch (Exception ex) {
             log.error("{} - Error deleting connector instance: {}", tenant, identifier, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -636,10 +640,10 @@ public class ConfigurationController {
             // Clear cached GraalVM sources if SHARED or SYSTEM templates are deleted
             // (Though this should rarely happen since they're typically marked as internal)
             if (TemplateType.SHARED.name().equals(id)) {
-                configurationRegistry.updateGraalsSourceShared(tenant, "");
+                configurationRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, "");
                 log.info("{} - Cleared cached SHARED code source after deletion", tenant);
             } else if (TemplateType.SYSTEM.name().equals(id)) {
-                configurationRegistry.updateGraalsSourceSystem(tenant, "");
+                configurationRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, "");
                 log.info("{} - Cleared cached SYSTEM code source after deletion", tenant);
             }
         } catch (Exception ex) {
@@ -703,10 +707,10 @@ public class ConfigurationController {
 
             // Invalidate cached GraalVM sources if SHARED or SYSTEM templates are updated
             if (TemplateType.SHARED.name().equals(id)) {
-                configurationRegistry.updateGraalsSourceShared(tenant, codeTemplate.getCode());
+                configurationRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, codeTemplate.getCode());
                 log.info("{} - Invalidated and updated cached SHARED code source", tenant);
             } else if (TemplateType.SYSTEM.name().equals(id)) {
-                configurationRegistry.updateGraalsSourceSystem(tenant, codeTemplate.getCode());
+                configurationRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, codeTemplate.getCode());
                 log.info("{} - Invalidated and updated cached SYSTEM code source", tenant);
             }
 
@@ -748,10 +752,10 @@ public class ConfigurationController {
 
             // Invalidate cached GraalVM sources if SHARED or SYSTEM templates are created
             if (TemplateType.SHARED.name().equals(codeTemplate.id)) {
-                configurationRegistry.updateGraalsSourceShared(tenant, codeTemplate.getCode());
+                configurationRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, codeTemplate.getCode());
                 log.info("{} - Created and cached SHARED code source", tenant);
             } else if (TemplateType.SYSTEM.name().equals(codeTemplate.id)) {
-                configurationRegistry.updateGraalsSourceSystem(tenant, codeTemplate.getCode());
+                configurationRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, codeTemplate.getCode());
                 log.info("{} - Created and cached SYSTEM code source", tenant);
             }
 

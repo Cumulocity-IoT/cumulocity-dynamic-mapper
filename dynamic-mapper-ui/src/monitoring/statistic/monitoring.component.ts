@@ -91,7 +91,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortOrder: 'asc',
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: NameRendererComponent,
-      gridTrackSize: '15%',
+      gridTrackSize: '25%',
       visible: true
     },
     {
@@ -114,24 +114,6 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       header: 'Received',
       name: 'messagesReceived',
       path: 'messagesReceived',
-      filterable: true,
-      cellRendererComponent: NumberRendererComponent,
-      dataType: ColumnDataType.Numeric,
-      gridTrackSize: '12.5%'
-    },
-    {
-      header: 'Snooped total',
-      name: 'snoopedTemplatesTotal',
-      path: 'snoopedTemplatesTotal',
-      filterable: true,
-      cellRendererComponent: NumberRendererComponent,
-      dataType: ColumnDataType.Numeric,
-      gridTrackSize: '12.5%'
-    },
-    {
-      header: 'Snooped active',
-      name: 'snoopedTemplatesActive',
-      path: 'snoopedTemplatesActive',
       filterable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,

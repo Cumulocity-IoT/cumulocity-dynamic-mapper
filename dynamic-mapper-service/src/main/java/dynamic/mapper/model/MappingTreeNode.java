@@ -37,7 +37,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -73,9 +72,11 @@ public class MappingTreeNode {
     private String absolutePath;
     private String level;
     private String tenant;
-    private final ReadWriteLock treeLock = new ReentrantReadWriteLock();
-    private final Lock readLock = treeLock.readLock();
-    private final Lock writeLock = treeLock.writeLock();
+    // A single ReadWriteLock guards the whole tree. All public operations are invoked on the
+    // root node (see MappingCacheManager), so every node shares the root's lock by reference
+    // instead of allocating its own — this avoids one lock instance per tree node.
+    @ToString.Exclude
+    private final ReadWriteLock treeLock;
 
     // Helper class for context; children list is mutable (nodes are added during tree building)
     @AllArgsConstructor
@@ -97,6 +98,7 @@ public class MappingTreeNode {
                 .parentNode(null)
                 .absolutePath("")
                 .mappingNode(false)
+                .treeLock(new ReentrantReadWriteLock())
                 .build();
     }
 
@@ -109,6 +111,7 @@ public class MappingTreeNode {
                 .absolutePath(buildPath(parent.getAbsolutePath(), level))
                 .depthIndex(parent.getDepthIndex() + 1)
                 .mappingNode(true)
+                .treeLock(parent.treeLock)
                 .build();
     }
 
@@ -120,13 +123,14 @@ public class MappingTreeNode {
                 .absolutePath(buildPath(parent.getAbsolutePath(), level))
                 .depthIndex(parent.getDepthIndex() + 1)
                 .mappingNode(false)
+                .treeLock(parent.treeLock)
                 .build();
     }
 
     // Public API methods
 
     public List<Mapping> resolveMapping(String topic) throws ResolveException {
-        readLock.lock();
+        treeLock.readLock().lock();
         try {
             List<MappingTreeNode> resolvedMappings = resolveTopicPath(
                     Mapping.splitTopicIncludingSeparatorAsList(topic), 0);
@@ -135,35 +139,53 @@ public class MappingTreeNode {
                     .map(MappingTreeNode::getMapping)
                     .collect(Collectors.toList());
         } finally {
-            readLock.unlock();
+            treeLock.readLock().unlock();
         }
     }
 
     public void addMapping(Mapping mapping) throws ResolveException {
-        if (mapping == null)
+        if (!hasResolvableTopic(mapping, "add"))
             return;
 
-        writeLock.lock();
+        treeLock.writeLock().lock();
         try {
             List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(mapping.getMappingTopic());
             addMapping(mapping, levels, 0);
         } finally {
-            writeLock.unlock();
+            treeLock.writeLock().unlock();
         }
     }
 
     public void deleteMapping(Mapping mapping) throws ResolveException {
-        if (mapping == null)
+        if (!hasResolvableTopic(mapping, "delete"))
             return;
 
-        writeLock.lock();
+        treeLock.writeLock().lock();
         try {
             List<String> levels = Mapping.splitTopicIncludingSeparatorAsList(mapping.getMappingTopic());
             MutableInt branchingLevel = new MutableInt(0);
             deleteMapping(mapping, levels, 0, branchingLevel);
         } finally {
-            writeLock.unlock();
+            treeLock.writeLock().unlock();
         }
+    }
+
+    /**
+     * Guards against mappings that cannot be placed in the resolver tree (null mapping or
+     * null/blank mapping topic). Such mappings would otherwise trigger a NullPointerException
+     * while splitting the topic inside the write lock.
+     */
+    private boolean hasResolvableTopic(Mapping mapping, String operation) {
+        if (mapping == null) {
+            return false;
+        }
+        String topic = mapping.getMappingTopic();
+        if (topic == null || topic.isBlank()) {
+            log.warn(TENANT_LOG_PREFIX + "Skipping tree {} for mapping {} with empty mapping topic",
+                    tenant, operation, mapping.getId());
+            return false;
+        }
+        return true;
     }
 
     // Helper methods for node operations
@@ -202,10 +224,11 @@ public class MappingTreeNode {
         } else if (topicLevels.size() == currentTopicLevelIndex) {
             if (getMappingNode()) {
                 results.add(this);
-            } else {
-                String remaining = String.join("", topicLevels);
-                log.info("Sibling path mapping registered for this path [{}], remaining {}!", this.getAbsolutePath(),
-                        remaining);
+            } else if (log.isDebugEnabled()) {
+                // The topic exactly matches an inner (non-mapping) node, i.e. no mapping is
+                // registered for this exact path. This is on the message dispatch hot path,
+                // so keep it at debug and avoid building strings eagerly.
+                log.debug("No mapping registered for exact path [{}]", this.getAbsolutePath());
             }
         }
 
@@ -367,13 +390,16 @@ public class MappingTreeNode {
     private boolean processMappingNodeEntry(Entry<String, List<MappingTreeNode>> entry, Mapping mapping,
             MappingContext context, MutableInt branchingLevel, MutableBoolean foundMapping) {
         List<MappingTreeNode> nodes = entry.getValue();
-        nodes.removeIf(node -> shouldRemoveNode(node, mapping, context, branchingLevel));
-
-        if (nodes.isEmpty()) {
+        // Mark the mapping as found whenever a matching node is actually removed — not only
+        // when the level becomes empty. Several mappings can share the same topic level, so
+        // removing one still leaves the list non-empty while the deletion did succeed.
+        boolean removedAny = nodes.removeIf(node -> shouldRemoveNode(node, mapping, context, branchingLevel));
+        if (removedAny) {
             foundMapping.setTrue();
-            return true;
         }
-        return false;
+
+        // Drop the (now empty) level entry from the parent's child map.
+        return nodes.isEmpty();
     }
 
     private boolean shouldRemoveNode(MappingTreeNode node, Mapping mapping, MappingContext context,
@@ -396,7 +422,7 @@ public class MappingTreeNode {
     }
 
     private boolean shouldDeleteNode(boolean deleted, int currentLevel, MutableInt branchingLevel) {
-        if (currentLevel < branchingLevel.getValue()) {
+        if (currentLevel < branchingLevel.intValue()) {
             log.debug(TENANT_LOG_PREFIX + "Deleting innerNode stopped: currentLevel [{}], branchingLevel [{}]",
                     tenant, currentLevel, branchingLevel);
             return false;

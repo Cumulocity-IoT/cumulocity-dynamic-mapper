@@ -20,6 +20,15 @@
 -->
 
 <c8y-title translate>Service configuration</c8y-title>
+@if (section == 'general'){
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" title="{{ 'Rotate GraalVM Engine' | translate }}"
+    (click)="clickedRotateGraalVMEngine()" [disabled]="!feature?.userHasMappingAdminRole">
+    <i c8yIcon="restore"></i>
+    {{ 'Rotate GraalVM Engine' | translate }}
+  </button>
+</c8y-action-bar-item>
+}
 @if (section == 'caching'){
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Clear external ID cache' | translate }}"
@@ -320,15 +329,82 @@
             <c8y-li-icon icon="alarm1"></c8y-li-icon>
             <div class="d-flex a-i-center">
               <div>
-                <p>{{ 'MaxCPU time in milliseconds for JavaScript code' | translate }}</p>
+                <p>{{ 'Maximum CPU time for Smart Function JavaScript code' | translate }}</p>
                 <p>
-                  <small translate>Set the maxCPU time in milliseconds for JavaScript code, to avoid malicious code from
-                    starving the CPU</small>
+                  <small translate>Maximum CPU time in milliseconds the JavaScript engine is allowed to consume.
+                    The script is forcibly stopped when this limit is reached, preventing runaway or malicious code from
+                    starving the CPU.</small>
                 </p>
               </div>
               <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ ' maxCPU time in milliseconds ' | translate }}">
+                <label class="editable" title="{{ 'Maximum CPU time for Smart Function JavaScript code' | translate }}">
                   <input class="form-control" name="maxCPUTimeMS" type="number" formControlName="maxCPUTimeMS" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="alarm1"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Maximum end-to-end processing time for Smart Functions' | translate }}</p>
+                <p>
+                  <small translate>Maximum wall-clock time in milliseconds the system waits for a Smart Function to
+                    finish processing a message end-to-end — including JavaScript execution and any Cumulocity API calls.
+                    When exceeded the message is not acknowledged (QoS &gt; 0) and will be redelivered.
+                    Must be greater than the CPU time limit above.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable"
+                  title="{{ 'Maximum end-to-end processing time for Smart Functions' | translate }}">
+                  <input class="form-control" name="pipelineTimeoutMS" type="number" min="1000"
+                    formControlName="pipelineTimeoutMS" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="restore"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'GraalVM engine rotation threshold' | translate }}</p>
+                <p>
+                  <small translate>Number of unique JavaScript source compilations after which the GraalVM Engine is
+                    rotated to reclaim JVM Metaspace. Each new or updated mapping code counts once per Engine lifetime;
+                    re-executing the same code is a cache hit and does not count. Lower values free memory more often;
+                    higher values retain JIT warm-up longer. Default: 100.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'GraalVM engine rotation threshold' | translate }}">
+                  <input class="form-control" name="engineRotationThreshold" type="number" min="1"
+                    formControlName="engineRotationThreshold" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="clock-o"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'GraalVM engine max age (minutes)' | translate }}</p>
+                <p>
+                  <small translate>Optional time-based rotation: rotate the GraalVM Engine after this many minutes
+                    regardless of compilation count. Set to 0 (default) to disable — the compilation counter alone
+                    drives rotation.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'GraalVM engine max age (minutes)' | translate }}">
+                  <input class="form-control" name="engineMaxAgeMinutes" type="number" min="1"
+                    formControlName="engineMaxAgeMinutes" />
                   <span></span>
                 </label>
               </div>
@@ -452,6 +528,26 @@
                 <label class="editable" title="{{ 'Minutes lifetime flow state' | translate }}" >
                   <input class="form-control" name="flowStateRetention" type="number"
                     formControlName="flowStateRetention" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="list"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Number of mapping versions to retain' | translate }}</p>
+                <p>
+                  <small translate>Maximum number of versions kept per mapping. When a new version is published, the
+                    oldest versions beyond this limit are deleted; the active version is never deleted.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Number of mapping versions to retain' | translate }}">
+                  <input class="form-control" name="mappingVersionRetention" type="number" min="1"
+                    formControlName="mappingVersionRetention" />
                   <span></span>
                 </label>
               </div>

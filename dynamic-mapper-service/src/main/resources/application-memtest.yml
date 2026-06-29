@@ -47,6 +47,8 @@ c8y:
     user: test_user
     password: test_password
     tenant: test_tenant
+    delay: 86400000        # 24h — suppress scheduler spam during local dev
+    initialDelay: 86400000
   microservice:
     isolation: MULTI_TENANT
 

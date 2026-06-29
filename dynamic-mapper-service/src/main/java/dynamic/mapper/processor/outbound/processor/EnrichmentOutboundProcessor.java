@@ -92,7 +92,7 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
                 || TransformationType.EXTENSION_JAVA.equals(mapping.getTransformationType());
 
         String identifier = context.getApi().identifier;
-        if (context.getTesting() && payloadObject instanceof Map) {
+        if (context.isTesting() && payloadObject instanceof Map) {
             @SuppressWarnings("unchecked")
             Map<String, Object> payloadMap = (Map<String, Object>) payloadObject;
             normalizeTestPayload(tenant, payloadMap, identifier);
@@ -100,7 +100,7 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
         String payloadAsString = toPrettyJsonString(payloadObject);
         Object sourceId = extractContent(context, payloadObject, payloadAsString, identifier);
         if (sourceId == null) {
-            if (context.getTesting()) {
+            if (context.isTesting()) {
                 // Test payload may not contain the source identifier (e.g. no source.id on a
                 // MEASUREMENT). Fall back to a mock ID so the test can proceed without error.
                 sourceId = "MOCK_DEVICE_ID";
@@ -140,7 +140,7 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
                 // The alias map is stored on the device/edge-node MO as sparkPlugB_NBIRTH or
                 // sparkPlugB_DBIRTH during inbound BIRTH processing.
                 if (MappingType.SPARKPLUGB.equals(mapping.getMappingType())) {
-                    SparkPlugBContext spbCtx = loadSparkPlugBContext(tenant, sourceId.toString(), context.getTesting());
+                    SparkPlugBContext spbCtx = loadSparkPlugBContext(tenant, sourceId.toString(), context.isTesting());
                     config.put("aliasMap", spbCtx.aliasMap());
                     config.put("isActive", spbCtx.isActive());
                     config.put("deviceActiveMap", spbCtx.deviceActiveMap());
@@ -152,7 +152,7 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
                 javaExtContext = (JavaExtensionContextImpl) flowContext;
                 // externalId is set directly on javaExtContext below after resolution
             } else if (TransformationType.EXTENSION_JAVA.equals(mapping.getTransformationType())
-                    && context.getTesting()
+                    && context.isTesting()
                     && payloadObject instanceof Map) {
                 // Test mode: flowContext is null for EXTENSION_JAVA (created later in ExtensibleOutboundProcessor).
                 // Java extensions typically read source.id directly from the payload. Inject a mock source
@@ -184,12 +184,16 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
         if (mapping.getUseExternalId() && !mapping.getExternalIdType().isEmpty()) {
             ExternalIDRepresentation externalId = c8yAgent.resolveGlobalId2ExternalId(context.getTenant(),
                     new GId(sourceId.toString()), mapping.getExternalIdType(),
-                    context.getTesting());
+                    context.isTesting());
             if (externalId == null) {
-                if (!context.getTesting()) {
-                    // Production: a missing external ID is a hard error — the broker topic cannot be resolved.
-                    throw new RuntimeException(String.format("External id %s for type %s not found!",
-                            sourceId.toString(), mapping.getExternalIdType()));
+                if (!context.isTesting()) {
+                    // Device is not enrolled with this external ID type — the mapping does not apply
+                    // to this device. Skip without counting as an error: a missing external ID is a
+                    // device-enrollment issue, not a mapping configuration failure.
+                    log.debug("{} - Skipping mapping '{}': device {} has no external ID of type '{}'",
+                            tenant, mapping.getName(), sourceId, mapping.getExternalIdType());
+                    context.setIgnoreFurtherProcessing(true);
+                    return;
                 }
                 // Test mode: source is synthetic, so use sourceId as fallback to keep topic templates resolvable.
                 String fallbackExternalId = sourceId.toString();

@@ -32,7 +32,6 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -45,8 +44,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NotificationSubscriptionService {
 
-    @Autowired
-    C8YAgent c8yAgent;
+    private final C8YAgent c8yAgent;
 
     private final ConfigurationRegistry configurationRegistry;
 
@@ -89,21 +87,21 @@ public class NotificationSubscriptionService {
     }
 
     public NotificationSubscriptionResponse updateDeviceSubscription(String tenant,
-            NotificationSubscriptionRequest request) {
+            NotificationSubscriptionRequest request, String subscription) {
 
-        // Get current subscriptions
+        // Get current subscriptions for the target bucket
         NotificationSubscriptionResponse current = configurationRegistry.getNotificationSubscriber()
-                .getSubscriptionsDevices(tenant, null, Utils.STATIC_DEVICE_SUBSCRIPTION);
+                .getSubscriptionsDevices(tenant, null, subscription);
 
         // Calculate differences
         List<Device> toAdd = calculateDevicesToAdd(request.getDevices(), current.getDevices());
         List<Device> toRemove = calculateDevicesToRemove(request.getDevices(), current.getDevices());
 
         // Process additions
-        processDeviceAdditions(tenant, toAdd, request.getApi());
+        processDeviceAdditions(tenant, toAdd, request.getApi(), subscription);
 
         // Process removals
-        processDeviceRemovals(tenant, toRemove);
+        processDeviceRemovals(tenant, toRemove, subscription);
 
         // Return updated response
         return NotificationSubscriptionResponse.builder()
@@ -259,13 +257,14 @@ public class NotificationSubscriptionService {
         return toRemove;
     }
 
-    private void processDeviceAdditions(String tenant, List<Device> devices, dynamic.mapper.model.API api) {
+    private void processDeviceAdditions(String tenant, List<Device> devices, dynamic.mapper.model.API api,
+            String subscription) {
         for (Device device : devices) {
             ManagedObjectRepresentation mor = configurationRegistry.getC8yAgent()
                     .getManagedObjectForId(tenant, device.getId(), false);
             if (mor != null) {
                 configurationRegistry.getNotificationSubscriber()
-                        .subscribeDeviceAndConnect(tenant, mor, api, Utils.STATIC_DEVICE_SUBSCRIPTION);
+                        .subscribeDeviceAndConnect(tenant, mor, api, subscription);
 
                 // Pre-populate inventory cache for this device to ensure inventory filters work correctly
                 log.debug("{} - Pre-populating inventory cache for device {} from device addition",
@@ -275,13 +274,13 @@ public class NotificationSubscriptionService {
         }
     }
 
-    private void processDeviceRemovals(String tenant, List<Device> devices) {
+    private void processDeviceRemovals(String tenant, List<Device> devices, String subscription) {
         for (Device device : devices) {
             ManagedObjectRepresentation mor = configurationRegistry.getC8yAgent()
                     .getManagedObjectForId(tenant, device.getId(), false);
             if (mor != null) {
                 configurationRegistry.getNotificationSubscriber()
-                        .unsubscribeDeviceAndDisconnect(tenant, mor, Utils.STATIC_DEVICE_SUBSCRIPTION);
+                        .unsubscribeDeviceAndDisconnect(tenant, mor, subscription);
             }
         }
     }

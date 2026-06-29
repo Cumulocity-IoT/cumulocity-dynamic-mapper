@@ -22,32 +22,37 @@
 package dynamic.mapper.core;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.Agent;
 import com.cumulocity.model.ID;
+import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.sdk.client.SDKException;
+import com.cumulocity.sdk.client.inventory.InventoryFilter;
 
 import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.MapperServiceRepresentation;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class DeviceBootstrapService {
 
-    @Autowired
-    private InventoryFacade inventoryApi;
-
-    @Autowired
-    private IdentityFacade identityApi;
+    private final InventoryFacade inventoryApi;
+    private final IdentityFacade identityApi;
+    private final MicroserviceSubscriptionsService subscriptionsService;
 
     @Value("${application.version}")
     private String version;
@@ -116,14 +121,47 @@ public class DeviceBootstrapService {
         amo.setName(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_NAME);
         amo.setType(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_TYPE);
         amo.setProperty(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT, new HashMap<>());
-        
+
         amo = inventoryApi.create(amo, false);
         log.info("{} - Dynamic Mapper Device To Client Map has been created with ID {}", tenant, amo.getId());
-        
+
         ExternalIDRepresentation externalAgentId = identityApi.create(amo,
                 new ID("c8y_Serial", DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_ID), false);
         log.debug("{} - ExternalId created: {}", tenant, externalAgentId.getExternalId());
-        
+
         return amo;
+    }
+
+    public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId, Boolean testing) {
+        return getManagedObjectForId(tenant, deviceId, testing, false);
+    }
+
+    public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId, Boolean testing,
+            boolean withParents) {
+        return subscriptionsService.callForTenant(tenant, () -> {
+            try {
+                return inventoryApi.get(GId.asGId(deviceId), testing, withParents);
+            } catch (SDKException e) {
+                log.warn("{} - Device with id {} not found!", tenant, deviceId);
+            }
+            return null;
+        });
+    }
+
+    public List<ManagedObjectRepresentation> getManagedObjectsByType(String tenant, String type, Boolean testing) {
+        return subscriptionsService.callForTenant(tenant, () -> {
+            try {
+                InventoryFilter filter = new InventoryFilter().byType(type);
+                List<ManagedObjectRepresentation> result = new ArrayList<>();
+                for (ManagedObjectRepresentation mor : inventoryApi.getManagedObjectsByFilter(filter, testing)
+                        .get().allPages()) {
+                    result.add(mor);
+                }
+                return result;
+            } catch (SDKException e) {
+                log.warn("{} - Error querying devices of type {}: {}", tenant, type, e.getMessage());
+                return Collections.emptyList();
+            }
+        });
     }
 }

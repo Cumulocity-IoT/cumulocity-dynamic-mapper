@@ -28,11 +28,12 @@ import { DocJsonataComponent } from './doc-jsonata.component';
 import { DocSmartFunctionComponent } from './doc-smartfunction.component';
 import { DocJavaExtensionComponent } from './doc-javaextension.component';
 import { DocCustomRoutingComponent } from './doc-customrouting.component';
+import { DocVersioningComponent } from './doc-versioning.component';
 
 const OVERVIEW_SECTIONS = [
   'overview', 'getting-started', 'managing-connectors', 'define-mapping',
   'sparkplugb', 'define-subscription-for-outbound', 'transformation-types',
-  'flow-state', 'code-templates', 'metadata', 'unknown-payload',
+  'flow-state', 'code-templates', 'metadata',
   'reliability-settings', 'access-control', 'monitoring', 'message-explorer', 'troubleshooting'
 ];
 
@@ -54,6 +55,7 @@ const OVERVIEW_SECTIONS = [
         { path: 'smartfunction',  component: DocSmartFunctionComponent },
         { path: 'javaextension',  component: DocJavaExtensionComponent },
         { path: 'custom-routing', component: DocCustomRoutingComponent },
+        { path: 'versioning',     component: DocVersioningComponent },
       ]
     }),
     hookNavigator(DocNavigationFactory),

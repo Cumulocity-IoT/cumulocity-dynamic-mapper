@@ -27,13 +27,13 @@ import static org.mockito.Mockito.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 import org.apache.camel.Exchange;
@@ -64,7 +64,6 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.processor.inbound.processor.JSONataInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SubstitutionResultInboundProcessor;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -121,12 +120,8 @@ class MappingInboundExecutionIntegrationTest {
 
         // Create processors
         jsonataProcessor = new JSONataInboundProcessor(mappingService);
-        substitutionProcessor = new SubstitutionResultInboundProcessor();
-
-        // Inject dependencies via reflection
-        injectField(substitutionProcessor, "c8yAgent", c8yAgent);
-        injectField(substitutionProcessor, "mappingService", mappingService);
-        injectField(substitutionProcessor, "objectMapper", new ObjectMapper());
+        // configurationRegistry is not exercised by these tests (no inventory-filter mappings)
+        substitutionProcessor = new SubstitutionResultInboundProcessor(c8yAgent, mappingService, null, null);
 
         // Setup common mocks
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
@@ -351,7 +346,7 @@ class MappingInboundExecutionIntegrationTest {
         // Setup mapping status mock
         MappingStatus mappingStatus = new MappingStatus(
                 mapping.getId(), mapping.getName(), mapping.getIdentifier(),
-                Direction.INBOUND, mapping.getMappingTopic(), "", 0L, 0L, 0L, 0L, 0L, null);
+                Direction.INBOUND, mapping.getMappingTopic(), "", 0L, 0L, 0L, null);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
 
         // Setup exchange message
@@ -434,23 +429,25 @@ class MappingInboundExecutionIntegrationTest {
     void testSampleMapping_JSONataExtraction(String mappingName, API expectedApi) throws Exception {
         Mapping mapping = findMappingByName(inboundMappings, mappingName);
         Assumptions.assumeTrue(mapping != null, "Mapping not present in sample file: " + mappingName);
-        Assumptions.assumeTrue(mapping.getMappingType() == MappingType.JSON,
+                final Mapping existingMapping = Objects.requireNonNull(mapping);
+
+        Assumptions.assumeTrue(existingMapping.getMappingType() == MappingType.JSON,
                 "Skipping non-JSON mapping: " + mappingName);
-        Assumptions.assumeTrue(mapping.getTransformationType() != TransformationType.SUBSTITUTION_AS_CODE,
+        Assumptions.assumeTrue(existingMapping.getTransformationType() == null
+                        || !"SUBSTITUTION_AS_CODE".equals(existingMapping.getTransformationType().name()),
                 "Skipping SUBSTITUTION_AS_CODE mapping: " + mappingName);
 
-        String sourceTemplate = mapping.getSourceTemplate();
-        Assumptions.assumeTrue(sourceTemplate != null && !sourceTemplate.isBlank(),
+        String sourceTemplate = Objects.requireNonNull(existingMapping.getSourceTemplate());
+        Assumptions.assumeTrue(!sourceTemplate.isBlank(),
                 "No sourceTemplate for: " + mappingName);
         Assumptions.assumeTrue(sourceTemplate.trim().startsWith("{"),
                 "Array-root source not supported in this test: " + mappingName);
 
-        @SuppressWarnings("unchecked")
         Map<String, Object> payload = objectMapper.readValue(sourceTemplate,
                 new TypeReference<Map<String, Object>>() {});
 
         ProcessingContext<Object> context = createProcessingContext(
-                mapping, new HashMap<>(payload), mapping.getMappingTopicSample());
+                existingMapping, new HashMap<>(payload), existingMapping.getMappingTopicSample());
 
         // Execute JSONata extraction through the processor under test
         jsonataProcessor.extractFromSource(context);
@@ -458,12 +455,12 @@ class MappingInboundExecutionIntegrationTest {
         Map<String, List<SubstituteValue>> cache = context.getProcessingCache();
         assertFalse(cache.isEmpty(),
                 "Processing cache should not be empty for: " + mappingName
-                        + " (substitutions: " + mapping.getSubstitutions().length + ")");
-        assertEquals(expectedApi, mapping.getTargetAPI(),
+                        + " (substitutions: " + existingMapping.getSubstitutions().length + ")");
+        assertEquals(expectedApi, existingMapping.getTargetAPI(),
                 "Target API mismatch for: " + mappingName);
 
         log.info("✅ {} → {} substitutions extracted, API={}",
-                mappingName, cache.size(), mapping.getTargetAPI());
+                mappingName, cache.size(), existingMapping.getTargetAPI());
     }
 
     /**
@@ -474,10 +471,11 @@ class MappingInboundExecutionIntegrationTest {
     void testMapping07_ArrayRootPayload_JSONataExtraction() throws Exception {
         Mapping mapping = findMappingByName(inboundMappings, "Mapping - 07");
         Assumptions.assumeTrue(mapping != null, "Mapping - 07 not found, skipping");
+                final Mapping existingMapping = Objects.requireNonNull(mapping);
 
         // The sourceTemplate is a JSON array – wrap it so the context payload is a Map
-        String sourceTemplate = mapping.getSourceTemplate();
-        Assumptions.assumeTrue(sourceTemplate != null && sourceTemplate.trim().startsWith("["),
+                String sourceTemplate = Objects.requireNonNull(existingMapping.getSourceTemplate());
+                Assumptions.assumeTrue(sourceTemplate.trim().startsWith("["),
                 "Expected array source for Mapping - 07");
 
         List<Object> arrayPayload = objectMapper.readValue(sourceTemplate,
@@ -495,7 +493,7 @@ class MappingInboundExecutionIntegrationTest {
         }
 
         ProcessingContext<Object> context = createProcessingContext(
-                mapping, payload, mapping.getMappingTopicSample());
+                existingMapping, payload, existingMapping.getMappingTopicSample());
 
         jsonataProcessor.extractFromSource(context);
 
@@ -535,12 +533,6 @@ class MappingInboundExecutionIntegrationTest {
     }
 
     // ========== HELPER METHODS ==========
-
-    private void injectField(Object target, String fieldName, Object value) throws Exception {
-        Field field = target.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(target, value);
-    }
 
     private List<Mapping> loadMappingsFromFile(String relativePath) throws IOException {
         // Get the project root directory by navigating up from the test class location

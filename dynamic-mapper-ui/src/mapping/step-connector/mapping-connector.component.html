@@ -20,19 +20,12 @@
   -->
 
 <div class="col-xs-12 flex-grow no-gutter d-col">
-  @if (showHeader) {
+  @if (showHeader && stepperConfiguration.editorMode === EditorMode.READ_ONLY) {
   <div class="p-16 p-t-0 flex-no-shrink separator-bottom col-xs-12">
-    @if (stepperConfiguration.editorMode !== EditorMode.READ_ONLY) {
-    <h5 class="text-medium text-center">
-      <span translate>Select connector for mapping (at least one is required)</span>
-    </h5>
-    }
-    @if (stepperConfiguration.editorMode === EditorMode.READ_ONLY) {
     <h5 class="text-medium text-center">
       <span translate>Selected connectors</span>
       <span class="label label-primary text-12">{{ 'Read Only' }}</span>
     </h5>
-    }
   </div>
   }
   <div class="card-inner-scroll fit-h flex-grow">

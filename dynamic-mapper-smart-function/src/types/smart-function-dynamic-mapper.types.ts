@@ -87,6 +87,7 @@ export interface SmartFunctionPayload {
  *   const temp = msg.payload.temperature;  // Already parsed!
  *   const topic = msg.topic;
  *   const clientId = msg.clientId;
+ *   const time = msg.time;                 // ISO-8601 receive timestamp
  * }
  */
 export interface DynamicMapperDeviceMessage {
@@ -102,17 +103,43 @@ export interface DynamicMapperDeviceMessage {
   /** The topic on the transport (e.g., MQTT topic) */
   topic: string;
 
-  /** Transport client ID (e.g., MQTT client ID) */
+  /**
+   * Transport client ID (e.g., MQTT client ID).
+   * Set for inbound messages; null for outbound.
+   */
   clientId?: string;
 
-  /** Identifier for the source/destination transport (e.g., "mqtt", "kafka") */
+  /**
+   * Internal Cumulocity device ID of the originating device.
+   * Set for outbound messages; null for inbound.
+   */
+  sourceId?: string;
+
+  /**
+   * Lowercase C8y object type string, matching the {@link C8yObjectType} union.
+   * Set by the outbound processor; null for inbound messages.
+   * Enables discriminant narrowing: `switch (msg.cumulocityType) { ... }`.
+   */
+  cumulocityType?: C8yObjectType;
+
+  /**
+   * ISO-8601 timestamp captured when the message was received by the connector.
+   * Use as a reliable receive-time fallback when the payload has no timestamp:
+   * `var time = payload["time"] ?? msg.time;`
+   */
+  time?: string;
+
+  /**
+   * Identifier of the connector that delivered this message (e.g. "my-mqtt-connector").
+   * Set for inbound messages; null for outbound (C8Y-originated) messages.
+   */
   transportId?: string;
 
-  /** Transport-specific fields/properties/headers */
-  transportFields?: { [key: string]: string };
-
-  /** Timestamp of the incoming message */
-  time?: Date;
+  /**
+   * Transport-specific key/value pairs (e.g. Kafka record headers, MQTT 5 user properties).
+   * Empty map when no transport fields are available.
+   */
+  transportFields?: Record<string, string>;
 }
 
 /**
@@ -303,6 +330,7 @@ export interface SmartFunctionContext extends DataPrepContext {
    * Warnings are collected and surfaced to users for debugging.
    * Use this for non-fatal issues that should be brought to attention
    * (e.g., fallback logic applied, optional field missing).
+   * Stored separately from log messages and visible in the Dynamic Mapper UI.
    *
    * @param warning - The warning message
    *
@@ -312,6 +340,56 @@ export interface SmartFunctionContext extends DataPrepContext {
    * }
    */
   addWarning(warning: string): void;
+
+  /**
+   * Logs a message to the processing context.
+   *
+   * Alias for {@link addLogMessage} — prefer `console.log` for general debugging.
+   * Log messages are stored internally and surfaced alongside warnings in the UI.
+   *
+   * @param message - The log message
+   * @deprecated Use `console.log` for debugging or `addWarning` for non-fatal issues.
+   *
+   * @example
+   * context.logMessage("Processing device: " + clientId);
+   */
+  logMessage(message: string): void;
+
+  /**
+   * Logs a message to the processing context (canonical form).
+   *
+   * @param message - The log message
+   * @deprecated Use `console.log` for debugging or `addWarning` for non-fatal issues.
+   */
+  addLogMessage(message: string): void;
+
+  /**
+   * Returns all state keys currently stored in the context.
+   *
+   * Useful for inspecting or iterating over all persisted state keys.
+   *
+   * @returns Array of state keys
+   *
+   * @example
+   * const keys = context.getStateKeySet();
+   * console.log("Stored state keys:", keys);
+   */
+  getStateKeySet(): string[];
+
+  /**
+   * Indicates whether this invocation is running inside a test cycle
+   * (i.e., triggered from the mapping test UI rather than a live message).
+   *
+   * Use this to skip side effects (alarms, external API calls) during tests.
+   *
+   * @returns true when running in a test cycle
+   *
+   * @example
+   * if (!context.getTesting()) {
+   *   // only run in production
+   * }
+   */
+  getTesting(): boolean;
 }
 
 // ============================================================================
@@ -1280,6 +1358,21 @@ export interface SmartFunctionContextV2<
 
   /** Add a non-fatal warning message visible in the Dynamic Mapper UI. */
   addWarning(warning: string): void;
+
+  /** @deprecated Use `console.log` for debugging or `addWarning` for non-fatal issues. */
+  logMessage(message: string): void;
+
+  /** @deprecated Use `console.log` for debugging or `addWarning` for non-fatal issues. */
+  addLogMessage(message: string): void;
+
+  /** Returns all state keys currently stored in the context. */
+  getStateKeySet(): string[];
+
+  /**
+   * Returns true when running inside a test cycle (mapping test UI).
+   * Use to skip side effects during tests.
+   */
+  getTesting(): boolean;
 }
 
 /**
@@ -1553,8 +1646,6 @@ export function createMockInputMessage<
     payload: payload as TInput extends C8yObjectType ? C8yPayloadTypeMap[TInput] : TInput,
     topic,
     ...(clientId !== undefined && { clientId }),
-    transportId: "mqtt",
-    time: new Date()
   };
 }
 
@@ -1670,6 +1761,18 @@ export function createMockRuntimeContextV2<
     },
     addWarning(warning: string) {
       console.warn('[MockContextV2]', warning);
+    },
+    logMessage(message: string) {
+      console.log('[MockContextV2]', message);
+    },
+    addLogMessage(message: string) {
+      console.log('[MockContextV2]', message);
+    },
+    getStateKeySet(): string[] {
+      return Object.keys(state);
+    },
+    getTesting(): boolean {
+      return false;
     }
   };
 }
@@ -1730,6 +1833,18 @@ export function createMockRuntimeContext(options: {
     },
     addWarning(warning: string) {
       console.warn('[MockContext]', warning);
+    },
+    logMessage(message: string) {
+      console.log('[MockContext]', message);
+    },
+    addLogMessage(message: string) {
+      console.log('[MockContext]', message);
+    },
+    getStateKeySet(): string[] {
+      return Object.keys(state);
+    },
+    getTesting(): boolean {
+      return false;
     }
   };
 }

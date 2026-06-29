@@ -278,7 +278,7 @@ function toC8yName(metricName) {
 function onMessage(msg, context) {
 
     // 1 ── Decode Base64 → raw bytes ────────────────────────────────────────
-    var base64 = msg.getPayload();
+    var base64 = msg.payload;
     if (!base64 || typeof base64 !== 'string') {
         console.log("Expected Base64 string from ANY_PAYLOAD mapping, got: " + typeof base64);
         return [];
@@ -309,7 +309,7 @@ function onMessage(msg, context) {
     }
 
     // 3 ── Extract device identity from topic ───────────────────────────────
-    var topic  = msg.getTopic();
+    var topic  = msg.topic;
     var parsed = parseSparkplugTopic(topic);
     if (!parsed) {
         console.log("Cannot parse SparkPlugB topic: " + topic);
@@ -321,7 +321,7 @@ function onMessage(msg, context) {
     // 4 ── Determine measurement timestamp ─────────────────────────────────
     var isoTime = spPayload.timestamp
         ? new Date(spPayload.timestamp).toISOString()
-        : new Date().toISOString();
+        : msg.time;
 
     // 5 ── Build C8Y outputs ────────────────────────────────────────────────
     var output = [];

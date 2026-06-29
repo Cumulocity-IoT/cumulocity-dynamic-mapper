@@ -19,7 +19,7 @@
 ~
 -->
   <div>
-    <c8y-title>{{ 'Introduction' | translate }}</c8y-title>
+    <c8y-title>{{ 'Home' | translate }}</c8y-title>
     <a id="top"></a>
     <div class="text-right m-b-16">
       <a (click)="scrollToElement('top')" class="to-the-top" role="button" aria-label="Scroll to top"
@@ -253,12 +253,10 @@
         <div class="admonition info">
           <div class="title">Info</div>
           <div class="content">
-            If you're unsure about your device's payload structure, enable <b>Snooping Mode</b>
-            when
-            creating a mapping.
-            This captures incoming messages that you can analyze and use as templates.
-            See <a (click)="scrollToElement('unknown-payload')">Getting started without knowing
-              your source payload</a> for details.
+            If you're unsure about your device's payload structure, use the
+            <b>Message Explorer</b> to inspect incoming messages in real time and use a
+            captured payload directly as the source template when creating a mapping.
+            See <a (click)="scrollToElement('message-explorer')">Message Explorer</a> for details.
           </div>
         </div>
         <div class="p-t-16 text-16">
@@ -300,7 +298,6 @@
                 <th style="width: 26%;">Connector</th>
                 <th class="text-center" style="width: 12%;">Direction: Inbound</th>
                 <th class="text-center" style="width: 12%;">Direction: Outbound</th>
-                <th class="text-center" style="width: 12%;">Supports Snoop</th>
                 <th class="text-center" style="width: 12%;">Supports JavaScript</th>
                 <th style="width: 26%;">Supported Payload Formats</th>
               </tr>
@@ -311,13 +308,11 @@
                     isolation, only one instance per tenant exists)</small></td>
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong></td>
-                <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong><br></td>
                 <td>JSON, Hex, Protobuf, Extension</td>
               </tr>
               <tr class="table-light">
                 <td><strong>MQTT</strong></td>
-                <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong><br></td>
@@ -328,14 +323,12 @@
                     exists)</small></td>
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center text-muted">-</td>
-                <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong><br></td>
                 <td>JSON, Hex, Protobuf, Extension</td>
               </tr>
               <tr class="table-light">
                 <td><strong>Webhook</strong><br><small class="text-muted">(for external REST APIs)</small></td>
                 <td class="text-center text-muted">-</td>
-                <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong><br></td>
                 <td>JSON</td>
@@ -345,13 +338,11 @@
                     API)</small></td>
                 <td class="text-center text-muted">-</td>
                 <td class="text-center"><strong>X</strong></td>
-                <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong><br></td>
                 <td>JSON</td>
               </tr>
               <tr class="table-light">
                 <td><strong>Apache Pulsar </strong><small class="text-muted"></small></td>
-                <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong><br></td>
@@ -361,7 +352,6 @@
                 <td><strong>Kafka</strong></td>
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong></td>
-                <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong><br></td>
                 <td>JSON, Hex, Protobuf, Extension</td>
               </tr>
@@ -369,13 +359,11 @@
                 <td><strong>AMQP 0-9-1</strong><br><small class="text-muted">(RabbitMQ, etc.)</small></td>
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong></td>
-                <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong><br></td>
                 <td>JSON, Hex, Protobuf, Extension</td>
               </tr>
               <tr>
                 <td><strong>AMQP 1.0</strong><br><small class="text-muted">(Azure Service Bus, Artemis, Solace, etc.)</small></td>
-                <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong><br></td>
@@ -1687,63 +1675,6 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
           mappings.</p>
         <br />
       </div>
-      <!-- ==================== SECTION: GETTING STARTED WITHOUT KNOWING YOUR SOURCE PAYLOAD ==================== -->
-      <div class="card-header" id="unknown-payload">
-        <h3>
-          {{ 'Getting started without knowing your source payload' | translate }}
-        </h3>
-      </div>
-      <div class="card-block">
-        <div class="p-b-8 text-16">
-          If you don't know the device payload, first capture and analyze incoming data.
-          This process, called snooping, records messages that can serve as source templates for future mappings.
-          To enable snooping for a mapping, select <b>Enable snooping</b> when choosing a mapping type.
-          Start by clicking <b>Add mapping</b> (Mapping → Inbound Mapping → Action Add mapping).
-        </div>
-        <div class="admonition info">
-          <div class="title">Info</div>
-          <div class="content">
-            <strong>Snooping Best Practices:</strong>
-            <ul class="m-t-8 m-b-0">
-              <li>Enable snooping when you're uncertain about the payload structure</li>
-              <li>Let your devices send multiple messages to capture variations</li>
-              <li>Review captured payloads to understand data patterns</li>
-              <li>Use captured payloads as templates for your mapping</li>
-              <li>Disable snooping once you've finalized the mapping to improve performance</li>
-              <li>
-                Use wildcards in topic patterns to
-                capture messages from multiple devices.
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div class="p-b-8 text-16"> The stepper guides you through these steps:</div>
-        <ul class="text-16">
-          <li>
-            Add or select an existing connector for your mapping (messages are snooped/recorded).
-          </li>
-          <li>
-            Define general settings, such as the topic name for this mapping.
-          </li>
-        </ul>
-        <br>
-        <img width="80%" class="m-l-48 m-b-48 m-b-16"
-          src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png"
-          alt="Snooping modal" />
-        <p class="image-description m-l-48"><b>Description:</b> Modal dialog to create a mapping in snooping mode.</p>
-        <br />
-        <p class="text-16">The following screenshot shows a mapping that is in snooping mode and for which snooped
-          messages have
-          already arrived.</p> <br />
-        <div>
-          <img width="80%" class="m-l-48 m-b-48 m-b-16"
-            src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Started.png"
-            alt="Snooping stepper" />
-        </div>
-        <p class="image-description m-l-48"><b>Description:</b> Screenshot showing the steps for defining a mapping in
-          snooping
-          mode.</p>
-      </div>
       <!-- ==================== SECTION: USING RELIABILITY SETTINGS IN MAPPINGS ==================== -->
       <div class="card-header" id="reliability-settings">
         <h3>
@@ -1983,7 +1914,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
         <ul class="p-b-8 text-16">
           <li><strong>No role</strong>: Read-only access to mappings, connectors, and service configuration.</li>
           <li><strong>Create role</strong>: All read permissions plus full mapping management (create, edit, delete,
-            activate/deactivate, snoop/debug/filter).</li>
+            activate/deactivate, debug/filter).</li>
           <li><strong>Admin role</strong>: All <strong>Create role</strong> permissions plus connector management and
             service configuration editing.</li>
         </ul>
@@ -2037,7 +1968,7 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
                 <td class="text-center"><strong>X</strong></td>
               </tr>
               <tr>
-                <td><strong>Mapping Snoop/Debug/Filter</strong></td>
+                <td><strong>Mapping Debug/Filter</strong></td>
                 <td class="text-center text-muted">-</td>
                 <td class="text-center"><strong>X</strong></td>
                 <td class="text-center"><strong>X</strong></td>
@@ -2132,14 +2063,6 @@ public CumulocityObject[] onMessage(Message&lt;byte[]&gt; message, JavaExtension
               <tr>
                 <td><strong>Received</strong></td>
                 <td>Total number of messages received and processed by this mapping since the last reset. Counts every message that matched the topic — including those that produced errors.</td>
-              </tr>
-              <tr>
-                <td><strong>Snooped total</strong></td>
-                <td>Total number of messages captured while the mapping was in Snooping mode.</td>
-              </tr>
-              <tr>
-                <td><strong>Snooped active</strong></td>
-                <td>Number of snooped messages currently stored and available as source-template candidates.</td>
               </tr>
               <tr>
                 <td><strong>Errors</strong></td>

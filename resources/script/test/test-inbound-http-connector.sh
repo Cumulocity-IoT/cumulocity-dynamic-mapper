@@ -19,6 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE=" 6. HTTP connector → MEASUREMENT"
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 EXT_ID="dmtest-http-$(date +%s)"
 MAPPING_ID=""
@@ -33,13 +35,15 @@ cleanup() {
     fi
 }
 
-[[ "${1:-}" == "--cleanup" ]] && trap cleanup EXIT
+dm_parse_args "$@"
+dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Inbound HTTP Connector (MEASUREMENT)"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
+dm_validate_only_exit
 
 # Topic template: dmtest/http/+ where + is replaced by the device external id
 MAPPING_JSON=$(cat <<EOF
@@ -66,9 +70,7 @@ MAPPING_JSON=$(cat <<EOF
   "useExternalId": true,
   "externalIdType": "c8y_Serial",
   "genericDeviceIdentifier": "_IDENTITY_.externalId",
-  "qos": "AT_LEAST_ONCE",
-  "snoopStatus": "NONE",
-  "snoopedTemplates": []
+  "qos": "AT_LEAST_ONCE"
 }
 EOF
 )
@@ -76,10 +78,21 @@ EOF
 dm_step "Creating and activating HTTP inbound mapping ..."
 dm_create_mapping "$MAPPING_JSON"
 MAPPING_ID="$_DM_LAST_MAPPING_ID"
+# The built-in HTTP connector (identifier HTTP_CONNECTOR_IDENTIFIER) is
+# auto-bootstrapped per tenant. A mapping is only processed by a connector it is
+# deployed to, so deploy BEFORE activating — otherwise onMessage runs but the
+# mapping is skipped and messagesReceived stays 0.
+dm_deploy_mapping_to_connector "$MAPPING_ID" "HTTP_CONNECTOR_IDENTIFIER"
 dm_activate_mapping "$MAPPING_ID"
 
-dm_step "Recording test start time ..."
-TEST_START=$(dm_now -10)
+# The HTTP connector rebuilds its inbound mapping resolver only on connect()
+# (initializeSubscriptionsInbound). Activation alone is a no-op while the
+# connector is not "connected" — updateSubscriptionForInbound short-circuits on
+# !isConnected(). Connecting it picks up the freshly deployed+active mapping.
+dm_step "Connecting HTTP connector so it (re)builds inbound mappings ..."
+dm_connect_connector "HTTP_CONNECTOR_IDENTIFIER"
+dm_wait_for_mapping_processing "$MAPPING_ID" 0 10 1 >/dev/null 2>&1 || true
+dm_info "HTTP connector mapping subscriptions established"
 
 HTTP_TOPIC="dmtest/http/${EXT_ID}"
 HTTP_ENDPOINT="${DM_SERVICE}/httpConnector/${HTTP_TOPIC}"
@@ -103,27 +116,15 @@ fi
 
 printf '%s\n' "$POST_OUTPUT" | jq '.' 2>/dev/null || printf '%s\n' "$POST_OUTPUT"
 
-dm_step "Waiting for processing ..."
-dm_wait 8
-
 dm_step "Checking whether HTTP message was processed ..."
 RECEIVED=$(dm_mapping_received_count "$MAPPING_ID")
 if [ "${RECEIVED:-0}" -lt 1 ]; then
-  dm_skip "HTTP connector accepted request but mapping processed 0 messages."
-  dm_skip "Verify HTTP connector route/role and microservice endpoint wiring in this tenant."
-  exit 0
+  dm_skip_exit "HTTP connector accepted request but mapping processed 0 messages." \
+               "Ensure the HTTP connector (HTTP_CONNECTOR_IDENTIFIER) is CONNECTED and the mapping is deployed to it."
 fi
-
-dm_step "Looking up device by external id ..."
-DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")
-if [ -z "$DEVICE_ID" ]; then
-    dm_fail "Device '$EXT_ID' not found — HTTP connector mapper did not create it"
-  exit 1
-fi
-dm_info "Device id: $DEVICE_ID"
 
 dm_step "Asserting at least 1 measurement was created ..."
-dm_assert_measurement_count_gt "Measurement via HTTP connector" "$DEVICE_ID" "$TEST_START" 1
+dm_assert_measurement_present "Measurement via HTTP connector" "$EXT_ID" "c8y_Serial" 1 15
 
-dm_done "Inbound HTTP Connector (MEASUREMENT)"
+dm_done "$TEST_TITLE"
 dm_print_summary

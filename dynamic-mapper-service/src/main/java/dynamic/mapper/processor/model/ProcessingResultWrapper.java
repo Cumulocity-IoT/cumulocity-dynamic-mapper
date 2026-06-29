@@ -32,17 +32,17 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-@Getter
-@Setter
 @Builder
 @Slf4j
 public class ProcessingResultWrapper<O> {
+    @Getter @Setter
     private Future<List<ProcessingContext<O>>> processingResult;
+    @Getter @Setter
     private Qos consolidatedQos;
-    private int maxCPUTimeMS;
-    private Exception error;
-    @SuppressWarnings("rawtypes")
-    private Future future;
+    /** Pipeline wait-timeout (milliseconds) used by broker callbacks for Future.get(). 30 s for
+     *  SmartFunction mappings (covers JS + post-JS C8Y calls), 0 for non-code mappings. */
+    @Getter @Setter
+    private int pipelineTimeoutMS;
 
     /**
      * Flag to indicate that processing cancellation has been requested.

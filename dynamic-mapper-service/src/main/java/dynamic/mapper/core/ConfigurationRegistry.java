@@ -26,10 +26,8 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.camel.CamelContext;
-import org.graalvm.polyglot.Engine;
-import org.graalvm.polyglot.HostAccess;
-import org.graalvm.polyglot.Source;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -37,23 +35,9 @@ import org.springframework.stereotype.Component;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.client.AConnectorClient;
-import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.connector.amqp.AMQPClient;
-import dynamic.mapper.connector.amqp.AMQP10Client;
-import dynamic.mapper.connector.http.HttpClient;
-import dynamic.mapper.connector.kafka.KafkaClientV2;
-import dynamic.mapper.connector.mqtt.MQTT3Client;
-import dynamic.mapper.connector.mqtt.MQTT5Client;
-import dynamic.mapper.connector.mqtt.MQTTServiceClient;
-import dynamic.mapper.connector.pulsar.MQTTServicePulsarClient;
-import dynamic.mapper.connector.pulsar.PulsarConnectorClient;
-import dynamic.mapper.connector.test.TestClient;
-import dynamic.mapper.connector.webhook.WebHook;
-import dynamic.mapper.connector.webhook.WebHookInternal;
 import dynamic.mapper.model.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.MapperServiceRepresentation;
@@ -63,16 +47,17 @@ import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-public class ConfigurationRegistry {
+public class ConfigurationRegistry implements IMapperConfiguration {
 
-    @Autowired
     @Getter
-    private TenantRegistry tenantRegistry;
+    private final TenantRegistry tenantRegistry;
+
+    @Getter
+    private final GraalVMContextService graalVMContextService;
 
     @Getter
     private C8YAgent c8yAgent;
@@ -86,29 +71,18 @@ public class ConfigurationRegistry {
     String mqttServicePulsarUrl;
 
     @Autowired
-    public void setC8yAgent(C8YAgent c8yAgent) {
+    public void setC8yAgent(@Lazy C8YAgent c8yAgent) {
         this.c8yAgent = c8yAgent;
     }
 
-    @Autowired
     @Getter
-    private ConnectorRegistry connectorRegistry;
-
-    @Getter
-    private NotificationSubscriber notificationSubscriber;
-
-    @Autowired
-    public void setNotificationSubscriber(NotificationSubscriber notificationSubscriber) {
-        this.notificationSubscriber = notificationSubscriber;
-    }
+    private final ConnectorRegistry connectorRegistry;
 
     @Getter
-    private ObjectMapper objectMapper;
+    private final NotificationSubscriber notificationSubscriber;
 
-    @Autowired
-    public void setObjectMapper(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
+    @Getter
+    private final ObjectMapper objectMapper;
 
     @Getter
     private MappingService mappingService;
@@ -136,12 +110,32 @@ public class ConfigurationRegistry {
     }
 
     @Getter
-    @Setter
-    @Autowired
-    private ExecutorService virtualThreadPool;
+    private final ExecutorService virtualThreadPool;
 
-    @Autowired
-    private CamelContext camelContext;
+    // @Lazy breaks the ConfigurationRegistry <-> camelContext circular dependency: the Camel
+    // context pulls in the RouteBuilder beans during its own creation, and those routes depend
+    // (transitively, via their processors) back on ConfigurationRegistry. Injecting a lazy proxy
+    // lets ConfigurationRegistry be constructed without forcing camelContext creation; the real
+    // context is resolved on first use (when connector dispatchers are built at runtime). Without
+    // this the cycle surfaces under lazy bean initialization (e.g. the test profile).
+    private final CamelContext camelContext;
+
+    public ConfigurationRegistry(
+            TenantRegistry tenantRegistry,
+            GraalVMContextService graalVMContextService,
+            ConnectorRegistry connectorRegistry,
+            NotificationSubscriber notificationSubscriber,
+            ObjectMapper objectMapper,
+            @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool,
+            @Lazy CamelContext camelContext) {
+        this.tenantRegistry = tenantRegistry;
+        this.graalVMContextService = graalVMContextService;
+        this.connectorRegistry = connectorRegistry;
+        this.notificationSubscriber = notificationSubscriber;
+        this.objectMapper = objectMapper;
+        this.virtualThreadPool = virtualThreadPool;
+        this.camelContext = camelContext;
+    }
 
     public boolean isPulsarAvailable(String tenant) {
         if (mqttServicePulsarUrl == null || mqttServicePulsarUrl.trim().isEmpty()) {
@@ -151,177 +145,27 @@ public class ConfigurationRegistry {
         return true;
     }
 
-    public AConnectorClient createConnectorClient(ConnectorConfiguration connectorConfiguration,
-            String additionalSubscriptionIdTest, String tenant) throws ConnectorException {
-        AConnectorClient connectorClient = null;
-
-        switch (connectorConfiguration.getConnectorType()) {
-            case MQTT:
-                // if version is not set, default to 3.1.1, as this property was introduced
-                // later. This will not break existing configuration
-                String version = ((String) connectorConfiguration.getProperties().getOrDefault("version",
-                        AConnectorClient.MQTT_VERSION_3_1_1));
-                if (AConnectorClient.MQTT_VERSION_3_1_1.equals(version)) {
-                    connectorClient = new MQTT3Client(this, connectorRegistry, connectorConfiguration,
-                            null,
-                            additionalSubscriptionIdTest, tenant);
-                } else {
-                    connectorClient = new MQTT5Client(this, connectorRegistry, connectorConfiguration,
-                            null,
-                            additionalSubscriptionIdTest, tenant);
-                }
-                log.info("{} - MQTT Connector {} created, identifier: {}", tenant, version,
-                        connectorConfiguration.getIdentifier());
-                break;
-
-            case CUMULOCITY_MQTT_SERVICE:
-                connectorClient = new MQTTServiceClient(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - MQTTService Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-
-            case KAFKA:
-                connectorClient = new KafkaClientV2(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - Kafka Connector V2 created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-
-            case HTTP:
-                connectorClient = new HttpClient(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - HTTP Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-
-            case WEB_HOOK:
-                connectorClient = new WebHook(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - WebHook Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-
-            case WEB_HOOK_INTERNAL:
-                connectorClient = new WebHookInternal(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - WebHook Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-
-            case PULSAR:
-                connectorClient = new PulsarConnectorClient(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - Pulsar Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-            case CUMULOCITY_MQTT_SERVICE_PULSAR:
-                if (isPulsarAvailable(tenant)) {
-                    connectorClient = new MQTTServicePulsarClient(this, connectorRegistry, connectorConfiguration,
-                            null, additionalSubscriptionIdTest, tenant);
-                    log.info("{} - MQTTService Pulsar Connector created, identifier: {}", tenant,
-                            connectorConfiguration.getIdentifier());
-                }
-                break;
-            case AMQP_091:
-                connectorClient = new AMQPClient(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - AMQP Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-            case AMQP_10:
-                connectorClient = new AMQP10Client(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - AMQP 1.0 Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-            case TEST:
-                connectorClient = new TestClient(this, connectorRegistry, connectorConfiguration,
-                        null,
-                        additionalSubscriptionIdTest, tenant);
-                log.info("{} - TestClient Connector created, identifier: {}", tenant,
-                        connectorConfiguration.getIdentifier());
-                break;
-            default:
-                log.warn("{} - Unknown connector type: {}", tenant, connectorConfiguration.getConnectorType());
-                break;
-        }
-
-        return connectorClient;
-    }
-
     public void initializeResources(String tenant) {
     }
 
-    public MapperServiceRepresentation initializeMapperServiceRepresentation(String tenant) {
-        ManagedObjectRepresentation mapperServiceMOR = c8yAgent
-                .initializeMapperServiceRepresentation(tenant);
+    public MapperServiceRepresentation storeMapperServiceRepresentation(String tenant,
+            ManagedObjectRepresentation mor) {
         MapperServiceRepresentation mapperServiceRepresentation = objectMapper
-                .convertValue(mapperServiceMOR, MapperServiceRepresentation.class);
+                .convertValue(mor, MapperServiceRepresentation.class);
         addMapperServiceRepresentation(tenant, mapperServiceRepresentation);
         return mapperServiceRepresentation;
     }
 
-    public DeviceToClientMapRepresentation initializeDeviceToClientMapRepresentation(String tenant) {
-        ManagedObjectRepresentation mapperServiceMOR = c8yAgent
-                .initializeDeviceToClientMapRepresentation(tenant);
+    public DeviceToClientMapRepresentation storeDeviceToClientMapRepresentation(String tenant,
+            ManagedObjectRepresentation mor) {
         DeviceToClientMapRepresentation deviceToClientMapRepresentation = objectMapper
-                .convertValue(mapperServiceMOR, DeviceToClientMapRepresentation.class);
-        addDeviceToClientMapRepresentation(tenant, deviceToClientMapRepresentation);
+                .convertValue(mor, DeviceToClientMapRepresentation.class);
+        tenantRegistry.initializeDeviceToClientMap(tenant, deviceToClientMapRepresentation);
         return deviceToClientMapRepresentation;
     }
 
     public MicroserviceCredentials getMicroserviceCredential(String tenant) {
         return tenantRegistry.getMicroserviceCredential(tenant);
-    }
-
-    public void createGraalsResources(String tenant, ServiceConfiguration serviceConfiguration) {
-        tenantRegistry.createGraalsResources(tenant, serviceConfiguration);
-    }
-
-    public Engine getGraalEngine(String tenant) {
-        return tenantRegistry.getGraalEngine(tenant);
-    }
-
-    public void updateGraalsSourceShared(String tenant, String code) {
-        tenantRegistry.updateGraalsSourceShared(tenant, code);
-    }
-
-    public Source getGraalsSourceShared(String tenant) {
-        return tenantRegistry.getGraalsSourceShared(tenant);
-    }
-
-    public void updateGraalsSourceSystem(String tenant, String code) {
-        tenantRegistry.updateGraalsSourceSystem(tenant, code);
-    }
-
-    public Source getGraalsSourceSystem(String tenant) {
-        return tenantRegistry.getGraalsSourceSystem(tenant);
-    }
-
-    /**
-     * Pre-compiles mapping-specific JavaScript into the Engine's Source cache.
-     * Call this after mappings are loaded so the first test for each existing
-     * mapping hits the cache instead of paying the full parse+compile cost.
-     *
-     * @param tenant      the tenant identifier
-     * @param sourceCodes map of source name (e.g. "onMessage_<id>.js") →
-     *                    decoded+adapted JS code
-     */
-    public void warmupMappingCodes(String tenant, Map<String, String> sourceCodes) {
-        tenantRegistry.warmupMappingCodes(tenant, sourceCodes);
-    }
-
-    public void removeGraalsResources(String tenant) {
-        tenantRegistry.removeGraalsResources(tenant);
     }
 
     public ServiceConfiguration getServiceConfiguration(String tenant) {
@@ -349,11 +193,6 @@ public class ConfigurationRegistry {
         tenantRegistry.removeMapperServiceRepresentation(tenant);
     }
 
-    private void addDeviceToClientMapRepresentation(String tenant,
-            DeviceToClientMapRepresentation deviceToClientMapRepresentation) {
-        tenantRegistry.initializeDeviceToClientMap(tenant, deviceToClientMapRepresentation);
-    }
-
     public String getDeviceToClientMapId(String tenant) {
         return tenantRegistry.getDeviceToClientMapId(tenant);
     }
@@ -366,9 +205,8 @@ public class ConfigurationRegistry {
         tenantRegistry.removeMicroserviceCredentials(tenant);
     }
 
-    // In ConfigurationRegistry
     public CamelContext getCamelContext() {
-        return this.camelContext; // Assuming you have it stored
+        return this.camelContext;
     }
 
     public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration,
@@ -385,10 +223,6 @@ public class ConfigurationRegistry {
                     connectorClient.getConnectorIdentifier(),
                     dispatcherOutbound);
         }
-    }
-
-    public HostAccess getHostAccess() {
-        return tenantRegistry.getHostAccess();
     }
 
     public void addOrUpdateClientRelation(String tenant, String clientId, String deviceId) {
@@ -433,80 +267,6 @@ public class ConfigurationRegistry {
 
     public boolean hasClientRelation(String tenant, String deviceId) {
         return tenantRegistry.hasClientRelation(tenant, deviceId);
-    }
-
-    /**
-     * Thread-safe method to create or retrieve an implicit device.
-     * Prevents race conditions when multiple threads try to create the same device simultaneously.
-     * Uses double-check locking pattern with per-external-ID locks.
-     *
-     * @param tenant               the tenant identifier
-     * @param externalIdType       the external ID type
-     * @param externalIdValue      the external ID value
-     * @param identity             the ID object for C8Y API calls
-     * @param context              the processing context
-     * @return the C8Y internal device ID, or null if creation failed and device doesn't exist
-     * @throws Exception if an error occurs during device creation or lookup
-     */
-    public String getOrCreateDeviceThreadSafe(String tenant, String externalIdType, String externalIdValue,
-            com.cumulocity.model.ID identity, dynamic.mapper.processor.model.ProcessingContext<?> context) throws Exception {
-        String cacheKey = tenant + "|" + externalIdType + "|" + externalIdValue;
-
-        // First check: quick cache hit
-        String cached = tenantRegistry.getCachedExternalId(cacheKey);
-        if (cached != null) {
-            log.debug("{} - Device cache hit for {}: {}", tenant, cacheKey, cached);
-            return cached;
-        }
-
-        // Get or create lock for this specific externalId (per-ID locking, not global)
-        Object lock = tenantRegistry.getOrCreateExternalIdLock(cacheKey);
-
-        synchronized (lock) {
-            // Double-check after acquiring lock: another thread may have created it
-            cached = tenantRegistry.getCachedExternalId(cacheKey);
-            if (cached != null) {
-                log.debug("{} - Device found in cache after lock acquired for {}: {}", tenant, cacheKey, cached);
-                return cached;
-            }
-
-            // Check if device already exists in C8Y
-            com.cumulocity.rest.representation.identity.ExternalIDRepresentation resolved =
-                    c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
-            if (resolved != null) {
-                String internalId = resolved.getManagedObject().getId().getValue();
-                // Only cache the resolved ID in production — during dry-run tests
-                // resolveExternalId2GlobalId routes to MockIdentity and returns a
-                // synthetic ID (e.g. "10000") that must never enter the production cache.
-                if (!Boolean.TRUE.equals(context.getTesting())) {
-                    tenantRegistry.cacheExternalId(cacheKey, internalId);
-                }
-                log.debug("{} - Device exists in C8Y for {}: {}", tenant, cacheKey, internalId);
-                return internalId;
-            }
-
-            // Device doesn't exist, check if we should create it
-            if (!Boolean.TRUE.equals(context.getMapping().getCreateNonExistingDevice())) {
-                log.debug("{} - Device creation disabled for {}, returning null", tenant, cacheKey);
-                return null;
-            }
-
-            // Create new device
-            log.info("{} - Creating new implicit device for {}/{}", tenant, externalIdType, externalIdValue);
-            String newId = dynamic.mapper.processor.util.ProcessingResultHelper.createImplicitDevice(
-                    identity, context, log, c8yAgent, objectMapper);
-
-            if (newId != null) {
-                if (!Boolean.TRUE.equals(context.getTesting())) {
-                    tenantRegistry.cacheExternalId(cacheKey, newId);
-                }
-                log.info("{} - Successfully created implicit device for {}: {}", tenant, cacheKey, newId);
-            } else {
-                log.error("{} - Failed to create implicit device for {}", tenant, cacheKey);
-            }
-
-            return newId;
-        }
     }
 
     /**

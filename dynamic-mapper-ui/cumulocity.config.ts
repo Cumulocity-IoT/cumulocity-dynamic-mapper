@@ -42,10 +42,6 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png',
-        to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_Snooping.png'
-      },
-      {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png'
       },
@@ -60,10 +56,6 @@ export default {
       {
         from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png'
-      },
-      {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Snooping_Started.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Snooping_Started.png'
       },
       {
         from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png',
@@ -108,6 +100,18 @@ export default {
       {
         from: '../resources/image/Dynamic_Mapper_Mapping_Message_Explorer.png',
         to: 'image/Dynamic_Mapper_Mapping_Message_Explorer.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Versions_Drawer.png',
+        to: 'image/Dynamic_Mapper_Mapping_Versions_Drawer.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Versions_Status_Badge.png',
+        to: 'image/Dynamic_Mapper_Mapping_Versions_Status_Badge.png'
+      },
+      {
+        from: '../resources/image/Dynamic_Mapper_Mapping_Versions_Retention_Config.png',
+        to: 'image/Dynamic_Mapper_Mapping_Versions_Retention_Config.png'
       },
       {
         from: '../LICENSE',

@@ -31,6 +31,8 @@ import java.util.Map;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Value;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,15 +55,18 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.model.SnoopStatus;
+import dynamic.mapper.processor.model.CumulocityObject;
+import dynamic.mapper.processor.model.CumulocityType;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.ExternalSource;
+import dynamic.mapper.processor.model.InputMessage;
 import dynamic.mapper.processor.model.MappingAction;
 import dynamic.mapper.processor.inbound.processor.ProcessorTestHelper;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -92,7 +97,6 @@ class FlowResultOutboundProcessorTest {
 
     private static final String TEST_TENANT = "testTenant";
     private static final String TEST_DEVICE_ID = "6926746";
-    private static final String TEST_EXTERNAL_ID = "berlin_01";
     private static final String TEST_EXTERNAL_ID_TYPE = "c8y_Serial";
     private static final String TEST_CLIENT_ID = "test-client-123";
 
@@ -109,7 +113,7 @@ void setUp() throws Exception {
     mapping = createSmartFunctionOutboundMapping();
     mappingStatus = new MappingStatus(
             "47266329", "Mapping - 54", "6ecyap6t", Direction.OUTBOUND,
-            "smart/#", "external/topic", 0L, 0L, 0L, 0L, 0L, null);
+            "smart/#", "external/topic", 0L, 0L, 0L, null);
 
     // Create fresh processing context for each test
     processingContext = createProcessingContext();
@@ -144,13 +148,6 @@ void setUp() throws Exception {
     // Reset Mockito invocations
     clearInvocations(mappingService, c8yAgent, objectMapper);
 }
-
-    private void injectDependencies() throws Exception {
-        ProcessorTestHelper.injectField(processor, "mappingService", mappingService);
-        ProcessorTestHelper.injectField(processor, "c8yAgent", c8yAgent);
-        ProcessorTestHelper.injectField(processor, "objectMapper", objectMapper);
-    }
-
     private void setupC8YAgentMocks() {
         ManagedObjectRepresentation mockDevice = new ManagedObjectRepresentation();
         GId deviceGId = new GId(TEST_DEVICE_ID);
@@ -202,8 +199,6 @@ void setUp() throws Exception {
                 .autoAckOperation(true)
                 .useExternalId(true)
                 .externalIdType(TEST_EXTERNAL_ID_TYPE)
-                .snoopStatus(SnoopStatus.NONE)
-                .snoopedTemplates(new ArrayList<>())
                 .filterMapping("$exists(c8y_TemperatureMeasurement)")
                 .filterInventory("")
                 .maxFailureCount(0)
@@ -249,7 +244,7 @@ void setUp() throws Exception {
         processingContext.getRequests().forEach(req -> log.info("Request: sourceId={}, externalId={}, method={}",
                 req.getSourceId(), req.getExternalId(), req.getMethod()));
 
-        assertFalse(processingContext.getIgnoreFurtherProcessing(),
+        assertFalse(processingContext.isIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
         assertFalse(processingContext.getRequests().isEmpty(),
                 "Should have created requests");
@@ -278,7 +273,7 @@ void setUp() throws Exception {
         processor.process(exchange);
 
         // Then
-        assertFalse(processingContext.getIgnoreFurtherProcessing(),
+        assertFalse(processingContext.isIgnoreFurtherProcessing(),
                 "Should not ignore further processing");
         assertEquals(2, processingContext.getRequests().size(),
                 "Should have created two requests");
@@ -304,7 +299,7 @@ void setUp() throws Exception {
         processor.process(exchange);
 
         // Then
-        assertTrue(processingContext.getIgnoreFurtherProcessing(),
+        assertTrue(processingContext.isIgnoreFurtherProcessing(),
                 "Should ignore further processing for null flow result");
         assertTrue(processingContext.getRequests().isEmpty(),
                 "Should not create any requests");
@@ -321,7 +316,7 @@ void setUp() throws Exception {
         processor.process(exchange);
 
         // Then
-        assertTrue(processingContext.getIgnoreFurtherProcessing(),
+        assertTrue(processingContext.isIgnoreFurtherProcessing(),
                 "Should ignore further processing for empty flow result");
         assertTrue(processingContext.getRequests().isEmpty(),
                 "Should not create any requests");
@@ -342,7 +337,7 @@ void setUp() throws Exception {
         processor.process(exchange);
 
         // Then
-        assertTrue(processingContext.getIgnoreFurtherProcessing(),
+        assertTrue(processingContext.isIgnoreFurtherProcessing(),
                 "Should ignore further processing when no DeviceMessages");
         assertTrue(processingContext.getRequests().isEmpty(),
                 "Should not create any requests");
@@ -392,6 +387,92 @@ void setUp() throws Exception {
         log.info("   - Resolved topic: {}", processingContext.getResolvedPublishTopic());
     }
 
+    /**
+     * End-to-end coverage for the documented OUTBOUND {@code externalSource}
+     * return-object property: a Smart Function returns
+     * {@code { topic: "devices/_externalId_/data", externalSource: [{type: ...}] }}
+     * and the mapper must resolve the triggering device's external id <em>of that
+     * type</em> and substitute it into the broker topic.
+     *
+     * <p>This drives the real chain — JS execution →
+     * {@link JavaScriptInteropHelper#convertToDeviceMessage} (exactly what
+     * FlowOutboundProcessor does) → the real {@link FlowResultOutboundProcessor}
+     * full path → {@code resolveGlobalId2ExternalId} → {@code _externalId_}
+     * replacement. The C8Y identity lookup is the only mocked collaborator, so
+     * the test runs offline.</p>
+     *
+     * <p>The return-object type ({@code c8y_LoRaDevEUI}) is deliberately
+     * <em>different</em> from the mapping's {@code externalIdType}
+     * ({@code c8y_Serial}), so the assertion proves the type came from the
+     * returned object — not from a mapping-level fallback.</p>
+     */
+    @Test
+    void testExternalSourceFromReturnObjectResolvesExternalIdToken_endToEnd() throws Exception {
+        final String RETURN_TYPE = "c8y_LoRaDevEUI";          // != mapping.externalIdType (c8y_Serial)
+        final String RESOLVED_EXTERNAL_ID = "lora-berlin-01"; // != internal id and != clientId
+
+        // C8Y resolves internal source id + the externalSource type → external id used in the topic.
+        ManagedObjectRepresentation mo = new ManagedObjectRepresentation();
+        mo.setId(new GId(TEST_DEVICE_ID));
+        ExternalIDRepresentation extRep = new ExternalIDRepresentation();
+        extRep.setManagedObject(mo);
+        extRep.setExternalId(RESOLVED_EXTERNAL_ID);
+        extRep.setType(RETURN_TYPE);
+        when(c8yAgent.resolveGlobalId2ExternalId(eq(TEST_TENANT), any(GId.class), eq(RETURN_TYPE), anyBoolean()))
+                .thenReturn(extRep);
+
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        // Run the real Smart Function and convert its result exactly like FlowOutboundProcessor does.
+        DeviceMessage deviceMsg;
+        Context graalContext = Context.newBuilder("js")
+                .allowAllAccess(true)
+                .option("engine.WarnInterpreterOnly", "false")
+                .build();
+        try {
+            String code = """
+                    function onMessage(msg, context) {
+                      var payload = msg.getPayload();
+                      return [{
+                        topic: "devices/_externalId_/data",
+                        payload: { value: payload[payload.type].T.value },
+                        externalSource: [{ type: "c8y_LoRaDevEUI" }]
+                      }];
+                    }
+                    globalThis['onMessage'] = onMessage;
+                    """;
+            graalContext.eval("js", code);
+            Value onMessage = graalContext.getBindings("js").getMember("onMessage");
+
+            InputMessage inMsg = new InputMessage(
+                    createTemperatureMeasurementPayload(), "measurements/" + TEST_DEVICE_ID, null, TEST_DEVICE_ID,
+                    "measurement");
+            Value result = onMessage.execute(graalContext.asValue(inMsg), graalContext.asValue(new HashMap<>()));
+            deviceMsg = JavaScriptInteropHelper.convertToDeviceMessage(result.getArrayElement(0));
+        } finally {
+            graalContext.close();
+        }
+
+        // Sanity: the parsed DeviceMessage carries the externalSource type from the JS return object.
+        assertEquals("devices/" + BaseProcessor.EXTERNAL_ID_TOKEN + "/data", deviceMsg.getTopic(),
+                "DeviceMessage topic should carry the _externalId_ token from the Smart Function");
+
+        processingContext.setFlowResult(deviceMsg);
+
+        // When - run the real outbound result processor end-to-end
+        fullProcessor.process(exchange);
+
+        // Then - the _externalId_ token is filled with the C8Y-resolved external id, of the returned type
+        assertEquals("devices/" + RESOLVED_EXTERNAL_ID + "/data", processingContext.getResolvedPublishTopic(),
+                "externalSource type from the returned object should drive external-id resolution and fill _externalId_");
+
+        // And the resolution used the type from the returned object, not the mapping's externalIdType
+        verify(c8yAgent).resolveGlobalId2ExternalId(eq(TEST_TENANT), any(GId.class), eq(RETURN_TYPE), anyBoolean());
+
+        log.info("✅ End-to-end outbound externalSource: topic resolved to {}",
+                processingContext.getResolvedPublishTopic());
+    }
+
     @Test
     void testProcessWithCustomDeviceResolver() throws Exception {
         // Given - Create a NEW processor with custom resolver
@@ -405,10 +486,9 @@ void setUp() throws Exception {
                     return customDeviceId;
                 });
 
-        // Inject dependencies into the custom processor
-        ProcessorTestHelper.injectField(customProcessor, "mappingService", mappingService);
+        // mappingService and objectMapper are supplied via the constructor; only c8yAgent
+        // (declared on the CommonProcessor base) still needs field injection.
         ProcessorTestHelper.injectField(customProcessor, "c8yAgent", c8yAgent);
-        ProcessorTestHelper.injectField(customProcessor, "objectMapper", objectMapper);
 
         DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
         processingContext.setFlowResult(deviceMsg);
@@ -540,10 +620,9 @@ void setUp() throws Exception {
                 .withDefaultDeviceId(TEST_DEVICE_ID)
                 .withSimplifiedProcessing(false); // Use full processing, not simplified
 
-        // Inject dependencies
-        ProcessorTestHelper.injectField(fullProcessor, "mappingService", mappingService);
+        // mappingService and objectMapper are supplied via the constructor; only c8yAgent
+        // (declared on the CommonProcessor base) still needs field injection.
         ProcessorTestHelper.injectField(fullProcessor, "c8yAgent", c8yAgent);
-        ProcessorTestHelper.injectField(fullProcessor, "objectMapper", objectMapper);
 
         return fullProcessor;
     }
@@ -784,6 +863,104 @@ void setUp() throws Exception {
         log.info("✅ Event update test passed");
         log.info("   - Method: {}", request.getMethod());
         log.info("   - Path Cumulocity: {}", request.getPathCumulocity());
+    }
+
+    // ==================== Bug regression tests ====================
+
+    /**
+     * Bug #1 regression: processCumulocityObject must NOT write back to context.setSourceId().
+     *
+     * A Smart Function can return a batch like [CumulocityObject(sourceId="childDevice"), DeviceMessage].
+     * Before the fix, the CumulocityObject path overwrites context.sourceId with "childDevice",
+     * and the subsequent DeviceMessage then reads the corrupted value.
+     *
+     * This test is expected to FAIL before the fix and PASS after.
+     */
+    @Test
+    void testCumulocityObjectBatch_doesNotCorruptContextSourceId() throws Exception {
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        final String triggerDeviceId = "triggerDevice-999";
+        processingContext.setSourceId(triggerDeviceId);
+
+        // A JS function returned [CumulocityObject for childDevice, DeviceMessage for the trigger device]
+        CumulocityObject childMeasurement = CumulocityObject.measurement()
+                .type("c8y_Temperature")
+                .time("2025-01-01T00:00:00Z")
+                .fragment("c8y_Temperature", "T", 22.5, "C")
+                .sourceId("childDevice-111")
+                .build();
+
+        DeviceMessage triggerDeviceMsg = new DeviceMessage();
+        triggerDeviceMsg.setCumulocityType(CumulocityType.MEASUREMENT);
+        triggerDeviceMsg.setPayload(createTemperatureMeasurementPayload());
+        // no explicit sourceId → should fall back to context.getSourceId() = triggerDeviceId
+
+        processingContext.setFlowResult(List.of(childMeasurement, triggerDeviceMsg));
+
+        fullProcessor.process(exchange);
+
+        // context.sourceId must not have been overwritten by the CumulocityObject iteration
+        assertEquals(triggerDeviceId, processingContext.getSourceId(),
+                "context.sourceId must not be overwritten by processCumulocityObject (Bug #1)");
+
+        assertEquals(2, processingContext.getRequests().size(),
+                "Should produce exactly 2 requests (one per batch item)");
+
+        // The first request is for childDevice-111 (from CumulocityObject)
+        DynamicMapperRequest childRequest = processingContext.getRequests().get(0);
+        assertEquals("childDevice-111", childRequest.getSourceId(),
+                "CumulocityObject request must carry the child device's sourceId");
+
+        // The second request is for the trigger device (from DeviceMessage, reads context.sourceId)
+        DynamicMapperRequest triggerRequest = processingContext.getRequests().get(1);
+        assertEquals(triggerDeviceId, triggerRequest.getSourceId(),
+                "DeviceMessage request must carry the original trigger device sourceId, not the child device's (Bug #1)");
+    }
+
+    /**
+     * Bug #2 regression: setResolvedPublishTopic must NOT call context.setTopic().
+     *
+     * When TOKEN_CONTEXT_DATA carries a "publishTopic" override, that value is the
+     * broker publish destination — it must be placed into context.resolvedPublishTopic only.
+     * Overwriting context.topic (the C8Y inbound notification topic) corrupts logging
+     * and any subsequent code that reads the inbound topic.
+     *
+     * This test is expected to FAIL before the fix and PASS after.
+     */
+    @Test
+    void testContextTopicNotOverwrittenByPublishTopicOverride() throws Exception {
+        TestableFlowResultOutboundProcessor fullProcessor = createFullProcessingProcessor();
+
+        final String inboundC8yTopic = "c8y/inbound/notification/device/67890";
+        processingContext.setTopic(inboundC8yTopic);
+        processingContext.setSourceId(TEST_DEVICE_ID);
+
+        final String brokerPublishTopic = "device/out/berlin-01/data";
+
+        // Build a payload that carries TOKEN_CONTEXT_DATA with a publishTopic override
+        Map<String, Object> payload = new HashMap<>(createTemperatureMeasurementPayload());
+        Map<String, String> contextData = new HashMap<>();
+        contextData.put("publishTopic", brokerPublishTopic);
+        payload.put(Mapping.TOKEN_CONTEXT_DATA, contextData);
+
+        DeviceMessage deviceMsg = new DeviceMessage();
+        // null topic: prevents the "Override resolvedPublishTopic if DeviceMessage provides a topic" branch (line 323)
+        // so resolvedPublishTopic is set exclusively by setResolvedPublishTopic → TOKEN_CONTEXT_DATA path
+        deviceMsg.setTopic(null);
+        deviceMsg.setCumulocityType(CumulocityType.MEASUREMENT);
+        deviceMsg.setPayload(payload);
+        processingContext.setFlowResult(deviceMsg);
+
+        fullProcessor.process(exchange);
+
+        // resolvedPublishTopic must be set from TOKEN_CONTEXT_DATA
+        assertEquals(brokerPublishTopic, processingContext.getResolvedPublishTopic(),
+                "resolvedPublishTopic should be set from TOKEN_CONTEXT_DATA publishTopic");
+
+        // context.topic (the C8Y notification topic) must NOT be overwritten (Bug #2)
+        assertEquals(inboundC8yTopic, processingContext.getTopic(),
+                "context.topic (C8Y inbound notification topic) must not be overwritten by the broker publish topic (Bug #2)");
     }
 
     @Test

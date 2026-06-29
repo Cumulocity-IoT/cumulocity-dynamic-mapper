@@ -386,7 +386,7 @@ public class MQTT3Client extends AMQTTClient {
             try {
                 Mqtt3Publish message = Mqtt3Publish.builder()
                         .topic(topic)
-                        .retain(context.getRetain() == null ? false : context.getRetain())
+                        .retain(context.isRetain())
                         .qos(mqttQos)
                         .payload(payloadBytes)
                         .build();

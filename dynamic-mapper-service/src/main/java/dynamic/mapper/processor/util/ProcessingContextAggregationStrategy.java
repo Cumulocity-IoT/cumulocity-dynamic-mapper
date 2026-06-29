@@ -42,17 +42,17 @@ public class ProcessingContextAggregationStrategy implements AggregationStrategy
             // First result
             List<ProcessingContext<Object>> contexts = new ArrayList<>();
             contexts.add((ProcessingContext<Object>) newContext);
-            newExchange.getIn().setHeader("processedContexts", contexts);
+            newExchange.getIn().setHeader(CamelHeaders.PROCESSED_CONTEXTS, contexts);
             return newExchange;
         }
 
         // Aggregate contexts
         @SuppressWarnings("unchecked")
-        List<ProcessingContext<Object>> existingContexts = oldExchange.getIn().getHeader("processedContexts",
+        List<ProcessingContext<Object>> existingContexts = oldExchange.getIn().getHeader(CamelHeaders.PROCESSED_CONTEXTS,
                 List.class);
         existingContexts.add((ProcessingContext<Object>) newContext);
 
-        oldExchange.getIn().setHeader("processedContexts", existingContexts);
+        oldExchange.getIn().setHeader(CamelHeaders.PROCESSED_CONTEXTS, existingContexts);
 
         // Clean up the new exchange's context after aggregation
         if (newContext != null) {

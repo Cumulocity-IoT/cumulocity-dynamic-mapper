@@ -18,7 +18,7 @@ Parse multiline CSV payload and create measurements
 */
 
 function onMessage(msg, context) {
-    const payload = msg.getPayload();
+    const payload = msg.payload;
     console.log("Payload Raw: " + payload);
 
     // Extract CSV data early

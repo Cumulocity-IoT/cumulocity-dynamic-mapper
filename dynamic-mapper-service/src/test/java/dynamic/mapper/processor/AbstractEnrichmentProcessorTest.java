@@ -48,19 +48,20 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.model.DataPrepContext;
-import dynamic.mapper.processor.model.SmartFunctionContext;
 import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Tests for AbstractEnrichmentProcessor base class.
@@ -92,6 +93,9 @@ class AbstractEnrichmentProcessorTest {
     @Mock
     private C8YAgent c8yAgent;
 
+    @Mock
+    private GraalVMContextService graalVMContextService;
+
     // Real GraalVM engine and context (not mocked) as they need to work together
     private Engine graalEngine;
 
@@ -102,7 +106,6 @@ class AbstractEnrichmentProcessorTest {
     private MappingStatus mappingStatus;
     private ProcessingContext<Object> processingContext;
     private Context graalContext;
-    private DataPrepContext flowContext;
 
     /**
      * Concrete test implementation of AbstractEnrichmentProcessor for testing.
@@ -173,7 +176,7 @@ class AbstractEnrichmentProcessorTest {
                 Direction.INBOUND,
                 "test/topic",
                 null,
-                0L, 0L, 0L, 0L, 0L, null);
+                0L, 0L, 0L, null);
 
         processingContext = createProcessingContext();
 
@@ -197,8 +200,9 @@ class AbstractEnrichmentProcessorTest {
         when(serviceConfiguration.getCodeTemplates()).thenReturn(codeTemplates);
 
         // Setup GraalVM engine and host access
-        when(configurationRegistry.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
-        when(configurationRegistry.getHostAccess()).thenReturn(HostAccess.ALL);
+        when(configurationRegistry.getGraalVMContextService()).thenReturn(graalVMContextService);
+        when(graalVMContextService.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
+        when(graalVMContextService.getHostAccess()).thenReturn(HostAccess.ALL);
         when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
     }
 
@@ -271,7 +275,7 @@ class AbstractEnrichmentProcessorTest {
         processor.process(exchange);
 
         // Then
-        verify(configurationRegistry).getGraalEngine(TEST_TENANT);
+        verify(graalVMContextService).getGraalEngine(TEST_TENANT);
         assertNotNull(processingContext.getSharedCode(), "Should have set shared code");
         assertNotNull(processingContext.getSystemCode(), "Should have set system code");
         assertTrue(processor.wasEnrichPayloadCalled(), "Should have called enrichPayload");
@@ -287,7 +291,7 @@ class AbstractEnrichmentProcessorTest {
         processor.process(exchange);
 
         // Then
-        verify(configurationRegistry).getGraalEngine(TEST_TENANT);
+        verify(graalVMContextService).getGraalEngine(TEST_TENANT);
         assertNotNull(processingContext.getSystemCode(), "Should have set system code");
         assertNotNull(processingContext.getFlowState(), "Should have initialized flow state");
         assertNotNull(processingContext.getFlowContext(), "Should have created flow context");
@@ -305,7 +309,7 @@ class AbstractEnrichmentProcessorTest {
         processor.process(exchange);
 
         // Then
-        verify(configurationRegistry, never()).getGraalEngine(any());
+        verify(graalVMContextService, never()).getGraalEngine(any());
         assertNull(processingContext.getGraalContext(), "Should not have created GraalVM context");
         assertTrue(processor.wasEnrichPayloadCalled(), "Should still call enrichPayload");
 
@@ -343,7 +347,7 @@ class AbstractEnrichmentProcessorTest {
     @Test
     void testProcessHandlesGraalVMSetupError() throws Exception {
         // Given
-        when(configurationRegistry.getGraalEngine(TEST_TENANT))
+        when(graalVMContextService.getGraalEngine(TEST_TENANT))
                 .thenThrow(new RuntimeException("Failed to get GraalVM engine"));
 
         // When
@@ -387,7 +391,7 @@ class AbstractEnrichmentProcessorTest {
     @Test
     void testCreateGraalContextWithSecuritySettings() throws Exception {
         // Given - Use the graalEngine from setUp (already configured)
-        when(configurationRegistry.getHostAccess()).thenReturn(HostAccess.ALL);
+        when(graalVMContextService.getHostAccess()).thenReturn(HostAccess.ALL);
 
         // When
         Context createdContext = processor.createGraalContext(graalEngine, false);
@@ -597,5 +601,84 @@ class AbstractEnrichmentProcessorTest {
         assertNotNull(processingContext.getSystemCode(), "Should have set system code");
 
         log.info("✅ Successfully set shared and system code");
+    }
+
+    // -------------------------------------------------------------------------
+    // Engine release-callback wiring
+    // -------------------------------------------------------------------------
+
+    @Test
+    void testProcessSetsEngineReleaseActionOnContext() throws Exception {
+        // When
+        processor.process(exchange);
+
+        // Then — the callback must be registered so GraalVMContextService can close
+        // a retired Engine once all its in-flight Contexts have drained.
+        assertNotNull(processingContext.getEngineReleaseAction(),
+                "engineReleaseAction should be set after process() for a SMART_FUNCTION mapping");
+
+        log.info("✅ process() sets engineReleaseAction on ProcessingContext");
+    }
+
+    @Test
+    void testProcessDoesNotSetEngineReleaseActionWhenNoCode() throws Exception {
+        // Given — no JavaScript code → no GraalVM context → no release action needed
+        mapping.setCode(null);
+
+        // When
+        processor.process(exchange);
+
+        // Then
+        assertNull(processingContext.getEngineReleaseAction(),
+                "engineReleaseAction should not be set when mapping has no code");
+
+        log.info("✅ process() leaves engineReleaseAction null when mapping has no code");
+    }
+
+    @Test
+    void testContextCloseInvokesEngineReleaseAction() throws Exception {
+        // Given — wire a custom release action so we can observe whether it fires
+        processor.process(exchange);
+        AtomicBoolean released = new AtomicBoolean(false);
+        processingContext.setEngineReleaseAction(() -> released.set(true));
+
+        // When
+        processingContext.close();
+
+        // Then
+        assertTrue(released.get(), "engineReleaseAction should be invoked when ProcessingContext is closed");
+
+        log.info("✅ ProcessingContext.close() invokes engineReleaseAction");
+    }
+
+    @Test
+    void testContextCloseClearsEngineReleaseActionAfterInvocation() throws Exception {
+        // Given
+        processor.process(exchange);
+        processingContext.setEngineReleaseAction(() -> {});
+
+        // When
+        processingContext.close();
+
+        // Then — nulled out to prevent double-invocation if close() is called again
+        assertNull(processingContext.getEngineReleaseAction(),
+                "engineReleaseAction should be cleared after ProcessingContext.close()");
+
+        log.info("✅ ProcessingContext.close() clears engineReleaseAction after invocation");
+    }
+
+    @Test
+    void testContextCloseCallsReleaseEngineOnService() throws Exception {
+        // Given — process() sets an engineReleaseAction that delegates to
+        // graalVMContextService.releaseEngine(graalEngine).
+        processor.process(exchange);
+
+        // When — simulate the context lifecycle ending
+        processingContext.close();
+
+        // Then — the service must be notified so it can drain retired Engines
+        verify(graalVMContextService).releaseEngine(graalEngine);
+
+        log.info("✅ ProcessingContext.close() calls GraalVMContextService.releaseEngine()");
     }
 }

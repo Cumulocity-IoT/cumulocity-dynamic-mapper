@@ -45,6 +45,7 @@ spring:
   main:
     banner-mode: off
     allow-bean-definition-overriding: true
+    allow-circular-references: false
     lazy-initialization: true
 
   # Web configuration

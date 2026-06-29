@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, inject, Input, OnInit } from '@angular/core';
+import { Component, inject, Input, OnInit, OnChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
@@ -34,11 +34,22 @@ export interface ExplorerStartResult {
   connectorName: string;
   topic: string;
   maxMessages: number;
+  sessionTTLMinutes: number;
   direction: 'INBOUND' | 'OUTBOUND';
   sourceId?: string;
   deviceName?: string;
   deviceType?: string | null;
   deviceTypeFilter?: string; // device type filter (OUTBOUND only)
+}
+
+export interface ExplorerSessionSnapshot {
+  connectorIdentifier: string;
+  topic: string;
+  maxMessages: number;
+  sessionTTLMinutes: number;
+  direction: 'INBOUND' | 'OUTBOUND';
+  sourceId?: string;
+  deviceTypeFilter?: string;
 }
 
 @Component({
@@ -51,12 +62,17 @@ export interface ExplorerStartResult {
 export class MessageExplorerDrawerComponent implements OnInit {
 
   @Input() activeSessionId: string | null = null;
+  /** When set, the drawer opens in edit mode pre-filled with the current session values. */
+  @Input() editSnapshot: ExplorerSessionSnapshot | null = null;
+
+  get editMode(): boolean { return this.editSnapshot !== null; }
 
   connectors: ConnectorConfiguration[] = [];
   allConnectors: ConnectorConfiguration[] = [];
   selectedConnectorIdentifier: string = '';
   topic: string = '';
   maxMessages: number = 50;
+  sessionTTLMinutes: number = 10;
   direction: 'INBOUND' | 'OUTBOUND' = 'INBOUND';
   /** Selected source (device or group) for outbound monitoring (single selection). */
   selectedDeviceList: IIdentified[] = [];
@@ -77,6 +93,18 @@ export class MessageExplorerDrawerComponent implements OnInit {
   private deviceTypeFetch: Promise<string | null> = Promise.resolve(null);
 
   async ngOnInit(): Promise<void> {
+    if (this.editSnapshot) {
+      this.direction = this.editSnapshot.direction;
+      this.topic = this.editSnapshot.topic;
+      this.maxMessages = this.editSnapshot.maxMessages;
+      this.sessionTTLMinutes = this.editSnapshot.sessionTTLMinutes;
+      this.deviceTypeFilter = this.editSnapshot.deviceTypeFilter ?? '';
+      if (this.editSnapshot.sourceId) {
+        this.outboundFilterMode = 'source';
+      } else if (this.editSnapshot.deviceTypeFilter) {
+        this.outboundFilterMode = 'deviceType';
+      }
+    }
     combineLatest([
       this.connectorConfigService.getConfigurations(),
       this.connectorConfigService.getSpecifications()
@@ -86,6 +114,11 @@ export class MessageExplorerDrawerComponent implements OnInit {
         supportedDirections: specs.find(s => s.connectorType === c.connectorType)?.supportedDirections ?? []
       }));
       this.filterConnectorsByDirection();
+      // Restore selected connector AFTER options are rendered — setting it before the
+      // <option> elements exist causes Angular ngModel to silently clear the value.
+      if (this.editSnapshot) {
+        this.selectedConnectorIdentifier = this.editSnapshot.connectorIdentifier;
+      }
     });
   }
 
@@ -162,6 +195,7 @@ export class MessageExplorerDrawerComponent implements OnInit {
       connectorName: selected?.name ?? this.selectedConnectorIdentifier,
       topic: this.direction === 'OUTBOUND' ? '#' : this.topic.trim(),
       maxMessages: this.maxMessages > 0 ? this.maxMessages : 50,
+      sessionTTLMinutes: this.sessionTTLMinutes > 0 ? this.sessionTTLMinutes : 10,
       direction: this.direction,
       sourceId,
       deviceName,

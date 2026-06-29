@@ -19,7 +19,6 @@
  */
 
 import { FormControl, FormGroup } from '@angular/forms';
-import { SnoopStatus } from '../../shared';
 import {
   deriveSampleTopicFromTopic,
   isFilterOutboundUnique,
@@ -28,7 +27,6 @@ import {
   normalizeTopic,
   splitTopicExcludingSeparator,
   splitTopicIncludingSeparator,
-  checkNotSnooping,
   checkTopicsInboundAreValid
 } from './util';
 import { Direction, Mapping, MappingType, RepairStrategy, TransformationType } from '../../shared';
@@ -47,8 +45,6 @@ function makeMapping(overrides: Partial<Mapping> = {}): Mapping {
     mappingType: MappingType.JSON,
     transformationType: TransformationType.DEFAULT,
     substitutions: [],
-    snoopedTemplates: [],
-    snoopStatus: SnoopStatus.NONE,
     sourceTemplate: '{}',
     targetTemplate: '{}',
     mappingTopic: 'test/topic',
@@ -260,38 +256,6 @@ describe('isFilterOutboundUnique', () => {
 });
 
 // ---------------------------------------------------------------------------
-// checkNotSnooping (form validator)
-// ---------------------------------------------------------------------------
-
-describe('checkNotSnooping', () => {
-  function makeControl(snoopStatusValue: SnoopStatus): FormGroup {
-    return new FormGroup({
-      snoopStatus: new FormControl(snoopStatusValue)
-    });
-  }
-
-  it('should return null when snoopStatus is NONE', () => {
-    expect(checkNotSnooping(makeControl(SnoopStatus.NONE))).toBeNull();
-  });
-
-  it('should return null when snoopStatus is STOPPED', () => {
-    expect(checkNotSnooping(makeControl(SnoopStatus.STOPPED))).toBeNull();
-  });
-
-  it('should return error object when snoopStatus is ENABLED', () => {
-    const result = checkNotSnooping(makeControl(SnoopStatus.ENABLED));
-    expect(result).not.toBeNull();
-    expect(result['Only_One_MuNot_Snooping']).toBeDefined();
-  });
-
-  it('should return error object when snoopStatus is STARTED', () => {
-    const result = checkNotSnooping(makeControl(SnoopStatus.STARTED));
-    expect(result).not.toBeNull();
-    expect(result['Only_One_MuNot_Snooping']).toBeDefined();
-  });
-});
-
-// ---------------------------------------------------------------------------
 // checkTopicsInboundAreValid (form validator)
 // ---------------------------------------------------------------------------
 
@@ -303,10 +267,18 @@ describe('checkTopicsInboundAreValid', () => {
     });
   }
 
-  it('should return a falsy required error when either field is empty', () => {
-    const result = checkTopicsInboundAreValid(makeControl('', 'a/b/c'));
-    expect(result).toBeTruthy();
-    expect(result['required']).toBe(false);
+  it('should return null and mark mappingTopic invalid when mappingTopic is empty', () => {
+    const control = makeControl('', 'a/b/c');
+    const result = checkTopicsInboundAreValid(control);
+    expect(result).toBeNull();
+    expect(control.get('mappingTopic').errors).toEqual({ required: true });
+  });
+
+  it('should return null and mark mappingTopicSample invalid when mappingTopicSample is empty', () => {
+    const control = makeControl('a/b/c', '');
+    const result = checkTopicsInboundAreValid(control);
+    expect(result).toBeNull();
+    expect(control.get('mappingTopicSample').errors).toEqual({ required: true });
   });
 
   it('should return null for matching topic and sample', () => {

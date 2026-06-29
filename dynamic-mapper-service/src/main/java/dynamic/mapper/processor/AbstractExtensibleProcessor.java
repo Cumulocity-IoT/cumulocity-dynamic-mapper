@@ -21,6 +21,8 @@
 
 package dynamic.mapper.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import java.util.Map;
 
 import org.apache.camel.Exchange;
@@ -68,7 +70,7 @@ public abstract class AbstractExtensibleProcessor extends CommonProcessor {
 
         Mapping mapping = context.getMapping();
         String tenant = routing.getTenant();
-        Boolean testing = context.getTesting();
+        Boolean testing = context.isTesting();
 
         try {
             processWithExtension(context);
@@ -181,6 +183,6 @@ public abstract class AbstractExtensibleProcessor extends CommonProcessor {
      */
     @SuppressWarnings("unchecked")
     protected ProcessingContext<byte[]> getProcessingContextAsByteArray(Exchange exchange) {
-        return exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        return exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
     }
 }

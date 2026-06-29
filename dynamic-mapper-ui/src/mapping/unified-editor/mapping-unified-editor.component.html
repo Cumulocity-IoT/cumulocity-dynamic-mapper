@@ -28,11 +28,13 @@
 
   <!-- Tab registration – tabs skipped by advanceFromStepToEndStep are omitted -->
   @if (isTabVisible(0)) {
-  <c8y-tab [icon]="'c8y-device-management'" [label]="'Connector'" [priority]="50" [tabsOutlet]="'unified-editor'"
+  <c8y-tab [icon]="'c8y-device-management'"
+    [label]="(isButtonDisabled$ | async) ? 'Connector *' : 'Connector'"
+    [priority]="50" [tabsOutlet]="'unified-editor'"
     [isActive]="activeTabIndex === 0" (onSelect)="onTabSelected(0)" data-cy="dm-unified-editor-tab-connector"></c8y-tab>
   }
   @if (isTabVisible(1)) {
-  <c8y-tab [icon]="'settings'" [label]="'General Settings'" [priority]="40" [tabsOutlet]="'unified-editor'"
+  <c8y-tab [icon]="'settings'" [label]="(stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim()) ? 'General Settings *' : 'General Settings'" [priority]="40" [tabsOutlet]="'unified-editor'"
     [isActive]="activeTabIndex === 1" (onSelect)="onTabSelected(1)" data-cy="dm-unified-editor-tab-general-settings"></c8y-tab>
   }
   @if (isTabVisible(2)) {
@@ -84,7 +86,6 @@
       [targetSystem]="targetSystem"
       [sourceTemplate]="sourceTemplate"
       [targetTemplate]="targetTemplate"
-      [snoopedTemplateItems]="snoopedTemplateItems"
       [editorOptionsSourceTemplate]="editorOptionsSourceTemplate"
       [editorOptionsTargetTemplate]="editorOptionsTargetTemplate"
       [schemaSource]="schemaSource"
@@ -137,16 +138,36 @@
   </div> <!-- end scrollable content -->
 
   <!-- Footer must be inside the card so flex layout pins it to the bottom -->
-  <div class="card-footer separator p-24 text-center flex-no-shrink">
-    <button type="button" class="btn btn-default" (click)="onCancel()" translate data-cy="dm-unified-editor-cancel">
-      Cancel
-    </button>
-    <button type="button" class="btn btn-primary" (click)="onCommitButton()"
-      [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.editorMode === EditorMode.READ_ONLY || mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE"
-      [title]="mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : ''"
-      translate data-cy="dm-unified-editor-save">
-      Save
-    </button>
+  <div class="card-footer separator p-24 flex-no-shrink d-flex a-i-center">
+    <!-- left: status text, right-aligned so it sits flush against Cancel -->
+    <div class="d-flex a-i-center j-c-end" style="flex:1; gap:4px; padding-right:16px;">
+      @if (mapping.version || mapping.debug || mapping.draftDirty) {
+        <i c8yIcon="info-circle" class="text-muted"></i>
+        @if (mapping.version) {
+          <span translate class="text-muted">Active </span><span class="text-12 label label-default" title="Active version">v{{ mapping.version }}</span>
+        }
+        @if (mapping.debug) {
+          <span class="text-12 label label-success">debug</span>
+        }
+        @if (mapping.draftDirty) {
+          <span translate class="text-muted">· Editing </span><span class="text-12 label label-info" title="This mapping has unpublished draft changes">draft</span>
+        }
+      }
+    </div>
+    <!-- center: buttons (truly centered because both flanking divs are flex:1) -->
+    <div class="d-flex a-i-center" style="gap:16px;">
+      <button type="button" class="btn btn-default" (click)="onCancel()" translate data-cy="dm-unified-editor-cancel">
+        Cancel
+      </button>
+      <button type="button" class="btn btn-primary" (click)="onCommitButton()"
+        [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.editorMode === EditorMode.READ_ONLY || mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE || (isButtonDisabled$ | async) || (stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim())"
+        [title]="mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : ((isButtonDisabled$ | async) ? ('Select at least one connector before saving.' | translate) : ((stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim()) ? ('Mapping Topic is required.' | translate) : ''))"
+        translate data-cy="dm-unified-editor-save">
+        Save
+      </button>
+    </div>
+    <!-- right: spacer matching the left column width to keep buttons centered -->
+    <div style="flex:1;"></div>
   </div>
 
 </div> <!-- end fullpage card -->

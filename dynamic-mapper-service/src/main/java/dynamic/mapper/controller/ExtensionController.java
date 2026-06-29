@@ -24,7 +24,6 @@ package dynamic.mapper.controller;
 import java.util.Map;
 
 import dynamic.mapper.core.ExtensionManager;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -38,6 +37,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Extension;
 import jakarta.validation.constraints.NotBlank;
@@ -51,16 +51,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Slf4j
+@RequiredArgsConstructor
 @RequestMapping("/extension")
 @RestController
 @Tag(name = "Extension Controller", description = "API for managing processor extensions that provide custom data transformation capabilities")
 public class ExtensionController {
 
-    @Autowired
-    private ContextService<UserCredentials> contextService;
-
-    @Autowired
-    private ExtensionManager extensionManager;
+    private final ContextService<UserCredentials> contextService;
+    private final ExtensionManager extensionManager;
 
     @Operation(summary = "Get all processor extensions", description = "Retrieves all available processor extensions for the current tenant. Extensions provide custom data transformation and processing capabilities that can be used in mappings.")
     @ApiResponses(value = {

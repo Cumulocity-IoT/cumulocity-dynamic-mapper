@@ -19,6 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE=" 7. Implicit device auto-creation"
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 # Use a unique external id that certainly does not exist yet
 EXT_ID="dmtest-newdevice-$(date +%s)"
@@ -34,14 +36,15 @@ cleanup() {
     fi
 }
 
-[[ "${1:-}" == "--cleanup" ]] && trap cleanup EXIT
+dm_parse_args "$@"
+dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Inbound Implicit Device Creation"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
-dm_wait_for_service
-dm_require_mqtt_broker
+dm_test_setup_and_validate
+dm_validate_only_exit
 
 MAPPING_JSON=$(cat <<EOF
 {
@@ -67,9 +70,7 @@ MAPPING_JSON=$(cat <<EOF
   "useExternalId": true,
   "externalIdType": "c8y_Serial",
   "genericDeviceIdentifier": "_IDENTITY_.externalId",
-  "qos": "AT_LEAST_ONCE",
-  "snoopStatus": "NONE",
-  "snoopedTemplates": []
+  "qos": "AT_LEAST_ONCE"
 }
 EOF
 )
@@ -90,16 +91,14 @@ dm_assert_mqtt_topics_active
 dm_step "Publishing MQTT message for unknown device ..."
 dm_mqtt_publish "dmtest/newdev/${EXT_ID}" '{"temperature":18.0}'
 
-dm_step "Waiting for processing ..."
-dm_wait 10
-
 dm_step "Asserting device was auto-created ..."
-DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")
-if [ -z "$DEVICE_ID" ]; then
-    dm_fail "Device '$EXT_ID' was NOT auto-created by the mapper"
-  exit 1
+if dm_wait_for_device_by_ext_id "$EXT_ID" "c8y_Serial" 20 2; then
+  DEVICE_ID="$_DM_LAST_DEVICE_ID"
+else
+  DEVICE_ID=""
 fi
-dm_success "Device auto-created: id=$DEVICE_ID"
+# Counted assertion (was a bare dm_success → 0/0 in the summary).
+dm_assert_gt "Device auto-created (id=${DEVICE_ID:-none})" "${#DEVICE_ID}" 0
 
-dm_done "Inbound Implicit Device Creation"
+dm_done "$TEST_TITLE"
 dm_print_summary

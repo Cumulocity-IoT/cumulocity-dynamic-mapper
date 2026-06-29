@@ -200,6 +200,12 @@ public abstract class AConnectorClient {
      */
     public void subscribeExplorerTopic(String topic) {
         try {
+            boolean alreadySubscribed = mappingSubscriptionManager != null
+                    && mappingSubscriptionManager.isTopicSubscribed(topic);
+            if (alreadySubscribed) {
+                log.debug("{} - Explorer topic [{}] already subscribed via mapping — skipping duplicate subscribe", tenant, topic);
+                return;
+            }
             subscribe(topic, Qos.AT_LEAST_ONCE);
             log.info("{} - Explorer subscribed to topic: [{}] on connector: {}", tenant, topic, connectorName);
         } catch (Exception e) {
@@ -536,7 +542,7 @@ public abstract class AConnectorClient {
                             if (isConfigValid(connectorConfiguration)) {
                                 connectionStateManager.updateStatus(ConnectorStatus.CONFIGURED, true, true);
                             }
-                            log.info("{} - Connector initialized successfully", tenant);
+                            log.debug("{} - Connector initialized successfully", tenant);
                         } catch (Exception e) {
                             log.error("{} - Initialization failed: {}", tenant, e.getMessage(), e);
                             connectionStateManager.updateStatusWithError(e);
@@ -560,7 +566,7 @@ public abstract class AConnectorClient {
                         try {
                             connectionStateManager.updateStatus(ConnectorStatus.CONNECTING, true, true);
                             connect();
-                            log.info("{} - Connector connected successfully", tenant);
+                            log.debug("{} - Connector connected successfully", tenant);
                         } catch (Exception e) {
                             log.error("{} - Connection failed: {}", tenant, e.getMessage(), e);
                             connectionStateManager.updateStatusWithError(e);
@@ -593,7 +599,7 @@ public abstract class AConnectorClient {
                         try {
                             disconnect();
                             connectionStateManager.setConnected(false);
-                            log.info("{} - Connector disconnected successfully", tenant);
+                            log.debug("{} - Connector disconnected successfully", tenant);
                         } catch (Exception e) {
                             log.error("{} - Disconnection failed: {}", tenant, e.getMessage(), e);
                             connectionStateManager.updateStatusWithError(e);
@@ -654,7 +660,7 @@ public abstract class AConnectorClient {
                     .filter(this::isDeployedInConnector)
                     .toList();
             mappingSubscriptionManager.prePopulateEffectiveMappingsInbound(
-                    deployedMappings, this::isMappingValidForDeployment);
+                    deployedMappings, this::isMappingCompatibleWithConnector);
 
             log.debug("{} - Pre-populated {} effective inbound mappings for persistent session on connector: {}",
                     tenant, deployedMappings.size(), connectorName);
@@ -719,29 +725,68 @@ public abstract class AConnectorClient {
                 mappingsEffective,
                 reset,
                 isConnected(),
-                this::isMappingValidForDeployment);
+                this::isMappingCompatibleWithConnector);
     }
 
     /**
-     * Initialize subscriptions for outbound mappings
+     * Initialize subscriptions for outbound mappings.
+     * <p>
+     * Delegates to {@link MappingSubscriptionManager#updateSubscriptionsOutbound} which
+     * clears and rebuilds the effective outbound set. This makes the operation a true
+     * reconcile: mappings that are no longer active or no longer deployed to this connector
+     * are dropped, not just added.
      */
     public void initializeSubscriptionsOutbound(List<Mapping> mappings) {
-        // Clear existing outbound mappings
-        // (This happens automatically in updateOutboundMappings, but you could also
-        // clear manually)
-
-        // Add active, valid mappings
-        mappings.stream()
-                .filter(Mapping::getActive)
-                .filter(this::isMappingValidForDeployment)
+        List<Mapping> deployedMappings = mappings.stream()
                 .filter(this::isDeployedInConnector)
-                .forEach(mapping -> mappingSubscriptionManager.addSubscriptionOutbound(mapping.getIdentifier(),
-                        mapping));
+                .toList();
+        mappingSubscriptionManager.updateSubscriptionsOutbound(deployedMappings,
+                this::isMappingCompatibleWithConnector);
+    }
 
-        log.info("{} - Initialized {} outbound mappings for connector: {}",
-                tenant,
-                mappingSubscriptionManager.getEffectiveOutboundMappingCount(),
-                connectorName);
+    /**
+     * Re-evaluate all inbound and outbound subscriptions for this connector against the
+     * current mapping caches and deployment map.
+     * <p>
+     * Called when the deployment map changes (a mapping is assigned to / removed from this
+     * connector) so that newly deployed mappings are subscribed and un-deployed mappings are
+     * unsubscribed live, without requiring a connector reconnect or a manual mappings reload.
+     */
+    public void reconcileSubscriptions() {
+        if (!isConnected() && !isPassiveReceiver()) {
+            log.debug("{} - Not connected, skipping subscription reconcile for connector: {}",
+                    tenant, connectorName);
+            return;
+        }
+
+        List<Mapping> inboundMappings = new ArrayList<>(
+                mappingService.getCacheInboundMappings(tenant).values());
+        List<Mapping> outboundMappings = new ArrayList<>(
+                mappingService.getCacheOutboundMappings(tenant).values());
+
+        initializeSubscriptionsInbound(inboundMappings, false);
+        initializeSubscriptionsOutbound(outboundMappings);
+
+        log.info("{} - Reconciled subscriptions for connector: {}", tenant, connectorName);
+    }
+
+    /**
+     * Whether this connector is a passive receiver that does not maintain an
+     * outbound broker connection to receive inbound messages — it is driven by
+     * incoming requests instead (e.g. the HTTP connector, fed by REST calls).
+     * <p>
+     * For such connectors there is no broker {@code subscribe} to perform, and
+     * messages can arrive at any time via {@link #onMessage} regardless of the
+     * reported connection state. Inbound subscription/resolver updates must
+     * therefore be applied even when {@link #isConnected()} is {@code false};
+     * otherwise a mapping deployed/activated after the connector was last
+     * connected would never be added to the dispatch resolver.
+     * <p>
+     * Default: {@code false} (connection-backed connectors like MQTT/Kafka must
+     * be connected to (un)subscribe at the broker).
+     */
+    protected boolean isPassiveReceiver() {
+        return false;
     }
 
     /**
@@ -753,7 +798,9 @@ public abstract class AConnectorClient {
     public boolean updateSubscriptionForInbound(Mapping mapping, Boolean create, Boolean activationChanged) {
         boolean result = true;
 
-        if (!isConnected()) {
+        // Passive receivers (e.g. HTTP) have no broker subscribe and accept messages
+        // at any time, so their resolver must be updated even when not "connected".
+        if (!isConnected() && !isPassiveReceiver()) {
             log.debug("{} - Not connected, skipping subscription update for mapping: {}",
                     tenant, mapping.getIdentifier());
             return true;
@@ -762,19 +809,15 @@ public abstract class AConnectorClient {
         // Always allow deactivation
         boolean isDeactivation = activationChanged && !mapping.getActive();
 
-        if (!isMappingValidForDeployment(mapping) && !isDeactivation) {
-            boolean isDeployed = isDeployedInConnector(mapping);
-
-            if (isDeployed) {
-                log.warn("{} - Mapping {} contains unsupported wildcards",
-                        tenant, mapping.getId());
-                result = false;
-            }
+        // Only check compatibility if the mapping is actually assigned to this connector;
+        // otherwise the incompatibility is irrelevant and the warning would be misleading.
+        if (!isDeactivation && isDeployedInConnector(mapping) && !isMappingCompatibleWithConnector(mapping)) {
+            result = false;
             return result;
         }
 
         try {
-            handleSubscriptionUpdateInbound(mapping, create, activationChanged);
+            handleSubscriptionUpdateInbound(mapping);
         } catch (Exception e) {
             log.error("{} - Error updating subscription for mapping {}: {}",
                     tenant, mapping.getIdentifier(), e.getMessage(), e);
@@ -784,12 +827,15 @@ public abstract class AConnectorClient {
         return result;
     }
 
-    private void handleSubscriptionUpdateInbound(Mapping mapping, Boolean create, Boolean activationChanged)
-            throws ConnectorException {
-        boolean isDeployed = isDeployedInConnector(mapping);
-        if (mapping.getActive() && isDeployed) {
+    private void handleSubscriptionUpdateInbound(Mapping mapping) throws ConnectorException {
+        // The desired state is simply: subscribed if and only if the mapping is active AND
+        // deployed to this connector. Both add and remove are idempotent, so this single
+        // invariant correctly covers activation, deactivation, (un)deployment and no-op
+        // updates — without depending on a separate "activationChanged" hint that callers
+        // do not always set (e.g. a mapping update that also flips the active flag).
+        if (mapping.getActive() && isDeployedInConnector(mapping)) {
             mappingSubscriptionManager.addSubscriptionInbound(mapping, mapping.getQos());
-        } else if (activationChanged && !mapping.getActive()) {
+        } else {
             mappingSubscriptionManager.removeSubscriptionInbound(mapping);
         }
     }
@@ -799,12 +845,13 @@ public abstract class AConnectorClient {
      * Called when a mapping is created, updated, or its activation state changes
      */
     public void updateSubscriptionForOutbound(Mapping mapping, Boolean create, Boolean activationChanged) {
+        // Same invariant as inbound: applied if and only if active AND deployed here.
+        // removeSubscriptionOutbound is idempotent and only logs on an actual removal.
         if (mapping.getActive() && isDeployedInConnector(mapping)) {
             mappingSubscriptionManager.addSubscriptionOutbound(mapping.getIdentifier(), mapping);
             log.debug("{} - Added outbound mapping: {}", tenant, mapping.getIdentifier());
-        } else if (!mapping.getActive()) {
+        } else {
             mappingSubscriptionManager.removeSubscriptionOutbound(mapping.getIdentifier());
-            log.debug("{} - Removed outbound mapping: {}", tenant, mapping.getIdentifier());
         }
     }
 
@@ -892,24 +939,27 @@ public abstract class AConnectorClient {
     }
 
     /**
-     * Check if mapping is valid for deployment
+     * Checks whether this connector is capable of handling the mapping's topic.
+     * <p>
+     * Currently this means: if the mapping's inbound topic contains MQTT wildcards
+     * ({@code #} / {@code +}), the connector must support wildcard subscriptions. Outbound
+     * mappings are always compatible (no broker subscription is performed).
+     * <p>
+     * This is a <em>capability</em> check only. Whether the mapping is actually assigned to
+     * this connector is a separate concern handled by {@link #isDeployedInConnector(Mapping)}.
      */
-    private Boolean isMappingValidForDeployment(Mapping mapping) {
-        // Check for unsupported wildcards only for inbound, ignore for outbound
+    private boolean isMappingCompatibleWithConnector(Mapping mapping) {
+        // Wildcards are only relevant for inbound subscriptions; ignore for outbound.
         boolean containsWildcards = mapping.getDirection().equals(Direction.INBOUND)
-                ? mapping.getMappingTopic().matches(".*[#+].*")
-                : false;
-        boolean validDeployment = supportsWildcardInTopic(mapping.getDirection()) || !containsWildcards;
+                && mapping.getMappingTopic().matches(".*[#+].*");
+        boolean compatible = supportsWildcardInTopic(mapping.getDirection()) || !containsWildcards;
 
-        if (!validDeployment) {
-            log.warn("{} - Mapping {} contains unsupported wildcards", tenant, mapping.getId());
-            return false;
+        if (!compatible) {
+            log.warn("{} - Mapping {} contains unsupported wildcards for connector {}",
+                    tenant, mapping.getId(), connectorName);
         }
 
-        // Check if mapping is deployed in this connector
-        // Implement deployment check logic here
-
-        return validDeployment;
+        return compatible;
     }
 
     /**

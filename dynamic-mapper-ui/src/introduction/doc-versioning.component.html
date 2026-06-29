@@ -1,0 +1,238 @@
+<!--
+~ Copyright (c) 2022-2025 Cumulocity GmbH.
+~
+~ SPDX-License-Identifier: Apache-2.0
+~
+~  Licensed under the Apache License, Version 2.0 (the "License");
+~  you may not use this file except in compliance with the License.
+~  You may obtain a copy of the License at
+~
+~       http://www.apache.org/licenses/LICENSE-2.0
+~
+~  Unless required by applicable law or agreed to in writing, software
+~  distributed under the License is distributed on an "AS IS" BASIS,
+~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~  See the License for the specific language governing permissions and
+~  limitations under the License.
+~
+~  @authors Christof Strack
+~
+-->
+<div>
+  <c8y-title>{{ 'Versioning mappings' | translate }}</c8y-title>
+  <a id="top"></a>
+  <div class="text-right m-b-16">
+    <a (click)="scrollToElement('top')" class="to-the-top" role="button" aria-label="Scroll to top">
+      <i class="dlt-c8y-icon-chevron-up m-r-4"></i> Top
+    </a>
+  </div>
+
+  <!-- Overview -->
+  <div>
+    <div class="card-header" id="versioning-overview">
+      <h3>{{ 'Overview' | translate }}</h3>
+    </div>
+    <div class="card-block">
+      <div class="p-b-8 text-16">
+        Every mapping keeps a history of <b>versions</b> using <b>semantic versioning</b>
+        (<code>MAJOR.MINOR.PATCH</code>, e.g. <span class="label label-default">v1.2.0</span>).
+        Editing a mapping no longer changes the running configuration directly &mdash; instead your changes
+        are saved to a <b>draft</b>. You then <b>publish</b> the draft to create a new immutable version,
+        choosing the version label yourself, and <b>activate</b> the version you want to run.
+        This lets you change a mapping safely, review what changed over time, and roll back to a
+        known-good configuration at any point.
+      </div>
+      <div class="p-b-8 text-16">
+        Key rule: <b>at most one version of a mapping is active at any time.</b> Activating a version
+        automatically deactivates the previously active one, so there is never any ambiguity about which
+        configuration is processing messages.
+      </div>
+    </div>
+  </div>
+
+  <!-- Lifecycle -->
+  <div>
+    <div class="card-header" id="versioning-lifecycle">
+      <h3>{{ 'The version lifecycle' | translate }}</h3>
+    </div>
+    <div class="card-block">
+      <div class="p-b-8 text-16">
+        The full flow when working with a mapping is:
+        <ol class="m-t-8">
+          <li><b>Edit &rarr; Save</b> &mdash; your changes are stored in the mapping's single <b>draft</b>.
+            The active configuration keeps running unchanged. A <span class="label label-info">draft</span>
+            badge appears in the mapping list.</li>
+          <li><b>Publish</b> the draft &mdash; a dialog opens where you choose the version label and an
+            optional <b>change note</b>. Use the <b>Patch</b>, <b>Minor</b>, or <b>Major</b> bump buttons
+            to auto-suggest the next semver label, or type any <code>MAJOR.MINOR.PATCH</code> string
+            directly. Once confirmed, the draft becomes a new immutable version. Publishing does not
+            activate the version.</li>
+          <li><b>Activate</b> a version &mdash; its configuration is loaded into the running mapping. To
+            <b>roll back</b>, simply activate an older version; newer versions are kept and remain
+            available.</li>
+        </ol>
+      </div>
+      <div class="admonition info">
+        <div class="title">Note</div>
+        <div class="content">
+          The first time you publish or activate a mapping that has no version history yet, its current
+          active configuration is automatically captured as <b>1.0.0</b>, so no history is lost.
+          Existing mappings that previously used sequential integer version numbers (1, 2, 3&hellip;)
+          are automatically migrated to semver format (<code>1.0.0</code>, <code>2.0.0</code>, etc.) on
+          first access.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Semver guidance -->
+  <div>
+    <div class="card-header" id="versioning-semver">
+      <h3>{{ 'Choosing the right version bump' | translate }}</h3>
+    </div>
+    <div class="card-block">
+      <div class="p-b-8 text-16">
+        When publishing a draft, the publish dialog offers three bump buttons that pre-fill the version
+        field based on the highest version published so far:
+      </div>
+      <table class="table table-striped m-t-8">
+        <thead>
+          <tr>
+            <th>Button</th>
+            <th>When to use</th>
+            <th>Example</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Patch</b></td>
+            <td>Backwards-compatible bug fix or minor tweak (no change to the data model)</td>
+            <td><code>1.2.0</code> &rarr; <code>1.2.1</code></td>
+          </tr>
+          <tr>
+            <td><b>Minor</b></td>
+            <td>New optional substitution, new source field, or other additive change</td>
+            <td><code>1.2.1</code> &rarr; <code>1.3.0</code></td>
+          </tr>
+          <tr>
+            <td><b>Major</b></td>
+            <td>Breaking change: different topic pattern, removed field, restructured template</td>
+            <td><code>1.3.0</code> &rarr; <code>2.0.0</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="p-t-8 text-16">
+        You can also type any valid <code>MAJOR.MINOR.PATCH</code> string directly into the version
+        field. Version labels must be unique within a mapping line &mdash; a label that was previously
+        used cannot be reused after deletion.
+      </div>
+    </div>
+  </div>
+
+  <!-- The Versions view -->
+  <div>
+    <div class="card-header" id="versioning-view">
+      <h3>{{ 'The Versions view' | translate }}</h3>
+    </div>
+    <div class="card-block">
+      <div class="p-b-8 text-16">
+        Open the version history from the mapping list: click the <b>&#8942;</b> (actions) menu of a mapping and
+        select <b>Versions</b>. A drawer lists every record of that mapping in a single grid &mdash; the current
+        draft and all published versions &mdash; each tagged with its <b>State</b>:
+        <ul class="m-t-8">
+          <li><span class="label label-primary">active</span> &mdash; the version currently running.</li>
+          <li><span class="label label-default">published</span> &mdash; an immutable version you can activate or delete.</li>
+          <li><span class="label label-info">draft</span> &mdash; unpublished edits waiting to be published.</li>
+        </ul>
+      </div>
+      <div class="p-b-8 text-16">
+        Versions are listed in descending semver order (newest first). Each row offers contextual actions
+        in its <b>&#8942;</b> menu: <b>Publish</b> (on the draft, opens the version-picker dialog),
+        <b>Activate</b> and <b>Delete</b> (on inactive published versions), and inline note editing
+        (on any published version). The active version cannot be deleted &mdash; activate another version
+        first.
+      </div>
+
+      <!-- SCREENSHOT PLACEHOLDER 1 -->
+      <img width="80%" class="m-l-48 m-b-48 m-b-16"
+        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Versions_Drawer.png"
+        alt="Versions drawer" />
+      <p class="image-description m-l-48"><b>Description:</b> The Versions drawer for a mapping.</p>
+    </div>
+  </div>
+
+  <!-- Status badge in the mapping list -->
+  <div>
+    <div class="card-header" id="versioning-status-badge">
+      <h3>{{ 'Version and draft indicators in the mapping list' | translate }}</h3>
+    </div>
+    <div class="card-block">
+      <div class="p-b-8 text-16">
+        The <b>Status</b> column of the inbound/outbound mapping list shows, at a glance, the
+        <b>active version</b> of each mapping (for example
+        <span class="label label-default">v1.2.0</span>) and a
+        <span class="label label-info">draft</span> badge when the mapping has unpublished changes.
+      </div>
+
+      <img width="80%" class="m-l-48 m-b-48 m-b-16"
+        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Versions_Status_Badge.png"
+        alt="Version and draft badges in the mapping list" />
+      <p class="image-description m-l-48"><b>Description:</b> The mapping list Status column showing the active
+        version badge and a draft badge.</p>
+    </div>
+  </div>
+
+  <!-- Labels (change notes) -->
+  <div>
+    <div class="card-header" id="versioning-labels">
+      <h3>{{ 'Change notes' | translate }}</h3>
+    </div>
+    <div class="card-block">
+      <div class="p-b-8 text-16">
+        A <b>change note</b> is an optional free-text description of what a version contains or why it
+        was created. You set it in the publish dialog when creating the version, and you can edit it
+        later for any published version directly in the Versions drawer. The note is the only field of
+        a published version that can be changed after publishing &mdash; the version label, snapshot, and
+        all other fields are immutable.
+      </div>
+    </div>
+  </div>
+
+  <!-- Retention -->
+  <div>
+    <div class="card-header" id="versioning-retention">
+      <h3>{{ 'Configuring how many versions are kept' | translate }}</h3>
+    </div>
+    <div class="card-block">
+      <div class="p-b-8 text-16">
+        To bound storage, only the most recent versions of each mapping are retained. The limit is
+        configured per tenant under <b>Configuration &rarr; Service configuration &rarr; Caching</b> in
+        the field <b>Number of mapping versions to retain</b> (default 10). When a new version is
+        published, versions older than this limit are deleted, ordered by publish date &mdash; the
+        <b>active version is never deleted</b>, even if it falls outside the retention window.
+      </div>
+
+      <img width="80%" class="m-l-48 m-b-48 m-b-16"
+        src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Versions_Retention_Config.png"
+        alt="Mapping version retention setting" />
+      <p class="image-description m-l-48"><b>Description:</b> The "Number of mapping versions to retain" setting
+        under Service configuration &rarr; Caching.</p>
+    </div>
+  </div>
+
+  <!-- Navigating via the inventory -->
+  <div>
+    <div class="card-header" id="versioning-inventory">
+      <h3>{{ 'Relationship in the inventory' | translate }}</h3>
+    </div>
+    <div class="card-block">
+      <div class="p-b-8 text-16">
+        Each version is stored as its own managed object (type <code>d11r_mapping_version</code>) and is
+        registered as a <b>child addition</b> of the mapping's managed object. This makes the
+        mapping&nbsp;&rarr;&nbsp;versions relationship navigable directly in the Cumulocity inventory and
+        from external tooling, independently of the mapper UI. The <code>version</code> field on both the
+        mapping managed object and each version record uses the <code>MAJOR.MINOR.PATCH</code> format.
+      </div>
+    </div>
+  </div>
+</div>

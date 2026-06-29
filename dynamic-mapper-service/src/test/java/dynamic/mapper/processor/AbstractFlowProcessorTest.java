@@ -55,6 +55,7 @@ import dynamic.mapper.processor.model.SmartFunctionContext;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.OutputCollector;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -69,6 +70,9 @@ class AbstractFlowProcessorTest {
 
     @Mock
     private MappingService mappingService;
+
+    @Mock
+    private GraalVMContextService graalVMContextService;
 
     @Mock
     private Exchange exchange;
@@ -116,8 +120,8 @@ class AbstractFlowProcessorTest {
         private Exception lastError;
         private String lastErrorMessage;
 
-        public TestableAbstractFlowProcessorProcessor(MappingService mappingService) {
-            super(mappingService);
+        public TestableAbstractFlowProcessorProcessor(MappingService mappingService, GraalVMContextService graalVMContextService) {
+            super(mappingService, graalVMContextService);
         }
 
         @Override
@@ -168,7 +172,7 @@ class AbstractFlowProcessorTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        processor = new TestableAbstractFlowProcessorProcessor(mappingService);
+        processor = new TestableAbstractFlowProcessorProcessor(mappingService, graalVMContextService);
 
         mapping = createFlowProcessorMapping();
         processingContext = createProcessingContext();
@@ -647,5 +651,97 @@ class AbstractFlowProcessorTest {
         assertTrue(output.getLogs().contains("Valid log"));
 
         log.info("✅ Successfully handled non-string log elements");
+    }
+
+    // ── Base64 polyfill (atob / btoa) ─────────────────────────────────────────
+
+    @Test
+    void testBase64PolyfillAtobInjectedAfterLoadSharedCode() {
+        // When
+        processor.loadSharedCode(graalContext, processingContext);
+
+        // Then
+        Value atob = graalContext.getBindings("js").getMember("atob");
+        assertNotNull(atob, "atob should be injected by loadSharedCode");
+        assertTrue(atob.canExecute(), "atob should be a callable function");
+    }
+
+    @Test
+    void testBase64PolyfillBtoaInjectedAfterLoadSharedCode() {
+        // When
+        processor.loadSharedCode(graalContext, processingContext);
+
+        // Then
+        Value btoa = graalContext.getBindings("js").getMember("btoa");
+        assertNotNull(btoa, "btoa should be injected by loadSharedCode");
+        assertTrue(btoa.canExecute(), "btoa should be a callable function");
+    }
+
+    @Test
+    void testBase64PolyfillAtobDecodesBase64ToUtf8() {
+        // Given
+        String original = "Hello, IoT!";
+        String encoded = Base64.getEncoder().encodeToString(
+                original.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        processor.loadSharedCode(graalContext, processingContext);
+
+        // When
+        Value result = graalContext.eval("js", "atob('" + encoded + "')");
+
+        // Then
+        assertEquals(original, result.asString());
+    }
+
+    @Test
+    void testBase64PolyfillBtoaEncodesToBase64() {
+        // Given
+        String original = "Hello, IoT!";
+        String expected = Base64.getEncoder().encodeToString(
+                original.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        processor.loadSharedCode(graalContext, processingContext);
+
+        // When
+        Value result = graalContext.eval("js", "btoa('" + original + "')");
+
+        // Then
+        assertEquals(expected, result.asString());
+    }
+
+    @Test
+    void testBase64PolyfillRoundTrip() {
+        // Given
+        processor.loadSharedCode(graalContext, processingContext);
+
+        // When
+        Value result = graalContext.eval("js", "atob(btoa('round-trip test'))");
+
+        // Then
+        assertEquals("round-trip test", result.asString());
+    }
+
+    @Test
+    void testBase64PolyfillWorksInSmartFunction() throws Exception {
+        // Given - Smart function that decodes a Base64 payload via atob()
+        // (mirrors the documented example in the UI)
+        String original = "{\"deviceId\":\"abc\",\"temp\":23.5}";
+        String encoded = Base64.getEncoder().encodeToString(
+                original.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        String jsCode = String.format("""
+                function onMessage(message, flowContext) {
+                    var decoded = atob('%s');
+                    var parsed  = JSON.parse(decoded);
+                    return [{ cumulocityType: "measurement", action: "create",
+                              payload: { type: parsed.deviceId } }];
+                }
+                """, encoded);
+        mapping.setCode(Base64.getEncoder().encodeToString(jsCode.getBytes()));
+
+        // When
+        processor.processSmartMapping(processingContext);
+
+        // Then
+        assertTrue(processor.wasProcessResultCalled(),
+                "Smart function that calls atob() should execute without ReferenceError");
     }
 }

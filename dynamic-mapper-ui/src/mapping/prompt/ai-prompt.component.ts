@@ -145,35 +145,57 @@ export class AIPromptComponent implements OnInit {
   }
 
   private prepareReviewMessage(): void {
+    const direction = this.mapping.direction ?? 'INBOUND';
+    const targetAPI = this.mapping.targetAPI ?? '';
+
     if (this.isCodeMapping) {
       this.drawerTitle = 'Review / Refine Smart Function';
       this.chatConfig = { ...this.chatConfig, title: 'Review / Refine Smart Function' };
-      this.newMessage = "I have an existing Smart Function for the following mapping. " +
-        "Please review it and let me know if you see any issues or improvements. " +
-        "Feel free to ask me questions about specific changes you'd like to make.\n\n" +
-        "Complete Mapping (including existing code):\n\n" +
-        JSON.stringify(this.mappingForAI, null, 2) + "\n";
+      this.newMessage =
+        `Review the existing ${direction} Smart Function` +
+        (targetAPI ? ` (target: ${targetAPI})` : '') + " in the following mapping" +
+        " and suggest improvements.\n\n" +
+        "```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
     } else {
       this.drawerTitle = 'Review / Refine Substitutions';
       this.chatConfig = { ...this.chatConfig, title: 'Review / Refine Substitutions' };
-      this.newMessage = "I have existing substitutions for the following mapping. " +
-        "Please review them and let me know if you see any issues or improvements. " +
-        "Feel free to ask me questions about specific changes you'd like to make.\n\n" +
-        JSON.stringify({ ...this.mappingForAI, substitutions: this.mapping.substitutions }, null, 2) + "\n";
+      this.newMessage =
+        `Review the existing substitutions for this ${direction}` +
+        (targetAPI ? ` ${targetAPI}` : '') + " mapping" +
+        " and suggest improvements.\n\n" +
+        "```json\n" + JSON.stringify({ ...this.mappingForAI, substitutions: this.mapping.substitutions }, null, 2) + "\n```\n";
     }
   }
 
   private prepareGenerateMessage(): void {
+    const direction = this.mapping.direction ?? 'INBOUND';
+    const targetAPI = this.mapping.targetAPI ?? '';
+
     if (this.isCodeMapping) {
       this.drawerTitle = 'Generate Smart Function';
       this.chatConfig = { ...this.chatConfig, title: 'Generate Smart Function' };
-      this.newMessage = "Map for the following mapping the source template to the target template:\n\n" +
-        JSON.stringify(this.mappingForAI, null, 2) + "\n";
+      const isOutbound = direction === 'OUTBOUND';
+      const targetTemplateIsEmpty = !this.mappingForAI.targetTemplate
+        || JSON.stringify(this.mappingForAI.targetTemplate) === '{}';
+      const missingContextHint = isOutbound && targetTemplateIsEmpty
+        ? "The targetTemplate is empty — ask the user what device message format or protocol structure" +
+          " is expected (field names, units, nesting) before generating code.\n"
+        : !isOutbound && !targetAPI
+          ? "The targetAPI is not set — ask the user what kind of Cumulocity object to produce" +
+            " (e.g. MEASUREMENT, ALARM, EVENT, INVENTORY) before generating code.\n"
+          : "";
+      this.newMessage =
+        `Generate a ${direction} Smart Function for the following mapping` +
+        (targetAPI ? ` (target: ${targetAPI})` : '') + ".\n" +
+        missingContextHint +
+        "\n```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
     } else {
       this.drawerTitle = 'Generate Substitutions';
       this.chatConfig = { ...this.chatConfig, title: 'Generate Substitutions' };
-      this.newMessage = "Map for the following mapping the source template to the target template:\n\n" +
-        JSON.stringify(this.mappingForAI, null, 2) + "\n";
+      this.newMessage =
+        `Generate JSONata substitutions for this ${direction}` +
+        (targetAPI ? ` ${targetAPI}` : '') + " mapping.\n\n" +
+        "```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
     }
   }
 
@@ -276,10 +298,8 @@ export class AIPromptComponent implements OnInit {
         if (jsContent.includes('function') && jsContent.includes('function onMessage')) {
           this.generatedCode = this.applyESMExport(jsContent);
           this.valid = true;
-          this.alertService.success('JavaScript code extracted successfully!');
         } else {
           this.valid = false;
-          this.alertService.warning('Invalid JavaScript function format found in response');
         }
       } else {
         // Try alternative patterns for code blocks
@@ -291,10 +311,8 @@ export class AIPromptComponent implements OnInit {
           if (jsContent.includes('function')) {
             this.generatedCode = this.applyESMExport(jsContent);
             this.valid = true;
-            this.alertService.success('JavaScript code extracted successfully!');
           } else {
             this.valid = false;
-            this.alertService.warning('No valid JavaScript function found in response');
           }
         } else {
           this.valid = false;
@@ -344,14 +362,11 @@ export class AIPromptComponent implements OnInit {
           if (isValidSubstitutions) {
             this.substitutions = parsedSubstitutions;
             this.valid = true;
-            this.alertService.success('Substitutions extracted successfully!');
           } else {
             this.valid = false;
-            this.alertService.warning('Invalid substitution format found in response');
           }
         } else {
           this.valid = false;
-          this.alertService.warning('Expected array of substitutions but found different format');
         }
       } else {
         this.valid = false;

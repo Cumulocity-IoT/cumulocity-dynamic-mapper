@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -49,7 +48,6 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -95,7 +93,7 @@ class JSONataInboundProcessorTest {
         // Create real MappingStatus
         mappingStatus = new MappingStatus(
                 "test-id", "Test Mapping", "test-mapping", Direction.INBOUND,
-                "test/topic", "output/topic", 0L, 0L, 0L, 0L, 0L, null);
+                "test/topic", "output/topic", 0L, 0L, 0L, null);
 
         // Create ProcessingContext with payload
         processingContext = createProcessingContext(mapping);
@@ -166,8 +164,6 @@ class JSONataInboundProcessorTest {
                 .direction(Direction.INBOUND)
                 .debug(false)
                 .active(true)
-                .snoopStatus(SnoopStatus.NONE)
-                .snoopedTemplates(new ArrayList<>())
                 .qos(Qos.AT_MOST_ONCE)
                 .useExternalId(false)
                 .lastUpdate(System.currentTimeMillis())
@@ -221,41 +217,19 @@ class JSONataInboundProcessorTest {
         };
     }
 
-    private void injectMappingService(JSONataInboundProcessor processor, MappingService mappingService)
-            throws Exception {
-        Field field = JSONataInboundProcessor.class.getDeclaredField("mappingService");
-        field.setAccessible(true);
-        field.set(processor, mappingService);
-    }
-
     @Test
     void testJsonataDirectly() throws Exception {
-        // Test JSONata directly to debug
-        log.info("=== DIRECT JSONATA TEST ===");
+        // Sanity check that the underlying JSONata engine extracts the expected
+        // fields from both Map and JSON-derived payloads used by this suite.
+        Object result = com.dashjoin.jsonata.Jsonata.jsonata("ID").evaluate(processingContext.getPayload());
+        assertEquals("0018", result, "JSONata must extract the ID field from a Map payload");
 
-        try {
-            // Test with com.dashjoin.jsonata.Jsonata directly
-            var expr = com.dashjoin.jsonata.Jsonata.jsonata("ID");
-            Object result = expr.evaluate(processingContext.getPayload());
-            log.info("Direct JSONata result for 'ID': " + result);
+        Object result2 = com.dashjoin.jsonata.Jsonata.jsonata("ts").evaluate(processingContext.getPayload());
+        assertEquals("2024-06-18 13:20:45.000Z", result2, "JSONata must extract the ts field");
 
-            var expr2 = com.dashjoin.jsonata.Jsonata.jsonata("ts");
-            Object result2 = expr2.evaluate(processingContext.getPayload());
-            log.info("Direct JSONata result for 'ts': " + result2);
-
-            // Test with JsonNode
-            Object jsonNodePayload = createTestPayloadAsJsonNode();
-            var expr3 = com.dashjoin.jsonata.Jsonata.jsonata("ID");
-            Object result3 = expr3.evaluate(jsonNodePayload);
-            log.info("Direct JSONata result with JsonNode for 'ID': " + result3);
-
-        } catch (Exception e) {
-            log.info("Direct JSONata test failed: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        // This test just verifies JSONata works
-        assertTrue(true, "JSONata direct test completed");
+        Object jsonNodePayload = createTestPayloadAsJsonNode();
+        Object result3 = com.dashjoin.jsonata.Jsonata.jsonata("ID").evaluate(jsonNodePayload);
+        assertEquals("0018", result3, "JSONata must extract the ID field from a JSON-derived payload");
     }
 
     @Test
@@ -273,8 +247,6 @@ class JSONataInboundProcessorTest {
                 .direction(Direction.INBOUND)
                 .debug(true) // Enable debug
                 .active(true)
-                .snoopStatus(SnoopStatus.NONE)
-                .snoopedTemplates(new ArrayList<>())
                 .qos(Qos.AT_MOST_ONCE)
                 .useExternalId(false)
                 .lastUpdate(System.currentTimeMillis())
@@ -356,26 +328,13 @@ class JSONataInboundProcessorTest {
 
         assertFalse(processingCache.isEmpty(), "Processing cache should not be empty");
 
-        // More lenient - check any extraction worked
-        boolean hasAnyExtraction = processingCache.entrySet().stream()
-                .anyMatch(entry -> !entry.getValue().isEmpty() &&
-                        entry.getValue().get(0).getValue() != null);
-
-        if (hasAnyExtraction) {
-            log.info("✅ Some extractions worked!");
-
-            if (processingCache.containsKey("_IDENTITY_.externalId")) {
-                List<SubstituteValue> idValues = processingCache.get("_IDENTITY_.externalId");
-                SubstituteValue idValue = idValues.get(0);
-                log.info("ID value extracted: " + idValue.getValue());
-                assertNotNull(idValue.getValue(), "ID value should not be null");
-                assertEquals("0018", idValue.getValue(), "ID value should be '0018'");
-            }
-        } else {
-            log.info("❌ No successful extractions found");
-            // Don't fail the test, but log the issue
-            assertTrue(true, "Test completed - check logs for extraction issues");
-        }
+        // The fixture maps source field "ID" (= "0018") to target "_IDENTITY_.externalId",
+        // so this extraction is deterministic and must always succeed.
+        assertTrue(processingCache.containsKey("_IDENTITY_.externalId"),
+                "the external-id substitution must populate the processing cache");
+        List<SubstituteValue> idValues = processingCache.get("_IDENTITY_.externalId");
+        assertFalse(idValues.isEmpty(), "_IDENTITY_.externalId must hold at least one extracted value");
+        assertEquals("0018", idValues.get(0).getValue(), "ID value should be '0018'");
     }
 
     @Test

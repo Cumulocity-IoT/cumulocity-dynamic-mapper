@@ -21,13 +21,14 @@
 
 package dynamic.mapper.processor.inbound.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.camel.Exchange;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.jayway.jsonpath.DocumentContext;
@@ -35,6 +36,7 @@ import com.jayway.jsonpath.JsonPath;
 
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.IdentityResolutionService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
@@ -55,22 +57,28 @@ import com.cumulocity.sdk.client.ProcessingMode;
 @Component
 public class SubstitutionResultInboundProcessor extends BaseProcessor {
 
-    @Autowired
-    private C8YAgent c8yAgent;
+    private final C8YAgent c8yAgent;
 
-    @Autowired
-    private MappingService mappingService;
+    private final MappingService mappingService;
 
-    @Autowired
-    private ConfigurationRegistry configurationRegistry;
+    private final ConfigurationRegistry configurationRegistry;
+    private final IdentityResolutionService identityResolutionService;
+
+    public SubstitutionResultInboundProcessor(C8YAgent c8yAgent, MappingService mappingService,
+            ConfigurationRegistry configurationRegistry, IdentityResolutionService identityResolutionService) {
+        this.c8yAgent = c8yAgent;
+        this.mappingService = mappingService;
+        this.configurationRegistry = configurationRegistry;
+        this.identityResolutionService = identityResolutionService;
+    }
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
-        Boolean testing = context.getTesting();
+        Boolean testing = context.isTesting();
 
         try {
             validateProcessingCache(context);
@@ -81,7 +89,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
             // !mapping.getCreateNonExistingDevice()) {
             if (mapping.getFilterInventory() != null) {
                 boolean filterInventory = evaluateInventoryFilter(tenant, mapping.getFilterInventory(),
-                        context.getSourceId(), context.getTesting());
+                        context.getSourceId(), context.isTesting());
                 if (context.getSourceId() == null
                         || !filterInventory) {
                     if (mapping.getDebug()) {
@@ -147,7 +155,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
                 context.addError(new ProcessingException(msg, e));
 
-                if (!context.getNeedsRepair()) {
+                if (!context.isNeedsRepair()) {
                     throw e;
                 }
             }
@@ -158,10 +166,10 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
         // else clone context and add multiContext to exchange
         // then in pipeline split and process in parallel
         if (!mapping.getCreateNonExistingDevice()) {
-            exchange.getIn().setHeader("parallelProcessing", true);
+            exchange.getIn().setHeader(CamelHeaders.PARALLEL_PROCESSING, true);
             log.debug("Marked requests for parallel processing for mapping: {}", mapping.getName());
         } else {
-            exchange.getIn().setHeader("parallelProcessing", false);
+            exchange.getIn().setHeader(CamelHeaders.PARALLEL_PROCESSING, false);
             log.debug("Marked requests for sequential processing for mapping: {}", mapping.getName());
         }
     }
@@ -181,11 +189,11 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
             SubstituteValue sourceId = new SubstituteValue(substitute.getValue(),
                     TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
             if (!context.getApi().equals(API.INVENTORY)) {
-                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
+                var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());
                 if (resolvedSourceId == null) {
                     if (mapping.getCreateNonExistingDevice()) {
                         try {
-                            String createdOrResolvedId = configurationRegistry.getOrCreateDeviceThreadSafe(
+                            String createdOrResolvedId = identityResolutionService.getOrCreateDeviceThreadSafe(
                                     tenant,
                                     identity.getType(),
                                     externalId,

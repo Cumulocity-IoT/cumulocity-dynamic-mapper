@@ -22,6 +22,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="31. Static subscription management"
+
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 DEVICE_NAME="test-static-device-01"
 DEVICE_TYPE="test-static-type"
@@ -35,11 +37,11 @@ cleanup() {
     echo "Cleanup done."
 }
 
-if [ "${1}" = "--cleanup" ]; then
-    trap cleanup EXIT
-fi
+dm_parse_args "$@"
+dm_register_cleanup cleanup
+dm_validate_only_exit
 
-dm_banner "Outbound Static Device Subscription"
+dm_banner "$TEST_TITLE"
 
 # Step 1: Create device
 dm_step 1 "Create test device"
@@ -78,4 +80,4 @@ if [ "${STATIC_MATCH_COUNT:-0}" -eq 0 ]; then
 fi
 
 dm_print_summary
-dm_done "Outbound Static Device Subscription"
+dm_done "$TEST_TITLE"

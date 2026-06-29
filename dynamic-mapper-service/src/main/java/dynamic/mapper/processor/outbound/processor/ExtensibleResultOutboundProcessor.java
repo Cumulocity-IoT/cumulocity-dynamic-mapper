@@ -197,7 +197,7 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
             output.addRequest(request);
 
             // Set retain flag on context
-            context.setRetain(deviceMsg.getRetain());
+            context.setRetain(Boolean.TRUE.equals(deviceMsg.getRetain()));
 
             log.debug("{} - Created outbound request: topic={}, retain={}",
                     tenant, publishTopic, deviceMsg.getRetain());

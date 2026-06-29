@@ -77,7 +77,10 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   set data(value: unknown) {
     if (value && Object.keys(value).length != 0 && this.initRan) {
       this.content = { json: value }
-      this.editor?.update(this.content);
+      if (this.editor) {
+        this.isReverting = true;
+        this.editor.set(this.content);
+      }
       this.cdr.detectChanges();
     }
   }

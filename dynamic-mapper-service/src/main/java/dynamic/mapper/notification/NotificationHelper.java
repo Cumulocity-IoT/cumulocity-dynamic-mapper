@@ -82,9 +82,12 @@ public class NotificationHelper {
         
         message.setParsedPayload(parsedPayload);
         message.setApi(notification.getApi());
-        message.setDeviceName(String.valueOf(parsedPayload.get("name")));
+        // L2: String.valueOf(null) yields the four-character string "null"; preserve null instead
+        Object nameObj = parsedPayload.get("name");
+        message.setDeviceName(nameObj instanceof String ? (String) nameObj : null);
         message.setOperation(notification.getOperation());
-        message.setMessageId(String.valueOf(parsedPayload.get("id")));
+        Object idObj = parsedPayload.get("id");
+        message.setMessageId(idObj != null ? String.valueOf(idObj) : null);
         message.setSourceId(extractSourceId(parsedPayload, notification.getApi()));
         message.setPayload(notification.getMessage());
         message.setTenant(tenant);

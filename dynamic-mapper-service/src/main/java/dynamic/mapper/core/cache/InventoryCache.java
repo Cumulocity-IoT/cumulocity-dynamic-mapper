@@ -21,70 +21,31 @@
 
 package dynamic.mapper.core.cache;
 
-import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.Metrics;
-import io.micrometer.core.instrument.Tags;
-
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
-import java.util.function.Consumer;
+/**
+ * Per-tenant LRU cache holding managed-object fragments keyed by source id.
+ *
+ * <p>An eviction listener (see {@link #setEvictionListener}) is used to
+ * unsubscribe from inventory notifications when an entry is evicted.
+ */
+public class InventoryCache extends MetricLRUCache<String, Map<String, Object>> {
 
-public class InventoryCache {
-
-    private final Map<String, Map<String, Object>> cache;
-    private Gauge cacheSizeGauge = null;
-    
-    // Listener for eviction events
-    private Consumer<String> evictionListener;
+    private static final String METRIC_NAME = "dynmapper_inbound_inventory_cache_size";
 
     public InventoryCache(int cacheSize, String tenant) {
-        this.cache = Collections.synchronizedMap(new LinkedHashMap<String, Map<String, Object>>() {
-            @Override
-            protected boolean removeEldestEntry(Map.Entry<String, Map<String, Object>> eldest) {
-                boolean shouldRemove = size() > cacheSize;
-                if (shouldRemove && evictionListener != null) {
-                    // Notify listener about eviction
-                    evictionListener.accept(eldest.getKey());
-                }
-                return shouldRemove;
-            }
-        });
-        
-        Tags tag = Tags.of("tenant", tenant);
-        this.cacheSizeGauge = Gauge.builder("dynmapper_inbound_inventory_cache_size", this.cache, Map::size)
-                .tags(tag)
-                .register(Metrics.globalRegistry);
-    }
-
-    /**
-     * Set a listener to be notified when entries are evicted
-     */
-    public void setEvictionListener(Consumer<String> listener) {
-        this.evictionListener = listener;
+        super(cacheSize, tenant, METRIC_NAME);
     }
 
     public void putMO(String sourceId, Map<String, Object> mo) {
-        cache.put(sourceId, mo);
-    }
-
-    public Gauge getCacheSizeGauge() {
-        return cacheSizeGauge;
+        putEntry(sourceId, mo);
     }
 
     public Map<String, Object> getMOBySource(String key) {
         return cache.get(key);
     }
+
     public void removeMO(String sourceId) {
         cache.remove(sourceId);
-    }
-
-    public void clearCache() {
-        cache.clear();
-    }
-
-    public int getCacheSize() {
-        return cache.size();
     }
 }

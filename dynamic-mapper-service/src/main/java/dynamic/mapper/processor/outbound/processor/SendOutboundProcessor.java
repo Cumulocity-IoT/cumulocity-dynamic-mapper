@@ -20,6 +20,8 @@
  */
 package dynamic.mapper.processor.outbound.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import org.apache.camel.Exchange;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,14 +66,14 @@ public class SendOutboundProcessor extends BaseProcessor {
     @Override
     @SuppressWarnings("unchecked")
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
-        Boolean testing = context.getTesting();
+        Boolean testing = context.isTesting();
 
         // Check if processing was cancelled due to timeout
-        ProcessingResultWrapper<?> wrapper = exchange.getIn().getHeader("processingResultWrapper",
+        ProcessingResultWrapper<?> wrapper = exchange.getIn().getHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER,
                 ProcessingResultWrapper.class);
         if (wrapper != null && wrapper.getCancellationRequested().get()) {
             log.warn("{} - Processing was cancelled (timeout), skipping SendOutboundProcessor for mapping: {}",
@@ -84,7 +86,7 @@ public class SendOutboundProcessor extends BaseProcessor {
             autoAckOperation(context, tenant, mapping, OperationStatus.EXECUTING);
 
             // Process all C8Y requests that were created by SubstitutionProcessor
-            String connectorIdentifier = exchange.getIn().getHeader("connectorIdentifier", String.class);
+            String connectorIdentifier = exchange.getIn().getHeader(CamelHeaders.CONNECTOR_IDENTIFIER, String.class);
             processAndPrepareRequests(context, connectorIdentifier);
 
 
@@ -117,7 +119,7 @@ public class SendOutboundProcessor extends BaseProcessor {
      */
     private void autoAckOperation(ProcessingContext<Object> context, String tenant, Mapping mapping, OperationStatus operationStatus) {
         if (!API.OPERATION.equals(context.getApi()) || !Boolean.TRUE.equals(mapping.getAutoAckOperation())
-                || Boolean.TRUE.equals(context.getTesting())) {
+                || Boolean.TRUE.equals(context.isTesting())) {
             return;
         }
         try {
@@ -154,7 +156,7 @@ public class SendOutboundProcessor extends BaseProcessor {
             return;
         }
 
-        if (!context.getSendPayload()) {
+        if (!context.isSendPayload()) {
             log.warn("{} - Not sending messages: sendPayload is false", tenant);
             return;
         }
@@ -164,7 +166,7 @@ public class SendOutboundProcessor extends BaseProcessor {
             // that have the mapping deployed, mirroring how inbound send=true uses real C8Y.
             // Identity enrichment still uses mocks (testing=true) since the source payload
             // is always synthetic for outbound tests.
-            if (Boolean.TRUE.equals(context.getTesting())) {
+            if (Boolean.TRUE.equals(context.isTesting())) {
                 publishToRealConnectors(context, tenant);
                 return;
             }

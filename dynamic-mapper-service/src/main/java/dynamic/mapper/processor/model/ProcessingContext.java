@@ -82,6 +82,8 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     private String clientId;
 
+    private String connectorIdentifier;
+
     private API api;
 
     private Qos qos;
@@ -131,23 +133,23 @@ public class ProcessingContext<O> implements AutoCloseable {
     private Map<String, List<SubstituteValue>> processingCache = new TreeMap<String, List<SubstituteValue>>();
 
     @Builder.Default
-    private Boolean sendPayload = false;
+    private boolean sendPayload = false;
 
     @Builder.Default
-    private Boolean testing = false;
+    private boolean testing = false;
 
     @Builder.Default
-    private Boolean needsRepair = false;
+    private boolean needsRepair = false;
 
     @Builder.Default
-    private Boolean retain = false;
+    private boolean retain = false;
 
     private String tenant;
 
     private ServiceConfiguration serviceConfiguration;
 
     @Builder.Default
-    private Boolean ignoreFurtherProcessing = false;
+    private boolean ignoreFurtherProcessing = false;
 
     private String key;
 
@@ -158,6 +160,14 @@ public class ProcessingContext<O> implements AutoCloseable {
     private Engine graalEngine;
 
     private Context graalContext;
+
+    /**
+     * Callback invoked after the GraalVM {@link Context} is closed to notify
+     * {@code GraalVMContextService} that this in-flight context slot has been released.
+     * Set by {@code AbstractEnrichmentProcessor} so the service can close a retired
+     * {@link Engine} once all its contexts have drained.
+     */
+    private Runnable engineReleaseAction;
 
     private String sharedCode;
 
@@ -208,7 +218,7 @@ public class ProcessingContext<O> implements AutoCloseable {
     private BinaryInfo binaryInfo = new BinaryInfo();
 
     public boolean hasError() {
-        return errors != null && errors.size() > 0;
+        return !errors.isEmpty();
     }
 
     /**
@@ -407,12 +417,8 @@ public class ProcessingContext<O> implements AutoCloseable {
         }
 
         // Copy flags
-        if (this.needsRepair != null) {
-            state.setNeedsRepair(this.needsRepair);
-        }
-        if (this.ignoreFurtherProcessing != null) {
-            state.setIgnoreFurtherProcessing(this.ignoreFurtherProcessing);
-        }
+        state.setNeedsRepair(this.needsRepair);
+        state.setIgnoreFurtherProcessing(this.ignoreFurtherProcessing);
 
         return state;
     }
@@ -519,6 +525,17 @@ public class ProcessingContext<O> implements AutoCloseable {
                     log.warn("{} - Error closing GraalVM Context: {}", getTenant(), e.getMessage());
                 }
                 graalContext = null;
+            }
+
+            // Notify GraalVMContextService that this context slot is freed so it can
+            // close a retired Engine once all its in-flight contexts have drained.
+            if (engineReleaseAction != null) {
+                try {
+                    engineReleaseAction.run();
+                } catch (Exception e) {
+                    log.warn("{} - Error in engineReleaseAction: {}", getTenant(), e.getMessage());
+                }
+                engineReleaseAction = null;
             }
         } catch (Exception e) {
             log.error("{} - Error during ProcessingContext cleanup: {}", getTenant(), e.getMessage(), e);

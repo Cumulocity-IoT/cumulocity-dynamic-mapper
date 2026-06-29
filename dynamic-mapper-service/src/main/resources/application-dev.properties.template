@@ -19,6 +19,12 @@
 #
 #
 
+# Spring Boot 3.5 RootLogLevelConfigurator defaults root to TRACE before logback-spring.xml
+# loads; set both the Spring-level root and the appender threshold explicitly
+logging.level.root=INFO
+logging.threshold.console=INFO
+logging.threshold.file=INFO
+
 # properties used for local testing
 springdoc.writer-with-default-pretty-printer=true
 C8Y_BASEURL_PULSAR=pulsar://localhost:6650

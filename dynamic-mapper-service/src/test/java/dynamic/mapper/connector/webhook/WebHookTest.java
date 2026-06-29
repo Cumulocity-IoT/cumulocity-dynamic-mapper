@@ -72,7 +72,7 @@ public class WebHookTest {
             ObjectNode result = objectMapper.createObjectNode();
 
             // Only process top-level fields from update node
-            updateNode.fields().forEachRemaining(field -> {
+            updateNode.properties().forEach(field -> {
                 String fieldName = field.getKey();
                 JsonNode fieldValue = field.getValue();
 
@@ -103,10 +103,10 @@ public class WebHookTest {
             ObjectNode result = objectMapper.createObjectNode();
 
             // First, copy all fields from the existing object
-            existingObj.fields().forEachRemaining(field -> result.set(field.getKey(), field.getValue()));
+            existingObj.properties().forEach(field -> result.set(field.getKey(), field.getValue()));
 
             // Then update with fields from the update object
-            updateObj.fields().forEachRemaining(field -> {
+            updateObj.properties().forEach(field -> {
                 String fieldName = field.getKey();
                 JsonNode fieldValue = field.getValue();
 

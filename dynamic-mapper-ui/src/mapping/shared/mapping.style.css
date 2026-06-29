@@ -21,6 +21,29 @@ c8y-data-grid button[title='Reload'] {
   display: none;
 }
 
+/* Name column: make the <td> a flex container so text is vertically centred like the checkbox.
+   Scoped under d11r-mapping-mapping-grid (the host element of MappingComponent) so other
+   grids with a "name" column are not affected. No :has() required. */
+d11r-mapping-mapping-grid td.cdk-column-name {
+  display: flex !important;
+  align-items: center;
+}
+d11r-mapping-mapping-grid td.cdk-column-name > c8y-cell-renderer {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+d11r-mapping-mapping-grid td.cdk-column-name d11r-mapping-id-renderer {
+  display: block;
+  overflow: hidden;
+}
+d11r-mapping-mapping-grid td.cdk-column-name d11r-mapping-id-renderer a {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .text-align-center {
   text-align: center;
 }
@@ -176,5 +199,9 @@ d11r-mapping-template-step {
   33%  { content: '..'; }
   66%  { content: '...'; }
   100% { content: '....'; }
+}
+
+d11r-mapping-properties .form-group {
+  margin-bottom: 8px;
 }
 

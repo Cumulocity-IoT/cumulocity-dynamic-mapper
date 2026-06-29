@@ -1,5 +1,7 @@
 package dynamic.mapper.processor.inbound.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -20,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.IdentityResolutionService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
@@ -43,6 +46,9 @@ public class SendInboundProcessor extends BaseProcessor {
     private ConfigurationRegistry configurationRegistry;
 
     @Autowired
+    private IdentityResolutionService identityResolutionService;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @Autowired
@@ -51,14 +57,14 @@ public class SendInboundProcessor extends BaseProcessor {
     @Override
     @SuppressWarnings("unchecked")
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
-        Boolean testing = context.getTesting();
+        Boolean testing = context.isTesting();
 
         // Check if processing was cancelled due to timeout
-        ProcessingResultWrapper<?> wrapper = exchange.getIn().getHeader("processingResultWrapper",
+        ProcessingResultWrapper<?> wrapper = exchange.getIn().getHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER,
                 ProcessingResultWrapper.class);
         if (wrapper != null && wrapper.getCancellationRequested().get()) {
             log.warn("{} - Processing was cancelled (timeout), skipping SendInboundProcessor for mapping: {}",
@@ -263,7 +269,7 @@ public class SendInboundProcessor extends BaseProcessor {
             if (request.getExternalId() != null) {
                 identity = new ID(request.getExternalIdType(), request.getExternalId());
                 ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity,
-                        context.getTesting());
+                        context.isTesting());
 
                 if (sourceId != null) {
                     request.setSourceId(sourceId.getManagedObject().getId().getValue());
@@ -303,18 +309,24 @@ public class SendInboundProcessor extends BaseProcessor {
             if (request.getExternalId() != null) {
                 ID identity = new ID(request.getExternalIdType(), request.getExternalId());
                 ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity,
-                        context.getTesting());
+                        context.isTesting());
 
                 if (sourceId != null) {
                     request.setSourceId(sourceId.getManagedObject().getId().getValue());
 
-                    // Add source field to payload JSON
+                    // Add source field to payload JSON — but only for non-MEASUREMENT collection payloads.
+                    // MEASUREMENT payloads are already wrapped in { "measurements": [...] } by
+                    // FlowResultInboundProcessor, with source.id injected inside each individual
+                    // measurement. Adding source at the collection root would create a spurious outer
+                    // "source" key that the C8Y API does not expect.
                     String payloadJson = request.getRequest();
                     Map<String, Object> payloadMap = objectMapper.readValue(payloadJson, new TypeReference<Map<String, Object>>() {});
-                    Map<String, Object> source = new HashMap<>();
-                    source.put("id", request.getSourceId());
-                    payloadMap.put("source", source);
-                    request.setRequest(objectMapper.writeValueAsString(payloadMap));
+                    if (!payloadMap.containsKey("measurements")) {
+                        Map<String, Object> source = new HashMap<>();
+                        source.put("id", request.getSourceId());
+                        payloadMap.put("source", source);
+                        request.setRequest(objectMapper.writeValueAsString(payloadMap));
+                    }
 
                     // Cache the mapping of device to client ID
                     if (context.getClientId() != null) {
@@ -324,8 +336,11 @@ public class SendInboundProcessor extends BaseProcessor {
                 }
             }
 
-            if (context.getSendPayload()) {
-                // Send the request to C8Y and capture the actual response
+            if (context.isSendPayload()) {
+                if (context.getServiceConfiguration().getLogPayload()) {
+                    log.info("{} - Sending {} request to C8Y: externalId={}, payload={}",
+                            tenant, request.getApi(), request.getExternalId(), request.getRequest());
+                }
                 AbstractExtensibleRepresentation meaoResult = c8yAgent.createMEAO(context, requestIndex);
                 if (meaoResult != null) {
                     request.setResponse(objectMapper.writeValueAsString(meaoResult));
@@ -434,7 +449,7 @@ public class SendInboundProcessor extends BaseProcessor {
                 String externalIdValue = parts[1] + "_" + parts[3]; // [Group ID]_[Edge Node ID]
                 com.cumulocity.model.ID identity = new com.cumulocity.model.ID(externalIdType, externalIdValue);
                 com.cumulocity.rest.representation.identity.ExternalIDRepresentation resolved =
-                        c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
+                        c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());
                 if (resolved != null) {
                     resolvedId = resolved.getManagedObject().getId().getValue();
                     log.debug("{} - storeSparkPlugBBirthMessage: resolved {} → C8Y ID {}",
@@ -443,7 +458,7 @@ public class SendInboundProcessor extends BaseProcessor {
                     log.info("{} - storeSparkPlugBBirthMessage: NODE MO for {}/{} does not exist, "
                             + "auto-creating (createNonExistingDevice=true)", tenant, externalIdType, externalIdValue);
                     try {
-                        resolvedId = configurationRegistry.getOrCreateDeviceThreadSafe(
+                        resolvedId = identityResolutionService.getOrCreateDeviceThreadSafe(
                                 tenant, externalIdType, externalIdValue, identity, context);
                         if (resolvedId == null) {
                             log.error("{} - storeSparkPlugBBirthMessage: Failed to auto-create NODE device for {}/{}",
@@ -480,7 +495,7 @@ public class SendInboundProcessor extends BaseProcessor {
             String nodeExternalIdValue = parts[1] + "_" + parts[3];
             com.cumulocity.model.ID nodeIdentity = new com.cumulocity.model.ID(externalIdType, nodeExternalIdValue);
             com.cumulocity.rest.representation.identity.ExternalIDRepresentation resolved =
-                    c8yAgent.resolveExternalId2GlobalId(tenant, nodeIdentity, context.getTesting());
+                    c8yAgent.resolveExternalId2GlobalId(tenant, nodeIdentity, context.isTesting());
             if (resolved == null) {
                 log.error("{} - storeSparkPlugBBirthMessage: NODE MO for {} '{}' not found. "
                         + "Cannot store DBIRTH alias map. Ensure the NBIRTH message has been processed first.",
@@ -528,7 +543,7 @@ public class SendInboundProcessor extends BaseProcessor {
         log.info("{} - Storing '{}' fragment ({} metric definitions) on MO {} ({})",
                 tenant, fragmentKey, aliasMap.size(), targetDeviceId, messageType);
         c8yAgent.storeManagedObjectFragment(tenant, targetDeviceId, fragmentKey,
-                aliasMap, context.getTesting());
+                aliasMap, context.isTesting());
     }
 
     /**
@@ -591,7 +606,7 @@ public class SendInboundProcessor extends BaseProcessor {
             String nodeExternalIdValue = parts[1] + "_" + parts[3];
             ID nodeIdentity = new ID(externalIdType, nodeExternalIdValue);
             ExternalIDRepresentation resolved =
-                    c8yAgent.resolveExternalId2GlobalId(tenant, nodeIdentity, context.getTesting());
+                    c8yAgent.resolveExternalId2GlobalId(tenant, nodeIdentity, context.isTesting());
             if (resolved == null) {
                 log.debug("{} - updateSparkPlugBActiveStatus: NODE MO not found for externalId={}, skipping",
                         tenant, nodeExternalIdValue);
@@ -601,7 +616,7 @@ public class SendInboundProcessor extends BaseProcessor {
             String fragmentKey = SparkPlugBDeserializer.getIsActiveFragmentKey(sparkplugDeviceId);
             log.info("{} - Setting {}={} on NODE MO {} (messageType={}, sparkplugDeviceId={})",
                     tenant, fragmentKey, isActive, nodeMoId, messageType, sparkplugDeviceId);
-            c8yAgent.storeManagedObjectFragment(tenant, nodeMoId, fragmentKey, isActive, context.getTesting());
+            c8yAgent.storeManagedObjectFragment(tenant, nodeMoId, fragmentKey, isActive, context.isTesting());
 
         } else {
             // Node-level NBIRTH/NDATA/NDEATH: store sparkPlugB_isActive on the NODE MO.
@@ -614,7 +629,7 @@ public class SendInboundProcessor extends BaseProcessor {
                 String externalIdValue = parts[1] + "_" + parts[3];
                 ID identity = new ID(externalIdType, externalIdValue);
                 ExternalIDRepresentation resolved =
-                        c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.getTesting());
+                        c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());
                 if (resolved == null) {
                     log.debug("{} - updateSparkPlugBActiveStatus: no NODE MO found for externalId={}, skipping",
                             tenant, externalIdValue);
@@ -628,7 +643,7 @@ public class SendInboundProcessor extends BaseProcessor {
                     isActive, nodeMoId, messageType);
             c8yAgent.storeManagedObjectFragment(tenant, nodeMoId,
                     SparkPlugBDeserializer.SPARKPLUGB_IS_ACTIVE_FRAGMENT,
-                    isActive, context.getTesting());
+                    isActive, context.isTesting());
         }
     }
 

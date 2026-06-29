@@ -165,12 +165,6 @@ export interface Mapping {
   /** Type of external ID to use (e.g., "c8y_Serial") */
   externalIdType: string;
 
-  /** Status of template snooping */
-  snoopStatus: SnoopStatus;
-
-  /** List of templates captured during snooping */
-  snoopedTemplates?: string[];
-
   /** Extension configuration for custom processing */
   extension?: ExtensionEntry;
 
@@ -182,13 +176,55 @@ export interface Mapping {
 
   /** Timestamp of last update */
   lastUpdate: number;
+
+  /** Semantic version (MAJOR.MINOR.PATCH) of the currently active configuration; null/absent when no version published yet */
+  version?: string;
+
+  /** Whether the line has unpublished draft changes that differ from the active version */
+  draftDirty?: boolean;
+
+  /** Free-text change note for the active version */
+  versionNote?: string;
+}
+
+/** An immutable snapshot of a mapping configuration together with its version metadata. */
+export interface MappingVersion {
+  /** Managed-object id of this version record */
+  id?: string;
+
+  /** Functional identifier of the owning mapping line */
+  identifier: string;
+
+  /** Semantic version (MAJOR.MINOR.PATCH), unique within the mapping line; null for the draft */
+  version: string | null;
+
+  /** Immutable copy of the full mapping configuration for this version */
+  snapshot: Mapping;
+
+  /** Whether this record is the mutable draft (true) or a published version (false) */
+  isDraft?: boolean;
+
+  /** Timestamp the version was published (epoch millis) */
+  createdAt?: number;
+
+  /** User who published the version */
+  createdBy?: string;
+
+  /** Optional free-text change note */
+  note?: string;
+}
+
+export interface MappingVersionCount {
+  /** Managed-object id of the mapping */
+  id: string;
+  /** Number of published (non-draft) versions */
+  versionCount: number;
 }
 
 export interface MappingEnriched {
   id: string;
   mapping: Mapping;
   connectors?: ConnectorConfiguration[];
-  snoopSupported?: boolean;
 }
 
 export interface DeploymentMapEntryDetailed {
@@ -225,13 +261,6 @@ export enum Direction {
   INBOUND = 'INBOUND',
   OUTBOUND = 'OUTBOUND',
   UNSPECIFIED = 'UNSPECIFIED'
-}
-
-export enum SnoopStatus {
-  NONE = 'NONE',
-  ENABLED = 'ENABLED',
-  STARTED = 'STARTED',
-  STOPPED = 'STOPPED'
 }
 
 export interface ExtensionEntry {
@@ -349,7 +378,6 @@ export const MappingTypeDescriptions = {
 } as const;
 
 export interface MappingTypeProperties {
-  snoopSupported: boolean;
   directionSupported: boolean;
   substitutionsAsCodeSupported: boolean;
   supportedTransformationTypes: TransformationType[]; // Add this line
@@ -404,7 +432,6 @@ export const MappingTypeDescriptionMap: Record<
     description: 'Mapping handles payloads in JSON format.',
     properties: {
       [Direction.INBOUND]: {
-        snoopSupported: true,
         directionSupported: true,
         substitutionsAsCodeSupported: true,
         supportedTransformationTypes: [
@@ -414,7 +441,6 @@ export const MappingTypeDescriptionMap: Record<
         ]
       },
       [Direction.OUTBOUND]: {
-        snoopSupported: true,
         directionSupported: true,
         substitutionsAsCodeSupported: true,
         supportedTransformationTypes: [
@@ -441,7 +467,6 @@ export const MappingTypeDescriptionMap: Record<
       .`,
     properties: {
       [Direction.INBOUND]: {
-        snoopSupported: true,
         directionSupported: true,
         substitutionsAsCodeSupported: true,
         supportedTransformationTypes: [
@@ -451,7 +476,6 @@ export const MappingTypeDescriptionMap: Record<
         ]
       },
       [Direction.OUTBOUND]: {
-        snoopSupported: false,
         directionSupported: false,
         substitutionsAsCodeSupported: false,
         supportedTransformationTypes: [
@@ -471,7 +495,6 @@ export const MappingTypeDescriptionMap: Record<
 Use the JSONata function "$number() to parse an hexadecimal string as a number, e.g. $number("0x5a75") returns 23157.`,
     properties: {
       [Direction.INBOUND]: {
-        snoopSupported: true,
         directionSupported: true,
         substitutionsAsCodeSupported: true,
         supportedTransformationTypes: [
@@ -481,7 +504,6 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
         ]
       },
       [Direction.OUTBOUND]: {
-        snoopSupported: false,
         directionSupported: false,
         substitutionsAsCodeSupported: false,
         supportedTransformationTypes: [
@@ -500,13 +522,11 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
     description: 'Mapping parses payloads in PROTOBUF format by an internal extension.',
     properties: {
       [Direction.INBOUND]: {
-        snoopSupported: false,
         directionSupported: true,
         substitutionsAsCodeSupported: false,
         supportedTransformationTypes: [TransformationType.DEFAULT]
       },
       [Direction.OUTBOUND]: {
-        snoopSupported: false,
         directionSupported: false,
         substitutionsAsCodeSupported: false,
         supportedTransformationTypes: [] // No transformation types supported for outbound
@@ -533,13 +553,11 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
     description: 'Deprecated — use Any Payload with Java Extension transformation type instead.',
     properties: {
       [Direction.INBOUND]: {
-        snoopSupported: false,
         directionSupported: true,
         substitutionsAsCodeSupported: false,
         supportedTransformationTypes: [TransformationType.EXTENSION_JAVA]
       },
       [Direction.OUTBOUND]: {
-        snoopSupported: false,
         directionSupported: false,
         substitutionsAsCodeSupported: false,
         supportedTransformationTypes: [TransformationType.EXTENSION_JAVA]
@@ -563,14 +581,12 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       'Use a Smart Function (JavaScript) for in-process decoding, or a Java Extension for server-side processing.',
     properties: {
       [Direction.INBOUND]: {
-        snoopSupported: false,
         directionSupported: true,
         substitutionsAsCodeSupported: false,
         // Both JS Smart Function and Java Extension are supported for inbound any-payload mappings.
         supportedTransformationTypes: [TransformationType.SMART_FUNCTION, TransformationType.EXTENSION_JAVA]
       },
       [Direction.OUTBOUND]: {
-        snoopSupported: false,
         directionSupported: false,
         substitutionsAsCodeSupported: false,
         supportedTransformationTypes: []
@@ -606,14 +622,12 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       'context.getConfig().aliasMap.',
     properties: {
       [Direction.INBOUND]: {
-        snoopSupported: false,
         directionSupported: true,
         substitutionsAsCodeSupported: false,
         // Only Smart Function is supported for SparkPlug B — the decoder handles binary parsing.
         supportedTransformationTypes: [TransformationType.SMART_FUNCTION]
       },
       [Direction.OUTBOUND]: {
-        snoopSupported: false,
         directionSupported: true,
         substitutionsAsCodeSupported: false,
         // Only Smart Function is supported — the serializer handles binary SparkPlug B encoding.
@@ -656,8 +670,6 @@ export interface MappingStatus {
   mappingTopic: string;
   errors: number;
   messagesReceived: number;
-  snoopedTemplatesTotal: number;
-  snoopedTemplatesActive: number;
 }
 
 export const API = {

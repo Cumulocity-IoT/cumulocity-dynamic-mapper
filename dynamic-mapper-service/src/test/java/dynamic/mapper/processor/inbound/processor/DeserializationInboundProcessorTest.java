@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Field;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
@@ -56,6 +55,9 @@ class DeserializationInboundProcessorTest {
     private MappingService mappingService;
 
     @Mock
+    private dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer sparkPlugBDeserializer;
+
+    @Mock
     private Exchange exchange;
 
     @Mock
@@ -82,11 +84,11 @@ class DeserializationInboundProcessorTest {
         // Create real MappingStatus objects
         mappingStatus = new MappingStatus(
                 "test-id", "Test Mapping", "test-mapping", Direction.INBOUND,
-                "test/topic", "output/topic", 0L, 0L, 0L, 0L, 0L, null);
+                "test/topic", "output/topic", 0L, 0L, 0L, null);
 
         unspecifiedMappingStatus = new MappingStatus(
                 "unspec-id", "Unspecified Mapping", "UNSPECIFIED", Direction.INBOUND,
-                "#", "#", 0L, 0L, 0L, 0L, 0L, null);
+                "#", "#", 0L, 0L, 0L, null);
 
         // Setup basic exchange and message mocks
         when(exchange.getIn()).thenReturn(message);
@@ -117,7 +119,7 @@ class DeserializationInboundProcessorTest {
                 when(connectorMessage.getPayload()).thenReturn("48656c6c6f".getBytes());
                 break;
             case PROTOBUF_INTERNAL:
-            case EXTENSION_JAVA:
+            case ANY_PAYLOAD:
                 // Provide valid byte array for byte-based processing
                 when(connectorMessage.getPayload()).thenReturn("test payload".getBytes());
                 break;
@@ -133,8 +135,7 @@ class DeserializationInboundProcessorTest {
         mapping.setMappingType(MappingType.JSON);
         setupValidPayload(MappingType.JSON);
 
-        DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
-        injectMappingService(processor, mappingService);
+        DeserializationInboundProcessor processor = newProcessor();
 
         // When
         processor.process(exchange);
@@ -149,8 +150,7 @@ class DeserializationInboundProcessorTest {
         mapping.setMappingType(MappingType.PROTOBUF_INTERNAL);
         setupValidPayload(MappingType.PROTOBUF_INTERNAL);
 
-        DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
-        injectMappingService(processor, mappingService);
+        DeserializationInboundProcessor processor = newProcessor();
 
         // When
         processor.process(exchange);
@@ -162,11 +162,11 @@ class DeserializationInboundProcessorTest {
     @Test
     void testProcessExtensionJavaMappingTypeSuccess() throws Exception {
         // Given
-        mapping.setMappingType(MappingType.EXTENSION_JAVA);
-        setupValidPayload(MappingType.EXTENSION_JAVA);
+        MappingType extensionJavaType = MappingType.valueOf("EXTENSION_JAVA");
+        mapping.setMappingType(extensionJavaType);
+        setupValidPayload(extensionJavaType);
 
-        DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
-        injectMappingService(processor, mappingService);
+        DeserializationInboundProcessor processor = newProcessor();
 
         // When
         processor.process(exchange);
@@ -181,8 +181,7 @@ class DeserializationInboundProcessorTest {
         mapping.setMappingType(MappingType.FLAT_FILE);
         setupValidPayload(MappingType.FLAT_FILE);
 
-        DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
-        injectMappingService(processor, mappingService);
+        DeserializationInboundProcessor processor = newProcessor();
 
         // When
         processor.process(exchange);
@@ -197,8 +196,7 @@ class DeserializationInboundProcessorTest {
         mapping.setMappingType(MappingType.HEX);
         setupValidPayload(MappingType.HEX);
 
-        DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
-        injectMappingService(processor, mappingService);
+        DeserializationInboundProcessor processor = newProcessor();
 
         // When
         processor.process(exchange);
@@ -212,8 +210,7 @@ class DeserializationInboundProcessorTest {
         // Given
         mapping.setMappingType(null);
 
-        DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
-        injectMappingService(processor, mappingService);
+        DeserializationInboundProcessor processor = newProcessor();
 
         // When
         processor.process(exchange);
@@ -235,8 +232,7 @@ class DeserializationInboundProcessorTest {
         // Provide invalid JSON to test error handling
         when(connectorMessage.getPayload()).thenReturn("invalid json".getBytes());
 
-        DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
-        injectMappingService(processor, mappingService);
+        DeserializationInboundProcessor processor = newProcessor();
 
         // When
         processor.process(exchange);
@@ -256,8 +252,7 @@ class DeserializationInboundProcessorTest {
         when(message.getHeader("connectorMessage", ConnectorMessage.class)).thenReturn(null);
         mapping.setMappingType(MappingType.JSON);
 
-        DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
-        injectMappingService(processor, mappingService);
+        DeserializationInboundProcessor processor = newProcessor();
 
         // When & Then
         assertThrows(Exception.class, () -> processor.process(exchange));
@@ -268,8 +263,7 @@ class DeserializationInboundProcessorTest {
         // Given
         when(message.getBody(Mapping.class)).thenReturn(null);
 
-        DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
-        injectMappingService(processor, mappingService);
+        DeserializationInboundProcessor processor = newProcessor();
 
         // When & Then
         assertThrows(NullPointerException.class, () -> processor.process(exchange));
@@ -278,10 +272,10 @@ class DeserializationInboundProcessorTest {
     @Test
     void testConstructorInitializesDeserializers() {
         // Given & When
-        DeserializationInboundProcessor newProcessor = new DeserializationInboundProcessor();
+        DeserializationInboundProcessor createdProcessor = newProcessor();
 
         // Then
-        assertNotNull(newProcessor);
+        assertNotNull(createdProcessor);
     }
 
     @Test
@@ -291,13 +285,12 @@ class DeserializationInboundProcessorTest {
                 MappingType.FLAT_FILE,
                 MappingType.HEX,
                 MappingType.PROTOBUF_INTERNAL,
-                MappingType.EXTENSION_JAVA,
+            MappingType.valueOf("EXTENSION_JAVA"),
         };
 
         for (MappingType type : mappingTypes) {
             // Create fresh processor for each test
-            DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
-            injectMappingService(processor, mappingService);
+            DeserializationInboundProcessor processor = newProcessor();
 
             // Reset message mock
             reset(message);
@@ -321,10 +314,7 @@ class DeserializationInboundProcessorTest {
         }
     }
 
-    private void injectMappingService(DeserializationInboundProcessor processor, MappingService mappingService)
-            throws Exception {
-        Field field = DeserializationInboundProcessor.class.getDeclaredField("mappingService");
-        field.setAccessible(true);
-        field.set(processor, mappingService);
+    private DeserializationInboundProcessor newProcessor() {
+        return new DeserializationInboundProcessor(mappingService, sparkPlugBDeserializer);
     }
 }

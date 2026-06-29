@@ -33,6 +33,8 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.*;
 import dynamic.mapper.processor.model.C8YMessage;
+import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import dynamic.mapper.service.cache.FlowStateStore;
 import dynamic.mapper.service.cache.MappingCacheManager;
 import dynamic.mapper.service.deployment.DeploymentMapService;
@@ -65,14 +67,19 @@ public class MappingService {
     private final MappingResolverService resolverService;
     private final DeploymentMapService deploymentMapService;
     private final DeviceToClientMapService deviceToClientMapService;
-    private final MappingSnoopService snoopService;
     private final ConfigurationRegistry configurationRegistry;
     private final MicroserviceSubscriptionsService subscriptionsService;
     private final MappingValidator mappingValidator;
     private final FlowStateStore flowStateStore;
+    private final MappingVersionService mappingVersionService;
 
     // Track dirty mappings that need to be persisted
     private final Map<String, Set<Mapping>> dirtyMappings = new ConcurrentHashMap<>();
+
+    // Per-line locks guaranteeing the version-activation swap (read -> copy -> persist ->
+    // cache) runs atomically, so concurrent activations on the same mapping line cannot
+    // interleave (NFR-2 / C-1). Keyed by "tenant:mappingId".
+    private final Map<String, java.util.concurrent.locks.ReentrantLock> activationLocks = new ConcurrentHashMap<>();
 
     // ========== Resource Lifecycle Management ==========
 
@@ -106,7 +113,9 @@ public class MappingService {
         statusService.removeTenantStatus(tenant);
         deploymentMapService.removeTenantDeploymentMap(tenant);
         flowStateStore.clearTenantState(tenant);
+        mappingRepository.clearReportedWarnings(tenant);
         dirtyMappings.remove(tenant);
+        activationLocks.keySet().removeIf(key -> key.startsWith(tenant + ":"));
 
         log.info("{} - Resources removed", tenant);
     }
@@ -123,9 +132,20 @@ public class MappingService {
             throw new MappingValidationException(errors);
         }
 
+        // Capture activation intent; always persist inactive first so that
+        // setActivationMapping can register subscriptions through the normal channel.
+        boolean activateAfterCreate = Boolean.TRUE.equals(mapping.getActive());
+
+        // Capture version hints before prepareForCreate resets them to 0.
+        // This allows imports to restore the original version number (e.g. v4) rather
+        // than always starting at v1.
+        String importedVersion = mapping.getVersion();
+        String importedVersionNote = mapping.getVersionNote();
+
         // Create with proper tenant context
-        return subscriptionsService.callForTenant(tenant, () -> {
+        Mapping created = subscriptionsService.callForTenant(tenant, () -> {
             mappingRepository.prepareForCreate(tenant, mapping);
+            mapping.setActive(false);
 
             MappingRepresentation mr = new MappingRepresentation();
             mr.setType(MappingRepresentation.MAPPING_TYPE);
@@ -152,6 +172,31 @@ public class MappingService {
             log.info("{} - Mapping created: {} [{}]", tenant, mapping.getName(), mapping.getId());
             return mapping;
         });
+
+        // Restore imported version hints so ensureBackfilled creates the right version
+        // number and note instead of always defaulting to v1.
+        if (importedVersion != null && !importedVersion.isBlank()) {
+            created.setVersion(importedVersion);
+            created.setVersionNote(importedVersionNote);
+        }
+
+        // Backfill the version record and sync the MO's version field.
+        dynamic.mapper.model.MappingVersion v1 = mappingVersionService.ensureBackfilled(tenant, created);
+        if (v1 != null) {
+            created.setVersion(v1.getVersion());
+            updateMapping(tenant, created, false, true);
+        }
+
+        // Activate through the proper channel so subscriptions are registered.
+        if (activateAfterCreate) {
+            try {
+                created = setActivationMapping(tenant, created.getId(), true, null);
+            } catch (Exception e) {
+                log.warn("{} - Mapping {} created but activation failed: {}", tenant, created.getId(), e.getMessage());
+            }
+        }
+
+        return created;
     }
 
     /**
@@ -232,6 +277,22 @@ public class MappingService {
     }
 
     /**
+     * Returns the published version count for every mapping that matches the given
+     * direction in a single inventory scan, instead of one query per mapping line.
+     */
+    public List<MappingVersionCount> getVersionCounts(String tenant, Direction direction) {
+        List<Mapping> mappings = getMappings(tenant, direction);
+        Set<String> identifiers = mappings.stream()
+                .map(Mapping::getIdentifier)
+                .collect(java.util.stream.Collectors.toSet());
+        Map<String, Long> counts = mappingVersionService.countVersionsForIdentifiers(tenant, identifiers);
+        return mappings.stream()
+                .map(m -> new MappingVersionCount(m.getId(),
+                        counts.getOrDefault(m.getIdentifier(), 0L)))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
      * Gets all outbound mappings from cache
      */
     public Map<String, Mapping> getCacheOutboundMappings(String tenant) {
@@ -259,6 +320,8 @@ public class MappingService {
 
                 Mapping m = found.get();
                 mappingRepository.prepareForDelete(tenant, id, m);
+                // Remove the line's version records too so they do not leak (FR-18).
+                mappingVersionService.deleteAllVersions(tenant, m.getIdentifier());
                 inventoryApi.delete(GId.asGId(id), false);
 
                 log.info("{} - Mapping deleted from Inventory: {}", tenant, id);
@@ -335,48 +398,143 @@ public class MappingService {
     // ========== Mapping State Changes ==========
 
     /**
-     * Activates or deactivates a mapping
+     * Activates or deactivates a mapping (current version).
      */
     public Mapping setActivationMapping(String tenant, String mappingId, Boolean active) throws Exception {
-        Mapping mapping = getMapping(tenant, mappingId);
-        if (mapping == null) {
-            throw new IllegalArgumentException("Mapping not found: " + mappingId);
-        }
+        return setActivationMapping(tenant, mappingId, active, null);
+    }
 
+    /**
+     * Activates or deactivates a mapping, optionally switching the active version.
+     *
+     * <p>When {@code active} is true and {@code versionNumber} names a different
+     * version than the one currently running, the corresponding stored snapshot is
+     * copied into the runnable mapping (rollback or roll-forward). Because a mapping
+     * line is a single managed object, exactly one version is ever active (C-1).
+     * The whole read -> copy -> persist -> cache sequence runs under a per-line lock
+     * so concurrent activations cannot interleave (NFR-2); validation happens before
+     * any persistence, so a failed activation leaves the running version unchanged
+     * (FR-9).
+     *
+     * @param version semver string to activate, or {@code null} to keep the current one
+     */
+    public Mapping setActivationMapping(String tenant, String mappingId, Boolean active, String version)
+            throws Exception {
+        java.util.concurrent.locks.ReentrantLock lock = activationLockFor(tenant, mappingId);
+        lock.lock();
         try {
-            // Retrieve current snooped templates
-            snoopService.applySnoopedTemplates(tenant, mapping);
-
-            mapping.setActive(active);
-
-            updateMapping(tenant, mapping, true, !active); // ignore validation when deactivating
-            updateCacheAfterChange(tenant, mapping);
-
-            if (active) {
-                statusService.resetFailureCount(tenant, mapping.getIdentifier());
+            Mapping mapping = getMapping(tenant, mappingId);
+            if (mapping == null) {
+                throw new IllegalArgumentException("Mapping not found: " + mappingId);
             }
 
-            configurationRegistry.getC8yAgent().createOperationEvent(
-                    String.format("Mapping %s [%s] %s", mapping.getName(), mappingId,
-                            active ? "activated" : "deactivated"),
-                    LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
-                    DateTime.now(),
-                    tenant,
-                    null);
+            // Capture the currently active configuration as a version if the line has
+            // none yet (legacy backfill, NFR-1a). Does not change what is running.
+            mappingVersionService.ensureBackfilled(tenant, mapping);
 
-            log.info("{} - Mapping {} set to active={}", tenant, mappingId, active);
-            return mapping;
-        } catch (Exception e) {
-            configurationRegistry.getC8yAgent().createOperationEvent(
-                    String.format("Failed to %s mapping %s [%s]: %s",
-                            active ? "activate" : "deactivate", mapping.getName(), mappingId, e.getMessage()),
-                    LoggingEventType.MAPPING_ACTIVATION_ERROR_EVENT_TYPE,
-                    DateTime.now(),
-                    tenant,
-                    null);
-            log.error("{} - Failed to set activation for mapping {}", tenant, mappingId, e);
-            throw e;
+            try {
+                Mapping toPersist = mapping;
+                boolean versionSwitched = false;
+                if (Boolean.TRUE.equals(active) && version != null
+                        && !version.equals(mapping.getVersion())) {
+                    toPersist = applyVersion(tenant, mapping, version);
+                    versionSwitched = true;
+                }
+                toPersist.setActive(active);
+
+                // Validate when activating (unless we just materialized an already-published
+                // snapshot); never validate when deactivating.
+                boolean ignoreValidation = versionSwitched || !active;
+                updateMapping(tenant, toPersist, true, ignoreValidation);
+                updateCacheAfterChange(tenant, toPersist);
+
+                if (active) {
+                    statusService.resetFailureCount(tenant, toPersist.getIdentifier());
+                }
+
+                String versionInfo = versionSwitched ? String.format(" (version %s)", toPersist.getVersion())
+                        : "";
+                configurationRegistry.getC8yAgent().createOperationEvent(
+                        String.format("Mapping %s [%s] %s%s", toPersist.getName(), mappingId,
+                                active ? "activated" : "deactivated", versionInfo),
+                        LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
+                        DateTime.now(),
+                        tenant,
+                        null);
+
+                log.info("{} - Mapping {} set to active={}{}", tenant, mappingId, active, versionInfo);
+
+                // Pre-compile the mapping's JavaScript code on the current GraalVM Engine so
+                // the first real message does not pay the full JIT cold-start penalty (~30 s).
+                // Submitted as a virtual thread so the activation REST call is not delayed.
+                if (Boolean.TRUE.equals(active)
+                        && TransformationType.SMART_FUNCTION.equals(toPersist.getTransformationType())
+                        && toPersist.getCode() != null && !toPersist.getCode().isBlank()) {
+                    final String identifier = toPersist.getIdentifier();
+                    final String b64Code = toPersist.getCode();
+                    configurationRegistry.getVirtualThreadPool().submit(() -> {
+                        try {
+                            byte[] decoded = java.util.Base64.getDecoder().decode(b64Code);
+                            String code = JavaScriptModuleStripper.toPlainScript(new String(decoded));
+                            String sourceName = Mapping.SMART_FUNCTION_NAME + "_" + identifier + ".js";
+                            configurationRegistry.getGraalVMContextService()
+                                    .warmupMappingCodes(tenant, Map.of(sourceName, code));
+                            log.info("{} - Pre-compiled SmartFunction code for activated mapping [{}]",
+                                    tenant, identifier);
+                        } catch (Exception e) {
+                            log.warn("{} - Failed to pre-compile SmartFunction on activation [{}]: {}",
+                                    tenant, identifier, e.getMessage());
+                        }
+                    });
+                }
+
+                return toPersist;
+            } catch (Exception e) {
+                configurationRegistry.getC8yAgent().createOperationEvent(
+                        String.format("Failed to %s mapping %s [%s]: %s",
+                                active ? "activate" : "deactivate", mapping.getName(), mappingId, e.getMessage()),
+                        LoggingEventType.MAPPING_ACTIVATION_ERROR_EVENT_TYPE,
+                        DateTime.now(),
+                        tenant,
+                        null);
+                log.error("{} - Failed to set activation for mapping {}", tenant, mappingId, e);
+                throw e;
+            }
+        } finally {
+            lock.unlock();
         }
+    }
+
+    /**
+     * Builds the runnable mapping for a target version by copying the stored
+     * snapshot, preserving the line's identity ({@code id}/{@code identifier}) and
+     * its line-level draft flag. The returned mapping is a fresh deep copy, so the
+     * stored version record is never aliased.
+     */
+    private Mapping applyVersion(String tenant, Mapping runnable, String version) {
+        dynamic.mapper.model.MappingVersion mv = mappingVersionService.getVersion(tenant,
+                runnable.getIdentifier(), version);
+        if (mv == null || mv.getSnapshot() == null) {
+            throw new IllegalArgumentException(String.format(
+                    "Tenant %s - No version %s found for mapping %s [%s]", tenant, version,
+                    runnable.getIdentifier(), runnable.getId()));
+        }
+        Mapping snapshot = copyOf(mv.getSnapshot());
+        snapshot.setId(runnable.getId());
+        snapshot.setIdentifier(runnable.getIdentifier());
+        snapshot.setVersion(mv.getVersion());
+        snapshot.setVersionNote(mv.getNote());
+        snapshot.setDraftDirty(runnable.isDraftDirty());
+        return snapshot;
+    }
+
+    private Mapping copyOf(Mapping mapping) {
+        return configurationRegistry.getObjectMapper().convertValue(mapping, Mapping.class);
+    }
+
+    private java.util.concurrent.locks.ReentrantLock activationLockFor(String tenant, String mappingId) {
+        return activationLocks.computeIfAbsent(tenant + ":" + mappingId,
+                k -> new java.util.concurrent.locks.ReentrantLock());
     }
 
     /**
@@ -388,7 +546,6 @@ public class MappingService {
             throw new IllegalArgumentException("Mapping not found: " + mappingId);
         }
 
-        snoopService.applySnoopedTemplates(tenant, mapping);
         mapping.setDebug(debug);
 
         updateMapping(tenant, mapping, true, true);
@@ -406,31 +563,6 @@ public class MappingService {
     }
 
     /**
-     * Sets the snoop status for a mapping
-     */
-    public void setSnoopStatusMapping(String tenant, String mappingId, SnoopStatus snoopStatus) throws Exception {
-        Mapping mapping = getMapping(tenant, mappingId);
-        if (mapping == null) {
-            throw new IllegalArgumentException("Mapping not found: " + mappingId);
-        }
-
-        snoopService.applySnoopedTemplates(tenant, mapping);
-        mapping.setSnoopStatus(snoopStatus);
-
-        updateMapping(tenant, mapping, true, true);
-        updateCacheAfterChange(tenant, mapping);
-
-        configurationRegistry.getC8yAgent().createOperationEvent(
-                String.format("Mapping %s [%s] snoop status set to %s", mapping.getName(), mappingId, snoopStatus),
-                LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
-                DateTime.now(),
-                tenant,
-                null);
-
-        log.info("{} - Mapping {} snoop status set to {}", tenant, mappingId, snoopStatus);
-    }
-
-    /**
      * Updates the filter for a mapping
      */
     public Mapping setFilterMapping(String tenant, String mappingId, String filterMapping) throws Exception {
@@ -439,7 +571,6 @@ public class MappingService {
             throw new IllegalArgumentException("Mapping not found: " + mappingId);
         }
 
-        snoopService.applySnoopedTemplates(tenant, mapping);
         mapping.setFilterMapping(filterMapping);
 
         updateMapping(tenant, mapping, true, false);
@@ -465,7 +596,6 @@ public class MappingService {
             throw new IllegalArgumentException("Mapping not found: " + mappingId);
         }
 
-        snoopService.applySnoopedTemplates(tenant, mapping);
         mapping.setCode(code);
 
         updateMapping(tenant, mapping, true, false);
@@ -482,60 +612,162 @@ public class MappingService {
         return mapping;
     }
 
+    // ========== Draft Editing ==========
+
     /**
-     * Updates the source template from snooped templates
+     * Returns the current draft (working copy) for a mapping line, or {@code null}
+     * if none. Identified by the runnable mapping's managed-object id.
      */
-    public void updateSourceTemplate(String tenant, String mappingId, Integer templateIndex) throws Exception {
-        Mapping mapping = getMapping(tenant, mappingId);
-        if (mapping == null) {
-            throw new IllegalArgumentException("Mapping not found: " + mappingId);
+    public Mapping getDraftMapping(String tenant, String id) {
+        Mapping runnable = getMapping(tenant, id);
+        if (runnable == null) {
+            throw new IllegalArgumentException("Mapping not found: " + id);
         }
-
-        snoopService.applySnoopedTemplates(tenant, mapping);
-
-        if (templateIndex < 0 || templateIndex >= mapping.getSnoopedTemplates().size()) {
-            throw new IllegalArgumentException("Invalid template index: " + templateIndex);
-        }
-
-        String newSourceTemplate = mapping.getSnoopedTemplates().get(templateIndex);
-        mapping.setSourceTemplate(newSourceTemplate);
-
-        updateMapping(tenant, mapping, true, true);
-        updateCacheAfterChange(tenant, mapping);
-
-        configurationRegistry.getC8yAgent().createOperationEvent(
-                String.format("Mapping %s [%s] source template updated from snoop index %d",
-                        mapping.getName(), mappingId, templateIndex),
-                LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
-                DateTime.now(),
-                tenant,
-                null);
-
-        log.info("{} - Mapping {} source template updated from snoop index {}", tenant, mappingId, templateIndex);
+        dynamic.mapper.model.MappingVersion draft = mappingVersionService.getDraft(tenant, runnable.getIdentifier());
+        return draft != null ? draft.getSnapshot() : null;
     }
 
     /**
-     * Resets snooped templates for a mapping
+     * Saves edits into the mapping line's draft without touching the running/active
+     * configuration (FR-1 / D-8). The runnable mapping is resolved by its
+     * managed-object id; the draft is keyed by the line's functional identifier.
      */
-    public void resetSnoop(String tenant, String mappingId) throws Exception {
-        Mapping mapping = getMapping(tenant, mappingId);
-        if (mapping == null) {
-            throw new IllegalArgumentException("Mapping not found: " + mappingId);
+    public Mapping saveDraftMapping(String tenant, String id, Mapping edits) {
+        java.util.concurrent.locks.ReentrantLock lock = activationLockFor(tenant, id);
+        lock.lock();
+        try {
+            Mapping runnable = getMapping(tenant, id);
+            if (runnable == null) {
+                throw new IllegalArgumentException("Mapping not found: " + id);
+            }
+            edits.setId(id);
+            edits.setIdentifier(runnable.getIdentifier());
+            dynamic.mapper.model.MappingVersion draft = mappingVersionService.saveDraft(tenant,
+                    runnable.getIdentifier(), edits);
+
+            // Mark the line as having unpublished changes so the grid can flag it. Persisting
+            // under the per-line lock keeps this consistent with the version-activation swap.
+            if (!runnable.isDraftDirty()) {
+                runnable.setDraftDirty(true);
+                updateMapping(tenant, runnable, true, true);
+                updateCacheAfterChange(tenant, runnable);
+            }
+            log.info("{} - Saved draft for mapping {} [{}]", tenant, runnable.getIdentifier(), id);
+            return draft.getSnapshot();
+        } finally {
+            lock.unlock();
         }
+    }
 
-        mapping.setSnoopedTemplates(new ArrayList<>());
+    // ========== Version Management ==========
 
-        updateMapping(tenant, mapping, true, true);
-        updateCacheAfterChange(tenant, mapping);
+    /**
+     * Publishes the mapping line's current draft as a new immutable version. The
+     * currently active configuration is first captured as a version if the line has
+     * none yet (NFR-1a), then the draft snapshot becomes the next version and the
+     * draft is cleared. Does not activate the new version.
+     */
+    public dynamic.mapper.model.MappingVersion publishDraft(String tenant, String id, String version, String note) {
+        java.util.concurrent.locks.ReentrantLock lock = activationLockFor(tenant, id);
+        lock.lock();
+        try {
+            Mapping runnable = getMapping(tenant, id);
+            if (runnable == null) {
+                throw new IllegalArgumentException("Mapping not found: " + id);
+            }
+            String identifier = runnable.getIdentifier();
 
-        configurationRegistry.getC8yAgent().createOperationEvent(
-                String.format("Mapping with id: %s snoop reset", mappingId),
-                LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
-                DateTime.now(),
-                tenant,
-                null);
+            // Preserve the currently active config in history before publishing a new version.
+            mappingVersionService.ensureBackfilled(tenant, runnable);
 
-        log.info("{} - Mapping {} snoop reset", tenant, mappingId);
+            dynamic.mapper.model.MappingVersion draft = mappingVersionService.getDraft(tenant, identifier);
+            if (draft == null || draft.getSnapshot() == null) {
+                throw new IllegalStateException(
+                        String.format("Tenant %s - No draft to publish for mapping %s [%s]", tenant, identifier, id));
+            }
+
+            String effectiveNote = note != null ? note : draft.getSnapshot().getVersionNote();
+            dynamic.mapper.model.MappingVersion published = mappingVersionService.publish(tenant, draft.getSnapshot(),
+                    version, effectiveNote, runnable.getVersion());
+
+            // The draft's content now lives in an immutable version; clear the working copy
+            // and the line's draft flag.
+            mappingVersionService.deleteDraft(tenant, identifier);
+            if (runnable.isDraftDirty()) {
+                runnable.setDraftDirty(false);
+                updateMapping(tenant, runnable, true, true);
+                updateCacheAfterChange(tenant, runnable);
+            }
+
+            log.info("{} - Published draft of mapping {} [{}] as version {}", tenant, identifier, id,
+                    published.getVersion());
+            return published;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /** Lists all published versions of a mapping line, identified by its managed-object id. */
+    public List<dynamic.mapper.model.MappingVersion> listVersions(String tenant, String id) {
+        Mapping runnable = getMapping(tenant, id);
+        if (runnable == null) {
+            throw new IllegalArgumentException("Mapping not found: " + id);
+        }
+        // Lazily create the v1 record for imported / pre-versioning mappings that have
+        // never been published or activated through the versioning flow.
+        mappingVersionService.ensureBackfilled(tenant, runnable);
+        return mappingVersionService.listVersions(tenant, runnable.getIdentifier());
+    }
+
+    /** Returns a single published version of a mapping line, or {@code null} if not found. */
+    public dynamic.mapper.model.MappingVersion getVersion(String tenant, String id, String version) {
+        Mapping runnable = getMapping(tenant, id);
+        if (runnable == null) {
+            throw new IllegalArgumentException("Mapping not found: " + id);
+        }
+        return mappingVersionService.getVersion(tenant, runnable.getIdentifier(), version);
+    }
+
+    /** Updates the change note of a published version (note is the only mutable field). */
+    public dynamic.mapper.model.MappingVersion updateVersionNote(String tenant, String id, String version,
+            String note) {
+        Mapping runnable = getMapping(tenant, id);
+        if (runnable == null) {
+            throw new IllegalArgumentException("Mapping not found: " + id);
+        }
+        return mappingVersionService.updateNote(tenant, runnable.getIdentifier(), version, note);
+    }
+
+    /** Deletes an inactive published version; the active version cannot be deleted (FR-17). */
+    public void deleteVersion(String tenant, String id, String version) {
+        Mapping runnable = getMapping(tenant, id);
+        if (runnable == null) {
+            throw new IllegalArgumentException("Mapping not found: " + id);
+        }
+        mappingVersionService.deleteVersion(tenant, runnable.getIdentifier(), version,
+                runnable.getVersion());
+    }
+
+    public String[] suggestNextVersions(String tenant, String id) {
+        Mapping runnable = getMapping(tenant, id);
+        if (runnable == null) {
+            throw new IllegalArgumentException("Mapping not found: " + id);
+        }
+        return mappingVersionService.suggestNextVersions(tenant, runnable.getIdentifier());
+    }
+
+    public void deleteDraftMapping(String tenant, String id) {
+        Mapping runnable = getMapping(tenant, id);
+        if (runnable == null) {
+            throw new IllegalArgumentException("Mapping not found: " + id);
+        }
+        mappingVersionService.deleteDraft(tenant, runnable.getIdentifier());
+        if (runnable.isDraftDirty()) {
+            runnable.setDraftDirty(false);
+            updateMapping(tenant, runnable, true, true);
+            updateCacheAfterChange(tenant, runnable);
+        }
+        log.info("{} - Discarded draft of mapping {}", tenant, id);
     }
 
     // ========== Cache Management ==========
@@ -550,7 +782,8 @@ public class MappingService {
         cacheManager.rebuildInboundCache(tenant, inboundMappings, connectorId);
         cacheManager.rebuildOutboundCache(tenant, outboundMappings, connectorId);
 
-        log.info("{} - Caches rebuilt by connector: {}", tenant, connectorId.getName());
+        log.info("{} - Caches rebuilt by connector: {} ({} inbound, {} outbound)",
+                tenant, connectorId.getName(), inboundMappings.size(), outboundMappings.size());
     }
 
     /**

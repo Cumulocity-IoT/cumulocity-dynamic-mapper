@@ -26,6 +26,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="35. Subscription persistence after restart"
+
 DM_MICROSERVICE_NAME="dynamic-mapper-service"
 STATIC_DEVICE_NAME="test-restart-static-device"
 STATIC_DEVICE_TYPE="test-restart-static"
@@ -48,11 +50,14 @@ cleanup() {
     echo "Cleanup done."
 }
 
-if [ "${1}" = "--cleanup" ]; then
-    trap cleanup EXIT
-fi
+dm_parse_args "$@"
+dm_register_cleanup cleanup
 
-dm_banner "Outbound Subscription Persistence After Restart"
+dm_banner "$TEST_TITLE"
+
+dm_step 0 "Validating environment"
+dm_wait_for_service
+dm_validate_only_exit
 
 # Step 1: Create static device and subscription
 dm_step 1 "Set up static subscription"
@@ -159,4 +164,4 @@ if [ "${TYPE_MATCH:-0}" -eq 0 ]; then
 fi
 
 dm_print_summary
-dm_done "Outbound Subscription Persistence After Restart"
+dm_done "$TEST_TITLE"

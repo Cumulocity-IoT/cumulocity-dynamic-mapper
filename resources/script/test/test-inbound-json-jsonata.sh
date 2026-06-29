@@ -19,6 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE=" 2. JSON / JSONATA → EVENT"
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 EXT_ID="dmtest-jsonata-$(date +%s)"
 MAPPING_ID=""
@@ -33,14 +35,15 @@ cleanup() {
     fi
 }
 
-[[ "${1:-}" == "--cleanup" ]] && trap cleanup EXIT
+dm_parse_args "$@"
+dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Inbound JSON JSONata Transformation (EVENT)"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
-dm_wait_for_service
-dm_require_mqtt_broker
+dm_test_setup_and_validate
+dm_validate_only_exit
 
 MAPPING_JSON=$(cat <<EOF
 {
@@ -67,9 +70,7 @@ MAPPING_JSON=$(cat <<EOF
   "useExternalId": true,
   "externalIdType": "c8y_Serial",
   "genericDeviceIdentifier": "_IDENTITY_.externalId",
-  "qos": "AT_LEAST_ONCE",
-  "snoopStatus": "NONE",
-  "snoopedTemplates": []
+  "qos": "AT_LEAST_ONCE"
 }
 EOF
 )
@@ -81,25 +82,11 @@ dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
 dm_assert_mqtt_topics_active
 
-dm_step "Recording test start time ..."
-TEST_START=$(dm_now -10)
-
 dm_step "Publishing MQTT message ..."
 dm_mqtt_publish "dmtest/event/${EXT_ID}" '{"msg_type":"c8y_TestEvent","txt":"hello JSONata","td":"2025-01-01T00:00:00Z"}'
 
-dm_step "Waiting for processing ..."
-dm_wait 8
-
-dm_step "Looking up device by external id ..."
-DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")
-if [ -z "$DEVICE_ID" ]; then
-    dm_fail "Device '$EXT_ID' not found — mapper did not create it"
-  exit 1
-fi
-dm_info "Device id: $DEVICE_ID"
-
 dm_step "Asserting at least 1 event was created ..."
-dm_assert_event_count_gt "Event created" "$DEVICE_ID" "$TEST_START" 1
+dm_assert_event_present "Event created" "$EXT_ID" "c8y_Serial" 1 20
 
-dm_done "Inbound JSON JSONata Transformation (EVENT)"
+dm_done "$TEST_TITLE"
 dm_print_summary

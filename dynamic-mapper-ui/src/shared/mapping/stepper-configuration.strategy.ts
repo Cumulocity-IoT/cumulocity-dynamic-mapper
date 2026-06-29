@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Direction, MappingType, StepperConfiguration, TransformationType, SnoopStatus } from './mapping.model';
+import { Direction, MappingType, StepperConfiguration, TransformationType } from './mapping.model';
 import { EditorMode } from '../../mapping/shared/stepper.model';
 
 export interface StepperConfigurationContext {
@@ -27,7 +27,6 @@ export interface StepperConfigurationContext {
   direction: Direction;
   editorMode: EditorMode;
   substitutionsAsCode: boolean;
-  snoopStatus?: SnoopStatus;
   hasDeployedConnector?: boolean;
 }
 
@@ -52,14 +51,6 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     condition: (ctx) => ctx.direction === Direction.OUTBOUND && ctx.hasDeployedConnector === true,
     properties: {
       allowTestSending: true
-    }
-  },
-  {
-    condition: (ctx) =>
-      ctx.direction === Direction.OUTBOUND &&
-      ctx.snoopStatus === SnoopStatus.ENABLED,
-    properties: {
-      advanceFromStepToEndStep: 0
     }
   },
   {

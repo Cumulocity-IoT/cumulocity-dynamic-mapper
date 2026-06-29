@@ -32,20 +32,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.notification.websocket.Notification;
 import dynamic.mapper.processor.util.APITopicUtil;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
@@ -77,16 +74,13 @@ class OutboundTransformationValidationTest {
     @Autowired
     private MappingService mappingService;
 
-    @MockBean
+    @MockitoBean
     private C8YAgent c8yAgent;
-
-    private ObjectMapper objectMapper;
 
     private static final String TEST_TENANT = "testTenant";
 
     @BeforeEach
     void setUp() {
-        objectMapper = new ObjectMapper();
 
         // Setup C8Y Agent mock for device resolution
         ManagedObjectRepresentation mockDevice = new ManagedObjectRepresentation();

@@ -21,6 +21,8 @@
 
 package dynamic.mapper.processor.outbound.processor;
 
+import dynamic.mapper.processor.util.CamelHeaders;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -68,7 +70,7 @@ public class SubstitutionResultOutboundProcessor extends BaseProcessor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
+        ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
@@ -119,7 +121,7 @@ public class SubstitutionResultOutboundProcessor extends BaseProcessor {
                 put(ProcessingContext.RETAIN, "false");
                 put(Mapping.CONTEXT_DATA_KEY_NAME, "dummy");
                 put(Mapping.CONTEXT_DATA_METHOD_NAME, "POST");
-                put("publishTopic", mapping.getPublishTopic());
+                put("publishTopic", "");
             }
         };
 

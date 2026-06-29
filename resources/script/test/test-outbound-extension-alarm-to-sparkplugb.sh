@@ -13,24 +13,16 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-KEEP_ON_FAILURE=false
+TEST_TITLE="20. Extension: Alarm → Sparkplug B DCMD"
+
 EXT_ID="dmtest-sparkplug-alarm-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
 DEVICE_NAME="dmtest-sparkplug-device-$RANDOM"
 
-for arg in "$@"; do
-    case "$arg" in
-        --keep) KEEP_ON_FAILURE=true ;;
-        --cleanup) trap cleanup EXIT ;;
-    esac
-done
+dm_parse_args "$@"
 
 cleanup() {
-    if [ "$KEEP_ON_FAILURE" = "true" ]; then
-        dm_warn "Skipping cleanup (--keep flag set)"
-        return 0
-    fi
     dm_info "Cleaning up test resources ..."
     [ -n "$MAPPING_ID" ] && dm_delete_mapping "$MAPPING_ID" 2>/dev/null || true
     if [ -n "${DEVICE_ID:-}" ]; then
@@ -42,15 +34,14 @@ cleanup() {
     dm_info "Cleanup complete"
 }
 
-trap cleanup EXIT
+dm_register_cleanup cleanup
 
-dm_banner "Test: Outbound Sparkplug B Alarm (Cumulocity Alarm → Sparkplug B DCMD)"
+dm_banner "$TEST_TITLE"
 
 dm_step 1 "Validating environment"
-dm_validate_tools
-dm_wait_for_service
-dm_require_mqtt_broker
-dm_verify_mqtt_connector_ready
+dm_test_setup_and_validate
+dm_validate_only_exit
+dm_require_extension "AlarmToSparkplugB" "OUTBOUND"
 
 dm_step 2 "Creating test device"
 DEVICE=$(c8y inventory create \
@@ -78,6 +69,7 @@ MAPPING_JSON=$(jq -cn \
     --arg name         "test-sparkplugb-alarm-$$" \
     --arg identifier   "sparkplug-alarm-$$" \
     --arg externalId   "$EXT_ID" \
+    --argjson extension "$_DM_RESOLVED_EXTENSION" \
     '{
       name: $name,
       identifier: $identifier,
@@ -86,13 +78,7 @@ MAPPING_JSON=$(jq -cn \
       mappingType: "PROTOBUF_INTERNAL",
       transformationType: "EXTENSION_JAVA",
       filterMapping: "true",
-      extension: {
-        extensionName: "alarm-to-sparkplugb-extension",
-        eventName: "AlarmToSparkplugB",
-        fqnClassName: "dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionAlarmToSparkplugB",
-                extensionType: "EXTENSION_OUTBOUND",
-        direction: "OUTBOUND"
-      },
+      extension: $extension,
             sourceTemplate: "{}",
             targetTemplate: "{}",
       active: false,
@@ -127,17 +113,17 @@ EXT_EVENT=$(echo "$MAPPING_CONFIG" | jq -r '.extension.eventName // empty')
 EXT_FQN=$(echo "$MAPPING_CONFIG" | jq -r '.extension.fqnClassName // empty')
 PUB_TOPIC=$(echo "$MAPPING_CONFIG" | jq -r '.publishTopic // empty')
 
+_ext_match=false
 if [ "$EXT_EVENT" = "AlarmToSparkplugB" ] || [[ "$EXT_FQN" == *".ProcessorExtensionAlarmToSparkplugB" ]]; then
-    dm_success "Alarm-to-Sparkplug extension configured: ${EXT_EVENT:-$EXT_FQN}"
-else
-    dm_warn "Extension mismatch: event=${EXT_EVENT:-n/a} fqn=${EXT_FQN:-n/a}"
+    _ext_match=true
 fi
+dm_assert_eq "Alarm-to-Sparkplug extension configured (event=${EXT_EVENT:-n/a} fqn=${EXT_FQN:-n/a})" "true" "$_ext_match"
 
+_topic_match=false
 if [[ "$PUB_TOPIC" == spBv1.0/*/DCMD/* ]]; then
-    dm_success "Sparkplug B DCMD publish topic configured: $PUB_TOPIC"
-else
-    dm_warn "Publish topic may not be Sparkplug B compliant: $PUB_TOPIC"
+    _topic_match=true
 fi
+dm_assert_eq "Sparkplug B DCMD publish topic configured ($PUB_TOPIC)" "true" "$_topic_match"
 
 dm_step 7 "Creating test alarm"
 ALARM=$(jq -cn \
@@ -152,7 +138,9 @@ ALARM=$(jq -cn \
       time: $time
     }')
 
-dm_api POST "/alarm/alarms" --data "$ALARM" > /dev/null 2>&1
+# /alarm/alarms is a core C8Y endpoint — create via the c8y CLI, not dm_api.
+printf '%s' "$ALARM" | c8y alarms create --template "input.value" \
+    --output json > /dev/null 2>&1 || dm_warn "Alarm creation may have failed"
 dm_success "Test alarm created (triggers DCMD mapping)"
 
 dm_step 8 "Verifying Sparkplug B configuration"
@@ -162,5 +150,6 @@ dm_info "  - Payload: Protobuf with metrics for alarm state"
 dm_info "  - Metric prefix: Alarms (configurable)"
 dm_info "  - ISA-95 alarm model: State/Message/Severity/Status"
 
-dm_done "Outbound Extension Alarm to Sparkplug B"
+dm_done "$TEST_TITLE"
 dm_info "Note: Full protobuf payload testing requires Sparkplug B broker validation"
+dm_print_summary

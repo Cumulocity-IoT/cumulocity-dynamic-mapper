@@ -19,6 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE=" 4. FLAT_FILE / CSV → MEASUREMENT"
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 EXT_ID="dmtest-flat-$(date +%s)"
 MAPPING_ID=""
@@ -33,14 +35,15 @@ cleanup() {
     fi
 }
 
-[[ "${1:-}" == "--cleanup" ]] && trap cleanup EXIT
+dm_parse_args "$@"
+dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Inbound FLAT_FILE (CSV) Transformation (MEASUREMENT)"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
-dm_wait_for_service
-dm_require_mqtt_broker
+dm_test_setup_and_validate
+dm_validate_only_exit
 
 # CSV format: <value>, <temperature>, <timestamp>, <type>
 # The DM wraps it as {"payload":"<raw string>"} — substitutions reference 'payload'.
@@ -68,9 +71,7 @@ MAPPING_JSON=$(cat <<EOF
   "useExternalId": true,
   "externalIdType": "c8y_Serial",
   "genericDeviceIdentifier": "_IDENTITY_.externalId",
-  "qos": "AT_LEAST_ONCE",
-  "snoopStatus": "NONE",
-  "snoopedTemplates": []
+  "qos": "AT_LEAST_ONCE"
 }
 EOF
 )
@@ -82,27 +83,13 @@ dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
 dm_assert_mqtt_topics_active
 
-dm_step "Recording test start time ..."
-TEST_START=$(dm_now -10)
-
 # Publish the raw CSV string (not JSON)
 CSV_PAYLOAD='165, 14.5, "2022-08-06T00:14:50.000+02:00","c8y_FuelMeasurement"'
 dm_step "Publishing flat CSV payload ..."
 dm_mqtt_publish "dmtest/flat/${EXT_ID}" "$CSV_PAYLOAD"
 
-dm_step "Waiting for processing ..."
-dm_wait 8
-
-dm_step "Looking up device by external id ..."
-DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")
-if [ -z "$DEVICE_ID" ]; then
-    dm_fail "Device '$EXT_ID' not found — FLAT_FILE mapper did not create it"
-  exit 1
-fi
-dm_info "Device id: $DEVICE_ID"
-
 dm_step "Asserting at least 1 measurement was created ..."
-dm_assert_measurement_count_gt "Measurement from CSV" "$DEVICE_ID" "$TEST_START" 1
+dm_assert_measurement_present "Measurement from CSV" "$EXT_ID" "c8y_Serial" 1 20
 
-dm_done "Inbound FLAT_FILE (CSV) Transformation (MEASUREMENT)"
+dm_done "$TEST_TITLE"
 dm_print_summary

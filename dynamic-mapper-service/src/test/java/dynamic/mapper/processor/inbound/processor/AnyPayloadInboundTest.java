@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.camel.Exchange;
@@ -44,7 +43,6 @@ import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.model.SnoopStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -82,6 +80,9 @@ class AnyPayloadInboundTest {
     @Mock
     private ConnectorMessage connectorMessage;
 
+    @Mock
+    private dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer sparkPlugBDeserializer;
+
     private static final String TEST_TENANT = "testTenant";
     private Mapping mapping;
     private MappingStatus mappingStatus;
@@ -99,8 +100,6 @@ class AnyPayloadInboundTest {
                 .direction(Direction.INBOUND)
                 .externalIdType("c8y_Serial")
                 .active(false)
-                .snoopStatus(SnoopStatus.NONE)
-                .snoopedTemplates(new java.util.ArrayList<>())
                 .substitutions(new Substitution[0])
                 .filterMapping("")
                 .build();
@@ -108,7 +107,7 @@ class AnyPayloadInboundTest {
         mappingStatus = new MappingStatus(
                 "any-payload-test-id", "ANY_PAYLOAD Test Mapping", "any-payload-test",
                 Direction.INBOUND, "device/+/data", null,
-                0L, 0L, 0L, 0L, 0L, null);
+                0L, 0L, 0L, null);
 
         when(exchange.getIn()).thenReturn(message);
         when(message.getBody(Mapping.class)).thenReturn(mapping);
@@ -244,25 +243,7 @@ class AnyPayloadInboundTest {
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
-    private DeserializationInboundProcessor createProcessor() throws Exception {
-        DeserializationInboundProcessor processor = new DeserializationInboundProcessor();
-        injectField(processor, "mappingService", mappingService);
-        return processor;
-    }
-
-    private static void injectField(Object target, String fieldName, Object value)
-            throws Exception {
-        Field field = findField(target.getClass(), fieldName);
-        field.setAccessible(true);
-        field.set(target, value);
-    }
-
-    private static Field findField(Class<?> clazz, String name) {
-        for (Class<?> c = clazz; c != null; c = c.getSuperclass()) {
-            for (Field f : c.getDeclaredFields()) {
-                if (f.getName().equals(name)) return f;
-            }
-        }
-        throw new RuntimeException("Field '" + name + "' not found in " + clazz);
+    private DeserializationInboundProcessor createProcessor() {
+        return new DeserializationInboundProcessor(mappingService, sparkPlugBDeserializer);
     }
 }

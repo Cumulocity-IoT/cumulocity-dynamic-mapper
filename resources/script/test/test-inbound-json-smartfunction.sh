@@ -19,6 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE=" 3. JSON / Smart Function → MEASUREMENT"
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 EXT_ID="dmtest-sf-$(date +%s)"
 MAPPING_ID=""
@@ -33,7 +35,8 @@ cleanup() {
     fi
 }
 
-[[ "${1:-}" == "--cleanup" ]] && trap cleanup EXIT
+dm_parse_args "$@"
+dm_register_cleanup cleanup
 
 # ── Smart Function code (base64-encoded for safe embedding) ────────────────────
 # The function extracts temperature from the payload and creates one measurement.
@@ -76,11 +79,11 @@ SF_CODE=$(dm_wrap_onmessage_code "$SF_CODE")
 SF_CODE_B64=$(printf '%s' "$SF_CODE" | base64)
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "Inbound JSON Smart Function Transformation (MEASUREMENT)"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
-dm_wait_for_service
-dm_require_mqtt_broker
+dm_test_setup_and_validate
+dm_validate_only_exit
 
 MAPPING_JSON=$(jq -cn \
     --arg name       "test-inbound-sf-$$" \
@@ -108,9 +111,7 @@ MAPPING_JSON=$(jq -cn \
       externalIdType: "c8y_Serial",
     genericDeviceIdentifier: "_IDENTITY_.externalId",
       supportsMessageContext: true,
-      qos: "AT_LEAST_ONCE",
-      snoopStatus: "NONE",
-      snoopedTemplates: []
+      qos: "AT_LEAST_ONCE"
     }')
 
 dm_step "Creating and activating Smart Function mapping ..."
@@ -120,25 +121,11 @@ dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
 dm_assert_mqtt_topics_active
 
-dm_step "Recording test start time ..."
-TEST_START=$(dm_now -10)
-
 dm_step "Publishing MQTT message ..."
 dm_mqtt_publish "dmtest/sf/${EXT_ID}" "{\"temperature\":55.5}"
 
-dm_step "Waiting for processing ..."
-dm_wait 8
-
-dm_step "Looking up device by external id ..."
-DEVICE_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")
-if [ -z "$DEVICE_ID" ]; then
-    dm_fail "Device '$EXT_ID' not found — Smart Function did not create it"
-    exit 1
-fi
-dm_info "Device id: $DEVICE_ID"
-
 dm_step "Asserting at least 1 measurement was created ..."
-dm_assert_measurement_count_gt "Measurement created by Smart Function" "$DEVICE_ID" "$TEST_START" 1
+dm_assert_measurement_present "Measurement created by Smart Function" "$EXT_ID" "c8y_Serial" 1 20
 
-dm_done "Inbound JSON Smart Function Transformation (MEASUREMENT)"
+dm_done "$TEST_TITLE"
 dm_print_summary
