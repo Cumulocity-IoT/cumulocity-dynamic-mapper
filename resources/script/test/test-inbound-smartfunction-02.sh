@@ -13,6 +13,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="12. Inbound: Pattern 02: Topic-based external ID + sensor filter"
+
 # Unique per run so a stale c8y_Serial identity binding from a previous run
 # can't shadow this run's device. The SF derives the external id from the last
 # topic level, so the publish topic must use the same value.
@@ -34,7 +36,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "12. Inbound: Pattern 02: Topic-based external ID + sensor filter"
+dm_banner "$TEST_TITLE"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -174,5 +176,5 @@ if [ -z "$VOLTAGE" ]; then
 fi
 dm_assert_eq "Voltage measurement value" "230.5" "$VOLTAGE"
 
-dm_done "12. Inbound: Pattern 02: Topic-based external ID + sensor filter"
+dm_done "$TEST_TITLE"
 dm_print_summary

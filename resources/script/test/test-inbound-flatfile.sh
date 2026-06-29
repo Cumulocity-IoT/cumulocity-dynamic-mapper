@@ -19,6 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE=" 4. FLAT_FILE / CSV → MEASUREMENT"
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 EXT_ID="dmtest-flat-$(date +%s)"
 MAPPING_ID=""
@@ -37,7 +39,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner " 4. FLAT_FILE / CSV → MEASUREMENT"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_test_setup_and_validate
@@ -89,5 +91,5 @@ dm_mqtt_publish "dmtest/flat/${EXT_ID}" "$CSV_PAYLOAD"
 dm_step "Asserting at least 1 measurement was created ..."
 dm_assert_measurement_present "Measurement from CSV" "$EXT_ID" "c8y_Serial" 1 20
 
-dm_done " 4. FLAT_FILE / CSV → MEASUREMENT"
+dm_done "$TEST_TITLE"
 dm_print_summary

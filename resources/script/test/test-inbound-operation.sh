@@ -13,6 +13,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="10. JSON / DEFAULT → OPERATION"
+
 EXT_ID="dmtest-operation-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
@@ -31,7 +33,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "10. JSON / DEFAULT → OPERATION"
+dm_banner "$TEST_TITLE"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -108,5 +110,5 @@ OPERATION_TYPE=$(echo "$OPERATION" | jq -rs '.[0] | keys[] | select(startswith("
 dm_info "Operation status: $OPERATION_STATUS"
 dm_info "Operation type: $OPERATION_TYPE"
 
-dm_done "10. JSON / DEFAULT → OPERATION"
+dm_done "$TEST_TITLE"
 dm_print_summary

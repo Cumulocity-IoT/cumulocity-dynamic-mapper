@@ -379,17 +379,20 @@ _DM_LAST_DEVICE_NAME=""
 # Create a device.  Sets _DM_LAST_DEVICE_ID and _DM_LAST_DEVICE_NAME.
 dm_create_device() {    # <name> <type>
     local _name=$1 _type=$2 _json
-    _json=$(c8y devices create --name "$_name" --type "$_type" --force --output json)
-    _DM_LAST_DEVICE_ID=$(printf '%s' "$_json" | jq -r '.id')
-    _DM_LAST_DEVICE_NAME=$(printf '%s' "$_json" | jq -r '.name')
-    dm_info "Created device: $_DM_LAST_DEVICE_NAME (id=$_DM_LAST_DEVICE_ID)"
+    # </dev/null prevents go-c8y-cli from entering pipeline mode when stdin is a
+    # closed pipe (happens when called from run-tests.sh's while-read loop).
+    _json=$(c8y devices create --name "$_name" --type "$_type" \
+        --force --output json </dev/null 2>/dev/null || true)
+    _DM_LAST_DEVICE_ID=$(printf '%s' "$_json" | jq -r '.id // empty' 2>/dev/null || printf '')
+    _DM_LAST_DEVICE_NAME=$(printf '%s' "$_json" | jq -r '.name // empty' 2>/dev/null || printf "$_name")
+    dm_info "Created device: ${_DM_LAST_DEVICE_NAME:-$_name} (id=$_DM_LAST_DEVICE_ID)"
 }
 
 # Delete a device; silently ignores missing devices.
 dm_delete_device() {    # <id>
     local _id=$1
     [ -z "$_id" ] && return 0
-    c8y devices delete --id "$_id" --force 2>/dev/null || true
+    c8y devices delete --id "$_id" --force </dev/null 2>/dev/null || true
     dm_info "Deleted device: $_id"
 }
 
@@ -399,7 +402,7 @@ dm_send_measurement() {     # <device_id> <temp_value> [unit=C]
     c8y measurements create \
         --device "$_device" \
         --data "c8y_TemperatureMeasurement.T.value=${_value},c8y_TemperatureMeasurement.T.unit=${_unit},type='c8y_TemperatureMeasurement'" \
-        --force
+        --force </dev/null
     dm_info "Measurement sent (device=$_device, temp=${_value} ${_unit})"
 }
 
@@ -488,7 +491,7 @@ dm_api_must() {     # <method> <path> [json_body]
         if printf '%s' "$_body" | grep -Eq '^[[:space:]]*\['; then
             if _out=$(printf '%s\n' "$_body" | c8y api --method "$_method" \
                     --url "${DM_SERVICE}${_path}" \
-                    --template "input.value" \
+                    --template "input" \
                     --header 'Content-Type: application/json' \
                     --output json 2>"$_err"); then
                 rm -f "$_err"
@@ -998,36 +1001,40 @@ dm_deploy_mapping_to_connector() {  # <mapping_id> <connector_identifier>
     _resolved=$(printf '%s' "$_mapping_json" | jq -r '.identifier // empty' 2>/dev/null || printf '')
     _deployment_key="${_resolved:-$_mapping_ref}"
 
-    # IMPORTANT: PUT the connector list with a LITERAL --template array body.
-    # The generic dm_api_must path serializes a top-level JSON array via
-    # `--template input.value`, which some go-c8y-cli versions mangle so the
-    # deployment registers NO connector (symptom: the mapping shows "No active
-    # connector" in the UI and inbound messages are dropped by the route filter).
-    # The literal form below is reliable; we then verify the assignment stuck.
-    local _err _retry_msg=""
+    # go-c8y-cli --data rejects arrays. Piping + --template "input" causes c8y to
+    # iterate array elements, sending each element as a separate body (wrong).
+    # A constant Jsonnet template with </dev/null (no pipeline mode) is evaluated
+    # once and used directly as the request body — the correct approach for arrays.
+    # PUT with constant Jsonnet template (no stdin = no pipeline-mode iteration).
+    # go-c8y-cli --data rejects JSON arrays; piping + --template "input" iterates
+    # array elements as separate requests; a constant template with </dev/null is
+    # evaluated once and sent directly as the request body.
+    local _err _put_exit _retry_msg=""
     _err=$(mktemp)
-    if ! c8y api --method PUT \
+    local _put_body; _put_body=$(printf '["%s"]' "${_conn}")
+    c8y api --method PUT \
             --url "${DM_SERVICE}/deployment/defined/${_deployment_key}" \
-            --template "[\"${_conn}\"]" \
+            --template "${_put_body}" \
             --header 'Content-Type: application/json' \
-            --force --output json </dev/null >/dev/null 2>"$_err"; then
+            --force --output rawResponse </dev/null 2>"$_err" >/dev/null; _put_exit=$?
+    if [ "${_put_exit}" -ne 0 ]; then
         [ -s "$_err" ] && _retry_msg="$(tr '\n' ' ' <"$_err" | head -c 400)"
         rm -f "$_err"
         dm_error "Deploy PUT failed for key=${_deployment_key}${_retry_msg:+: $_retry_msg}"
     fi
     rm -f "$_err"
 
-    # Verify the connector is actually present in the deployment map.
-    local _deployment _assigned
-    _deployment=$(dm_api_must GET "/deployment/defined/${_deployment_key}")
+    # Verify: GET /deployment/defined/{key} returns List<String>.
+    # --output json silently discards string-array responses; --raw returns the raw HTTP body.
+    local _raw_resp _assigned
+    _raw_resp=$(c8y api --method GET \
+            --url "${DM_SERVICE}/deployment/defined/${_deployment_key}" \
+            --header 'Content-Type: application/json' \
+            --force --raw </dev/null 2>/dev/null)
+    local _deployment="${_raw_resp:-[]}"
     _assigned=$(printf '%s' "$_deployment" | jq -r --arg cid "${_conn}" '
-        if type == "string" then . == $cid
-        elif type == "array" then
-            (index($cid) != null)
-            or (map(select(type == "object") | (.identifier // .connectorIdentifier // .id // "")) | index($cid) != null)
-        elif type == "object" then
-            (.identifier // .connectorIdentifier // .id // "") == $cid
-            or (.connectors // [] | if type == "array" then (index($cid) != null) else false end)
+        if type == "array" then (index($cid) != null)
+        elif type == "string" then . == $cid
         else false end' 2>/dev/null || printf 'false')
     [ "${_assigned:-false}" = "true" ] \
         || dm_error "Deployment did not stick for mapping ${_mapping_ref} (key=${_deployment_key}): connector ${_conn} not assigned; response=${_deployment}"
@@ -1041,72 +1048,7 @@ dm_deploy_mapping_to_mqtt_connector() {  # <mapping_id>
         dm_fail "MQTT connector ID not set — call dm_require_mqtt_broker first"
         return 1
     fi
-    local _mapping_ref _deployment_key _mapping_json _resolved_identifier
-    _mapping_ref="$1"
-    _deployment_key="$_mapping_ref"
-
-    # Deployment map is keyed by mapping identifier (not inventory id).
-    # Tests pass mapping id from create response, so resolve it when possible.
-    _mapping_json=$(dm_api GET "/mapping/${_mapping_ref}" 2>/dev/null || printf '{}')
-    _resolved_identifier=$(printf '%s' "$_mapping_json" | jq -r '.identifier // empty' 2>/dev/null || printf '')
-    if [ -n "${_resolved_identifier:-}" ]; then
-        _deployment_key="$_resolved_identifier"
-    fi
-
-    dm_api_must PUT "/deployment/defined/${_deployment_key}" \
-        "[\"${_DM_MQTT_CONNECTOR_ID}\"]" >/dev/null
-
-    # Verify deployment assignment is persisted before test publish.
-    local _assigned _deployment _retry_err
-    _deployment=$(dm_api_must GET "/deployment/defined/${_deployment_key}")
-    _assigned=$(printf '%s' "$_deployment" | jq -r --arg cid "${_DM_MQTT_CONNECTOR_ID}" '
-        if type == "string" then
-            . == $cid
-        elif type == "array" then
-            (index($cid) != null)
-            or (map(select(type == "object") | (.identifier // .connectorIdentifier // .id // "")) | index($cid) != null)
-        elif type == "object" then
-            (.identifier // .connectorIdentifier // .id // "") == $cid
-            or (.connectors // [] | if type == "array" then (index($cid) != null) else false end)
-        else
-            false
-        end' 2>/dev/null || printf 'false')
-
-    # Some c8y api versions serialize top-level array bodies differently with --template input.value.
-    # If deployment did not stick, retry with a literal template expression body.
-    if [ "${_assigned:-false}" != "true" ]; then
-        _retry_err=$(mktemp)
-        if ! c8y api --method PUT \
-                --url "${DM_SERVICE}/deployment/defined/${_deployment_key}" \
-                --template "[\"${_DM_MQTT_CONNECTOR_ID}\"]" \
-                --header 'Content-Type: application/json' \
-                --output json > /dev/null 2>"$_retry_err"; then
-            local _retry_msg=""
-            [ -s "$_retry_err" ] && _retry_msg="$(tr '\n' ' ' <"$_retry_err" | head -c 400)"
-            rm -f "$_retry_err"
-            dm_error "Deployment retry failed for key=${_deployment_key}${_retry_msg:+: $_retry_msg}"
-        fi
-        rm -f "$_retry_err"
-
-        _deployment=$(dm_api_must GET "/deployment/defined/${_deployment_key}")
-        _assigned=$(printf '%s' "$_deployment" | jq -r --arg cid "${_DM_MQTT_CONNECTOR_ID}" '
-            if type == "string" then
-                . == $cid
-            elif type == "array" then
-                (index($cid) != null)
-                or (map(select(type == "object") | (.identifier // .connectorIdentifier // .id // "")) | index($cid) != null)
-            elif type == "object" then
-                (.identifier // .connectorIdentifier // .id // "") == $cid
-                or (.connectors // [] | if type == "array" then (index($cid) != null) else false end)
-            else
-                false
-            end' 2>/dev/null || printf 'false')
-    fi
-
-    if [ "${_assigned:-false}" != "true" ]; then
-        dm_error "Deployment verification failed for mapping ${_mapping_ref} (key=${_deployment_key}): connector ${_DM_MQTT_CONNECTOR_ID} not assigned; response=${_deployment}"
-    fi
-    dm_info "Deployed mapping to MQTT connector: ${_mapping_ref} (key=${_deployment_key}) -> ${_DM_MQTT_CONNECTOR_ID}"
+    dm_deploy_mapping_to_connector "$1" "${_DM_MQTT_CONNECTOR_ID}"
 }
 
 # Assert that connector runtime has at least one active subscribed topic.
@@ -1464,7 +1406,11 @@ _dm_require_mqtt_service_broker() {
     fi
     dm_enable_connector "$_DM_MQTT_CONNECTOR_ID"  >/dev/null 2>&1 || true
     dm_connect_connector "$_DM_MQTT_CONNECTOR_ID" >/dev/null 2>&1 || true
-    _status="$(dm_wait_for_connector_status "$_DM_MQTT_CONNECTOR_ID" "CONNECTED" 45 3)"
+    # Use || true so set -e (from the calling test script) does not silently exit
+    # when the connector fails to reach CONNECTED within the timeout. Without it,
+    # dm_wait_for_connector_status exits 1 on timeout, the assignment propagates
+    # that exit code under set -e, and the script dies with no error message.
+    _status="$(dm_wait_for_connector_status "$_DM_MQTT_CONNECTOR_ID" "CONNECTED" 45 3)" || true
     [ "$_status" = "CONNECTED" ] \
         || dm_error "${_conn_type} connector ${_DM_MQTT_CONNECTOR_ID} is not CONNECTED (status=$_status) — check the MQTT Service is reachable and the user has the 'Mqtt service' permission."
 

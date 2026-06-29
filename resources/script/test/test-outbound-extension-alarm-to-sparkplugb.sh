@@ -13,6 +13,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="20. Extension: Alarm → Sparkplug B DCMD"
+
 EXT_ID="dmtest-sparkplug-alarm-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
@@ -34,7 +36,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "35. Extension: Alarm → Sparkplug B DCMD"
+dm_banner "$TEST_TITLE"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -148,6 +150,6 @@ dm_info "  - Payload: Protobuf with metrics for alarm state"
 dm_info "  - Metric prefix: Alarms (configurable)"
 dm_info "  - ISA-95 alarm model: State/Message/Severity/Status"
 
-dm_done "35. Extension: Alarm → Sparkplug B DCMD"
+dm_done "$TEST_TITLE"
 dm_info "Note: Full protobuf payload testing requires Sparkplug B broker validation"
 dm_print_summary

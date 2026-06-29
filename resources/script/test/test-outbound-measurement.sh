@@ -19,6 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="21. C8Y Measurement → MQTT broker"
+
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 DEVICE_NAME="dmtest-out-mea-$(date +%s)"
 DEVICE_TYPE="dmtest-out-type"
@@ -37,7 +39,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "20. C8Y Measurement → MQTT broker"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
@@ -55,7 +57,7 @@ c8y identity create \
   --name "$EXT_ID" \
   --type "c8y_Serial" \
   --device "$DEVICE_ID" \
-  --output json >/dev/null 2>&1 || dm_warn "External id may already exist: $EXT_ID"
+  --output json </dev/null >/dev/null 2>&1 || dm_warn "External id may already exist: $EXT_ID"
 
 dm_step "Creating static subscription for device ..."
 dm_create_static_subscription_must "MEASUREMENT" "$DEVICE_ID" "$DEVICE_NAME"
@@ -102,7 +104,7 @@ c8y measurements create \
     --device "$DEVICE_ID" \
     --type "c8y_TemperatureMeasurement" \
     --data '{"c8y_TemperatureMeasurement":{"T":{"value":42.0,"unit":"C"}}}' \
-    --output json >/dev/null
+    --output json </dev/null >/dev/null
 
 dm_step "Waiting for outbound processing ..."
 dm_wait 12
@@ -110,5 +112,5 @@ dm_wait 12
 dm_step "Asserting messagesReceived increased ..."
 dm_assert_mapping_received_gt "Outbound measurement processed" "$MAPPING_ID" "$BASELINE"
 
-dm_done "20. C8Y Measurement → MQTT broker"
+dm_done "$TEST_TITLE"
 dm_print_summary

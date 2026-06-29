@@ -26,6 +26,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="35. Subscription persistence after restart"
+
 DM_MICROSERVICE_NAME="dynamic-mapper-service"
 STATIC_DEVICE_NAME="test-restart-static-device"
 STATIC_DEVICE_TYPE="test-restart-static"
@@ -51,7 +53,7 @@ cleanup() {
 dm_parse_args "$@"
 dm_register_cleanup cleanup
 
-dm_banner "34. Subscription persistence after restart"
+dm_banner "$TEST_TITLE"
 
 dm_step 0 "Validating environment"
 dm_wait_for_service
@@ -162,4 +164,4 @@ if [ "${TYPE_MATCH:-0}" -eq 0 ]; then
 fi
 
 dm_print_summary
-dm_done "34. Subscription persistence after restart"
+dm_done "$TEST_TITLE"

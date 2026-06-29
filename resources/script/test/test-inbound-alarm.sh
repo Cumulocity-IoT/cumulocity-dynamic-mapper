@@ -13,6 +13,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE=" 9. JSON / DEFAULT → ALARM"
+
 EXT_ID="dmtest-alarm-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
@@ -31,7 +33,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner " 9. JSON / DEFAULT → ALARM"
+dm_banner "$TEST_TITLE"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -114,5 +116,5 @@ dm_info "Alarm text: $ALARM_TEXT"
 dm_info "Alarm severity: $ALARM_SEVERITY"
 dm_assert_eq "Alarm severity" "CRITICAL" "$ALARM_SEVERITY"
 
-dm_done " 9. JSON / DEFAULT → ALARM"
+dm_done "$TEST_TITLE"
 dm_print_summary

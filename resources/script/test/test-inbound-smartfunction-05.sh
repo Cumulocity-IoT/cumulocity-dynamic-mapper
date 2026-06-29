@@ -18,6 +18,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="15. Inbound: Pattern 11: Per-device running statistics (device ID from context)"
+
 TS=$(date +%s)
 EXT_ID_A="dmtest-sf11-a-${TS}"
 EXT_ID_B="dmtest-sf11-b-${TS}"
@@ -101,7 +103,7 @@ publish_with_cid() {  # <clientId> <topic> <payload> [qos=0]
     dm_info "Published to $_topic as client '$_cid' (qos=$_qos)"
 }
 
-dm_banner "15. Inbound: Pattern 11: Per-device running statistics (device ID from context)"
+dm_banner "$TEST_TITLE"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -279,5 +281,5 @@ LAST_A=$(c8y measurements list --device "$DEVICE_ID_A" --type "c8y_TemperatureMe
 MSG_COUNT_A=$(printf '%s' "$LAST_A" | jq -r '.c8y_TemperatureStatistics.messageCount.value // empty')
 dm_assert_eq "Device A messageCount=3 in statistics" "3" "${MSG_COUNT_A:-0}"
 
-dm_done "15. Inbound: Pattern 11: Per-device running statistics (device ID from context)"
+dm_done "$TEST_TITLE"
 dm_print_summary

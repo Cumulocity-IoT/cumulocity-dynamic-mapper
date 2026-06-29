@@ -19,6 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE=" 6. HTTP connector → MEASUREMENT"
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 EXT_ID="dmtest-http-$(date +%s)"
 MAPPING_ID=""
@@ -37,7 +39,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner " 6. HTTP connector → MEASUREMENT"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
@@ -124,5 +126,5 @@ fi
 dm_step "Asserting at least 1 measurement was created ..."
 dm_assert_measurement_present "Measurement via HTTP connector" "$EXT_ID" "c8y_Serial" 1 15
 
-dm_done " 6. HTTP connector → MEASUREMENT"
+dm_done "$TEST_TITLE"
 dm_print_summary

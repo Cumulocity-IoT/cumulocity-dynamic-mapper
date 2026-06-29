@@ -20,6 +20,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE=" 1. JSON / DEFAULT → MEASUREMENT"
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 DEVICE_NAME="dmtest-json-default-$(date +%s)"
 EXT_ID="$DEVICE_NAME"
@@ -37,7 +39,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner " 1. JSON / DEFAULT → MEASUREMENT"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_test_setup_and_validate
@@ -85,5 +87,5 @@ dm_mqtt_publish "dmtest/json/${EXT_ID}" '{"temperature":42.5}'
 dm_step "Asserting at least 1 measurement was created ..."
 dm_assert_measurement_present "Measurement created" "$EXT_ID" "c8y_Serial" 1 20
 
-dm_done " 1. JSON / DEFAULT → MEASUREMENT"
+dm_done "$TEST_TITLE"
 dm_print_summary

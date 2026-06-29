@@ -24,6 +24,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="26. filterMapping — selective forwarding"
+
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 DEVICE_NAME="dmtest-out-filter-$(date +%s)"
 DEVICE_TYPE="dmtest-out-type"
@@ -44,7 +46,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "25. filterMapping — selective forwarding"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
@@ -163,5 +165,5 @@ dm_wait 8
 dm_assert_mapping_received_gt "Mapping A should process bus event" "$MAPPING_A_ID" "$BASELINE_A2"
 dm_assert_mapping_received_gt "Mapping B should process bus event" "$MAPPING_B_ID" "$BASELINE_B2"
 
-dm_done "25. filterMapping — selective forwarding"
+dm_done "$TEST_TITLE"
 dm_print_summary

@@ -109,6 +109,40 @@ _cat_of()  { echo "${1%%|*}"; }
 _name_of() { local rest="${1#*|}"; echo "${rest%%|*}"; }
 _desc_of() { echo "${1##*|}"; }
 
+# Returns 0 if the token is a bare number or an N-M range.
+_is_index_like() { [[ "$1" =~ ^[0-9]+$ ]] || [[ "$1" =~ ^[0-9]+-[0-9]+$ ]]; }
+
+# Prints the expanded list of menu indices for a number or N-M range token.
+_expand_index_token() {
+    local token="$1"
+    if [[ "$token" =~ ^[0-9]+$ ]]; then
+        echo "$token"
+    elif [[ "$token" =~ ^([0-9]+)-([0-9]+)$ ]]; then
+        local lo="${BASH_REMATCH[1]}" hi="${BASH_REMATCH[2]}"
+        if [ "$lo" -gt "$hi" ]; then
+            printf '%sERROR: invalid range %s (start > end)%s\n' \
+                "${C_RED}" "$token" "${C_RESET}" >&2
+            exit 1
+        fi
+        seq "$lo" "$hi"
+    fi
+}
+
+# Run all tests identified by one index-like token (number or N-M range).
+_run_index_token() {
+    local num idx
+    while IFS= read -r num; do
+        idx=$(( num - 1 ))
+        if [ "$idx" -ge 0 ] && [ "$idx" -lt "$_n_tests" ]; then
+            _run_one "${TESTS[$idx]}"
+        else
+            printf "${C_RED}ERROR: index %s out of range (1–%d)${C_RESET}\n" \
+                "$num" "$_n_tests"
+            exit 1
+        fi
+    done < <(_expand_index_token "$1")
+}
+
 _print_header() {
     printf "\n${C_BOLD}%s${C_RESET}\n" "Dynamic Mapper — Integration Test Runner"
     printf "${C_DIM}Scripts: %s${C_RESET}\n\n" "$SCRIPT_DIR"
@@ -158,6 +192,7 @@ Usage:
     r | reliability                  Run reliability tests
     <script-name>                    Run one script (with or without .sh)
     <n> [n2 ...]                     Run one or more menu indices
+    <n>-<m>                          Run a range of menu indices (e.g. 3-7)
     (omit)                           Pick interactively
 
   CONNECTOR — which broker the MQTT tests drive (default g):
@@ -273,7 +308,7 @@ _check_c8y_session() {
     # 'c8y sessions current' may exit 0 even when no session is loaded, so
     # we check for an actual non-empty host value in the JSON output.
     local _host
-    _host=$(c8y sessions current --output json 2>/dev/null \
+    _host=$(c8y sessions current --output json </dev/null 2>/dev/null \
         | jq -r '.host // empty' 2>/dev/null || true)
     [ -n "${_host:-}" ] && return 0
     printf '%sERROR: No active c8y session.%s\n' "${C_RED}" "${C_RESET}" >&2
@@ -294,7 +329,7 @@ _suite_health_check() {
     local _retries=24 _interval=3 _i
     for _i in $(seq 1 "$_retries"); do
         if c8y api --method GET --url "${_DM_SERVICE}/mapping" \
-                --output json >/dev/null 2>&1; then
+                --output json </dev/null >/dev/null 2>&1; then
             printf "%sService is UP — health check will be skipped per test.%s\n" \
                 "${C_GREEN}" "${C_RESET}"
             export DM_SKIP_HEALTH_CHECK=1
@@ -404,7 +439,12 @@ _run_one() {   # <entry-from-TESTS>
         _cleanup_flag="--keep"
     fi
     set +e
-    bash "$script" "$_cleanup_flag"
+    # </dev/null: when _run_one is called from _run_index_token's `while read`
+    # loop, stdin is a process-substitution pipe. go-c8y-cli detects non-terminal
+    # stdin and enters "pipeline mode", causing c8y commands with no explicit
+    # --data to silently produce no output. /dev/null is not a FIFO so go-c8y-cli
+    # stays out of pipeline mode — all test-script c8y calls behave correctly.
+    bash "$script" "$_cleanup_flag" </dev/null
     exit_code=$?
     set -e
 
@@ -512,7 +552,7 @@ _dispatch_args() {
 # ── Interactive selection ──────────────────────────────────────────────────────
 _interactive() {
     _print_menu
-    printf "Select tests (e.g. 1 3 5, or a/i/o/e/s/r): "
+    printf "Select tests (e.g. 1 3 5, 3-7, or a/i/o/e/s/r): "
     read -r REPLY
     echo ""
 
@@ -537,14 +577,17 @@ _interactive() {
             # shellcheck disable=SC2206
             selections=($REPLY)
             for sel in "${selections[@]}"; do
-                if [[ "$sel" =~ ^[0-9]+$ ]]; then
-                    local idx=$(( sel - 1 ))
-                    if [ "$idx" -ge 0 ] && [ "$idx" -lt "$_n_tests" ]; then
-                        _run_one "${TESTS[$idx]}"
-                    else
-                        printf "${C_YELLOW}WARN: %s is out of range (1–%d)${C_RESET}\n" \
-                            "$sel" "$_n_tests"
-                    fi
+                if _is_index_like "$sel"; then
+                    local num idx
+                    while IFS= read -r num; do
+                        idx=$(( num - 1 ))
+                        if [ "$idx" -ge 0 ] && [ "$idx" -lt "$_n_tests" ]; then
+                            _run_one "${TESTS[$idx]}"
+                        else
+                            printf "${C_YELLOW}WARN: %s is out of range (1–%d)${C_RESET}\n" \
+                                "$num" "$_n_tests"
+                        fi
+                    done < <(_expand_index_token "$sel")
                 else
                     printf "${C_YELLOW}WARN: unrecognised selection '%s'${C_RESET}\n" "$sel"
                 fi
@@ -585,22 +628,15 @@ done
 if [ "${#_suite_args[@]}" -eq 0 ]; then
     _interactive
 else
-    # Suite args could be numbers (menu indices) or keywords / script names.
+    # Suite args could be numbers/ranges (menu indices) or keywords / script names.
     all_numeric=true
     for arg in "${_suite_args[@]}"; do
-        [[ "$arg" =~ ^[0-9]+$ ]] || { all_numeric=false; break; }
+        _is_index_like "$arg" || { all_numeric=false; break; }
     done
 
     if $all_numeric; then
-        for num in "${_suite_args[@]}"; do
-            idx=$(( num - 1 ))
-            if [ "$idx" -ge 0 ] && [ "$idx" -lt "$_n_tests" ]; then
-                _run_one "${TESTS[$idx]}"
-            else
-                printf "${C_RED}ERROR: index %s out of range (1–%d)${C_RESET}\n" \
-                    "$num" "$_n_tests"
-                exit 1
-            fi
+        for tok in "${_suite_args[@]}"; do
+            _run_index_token "$tok"
         done
     else
         for arg in "${_suite_args[@]}"; do

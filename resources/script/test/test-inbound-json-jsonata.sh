@@ -19,6 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE=" 2. JSON / JSONATA → EVENT"
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 EXT_ID="dmtest-jsonata-$(date +%s)"
 MAPPING_ID=""
@@ -37,7 +39,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner " 2. JSON / JSONATA → EVENT"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_test_setup_and_validate
@@ -86,5 +88,5 @@ dm_mqtt_publish "dmtest/event/${EXT_ID}" '{"msg_type":"c8y_TestEvent","txt":"hel
 dm_step "Asserting at least 1 event was created ..."
 dm_assert_event_present "Event created" "$EXT_ID" "c8y_Serial" 1 20
 
-dm_done " 2. JSON / JSONATA → EVENT"
+dm_done "$TEST_TITLE"
 dm_print_summary

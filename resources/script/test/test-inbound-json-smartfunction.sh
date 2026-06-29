@@ -19,6 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE=" 3. JSON / Smart Function → MEASUREMENT"
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 EXT_ID="dmtest-sf-$(date +%s)"
 MAPPING_ID=""
@@ -77,7 +79,7 @@ SF_CODE=$(dm_wrap_onmessage_code "$SF_CODE")
 SF_CODE_B64=$(printf '%s' "$SF_CODE" | base64)
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner " 3. JSON / Smart Function → MEASUREMENT"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_test_setup_and_validate
@@ -125,5 +127,5 @@ dm_mqtt_publish "dmtest/sf/${EXT_ID}" "{\"temperature\":55.5}"
 dm_step "Asserting at least 1 measurement was created ..."
 dm_assert_measurement_present "Measurement created by Smart Function" "$EXT_ID" "c8y_Serial" 1 20
 
-dm_done " 3. JSON / Smart Function → MEASUREMENT"
+dm_done "$TEST_TITLE"
 dm_print_summary

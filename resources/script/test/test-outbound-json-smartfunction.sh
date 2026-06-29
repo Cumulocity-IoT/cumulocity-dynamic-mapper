@@ -13,6 +13,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="28. Smart Function: Measurement → MQTT JSON"
+
 SUBSCRIPTION_NAME=""
 EXT_ID="dmtest-sf-out-$(date +%s)"
 MAPPING_ID=""
@@ -46,7 +48,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "27. Smart Function: Measurement → MQTT JSON"
+dm_banner "$TEST_TITLE"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -219,5 +221,5 @@ dm_assert_eq "Transformed temperature value" "22.5" "$TEMP_VALUE"
 kill "$MQTT_PID" 2>/dev/null || true
 rm -f "$TEMP_FILE" "$TEMP_ERR_FILE"
 
-dm_done "27. Smart Function: Measurement → MQTT JSON"
+dm_done "$TEST_TITLE"
 dm_print_summary

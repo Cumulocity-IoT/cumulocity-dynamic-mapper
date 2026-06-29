@@ -31,6 +31,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="29. Smart Function externalSource → _externalId_ topic (broker round-trip)"
+
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 DEVICE_NAME="dmtest-sfext-$(date +%s)"
 DEVICE_TYPE="dmtest-out-type"
@@ -52,7 +54,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "28. Smart Function externalSource → _externalId_ topic (broker round-trip)"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
@@ -173,5 +175,5 @@ else
     dm_warn "mosquitto_sub did not capture a message within timeout (OK if broker egress is blocked from the test host); topic-resolution round-trip not verified this run"
 fi
 
-dm_done "28. Smart Function externalSource → _externalId_ topic (broker round-trip)"
+dm_done "$TEST_TITLE"
 dm_print_summary

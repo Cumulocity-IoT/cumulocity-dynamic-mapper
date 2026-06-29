@@ -19,6 +19,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="13. Inbound: Pattern 03: getManagedObjectByExternalId — MO enrichment"
+
 EXT_ID="dmtest-mo-lookup-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
@@ -37,7 +39,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "13. Inbound: Pattern 03: getManagedObjectByExternalId — MO enrichment"
+dm_banner "$TEST_TITLE"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -155,5 +157,5 @@ fi
 dm_assert_eq "Event text contains MO-resolved device name and type" \
     "device=Sensor Berlin 03 type=c8y_Sensor" "$EVENT_TEXT"
 
-dm_done "13. Inbound: Pattern 03: getManagedObjectByExternalId — MO enrichment"
+dm_done "$TEST_TITLE"
 dm_print_summary

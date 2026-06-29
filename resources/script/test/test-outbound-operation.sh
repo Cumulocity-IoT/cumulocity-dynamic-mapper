@@ -20,6 +20,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="24. C8Y Operation → MQTT broker"
+
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 DEVICE_NAME="dmtest-out-op-$(date +%s)"
 DEVICE_TYPE="dmtest-out-type"
@@ -38,7 +40,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "23. C8Y Operation → MQTT broker"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
@@ -114,5 +116,5 @@ dm_wait 8
 dm_step "Asserting messagesReceived increased ..."
 dm_assert_mapping_received_gt "Outbound operation processed" "$MAPPING_ID" "$BASELINE"
 
-dm_done "23. C8Y Operation → MQTT broker"
+dm_done "$TEST_TITLE"
 dm_print_summary

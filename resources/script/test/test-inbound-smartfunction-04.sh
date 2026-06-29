@@ -13,6 +13,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="14. Inbound: Pattern 04: Dual payload type + deduplication"
+
 EXT_ID="dmtest-dual-payload-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
@@ -31,7 +33,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "14. Inbound: Pattern 04: Dual payload type + deduplication"
+dm_banner "$TEST_TITLE"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -195,5 +197,5 @@ if [ -n "$DEVICE_ID" ]; then
     dm_assert_eq "Error alarm deduplicated to single alarm" "1" "${ALARM_COUNT:-0}"
 fi
 
-dm_done "14. Inbound: Pattern 04: Dual payload type + deduplication"
+dm_done "$TEST_TITLE"
 dm_print_summary

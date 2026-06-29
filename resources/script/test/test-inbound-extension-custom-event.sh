@@ -13,6 +13,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="18. Extension: Protobuf → Event"
+
 EXT_ID="dmtest-ext-event-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
@@ -31,7 +33,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "18. Extension: Protobuf → Event"
+dm_banner "$TEST_TITLE"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -92,6 +94,6 @@ if [ "$EXT_EVENT" = "ProtobufEvent" ] || [[ "$EXT_FQN" == *".ProcessorExtensionC
 fi
 dm_assert_eq "Custom event extension configured (event=${EXT_EVENT:-n/a} fqn=${EXT_FQN:-n/a})" "true" "$_ext_match"
 
-dm_done "18. Extension: Protobuf → Event"
+dm_done "$TEST_TITLE"
 dm_info "Note: Full protobuf payload testing requires binary message generation from custom protobuf schema"
 dm_print_summary

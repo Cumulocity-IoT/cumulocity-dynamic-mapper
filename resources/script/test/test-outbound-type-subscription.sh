@@ -23,6 +23,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="32. Dynamic type subscription"
+
 DEVICE_TYPE="auto-type"
 DEVICE_NAME="test-dynamic-type-device-01"
 DISCOVERY_WAIT=${DM_DEFAULT_DISCOVERY_WAIT}
@@ -40,7 +42,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 dm_validate_only_exit
 
-dm_banner "31. Dynamic type subscription"
+dm_banner "$TEST_TITLE"
 
 # Step 1: Add dynamic type subscription
 dm_step 1 "Add dynamic type subscription for '$DEVICE_TYPE'"
@@ -91,4 +93,4 @@ if [ "${TYPE_MATCH:-0}" -eq 0 ]; then
 fi
 
 dm_print_summary
-dm_done "31. Dynamic type subscription"
+dm_done "$TEST_TITLE"

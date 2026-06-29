@@ -21,6 +21,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="30. Smart Function outbound: Pattern 03 — getManagedObjectByExternalId — MO enrichment"
+
 SUBSCRIPTION_NAME=""
 EXT_ID="dmtest-out-molookup-$(date +%s)"
 DEVICE_NAME="Sensor Berlin Out 03"
@@ -48,7 +50,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "29. Smart Function outbound: Pattern 03 — getManagedObjectByExternalId — MO enrichment"
+dm_banner "$TEST_TITLE"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -207,5 +209,5 @@ dm_assert_eq "MO-resolved device type in MQTT payload" "c8y_TemperatureSensor" "
 kill "$MQTT_PID" 2>/dev/null || true
 rm -f "$TEMP_FILE" "$TEMP_ERR_FILE"
 
-dm_done "29. Smart Function outbound: Pattern 03 — getManagedObjectByExternalId — MO enrichment"
+dm_done "$TEST_TITLE"
 dm_print_summary

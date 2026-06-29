@@ -30,6 +30,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="11. JSON / DEFAULT → INVENTORY (device metadata update)"
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 DEVICE_NAME="dmtest-inv-$(date +%s)"
 EXT_ID="$DEVICE_NAME"
@@ -50,7 +52,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "11. JSON / DEFAULT → INVENTORY (device metadata update)"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
@@ -127,5 +129,5 @@ dm_step "Asserting the update was in place (no duplicate device created) ..."
 RESOLVED_ID=$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")
 dm_assert_eq "Same managed object updated in place" "$DEVICE_ID" "$RESOLVED_ID"
 
-dm_done "11. JSON / DEFAULT → INVENTORY (device metadata update)"
+dm_done "$TEST_TITLE"
 dm_print_summary

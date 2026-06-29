@@ -13,6 +13,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="16. Extension: JSON → Measurement"
+
 EXT_ID="dmtest-ext-measurement-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
@@ -31,7 +33,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "16. Extension: JSON → Measurement"
+dm_banner "$TEST_TITLE"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -100,5 +102,5 @@ TEMP_UNIT=$(echo "$MEASUREMENT" | jq -r '.c8y_Temperature.T.unit // empty')
 dm_assert_eq "Temperature value" "25.5" "$TEMP_VALUE"
 dm_assert_eq "Temperature unit" "C" "$TEMP_UNIT"
 
-dm_done "16. Extension: JSON → Measurement"
+dm_done "$TEST_TITLE"
 dm_print_summary

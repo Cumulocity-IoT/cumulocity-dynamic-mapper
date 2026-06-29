@@ -13,6 +13,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="19. Extension: Sparkplug B → Measurement"
+
 EXT_ID="dmtest-sparkplug-measure-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
@@ -31,7 +33,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "19. Extension: Sparkplug B → Measurement"
+dm_banner "$TEST_TITLE"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -98,6 +100,6 @@ if [ "$EXT_EVENT" = "SparkplugBMeasurement" ] || [[ "$EXT_FQN" == *".ProcessorEx
 fi
 dm_assert_eq "Sparkplug B extension configured (event=${EXT_EVENT:-n/a} fqn=${EXT_FQN:-n/a})" "true" "$_ext_match"
 
-dm_done "19. Extension: Sparkplug B → Measurement"
+dm_done "$TEST_TITLE"
 dm_info "Note: Full protobuf payload testing requires binary message generation"
 dm_print_summary

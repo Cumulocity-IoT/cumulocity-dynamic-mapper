@@ -19,6 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE=" 8. Array payload → multiple devices"
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 TS=$(date +%s)
 EXT_ID_1="dmtest-multi-01-${TS}"
@@ -41,7 +43,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner " 8. Array payload → multiple devices"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_test_setup_and_validate
@@ -116,5 +118,5 @@ if [ -z "$DEV2" ]; then
 fi
 dm_assert_measurement_present "Measurement for device 2" "$EXT_ID_2" "c8y_Serial" 1 20
 
-dm_done " 8. Array payload → multiple devices"
+dm_done "$TEST_TITLE"
 dm_print_summary

@@ -19,6 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="36. Mapping CRUD / tenant isolation"
+
 MAPPING_ID=""
 
 cleanup() {
@@ -28,7 +30,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "36. Mapping CRUD / tenant isolation"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
@@ -100,5 +102,5 @@ COUNT2=$(dm_api_json_array GET /mapping \
       ' 2>/dev/null || echo 0)
 dm_assert_eq "Mapping is no longer listed" "0" "$COUNT2"
 
-dm_done "36. Mapping CRUD / tenant isolation"
+dm_done "$TEST_TITLE"
 dm_print_summary

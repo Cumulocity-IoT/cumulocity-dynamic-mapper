@@ -13,6 +13,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="17. Extension: JSON → Alarm"
+
 EXT_ID="dmtest-ext-alarm-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
@@ -31,7 +33,7 @@ cleanup() {
 
 dm_register_cleanup cleanup
 
-dm_banner "17. Extension: JSON → Alarm"
+dm_banner "$TEST_TITLE"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
@@ -112,5 +114,5 @@ _text_match=false
 [[ "$ALARM_TEXT" == *"Temperature"* ]] && _text_match=true
 dm_assert_eq "Alarm text contains 'Temperature' ($ALARM_TEXT)" "true" "$_text_match"
 
-dm_done "17. Extension: JSON → Alarm"
+dm_done "$TEST_TITLE"
 dm_print_summary

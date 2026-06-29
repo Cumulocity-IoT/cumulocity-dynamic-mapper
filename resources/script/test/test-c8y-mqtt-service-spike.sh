@@ -45,6 +45,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="MQTT Service Spike — cert-auth inbound round-trip"
+
 CONNECTOR_TYPE="CUMULOCITY_MQTT_SERVICE_PULSAR"
 MQTT_HOST="${DM_C8Y_MQTT_HOST:-${C8Y_DOMAIN:-}}"
 MQTT_PORT="${DM_C8Y_MQTT_PORT:-9883}"
@@ -81,7 +83,7 @@ cleanup() {
 dm_register_cleanup cleanup
 
 # ── Test ─────────────────────────────────────────────────────────────────────────
-dm_banner "MQTT Service Spike — cert-auth inbound round-trip"
+dm_banner "$TEST_TITLE"
 
 dm_step "Validating environment ..."
 dm_test_setup_and_validate false
@@ -219,5 +221,5 @@ dm_info "Connector ${PULSAR_ID} status: $(dm_get_connector_status "$PULSAR_ID" |
 dm_step "Verifying the measurement was created ..."
 dm_assert_measurement_count_gt "Inbound measurement via MQTT Service" "$DEVICE_ID" "$TEST_START" 0
 
-dm_done "MQTT Service Spike — cert-auth inbound round-trip"
+dm_done "$TEST_TITLE"
 dm_print_summary

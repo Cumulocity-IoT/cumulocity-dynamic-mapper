@@ -37,6 +37,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="39. Cumulocity MQTT Service connector lifecycle"
+
 CONNECTOR_TYPE="CUMULOCITY_MQTT_SERVICE_PULSAR"
 
 # NOTE: the identifier MUST be alphanumeric (no hyphens/underscores). On connect
@@ -98,7 +100,7 @@ cleanup() {
 dm_register_cleanup cleanup
 
 # ── Test ─────────────────────────────────────────────────────────────────────────
-dm_banner "39. Cumulocity MQTT Service connector lifecycle"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_test_setup_and_validate false
@@ -155,5 +157,5 @@ STATUS_AFTER_DISCONNECT=$(dm_get_connector_status "$CONNECTOR_ID" | jq -r '.stat
 dm_info "Status after disconnect: $STATUS_AFTER_DISCONNECT"
 dm_assert_ne "Connector not CONNECTED after disconnect" "CONNECTED" "$STATUS_AFTER_DISCONNECT"
 
-dm_done "39. Cumulocity MQTT Service connector lifecycle"
+dm_done "$TEST_TITLE"
 dm_print_summary

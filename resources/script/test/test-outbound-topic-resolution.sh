@@ -20,6 +20,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
+TEST_TITLE="27. Dynamic publish topic resolution"
+
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 DEVICE_NAME="dmtest-topicres-$(date +%s)"
 DEVICE_TYPE="dmtest-out-type"
@@ -38,7 +40,7 @@ dm_parse_args "$@"
 dm_register_cleanup cleanup
 
 # ── Test ───────────────────────────────────────────────────────────────────────
-dm_banner "26. Dynamic publish topic resolution"
+dm_banner "$TEST_TITLE"
 
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_wait_for_service
@@ -131,5 +133,5 @@ else
 fi
 rm -f "$RECEIVED_FILE"
 
-dm_done "26. Dynamic publish topic resolution"
+dm_done "$TEST_TITLE"
 dm_print_summary
