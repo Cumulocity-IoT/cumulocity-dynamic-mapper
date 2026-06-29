@@ -143,19 +143,47 @@ dm_success "Mapping deployed and activated"
 BASELINE=$(dm_mapping_received_count "$MAPPING_ID")
 dm_info "Baseline messagesReceived=$BASELINE"
 
+dm_step "Warming up Smart Function JIT"
+# The first Smart Function execution triggers GraalVM JIT compilation (~1-7 s).
+# Send a throw-away measurement now so the JIT completes before the actual test
+# measurement.  This prevents the 8-second C8Y notification timeout from firing
+# on the first (cold) execution and causing a false retransmission.
+WARMUP_PAYLOAD=$(jq -cn \
+    --arg deviceId "$DEVICE_ID" \
+    --arg time "$(date -u +'%Y-%m-%dT%H:%M:%S.000Z')" \
+    '{source:{id:$deviceId},type:"c8y_TemperatureMeasurement",time:$time,
+      c8y_TemperatureMeasurement:{T:{value:0.0,unit:"C"}}}')
+printf '%s' "$WARMUP_PAYLOAD" | c8y measurements create --template "input.value" \
+    --output json > /dev/null 2>&1 || dm_warn "Warm-up measurement may have failed"
+dm_wait 12 "GraalVM JIT warm-up"
+BASELINE=$(dm_mapping_received_count "$MAPPING_ID")
+dm_info "Post-warmup baseline messagesReceived=$BASELINE"
+
 dm_step 6 "Subscribing to MQTT output topic"
 MQTT_TOPIC="dmtest/out/sfjson/$EXT_ID"
 dm_info "Subscribing to: $MQTT_TOPIC"
 
-dm_mqtt_probe_subscription "$MQTT_TOPIC" 10 || true
+# In C8Y MQTT Service mode the connector and mosquitto_sub share the same
+# certificate CN (one connection allowed).  Starting mosquitto_sub would
+# disconnect the connector so the outbound publish would fail.  Skip MQTT
+# reception checks and only verify messagesReceived in that mode.
+_SKIP_MQTT_CHECK=false
+if [ "${_DM_MQTT_SVC_MODE:-false}" = "true" ]; then
+    dm_info "MQTT Service mode: skipping mosquitto_sub (cert-CN conflict); will verify via messagesReceived only"
+    _SKIP_MQTT_CHECK=true
+fi
 
-# Background MQTT subscriber (collects the outbound mapping message).
-# Uses the harness helper so MQTT_HOST/PORT/USER/PASS/TLS overrides apply.
 TEMP_FILE=$(mktemp)
 TEMP_ERR_FILE=$(mktemp)
-( dm_mqtt_subscribe_one "$MQTT_TOPIC" 15 > "$TEMP_FILE" 2>"$TEMP_ERR_FILE" ) &
-MQTT_PID=$!
-sleep 1
+MQTT_PID=""
+
+if [ "$_SKIP_MQTT_CHECK" = "false" ]; then
+    dm_mqtt_probe_subscription "$MQTT_TOPIC" 10 || true
+    # Background MQTT subscriber (collects the outbound mapping message).
+    ( dm_mqtt_subscribe_one "$MQTT_TOPIC" 15 > "$TEMP_FILE" 2>"$TEMP_ERR_FILE" ) &
+    MQTT_PID=$!
+    sleep 1
+fi
 
 dm_step 7 "Creating measurement in C8Y"
 MEASUREMENT=$(jq -cn \
@@ -179,46 +207,51 @@ printf '%s' "$MEASUREMENT" | c8y measurements create --template "input.value" \
     --output json > /dev/null 2>&1 || dm_warn "Measurement creation may have failed"
 dm_success "Test measurement created"
 
-dm_step 8 "Waiting for MQTT message"
-# Block until the background subscriber gets a message (it exits on the first
-# one via -C 1) or its 15s window elapses — don't read the temp file early.
-set +e
-wait "$MQTT_PID"
-MQTT_SUB_RC=$?
-set -e
+dm_step 8 "Waiting for outbound processing"
 
-if [ "$MQTT_SUB_RC" -ne 0 ]; then
-    # 0=ok, 27=timeout (no message), 2=MOSQ_ERR_PROTOCOL (broker disconnect),
-    # 5=connection refused, 8=TLS error. Surface mosquitto's own message.
-    dm_warn "mosquitto_sub exited $MQTT_SUB_RC; stderr: $(tr '\n' ' ' < "$TEMP_ERR_FILE" 2>/dev/null | head -c 400)"
+if [ "$_SKIP_MQTT_CHECK" = "true" ]; then
+    # MQTT Service mode: wait for notification delivery + processing, then check counter.
+    dm_wait 8 "outbound notification processing"
+    dm_assert_mapping_received_gt "Outbound mapping processed measurement" "$MAPPING_ID" "$BASELINE"
+    dm_info "MQTT Service mode: MQTT message content check skipped (cert-CN conflict with connector)"
+else
+    # Generic MQTT mode: block until mosquitto_sub receives a message (exits on first
+    # one via -C 1) or its 15s window elapses.
+    set +e
+    wait "$MQTT_PID"
+    MQTT_SUB_RC=$?
+    set -e
+
+    if [ "$MQTT_SUB_RC" -ne 0 ]; then
+        dm_warn "mosquitto_sub exited $MQTT_SUB_RC; stderr: $(tr '\n' ' ' < "$TEMP_ERR_FILE" 2>/dev/null | head -c 400)"
+    fi
+    dm_assert_eq "MQTT subscriber exit code" "0" "$MQTT_SUB_RC"
+
+    # Reliable secondary signal: confirm the mapping incremented its counter.
+    dm_assert_mapping_received_gt "Outbound mapping processed measurement" "$MAPPING_ID" "$BASELINE"
+
+    # Check if the transformed message was published to the broker.
+    MQTT_MSG=""
+    if [ -f "$TEMP_FILE" ] && [ -s "$TEMP_FILE" ]; then
+        MQTT_MSG=$(head -1 "$TEMP_FILE")
+        dm_info "MQTT message received: $MQTT_MSG"
+    fi
+    _received=false
+    [ -n "$MQTT_MSG" ] && _received=true
+    dm_assert_eq "Outbound MQTT message received" "true" "$_received"
+
+    _json_payload=false
+    if printf '%s' "$MQTT_MSG" | jq -e . >/dev/null 2>&1; then
+        _json_payload=true
+    fi
+    dm_assert_eq "Outbound MQTT payload is valid JSON" "true" "$_json_payload"
+
+    TEMP_VALUE=$(echo "$MQTT_MSG" | jq -r '.temperature // empty' 2>/dev/null || echo "")
+    dm_assert_eq "Transformed temperature value" "22.5" "$TEMP_VALUE"
 fi
-dm_assert_eq "MQTT subscriber exit code" "0" "$MQTT_SUB_RC"
-
-# Reliable signal: confirm the outbound mapping actually processed the measurement.
-dm_assert_mapping_received_gt "Outbound mapping processed measurement" "$MAPPING_ID" "$BASELINE"
-
-# Check if the transformed message was published to the broker.
-MQTT_MSG=""
-if [ -f "$TEMP_FILE" ] && [ -s "$TEMP_FILE" ]; then
-    MQTT_MSG=$(head -1 "$TEMP_FILE")
-    dm_info "MQTT message received: $MQTT_MSG"
-fi
-_received=false
-[ -n "$MQTT_MSG" ] && _received=true
-dm_assert_eq "Outbound MQTT message received" "true" "$_received"
-
-_json_payload=false
-if printf '%s' "$MQTT_MSG" | jq -e . >/dev/null 2>&1; then
-  _json_payload=true
-fi
-dm_assert_eq "Outbound MQTT payload is valid JSON" "true" "$_json_payload"
-
-# Verify transformed content
-TEMP_VALUE=$(echo "$MQTT_MSG" | jq -r '.temperature // empty' 2>/dev/null || echo "")
-dm_assert_eq "Transformed temperature value" "22.5" "$TEMP_VALUE"
 
 # Cleanup
-kill "$MQTT_PID" 2>/dev/null || true
+[ -n "$MQTT_PID" ] && kill "$MQTT_PID" 2>/dev/null || true
 rm -f "$TEMP_FILE" "$TEMP_ERR_FILE"
 
 dm_done "$TEST_TITLE"
