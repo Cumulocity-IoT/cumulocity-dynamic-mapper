@@ -393,7 +393,6 @@ export class MappingSubstitutionStepComponent implements OnInit {
       if (isSubstitutionsAsCode(this.mapping)) {
         if (typeof resultOf === 'string' && resultOf.trim()) {
           this.mappingCodeChange.emit(resultOf);
-          this.alertService.success('Generated JavaScript code successfully.');
         } else {
           this.alertService.warning('No valid JavaScript code was generated.');
         }

@@ -298,10 +298,8 @@ export class AIPromptComponent implements OnInit {
         if (jsContent.includes('function') && jsContent.includes('function onMessage')) {
           this.generatedCode = this.applyESMExport(jsContent);
           this.valid = true;
-          this.alertService.success('JavaScript code extracted successfully!');
         } else {
           this.valid = false;
-          this.alertService.warning('Invalid JavaScript function format found in response');
         }
       } else {
         // Try alternative patterns for code blocks
@@ -313,10 +311,8 @@ export class AIPromptComponent implements OnInit {
           if (jsContent.includes('function')) {
             this.generatedCode = this.applyESMExport(jsContent);
             this.valid = true;
-            this.alertService.success('JavaScript code extracted successfully!');
           } else {
             this.valid = false;
-            this.alertService.warning('No valid JavaScript function found in response');
           }
         } else {
           this.valid = false;
@@ -366,14 +362,11 @@ export class AIPromptComponent implements OnInit {
           if (isValidSubstitutions) {
             this.substitutions = parsedSubstitutions;
             this.valid = true;
-            this.alertService.success('Substitutions extracted successfully!');
           } else {
             this.valid = false;
-            this.alertService.warning('Invalid substitution format found in response');
           }
         } else {
           this.valid = false;
-          this.alertService.warning('Expected array of substitutions but found different format');
         }
       } else {
         this.valid = false;

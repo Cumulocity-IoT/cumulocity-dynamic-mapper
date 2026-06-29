@@ -93,18 +93,24 @@ export class SubscriptionService {
   // ===== SUBSCRIPTION CRUD OPERATIONS =====
 
   /**
-   * Updates device-based notification subscription
+   * Updates device-based notification subscription.
+   * @param subscription optional subscription name (e.g. STATIC_DEVICE_SUBSCRIPTION or
+   *   DYNAMIC_DEVICE_SUBSCRIPTION). When omitted the backend uses its default (static).
    */
   async updateSubscriptionDevice(
-    request: NotificationSubscriptionRequest
+    request: NotificationSubscriptionRequest,
+    subscription?: string
   ): Promise<NotificationSubscriptionResponse> {
     // this.validateSubscriptionRequest(request, SubscriptionType.DEVICE);
 
     return this.handleOperation(
       'updateSubscriptionDevice',
       async () => {
+        const url = subscription
+          ? `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}?subscription=${encodeURIComponent(subscription)}`
+          : `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}`;
         const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}`,
+          url,
           {
             headers: {
               'content-type': 'application/json'

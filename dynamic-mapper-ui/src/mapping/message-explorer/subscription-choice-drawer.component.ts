@@ -136,6 +136,7 @@ export interface DeviceGroupInfo {
   `
 })
 export class SubscriptionChoiceDrawerComponent implements AfterViewInit {
+  @Input() deviceId: string | null = null;
   @Input() deviceType: string | null = null;
 
   private _deviceGroups: DeviceGroupInfo[] = [];
@@ -195,6 +196,23 @@ export class SubscriptionChoiceDrawerComponent implements AfterViewInit {
           api: API.ALL.name,
           types: mergedTypes
         });
+        // Also subscribe the current device immediately — it already exists and won't be
+        // picked up by the "new devices of this type" auto-subscription rule.
+        // Use the dynamic subscription so the device is grouped together with other
+        // devices that were auto-subscribed via type/group rules, not the static list.
+        if (this.deviceId) {
+          const existingDevice = await this.subscriptionService.getSubscriptionDevice(
+            this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION
+          );
+          const existingDevices: Device[] = existingDevice?.devices ?? [];
+          const alreadySubscribed = existingDevices.some(d => d.id === this.deviceId);
+          if (!alreadySubscribed) {
+            await this.subscriptionService.updateSubscriptionDevice(
+              { api: API.ALL.name, devices: [...existingDevices, { id: this.deviceId! }] },
+              this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION
+            );
+          }
+        }
         this.alertService.add({ text: 'Subscription request submitted. Subscriptions are processed asynchronously.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
         this._resolve('type');
       } else if (this.choice === 'group' && this.selectedGroupId) {

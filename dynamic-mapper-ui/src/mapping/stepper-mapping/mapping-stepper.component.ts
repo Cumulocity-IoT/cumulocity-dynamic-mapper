@@ -962,7 +962,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
             });
           }
 
-          this.alertService.success('Generated JavaScript code successfully.');
         } else {
           // this.raiseAlert({ type: 'warning', text: 'No valid JavaScript code was generated.' });
         }

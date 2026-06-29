@@ -518,7 +518,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         }
       }
       const subDrawer = this.bottomDrawerService.openDrawer(SubscriptionChoiceDrawerComponent, {
-        initialState: { deviceType, deviceGroups }
+        initialState: { deviceId: effectiveDeviceId ?? null, deviceType, deviceGroups }
       });
       const subResult = await subDrawer.instance.result;
       if (subResult === null) return; // user cancelled

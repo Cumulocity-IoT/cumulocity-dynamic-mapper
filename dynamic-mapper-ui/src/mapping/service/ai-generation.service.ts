@@ -97,7 +97,6 @@ export class AIGenerationService {
    */
   private processCodeGeneration(result: any): AIGenerationResult {
     if (typeof result === 'string' && result.trim()) {
-      this.alertService.success('Generated JavaScript code successfully.');
       return {
         success: true,
         code: result
