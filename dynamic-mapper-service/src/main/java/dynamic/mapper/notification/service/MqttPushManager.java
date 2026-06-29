@@ -162,8 +162,14 @@ public class MqttPushManager {
             connectionFuture.orTimeout(CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                     .whenComplete((result, throwable) -> {
                         if (throwable instanceof TimeoutException) {
-                            log.warn("{} - MQTT connection timeout for device {}", tenant, deviceId);
+                            log.debug("{} - MQTT connection timeout for device {} — removing stale entry",
+                                    tenant, deviceId);
                             client.disconnect();
+                            // Remove from map so future activatePushConnectivity calls can retry cleanly.
+                            Map<String, Mqtt3Client> connections = activePushConnections.get(tenant);
+                            if (connections != null) {
+                                connections.remove(deviceId, client);
+                            }
                         } else if (throwable != null) {
                             logMqttError(tenant, deviceId, throwable);
                         }
