@@ -193,11 +193,15 @@ class SubscriptionManagerTest {
     }
 
     // -------------------------------------------------------------------------
-    // M1: updateSubscriptionByType deletes before create — no rollback on failure
+    // DELETE-first order: old subscription is removed before the new one is created.
+    // C8Y subscriptions are keyed by (subscription-name, context); attempting to
+    // create a new tenant-scoped subscription while the old one still exists always
+    // returns 409, so DELETE must come first.
+    // Trade-off: if the subsequent CREATE fails the old entry is already gone.
     // -------------------------------------------------------------------------
 
     @Test
-    void updateSubscriptionByType_createFails_oldSubscriptionPreserved() {
+    void updateSubscriptionByType_createFails_oldSubscriptionAlreadyDeleted() {
         NotificationSubscriptionRepresentation existing = stubNsr("existing");
         existing.setContext("tenant"); // required so findExistingTypeSubscription() returns this NSR
         NotificationSubscriptionFilterRepresentation filter = new NotificationSubscriptionFilterRepresentation();
@@ -211,9 +215,9 @@ class SubscriptionManagerTest {
         assertThrows(RuntimeException.class,
                 () -> subscriptionManager.updateSubscriptionByType("t1", List.of("cBy_NewType")));
 
-        // M1 fixed: create is attempted first; on failure the old subscription is NOT deleted
+        // DELETE-first: the old subscription IS deleted before the (failing) create attempt
+        verify(subscriptionAPI, times(1)).delete(existing);
         verify(subscriptionAPI, times(1)).subscribe(any());
-        verify(subscriptionAPI, never()).delete(existing);
     }
 
     // -------------------------------------------------------------------------

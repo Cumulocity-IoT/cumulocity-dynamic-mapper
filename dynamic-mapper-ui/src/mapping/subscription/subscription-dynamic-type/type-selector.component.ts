@@ -60,7 +60,7 @@ export class TypeSelectorComponent {
   }
 
   remove(index: number) {
-    this.typeListInternal.splice(index, 1);
+    this.typeListInternal = this.typeListInternal.filter((_, i) => i !== index);
   }
 
   clickedUpdateSubscription() {

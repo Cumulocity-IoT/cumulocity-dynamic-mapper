@@ -323,8 +323,6 @@ public class SubscriptionManager {
     public NotificationSubscriptionResponse updateSubscriptionByType(String tenant, List<String> types) {
         return subscriptionsService.callForTenant(tenant, () -> {
             try {
-                // M1: read existing metadata but do NOT delete yet — create new first so that a
-                // failed create leaves the old subscription intact (rollback-safe order).
                 NotificationSubscriptionRepresentation existing = findExistingTypeSubscription();
                 String existingTypeFilter = null;
                 if (existing != null && existing.getSubscriptionFilter() != null) {
@@ -337,18 +335,23 @@ public class SubscriptionManager {
                         .subscriptionName(Utils.MANAGEMENT_SUBSCRIPTION);
 
                 if (newTypeFilter != null && !newTypeFilter.trim().isEmpty()) {
-                    // Create new subscription first — only delete old on success
-                    NotificationSubscriptionRepresentation nsr = createTypeSubscription(newTypeFilter);
+                    // DELETE first, then CREATE.
+                    // C8Y subscriptions are keyed by (subscription-name, context): only one
+                    // "DynamicMapperManagementSubscription / tenant" entry may exist at a time.
+                    // Creating a new one while the old one is still present always returns 409,
+                    // which caused createTypeSubscription() to return the stale existing NSR —
+                    // followed by deleting it — leaving zero types registered.
                     if (existing != null) {
                         subscriptionAPI.delete(existing);
-                        log.info("{} - Deleted old type subscription after successful create", tenant);
+                        log.info("{} - Deleted old type subscription before re-creating with new filter", tenant);
                     }
+                    NotificationSubscriptionRepresentation nsr = createTypeSubscription(newTypeFilter);
                     responseBuilder.types(new ArrayList<>(Utils.parseTypesFromFilter(newTypeFilter)))
                             .subscriptionId(nsr.getId().getValue())
                             .status(NotificationSubscriptionResponse.SubscriptionStatus.ACTIVE);
                     log.info("{} - Created type subscription with {} types", tenant, types.size());
                 } else {
-                    // No new filter — safe to just delete the existing one
+                    // No new filter — just delete the existing one
                     if (existing != null) {
                         subscriptionAPI.delete(existing);
                         log.info("{} - Deleted type subscription (no replacement needed)", tenant);
