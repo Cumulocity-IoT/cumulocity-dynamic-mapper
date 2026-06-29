@@ -248,4 +248,49 @@ class GroupCacheManagerTest {
         // Sanity: cleanup should have shrunk the cache toward the 3/4 target.
         assertTrue(cache.size() < total, "cleanupOldestEntries should remove the oldest entries");
     }
+
+    // ---------------------------------------------------------------------
+    // cleanupExpiredEntries — re-enabled after cache-miss re-sync was added.
+    // Entries older than 24 h must be evicted; recent entries must survive.
+    // ---------------------------------------------------------------------
+    @Test
+    void cleanupExpiredEntries_removesStaleEntries_keepsRecentOnes() throws Exception {
+        Field cacheField = GroupCacheManager.class.getDeclaredField("groupCache");
+        cacheField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, CachedGroup> cache =
+                (java.util.Map<String, CachedGroup>) cacheField.get(cacheManager);
+
+        // Entry that is clearly expired (25 hours old)
+        cache.put("stale-group",
+                new CachedGroup(group("stale-group"),
+                        LocalDateTime.now().minusHours(25), new HashSet<>()));
+
+        // Entry that is fresh (1 hour old)
+        cache.put("fresh-group",
+                new CachedGroup(group("fresh-group"),
+                        LocalDateTime.now().minusHours(1), new HashSet<>()));
+
+        Method cleanup = GroupCacheManager.class.getDeclaredMethod("cleanupExpiredEntries");
+        cleanup.setAccessible(true);
+        cleanup.invoke(cacheManager);
+
+        assertFalse(cache.containsKey("stale-group"),
+                "cleanupExpiredEntries must remove entries older than 24 h");
+        assertTrue(cache.containsKey("fresh-group"),
+                "cleanupExpiredEntries must keep entries younger than 24 h");
+    }
+
+    @Test
+    void cleanupExpiredEntries_allFresh_removesNothing() throws Exception {
+        cacheManager.addGroup(group("g1"));
+        cacheManager.addGroup(group("g2"));
+
+        Method cleanup = GroupCacheManager.class.getDeclaredMethod("cleanupExpiredEntries");
+        cleanup.setAccessible(true);
+        cleanup.invoke(cacheManager);
+
+        assertTrue(cacheManager.getCache().containsKey("g1"), "fresh entry g1 must survive");
+        assertTrue(cacheManager.getCache().containsKey("g2"), "fresh entry g2 must survive");
+    }
 }

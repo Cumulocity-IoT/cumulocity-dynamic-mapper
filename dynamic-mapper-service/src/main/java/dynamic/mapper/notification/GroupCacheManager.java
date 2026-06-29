@@ -25,6 +25,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,6 +45,7 @@ public class GroupCacheManager {
     
     private static final int MAX_CACHE_SIZE = 10000;
     private static final int CACHE_CLEANUP_INTERVAL_MINUTES = 30;
+    private static final int CACHE_EXPIRY_HOURS = 24;
 
     private final String tenant;
     private final Map<String, CachedGroup> groupCache = new ConcurrentHashMap<>();
@@ -153,22 +155,25 @@ public class GroupCacheManager {
     }
 
     private void cleanupExpiredEntries() {
-        // L6: expiry-based cleanup intentionally disabled — removing entries would miss group
-        // membership changes that arrive while the entry is absent. Scheduler kept for future use.
-        log.debug("{} - Cache expiry cleanup disabled; skipping scheduled run", tenant);
+        // Safe to evict: UpdateSubscriptionDeviceGroupTask now re-syncs from the C8Y API
+        // on a cache miss instead of skipping the update.
+        LocalDateTime expiredBefore = LocalDateTime.now().minusHours(CACHE_EXPIRY_HOURS);
         int removedCount = 0;
-        
-        // Iterator<Map.Entry<String, CachedGroup>> iterator = groupCache.entrySet().iterator();
-        // while (iterator.hasNext()) {
-        //     Map.Entry<String, CachedGroup> entry = iterator.next();
-        //     if (entry.getValue().getLastUpdated().isBefore(expiredBefore)) {
-        //         iterator.remove();
-        //         removedCount++;
-        //     }
-        // }
-        
+
+        Iterator<Map.Entry<String, CachedGroup>> iterator = groupCache.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<String, CachedGroup> entry = iterator.next();
+            if (entry.getValue().getLastUpdated().isBefore(expiredBefore)) {
+                iterator.remove();
+                removedCount++;
+            }
+        }
+
         if (removedCount > 0) {
-            log.info("{} - Cleaned up {} expired cache entries", tenant, removedCount);
+            log.info("{} - Evicted {} expired group cache entries (older than {}h)",
+                    tenant, removedCount, CACHE_EXPIRY_HOURS);
+        } else {
+            log.debug("{} - Cache expiry sweep: no entries older than {}h", tenant, CACHE_EXPIRY_HOURS);
         }
     }
 

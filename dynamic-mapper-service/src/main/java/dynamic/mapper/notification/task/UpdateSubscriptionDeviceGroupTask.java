@@ -69,13 +69,6 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
         }
 
         try {
-            // Get cached group state (null means group is not subscribed by this service)
-            CachedGroup cachedGroup = groupCacheManager.getCache().get(groupId);
-            if (cachedGroup == null) {
-                log.warn("{} - Group {} not found in cache, skipping subscription update", tenant, groupId);
-                return SubscriptionUpdateResult.empty();
-            }
-
             Map<String, Object> payload = c8yMessage.getParsedPayload();
 
             // Guard: if the payload contains no childAssets key this is a property update
@@ -88,11 +81,17 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                 return SubscriptionUpdateResult.empty();
             }
 
-            // Extract child device IDs from cache and payload
+            // Cache miss: entry was expired or never populated. Re-sync from payload
+            // instead of skipping — this makes time-based cache expiry safe.
+            CachedGroup cachedGroup = groupCacheManager.getCache().get(groupId);
+            if (cachedGroup == null) {
+                return handleCacheMiss(tenant, groupId, payload);
+            }
+
+            // Normal delta path
             Set<String> cachedChildIds = groupCacheManager.getSubscribedDevices(groupId);
             Set<String> payloadChildIds = extractChildIdsFromPayload(payload);
 
-            // Calculate differences
             Set<String> toAdd = calculateToAdd(payloadChildIds, cachedChildIds);
             Set<String> toRemove = calculateToRemove(cachedChildIds, payloadChildIds);
 
@@ -104,10 +103,7 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                 return SubscriptionUpdateResult.empty();
             }
 
-            // Process subscription changes
             SubscriptionUpdateResult result = processSubscriptionChanges(tenant, groupId, toAdd, toRemove);
-
-            // Update cache with the authoritative membership from the payload
             groupCacheManager.updateSubscribedDevices(groupId, payloadChildIds);
 
             log.info("{} - Updated group {} subscriptions: {} added, {} removed, {} failed",
@@ -119,6 +115,56 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
             log.error("{} - Error updating group {} subscription: {}", tenant, groupId, e.getMessage(), e);
             return SubscriptionUpdateResult.withError(e);
         }
+    }
+
+    /**
+     * Handles a cache miss for a group that has a childAssets membership-change payload.
+     *
+     * <p>A miss means the cache entry was evicted (time-based expiry) or was never populated
+     * (e.g. first notification after a restart). We cannot compute a safe delta without the
+     * previous state, so we treat the payload as the authoritative current state and subscribe
+     * every device in it. We deliberately do NOT unsubscribe anything — without knowing what
+     * was previously subscribed, removing devices would risk dropping live subscriptions.
+     *
+     * <p>After this call the cache is fully populated, so subsequent notifications for the
+     * same group will follow the normal delta path.
+     */
+    private SubscriptionUpdateResult handleCacheMiss(String tenant, String groupId,
+            Map<String, Object> payload) {
+        log.info("{} - Group {} not in cache (expired or first-seen) — re-syncing from UPDATE payload",
+                tenant, groupId);
+
+        Set<String> payloadChildIds = extractChildIdsFromPayload(payload);
+
+        // Best-effort: restore the group MO so future addGroup() calls have the full object
+        try {
+            ManagedObjectRepresentation groupMO = configurationRegistry.getC8yAgent()
+                    .getManagedObjectForId(tenant, groupId, false);
+            if (groupMO != null) {
+                groupCacheManager.addGroup(groupMO);
+            }
+        } catch (Exception e) {
+            log.debug("{} - Could not fetch group MO {} during cache re-sync: {}", tenant, groupId, e.getMessage());
+        }
+
+        if (payloadChildIds.isEmpty()) {
+            log.info("{} - Re-sync for group {}: payload has no child devices", tenant, groupId);
+            groupCacheManager.updateSubscribedDevices(groupId, Collections.emptySet());
+            return SubscriptionUpdateResult.empty();
+        }
+
+        log.info("{} - Re-sync for group {}: subscribing {} device(s) from payload state (no removals — prior state unknown)",
+                tenant, groupId, payloadChildIds.size());
+
+        // toRemove is empty: we have no prior knowledge of what was subscribed
+        SubscriptionUpdateResult result = processSubscriptionChanges(
+                tenant, groupId, payloadChildIds, Collections.emptySet());
+        groupCacheManager.updateSubscribedDevices(groupId, payloadChildIds);
+
+        log.info("{} - Re-sync completed for group {}: {} subscribed, {} failed",
+                tenant, groupId, result.getAddedCount(), result.getFailedCount());
+
+        return result;
     }
 
     /**
