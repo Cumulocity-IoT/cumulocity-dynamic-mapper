@@ -164,10 +164,10 @@ public class MappingService {
 
             configurationRegistry.getC8yAgent().createLoggingEvent(
                     String.format("Mapping created: %s [%s]", mapping.getName(), mapping.getId()),
-                    LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
+                    LoggingEventType.MAPPING_CREATED_EVENT_TYPE,
                     DateTime.now(),
                     tenant,
-                    null);
+                    Map.of("mappingId", mapping.getId(), "mappingName", mapping.getName()));
 
             log.info("{} - Mapping created: {} [{}]", tenant, mapping.getName(), mapping.getId());
             return mapping;
@@ -237,10 +237,10 @@ public class MappingService {
             if (logEvent) {
                 configurationRegistry.getC8yAgent().createLoggingEvent(
                         String.format("Mapping updated: %s [%s]", mapping.getName(), mapping.getId()),
-                        LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
+                        LoggingEventType.MAPPING_UPDATED_EVENT_TYPE,
                         DateTime.now(),
                         tenant,
-                        null);
+                        Map.of("mappingId", mapping.getId(), "mappingName", mapping.getName()));
             }
 
             log.info("{} - Mapping updated: {} [{}]", tenant, mapping.getName(), mapping.getId());
@@ -340,10 +340,10 @@ public class MappingService {
 
             configurationRegistry.getC8yAgent().createLoggingEvent(
                     String.format("Mapping deleted: %s [%s]", mapping.getName(), id),
-                    LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
+                    LoggingEventType.MAPPING_DELETED_EVENT_TYPE,
                     DateTime.now(),
                     tenant,
-                    null);
+                    Map.of("mappingId", id, "mappingName", mapping.getName()));
 
             log.info("{} - Mapping deleted from Service: {}", tenant, id);
         }
@@ -457,10 +457,12 @@ public class MappingService {
                 configurationRegistry.getC8yAgent().createLoggingEvent(
                         String.format("Mapping %s [%s] %s%s", toPersist.getName(), mappingId,
                                 active ? "activated" : "deactivated", versionInfo),
-                        LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
+                        LoggingEventType.MAPPING_ACTIVATION_EVENT_TYPE,
                         DateTime.now(),
                         tenant,
-                        null);
+                        Map.of("mappingId", mappingId, "mappingName", toPersist.getName(),
+                                "active", active.toString(),
+                                "version", toPersist.getVersion() != null ? toPersist.getVersion() : "unknown"));
 
                 log.info("{} - Mapping {} set to active={}{}", tenant, mappingId, active, versionInfo);
 
@@ -554,10 +556,10 @@ public class MappingService {
         configurationRegistry.getC8yAgent().createLoggingEvent(
                 String.format("Mapping %s [%s] debug mode %s", mapping.getName(), mappingId,
                         debug ? "enabled" : "disabled"),
-                LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
+                LoggingEventType.MAPPING_UPDATED_EVENT_TYPE,
                 DateTime.now(),
                 tenant,
-                null);
+                Map.of("mappingId", mappingId, "mappingName", mapping.getName(), "debug", debug.toString()));
 
         log.info("{} - Mapping {} debug set to {}", tenant, mappingId, debug);
     }
@@ -578,10 +580,10 @@ public class MappingService {
 
         configurationRegistry.getC8yAgent().createLoggingEvent(
                 String.format("Mapping %s [%s] filter updated", mapping.getName(), mappingId),
-                LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
+                LoggingEventType.MAPPING_UPDATED_EVENT_TYPE,
                 DateTime.now(),
                 tenant,
-                null);
+                Map.of("mappingId", mappingId, "mappingName", mapping.getName()));
 
         log.info("{} - Mapping {} filter updated", tenant, mappingId);
         return mapping;
@@ -603,10 +605,10 @@ public class MappingService {
 
         configurationRegistry.getC8yAgent().createLoggingEvent(
                 String.format("Mapping %s [%s] code updated", mapping.getName(), mappingId),
-                LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
+                LoggingEventType.MAPPING_UPDATED_EVENT_TYPE,
                 DateTime.now(),
                 tenant,
-                null);
+                Map.of("mappingId", mappingId, "mappingName", mapping.getName()));
 
         log.info("{} - Mapping {} code updated", tenant, mappingId);
         return mapping;
@@ -919,7 +921,8 @@ public class MappingService {
             return;
         }
 
-        log.info("{} - Cleaning {} dirty mappings", tenant, dirty.size());
+        int dirtyCount = dirty.size();
+        log.info("{} - Cleaning {} dirty mappings", tenant, dirtyCount);
 
         for (Mapping mapping : dirty) {
             updateMapping(tenant, mapping, true, false, false); // Don't log individual updates in batch
@@ -928,11 +931,11 @@ public class MappingService {
         dirty.clear();
 
         configurationRegistry.getC8yAgent().createLoggingEvent(
-                "Mappings updated in backend, dirty mappings cleaned!",
+                String.format("Mappings updated in backend, %d dirty mapping(s) cleaned!", dirtyCount),
                 LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                 DateTime.now(),
                 tenant,
-                null);
+                Map.of("count", String.valueOf(dirtyCount)));
     }
 
     private void removeDirtyMapping(String tenant, Mapping mapping) {

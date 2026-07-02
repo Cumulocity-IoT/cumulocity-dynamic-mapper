@@ -51,11 +51,9 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -1168,7 +1166,7 @@ public abstract class AConnectorClient {
     public void sendConnectorLifecycle(ConnectorStatusEvent status) {
         if (serviceConfiguration.getSendConnectorLifecycle()) {
             Map<String, String> statusMap = createStatusMap(status);
-            String message = "Connector status: " + status;
+            String message = String.format("Connector status: %s", status);
             c8yAgent.createLoggingEvent(
                     message,
                     LoggingEventType.CONNECTOR_EVENT_TYPE,
@@ -1180,19 +1178,16 @@ public abstract class AConnectorClient {
     }
 
     private Map<String, String> createStatusMap(ConnectorStatusEvent status) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        String date = dateFormat.format(new Date());
         String message = status.getMessage();
         if ("".equals(status.getMessage())) {
-            message = "Connector status: " + status.status;
+            message = String.format("Connector status: %s", status.status);
         }
 
         return Map.ofEntries(
                 entry("status", status.getStatus().name()),
                 entry("message", message),
                 entry("connectorName", getConnectorName()),
-                entry("connectorIdentifier", getConnectorIdentifier()),
-                entry("date", date));
+                entry("connectorIdentifier", getConnectorIdentifier()));
     }
 
     /**
@@ -1257,7 +1252,7 @@ public abstract class AConnectorClient {
             return;
         }
 
-        String message = action + " topic: " + topic;
+        String message = String.format("%s topic: %s", action, topic);
         Map<String, String> eventMap = createSubscriptionEventMap(message);
 
         c8yAgent.createLoggingEvent(
@@ -1269,13 +1264,10 @@ public abstract class AConnectorClient {
     }
 
     private Map<String, String> createSubscriptionEventMap(String message) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        String date = dateFormat.format(new Date());
-
         return Map.ofEntries(
                 entry("message", message),
                 entry("connectorName", getConnectorName()),
-                entry("date", date));
+                entry("connectorIdentifier", getConnectorIdentifier()));
     }
 
     /**

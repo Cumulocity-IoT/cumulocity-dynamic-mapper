@@ -23,9 +23,6 @@ package dynamic.mapper.core;
 
 import static java.util.Map.entry;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1075,17 +1072,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         if (tenantRegistry.getServiceConfiguration(tenant).getSendNotificationLifecycle()
                 && !(connectorStatus.equals(previousConnectorStatus))) {
             previousConnectorStatus = connectorStatus;
-            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            Date now = new Date();
-            String date = dateFormat.format(now);
             Map<String, String> stMap = Map.ofEntries(
                     entry("status", connectorStatus.name()),
                     entry("message",
                             message == null ? C8Y_NOTIFICATION_CONNECTOR + ": " + connectorStatus.name() : message),
                     entry("connectorName", C8Y_NOTIFICATION_CONNECTOR),
-                    entry("connectorIdentifier", "000000"),
-                    entry("date", date));
-            createLoggingEvent("Connector status: " + connectorStatus.name(),
+                    entry("connectorIdentifier", "000000"));
+            createLoggingEvent(String.format("Connector status: %s", connectorStatus.name()),
                     LoggingEventType.NOTIFICATION_EVENT_TYPE, connectorStatus.toSeverity(), DateTime.now(),
                     tenant,
                     stMap);

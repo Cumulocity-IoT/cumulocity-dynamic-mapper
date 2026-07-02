@@ -34,8 +34,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -317,16 +315,14 @@ public class MappingStatusService {
                 return;
             }
 
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            String date = LocalDateTime.now().format(formatter);
+            String resolvedMessage = message != null ? message : "Unknown error";
 
             Map<String, String> eventData = Map.of(
-                    "message", message != null ? message : "Unknown error",
-                    "id", moId,
-                    "date", date);
+                    "message", resolvedMessage,
+                    "id", moId);
 
             configurationRegistry.getC8yAgent().createLoggingEvent(
-                    message,
+                    resolvedMessage,
                     LoggingEventType.MAPPING_LOADING_ERROR_EVENT_TYPE,
                     DateTime.now(),
                     tenant,
@@ -382,17 +378,18 @@ public class MappingStatusService {
 
     private void handleFailureThresholdExceeded(String tenant, Mapping mapping, MappingStatus status) {
         String message = String.format(
-                "Tenant %s - Mapping %s deactivated due to exceeded failure count: %d",
-                tenant, mapping.getId(), status.getCurrentFailureCount());
+                "Mapping %s deactivated due to exceeded failure count: %d",
+                mapping.getId(), status.getCurrentFailureCount());
 
-        log.warn(message);
+        log.warn("{} - {}", tenant, message);
 
         configurationRegistry.getC8yAgent().createLoggingEvent(
                 message,
                 LoggingEventType.MAPPING_FAILURE_EVENT_TYPE,
                 DateTime.now(),
                 tenant,
-                null);
+                Map.of("mappingId", mapping.getId(),
+                        "failureCount", String.valueOf(status.getCurrentFailureCount())));
     }
 
     private MappingStatus[] buildStatusArray(String tenant, Map<String, MappingStatus> statusMap) {
