@@ -28,6 +28,7 @@ import {
   ConnectorStatus,
   Direction,
   Feature,
+  getSeverityBadgeClass,
   LoggingEventType,
   LoggingEventTypeMap,
   Operation,
@@ -111,6 +112,10 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
 
   updateStatusLogs() {
     this.connectorStatusService.updateStatusLogs(this.filterStatusLog);
+  }
+
+  getSeverityClass(severity: string): string {
+    return getSeverityBadgeClass(severity);
   }
 
   async onConfigurationUpdate(): Promise<void> {
