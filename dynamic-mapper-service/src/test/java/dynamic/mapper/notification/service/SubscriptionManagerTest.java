@@ -221,6 +221,92 @@ class SubscriptionManagerTest {
     }
 
     // -------------------------------------------------------------------------
+    // checkAndHandleDeduplication fast path: subscription families other than
+    // STATIC/DYNAMIC (e.g. explorer) always proceed and must not pay the
+    // per-device dedup lookup GETs, since their result was always discarded.
+    // -------------------------------------------------------------------------
+
+    @Test
+    void subscribeDeviceAndConnect_explorerSubscription_skipsDedupLookupsEntirely() throws Exception {
+        ManagedObjectRepresentation mor = morWithId("device-1");
+        when(subscriptionAPI.subscribe(any())).thenReturn(stubNsr("device-1"));
+
+        subscriptionManager
+                .subscribeDeviceAndConnect("t1", mor, API.ALL, Utils.EXPLORER_DEVICE_SUBSCRIPTION)
+                .get(5, TimeUnit.SECONDS);
+
+        verify(subscriptionAPI, never()).getSubscriptionsByFilter(any());
+        verify(subscriptionAPI, times(1)).subscribe(any());
+    }
+
+    // -------------------------------------------------------------------------
+    // Batch dedup pre-fetch: fetchDeviceIdsForSubscription + the 5-arg
+    // subscribeDeviceAndConnect overload for bulk DYNAMIC_DEVICE_SUBSCRIPTION callers.
+    // -------------------------------------------------------------------------
+
+    @Test
+    void fetchDeviceIdsForSubscription_aggregatesSourceIdsAcrossAllPages() {
+        NotificationSubscriptionRepresentation nsr1 = stubNsrWithSource("sub-1", "device-1");
+        NotificationSubscriptionRepresentation nsr2 = stubNsrWithSource("sub-2", "device-2");
+        NotificationSubscriptionCollection multi = multiCollection(nsr1, nsr2);
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(multi);
+
+        java.util.Set<String> ids = subscriptionManager
+                .fetchDeviceIdsForSubscription("t1", Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+
+        assertEquals(java.util.Set.of("device-1", "device-2"), ids);
+    }
+
+    @Test
+    void subscribeDeviceAndConnect_dynamicWithKnownId_skipsWithoutSubscribing() throws Exception {
+        ManagedObjectRepresentation mor = morWithId("device-1");
+        java.util.Set<String> known = java.util.Set.of("device-1");
+
+        subscriptionManager
+                .subscribeDeviceAndConnect("t1", mor, API.ALL, Utils.DYNAMIC_DEVICE_SUBSCRIPTION, known)
+                .get(5, TimeUnit.SECONDS);
+
+        verify(subscriptionAPI, never()).subscribe(any());
+        verify(subscriptionAPI, never()).getSubscriptionsByFilter(any());
+    }
+
+    @Test
+    void subscribeDeviceAndConnect_dynamicWithUnknownId_proceedsNormally() throws Exception {
+        ManagedObjectRepresentation mor = morWithId("device-2");
+        java.util.Set<String> known = java.util.Set.of("device-1"); // does not contain device-2
+        when(subscriptionAPI.subscribe(any())).thenReturn(stubNsr("device-2"));
+        NotificationSubscriptionCollection empty = emptyCollection();
+        lenient().when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(empty);
+
+        subscriptionManager
+                .subscribeDeviceAndConnect("t1", mor, API.ALL, Utils.DYNAMIC_DEVICE_SUBSCRIPTION, known)
+                .get(5, TimeUnit.SECONDS);
+
+        verify(subscriptionAPI, times(1)).subscribe(any());
+    }
+
+    @Test
+    void subscribeDeviceAndConnect_nonDynamicSubscription_ignoresKnownIdsSet() throws Exception {
+        // Guard only applies when requesting DYNAMIC_DEVICE_SUBSCRIPTION — a STATIC request
+        // for a device present in a "known dynamic" set must still go through the normal
+        // (dynamic-beats-static) dedup path, not be silently skipped by the batch guard.
+        ManagedObjectRepresentation mor = morWithId("device-1");
+        java.util.Set<String> known = java.util.Set.of("device-1");
+        // hasSubscriptionForDevice(DYNAMIC) -> true, so checkAndHandleDeduplication skips (dynamic beats static)
+        NotificationSubscriptionRepresentation existingDynamic = stubNsrWithSource("sub-1", "device-1");
+        NotificationSubscriptionCollection existingCol = singletonCollection(existingDynamic);
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(existingCol);
+
+        subscriptionManager
+                .subscribeDeviceAndConnect("t1", mor, API.ALL, Utils.STATIC_DEVICE_SUBSCRIPTION, known)
+                .get(5, TimeUnit.SECONDS);
+
+        // Reached the real dedup path (proven by the lookup GET happening) rather than the batch short-circuit
+        verify(subscriptionAPI, atLeastOnce()).getSubscriptionsByFilter(any());
+        verify(subscriptionAPI, never()).subscribe(any());
+    }
+
+    // -------------------------------------------------------------------------
     // M2: unsubscribe last device triggers connectionManager.disconnect()
     // -------------------------------------------------------------------------
 
@@ -251,6 +337,21 @@ class SubscriptionManagerTest {
         NotificationSubscriptionRepresentation nsr = new NotificationSubscriptionRepresentation();
         nsr.setId(GId.asGId(id));
         return nsr;
+    }
+
+    private NotificationSubscriptionRepresentation stubNsrWithSource(String id, String sourceDeviceId) {
+        NotificationSubscriptionRepresentation nsr = stubNsr(id);
+        nsr.setSource(morWithId(sourceDeviceId));
+        return nsr;
+    }
+
+    private NotificationSubscriptionCollection multiCollection(NotificationSubscriptionRepresentation... nsrs) {
+        PagedNotificationSubscriptionCollectionRepresentation paged =
+                mock(PagedNotificationSubscriptionCollectionRepresentation.class);
+        when(paged.allPages()).thenReturn(List.of(nsrs));
+        NotificationSubscriptionCollection col = mock(NotificationSubscriptionCollection.class);
+        when(col.get()).thenReturn(paged);
+        return col;
     }
 
     private NotificationSubscriptionCollection emptyCollection() {

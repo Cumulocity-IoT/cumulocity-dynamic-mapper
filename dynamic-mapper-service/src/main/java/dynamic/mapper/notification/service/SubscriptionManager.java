@@ -144,6 +144,59 @@ public class SubscriptionManager {
         });
     }
 
+    /**
+     * Batch variant of {@link #subscribeDeviceAndConnect(String, ManagedObjectRepresentation, API, String)}
+     * for bulk callers requesting {@link Utils#DYNAMIC_DEVICE_SUBSCRIPTION} for many devices at once (e.g.
+     * resyncing all existing devices of a type). If {@code knownDynamicDeviceIds} already contains this
+     * device's id, it's assumed to already have a dynamic subscription — mirroring
+     * {@code checkAndHandleDeduplication}'s dynamic-vs-dynamic skip rule — and the call is skipped without
+     * hitting the per-device lookup GETs. Only takes effect when {@code subscription} is
+     * {@link Utils#DYNAMIC_DEVICE_SUBSCRIPTION}; for any other subscription family this behaves exactly
+     * like the 4-arg overload (other families, e.g. {@link Utils#EXPLORER_DEVICE_SUBSCRIPTION}, are not
+     * deduplicated against dynamic subscriptions — see {@code checkAndHandleDeduplication}). Pass
+     * {@code null} to always fall back to the unconditional single-device path.
+     */
+    public Future<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(
+            String tenant, ManagedObjectRepresentation mor, API api, String subscription,
+            Set<String> knownDynamicDeviceIds) {
+
+        if (knownDynamicDeviceIds != null && isValid(mor)
+                && Utils.DYNAMIC_DEVICE_SUBSCRIPTION.equals(subscription)
+                && knownDynamicDeviceIds.contains(mor.getId().getValue())) {
+            log.debug("{} - Device {} already dynamically subscribed (batch pre-check), skipping",
+                    tenant, mor.getId().getValue());
+            return CompletableFuture.completedFuture(null);
+        }
+        return subscribeDeviceAndConnect(tenant, mor, api, subscription);
+    }
+
+    /**
+     * Fetches all device ids currently holding a subscription of the given name, tenant-wide, via a
+     * single paged query. Intended for bulk callers that would otherwise call
+     * {@code checkAndHandleDeduplication} once per device (2 filtered GETs each) — call this once up
+     * front instead and check membership in-memory.
+     */
+    public Set<String> fetchDeviceIdsForSubscription(String tenant, String subscriptionName) {
+        return subscriptionsService.callForTenant(tenant, () -> {
+            Set<String> ids = new HashSet<>();
+            try {
+                Iterator<NotificationSubscriptionRepresentation> it = subscriptionAPI
+                        .getSubscriptionsByFilter(
+                                new NotificationSubscriptionFilter()
+                                        .bySubscription(subscriptionName)
+                                        .byContext("mo"))
+                        .get().allPages().iterator();
+                while (it.hasNext()) {
+                    ids.add(it.next().getSource().getId().getValue());
+                }
+            } catch (Exception e) {
+                log.warn("{} - Error fetching device ids for subscription {}: {}",
+                        tenant, subscriptionName, e.getMessage());
+            }
+            return ids;
+        });
+    }
+
     public Future<NotificationSubscriptionRepresentation> subscribeByDeviceGroup(
             String tenant, ManagedObjectRepresentation mor) {
 
@@ -553,6 +606,14 @@ public class SubscriptionManager {
      * @return true if the new subscription should be skipped, false if it should proceed
      */
     private boolean checkAndHandleDeduplication(String tenant, String deviceId, String requestedSubscription) {
+        if (!Utils.STATIC_DEVICE_SUBSCRIPTION.equals(requestedSubscription)
+                && !Utils.DYNAMIC_DEVICE_SUBSCRIPTION.equals(requestedSubscription)) {
+            // Priority-based dedup only applies between static/dynamic. Other families
+            // (e.g. EXPLORER_DEVICE_SUBSCRIPTION) are independent and always proceed —
+            // skip the lookup GETs below since their result would be discarded anyway.
+            return false;
+        }
+
         boolean hasDynamic = hasSubscriptionForDevice(tenant, deviceId, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
         boolean hasStatic = hasSubscriptionForDevice(tenant, deviceId, Utils.STATIC_DEVICE_SUBSCRIPTION);
 

@@ -99,6 +99,17 @@ public class NotificationSubscriber {
         return subscriptionManager.subscribeDeviceAndConnect(tenant, mor, api, subscriptionName);
     }
 
+    public Future<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(
+            String tenant, ManagedObjectRepresentation mor, API api, String subscriptionName,
+            Set<String> knownDynamicDeviceIds) {
+        return subscriptionManager.subscribeDeviceAndConnect(tenant, mor, api, subscriptionName,
+                knownDynamicDeviceIds);
+    }
+
+    public Set<String> fetchDeviceIdsForSubscription(String tenant, String subscriptionName) {
+        return subscriptionManager.fetchDeviceIdsForSubscription(tenant, subscriptionName);
+    }
+
     public Future<NotificationSubscriptionRepresentation> subscribeByDeviceGroup(
             String tenant, ManagedObjectRepresentation mor) {
         return subscriptionManager.subscribeByDeviceGroup(tenant, mor);
