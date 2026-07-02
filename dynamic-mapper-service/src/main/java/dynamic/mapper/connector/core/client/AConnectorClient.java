@@ -1169,9 +1169,10 @@ public abstract class AConnectorClient {
         if (serviceConfiguration.getSendConnectorLifecycle()) {
             Map<String, String> statusMap = createStatusMap(status);
             String message = "Connector status: " + status;
-            c8yAgent.createOperationEvent(
+            c8yAgent.createLoggingEvent(
                     message,
                     LoggingEventType.CONNECTOR_EVENT_TYPE,
+                    status.getStatus().toSeverity(),
                     DateTime.now(),
                     tenant,
                     statusMap);
@@ -1259,7 +1260,7 @@ public abstract class AConnectorClient {
         String message = action + " topic: " + topic;
         Map<String, String> eventMap = createSubscriptionEventMap(message);
 
-        c8yAgent.createOperationEvent(
+        c8yAgent.createLoggingEvent(
                 message,
                 LoggingEventType.SUBSCRIPTION_EVENT_TYPE,
                 DateTime.now(),

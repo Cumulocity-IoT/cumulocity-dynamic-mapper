@@ -183,7 +183,7 @@ class MappingServiceActivationTest {
 
         verify(cacheManager, never()).addMapping(any(), any());
         verify(statusService, never()).resetFailureCount(any(), any());
-        verify(c8yAgent).createOperationEvent(any(), eq(dynamic.mapper.model.LoggingEventType.MAPPING_ACTIVATION_ERROR_EVENT_TYPE),
+        verify(c8yAgent).createLoggingEvent(any(), eq(dynamic.mapper.model.LoggingEventType.MAPPING_ACTIVATION_ERROR_EVENT_TYPE),
                 any(), eq(TENANT), any());
     }
 

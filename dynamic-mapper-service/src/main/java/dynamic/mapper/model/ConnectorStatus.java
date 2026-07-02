@@ -29,5 +29,19 @@ public enum ConnectorStatus {
     CONNECTED,
     DISCONNECTED,
     DISCONNECTING,
-    FAILED,
+    FAILED;
+
+    /**
+     * Severity to use for a logging event reporting this status, so a status change's severity
+     * reflects the actual outcome rather than a value fixed per event type. DISCONNECTED/
+     * DISCONNECTING are not treated as warning/error here since they're also reached via normal,
+     * user-initiated shutdown flows, not only failures.
+     */
+    public String toSeverity() {
+        return switch (this) {
+            case FAILED -> "error";
+            case UNKNOWN -> "warning";
+            default -> "info";
+        };
+    }
 }

@@ -209,8 +209,7 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
 
   getSeverityClass(severity: string): string {
     switch (severity) {
-      // case 'error': return 'label-danger';
-      case 'error': return 'label-warning';
+      case 'error': return 'label-danger';
       case 'warning': return 'label-warning';
       case 'info':
       default: return 'label-primary';

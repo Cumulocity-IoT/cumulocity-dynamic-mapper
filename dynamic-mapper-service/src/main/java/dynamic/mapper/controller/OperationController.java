@@ -360,7 +360,7 @@ public class OperationController {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
 
-        c8YAgent.createOperationEvent(
+        c8YAgent.createLoggingEvent(
                 "System code templates re-initialized",
                 LoggingEventType.CODE_TEMPLATE_INIT_EVENT_TYPE,
                 DateTime.now(),

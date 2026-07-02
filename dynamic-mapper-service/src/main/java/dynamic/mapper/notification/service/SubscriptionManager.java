@@ -673,7 +673,7 @@ public class SubscriptionManager {
                     "deviceId", deviceId,
                     "removedSubscription", removedSubscription,
                     "keptSubscription", keptSubscription);
-            configurationRegistry.getC8yAgent().createOperationEvent(
+            configurationRegistry.getC8yAgent().createLoggingEvent(
                     message,
                     LoggingEventType.SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE,
                     DateTime.now(),

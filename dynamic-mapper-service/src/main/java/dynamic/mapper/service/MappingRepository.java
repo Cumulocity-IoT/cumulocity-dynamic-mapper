@@ -317,7 +317,7 @@ public class MappingRepository {
             mappingService.updateMapping(tenant, mapping, true, true);
             switch (migration.notice()) {
                 case LOADING_ERROR -> mappingService.sendMappingLoadingError(tenant, mo, migration.message());
-                case OPERATION_EVENT -> configurationRegistry.getC8yAgent().createOperationEvent(
+                case OPERATION_EVENT -> configurationRegistry.getC8yAgent().createLoggingEvent(
                         migration.message(), LoggingEventType.MAPPING_MIGRATION_EVENT_TYPE, DateTime.now(), tenant, null);
             }
         } catch (Exception updateEx) {

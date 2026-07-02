@@ -162,7 +162,7 @@ public class MappingService {
             mor.setName(mapping.getName());
             inventoryApi.update(mor, false);
 
-            configurationRegistry.getC8yAgent().createOperationEvent(
+            configurationRegistry.getC8yAgent().createLoggingEvent(
                     String.format("Mapping created: %s [%s]", mapping.getName(), mapping.getId()),
                     LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                     DateTime.now(),
@@ -235,7 +235,7 @@ public class MappingService {
             inventoryApi.update(mor, false);
 
             if (logEvent) {
-                configurationRegistry.getC8yAgent().createOperationEvent(
+                configurationRegistry.getC8yAgent().createLoggingEvent(
                         String.format("Mapping updated: %s [%s]", mapping.getName(), mapping.getId()),
                         LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                         DateTime.now(),
@@ -338,7 +338,7 @@ public class MappingService {
             deploymentMapService.removeMappingDeployment(tenant, mapping.getIdentifier());
             flowStateStore.clearMappingState(tenant, mapping.getIdentifier());
 
-            configurationRegistry.getC8yAgent().createOperationEvent(
+            configurationRegistry.getC8yAgent().createLoggingEvent(
                     String.format("Mapping deleted: %s [%s]", mapping.getName(), id),
                     LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                     DateTime.now(),
@@ -454,7 +454,7 @@ public class MappingService {
 
                 String versionInfo = versionSwitched ? String.format(" (version %s)", toPersist.getVersion())
                         : "";
-                configurationRegistry.getC8yAgent().createOperationEvent(
+                configurationRegistry.getC8yAgent().createLoggingEvent(
                         String.format("Mapping %s [%s] %s%s", toPersist.getName(), mappingId,
                                 active ? "activated" : "deactivated", versionInfo),
                         LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
@@ -490,7 +490,7 @@ public class MappingService {
 
                 return toPersist;
             } catch (Exception e) {
-                configurationRegistry.getC8yAgent().createOperationEvent(
+                configurationRegistry.getC8yAgent().createLoggingEvent(
                         String.format("Failed to %s mapping %s [%s]: %s",
                                 active ? "activate" : "deactivate", mapping.getName(), mappingId, e.getMessage()),
                         LoggingEventType.MAPPING_ACTIVATION_ERROR_EVENT_TYPE,
@@ -551,7 +551,7 @@ public class MappingService {
         updateMapping(tenant, mapping, true, true);
         updateCacheAfterChange(tenant, mapping);
 
-        configurationRegistry.getC8yAgent().createOperationEvent(
+        configurationRegistry.getC8yAgent().createLoggingEvent(
                 String.format("Mapping %s [%s] debug mode %s", mapping.getName(), mappingId,
                         debug ? "enabled" : "disabled"),
                 LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
@@ -576,7 +576,7 @@ public class MappingService {
         updateMapping(tenant, mapping, true, false);
         updateCacheAfterChange(tenant, mapping);
 
-        configurationRegistry.getC8yAgent().createOperationEvent(
+        configurationRegistry.getC8yAgent().createLoggingEvent(
                 String.format("Mapping %s [%s] filter updated", mapping.getName(), mappingId),
                 LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                 DateTime.now(),
@@ -601,7 +601,7 @@ public class MappingService {
         updateMapping(tenant, mapping, true, false);
         updateCacheAfterChange(tenant, mapping);
 
-        configurationRegistry.getC8yAgent().createOperationEvent(
+        configurationRegistry.getC8yAgent().createLoggingEvent(
                 String.format("Mapping %s [%s] code updated", mapping.getName(), mappingId),
                 LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                 DateTime.now(),
@@ -927,7 +927,7 @@ public class MappingService {
 
         dirty.clear();
 
-        configurationRegistry.getC8yAgent().createOperationEvent(
+        configurationRegistry.getC8yAgent().createLoggingEvent(
                 "Mappings updated in backend, dirty mappings cleaned!",
                 LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                 DateTime.now(),

@@ -325,7 +325,7 @@ public class MappingStatusService {
                     "id", moId,
                     "date", date);
 
-            configurationRegistry.getC8yAgent().createOperationEvent(
+            configurationRegistry.getC8yAgent().createLoggingEvent(
                     message,
                     LoggingEventType.MAPPING_LOADING_ERROR_EVENT_TYPE,
                     DateTime.now(),
@@ -387,7 +387,7 @@ public class MappingStatusService {
 
         log.warn(message);
 
-        configurationRegistry.getC8yAgent().createOperationEvent(
+        configurationRegistry.getC8yAgent().createLoggingEvent(
                 message,
                 LoggingEventType.MAPPING_FAILURE_EVENT_TYPE,
                 DateTime.now(),

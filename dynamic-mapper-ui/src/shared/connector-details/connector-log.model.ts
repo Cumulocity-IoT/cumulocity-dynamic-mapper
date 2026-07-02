@@ -49,6 +49,7 @@ export enum LoggingEventType {
   MAPPING_FAILURE_EVENT_TYPE = 'MAPPING_FAILURE_EVENT_TYPE',
   NOTIFICATION_EVENT_TYPE = 'NOTIFICATION_EVENT_TYPE',
   SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE = 'SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE',
+  CODE_TEMPLATE_INIT_EVENT_TYPE = 'CODE_TEMPLATE_INIT_EVENT_TYPE',
   ALL = 'ALL'
 }
 
@@ -148,6 +149,14 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     componentDisplayName: 'Connector',
     severity: 'info',
     description: 'Duplicate subscription removed to prevent multiply processed messages'
+  },
+  [LoggingEventType.CODE_TEMPLATE_INIT_EVENT_TYPE]: {
+    name: 'CODE_TEMPLATE_INIT_EVENT_TYPE',
+    type: 'd11r_codeTemplateInitEvent',
+    component: 'd11r_system',
+    componentDisplayName: 'System',
+    severity: 'info',
+    description: 'System code templates have been re-initialized'
   },
   [LoggingEventType.ALL]: {
     name: 'ALL',
