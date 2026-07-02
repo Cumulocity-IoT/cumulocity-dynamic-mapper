@@ -177,8 +177,19 @@ public class NotificationSubscriber {
         return queryService.getSubscriptionsDevices(tenant, deviceId, deviceSubscription);
     }
 
+    public NotificationSubscriptionResponse getSubscriptionsDevices(String tenant, String deviceId,
+            String deviceSubscription, int currentPage, int pageSize, boolean withTotalPages) {
+        return queryService.getSubscriptionsDevices(tenant, deviceId, deviceSubscription,
+                currentPage, pageSize, withTotalPages);
+    }
+
     public NotificationSubscriptionResponse getSubscriptionsByDeviceGroup(String tenant) {
         return queryService.getSubscriptionsByDeviceGroup(tenant);
+    }
+
+    public NotificationSubscriptionResponse getSubscriptionsByDeviceGroup(String tenant,
+            int currentPage, int pageSize, boolean withTotalPages) {
+        return queryService.getSubscriptionsByDeviceGroup(tenant, currentPage, pageSize, withTotalPages);
     }
 
     public NotificationSubscriptionResponse getSubscriptionsByDeviceType(String tenant) {

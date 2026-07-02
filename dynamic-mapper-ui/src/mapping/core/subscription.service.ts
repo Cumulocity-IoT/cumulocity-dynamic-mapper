@@ -285,9 +285,18 @@ export class SubscriptionService {
   // ===== SUBSCRIPTION READ OPERATIONS =====
 
   /**
-   * Gets device-based notification subscription
+   * Gets device-based notification subscription.
+   *
+   * Paging is opt-in: when both `currentPage` and `pageSize` are supplied the backend returns
+   * only that page (plus paging metadata) — used by the grid's load-more. When they are omitted
+   * the backend returns the full list (used by the manage-subscription drawers, which re-commit
+   * the complete desired set).
    */
-  async getSubscriptionDevice(subscription: string): Promise<NotificationSubscriptionResponse | null> {
+  async getSubscriptionDevice(
+    subscription: string,
+    currentPage?: number,
+    pageSize?: number
+  ): Promise<NotificationSubscriptionResponse | null> {
     const features = await this.sharedService.getFeatures();
 
     if (!features?.outputMappingEnabled) {
@@ -297,8 +306,12 @@ export class SubscriptionService {
     return this.handleOperation(
       'getSubscriptionDevice',
       async () => {
+        let url = `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}?subscription=${encodeURIComponent(subscription)}`;
+        if (currentPage != null && pageSize != null) {
+          url += `&currentPage=${currentPage}&pageSize=${pageSize}&withTotalPages=true`;
+        }
         const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}?subscription=${subscription}`,
+          url,
           {
             headers: {
               'content-type': 'application/json'

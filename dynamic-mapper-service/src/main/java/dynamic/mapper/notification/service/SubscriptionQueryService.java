@@ -23,10 +23,14 @@ package dynamic.mapper.notification.service;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
+import com.cumulocity.rest.representation.PageStatisticsRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
+import com.cumulocity.sdk.client.PagedCollectionResource;
+import com.cumulocity.sdk.client.QueryParam;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionApi;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
+import com.cumulocity.sdk.client.messaging.notifications.PagedNotificationSubscriptionCollectionRepresentation;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Device;
@@ -39,6 +43,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -213,6 +218,89 @@ public class SubscriptionQueryService {
     }
 
     /**
+     * Get a single page of device subscriptions for the static/dynamic device tabs.
+     */
+    public NotificationSubscriptionResponse getSubscriptionsDevices(String tenant, String deviceId,
+            String deviceSubscription, int currentPage, int pageSize, boolean withTotalPages) {
+
+        if (tenant == null) {
+            throw new IllegalArgumentException("Tenant cannot be null");
+        }
+
+        NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter()
+                .bySubscription(deviceSubscription != null ? deviceSubscription : Utils.STATIC_DEVICE_SUBSCRIPTION);
+
+        if (deviceId != null) {
+            GId id = new GId();
+            id.setValue(deviceId);
+            filter = filter.bySource(id);
+        }
+        filter = filter.byContext("mo");
+
+        return getSubscriptionsDevicesPaged(tenant, filter, currentPage, pageSize, withTotalPages);
+    }
+
+    /**
+     * Fetch a single page of "mo"-context device subscriptions for the given filter, enrich each
+     * into a Device, and return a paged response. Shared by the device tabs and the group tab.
+     */
+    private NotificationSubscriptionResponse getSubscriptionsDevicesPaged(String tenant,
+            NotificationSubscriptionFilter filter, int currentPage, int pageSize, boolean withTotalPages) {
+
+        int effectivePageSize = pageSize > 0 ? pageSize : 30;
+        int requestedPage = Math.max(1, currentPage);
+
+        NotificationSubscriptionFilter finalFilter = filter;
+        NotificationSubscriptionResponse.NotificationSubscriptionResponseBuilder responseBuilder =
+                NotificationSubscriptionResponse.builder();
+        List<Device> devices = new ArrayList<>();
+        AtomicReference<PageStatisticsRepresentation> statsRef = new AtomicReference<>();
+
+        subscriptionsService.runForTenant(tenant, () -> {
+            try {
+                List<QueryParam> params = new ArrayList<>();
+                params.add(new QueryParam(() -> PagedCollectionResource.PAGE_NUMBER_KEY,
+                        String.valueOf(requestedPage)));
+                if (withTotalPages) {
+                    params.add(new QueryParam(() -> "withTotalPages", "true"));
+                }
+
+                PagedNotificationSubscriptionCollectionRepresentation page = subscriptionAPI
+                        .getSubscriptionsByFilter(finalFilter)
+                        .get(effectivePageSize, params.toArray(new QueryParam[0]));
+
+                for (NotificationSubscriptionRepresentation nsr : page.getSubscriptions()) {
+                    processDeviceSubscription(tenant, nsr, devices, responseBuilder);
+                }
+                statsRef.set(page.getPageStatistics());
+            } catch (Exception e) {
+                log.error("{} - Error getting paged device subscriptions: {}", tenant, e.getMessage(), e);
+            }
+        });
+
+        PageStatisticsRepresentation stats = statsRef.get();
+        int effectivePage = stats != null ? stats.getCurrentPage() : requestedPage;
+        Integer totalPages = stats != null ? stats.getTotalPages() : null;
+        Long totalElements = stats != null ? stats.getTotalElements() : null;
+
+        // If totals are known use them; otherwise infer "more" from a full page.
+        boolean hasNext = totalPages != null
+                ? effectivePage < totalPages
+                : devices.size() >= effectivePageSize;
+
+        return responseBuilder
+                .devices(devices)
+                .paging(NotificationSubscriptionResponse.Paging.builder()
+                        .currentPage(effectivePage)
+                        .pageSize(effectivePageSize)
+                        .totalPages(totalPages)
+                        .totalElements(totalElements)
+                        .hasNext(hasNext)
+                        .build())
+                .build();
+    }
+
+    /**
      * Get subscriptions by device group
      */
     public NotificationSubscriptionResponse getSubscriptionsByDeviceGroup(String tenant) {
@@ -243,6 +331,23 @@ public class SubscriptionQueryService {
         });
 
         return responseBuilder.devices(devices).build();
+    }
+
+    /**
+     * Get a single page of group ("management") device subscriptions for the group tab.
+     */
+    public NotificationSubscriptionResponse getSubscriptionsByDeviceGroup(String tenant,
+            int currentPage, int pageSize, boolean withTotalPages) {
+
+        if (tenant == null) {
+            throw new IllegalArgumentException("Tenant cannot be null");
+        }
+
+        NotificationSubscriptionFilter filter = new NotificationSubscriptionFilter()
+                .bySubscription(Utils.MANAGEMENT_SUBSCRIPTION)
+                .byContext("mo");
+
+        return getSubscriptionsDevicesPaged(tenant, filter, currentPage, pageSize, withTotalPages);
     }
 
     /**

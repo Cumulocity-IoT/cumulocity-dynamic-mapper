@@ -97,26 +97,26 @@
   <span translate>for subscription and deduplication details.</span>
 </div>
 
-@if (subscriptionDevices?.devices) {
-  <div class="card">
-    <div class="card-block content-fullpage border-top border-bottom">
-      <c8y-data-grid #subscriptionGrid [selectable]="true" [configureColumnsEnabled]="false"
-        [title]="titleSubscription | translate" [columns]="columnsSubscriptions" [rows]="subscribedDevices"
-        [pagination]="pagination" [actionControls]="actionControlSubscription"
-        [bulkActionControls]="bulkActionControlSubscription">
-        <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-mail'"
-        [title]="'No subscriptions for devices exist.' | translate" [subtitle]="
-    'Create your first subscription for a device.' | translate
-  " [horizontal]="true"> <button class="btn btn-link m-t-16" title="{{ 'Manage subscriptions' | translate }}"
-          (click)="onDefineSubscription1()" data-cy="dm-subscription-empty-manage">
-          <i c8yIcon="subscription"></i>
-          {{ 'Manage subscriptions' | translate }}
-        </button>
-      </c8y-ui-empty-state>
-    </c8y-data-grid>
-  </div>
+<div class="card">
+  <div class="card-block content-fullpage border-top border-bottom">
+    <c8y-data-grid #subscriptionGrid [selectable]="true" [configureColumnsEnabled]="false"
+      [title]="titleSubscription | translate" [columns]="columnsSubscriptions"
+      [serverSideDataCallback]="serverSideDataCallback" [infiniteScroll]="infiniteScroll"
+      [loadMoreItemsLabel]="loadMoreItemsLabel | translate"
+      [pagination]="pagination" [actionControls]="actionControlSubscription"
+      [bulkActionControls]="bulkActionControlSubscription">
+      <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-mail'"
+      [title]="'No subscriptions for devices exist.' | translate" [subtitle]="
+  'Create your first subscription for a device.' | translate
+" [horizontal]="true"> <button class="btn btn-link m-t-16" title="{{ 'Manage subscriptions' | translate }}"
+        (click)="onDefineSubscription1()" data-cy="dm-subscription-empty-manage">
+        <i c8yIcon="subscription"></i>
+        {{ 'Manage subscriptions' | translate }}
+      </button>
+    </c8y-ui-empty-state>
+  </c8y-data-grid>
 </div>
-}
+</div>
 
 <div [ngClass]="{ drawerOpen: showConfigSubscription1 }">
   <div class="bottom-drawer d-col has-backdrop" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">

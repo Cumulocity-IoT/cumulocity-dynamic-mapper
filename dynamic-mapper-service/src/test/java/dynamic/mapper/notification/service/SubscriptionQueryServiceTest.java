@@ -22,10 +22,13 @@
 package dynamic.mapper.notification.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -49,8 +52,10 @@ import org.mockito.quality.Strictness;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
+import com.cumulocity.rest.representation.PageStatisticsRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
+import com.cumulocity.sdk.client.QueryParam;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionApi;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionCollection;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
@@ -261,6 +266,144 @@ class SubscriptionQueryServiceTest {
         // The service guards against a null tenant up front.
         try {
             queryService.getSubscriptionsDevices(null, null, Utils.STATIC_DEVICE_SUBSCRIPTION);
+            org.junit.jupiter.api.Assertions.fail("Expected IllegalArgumentException for null tenant");
+        } catch (IllegalArgumentException expected) {
+            assertEquals("Tenant cannot be null", expected.getMessage());
+        }
+    }
+
+    // === Paged read tests (load-more support) ===
+
+    /**
+     * Stubs the single-page fetch chain used by the paged methods:
+     * {@code getSubscriptionsByFilter(...).get(pageSize, QueryParam...)} -> pagedCollection,
+     * whose {@code getSubscriptions()} returns the given page and {@code getPageStatistics()}
+     * returns the given stats.
+     */
+    private void stubPage(List<NotificationSubscriptionRepresentation> pageContent,
+            PageStatisticsRepresentation stats) {
+        when(subscriptionCollection.get(anyInt(), any(QueryParam[].class))).thenReturn(pagedCollection);
+        when(pagedCollection.getSubscriptions()).thenReturn(pageContent);
+        when(pagedCollection.getPageStatistics()).thenReturn(stats);
+    }
+
+    private PageStatisticsRepresentation pageStats(int currentPage, int pageSize,
+            Integer totalPages, Long totalElements) {
+        PageStatisticsRepresentation stats = new PageStatisticsRepresentation();
+        stats.setCurrentPage(currentPage);
+        stats.setPageSize(pageSize);
+        stats.setTotalPages(totalPages);
+        stats.setTotalElements(totalElements);
+        return stats;
+    }
+
+    private void stubExistingMO(String deviceId, String name) {
+        ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
+        GId morId = new GId();
+        morId.setValue(deviceId);
+        mor.setId(morId);
+        mor.setName(name);
+        when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        when(c8yAgent.getManagedObjectForId(eq(TEST_TENANT), eq(deviceId), anyBoolean(), anyBoolean()))
+                .thenReturn(mor);
+    }
+
+    @Test
+    void getSubscriptionsDevices_paged_returnsPageAndPagingWithTotals() {
+        NotificationSubscriptionRepresentation nsr = deviceSubscription("sub-1", DEVICE_ID);
+        stubPage(Collections.singletonList(nsr), pageStats(1, 30, 3, 65L));
+        stubExistingMO(DEVICE_ID, "Device One");
+
+        // withTotalPages = true, first of 3 pages
+        NotificationSubscriptionResponse response = queryService.getSubscriptionsDevices(
+                TEST_TENANT, null, Utils.STATIC_DEVICE_SUBSCRIPTION, 1, 30, true);
+
+        assertNotNull(response);
+        assertEquals(1, response.getDevices().size());
+        assertEquals(DEVICE_ID, response.getDevices().get(0).getId());
+
+        NotificationSubscriptionResponse.Paging paging = response.getPaging();
+        assertNotNull(paging);
+        assertEquals(1, paging.getCurrentPage());
+        assertEquals(30, paging.getPageSize());
+        assertEquals(3, paging.getTotalPages());
+        assertEquals(65L, paging.getTotalElements());
+        assertTrue(paging.isHasNext(), "Page 1 of 3 must report hasNext=true");
+
+        // The full-list allPages() path must NOT be used on the paged call.
+        verify(pagedCollection, never()).allPages();
+    }
+
+    @Test
+    void getSubscriptionsDevices_paged_lastPage_hasNextFalse() {
+        NotificationSubscriptionRepresentation nsr = deviceSubscription("sub-1", DEVICE_ID);
+        stubPage(Collections.singletonList(nsr), pageStats(3, 30, 3, 65L));
+        stubExistingMO(DEVICE_ID, "Device One");
+
+        NotificationSubscriptionResponse response = queryService.getSubscriptionsDevices(
+                TEST_TENANT, null, Utils.STATIC_DEVICE_SUBSCRIPTION, 3, 30, true);
+
+        NotificationSubscriptionResponse.Paging paging = response.getPaging();
+        assertEquals(3, paging.getCurrentPage());
+        assertFalse(paging.isHasNext(), "Last page must report hasNext=false");
+    }
+
+    @Test
+    void getSubscriptionsDevices_paged_noStats_infersHasNextFromFullPage() {
+        // No page statistics available: hasNext is inferred from a full page (size >= pageSize),
+        // and totals are left null.
+        NotificationSubscriptionRepresentation a = deviceSubscription("sub-a", "da");
+        NotificationSubscriptionRepresentation b = deviceSubscription("sub-b", "db");
+        stubPage(Arrays.asList(a, b), null);
+        stubExistingMO("da", "Device A");
+        stubExistingMO("db", "Device B");
+
+        NotificationSubscriptionResponse response = queryService.getSubscriptionsDevices(
+                TEST_TENANT, null, Utils.STATIC_DEVICE_SUBSCRIPTION, 1, 2, false);
+
+        NotificationSubscriptionResponse.Paging paging = response.getPaging();
+        assertNotNull(paging);
+        assertEquals(1, paging.getCurrentPage());
+        assertEquals(2, paging.getPageSize());
+        assertNull(paging.getTotalPages());
+        assertNull(paging.getTotalElements());
+        assertTrue(paging.isHasNext(), "A full page (2 of pageSize 2) must infer hasNext=true");
+    }
+
+    @Test
+    void getSubscriptionsDevices_paged_partialPage_infersHasNextFalse() {
+        NotificationSubscriptionRepresentation a = deviceSubscription("sub-a", "da");
+        stubPage(Collections.singletonList(a), null);
+        stubExistingMO("da", "Device A");
+
+        NotificationSubscriptionResponse response = queryService.getSubscriptionsDevices(
+                TEST_TENANT, null, Utils.STATIC_DEVICE_SUBSCRIPTION, 1, 30, false);
+
+        assertFalse(response.getPaging().isHasNext(),
+                "A partial page (1 of pageSize 30) must infer hasNext=false");
+    }
+
+    @Test
+    void getSubscriptionsByDeviceGroup_paged_returnsPagedResponse() {
+        NotificationSubscriptionRepresentation nsr = deviceSubscription("sub-g", "dg");
+        stubPage(Collections.singletonList(nsr), pageStats(1, 10, 2, 15L));
+        stubExistingMO("dg", "Group Device");
+
+        NotificationSubscriptionResponse response = queryService.getSubscriptionsByDeviceGroup(
+                TEST_TENANT, 1, 10, true);
+
+        assertNotNull(response);
+        assertEquals(1, response.getDevices().size());
+        assertEquals("dg", response.getDevices().get(0).getId());
+        assertNotNull(response.getPaging());
+        assertEquals(2, response.getPaging().getTotalPages());
+        assertTrue(response.getPaging().isHasNext());
+    }
+
+    @Test
+    void getSubscriptionsDevices_paged_nullTenant_throwsIllegalArgument() {
+        try {
+            queryService.getSubscriptionsDevices(null, null, Utils.STATIC_DEVICE_SUBSCRIPTION, 1, 30, true);
             org.junit.jupiter.api.Assertions.fail("Expected IllegalArgumentException for null tenant");
         } catch (IllegalArgumentException expected) {
             assertEquals("Tenant cannot be null", expected.getMessage());

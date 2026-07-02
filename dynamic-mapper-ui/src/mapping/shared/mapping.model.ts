@@ -188,4 +188,23 @@ export interface NotificationSubscriptionResponse {
   /** Current subscription status */
   status?: SubscriptionStatus;
 
+  /** Pagination metadata; only present when the request opted into paging */
+  paging?: NotificationSubscriptionPaging;
+
+}
+
+/**
+ * Pagination metadata for a paged device subscription response.
+ */
+export interface NotificationSubscriptionPaging {
+  /** Current page (1-based) */
+  currentPage: number;
+  /** Items requested per page */
+  pageSize: number;
+  /** Total pages; only set when withTotalPages was requested */
+  totalPages?: number;
+  /** Total subscriptions; only set when withTotalPages was requested */
+  totalElements?: number;
+  /** True when another page can be loaded */
+  hasNext: boolean;
 }
