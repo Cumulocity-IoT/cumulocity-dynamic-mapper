@@ -192,6 +192,36 @@ export class SubscriptionService {
   }
 
   /**
+   * Resyncs already-existing devices of a single, already-configured type into the dynamic
+   * device subscription. Notification 2.0's tenant-level type filter only fires for devices
+   * created after the type was added — this backfills devices that existed before. Runs
+   * asynchronously in the background on the server; progress/completion is reported via
+   * Service Events, not via this call's response.
+   */
+  async resyncTypeSubscription(type: string): Promise<void> {
+    await this.handleOperation(
+      'resyncTypeSubscription',
+      async () => {
+        const response = await this.client.fetch(
+          `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/type/resync/${encodeURIComponent(type)}`,
+          {
+            headers: {
+              'content-type': 'application/json'
+            },
+            method: 'POST'
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return;
+      }
+    );
+  }
+
+  /**
    * Creates a new notification subscription
    */
   async createSubscription(

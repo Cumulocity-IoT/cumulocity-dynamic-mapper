@@ -29,9 +29,12 @@ import com.cumulocity.rest.representation.reliable.notification.NotificationSubs
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionApi;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionCollection;
+import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
 import com.cumulocity.sdk.client.messaging.notifications.PagedNotificationSubscriptionCollectionRepresentation;
+import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
+import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.notification.Utils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +43,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,6 +55,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -304,6 +311,120 @@ class SubscriptionManagerTest {
         // Reached the real dedup path (proven by the lookup GET happening) rather than the batch short-circuit
         verify(subscriptionAPI, atLeastOnce()).getSubscriptionsByFilter(any());
         verify(subscriptionAPI, never()).subscribe(any());
+    }
+
+    // -------------------------------------------------------------------------
+    // resyncTypeSubscription / backfillDevicesForType: backfill existing devices
+    // into an already-configured type subscription.
+    // -------------------------------------------------------------------------
+
+    @Test
+    void resyncTypeSubscription_typeNotConfigured_throwsWithoutStartingBackfill() {
+        NotificationSubscriptionRepresentation existing = stubNsr("type-sub");
+        existing.setContext("tenant");
+        NotificationSubscriptionFilterRepresentation filter = new NotificationSubscriptionFilterRepresentation();
+        filter.setTypeFilter("'otherType'");
+        existing.setSubscriptionFilter(filter);
+        NotificationSubscriptionCollection existingCol = singletonCollection(existing);
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(existingCol);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> subscriptionManager.resyncTypeSubscription("t1", "myType"));
+
+        verifyNoInteractions(configurationRegistry);
+    }
+
+    @Test
+    void resyncTypeSubscription_noTypeSubscriptionConfiguredAtAll_throws() {
+        NotificationSubscriptionCollection empty = emptyCollection();
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(empty);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> subscriptionManager.resyncTypeSubscription("t1", "myType"));
+    }
+
+    @Test
+    void resyncTypeSubscription_configuredType_subscribesNewDeviceAndSkipsKnownDevice() throws Exception {
+        NotificationSubscriptionRepresentation existingTypeSub = stubNsr("type-sub");
+        existingTypeSub.setContext("tenant");
+        NotificationSubscriptionFilterRepresentation filter = new NotificationSubscriptionFilterRepresentation();
+        filter.setTypeFilter("'myType'");
+        existingTypeSub.setSubscriptionFilter(filter);
+
+        NotificationSubscriptionRepresentation alreadyDynamicNsr = stubNsrWithSource("existing-dyn", "device-1");
+
+        // Distinguish the 3 kinds of getSubscriptionsByFilter calls by their actual filter shape:
+        // (1) type-subscription lookup (subscription=MANAGEMENT, context=tenant, no source)
+        // (2) bulk dedup pre-fetch (subscription=DYNAMIC, context=mo, no source)
+        // (3) per-device dedup lookups for device-2 (subscription=DYNAMIC/STATIC, bySource set)
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenAnswer(inv -> {
+            NotificationSubscriptionFilter f = inv.getArgument(0);
+            if (Utils.MANAGEMENT_SUBSCRIPTION.equals(f.getSubscription()) && "tenant".equals(f.getContext())) {
+                return singletonCollection(existingTypeSub);
+            }
+            if (Utils.DYNAMIC_DEVICE_SUBSCRIPTION.equals(f.getSubscription()) && f.getSource() == null) {
+                return singletonCollection(alreadyDynamicNsr);
+            }
+            return emptyCollection(); // per-device dedup lookups for device-2 -> not subscribed yet
+        });
+        when(subscriptionAPI.subscribe(any())).thenReturn(stubNsr("device-2"));
+
+        C8YAgent mockC8yAgent = mock(C8YAgent.class);
+        when(configurationRegistry.getC8yAgent()).thenReturn(mockC8yAgent);
+        doAnswer(inv -> {
+            Consumer<ManagedObjectRepresentation> consumer = inv.getArgument(3);
+            consumer.accept(morWithId("device-1")); // already dynamically subscribed -> should be skipped
+            consumer.accept(morWithId("device-2")); // new -> should be subscribed
+            return null;
+        }).when(mockC8yAgent).forEachManagedObjectByType(eq("t1"), eq("myType"), any(), any());
+
+        subscriptionManager.resyncTypeSubscription("t1", "myType");
+
+        verify(mockC8yAgent, timeout(5000)).createLoggingEvent(
+                contains("finished"),
+                eq(LoggingEventType.BACKFILL_SUBSCRIPTION_EVENT_TYPE),
+                any(), eq("t1"),
+                argThat((Map<String, String> props) -> "1".equals(props.get("subscribed"))
+                        && "1".equals(props.get("skipped"))
+                        && "0".equals(props.get("failed"))));
+
+        // Only device-2 was actually subscribed; device-1 was skipped via the batch pre-fetch
+        verify(subscriptionAPI, times(1)).subscribe(any());
+    }
+
+    @Test
+    void resyncTypeSubscription_deviceSubscribeFails_countedAsFailedNotThrown() throws Exception {
+        NotificationSubscriptionRepresentation existingTypeSub = stubNsr("type-sub");
+        existingTypeSub.setContext("tenant");
+        NotificationSubscriptionFilterRepresentation filter = new NotificationSubscriptionFilterRepresentation();
+        filter.setTypeFilter("'myType'");
+        existingTypeSub.setSubscriptionFilter(filter);
+
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenAnswer(inv -> {
+            NotificationSubscriptionFilter f = inv.getArgument(0);
+            if (Utils.MANAGEMENT_SUBSCRIPTION.equals(f.getSubscription()) && "tenant".equals(f.getContext())) {
+                return singletonCollection(existingTypeSub);
+            }
+            return emptyCollection();
+        });
+        when(subscriptionAPI.subscribe(any())).thenThrow(new SDKException(500, "C8Y unavailable"));
+
+        C8YAgent mockC8yAgent = mock(C8YAgent.class);
+        when(configurationRegistry.getC8yAgent()).thenReturn(mockC8yAgent);
+        doAnswer(inv -> {
+            Consumer<ManagedObjectRepresentation> consumer = inv.getArgument(3);
+            consumer.accept(morWithId("device-1"));
+            return null;
+        }).when(mockC8yAgent).forEachManagedObjectByType(eq("t1"), eq("myType"), any(), any());
+
+        subscriptionManager.resyncTypeSubscription("t1", "myType");
+
+        verify(mockC8yAgent, timeout(5000)).createLoggingEvent(
+                contains("finished"),
+                eq(LoggingEventType.BACKFILL_SUBSCRIPTION_EVENT_TYPE),
+                any(), eq("t1"),
+                argThat((Map<String, String> props) -> "0".equals(props.get("subscribed"))
+                        && "1".equals(props.get("failed"))));
     }
 
     // -------------------------------------------------------------------------

@@ -67,6 +67,7 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
 import { DeviceSelectorTreeComponent } from './subscription-static-tree/device-selector-tree.component';
 import { GroupSelectorComponent } from './subscription-dynamic-group/group-selector.component';
 import { TypeSelectorComponent } from './subscription-dynamic-type/type-selector.component';
+import { TypeResyncComponent } from './subscription-dynamic-type/type-resync.component';
 import { DeviceSelectorTableComponent } from './subscription-static-table/device-selector-table.component';
 import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
 
@@ -76,7 +77,7 @@ import { ConfirmationModalService } from '../../shared/service/confirmation-moda
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CommonModule, SharedModule, PopoverModule, DeviceSelectorTreeComponent, DeviceSelectorTableComponent, GroupSelectorComponent, TypeSelectorComponent],
+  imports: [CoreModule, CommonModule, SharedModule, PopoverModule, DeviceSelectorTreeComponent, DeviceSelectorTableComponent, GroupSelectorComponent, TypeSelectorComponent, TypeResyncComponent],
   providers: [
     DataGridService]
 
@@ -101,6 +102,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   showConfigSubscription2 = false;
   showConfigSubscription3 = false;
   showConfigSubscription4 = false;
+  showConfigSubscriptionResync = false;
 
   isConnectionToMQTTEstablished = false;
 
@@ -344,6 +346,10 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     this.showConfigSubscription4 = !this.showConfigSubscription4;
   }
 
+  onDefineSubscriptionResync(): void {
+    this.showConfigSubscriptionResync = !this.showConfigSubscriptionResync;
+  }
+
   async deleteSubscription(device: IIdentified): Promise<void> {
     // console.log('Delete device', device);
     try {
@@ -461,6 +467,26 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       );
     }
     this.showConfigSubscription4 = false;
+  }
+
+  async resyncType(type: string): Promise<void> {
+    const confirmed = await this.confirmationService.confirmWarning(
+      gettext('Resync existing devices'),
+      gettext('This rescans the full inventory for type') + ` "${type}" ` +
+      gettext('and subscribes any existing device not already covered. This can take a while on large inventories. Continue?')
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await this.subscriptionService.resyncTypeSubscription(type);
+      this.alertService.add({ text: gettext('Resync request submitted. Existing devices of this type are being subscribed in the background – verify the result in the list below and check Service Events for details.'), type: 'info', timeout: ALERT_INFO_TIMEOUT });
+    } catch (error) {
+      this.alertService.danger(
+        gettext('Failed to resync type subscription:') + error
+      );
+    }
   }
 
   navigateToServiceEvents(): void {
