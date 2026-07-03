@@ -1018,6 +1018,34 @@
         <p class="image-description m-l-48"><b>Description:</b> Screenshot of subscribed devices to receive messages for
           outbound.</p>
         <br />
+        <h4 class="p-t-16 p-b-8">Resync existing devices into a type subscription</h4>
+        <div class="p-b-8 text-16">
+          Dynamic subscriptions by device type only subscribe devices that are <b>created after</b> the type was
+          added to the list. Devices of that type which already existed beforehand are not picked up automatically.
+          Use <b>Resync existing devices</b> to backfill subscriptions for those pre-existing devices.
+        </div>
+        <div class="admonition info">
+          <div class="title">Info</div>
+          <div class="content">
+            When a device type is removed from the dynamic subscription list, subscriptions that were already
+            created for that type are <b>not</b> deleted.
+          </div>
+        </div>
+        <div class="p-b-8 text-16">
+          Clicking <b>Resync existing devices</b> next to the device type list opens a dialog listing all configured
+          device types together with the time of their last successful resync. Selecting <b>Resync existing
+          devices</b> for a given type triggers a background job that rescans the full inventory for devices of that
+          type and creates the missing subscriptions. This can take a while on large inventories, so the request is
+          submitted asynchronously — progress and the outcome (e.g. number of devices subscribed) can be tracked via
+          Service Events.
+        </div>
+        <br />
+        <img width="80%" class="m-l-48 m-b-48 m-b-16"
+          src="/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Subscription_Outbound_Resync.png"
+          alt="Resync existing devices into a type subscription" />
+        <p class="image-description m-l-48"><b>Description:</b> Screenshot of the dialog used to resync existing
+          devices into a device type subscription.</p>
+        <br />
         <h4 class="p-t-16 p-b-8">Inventory Filter and Execution Filter</h4>
         <div class="p-b-8 text-16">
           Two optional filters let you narrow which outbound messages are processed without writing any

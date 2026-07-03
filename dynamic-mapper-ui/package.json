@@ -6,7 +6,10 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "prestart": "node scripts/optimize-images.js",
+    "prebuild": "node scripts/optimize-images.js",
     "build": "ng build",
+    "prewatch": "node scripts/optimize-images.js",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "format": "prettier --write 'src/**/*.ts'",
@@ -79,6 +82,7 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
     "less": "^4.2.0",
+    "sharp": "^0.35.3",
     "typescript": "~5.9.2",
     "webpack": "^5.105.0"
   }
