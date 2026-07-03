@@ -350,6 +350,10 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     this.showConfigSubscriptionResync = !this.showConfigSubscriptionResync;
   }
 
+  onRefresh(): void {
+    this.subscriptionGrid?.reload();
+  }
+
   async deleteSubscription(device: IIdentified): Promise<void> {
     // console.log('Delete device', device);
     try {

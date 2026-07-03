@@ -117,7 +117,7 @@ public class GroupCacheManager {
         }
 
         groupCache.put(groupId, new CachedGroup(groupMO, LocalDateTime.now(), deviceIds));
-        log.debug("{} - Cached group {} with {} known member device(s)", tenant, groupId, deviceIds.size());
+        log.debug("{} - Cached group {} with {} known member device(s): {}", tenant, groupId, deviceIds.size(), deviceIds);
     }
 
     /**

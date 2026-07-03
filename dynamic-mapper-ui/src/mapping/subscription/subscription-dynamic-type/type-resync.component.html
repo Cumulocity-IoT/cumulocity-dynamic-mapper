@@ -34,25 +34,13 @@
           resync to also subscribe devices of a type that already existed beforehand. This rescans the full
           inventory for the selected type and can take a while on large inventories.
         </p>
-        <c8y-list-group class="separator-top" role="list">
-          @for (item of typeList; track trackByFn($index, item)) {
-          <c8y-li role="listitem" [attr.data-cy]="'dm-type-resync-row-' + item">
-            <c8y-li-icon [icon]="'link'"></c8y-li-icon>
-            <c8y-li-body>
-              <span class="label label-primary">{{ item }}</span>
-            </c8y-li-body>
-            <button type="button" class="btn btn-link btn-sm m-l-auto" (click)="clickedResync(item)"
-              [attr.data-cy]="'dm-type-resync-button-' + item">
-              <i c8yIcon="refresh"></i>
-              {{ 'Resync existing devices' | translate }}
-            </button>
-          </c8y-li>
-          }
-        </c8y-list-group>
-        @if (!typeList?.length) {
-        <c8y-ui-empty-state [icon]="'subscription'" [title]="'No device types configured.' | translate"
-          [horizontal]="true"></c8y-ui-empty-state>
-        }
+        <c8y-data-grid #typeResyncGrid [selectable]="false" [configureColumnsEnabled]="false"
+          [title]="'Device types' | translate" [columns]="columns" [rows]="rows"
+          [pagination]="pagination" [displayOptions]="displayOptions" [actionControls]="actionControls"
+          data-cy="dm-type-resync-grid">
+          <c8y-ui-empty-state [icon]="'subscription'" [title]="'No device types configured.' | translate"
+            [horizontal]="true"></c8y-ui-empty-state>
+        </c8y-data-grid>
       </div>
     </div>
     <div class="card-footer separator p-24 text-center flex-no-shrink">

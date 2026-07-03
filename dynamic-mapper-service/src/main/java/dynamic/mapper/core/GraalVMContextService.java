@@ -575,7 +575,8 @@ public class GraalVMContextService {
                             e.getMessage());
                 }
             }
-            log.info("{} - GraalVM pre-compiled {} mapping JavaScript source(s)", tenant, warmed);
+            log.info("{} - GraalVM pre-compiled {} mapping JavaScript source(s) — {}", tenant, warmed,
+                    metaspaceUsageSummary());
         } catch (Exception e) {
             log.warn("{} - Mapping code warm-up failed (non-fatal): {}", tenant, e.getMessage());
         }

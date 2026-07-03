@@ -4,8 +4,8 @@ All URIs are relative to *http://localhost:8080*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
-| [**echoHealth**](TestControllerApi.md#echoHealth) | **GET** /webhook |  |
-| [**echoInput**](TestControllerApi.md#echoInput) | **POST** /webhook/echo/** |  |
+| [**echoHealth**](TestControllerApi.md#echoHealth) | **GET** /webhook | Webhook health check |
+| [**echoInput**](TestControllerApi.md#echoInput) | **POST** /webhook/echo/** | Echo webhook input |
 | [**testMapping**](TestControllerApi.md#testMapping) | **POST** /test/mapping | Test a mapping |
 
 
@@ -13,7 +13,9 @@ All URIs are relative to *http://localhost:8080*
 # **echoHealth**
 > String echoHealth()
 
+Webhook health check
 
+    Returns 200 OK to confirm the webhook echo endpoint is reachable.
 
 ### Parameters
 This endpoint does not need any parameter.
@@ -24,7 +26,7 @@ This endpoint does not need any parameter.
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
@@ -33,9 +35,11 @@ No authorization required
 
 <a name="echoInput"></a>
 # **echoInput**
-> String echoInput(body)
+> echoInput(body)
 
+Echo webhook input
 
+    Accepts any POST request and returns the body unchanged. Useful for testing outbound webhook mappings.
 
 ### Parameters
 
@@ -45,16 +49,16 @@ No authorization required
 
 ### Return type
 
-**String**
+null (empty response body)
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
 - **Content-Type**: application/json
-- **Accept**: */*
+- **Accept**: application/json
 
 <a name="testMapping"></a>
 # **testMapping**
@@ -62,13 +66,13 @@ No authorization required
 
 Test a mapping
 
-    Executes a mapping test with a sample payload. Can optionally send the result to Cumulocity IoT. Supports both INBOUND and OUTBOUND mapping directions.
+    Executes a mapping transformation against a provided payload and returns the generated requests and any warnings or errors. Optionally sends the result to Cumulocity IoT.
 
 ### Parameters
 
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **TestContext** | [**TestContext**](../Models/TestContext.md)| Test context containing the mapping and payload to test | |
+| **TestContext** | [**TestContext**](../Models/TestContext.md)|  | |
 
 ### Return type
 
@@ -76,7 +80,7 @@ Test a mapping
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 

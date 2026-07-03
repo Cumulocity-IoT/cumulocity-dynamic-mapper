@@ -47,7 +47,7 @@
   }
   @if (path == 'dynamic') {
 <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
-      'Specify device types. Only when CREATING a device of any of types a subscription is created (dynamic). When a type is removed the existing subscriptions resulting from this type are NOT deleted.'
+      'Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward — devices of a newly added type that already existed beforehand are NOT picked up automatically; use \'Resync existing devices\' for those. When a type is removed the existing subscriptions resulting from this type are NOT deleted.'
         | translate
     }}" placement="bottom" triggers="focus" type="button"></button>
   }
@@ -100,6 +100,13 @@
         | translate
     }}" placement="bottom" triggers="focus" type="button"></button>
   }
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="onRefresh()"
+    data-cy="dm-subscription-refresh">
+    <i c8yIcon="refresh"></i>
+    {{ 'Refresh' | translate }}
+  </button>
 </c8y-action-bar-item>
 
 <div class="alert alert-info a-i-center" role="alert" style="min-width: stretch;">

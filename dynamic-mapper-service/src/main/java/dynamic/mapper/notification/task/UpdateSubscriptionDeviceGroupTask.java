@@ -71,6 +71,9 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
         try {
             Map<String, Object> payload = c8yMessage.getParsedPayload();
 
+            log.debug("{} - Group {} UPDATE notification received. Payload top-level keys: {}",
+                    tenant, groupId, payload == null ? "null (unparseable payload)" : payload.keySet());
+
             // Guard: if the payload contains no childAssets key this is a property update
             // (e.g. group name/description changed), NOT a membership change.
             // Without this check payloadChildIds would be empty, making toRemove equal to
@@ -81,10 +84,14 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                 return SubscriptionUpdateResult.empty();
             }
 
+            log.debug("{} - Group {} raw childAssets fragment: {}", tenant, groupId, payload.get("childAssets"));
+
             // Cache miss: entry was expired or never populated. Re-sync from payload
             // instead of skipping — this makes time-based cache expiry safe.
             CachedGroup cachedGroup = groupCacheManager.getCache().get(groupId);
             if (cachedGroup == null) {
+                log.debug("{} - Group {} cache miss (never populated or evicted) — falling back to handleCacheMiss",
+                        tenant, groupId);
                 return handleCacheMiss(tenant, groupId, payload);
             }
 
@@ -92,11 +99,14 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
             Set<String> cachedChildIds = groupCacheManager.getSubscribedDevices(groupId);
             Set<String> payloadChildIds = extractChildIdsFromPayload(payload);
 
+            log.debug("{} - Group {} cached child IDs (previously known members): {}", tenant, groupId, cachedChildIds);
+            log.debug("{} - Group {} payload child IDs (current members per notification): {}", tenant, groupId, payloadChildIds);
+
             Set<String> toAdd = calculateToAdd(payloadChildIds, cachedChildIds);
             Set<String> toRemove = calculateToRemove(cachedChildIds, payloadChildIds);
 
-            log.debug("{} - Group {} membership delta: +{} to subscribe, -{} to remove",
-                    tenant, groupId, toAdd.size(), toRemove.size());
+            log.debug("{} - Group {} membership delta: +{} to subscribe {}, -{} to remove {}",
+                    tenant, groupId, toAdd.size(), toAdd, toRemove.size(), toRemove);
 
             if (toAdd.isEmpty() && toRemove.isEmpty()) {
                 log.debug("{} - No membership changes detected for group {}", tenant, groupId);
@@ -135,6 +145,8 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                 tenant, groupId);
 
         Set<String> payloadChildIds = extractChildIdsFromPayload(payload);
+        log.debug("{} - Group {} payload child IDs extracted during cache-miss re-sync: {}",
+                tenant, groupId, payloadChildIds);
 
         // Best-effort: restore the group MO so future addGroup() calls have the full object
         try {
@@ -181,11 +193,14 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
         try {
             Object childAssets = payload.get("childAssets");
             if (!(childAssets instanceof Map)) {
+                log.debug("Unexpected childAssets type in payload: {}",
+                        childAssets == null ? "null" : childAssets.getClass());
                 return childIds;
             }
 
             Object references = ((Map<String, Object>) childAssets).get("references");
             if (!(references instanceof List)) {
+                log.debug("childAssets fragment has no 'references' list: {}", childAssets);
                 return childIds;
             }
 
