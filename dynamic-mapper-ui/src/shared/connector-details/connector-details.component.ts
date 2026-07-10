@@ -114,8 +114,8 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
     this.connectorStatusService.updateStatusLogs(this.filterStatusLog);
   }
 
-  getSeverityClass(severity: string): string {
-    return getSeverityBadgeClass(severity);
+  getSeverityClass(severity?: string | null): string {
+    return getSeverityBadgeClass(severity ?? 'info');
   }
 
   async onConfigurationUpdate(): Promise<void> {
