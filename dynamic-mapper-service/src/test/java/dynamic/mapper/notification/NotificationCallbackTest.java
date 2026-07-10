@@ -40,13 +40,16 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 
 /**
- * Tests covering M7 — the 401-detection logic in the {@code onClose(int, String)}
+ * Tests covering the 401-detection logic in the {@code onClose(int, String)}
  * implementations of {@link ManagementSubscriptionClient} and
  * {@link CacheInventoryUpdateClient}.
  *
- * <p>The fix uses {@code statusCode == 401} instead of {@code reason.contains("401")},
- * eliminating false negatives (genuine 401 with non-matching reason) and false positives
- * (non-401 status whose reason text happens to contain "401").
+ * <p>The java-websocket library closes with code {@code 1002} (protocol error) when the
+ * server rejects the HTTP upgrade with HTTP 401, placing the HTTP status in the reason
+ * string (e.g. {@code "Invalid status code received: 401 Status line: HTTP/1.1 401 Unauthorized"}).
+ * The fix detects 401 when {@code statusCode == 401} OR
+ * {@code statusCode == 1002 && reason.contains("401")}, avoiding false positives for
+ * normal closes (statusCode 1000) whose reason text happens to contain "401".
  */
 @ExtendWith(MockitoExtension.class)
 class NotificationCallbackTest {
@@ -88,7 +91,16 @@ class NotificationCallbackTest {
         // statusCode IS 401 — reason text is irrelevant.
         client.onClose(401, "Normal closure");
 
-        // M7 fixed: genuine 401 is correctly detected via statusCode.
+        verify(notificationSubscriber).setManagementConnectionStatus(eq(TENANT), eq(401));
+    }
+
+    @Test
+    void managementClient_onClose_statusCode1002_reasonContaining401_triggersRefresh() {
+        ManagementSubscriptionClient client = new ManagementSubscriptionClient(configurationRegistry, TENANT);
+
+        // Real-world case: java-websocket wraps HTTP 401 upgrade rejection as 1002 with reason string.
+        client.onClose(1002, "Invalid status code received: 401 Status line: HTTP/1.1 401 Unauthorized");
+
         verify(notificationSubscriber).setManagementConnectionStatus(eq(TENANT), eq(401));
     }
 
@@ -96,10 +108,9 @@ class NotificationCallbackTest {
     void managementClient_onClose_reasonContaining401ButNot401StatusCode_doesNotTriggerRefresh() {
         ManagementSubscriptionClient client = new ManagementSubscriptionClient(configurationRegistry, TENANT);
 
-        // statusCode is NOT 401, but the reason text contains "401".
+        // statusCode is 1000 (normal close), reason happens to contain "401" — should NOT trigger.
         client.onClose(1000, "error 401 Unauthorized");
 
-        // M7 fixed: non-401 status code is not treated as 401 just because of the reason string.
         verify(notificationSubscriber, never()).setManagementConnectionStatus(eq(TENANT), eq(401));
         verify(notificationSubscriber).setManagementConnectionStatus(eq(TENANT), isNull());
     }
@@ -125,7 +136,16 @@ class NotificationCallbackTest {
         // statusCode IS 401 — reason text is irrelevant.
         client.onClose(401, "Normal closure");
 
-        // M7 fixed: genuine 401 is correctly detected via statusCode.
+        verify(notificationSubscriber).setCacheInventoryConnectionStatus(eq(TENANT), eq(401));
+    }
+
+    @Test
+    void cacheInventoryClient_onClose_statusCode1002_reasonContaining401_triggersRefresh() {
+        CacheInventoryUpdateClient client = new CacheInventoryUpdateClient(configurationRegistry, TENANT);
+
+        // Real-world case: java-websocket wraps HTTP 401 upgrade rejection as 1002 with reason string.
+        client.onClose(1002, "Invalid status code received: 401 Status line: HTTP/1.1 401 Unauthorized");
+
         verify(notificationSubscriber).setCacheInventoryConnectionStatus(eq(TENANT), eq(401));
     }
 
@@ -133,10 +153,9 @@ class NotificationCallbackTest {
     void cacheInventoryClient_onClose_reasonContaining401ButNot401StatusCode_doesNotTriggerRefresh() {
         CacheInventoryUpdateClient client = new CacheInventoryUpdateClient(configurationRegistry, TENANT);
 
-        // statusCode is NOT 401, but the reason text contains "401".
+        // statusCode is 1000 (normal close), reason happens to contain "401" — should NOT trigger.
         client.onClose(1000, "error 401 Unauthorized");
 
-        // M7 fixed: non-401 status code is not treated as 401 just because of the reason string.
         verify(notificationSubscriber, never()).setCacheInventoryConnectionStatus(eq(TENANT), eq(401));
         verify(notificationSubscriber).setCacheInventoryConnectionStatus(eq(TENANT), isNull());
     }

@@ -145,7 +145,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
         
         // The WebSocket library closes with code 1002 when the HTTP upgrade is rejected with 401,
         // embedding the HTTP status in the reason string. Check both to detect unauthorized.
-        if (statusCode == 401 || (reason != null && reason.contains("401"))) {
+        if (statusCode == 401 || (statusCode == 1002 && reason != null && reason.contains("401"))) {
             notificationSubscriber.setManagementConnectionStatus(tenant, 401);
         } else {
             notificationSubscriber.setManagementConnectionStatus(tenant, null);
