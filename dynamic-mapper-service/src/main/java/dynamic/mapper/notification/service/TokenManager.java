@@ -77,16 +77,47 @@ public class TokenManager {
     }
 
     public void storeDeviceToken(String tenant, String connectorId, String token) {
-        deviceTokens.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>())
-                .put(connectorId, token);
+        if (token == null) {
+            Map<String, String> tenantTokens = deviceTokens.get(tenant);
+            if (tenantTokens != null) {
+                tenantTokens.remove(connectorId);
+            }
+        } else {
+            deviceTokens.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>())
+                    .put(connectorId, token);
+        }
+    }
+
+    public String getDeviceToken(String tenant, String connectorId) {
+        if (tenant == null || connectorId == null) {
+            return null;
+        }
+        Map<String, String> tenantTokens = deviceTokens.get(tenant);
+        return tenantTokens != null ? tenantTokens.get(connectorId) : null;
     }
 
     public void storeManagementToken(String tenant, String token) {
-        managementTokens.put(tenant, token);
+        if (token == null) {
+            managementTokens.remove(tenant);
+        } else {
+            managementTokens.put(tenant, token);
+        }
+    }
+
+    public String getManagementToken(String tenant) {
+        return tenant != null ? managementTokens.get(tenant) : null;
     }
 
     public void storeCacheInventoryToken(String tenant, String token) {
-        cacheInventoryTokens.put(tenant, token);
+        if (token == null) {
+            cacheInventoryTokens.remove(tenant);
+        } else {
+            cacheInventoryTokens.put(tenant, token);
+        }
+    }
+
+    public String getCacheInventoryToken(String tenant) {
+        return tenant != null ? cacheInventoryTokens.get(tenant) : null;
     }
 
     public void unsubscribeDeviceSubscriber(String tenant) {
@@ -226,7 +257,11 @@ public class TokenManager {
                 }
             }
 
-            // H7: also refresh management token
+            // Refresh management and cache inventory tokens.
+            // The refreshed token is stored and will be picked up automatically on the next
+            // reconnect (initializeManagementClient uses getManagementToken / getCacheInventoryToken
+            // which prefer the stored refreshed token over creating a brand-new one).
+            // This avoids disrupting a healthy connection just to rotate the token.
             String mgmtToken = managementTokens.get(tenant);
             if (mgmtToken != null) {
                 try {
@@ -240,7 +275,6 @@ public class TokenManager {
                 }
             }
 
-            // H7: also refresh cache inventory token
             String cacheToken = cacheInventoryTokens.get(tenant);
             if (cacheToken != null) {
                 try {

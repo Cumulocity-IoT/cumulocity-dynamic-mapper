@@ -121,12 +121,14 @@ public class CacheManager {
             String message = String.format("InboundExternalIdCache %s (previous size: %d entries, new capacity: %d)",
                     action, previousSize, inboundExternalIdCacheSize);
 
-            c8yAgent.createOperationEvent(
+            c8yAgent.createLoggingEvent(
                     message,
                     LoggingEventType.CACHE_EVENT_TYPE,
                     org.joda.time.DateTime.now(),
                     tenant,
-                    null);
+                    Map.of("cache", "InboundExternalIdCache", "action", action,
+                            "previousSize", String.valueOf(previousSize),
+                            "newCapacity", String.valueOf(inboundExternalIdCacheSize)));
 
             log.info("{} - {}", tenant, message);
         }
@@ -172,12 +174,14 @@ public class CacheManager {
             String message = String.format("InventoryCache %s (previous size: %d entries, new capacity: %d)",
                     action, previousSize, inventoryCacheSize);
 
-            c8yAgent.createOperationEvent(
+            c8yAgent.createLoggingEvent(
                     message,
                     LoggingEventType.CACHE_EVENT_TYPE,
                     org.joda.time.DateTime.now(),
                     tenant,
-                    null);
+                    Map.of("cache", "InventoryCache", "action", action,
+                            "previousSize", String.valueOf(previousSize),
+                            "newCapacity", String.valueOf(inventoryCacheSize)));
 
             log.info("{} - {}", tenant, message);
         }

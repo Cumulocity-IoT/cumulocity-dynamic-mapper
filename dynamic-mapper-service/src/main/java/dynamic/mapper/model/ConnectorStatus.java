@@ -30,4 +30,21 @@ public enum ConnectorStatus {
     DISCONNECTED,
     DISCONNECTING,
     FAILED,
+    /** Physically connected, but a transient error (e.g. platform 502/503/504) is delaying
+     * subscription/mapping initialization; a retry with backoff is scheduled. */
+    RETRYING;
+
+    /**
+     * Severity to use for a logging event reporting this status, so a status change's severity
+     * reflects the actual outcome rather than a value fixed per event type. DISCONNECTED/
+     * DISCONNECTING are not treated as warning/error here since they're also reached via normal,
+     * user-initiated shutdown flows, not only failures.
+     */
+    public String toSeverity() {
+        return switch (this) {
+            case FAILED -> "error";
+            case UNKNOWN, RETRYING -> "warning";
+            default -> "info";
+        };
+    }
 }

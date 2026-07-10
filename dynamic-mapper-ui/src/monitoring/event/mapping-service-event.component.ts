@@ -28,6 +28,8 @@ import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
 import { BehaviorSubject, catchError, from, Observable, of, Subject, switchMap, takeUntil, tap } from 'rxjs';
 import {
   EventMetadata,
+  getEventMetadata as getEventMetadataShared,
+  getSeverityBadgeClass,
   LoggingEventType,
   LoggingEventTypeMap,
   SharedModule,
@@ -186,35 +188,11 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
   }
 
   getEventMetadata(event: IEvent): EventMetadata | null {
-    // Try to get metadata from event first (new events with d11r_metadata fragment)
-    const metadata = event['d11r_metadata'];
-    if (metadata) {
-      return metadata as EventMetadata;
-    }
-
-    // Fallback: lookup for old events without metadata
-    const entry = Object.entries(LoggingEventTypeMap).find(
-      ([_, details]) => details.type === event.type
-    );
-    if (entry && entry[1]) {
-      return {
-        component: entry[1].component || '',
-        componentDisplayName: entry[1].componentDisplayName || 'Unknown',
-        severity: entry[1].severity || 'info',
-        description: entry[1].description || ''
-      };
-    }
-    return null;
+    return getEventMetadataShared(event);
   }
 
   getSeverityClass(severity: string): string {
-    switch (severity) {
-      // case 'error': return 'label-danger';
-      case 'error': return 'label-warning';
-      case 'warning': return 'label-warning';
-      case 'info':
-      default: return 'label-primary';
-    }
+    return getSeverityBadgeClass(severity);
   }
 
   extractManagedObjectId(event: IEvent): string | null {

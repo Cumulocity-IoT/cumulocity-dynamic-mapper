@@ -571,14 +571,30 @@ public class NotificationConnectionManager {
             String tokenSeedForStatic = Utils.STATIC_DEVICE_SUBSCRIBER + connectorId + additionalSubscriptionIdTest;
 
             try {
-                String token = tokenManager.createToken(Utils.STATIC_DEVICE_SUBSCRIPTION, tokenSeedForStatic);
-                tokenManager.storeDeviceToken(tenant, connectorId + "_static", token);
+                String storedToken = tokenManager.getDeviceToken(tenant, connectorId + "_static");
+                boolean usingStoredToken = storedToken != null;
+                String token = usingStoredToken
+                        ? storedToken
+                        : tokenManager.createToken(Utils.STATIC_DEVICE_SUBSCRIPTION, tokenSeedForStatic);
+                if (!usingStoredToken) {
+                    tokenManager.storeDeviceToken(tenant, connectorId + "_static", token);
+                } else {
+                    log.debug("{} - Reusing refreshed static device token for connector {}", tenant, connectorId);
+                }
 
                 ConnectorId connectorInfo = new ConnectorId(
                         dispatcher.getConnectorClient().getConnectorName(),
                         connectorId);
 
                 CustomWebSocketClient client = connect(tenant, token, dispatcher, connectorInfo);
+                if (client == null && usingStoredToken) {
+                    log.warn("{} - Stored static device token failed to connect for connector {}, retrying with fresh token",
+                            tenant, connectorId);
+                    tokenManager.storeDeviceToken(tenant, connectorId + "_static", null);
+                    token = tokenManager.createToken(Utils.STATIC_DEVICE_SUBSCRIPTION, tokenSeedForStatic);
+                    tokenManager.storeDeviceToken(tenant, connectorId + "_static", token);
+                    client = connect(tenant, token, dispatcher, connectorInfo);
+                }
                 if (client != null) {
                     staticDeviceClients.get(tenant).put(connectorId, client);
                     log.info("{} - Initialized device connection for connector: {}", tenant, connectorId);
@@ -616,14 +632,30 @@ public class NotificationConnectionManager {
             String tokenSeedForDynamic = Utils.DYNAMIC_DEVICE_SUBSCRIBER + connectorId + additionalSubscriptionIdTest;
 
             try {
-                String token = tokenManager.createToken(Utils.DYNAMIC_DEVICE_SUBSCRIPTION, tokenSeedForDynamic);
-                tokenManager.storeDeviceToken(tenant, connectorId + "_dynamic", token);
+                String storedToken = tokenManager.getDeviceToken(tenant, connectorId + "_dynamic");
+                boolean usingStoredToken = storedToken != null;
+                String token = usingStoredToken
+                        ? storedToken
+                        : tokenManager.createToken(Utils.DYNAMIC_DEVICE_SUBSCRIPTION, tokenSeedForDynamic);
+                if (!usingStoredToken) {
+                    tokenManager.storeDeviceToken(tenant, connectorId + "_dynamic", token);
+                } else {
+                    log.debug("{} - Reusing refreshed dynamic device token for connector {}", tenant, connectorId);
+                }
 
                 ConnectorId connectorInfo = new ConnectorId(
                         dispatcher.getConnectorClient().getConnectorName(),
                         connectorId);
 
                 CustomWebSocketClient client = connect(tenant, token, dispatcher, connectorInfo);
+                if (client == null && usingStoredToken) {
+                    log.warn("{} - Stored dynamic device token failed to connect for connector {}, retrying with fresh token",
+                            tenant, connectorId);
+                    tokenManager.storeDeviceToken(tenant, connectorId + "_dynamic", null);
+                    token = tokenManager.createToken(Utils.DYNAMIC_DEVICE_SUBSCRIPTION, tokenSeedForDynamic);
+                    tokenManager.storeDeviceToken(tenant, connectorId + "_dynamic", token);
+                    client = connect(tenant, token, dispatcher, connectorInfo);
+                }
                 if (client != null) {
                     dynamicDeviceClients.get(tenant).put(connectorId, client);
                     log.info("{} - Initialized dynamic connection for connector: {}", tenant, connectorId);
@@ -678,15 +710,32 @@ public class NotificationConnectionManager {
 
     private void createManagementConnection(String tenant, NotificationCallback callback)
             throws URISyntaxException {
+        // Prefer the stored (periodically refreshed) token so that a background refresh
+        // is picked up on the next reconnect without an extra round-trip to C8Y.
+        // Fall back to creating a brand-new token when none is stored yet.
         String tokenSeed = Utils.MANAGEMENT_SUBSCRIBER + additionalSubscriptionIdTest;
-        String token = tokenManager.createToken(Utils.MANAGEMENT_SUBSCRIPTION, tokenSeed);
-        tokenManager.storeManagementToken(tenant, token);
+        String token = tokenManager.getManagementToken(tenant);
+        boolean usingStoredToken = token != null;
+        if (!usingStoredToken) {
+            token = tokenManager.createToken(Utils.MANAGEMENT_SUBSCRIPTION, tokenSeed);
+            tokenManager.storeManagementToken(tenant, token);
+        } else {
+            log.debug("{} - Reusing refreshed management token for reconnect", tenant);
+        }
 
         ConnectorId connectorId = new ConnectorId(
                 ManagementSubscriptionClient.CONNECTOR_NAME,
                 ManagementSubscriptionClient.CONNECTOR_ID);
 
         CustomWebSocketClient client = connect(tenant, token, callback, connectorId);
+        if (client == null && usingStoredToken) {
+            // Stored token was invalid (e.g. expired before we could use it); create a fresh one.
+            log.warn("{} - Stored management token failed to connect, retrying with a fresh token", tenant);
+            tokenManager.storeManagementToken(tenant, null);
+            token = tokenManager.createToken(Utils.MANAGEMENT_SUBSCRIPTION, tokenSeed);
+            tokenManager.storeManagementToken(tenant, token);
+            client = connect(tenant, token, callback, connectorId);
+        }
         if (client != null) {
             managementClients.put(tenant, client);
             log.info("{} - Created management connection", tenant);
@@ -695,15 +744,30 @@ public class NotificationConnectionManager {
 
     private void createCacheInventoryConnection(String tenant, NotificationCallback callback)
             throws URISyntaxException {
+        // Same pattern: prefer stored refreshed token, fall back to creating a new one.
         String tokenSeed = Utils.CACHE_INVENTORY_SUBSCRIBER + additionalSubscriptionIdTest;
-        String token = tokenManager.createToken(Utils.CACHE_INVENTORY_SUBSCRIPTION, tokenSeed);
-        tokenManager.storeCacheInventoryToken(tenant, token);
+        String token = tokenManager.getCacheInventoryToken(tenant);
+        boolean usingStoredToken = token != null;
+        if (!usingStoredToken) {
+            token = tokenManager.createToken(Utils.CACHE_INVENTORY_SUBSCRIPTION, tokenSeed);
+            tokenManager.storeCacheInventoryToken(tenant, token);
+        } else {
+            log.debug("{} - Reusing refreshed cache inventory token for reconnect", tenant);
+        }
 
         ConnectorId connectorId = new ConnectorId(
                 CacheInventoryUpdateClient.CONNECTOR_NAME,
                 CacheInventoryUpdateClient.CONNECTOR_ID);
 
         CustomWebSocketClient client = connect(tenant, token, callback, connectorId);
+        if (client == null && usingStoredToken) {
+            // Stored token was invalid (e.g. expired before we could use it); create a fresh one.
+            log.warn("{} - Stored cache inventory token failed to connect, retrying with a fresh token", tenant);
+            tokenManager.storeCacheInventoryToken(tenant, null);
+            token = tokenManager.createToken(Utils.CACHE_INVENTORY_SUBSCRIPTION, tokenSeed);
+            tokenManager.storeCacheInventoryToken(tenant, token);
+            client = connect(tenant, token, callback, connectorId);
+        }
         if (client != null) {
             cacheInventoryClients.put(tenant, client);
             log.info("{} - Created cache inventory connection", tenant);

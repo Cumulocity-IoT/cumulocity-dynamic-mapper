@@ -51,16 +51,16 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
@@ -69,6 +69,7 @@ import javax.net.ssl.TrustManagerFactory;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.joda.time.DateTime;
 
+import com.cumulocity.sdk.client.SDKException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hivemq.client.mqtt.MqttClientSslConfig;
 
@@ -83,6 +84,12 @@ public abstract class AConnectorClient {
     protected static final int HOUSEKEEPING_INTERVAL_SECONDS = 30;
     protected static final int WAIT_PERIOD_MS = 10000;
     protected static final int CONNECTION_TIMEOUT_SECONDS = 30;
+
+    // HTTP status codes that indicate a transient platform-side error (e.g. during platform
+    // maintenance/rollouts) rather than a genuine configuration/permission problem.
+    private static final Set<Integer> RETRYABLE_HTTP_STATUS_CODES = Set.of(502, 503, 504);
+    private static final long SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_MS = 10_000L;
+    private static final long SUBSCRIPTION_INIT_RETRY_MAX_DELAY_MS = 300_000L;
 
     public static final String MQTT_PROTOCOL_MQTT = "mqtt://";
     public static final String MQTT_PROTOCOL_MQTTS = "mqtts://";
@@ -251,6 +258,8 @@ public abstract class AConnectorClient {
     private CompletableFuture<Void> connectTask;
     private CompletableFuture<Void> disconnectTask;
     private ScheduledThreadPoolExecutor housekeepingExecutor;
+    // Guards against scheduling overlapping retry chains for initializeSubscriptionsAfterConnect()
+    private final AtomicBoolean subscriptionInitRetryScheduled = new AtomicBoolean(false);
 
     // Abstract methods to be implemented by subclasses
     public abstract boolean initialize();
@@ -671,7 +680,20 @@ public abstract class AConnectorClient {
     }
 
     public void initializeSubscriptionsAfterConnect() {
+        try {
+            doInitializeSubscriptionsAfterConnect();
+        } catch (Exception e) {
+            if (isRetryableConnectorError(e)) {
+                log.warn("{} - Transient error initializing subscriptions for connector {}, will retry in {}ms: {}",
+                        tenant, connectorName, SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_MS, e.getMessage());
+                scheduleSubscriptionInitRetry(SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_MS, e);
+            } else {
+                throw e;
+            }
+        }
+    }
 
+    private void doInitializeSubscriptionsAfterConnect() {
         // Rebuild caches
         mappingService.rebuildMappingCaches(tenant, connectorId);
         List<Mapping> outboundMappings = new ArrayList<>(
@@ -685,6 +707,77 @@ public abstract class AConnectorClient {
 
         log.info("{} - Initialized {} inbound and {} outbound mappings",
                 tenant, inboundMappings.size(), outboundMappings.size());
+    }
+
+    /**
+     * True if the exception (or one of its causes) is a platform-side error known to be
+     * transient (e.g. a 502/503/504 during a platform rollout), rather than a permanent
+     * configuration/permission problem that retrying won't fix.
+     */
+    private boolean isRetryableConnectorError(Throwable t) {
+        Throwable current = t;
+        while (current != null) {
+            if (current instanceof SDKException sdkException
+                    && RETRYABLE_HTTP_STATUS_CODES.contains(sdkException.getHttpStatus())) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    /**
+     * Schedules a retry of {@link #doInitializeSubscriptionsAfterConnect()} on the housekeeping
+     * executor after {@code delayMs}, marking the connector as {@link ConnectorStatus#RETRYING}.
+     * The retry chain doubles its delay (capped at {@link #SUBSCRIPTION_INIT_RETRY_MAX_DELAY_MS})
+     * on each further failure and keeps going until it succeeds or a non-retryable error occurs.
+     * Pending retries are cancelled automatically when the connector disconnects, since they run
+     * on {@code housekeepingExecutor}, which is shut down in {@link #stopHousekeepingAndClose()}.
+     */
+    private void scheduleSubscriptionInitRetry(long delayMs, Exception lastError) {
+        if (!subscriptionInitRetryScheduled.compareAndSet(false, true)) {
+            // A retry chain is already in flight for this connector; let it continue.
+            return;
+        }
+        connectionStateManager.updateStatusRetrying(lastError, delayMs);
+        if (housekeepingExecutor == null || housekeepingExecutor.isShutdown()) {
+            subscriptionInitRetryScheduled.set(false);
+            return;
+        }
+        housekeepingExecutor.schedule(() -> runSubscriptionInitRetry(delayMs), delayMs, TimeUnit.MILLISECONDS);
+    }
+
+    private void runSubscriptionInitRetry(long previousDelayMs) {
+        if (!isConnected()) {
+            log.debug("{} - Connector {} no longer connected, abandoning subscription-init retry",
+                    tenant, connectorName);
+            subscriptionInitRetryScheduled.set(false);
+            return;
+        }
+        try {
+            doInitializeSubscriptionsAfterConnect();
+            log.info("{} - Subscription initialization succeeded after retry for connector {}",
+                    tenant, connectorName);
+            subscriptionInitRetryScheduled.set(false);
+            connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
+        } catch (Exception e) {
+            if (!isRetryableConnectorError(e)) {
+                log.error("{} - Non-retryable error re-initializing subscriptions for connector {}: {}",
+                        tenant, connectorName, e.getMessage(), e);
+                subscriptionInitRetryScheduled.set(false);
+                connectionStateManager.updateStatusWithError(e);
+                return;
+            }
+            long nextDelayMs = Math.min(previousDelayMs * 2, SUBSCRIPTION_INIT_RETRY_MAX_DELAY_MS);
+            log.warn("{} - Retry of subscription initialization failed for connector {}, next attempt in {}ms: {}",
+                    tenant, connectorName, nextDelayMs, e.getMessage());
+            connectionStateManager.updateStatusRetrying(e, nextDelayMs);
+            if (housekeepingExecutor == null || housekeepingExecutor.isShutdown()) {
+                subscriptionInitRetryScheduled.set(false);
+                return;
+            }
+            housekeepingExecutor.schedule(() -> runSubscriptionInitRetry(nextDelayMs), nextDelayMs, TimeUnit.MILLISECONDS);
+        }
     }
 
     /**
@@ -1168,10 +1261,11 @@ public abstract class AConnectorClient {
     public void sendConnectorLifecycle(ConnectorStatusEvent status) {
         if (serviceConfiguration.getSendConnectorLifecycle()) {
             Map<String, String> statusMap = createStatusMap(status);
-            String message = "Connector status: " + status;
-            c8yAgent.createOperationEvent(
+            String message = String.format("Connector status: %s", status);
+            c8yAgent.createLoggingEvent(
                     message,
                     LoggingEventType.CONNECTOR_EVENT_TYPE,
+                    status.getStatus().toSeverity(),
                     DateTime.now(),
                     tenant,
                     statusMap);
@@ -1179,19 +1273,16 @@ public abstract class AConnectorClient {
     }
 
     private Map<String, String> createStatusMap(ConnectorStatusEvent status) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        String date = dateFormat.format(new Date());
         String message = status.getMessage();
         if ("".equals(status.getMessage())) {
-            message = "Connector status: " + status.status;
+            message = String.format("Connector status: %s", status.status);
         }
 
         return Map.ofEntries(
                 entry("status", status.getStatus().name()),
                 entry("message", message),
                 entry("connectorName", getConnectorName()),
-                entry("connectorIdentifier", getConnectorIdentifier()),
-                entry("date", date));
+                entry("connectorIdentifier", getConnectorIdentifier()));
     }
 
     /**
@@ -1256,10 +1347,10 @@ public abstract class AConnectorClient {
             return;
         }
 
-        String message = action + " topic: " + topic;
+        String message = String.format("%s topic: %s", action, topic);
         Map<String, String> eventMap = createSubscriptionEventMap(message);
 
-        c8yAgent.createOperationEvent(
+        c8yAgent.createLoggingEvent(
                 message,
                 LoggingEventType.SUBSCRIPTION_EVENT_TYPE,
                 DateTime.now(),
@@ -1268,13 +1359,10 @@ public abstract class AConnectorClient {
     }
 
     private Map<String, String> createSubscriptionEventMap(String message) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        String date = dateFormat.format(new Date());
-
         return Map.ofEntries(
                 entry("message", message),
                 entry("connectorName", getConnectorName()),
-                entry("date", date));
+                entry("connectorIdentifier", getConnectorIdentifier()));
     }
 
     /**

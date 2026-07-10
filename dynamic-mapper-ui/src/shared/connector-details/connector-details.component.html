@@ -72,12 +72,12 @@
     <c8y-list-group class="m-r-8 p-b-8">
       @for (event of statusLogs$ | async; track event) {
       <c8y-li-timeline>
-        {{ event.date | date: 'dd.MM.yy HH:mm' }}
+        {{ event.time | date: 'dd.MM.yy HH:mm' }}
         <c8y-li>
           <c8y-li-body>
             <div class="d-flex">
               <div class="col-md-3">
-                <div class="label label-primary">
+                <div class="label" [ngClass]="getSeverityClass(event.severity)" [title]="event.description">
                   {{ event.status ? event.status : '-' }}
                 </div>
               </div>

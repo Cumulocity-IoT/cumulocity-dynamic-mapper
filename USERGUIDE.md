@@ -431,9 +431,6 @@ Otherwise an extracted array is treated as a single value, see [Different type o
     * `USE_LAST_VALUE_OF_ARRAY`: When the left side of the mapping returns an array, only use the last item in the array and map this to the right side
     * `REMOVE_IF_MISSING_OR_NULL`: When the left side of the mapping returns no result (not NULL), then delete the attribute (that is addressed in mapping) in the target on the right side. This avoids empty attribute, e.g. `airsensor: undefined`
 
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Stepper_Edit_Modal.png"  style="width: 50%;" />
-</p>
 <br/>
 
 > **_NOTE:_** When adding a new substitution the following two consistency rules are checked:
@@ -733,11 +730,7 @@ To send the transformed payload to a test device, press the button `Send test me
 
 To avoid inconsistencies when updating the properties of a mapping, active mapping are locked - `READ_ONLY` - and can't be updated. All properties of the mapping are protected from changes.
 
-To allow updating an activated mapping it has to be deactivated in the list of all mapping, please refer to the following screenshot:
-
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Mapping_Table_Annotated.png"  style="width: 70%;" />
-</p>
+To allow updating an activated mapping it has to be deactivated in the list of all mapping.
 <br/>
 
 ### Import & Export Mappings

@@ -136,13 +136,23 @@ public class NotificationSubscriptionController {
     })
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<NotificationSubscriptionResponse> getSubscriptions(
-            @RequestParam("subscription") String subscription) {
+            @RequestParam("subscription") String subscription,
+            @RequestParam(value = "currentPage", required = false) Integer currentPage,
+            @RequestParam(value = "pageSize", required = false) Integer pageSize,
+            @RequestParam(value = "withTotalPages", defaultValue = "true") boolean withTotalPages) {
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
 
         try {
-            NotificationSubscriptionResponse response = configurationRegistry.getNotificationSubscriber()
-                    .getSubscriptionsDevices(tenant, null, subscription);
+            // Paging is opt-in: only when a pageSize is supplied. Without it the full list is
+            // returned (backward compatible) — required by consumers that need the complete set
+            // (e.g. the "manage subscriptions" drawers, which re-commit the full desired set).
+            NotificationSubscriptionResponse response = (pageSize == null)
+                    ? configurationRegistry.getNotificationSubscriber()
+                            .getSubscriptionsDevices(tenant, null, subscription)
+                    : configurationRegistry.getNotificationSubscriber()
+                            .getSubscriptionsDevices(tenant, null, subscription,
+                                    currentPage == null ? 1 : currentPage, pageSize, withTotalPages);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("{} - Error retrieving subscriptions: {}", tenant, e.getMessage(), e);
@@ -196,13 +206,22 @@ public class NotificationSubscriptionController {
 
     @Operation(summary = "Get group notification subscriptions")
     @GetMapping(value = "/group", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<NotificationSubscriptionResponse> getGroupSubscriptions() {
+    public ResponseEntity<NotificationSubscriptionResponse> getGroupSubscriptions(
+            @RequestParam(value = "currentPage", required = false) Integer currentPage,
+            @RequestParam(value = "pageSize", required = false) Integer pageSize,
+            @RequestParam(value = "withTotalPages", defaultValue = "true") boolean withTotalPages) {
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
 
         try {
-            NotificationSubscriptionResponse response = configurationRegistry.getNotificationSubscriber()
-                    .getSubscriptionsByDeviceGroup(tenant);
+            // Paging is opt-in (see getSubscriptions). The group list currently feeds the manage
+            // drawers/enrichment, which need the full set, so the UI calls this without paging.
+            NotificationSubscriptionResponse response = (pageSize == null)
+                    ? configurationRegistry.getNotificationSubscriber()
+                            .getSubscriptionsByDeviceGroup(tenant)
+                    : configurationRegistry.getNotificationSubscriber()
+                            .getSubscriptionsByDeviceGroup(tenant,
+                                    currentPage == null ? 1 : currentPage, pageSize, withTotalPages);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("{} - Error retrieving group subscriptions: {}", tenant, e.getMessage(), e);

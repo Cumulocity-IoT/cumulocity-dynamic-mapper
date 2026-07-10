@@ -55,7 +55,34 @@ public class NotificationSubscriptionResponse {
     @Schema(description = "Current subscription status")
     private SubscriptionStatus status;
 
+    @Schema(description = "Pagination metadata for the returned devices")
+    private Paging paging;
+
     public enum SubscriptionStatus {
         ACTIVE, INACTIVE, ERROR, PENDING
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    @Schema(description = "Page statistics for the device list")
+    public static class Paging {
+
+        @Schema(description = "Current page (1-based)", example = "1")
+        private int currentPage;
+
+        @Schema(description = "Number of items requested per page", example = "30")
+        private int pageSize;
+
+        @Schema(description = "Total number of pages; null unless withTotalPages was requested")
+        private Integer totalPages;
+
+        @Schema(description = "Total number of subscriptions; null unless withTotalPages was requested")
+        private Long totalElements;
+
+        @Schema(description = "True when another page can be loaded")
+        private boolean hasNext;
     }
 }

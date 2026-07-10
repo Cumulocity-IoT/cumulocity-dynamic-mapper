@@ -22,6 +22,7 @@ import { EventService } from '@c8y/client';
 import {
   CONNECTOR_FRAGMENT,
   ConnectorStatusEvent,
+  getEventMetadata,
   LoggingEventType,
   LoggingEventTypeMap,
   SharedService,
@@ -162,7 +163,18 @@ export class ConnectorLogService {
   private toConnectorStatusEvent(event: any): ConnectorStatusEvent | null {
     try {
       const fragment = event[CONNECTOR_FRAGMENT];
-      return { ...fragment, type: event.type };
+      const metadata = getEventMetadata(event);
+      return {
+        ...fragment,
+        type: event.type,
+        time: event.time,
+        ...(metadata && {
+          severity: metadata.severity,
+          component: metadata.component,
+          componentDisplayName: metadata.componentDisplayName,
+          description: metadata.description
+        })
+      };
     } catch (error) {
       console.error('Failed to map event:', error);
       return null;

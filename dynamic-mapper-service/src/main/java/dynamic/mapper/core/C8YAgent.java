@@ -23,9 +23,6 @@ package dynamic.mapper.core;
 
 import static java.util.Map.entry;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -317,8 +314,19 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return alarmRepresentation;
     }
 
-    public void createOperationEvent(String message, LoggingEventType loggingType, DateTime eventTime,
+    public void createLoggingEvent(String message, LoggingEventType loggingType, DateTime eventTime,
             String tenant, Map<String, String> properties) {
+        createLoggingEvent(message, loggingType, null, eventTime, tenant, properties);
+    }
+
+    /**
+     * @param severityOverride overrides {@code loggingType.getSeverity()} in the emitted
+     *                         {@code d11r_metadata} fragment, e.g. so callers can derive severity
+     *                         from a concrete status value instead of a fixed per-type default.
+     *                         Pass {@code null} to use {@code loggingType.getSeverity()} unchanged.
+     */
+    public void createLoggingEvent(String message, LoggingEventType loggingType, String severityOverride,
+            DateTime eventTime, String tenant, Map<String, String> properties) {
         MapperServiceRepresentation source = mapperConfiguration.getMapperServiceRepresentation(tenant);
         subscriptionsService.runForTenant(tenant, () -> {
             MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
@@ -338,37 +346,27 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 Map<String, String> metadata = Map.of(
                     "component", loggingType.getComponent(),
                     "componentDisplayName", loggingType.getComponentDisplayName(),
-                    "severity", loggingType.getSeverity(),
+                    "severity", severityOverride != null ? severityOverride : loggingType.getSeverity(),
                     "description", loggingType.getDescription()
                 );
                 er.setProperty("d11r_metadata", metadata);
 
                 try {
                     c8ySemaphore.acquire();
-                    // this.initializeMapperServiceObject(tenant), add the new mo to the
-                    // configuration registry and retry the API call
                     Future result = this.eventApi.createAsync(er);
-                    // configurationRegistry.getVirtualThreadPool().submit(() -> {
-                    // try {
-                    // EventRepresentation oneEvent = (EventRepresentation) result.get();
-                    // } catch (SDKException e) {
-                    // log.error("{} - Failed to send event", tenant, e);
-                    // if (e.getHttpStatus() == 404 || e.getHttpStatus() == 422) {
-                    // log.warn("{} - Try to recreate the Agent with external ID", tenant);
-                    // MapperServiceRepresentation sourceNew = configurationRegistry
-                    // .initializeMapperServiceRepresentation(tenant);
-                    // mor.setId(new GId(sourceNew.getId()));
-                    // er.setSource(mor);
-                    // er.setText(message);
-                    // er.setDateTime(eventTime);
-                    // er.setType(loggingType.type);
-                    // this.eventApi.createAsync(er);
-                    // }
-                    // } catch (Exception e) {
-                    // log.error("{} - Failed to send event", tenant, e);
-                    // }
-
-                    // });
+                    // Non-blocking check so a failed event-creation call is at least logged
+                    // instead of silently disappearing (the SDK's Future has no callback API).
+                    Thread.ofVirtual().name("logging-event-result-" + tenant).start(() -> {
+                        try {
+                            result.get();
+                        } catch (SDKException e) {
+                            log.warn("{} - Failed to create logging event (type={}): {}",
+                                    tenant, loggingType.type, e.getMessage());
+                        } catch (Exception e) {
+                            log.warn("{} - Failed to create logging event (type={}): {}",
+                                    tenant, loggingType.type, e.getMessage());
+                        }
+                    });
                 } catch (InterruptedException e) {
                     log.error("{} - Failed to acquire semaphore for creating Event", tenant, e);
                 } finally {
@@ -1074,18 +1072,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         if (tenantRegistry.getServiceConfiguration(tenant).getSendNotificationLifecycle()
                 && !(connectorStatus.equals(previousConnectorStatus))) {
             previousConnectorStatus = connectorStatus;
-            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            Date now = new Date();
-            String date = dateFormat.format(now);
             Map<String, String> stMap = Map.ofEntries(
                     entry("status", connectorStatus.name()),
                     entry("message",
                             message == null ? C8Y_NOTIFICATION_CONNECTOR + ": " + connectorStatus.name() : message),
                     entry("connectorName", C8Y_NOTIFICATION_CONNECTOR),
-                    entry("connectorIdentifier", "000000"),
-                    entry("date", date));
-            createOperationEvent("Connector status: " + connectorStatus.name(),
-                    LoggingEventType.NOTIFICATION_EVENT_TYPE, DateTime.now(),
+                    entry("connectorIdentifier", "000000"));
+            createLoggingEvent(String.format("Connector status: %s", connectorStatus.name()),
+                    LoggingEventType.NOTIFICATION_EVENT_TYPE, connectorStatus.toSeverity(), DateTime.now(),
                     tenant,
                     stMap);
         }

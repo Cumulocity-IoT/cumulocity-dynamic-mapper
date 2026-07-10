@@ -132,6 +132,30 @@ public class ConnectionStateManager {
         }
     }
     
+    /**
+     * Marks the connector as RETRYING after a transient error (e.g. platform 502/503/504)
+     * delayed subscription/mapping initialization. Unlike {@link #updateStatusWithError}, this
+     * does not move the connector to FAILED, since the underlying connection is still alive and
+     * a retry is already scheduled.
+     */
+    public void updateStatusRetrying(Exception e, long nextRetryDelayMs) {
+        ConnectorStatusEvent newStatus = new ConnectorStatusEvent(ConnectorStatus.RETRYING);
+        newStatus.connectorName = connectorName;
+        newStatus.connectorIdentifier = connectorIdentifier;
+        newStatus.setMessage(buildErrorMessage(e) + String.format(" --- Retrying in %dms", nextRetryDelayMs));
+        connectorStatus.set(newStatus);
+
+        Map<String, ConnectorStatusEvent> statusMap = connectorRegistry.getConnectorStatusMap(tenant);
+        if (statusMap != null) {
+            statusMap.put(connectorIdentifier, newStatus);
+        }
+
+        if (!ConnectorStatus.RETRYING.equals(previousStatus)) {
+            previousStatus = ConnectorStatus.RETRYING;
+            notifyStatusChange(newStatus);
+        }
+    }
+
     private String buildErrorMessage(Exception e) {
         StringBuilder messageBuilder = new StringBuilder()
                 .append(" --- ")
