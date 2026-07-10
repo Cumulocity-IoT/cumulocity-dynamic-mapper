@@ -41,7 +41,8 @@ export enum ConnectorStatus {
   CONNECTED = 'CONNECTED',
   DISCONNECTED = 'DISCONNECTED',
   DISCONNECTING = 'DISCONNECTING',
-  FAILED = 'FAILED'
+  FAILED = 'FAILED',
+  RETRYING = 'RETRYING'
 }
 
 export enum LoggingEventType {

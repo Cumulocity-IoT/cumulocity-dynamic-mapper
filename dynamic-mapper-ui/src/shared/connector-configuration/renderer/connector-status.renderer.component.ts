@@ -43,6 +43,8 @@ import { CellRendererContext } from '@c8y/ngx-components';
           ? 'tag--danger'
           : (context.item?.status) === 'DISCONNECTED'
           ? 'tag--info'
+          : (context.item?.status) === 'RETRYING'
+          ? 'tag--warning'
           : 'tag--default')
     "
     >{{ context.item?.status }}
