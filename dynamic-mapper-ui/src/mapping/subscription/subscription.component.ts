@@ -179,7 +179,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   feature!: Feature;
 
   // Server-side load-more wiring: the grid requests one page at a time via this callback.
-  serverSideDataCallback: any;
+  serverSideDataCallback: (modifier: DataSourceModifier) => Promise<ServerSideDataResult>;
   readonly infiniteScroll: LoadMoreMode = 'auto';
   loadMoreItemsLabel = 'Load more devices';
 
