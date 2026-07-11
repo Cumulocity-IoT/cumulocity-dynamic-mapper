@@ -198,6 +198,12 @@ public class NotificationSubscriber {
                 currentPage, pageSize, withTotalPages);
     }
 
+    public NotificationSubscriptionResponse getSubscriptionsDevices(String tenant, String deviceId,
+            String deviceSubscription, int currentPage, int pageSize, boolean withTotalPages, String search) {
+        return queryService.getSubscriptionsDevices(tenant, deviceId, deviceSubscription,
+                currentPage, pageSize, withTotalPages, search);
+    }
+
     public NotificationSubscriptionResponse getSubscriptionsByDeviceGroup(String tenant) {
         return queryService.getSubscriptionsByDeviceGroup(tenant);
     }

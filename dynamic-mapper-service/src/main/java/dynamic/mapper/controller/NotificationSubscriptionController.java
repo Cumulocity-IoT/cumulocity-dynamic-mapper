@@ -139,7 +139,8 @@ public class NotificationSubscriptionController {
             @RequestParam("subscription") String subscription,
             @RequestParam(value = "currentPage", required = false) Integer currentPage,
             @RequestParam(value = "pageSize", required = false) Integer pageSize,
-            @RequestParam(value = "withTotalPages", defaultValue = "true") boolean withTotalPages) {
+            @RequestParam(value = "withTotalPages", defaultValue = "true") boolean withTotalPages,
+            @RequestParam(value = "search", required = false) String search) {
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
 
@@ -152,7 +153,7 @@ public class NotificationSubscriptionController {
                             .getSubscriptionsDevices(tenant, null, subscription)
                     : configurationRegistry.getNotificationSubscriber()
                             .getSubscriptionsDevices(tenant, null, subscription,
-                                    currentPage == null ? 1 : currentPage, pageSize, withTotalPages);
+                                    currentPage == null ? 1 : currentPage, pageSize, withTotalPages, search);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("{} - Error retrieving subscriptions: {}", tenant, e.getMessage(), e);

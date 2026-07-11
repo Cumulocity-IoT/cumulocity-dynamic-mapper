@@ -122,7 +122,7 @@
 
 <div class="card">
   <div class="card-block content-fullpage border-top border-bottom">
-    <c8y-data-grid #subscriptionGrid [selectable]="true" [configureColumnsEnabled]="false"
+    <c8y-data-grid #subscriptionGrid [selectable]="true" [configureColumnsEnabled]="false" [showSearch]="true"
       [title]="titleSubscription | translate" [columns]="columnsSubscriptions"
       [serverSideDataCallback]="serverSideDataCallback" [infiniteScroll]="infiniteScroll"
       [loadMoreItemsLabel]="loadMoreItemsLabel | translate"

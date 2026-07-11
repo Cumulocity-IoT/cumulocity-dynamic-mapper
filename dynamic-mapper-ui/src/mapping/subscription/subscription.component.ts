@@ -233,8 +233,17 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       : this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION;
     const currentPage = mod.pagination?.currentPage ?? 1;
     const pageSize = mod.pagination?.pageSize ?? this.pagination.pageSize;
+    const searchText = mod.searchText?.trim() || undefined;
 
-    const response = await this.subscriptionService.getSubscriptionDevice(subscription, currentPage, pageSize);
+    // The backend resolves the search against every subscribed device (there is no name/text
+    // predicate on the underlying notification-subscription API), so a search request re-paginates
+    // over the filtered set rather than the full unfiltered one.
+    const response = await this.subscriptionService.getSubscriptionDevice(
+      subscription,
+      currentPage,
+      pageSize,
+      searchText
+    );
     this.subscriptionDevices = response ?? undefined;
 
     const devices = this.enrichDevices(response?.devices ?? []);

@@ -325,7 +325,8 @@ export class SubscriptionService {
   async getSubscriptionDevice(
     subscription: string,
     currentPage?: number,
-    pageSize?: number
+    pageSize?: number,
+    search?: string
   ): Promise<NotificationSubscriptionResponse | null> {
     const features = await this.sharedService.getFeatures();
 
@@ -339,6 +340,9 @@ export class SubscriptionService {
         let url = `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}?subscription=${encodeURIComponent(subscription)}`;
         if (currentPage != null && pageSize != null) {
           url += `&currentPage=${currentPage}&pageSize=${pageSize}&withTotalPages=true`;
+        }
+        if (search) {
+          url += `&search=${encodeURIComponent(search)}`;
         }
         const response = await this.client.fetch(
           url,

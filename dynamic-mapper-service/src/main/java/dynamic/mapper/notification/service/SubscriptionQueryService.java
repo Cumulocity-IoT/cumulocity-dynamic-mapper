@@ -222,6 +222,18 @@ public class SubscriptionQueryService {
      */
     public NotificationSubscriptionResponse getSubscriptionsDevices(String tenant, String deviceId,
             String deviceSubscription, int currentPage, int pageSize, boolean withTotalPages) {
+        return getSubscriptionsDevices(tenant, deviceId, deviceSubscription, currentPage, pageSize, withTotalPages,
+                null);
+    }
+
+    /**
+     * Get a single page of device subscriptions for the static/dynamic device tabs, optionally
+     * restricted to devices whose id/name/type/group matches {@code search} (case-insensitive
+     * substring). The notification-subscription API has no name predicate, so a search request
+     * resolves every subscribed device (see {@link #searchAndPaginate}) instead of a single page.
+     */
+    public NotificationSubscriptionResponse getSubscriptionsDevices(String tenant, String deviceId,
+            String deviceSubscription, int currentPage, int pageSize, boolean withTotalPages, String search) {
 
         if (tenant == null) {
             throw new IllegalArgumentException("Tenant cannot be null");
@@ -236,6 +248,10 @@ public class SubscriptionQueryService {
             filter = filter.bySource(id);
         }
         filter = filter.byContext("mo");
+
+        if (search != null && !search.isBlank()) {
+            return searchAndPaginate(tenant, filter, search, currentPage, pageSize);
+        }
 
         return getSubscriptionsDevicesPaged(tenant, filter, currentPage, pageSize, withTotalPages);
     }
@@ -298,6 +314,69 @@ public class SubscriptionQueryService {
                         .hasNext(hasNext)
                         .build())
                 .build();
+    }
+
+    /**
+     * Resolves every subscription matching {@code filter} (there is no name/text predicate on the
+     * notification-subscription API, so this cannot be pushed down to a single page), keeps the
+     * devices whose id/name/type/group contains {@code search} (case-insensitive), then slices the
+     * requested page out of the filtered result.
+     */
+    private NotificationSubscriptionResponse searchAndPaginate(String tenant, NotificationSubscriptionFilter filter,
+            String search, int currentPage, int pageSize) {
+
+        int effectivePageSize = pageSize > 0 ? pageSize : 30;
+        int requestedPage = Math.max(1, currentPage);
+        String needle = search.toLowerCase();
+
+        NotificationSubscriptionResponse.NotificationSubscriptionResponseBuilder responseBuilder =
+                NotificationSubscriptionResponse.builder();
+        List<Device> allDevices = new ArrayList<>();
+
+        subscriptionsService.runForTenant(tenant, () -> {
+            try {
+                Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
+                        .getSubscriptionsByFilter(filter).get().allPages().iterator();
+
+                while (subIt.hasNext()) {
+                    processDeviceSubscription(tenant, subIt.next(), allDevices, responseBuilder);
+                }
+            } catch (Exception e) {
+                log.error("{} - Error searching device subscriptions: {}", tenant, e.getMessage(), e);
+            }
+        });
+
+        List<Device> matches = allDevices.stream()
+                .filter(d -> matchesSearch(d, needle))
+                .collect(Collectors.toList());
+
+        int totalElements = matches.size();
+        int fromIndex = Math.min((requestedPage - 1) * effectivePageSize, totalElements);
+        int toIndex = Math.min(fromIndex + effectivePageSize, totalElements);
+        List<Device> pageDevices = matches.subList(fromIndex, toIndex);
+
+        return responseBuilder
+                .devices(pageDevices)
+                .paging(NotificationSubscriptionResponse.Paging.builder()
+                        .currentPage(requestedPage)
+                        .pageSize(effectivePageSize)
+                        .totalPages((int) Math.ceil((double) totalElements / effectivePageSize))
+                        .totalElements((long) totalElements)
+                        .hasNext(toIndex < totalElements)
+                        .build())
+                .build();
+    }
+
+    private boolean matchesSearch(Device device, String needleLowerCase) {
+        return containsIgnoreCase(device.getId(), needleLowerCase)
+                || containsIgnoreCase(device.getName(), needleLowerCase)
+                || containsIgnoreCase(device.getType(), needleLowerCase)
+                || (device.getGroups() != null
+                        && device.getGroups().stream().anyMatch(g -> containsIgnoreCase(g, needleLowerCase)));
+    }
+
+    private boolean containsIgnoreCase(String value, String needleLowerCase) {
+        return value != null && value.toLowerCase().contains(needleLowerCase);
     }
 
     /**
