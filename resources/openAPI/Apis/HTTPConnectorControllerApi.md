@@ -12,7 +12,7 @@ All URIs are relative to *http://localhost:8080*
 
 <a name="processGenericMessage"></a>
 # **processGenericMessage**
-> processGenericMessage(path)
+> processGenericMessage(path, body)
 
 Process HTTP connector message
 
@@ -23,6 +23,7 @@ Process HTTP connector message
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **path** | **String**| Dynamic path that becomes the topic for mapping resolution. Everything after &#39;/httpConnector&#39; is used as the topic. | [optional] [default to null] |
+| **body** | **Object**| Message payload in any format (JSON, XML, plain text, binary) | [optional] |
 
 ### Return type
 
@@ -30,7 +31,7 @@ null (empty response body)
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
@@ -39,7 +40,7 @@ No authorization required
 
 <a name="processGenericMessage1"></a>
 # **processGenericMessage1**
-> processGenericMessage1(path)
+> processGenericMessage1(path, body)
 
 Process HTTP connector message
 
@@ -50,6 +51,7 @@ Process HTTP connector message
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **path** | **String**| Dynamic path that becomes the topic for mapping resolution. Everything after &#39;/httpConnector&#39; is used as the topic. | [optional] [default to null] |
+| **body** | **Object**| Message payload in any format (JSON, XML, plain text, binary) | [optional] |
 
 ### Return type
 
@@ -57,7 +59,7 @@ null (empty response body)
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
@@ -66,7 +68,7 @@ No authorization required
 
 <a name="processGenericMessage2"></a>
 # **processGenericMessage2**
-> processGenericMessage2(path)
+> processGenericMessage2(path, body)
 
 Process HTTP connector message
 
@@ -77,6 +79,7 @@ Process HTTP connector message
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **path** | **String**| Dynamic path that becomes the topic for mapping resolution. Everything after &#39;/httpConnector&#39; is used as the topic. | [optional] [default to null] |
+| **body** | **Object**| Message payload in any format (JSON, XML, plain text, binary) | [optional] |
 
 ### Return type
 
@@ -84,7 +87,7 @@ null (empty response body)
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
@@ -93,7 +96,7 @@ No authorization required
 
 <a name="processGenericMessage3"></a>
 # **processGenericMessage3**
-> processGenericMessage3(path)
+> processGenericMessage3(path, body)
 
 Process HTTP connector message
 
@@ -104,6 +107,7 @@ Process HTTP connector message
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **path** | **String**| Dynamic path that becomes the topic for mapping resolution. Everything after &#39;/httpConnector&#39; is used as the topic. | [optional] [default to null] |
+| **body** | **Object**| Message payload in any format (JSON, XML, plain text, binary) | [optional] |
 
 ### Return type
 
@@ -111,7 +115,7 @@ null (empty response body)
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 

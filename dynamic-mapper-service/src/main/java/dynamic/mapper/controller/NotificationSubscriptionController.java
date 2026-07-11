@@ -294,6 +294,33 @@ public class NotificationSubscriptionController {
         }
     }
 
+    @Operation(summary = "Resync existing devices into a type subscription",
+            description = "Notification 2.0's tenant-level type filter only fires on future inventory CREATE events — devices that existed before the type was added are never picked up automatically. This scans the current inventory for the given (already-configured) type and subscribes any device not yet covered. Runs asynchronously in the background; watch the dynamic device subscription list to see it progress.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "202", description = "Resync accepted, processing asynchronously"),
+            @ApiResponse(responseCode = "400", description = "Type is not part of the configured type subscription"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - insufficient permissions"),
+            @ApiResponse(responseCode = "404", description = "Outbound mapping is disabled"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PreAuthorize(ADMIN_CREATE_ROLES)
+    @PostMapping(value = "/type/resync/{type}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Void> resyncTypeSubscription(@PathVariable String type) {
+        String tenant = getTenant();
+        validateOutboundMappingEnabled(tenant);
+
+        try {
+            configurationRegistry.getNotificationSubscriber().resyncTypeSubscription(tenant, type);
+            log.info("{} - Resync accepted for type {}", tenant, type);
+            return ResponseEntity.status(HttpStatus.ACCEPTED).build();
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (Exception e) {
+            log.error("{} - Error resyncing type subscription for {}: {}", tenant, type, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getLocalizedMessage());
+        }
+    }
+
     private String getTenant() {
         return contextService.getContext().getTenant();
     }

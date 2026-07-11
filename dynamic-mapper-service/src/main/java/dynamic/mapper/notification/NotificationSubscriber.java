@@ -181,6 +181,10 @@ public class NotificationSubscriber {
         return subscriptionManager.updateSubscriptionByType(tenant, types);
     }
 
+    public void resyncTypeSubscription(String tenant, String type) {
+        subscriptionManager.resyncTypeSubscription(tenant, type);
+    }
+
     // === Query Methods ===
 
     public NotificationSubscriptionResponse getSubscriptionsDevices(String tenant, String deviceId,

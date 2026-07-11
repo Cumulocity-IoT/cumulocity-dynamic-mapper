@@ -22,6 +22,22 @@
 <c8y-title translate>Subscription outbound</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
   @if (path == 'dynamic') {
+    <button class="btn btn-link" title="{{ 'Resync existing devices' | translate }}" (click)="onDefineSubscriptionResync()"
+      data-cy="dm-subscription-resync"
+      [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
+      <i c8yIcon="refresh"></i>
+      {{ 'Resync existing devices' | translate }}
+    </button>
+  }
+  @if (path == 'dynamic') {
+<button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
+      'Notification subscriptions for a device type only fire for devices created after the type was added. Use this to also subscribe devices of a type that already existed beforehand.'
+        | translate
+    }}" placement="bottom" triggers="focus" type="button"></button>
+  }
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  @if (path == 'dynamic') {
     <button class="btn btn-link" title="{{ 'Manage subscriptions' | translate }}" (click)="onDefineSubscription4()"
       data-cy="dm-subscription-manage-by-type"
       [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
@@ -31,7 +47,7 @@
   }
   @if (path == 'dynamic') {
 <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
-      'Specify device types. Only when CREATING a device of any of types a subscription is created (dynamic). When a type is removed the existing subscriptions resulting from this type are NOT deleted.'
+      'Specify device types. A subscription is only created (dynamic) when a device of one of these types is CREATED afterward — devices of a newly added type that already existed beforehand are NOT picked up automatically; use \'Resync existing devices\' for those. When a type is removed the existing subscriptions resulting from this type are NOT deleted.'
         | translate
     }}" placement="bottom" triggers="focus" type="button"></button>
   }
@@ -84,6 +100,13 @@
         | translate
     }}" placement="bottom" triggers="focus" type="button"></button>
   }
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="onRefresh()"
+    data-cy="dm-subscription-refresh">
+    <i c8yIcon="refresh"></i>
+    {{ 'Refresh' | translate }}
+  </button>
 </c8y-action-bar-item>
 
 <div class="alert alert-info a-i-center" role="alert" style="min-width: stretch;">
@@ -155,6 +178,16 @@
       <d11r-type-selector (cancel)="showConfigSubscription4 = false"
         (commit)="onCommitSubscriptionByDeviceType($event)" [typeList]="subscribedDeviceTypes">
       </d11r-type-selector>
+    }
+  </div>
+</div>
+
+<div [ngClass]="{ drawerOpen: showConfigSubscriptionResync }">
+  <div class="bottom-drawer d-col has-backdrop" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+    @if (showConfigSubscriptionResync) {
+      <d11r-type-resync (cancel)="showConfigSubscriptionResync = false"
+        (resync)="resyncType($event)" [typeList]="subscribedDeviceTypes">
+      </d11r-type-resync>
     }
   </div>
 </div>

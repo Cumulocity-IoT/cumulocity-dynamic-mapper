@@ -7,6 +7,7 @@
 | **name** | **String** |  | [default to null] |
 | **description** | **String** |  | [default to null] |
 | **templateType** | **String** |  | [default to null] |
+| **direction** | **String** |  | [optional] [default to null] |
 | **code** | **String** |  | [default to null] |
 | **internal** | **Boolean** |  | [default to null] |
 | **readonly** | **Boolean** |  | [default to null] |

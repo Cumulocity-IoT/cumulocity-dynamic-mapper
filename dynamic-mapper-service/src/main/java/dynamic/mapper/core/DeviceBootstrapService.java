@@ -164,4 +164,26 @@ public class DeviceBootstrapService {
             }
         });
     }
+
+    /**
+     * Streaming variant of {@link #getManagedObjectsByType} for bulk callers (e.g. resyncing a
+     * type subscription) that would otherwise pay the memory cost of materializing a full
+     * inventory scan into a {@link List} before processing a single device. The whole paged scan
+     * is consumed inside the tenant-scoped callable — as with every other paged-iterator use in
+     * this service — so lazily-fetched later pages still run with the correct tenant context.
+     */
+    public void forEachManagedObjectByType(String tenant, String type, Boolean testing,
+            java.util.function.Consumer<ManagedObjectRepresentation> consumer) {
+        subscriptionsService.runForTenant(tenant, () -> {
+            try {
+                InventoryFilter filter = new InventoryFilter().byType(type);
+                for (ManagedObjectRepresentation mor : inventoryApi.getManagedObjectsByFilter(filter, testing)
+                        .get().allPages()) {
+                    consumer.accept(mor);
+                }
+            } catch (SDKException e) {
+                log.warn("{} - Error querying devices of type {}: {}", tenant, type, e.getMessage());
+            }
+        });
+    }
 }
