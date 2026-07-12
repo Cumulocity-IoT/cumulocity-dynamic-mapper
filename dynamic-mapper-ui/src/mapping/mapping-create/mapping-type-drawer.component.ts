@@ -230,7 +230,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
     const exportName =
       transformationType === TransformationType.SMART_FUNCTION ? 'onMessage' :
-      transformationType === TransformationType.SUBSTITUTION_AS_CODE ? 'extractFromSource' :
       null;
 
     if (!exportName) return template;
