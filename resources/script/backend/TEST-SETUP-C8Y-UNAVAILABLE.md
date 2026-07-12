@@ -229,6 +229,36 @@ Backoff doubled 10000ms → 20000ms exactly as asserted in
 `AConnectorClientSubscriptionInitRetryTest`'s `retryStillFailsRetryably_doublesBackoff_staysRetrying`.
 Confirms Path A's unit coverage matches real behavior, not just the mocked path.
 
+The connector status object (as exposed to the UI/API) confirms the same story end to end —
+`RETRYING` with the exact backoff message, then a clean `CONNECTED` once the fault was disabled,
+with no restart and no manual reconnect:
+
+```json
+{
+  "connectorName": "Mqtt - Hive",
+  "connectorIdentifier": "1lrtycb2",
+  "status": "RETRYING",
+  "message": " --- com.cumulocity.sdk.client.SDKException: Http status code: 502\nReceived non-JSON error response (status=502, content-type=text/plain). Skipping JSON parse.\n tenant: <tenant> user: service_dynamic-mapper-service --- Retrying in 20000ms",
+  "date": "2026-07-12 14:30:15"
+}
+```
+
+→ (fault disabled) →
+
+```json
+{
+  "connectorName": "Mqtt - Hive",
+  "connectorIdentifier": "1lrtycb2",
+  "status": "CONNECTED",
+  "message": "",
+  "date": "2026-07-12 14:31:18"
+}
+```
+
+This is the full before/during/after loop the fix was meant to close: platform 5xx during
+subscription init no longer strands the connector in `FAILED` — it self-heals to `CONNECTED` once
+the Inventory API is reachable again. Path B is verified.
+
 Two unrelated observations surfaced during this run, both explicitly out of scope for this fix:
 
 - The management-subscription group-caching step (`initializeManagementClient`'s "cache monitored
@@ -283,7 +313,9 @@ Independent of the 502 path. Two layers:
    needing any real backend, and closes the test-coverage gap identified above.
 2. ~~Add Path C unit tests~~ — **done**, see `TokenManagerTest` additions above; closes the token
    storage-layer gap independently of Path B, no real tenant needed.
-3. Do one manual Path B run against a disposable/test tenant to confirm the 502 fix holds up
-   against a real 502 from `MappingRepository.findAll`'s pagination.
-4. Do the manual Path C functional check (item 3 above) only if the 401 loop reappears in logs
-   after deploying the fix — the two paths are orthogonal and this one doesn't block on Path B.
+3. ~~Do one manual Path B run~~ — **done**, see "Verified — real run against a local backend"
+   above; confirmed `RETRYING` with correct backoff then a clean self-healed `CONNECTED` against a
+   real 502 from `MappingRepository.findAll`'s pagination.
+4. Do the manual Path C functional check (item 3 under Path C above) only if the 401 loop
+   reappears in logs after deploying the fix — the two paths are orthogonal and this one doesn't
+   block on Path B.
