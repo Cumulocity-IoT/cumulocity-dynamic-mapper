@@ -1,6 +1,9 @@
 from mitmproxy import command, ctx, http
 
-REAL_HOST = "ck4.eu-latest.cumulocity.com"
+# Set this to your own tenant host before running — e.g. "myTenant.eu-latest.cumulocity.com".
+# Deliberately left as a placeholder: this file is checked into the repo, unlike the gitignored
+# application-dev.properties, so no real tenant hostname belongs here.
+REAL_HOST = "<your-tenant>.cumulocity.com"
 FAULT_PATH_PREFIX = "/inventory/managedObjects"
 
 

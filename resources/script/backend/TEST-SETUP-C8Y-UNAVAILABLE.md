@@ -154,10 +154,11 @@ proxy transparently carries the WebSocket traffic too (reverse-proxy mode handle
    commands — `fault.on`, `fault.off`, `fault.toggle` — so the fault can be toggled live from the
    interactive TUI's command bar (press `:`, type the command, hit Enter; the resulting state is
    echoed to the event log at the bottom of the screen).
-3. Start the proxy in front of the real tenant. Use the interactive `mitmproxy` TUI (not headless
+3. Start the proxy in front of the real tenant (replace `<your-tenant>.cumulocity.com` with the
+   same host you set in `REAL_HOST`). Use the interactive `mitmproxy` TUI (not headless
    `mitmdump`) since toggling the fault requires the `:` command bar:
    ```bash
-   mitmproxy --mode reverse:https://ck4.eu-latest.cumulocity.com \
+   mitmproxy --mode reverse:https://<your-tenant>.cumulocity.com \
              --listen-port 8888 \
              -s fault_inject.py
    ```
@@ -210,6 +211,35 @@ proxy transparently carries the WebSocket traffic too (reverse-proxy mode handle
 11. Cross-check logs for the exact messages the fix emits: `"Transient error initializing
     subscriptions for connector {}, will retry in {}ms"` and `"Subscription initialization
     succeeded after retry for connector {}"`.
+
+#### Verified — real run against a local backend
+
+Ran end-to-end against a local instance with this setup. On reconnect, with the fault active, the
+connector correctly entered the retry/backoff cycle instead of failing outright (tenant ID,
+connector identifiers, and hostnames below are placeholders):
+
+```
+WARN  AConnectorClient - Transient error initializing subscriptions for connector Mqtt - Hive,
+      will retry in 10000ms: Http status code: 502
+WARN  AConnectorClient - Retry of subscription initialization failed for connector Mqtt - Hive,
+      next attempt in 20000ms: Http status code: 502
+```
+
+Backoff doubled 10000ms → 20000ms exactly as asserted in
+`AConnectorClientSubscriptionInitRetryTest`'s `retryStillFailsRetryably_doublesBackoff_staysRetrying`.
+Confirms Path A's unit coverage matches real behavior, not just the mocked path.
+
+Two unrelated observations surfaced during this run, both explicitly out of scope for this fix:
+
+- The management-subscription group-caching step (`initializeManagementClient`'s "cache monitored
+  groups" call) also hits `/inventory/managedObjects/{id}` and degrades ungracefully under the
+  same fault — it logs a misleading `WARN ... Device with id <id> not found!` instead of surfacing
+  the 502, and caches 0 groups instead of retrying. Different code path from the one this fix
+  targets.
+- The periodic housekeeping status-push (`MappingStatusService.sendStatusToInventory`, called
+  every 30s from `performHousekeeping`) has no retry/backoff at all — it just logs
+  `ERROR ... Unexpected error sending status to inventory` and tries again next cycle, indefinitely,
+  for as long as the outage lasts. Already noted above as a separate gap.
 
 ### Path C — Verifying the 401 WebSocket fix — DONE (unit-testable parts)
 
