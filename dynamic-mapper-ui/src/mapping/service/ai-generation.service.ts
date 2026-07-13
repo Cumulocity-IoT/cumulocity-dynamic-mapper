@@ -30,7 +30,7 @@ import { MappingStepperService } from './mapping-stepper.service';
  * Result from AI generation process
  */
 export interface AIGenerationResult {
-  /** Generated code (for SUBSTITUTION_AS_CODE transformation type) */
+  /** Generated code (for SMART_FUNCTION transformation type) */
   code?: string;
   /** Generated substitutions (for standard transformation types) */
   substitutions?: any[];

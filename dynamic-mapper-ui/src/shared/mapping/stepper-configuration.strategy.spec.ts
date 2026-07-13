@@ -82,7 +82,7 @@ describe('StepperConfigurationResolver', () => {
 
       const context: StepperConfigurationContext = {
         mappingType: MappingType.JSON,
-        transformationType: TransformationType.SUBSTITUTION_AS_CODE,
+        transformationType: TransformationType.SMART_FUNCTION,
         direction: Direction.INBOUND,
         editorMode: EditorMode.CREATE,
         substitutionsAsCode: true
@@ -226,7 +226,7 @@ describe('StepperConfigurationResolver', () => {
 
       const context: StepperConfigurationContext = {
         mappingType: MappingType.JSON,
-        transformationType: TransformationType.SUBSTITUTION_AS_CODE,
+        transformationType: TransformationType.SMART_FUNCTION,
         direction: Direction.INBOUND,
         editorMode: EditorMode.CREATE,
         substitutionsAsCode: true
@@ -373,7 +373,7 @@ describe('StepperConfigurationResolver', () => {
     it('should include post-processing message for substitutionsAsCode', () => {
       const context: StepperConfigurationContext = {
         mappingType: MappingType.JSON,
-        transformationType: TransformationType.SUBSTITUTION_AS_CODE,
+        transformationType: TransformationType.SMART_FUNCTION,
         direction: Direction.INBOUND,
         editorMode: EditorMode.CREATE,
         substitutionsAsCode: true
