@@ -1032,6 +1032,11 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return deviceBootstrapService.getManagedObjectsByType(tenant, type, testing);
     }
 
+    public void forEachManagedObjectByType(String tenant, String type, Boolean testing,
+            java.util.function.Consumer<ManagedObjectRepresentation> consumer) {
+        deviceBootstrapService.forEachManagedObjectByType(tenant, type, testing, consumer);
+    }
+
     public ManagedObjectRepresentation getManagedObjectForId(String tenant, String deviceId, Boolean testing) {
         return deviceBootstrapService.getManagedObjectForId(tenant, deviceId, testing);
     }

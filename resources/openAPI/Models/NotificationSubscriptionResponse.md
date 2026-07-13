@@ -9,6 +9,7 @@
 | **types** | **List** | List of subscribed device types | [optional] [default to null] |
 | **subscriptionId** | **String** | Unique subscription identifier | [optional] [default to null] |
 | **status** | **String** | Current subscription status | [optional] [default to null] |
+| **paging** | [**Paging**](Paging.md) | Pagination metadata for the returned devices | [optional] [default to null] |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

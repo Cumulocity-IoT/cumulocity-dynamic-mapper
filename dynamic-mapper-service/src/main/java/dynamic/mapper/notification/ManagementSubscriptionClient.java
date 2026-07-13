@@ -76,7 +76,10 @@ public class ManagementSubscriptionClient implements NotificationCallback {
         
         try {
             String operation = notification.getOperation();
-            
+
+            log.debug("{} - Received management notification. operation={}, headers={}",
+                    notificationTenant, operation, notification.getNotificationHeaders());
+
             if ("UPDATE".equals(operation)) {
                 return handleGroupUpdate(notification, notificationTenant);
             } else if ("CREATE".equals(operation)) {
@@ -97,8 +100,9 @@ public class ManagementSubscriptionClient implements NotificationCallback {
 
     private ProcessingResultWrapper<?> handleGroupUpdate(Notification notification, String notificationTenant) {
         C8YMessage message = NotificationHelper.createC8YMessage(notification, notificationTenant);
-        log.debug("{} - Handling group update for: {}", notificationTenant, message.getSourceId());
-        
+        log.debug("{} - Handling group update for source: {}. Raw notification body: {}",
+                notificationTenant, message.getSourceId(), notification.getMessage());
+
         virtualThreadPool.submit(
             new UpdateSubscriptionDeviceGroupTask(
                 configurationRegistry,

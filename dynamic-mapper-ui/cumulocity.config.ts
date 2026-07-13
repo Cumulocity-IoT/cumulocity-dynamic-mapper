@@ -33,84 +33,88 @@ export default {
         from: 'README.md',
         to: 'README.md'
       },
+            {
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Subscription_Outbound_Resync.png',
+        to: 'image/Dynamic_Mapper_Mapping_Subscription_Outbound_Resync.png'
+      },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Table_Add_Modal.png',
         to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png',
         to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png',
         to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Subscription_Outbound.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Subscription_Outbound.png',
         to: 'image/Dynamic_Mapper_Mapping_Subscription_Outbound.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Inbound.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Inbound.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Inbound.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Outbound.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Outbound.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Outbound.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Connector_New.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Connector_New.png',
         to: 'image/Dynamic_Mapper_Connector_New.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ProcessorExtension.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Substitution_ProcessorExtension.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_ProcessorExtension.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Configuration_ProcessorExtensionSource_Plugin_Installed.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Configuration_ProcessorExtensionSource_Plugin_Installed.png',
         to: 'image/Dynamic_Mapper_Configuration_ProcessorExtensionSource_Plugin_Installed.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Message_Explorer.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Message_Explorer.png',
         to: 'image/Dynamic_Mapper_Mapping_Message_Explorer.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Versions_Drawer.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Versions_Drawer.png',
         to: 'image/Dynamic_Mapper_Mapping_Versions_Drawer.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Versions_Status_Badge.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Versions_Status_Badge.png',
         to: 'image/Dynamic_Mapper_Mapping_Versions_Status_Badge.png'
       },
       {
-        from: '../resources/image/Dynamic_Mapper_Mapping_Versions_Retention_Config.png',
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Versions_Retention_Config.png',
         to: 'image/Dynamic_Mapper_Mapping_Versions_Retention_Config.png'
       },
       {

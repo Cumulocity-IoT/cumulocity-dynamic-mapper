@@ -31,7 +31,7 @@ Get active subscriptions for connector
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
@@ -58,7 +58,7 @@ Get connector status
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
@@ -82,7 +82,7 @@ This endpoint does not need any parameter.
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
@@ -106,7 +106,7 @@ This endpoint does not need any parameter.
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
@@ -130,7 +130,7 @@ This endpoint does not need any parameter.
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 

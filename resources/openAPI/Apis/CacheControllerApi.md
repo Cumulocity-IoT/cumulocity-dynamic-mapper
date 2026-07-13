@@ -13,13 +13,13 @@ All URIs are relative to *http://localhost:8080*
 
 Get cache size
 
-    Returns the current number of entries in the specified cache.
+    Returns the current number of entries in the specified cache. Supported values for cacheId: INVENTORY_CACHE, INBOUND_ID_CACHE.
 
 ### Parameters
 
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **cacheId** | **String**| Identifier of the cache. Supported values: INVENTORY_CACHE, INBOUND_ID_CACHE | [default to null] [enum: INVENTORY_CACHE, INBOUND_ID_CACHE] |
+| **cacheId** | **String**| Identifier of the cache to query. Allowed values: INVENTORY_CACHE, INBOUND_ID_CACHE | [default to null] |
 
 ### Return type
 
@@ -27,10 +27,10 @@ Get cache size
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: application/json
+- **Accept**: application/json, */*
 

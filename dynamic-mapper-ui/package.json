@@ -1,12 +1,15 @@
 {
   "name": "dynamic-mapper",
-  "version": "6.4.1",
+  "version": "6.4.2-SNAPSHOT",
   "author": "christof.strack@cumulocity.com, stefan.witschel@cumulocity.com",
   "description": "Cumulocity Dynamic Mapper UI to map data from any data source to Cumulocity and vice-versa in a zero-code/low-code way. When using an AI Provider code and mappings can be generated.",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "prestart": "node scripts/optimize-images.js",
+    "prebuild": "node scripts/optimize-images.js",
     "build": "ng build",
+    "prewatch": "node scripts/optimize-images.js",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "format": "prettier --write 'src/**/*.ts'",
@@ -79,6 +82,7 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
     "less": "^4.2.0",
+    "sharp": "^0.35.3",
     "typescript": "~5.9.2",
     "webpack": "^5.105.0"
   }
