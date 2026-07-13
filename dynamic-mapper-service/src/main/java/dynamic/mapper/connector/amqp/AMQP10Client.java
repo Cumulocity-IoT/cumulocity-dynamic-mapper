@@ -184,6 +184,12 @@ public class AMQP10Client extends AConnectorClient {
                 return;
             }
 
+            // Close any connection/session left over from a previous connect() attempt (e.g. one
+            // that got partway through before failing) before building new ones — otherwise that
+            // old connection's socket, and Qpid's failover reconnect loop if automaticRecovery is
+            // enabled, would leak forever once these fields are overwritten below.
+            closeExistingConnectionQuietly();
+
             String remoteUri = buildConnectionUri();
             log.debug("{} - Connecting to AMQP 1.0 URI: {}", tenant, sanitizeUri(remoteUri));
 
@@ -236,6 +242,26 @@ public class AMQP10Client extends AConnectorClient {
         }
     }
 
+    /** Close and null out any previous JMS session/connection, swallowing errors (best-effort). */
+    private void closeExistingConnectionQuietly() {
+        if (session != null) {
+            try {
+                session.close();
+            } catch (Exception e) {
+                log.debug("{} - Error closing previous JMS session before reconnect: {}", tenant, e.getMessage());
+            }
+            session = null;
+        }
+        if (connection != null) {
+            try {
+                connection.close();
+            } catch (Exception e) {
+                log.debug("{} - Error closing previous JMS connection before reconnect: {}", tenant, e.getMessage());
+            }
+            connection = null;
+        }
+    }
+
     @Override
     public void disconnect() {
         if (!beginDisconnection()) {
@@ -248,42 +274,47 @@ public class AMQP10Client extends AConnectorClient {
 
             physicallyConnected = false;
 
-            // Close all consumers
-            consumers.forEach((topic, consumer) -> {
-                try {
-                    consumer.close();
-                } catch (JMSException e) {
-                    log.debug("{} - Error closing consumer for {}: {}", tenant, topic, e.getMessage());
-                }
-            });
-            consumers.clear();
+            // Guarded by the same lock publishMEAO() uses around its producer-get/create-and-send
+            // sequence: without it, a publish in progress could have its producer/session closed
+            // out from under it mid-send, and two threads could race on the producers map.
+            synchronized (this) {
+                // Close all consumers
+                consumers.forEach((topic, consumer) -> {
+                    try {
+                        consumer.close();
+                    } catch (JMSException e) {
+                        log.debug("{} - Error closing consumer for {}: {}", tenant, topic, e.getMessage());
+                    }
+                });
+                consumers.clear();
 
-            // Close all cached producers
-            producers.forEach((address, producer) -> {
-                try {
-                    producer.close();
-                } catch (JMSException e) {
-                    log.debug("{} - Error closing producer for {}: {}", tenant, address, e.getMessage());
-                }
-            });
-            producers.clear();
+                // Close all cached producers
+                producers.forEach((address, producer) -> {
+                    try {
+                        producer.close();
+                    } catch (JMSException e) {
+                        log.debug("{} - Error closing producer for {}: {}", tenant, address, e.getMessage());
+                    }
+                });
+                producers.clear();
 
-            // Close session
-            if (session != null) {
-                try {
-                    session.close();
-                } catch (JMSException e) {
-                    log.debug("{} - Error closing JMS session: {}", tenant, e.getMessage());
+                // Close session
+                if (session != null) {
+                    try {
+                        session.close();
+                    } catch (JMSException e) {
+                        log.debug("{} - Error closing JMS session: {}", tenant, e.getMessage());
+                    }
                 }
-            }
 
-            // Close connection
-            if (connection != null) {
-                try {
-                    connection.close();
-                    log.info("{} - AMQP 1.0 connection closed successfully", tenant);
-                } catch (JMSException e) {
-                    log.debug("{} - Error closing JMS connection: {}", tenant, e.getMessage());
+                // Close connection
+                if (connection != null) {
+                    try {
+                        connection.close();
+                        log.info("{} - AMQP 1.0 connection closed successfully", tenant);
+                    } catch (JMSException e) {
+                        log.debug("{} - Error closing JMS connection: {}", tenant, e.getMessage());
+                    }
                 }
             }
 
@@ -456,7 +487,11 @@ public class AMQP10Client extends AConnectorClient {
             virtualThreadPool.submit(() -> {
                 try {
                     Thread.sleep(5000);
-                    connect();
+                    // submitConnect() (not connect() directly): goes through AConnectorClient's
+                    // lifecycleLock/connectDisconnectExecutionLock, so this background reconnect
+                    // can't race a concurrent submitConnect()/submitDisconnect() triggered by a
+                    // user operation or another health check.
+                    submitConnect();
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 } catch (Exception e) {

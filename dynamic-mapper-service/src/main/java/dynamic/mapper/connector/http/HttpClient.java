@@ -264,27 +264,27 @@ public class HttpClient extends AConnectorClient {
     /**
      * Handle incoming HTTP message
      * Called by the HTTP endpoint controller
-     * 
+     * <p>
+     * Deliberately does not catch exceptions from {@code dispatcher.onMessage()}: the sole
+     * caller, {@code HttpConnectorController.processGenericMessage()}, already wraps this call
+     * in a try/catch that maps any exception to an HTTP 400 response. Swallowing errors here
+     * previously meant a device sending malformed data always got a 200 OK with no signal to
+     * retry, since the controller's error handling could never trigger.
+     *
      * @param message The connector message containing the HTTP request data
      */
     public void onMessage(ConnectorMessage message) {
         if (dispatcher == null) {
             log.error("{} - Dispatcher is not initialized, cannot process message", tenant);
-            return;
+            throw new IllegalStateException("Dispatcher is not initialized, cannot process message");
         }
 
-        try {
-            if (log.isDebugEnabled()) {
-                log.debug("{} - Received HTTP message on topic: [{}]",
-                        tenant, message.getTopic());
-            }
-
-            dispatcher.onMessage(message);
-
-        } catch (Exception e) {
-            log.error("{} - Error processing HTTP message on topic: [{}]",
-                    tenant, message.getTopic(), e);
+        if (log.isDebugEnabled()) {
+            log.debug("{} - Received HTTP message on topic: [{}]",
+                    tenant, message.getTopic());
         }
+
+        dispatcher.onMessage(message);
     }
 
     /**

@@ -44,6 +44,8 @@ import javax.net.ssl.TrustManagerFactory;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Abstract base class for MQTT connector clients.
@@ -52,13 +54,23 @@ import java.util.*;
 @Slf4j
 public abstract class AMQTTClient extends AConnectorClient {
 
-    // MQTT-specific fields - note: parent class already has sslContext and sslConfig
+    // MQTT-specific fields - note: parent class already has sslContext
     protected MqttClientSslConfig mqttSslConfig; // MQTT-specific SSL config
     protected Boolean cleanSession = true; // MQTT 3.x uses cleanSession, MQTT 5 uses cleanStart
-    protected volatile int reconnectAttempt = 0;
+    // AtomicInteger (not volatile int): incremented on the housekeeping-executor thread
+    // (connectorSpecificHousekeeping()) but reset to 0 on a HiveMQ/Netty callback thread
+    // (addConnectedListener) — a plain `++` read-modify-write would be able to lose a concurrent
+    // reset.
+    protected final AtomicInteger reconnectAttempt = new AtomicInteger(0);
     protected volatile long nextReconnectTimeMs = 0;
     protected static final int RECONNECT_DELAY_STEP_MS = 10000;
     protected static final int RECONNECT_DELAY_MAX_MS  = 300000; // 5 minutes
+    // Bumped once per connect() attempt; captured by buildMqttClient()'s disconnected-listener
+    // closure so a listener belonging to a superseded (already-replaced) mqttClient instance can
+    // recognize itself as stale and skip scheduling a reconnect — see buildMqttClient() in
+    // MQTT3Client/MQTT5Client for how this closes a race with the disconnect()->connect()
+    // reconnect-trigger in createMqttCallback().
+    protected final AtomicLong connectGeneration = new AtomicLong(0);
 
      @Getter
      @Setter
@@ -217,6 +229,7 @@ public abstract class AMQTTClient extends AConnectorClient {
             log.info("{} - Connection attempt already in progress for connector: {}", tenant, connectorName);
             return;
         }
+        connectGeneration.incrementAndGet();
 
         try {
             log.info("{} - Connecting MQTT client: {}", tenant, connectorName);

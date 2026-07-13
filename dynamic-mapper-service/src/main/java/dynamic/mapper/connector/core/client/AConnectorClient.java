@@ -57,6 +57,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
@@ -244,6 +245,18 @@ public abstract class AConnectorClient {
     private volatile CompletableFuture<Void> disconnectTask;
     private volatile CompletableFuture<Void> reconnectTask;
     private ScheduledThreadPoolExecutor housekeepingExecutor;
+
+    // Ensures connect() and disconnect() bodies never run concurrently with each other for a
+    // given connector instance. lifecycleLock (above) only dedupes overlapping submitConnect() vs
+    // submitConnect() (or submitDisconnect() vs submitDisconnect()) calls, but does nothing about
+    // a connectTask and a disconnectTask running at the same time on separate virtual threads.
+    // beginConnection()/beginDisconnection() don't close this gap either — they synchronize on
+    // two DIFFERENT locks (connectionLock vs disconnectionLock), so they never exclude each other,
+    // and three connectors (HttpClient, WebHook, TestClient) don't call them at all. A
+    // ReentrantLock (not `synchronized`) is used because it's held across the full connect()/
+    // disconnect() call — including blocking network I/O — and `synchronized` would pin the
+    // virtual thread's carrier thread for that entire duration.
+    private final ReentrantLock connectDisconnectExecutionLock = new ReentrantLock();
     // Guards against scheduling overlapping retry chains for initializeSubscriptionsAfterConnect()
     private final AtomicBoolean subscriptionInitRetryScheduled = new AtomicBoolean(false);
 
@@ -261,7 +274,12 @@ public abstract class AConnectorClient {
      * then release those resources.
      */
     public void close() {
-        disconnect();
+        connectDisconnectExecutionLock.lock();
+        try {
+            disconnect();
+        } finally {
+            connectDisconnectExecutionLock.unlock();
+        }
     }
 
     public abstract boolean isConfigValid(ConnectorConfiguration configuration);
@@ -538,6 +556,7 @@ public abstract class AConnectorClient {
                 log.debug("{} - Connecting connector: {}", tenant, connectorName);
                 connectTask = CompletableFuture
                         .runAsync(() -> {
+                            connectDisconnectExecutionLock.lock();
                             try {
                                 connectionStateManager.updateStatus(ConnectorStatus.CONNECTING, true, true);
                                 connect();
@@ -546,6 +565,8 @@ public abstract class AConnectorClient {
                                 log.error("{} - Connection failed: {}", tenant, e.getMessage(), e);
                                 connectionStateManager.updateStatusWithError(e);
                                 throw new CompletionException("Connection failed for connector " + connectorName, e);
+                            } finally {
+                                connectDisconnectExecutionLock.unlock();
                             }
                         }, virtualThreadPool);
             }
@@ -573,6 +594,7 @@ public abstract class AConnectorClient {
                 connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
                 disconnectTask = CompletableFuture
                         .runAsync(() -> {
+                            connectDisconnectExecutionLock.lock();
                             try {
                                 disconnect();
                                 connectionStateManager.setConnected(false);
@@ -581,6 +603,8 @@ public abstract class AConnectorClient {
                                 log.error("{} - Disconnection failed: {}", tenant, e.getMessage(), e);
                                 connectionStateManager.updateStatusWithError(e);
                                 throw new CompletionException("Disconnection failed for connector " + connectorName, e);
+                            } finally {
+                                connectDisconnectExecutionLock.unlock();
                             }
                         }, virtualThreadPool);
             }

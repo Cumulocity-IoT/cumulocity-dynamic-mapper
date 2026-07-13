@@ -60,11 +60,14 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
 
+import org.apache.kafka.common.errors.WakeupException;
+
 import java.io.IOException;
 import java.io.StringWriter;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -80,6 +83,9 @@ public class KafkaClientV2 extends AConnectorClient {
     private static final int MAX_CONSECUTIVE_FAILURES = 5;
     private static final int MAX_RETRY_ATTEMPTS = 3;
     private static final long CONSUMER_RESTART_DELAY_MS = 5000;
+    // How long unsubscribe()/disconnect() wait for a poll-loop thread to notice wakeup() and
+    // exit before giving up on the wait (the thread itself still exits/closes shortly after).
+    private static final long CONSUMER_SHUTDOWN_TIMEOUT_MS = 5000;
 
     private static final String KAFKA_CONSUMER_PROPERTIES = "/kafka-consumer.properties";
     private static final String KAFKA_PRODUCER_PROPERTIES = "/kafka-producer.properties";
@@ -97,7 +103,15 @@ public class KafkaClientV2 extends AConnectorClient {
     // Consumer management
     private final Map<String, KafkaConsumerWrapper> topicConsumers = new ConcurrentHashMap<>();
     private final Map<String, Future<?>> consumerTasks = new ConcurrentHashMap<>();
-    private final Map<String, MutableInt> failedSubscriptions = new ConcurrentHashMap<>();
+    // Poll-loop failure counts, keyed by plain topic name — read by monitorSubscriptions() to
+    // decide which topics are worth retrying.
+    private final Map<String, MutableInt> pollFailureCounts = new ConcurrentHashMap<>();
+    // Per-partition processing-error counts, keyed by "topic-partition" — purely internal to
+    // handleProcessingError()'s own restart threshold; never read by monitorSubscriptions() (which
+    // treats every key in its map as a bare topic name, so mixing the two key formats in one map
+    // previously made monitorSubscriptions() try to "restart" a topic literally named
+    // "myTopic-0").
+    private final Map<String, MutableInt> processingErrorCounts = new ConcurrentHashMap<>();
 
     @Getter
     protected List<Qos> supportedQOS;
@@ -390,27 +404,40 @@ public class KafkaClientV2 extends AConnectorClient {
     protected void unsubscribe(String topic) throws ConnectorException {
         log.debug("{} - Unsubscribing from Kafka topic: [{}]", tenant, topic);
 
-        // Cancel consumer task
+        KafkaConsumerWrapper wrapper = topicConsumers.remove(topic);
         Future<?> task = consumerTasks.remove(topic);
-        if (task != null && !task.isDone()) {
-            task.cancel(true);
+
+        if (wrapper != null) {
+            // Signal the owning poll-loop thread to stop; only that thread may ever call
+            // poll()/commitSync()/close() on the consumer (KafkaConsumer is not thread-safe) —
+            // see consumeMessages(), which does the actual close in its finally block.
+            wrapper.requestClose();
         }
 
-        // Close consumer
-        KafkaConsumerWrapper wrapper = topicConsumers.remove(topic);
-        if (wrapper != null) {
+        if (task != null) {
             try {
-                wrapper.getConsumer().close();
-                log.info("{} - Successfully unsubscribed from Kafka topic: [{}]", tenant, topic);
-                sendSubscriptionEvents(topic, "Unsubscribed");
+                task.get(CONSUMER_SHUTDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            } catch (TimeoutException e) {
+                log.warn("{} - Timed out waiting for consumer task to stop for topic: [{}]; " +
+                        "it will finish closing shortly on its own", tenant, topic);
             } catch (Exception e) {
-                log.warn("{} - Error closing Kafka consumer for topic: [{}]", tenant, topic, e);
+                log.debug("{} - Consumer task for topic [{}] ended while unsubscribing: {}",
+                        tenant, topic, e.getMessage());
             }
         }
+
+        log.info("{} - Successfully unsubscribed from Kafka topic: [{}]", tenant, topic);
+        sendSubscriptionEvents(topic, "Unsubscribed");
     }
 
     /**
-     * Consume messages from Kafka topic
+     * Consume messages from Kafka topic.
+     * <p>
+     * This method's thread is the sole owner of {@code wrapper.getConsumer()} for its entire
+     * lifetime: it is the only thread that ever calls {@code poll()}, {@code commitSync()}, or
+     * {@code close()} on it. Other threads request work (committing an offset, closing the
+     * consumer) via {@link KafkaConsumerWrapper#requestCommit} / {@link KafkaConsumerWrapper#requestClose},
+     * which this loop drains/honours on its own thread.
      */
     private void consumeMessages(KafkaConsumerWrapper wrapper) {
         KafkaConsumer<String, String> consumer = wrapper.getConsumer();
@@ -418,39 +445,81 @@ public class KafkaClientV2 extends AConnectorClient {
 
         log.debug("{} - Starting message consumption for topic: [{}]", tenant, topic);
 
-        while (!Thread.currentThread().isInterrupted()) {
-            try {
-                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(CONSUMER_POLL_TIMEOUT_MS));
-
-                for (ConsumerRecord<String, String> record : records) {
-                    processKafkaMessage(record);
-                }
-
-                // Reset failed count on successful poll
-                failedSubscriptions.remove(topic);
-
-            } catch (Exception e) {
-                log.error("{} - Error consuming messages from topic: [{}]", tenant, topic, e);
-                handleConsumerError(topic, e);
-
-                MutableInt failCount = failedSubscriptions.computeIfAbsent(topic, k -> new MutableInt(0));
-                failCount.increment();
-
-                if (failCount.intValue() > MAX_CONSECUTIVE_FAILURES) {
-                    log.error("{} - Too many failures for topic: [{}], stopping consumer", tenant, topic);
-                    break;
-                }
-
+        try {
+            while (!wrapper.isCloseRequested()) {
                 try {
-                    Thread.sleep(CONSUMER_RESTART_DELAY_MS);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
+                    drainPendingCommits(wrapper);
+
+                    ConsumerRecords<String, String> records = consumer
+                            .poll(Duration.ofMillis(CONSUMER_POLL_TIMEOUT_MS));
+
+                    for (ConsumerRecord<String, String> record : records) {
+                        processKafkaMessage(record);
+                    }
+
+                    // Reset failed count on successful poll
+                    pollFailureCounts.remove(topic);
+
+                } catch (WakeupException we) {
+                    // Only triggered by our own requestClose(); the while condition will exit next.
                     break;
+                } catch (Exception e) {
+                    log.error("{} - Error consuming messages from topic: [{}]", tenant, topic, e);
+                    handleConsumerError(topic, e);
+
+                    MutableInt failCount = pollFailureCounts.computeIfAbsent(topic, k -> new MutableInt(0));
+                    failCount.increment();
+
+                    if (failCount.intValue() > MAX_CONSECUTIVE_FAILURES) {
+                        log.error("{} - Too many consecutive failures for topic: [{}], stopping this consumer; " +
+                                "housekeeping will retry it", tenant, topic);
+                        // Hand off to the slower housekeeping-driven retry cycle (monitorSubscriptions())
+                        // instead of leaving the count above MAX_RETRY_ATTEMPTS, where it would never
+                        // be picked up again.
+                        failCount.setValue(1);
+                        break;
+                    }
+
+                    try {
+                        Thread.sleep(CONSUMER_RESTART_DELAY_MS);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
                 }
             }
+        } finally {
+            drainPendingCommits(wrapper);
+            try {
+                consumer.close();
+            } catch (Exception e) {
+                log.warn("{} - Error closing Kafka consumer for topic: [{}]", tenant, topic, e);
+            }
+            // Conditional remove: don't clobber a newer wrapper/task a concurrent subscribe()
+            // may already have installed for this topic.
+            topicConsumers.remove(topic, wrapper);
+            consumerTasks.remove(topic);
+            log.debug("{} - Stopped message consumption for topic: [{}]", tenant, topic);
         }
+    }
 
-        log.debug("{} - Stopped message consumption for topic: [{}]", tenant, topic);
+    /**
+     * Commit any offsets queued via {@link KafkaConsumerWrapper#requestCommit}. Must only ever be
+     * called from the consumer's own owning poll-loop thread (see {@link #consumeMessages}).
+     */
+    private void drainPendingCommits(KafkaConsumerWrapper wrapper) {
+        Map<TopicPartition, OffsetAndMetadata> toCommit = wrapper.drainPendingCommits();
+        if (toCommit.isEmpty()) {
+            return;
+        }
+        try {
+            wrapper.getConsumer().commitSync(toCommit);
+            if (serviceConfiguration.getLogPayload()) {
+                log.debug("{} - Committed {} offset(s) for topic: [{}]", tenant, toCommit.size(), wrapper.getTopic());
+            }
+        } catch (Exception e) {
+            log.error("{} - Error committing offsets for topic: [{}]", tenant, wrapper.getTopic(), e);
+        }
     }
 
     /**
@@ -548,7 +617,14 @@ public class KafkaClientV2 extends AConnectorClient {
     }
 
     /**
-     * Handle successful message processing
+     * Handle successful message processing.
+     * <p>
+     * Queues the offset to commit rather than committing directly: this method can run either on
+     * the topic's own poll-loop thread (QoS 0, called synchronously from {@link #processKafkaMessage})
+     * or on a separate virtual thread (QoS &gt; 0, called from {@link #processMessageWithQos}) —
+     * calling {@code commitSync} directly from the latter would touch the KafkaConsumer from a
+     * foreign thread, which is not thread-safe. The queued offset is committed by
+     * {@link #drainPendingCommits} on the consumer's own thread on its next loop iteration.
      */
     private void handleSuccessfulProcessing(ConsumerRecord<String, String> record) {
         // Manual commit if auto-commit is disabled
@@ -558,20 +634,9 @@ public class KafkaClientV2 extends AConnectorClient {
         if (!autoCommit) {
             KafkaConsumerWrapper wrapper = topicConsumers.get(record.topic());
             if (wrapper != null) {
-                try {
-                    Map<TopicPartition, OffsetAndMetadata> offsetsToCommit = Collections.singletonMap(
-                            new TopicPartition(record.topic(), record.partition()),
-                            new OffsetAndMetadata(record.offset() + 1));
-                    wrapper.getConsumer().commitSync(offsetsToCommit);
-
-                    if (serviceConfiguration.getLogPayload()) {
-                        log.debug("{} - Committed offset for topic: [{}], partition: {}, offset: {}",
-                                tenant, record.topic(), record.partition(), record.offset() + 1);
-                    }
-                } catch (Exception e) {
-                    log.error("{} - Error committing offset for topic: [{}]",
-                            tenant, record.topic(), e);
-                }
+                wrapper.requestCommit(
+                        new TopicPartition(record.topic(), record.partition()),
+                        new OffsetAndMetadata(record.offset() + 1));
             }
         }
     }
@@ -584,7 +649,7 @@ public class KafkaClientV2 extends AConnectorClient {
                 tenant, record.topic(), record.partition(), record.offset(), httpStatusCode);
 
         String errorKey = record.topic() + "-" + record.partition();
-        MutableInt errorCount = failedSubscriptions.computeIfAbsent(errorKey, k -> new MutableInt(0));
+        MutableInt errorCount = processingErrorCounts.computeIfAbsent(errorKey, k -> new MutableInt(0));
         errorCount.increment();
 
         if (errorCount.intValue() > 10) {
@@ -594,7 +659,7 @@ public class KafkaClientV2 extends AConnectorClient {
             virtualThreadPool.submit(() -> {
                 try {
                     restartConsumerForTopic(record.topic());
-                    failedSubscriptions.remove(errorKey);
+                    processingErrorCounts.remove(errorKey);
                 } catch (ConnectorException e) {
                     log.error("{} - Failed to restart consumer for topic: [{}]", tenant, record.topic(), e);
                 }
@@ -645,22 +710,19 @@ public class KafkaClientV2 extends AConnectorClient {
             log.info("{} - Disconnecting Kafka connector", tenant);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
 
-            // Stop consumer tasks
-            consumerTasks.values().forEach(task -> {
-                if (!task.isDone()) {
-                    task.cancel(true);
-                }
-            });
-            consumerTasks.clear();
-
-            // Close consumers
-            topicConsumers.values().forEach(wrapper -> {
+            // Signal every poll-loop thread to stop and close its own consumer (see
+            // consumeMessages()'s finally block) — never call KafkaConsumer methods from this
+            // thread, it is not safe for multi-threaded access.
+            topicConsumers.values().forEach(KafkaConsumerWrapper::requestClose);
+            for (Future<?> task : consumerTasks.values()) {
                 try {
-                    wrapper.getConsumer().close();
+                    task.get(CONSUMER_SHUTDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS);
                 } catch (Exception e) {
-                    log.warn("{} - Error closing Kafka consumer: {}", tenant, e.getMessage());
+                    log.debug("{} - Consumer task did not stop cleanly during disconnect: {}",
+                            tenant, e.getMessage());
                 }
-            });
+            }
+            consumerTasks.clear();
             topicConsumers.clear();
 
             // Close producer
@@ -798,17 +860,17 @@ public class KafkaClientV2 extends AConnectorClient {
 
     @Override
     public void monitorSubscriptions() {
-        Set<String> failedTopics = new HashSet<>(failedSubscriptions.keySet());
+        Set<String> failedTopics = new HashSet<>(pollFailureCounts.keySet());
 
         for (String topic : failedTopics) {
-            MutableInt failCount = failedSubscriptions.get(topic);
+            MutableInt failCount = pollFailureCounts.get(topic);
             if (failCount != null && failCount.intValue() > 0 && failCount.intValue() <= MAX_RETRY_ATTEMPTS) {
                 log.warn("{} - Attempting to restart consumer for topic: [{}], fail count: {}",
                         tenant, topic, failCount.intValue());
 
                 try {
                     restartConsumerForTopic(topic);
-                    failedSubscriptions.remove(topic);
+                    pollFailureCounts.remove(topic);
                     log.info("{} - Successfully restarted consumer for topic: [{}]", tenant, topic);
                 } catch (Exception e) {
                     log.error("{} - Failed to restart consumer for topic: [{}]", tenant, topic, e);
@@ -851,17 +913,57 @@ public class KafkaClientV2 extends AConnectorClient {
     }
 
     /**
-     * Helper class to manage Kafka consumers
+     * Helper class to manage a Kafka consumer.
+     * <p>
+     * The wrapped {@link KafkaConsumer} is only ever touched by the single poll-loop thread that
+     * owns it (see {@link #consumeMessages}) — KafkaConsumer is explicitly not safe for
+     * multi-threaded access. Other threads that want to commit an offset or close the consumer go
+     * through {@link #requestCommit}/{@link #requestClose}, which queue the request (or, for
+     * close, use {@code consumer.wakeup()} — the one KafkaConsumer method documented as safe to
+     * call from another thread) for the owning thread to act on.
      */
     private static class KafkaConsumerWrapper {
         @Getter
         private final KafkaConsumer<String, String> consumer;
         @Getter
         private final String topic;
+        private final Map<TopicPartition, OffsetAndMetadata> pendingCommits = new ConcurrentHashMap<>();
+        private final AtomicBoolean closeRequested = new AtomicBoolean(false);
 
         public KafkaConsumerWrapper(KafkaConsumer<String, String> consumer, String topic) {
             this.consumer = consumer;
             this.topic = topic;
+        }
+
+        /** Queue an offset to be committed by the owning poll-loop thread. */
+        void requestCommit(TopicPartition partition, OffsetAndMetadata offset) {
+            pendingCommits.merge(partition, offset,
+                    (existing, incoming) -> incoming.offset() > existing.offset() ? incoming : existing);
+        }
+
+        /** Drain and return all queued offsets. Must only be called from the owning thread. */
+        Map<TopicPartition, OffsetAndMetadata> drainPendingCommits() {
+            if (pendingCommits.isEmpty()) {
+                return Collections.emptyMap();
+            }
+            Map<TopicPartition, OffsetAndMetadata> drained = new HashMap<>();
+            for (TopicPartition partition : new ArrayList<>(pendingCommits.keySet())) {
+                OffsetAndMetadata offset = pendingCommits.remove(partition);
+                if (offset != null) {
+                    drained.put(partition, offset);
+                }
+            }
+            return drained;
+        }
+
+        boolean isCloseRequested() {
+            return closeRequested.get();
+        }
+
+        /** Signal the owning poll-loop thread to stop and close the consumer itself. */
+        void requestClose() {
+            closeRequested.set(true);
+            consumer.wakeup();
         }
     }
 
