@@ -91,7 +91,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   ];
 
   private readonly CODE_TEMPLATE_TYPES: TransformationType[] = [
-    TransformationType.SUBSTITUTION_AS_CODE,
     TransformationType.SMART_FUNCTION
   ];
 

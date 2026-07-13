@@ -422,7 +422,6 @@ class MappingInboundExecutionIntegrationTest {
      *   Mapping - 20  – EXTENSION_JAVA
      *   Mapping - 24  – EXTENSION_JAVA
      *   Mapping - 26  – FLAT_FILE
-     *   Any mapping using SUBSTITUTION_AS_CODE transformation type
      */
     @ParameterizedTest(name = "[{index}] {0} → {1}")
     @MethodSource("jsonSampleMappingTestCases")
@@ -433,9 +432,6 @@ class MappingInboundExecutionIntegrationTest {
 
         Assumptions.assumeTrue(existingMapping.getMappingType() == MappingType.JSON,
                 "Skipping non-JSON mapping: " + mappingName);
-        Assumptions.assumeTrue(existingMapping.getTransformationType() == null
-                        || !"SUBSTITUTION_AS_CODE".equals(existingMapping.getTransformationType().name()),
-                "Skipping SUBSTITUTION_AS_CODE mapping: " + mappingName);
 
         String sourceTemplate = Objects.requireNonNull(existingMapping.getSourceTemplate());
         Assumptions.assumeTrue(!sourceTemplate.isBlank(),

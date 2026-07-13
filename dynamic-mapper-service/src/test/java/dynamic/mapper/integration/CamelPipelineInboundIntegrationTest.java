@@ -444,14 +444,9 @@ class CamelPipelineInboundIntegrationTest {
                 .filter(m -> m.getTransformationType() == TransformationType.SMART_FUNCTION)
                 .count();
 
-        long substitutionAsCode = inboundMappings.stream()
-            .filter(m -> m.getTransformationType() != null
-                && "SUBSTITUTION_AS_CODE".equals(m.getTransformationType().name()))
-                .count();
-
         // Then - Log coverage
-        log.info("✅ Transformation types - DEFAULT: {}, SMART_FUNCTION: {}, SUBSTITUTION_AS_CODE: {}",
-                defaultTransforms, smartFunctions, substitutionAsCode);
+        log.info("✅ Transformation types - DEFAULT: {}, SMART_FUNCTION: {}",
+                defaultTransforms, smartFunctions);
 
         assertTrue(defaultTransforms > 0, "Should have DEFAULT transformations");
     }

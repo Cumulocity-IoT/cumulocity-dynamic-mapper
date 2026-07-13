@@ -24,7 +24,7 @@ package dynamic.mapper.processor.model;
 public enum TransformationType {
     DEFAULT("DEFAULT"),
     /** @deprecated Substitution As Code is no longer supported. Use {@link #SMART_FUNCTION} instead. */
-    @Deprecated(since = "6.3", forRemoval = false)
+    @Deprecated(since = "6.3", forRemoval = true)
     SUBSTITUTION_AS_CODE("SUBSTITUTION_AS_CODE"),
     SMART_FUNCTION("SMART_FUNCTION"),
     JSONATA("JSONATA"),

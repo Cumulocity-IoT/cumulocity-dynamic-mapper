@@ -299,13 +299,9 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     this.initializeFormlyFields();
     await this.initializeCodeTemplates();
 
-    this.codeEditorHelp = this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE  ?
-      'JavaScript for creating substitutions...' :
-      'JavaScript for creating complete payloads as Smart Functions.';
+    this.codeEditorHelp = 'JavaScript for creating complete payloads as Smart Functions.';
 
-    this.codeEditorLabel = this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ?
-      'JavaScript callback for creating substitutions' :
-      'JavaScript callback for Smart functions';
+    this.codeEditorLabel = 'JavaScript callback for Smart functions';
 
     this.schemaSource = getSchema(this.mapping.targetAPI, this.mapping.direction, false, false);
     this.schemaTarget = getSchema(this.mapping.targetAPI, this.mapping.direction, true, false);
