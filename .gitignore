@@ -66,3 +66,5 @@ CLAUDE.md
 attic
 resources/script/test/tmp
 resources/image-optimized/
+resources/script/backend/backend_test.argfile
+resources/script/backend/start.md

@@ -194,6 +194,104 @@ class TokenManagerTest {
         assertEquals("cache-tok", map.get("t1"));
     }
 
+    // -------------------------------------------------------------------------
+    // 401 WebSocket reconnect-loop fix (commit 764bee9c): NotificationConnectionManager's
+    // createManagementConnection/createCacheInventoryConnection prefer a stored (refreshed)
+    // token on reconnect, and clear + re-mint one if it turns out to be stale. These getX/storeX
+    // getter/setter contracts are the piece of that fix testable without a live WebSocket — see
+    // resources/script/backend/TEST-SETUP-C8Y-UNAVAILABLE.md (Path C) for the full picture,
+    // including why the connect()-level fallback itself is verified functionally instead.
+    // -------------------------------------------------------------------------
+
+    @Test
+    void getManagementToken_returnsStoredToken() {
+        tokenManager.storeManagementToken("t1", "mgmt-tok");
+
+        assertEquals("mgmt-tok", tokenManager.getManagementToken("t1"));
+    }
+
+    @Test
+    void getManagementToken_noneStored_returnsNull() {
+        assertNull(tokenManager.getManagementToken("t1"));
+    }
+
+    @Test
+    void storeManagementToken_withNull_removesStoredToken() {
+        tokenManager.storeManagementToken("t1", "mgmt-tok");
+        assertNotNull(tokenManager.getManagementToken("t1"));
+
+        // This is exactly what createManagementConnection does when a stored token fails to
+        // connect, before minting and storing a fresh one.
+        tokenManager.storeManagementToken("t1", null);
+
+        assertNull(tokenManager.getManagementToken("t1"),
+                "storing null must clear the stale token so a fresh one is minted on the next call");
+    }
+
+    @Test
+    void getCacheInventoryToken_returnsStoredToken() {
+        tokenManager.storeCacheInventoryToken("t1", "cache-tok");
+
+        assertEquals("cache-tok", tokenManager.getCacheInventoryToken("t1"));
+    }
+
+    @Test
+    void getCacheInventoryToken_noneStored_returnsNull() {
+        assertNull(tokenManager.getCacheInventoryToken("t1"));
+    }
+
+    @Test
+    void storeCacheInventoryToken_withNull_removesStoredToken() {
+        tokenManager.storeCacheInventoryToken("t1", "cache-tok");
+        assertNotNull(tokenManager.getCacheInventoryToken("t1"));
+
+        tokenManager.storeCacheInventoryToken("t1", null);
+
+        assertNull(tokenManager.getCacheInventoryToken("t1"),
+                "storing null must clear the stale token so a fresh one is minted on the next call");
+    }
+
+    @Test
+    void getDeviceToken_returnsStoredToken() {
+        tokenManager.storeDeviceToken("t1", "connector-1", "device-tok");
+
+        assertEquals("device-tok", tokenManager.getDeviceToken("t1", "connector-1"));
+    }
+
+    @Test
+    void getDeviceToken_noneStored_returnsNull() {
+        assertNull(tokenManager.getDeviceToken("t1", "connector-1"));
+    }
+
+    @Test
+    void getDeviceToken_nullTenantOrConnector_returnsNull() {
+        tokenManager.storeDeviceToken("t1", "connector-1", "device-tok");
+
+        assertNull(tokenManager.getDeviceToken(null, "connector-1"));
+        assertNull(tokenManager.getDeviceToken("t1", null));
+    }
+
+    @Test
+    void storeDeviceToken_withNull_removesOnlyThatConnectorsToken() {
+        tokenManager.storeDeviceToken("t1", "connector-1", "device-tok-1");
+        tokenManager.storeDeviceToken("t1", "connector-2", "device-tok-2");
+
+        tokenManager.storeDeviceToken("t1", "connector-1", null);
+
+        assertNull(tokenManager.getDeviceToken("t1", "connector-1"),
+                "storing null must clear the stale token so a fresh one is minted on the next call");
+        assertEquals("device-tok-2", tokenManager.getDeviceToken("t1", "connector-2"),
+                "clearing one connector's token must not affect another connector's token");
+    }
+
+    @Test
+    void storeDeviceToken_withNull_noPriorEntry_doesNotThrow() {
+        // No token was ever stored for this tenant — the fallback path in
+        // NotificationConnectionManager still calls storeDeviceToken(tenant, id, null)
+        // unconditionally, so this must be a no-op, not an NPE.
+        assertDoesNotThrow(() -> tokenManager.storeDeviceToken("unknown-tenant", "connector-1", null));
+    }
+
     /**
      * L1 fixed: unsubscribeDeviceSubscriber must remove from deviceTokens (not managementTokens).
      * unsubscribeDeviceGroupSubscriber must remove from managementTokens (not deviceTokens).

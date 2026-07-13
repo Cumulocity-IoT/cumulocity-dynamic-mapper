@@ -98,8 +98,8 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_ProcessorExtension.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Configuration_ProcessorExtensionSource_Plugin_Installed.png',
-        to: 'image/Dynamic_Mapper_Configuration_ProcessorExtensionSource_Plugin_Installed.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Configuration_ProcessorExtension_Plugin_Installed.png',
+        to: 'image/Dynamic_Mapper_Configuration_ProcessorExtension_Plugin_Installed.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Message_Explorer.png',

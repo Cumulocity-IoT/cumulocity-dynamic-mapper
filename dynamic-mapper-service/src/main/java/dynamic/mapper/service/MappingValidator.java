@@ -140,7 +140,6 @@ public class MappingValidator {
                 mapping.getMappingType() == MappingType.SPARKPLUGB ||
                 mapping.getTransformationType() == TransformationType.EXTENSION_JAVA ||
                 mapping.getTransformationType() == TransformationType.SMART_FUNCTION ||
-                mapping.getTransformationType() == TransformationType.SUBSTITUTION_AS_CODE ||
                 mapping.getDirection() == Direction.OUTBOUND;
 
         if (!skipDeviceIdentifierValidation) {

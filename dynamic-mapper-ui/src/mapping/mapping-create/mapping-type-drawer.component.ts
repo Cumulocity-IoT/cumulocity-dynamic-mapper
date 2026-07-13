@@ -91,7 +91,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   ];
 
   private readonly CODE_TEMPLATE_TYPES: TransformationType[] = [
-    TransformationType.SUBSTITUTION_AS_CODE,
     TransformationType.SMART_FUNCTION
   ];
 
@@ -230,7 +229,6 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
     const exportName =
       transformationType === TransformationType.SMART_FUNCTION ? 'onMessage' :
-      transformationType === TransformationType.SUBSTITUTION_AS_CODE ? 'extractFromSource' :
       null;
 
     if (!exportName) return template;

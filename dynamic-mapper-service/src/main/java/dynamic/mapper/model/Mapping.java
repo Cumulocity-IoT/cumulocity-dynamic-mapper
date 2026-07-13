@@ -238,22 +238,6 @@ public class Mapping implements Serializable {
     @Schema(description = "Base64 encoded code for custom substitutions")
     private String code;
 
-    // @Schema(description = "Define substitutions as JavaScript code")
-    // public Boolean substitutionsAsCode = false;
-
-    @JsonSetter("substitutionsAsCode")
-    @Deprecated
-    public void setSubstitutionsAsCode(Boolean substitutionsAsCode) {
-        // Migration logic when old property is used
-        if (substitutionsAsCode != null && substitutionsAsCode) {
-            // Default to SUBSTITUTION_AS_CODE when true
-            // You might want to make this configurable or use different logic
-            this.transformationType = TransformationType.SUBSTITUTION_AS_CODE;
-        }
-        // Set to null as per requirement
-        this.substitutionsAsCode = null;
-    }
-
     @Builder.Default
     @Schema(description = "Define substitutions as JavaScript code")
     @Deprecated(since = "version-6.0", forRemoval = true)
@@ -453,12 +437,7 @@ public class Mapping implements Serializable {
 
     @JsonIgnore
     public Boolean isTransformationAsCode() {
-        return TransformationType.SUBSTITUTION_AS_CODE.equals(this.transformationType) ||
-                TransformationType.SMART_FUNCTION.equals(this.transformationType);
+        return TransformationType.SMART_FUNCTION.equals(this.transformationType);
     }
 
-    @JsonIgnore
-    public Boolean isSubstitutionAsCode() {
-        return TransformationType.SUBSTITUTION_AS_CODE.equals(this.transformationType);
-    }
 }
