@@ -236,7 +236,7 @@ class AConnectorClientSubscriptionInitRetryTest {
         when(mappingService.getCacheInboundMappings(TENANT)).thenReturn(new HashMap<>());
         doNothing().when(mappingService).rebuildMappingCaches(TENANT, connector.connectorId);
 
-        invokeRunSubscriptionInitRetry(connector, 10_000L);
+        invokeRunSubscriptionInitRetry(connector, 10L);
 
         assertEquals(ConnectorStatus.CONNECTED, connector.getConnectionStateManager().getCurrentStatus());
         assertFalse(retryScheduledFlag(connector), "retry-in-flight flag must reset after success");
@@ -250,11 +250,11 @@ class AConnectorClientSubscriptionInitRetryTest {
                 .when(mappingService).rebuildMappingCaches(TENANT, connector.connectorId);
         connector.initializeSubscriptionsAfterConnect();
 
-        invokeRunSubscriptionInitRetry(connector, 10_000L); // still fails -> next delay = 20s
+        invokeRunSubscriptionInitRetry(connector, 10L); // still fails -> next delay = 20s
 
         assertEquals(ConnectorStatus.RETRYING, connector.getConnectionStateManager().getCurrentStatus());
-        assertTrue(statusMap.get(CONNECTOR_IDENTIFIER).getMessage().contains("20000"),
-                "backoff delay must double from 10000ms to 20000ms");
+        assertTrue(statusMap.get(CONNECTOR_IDENTIFIER).getMessage().contains("Retrying in 20s"),
+                "backoff delay must double from 10s to 20s");
     }
 
     @Test
@@ -263,10 +263,10 @@ class AConnectorClientSubscriptionInitRetryTest {
                 .when(mappingService).rebuildMappingCaches(TENANT, connector.connectorId);
         connector.initializeSubscriptionsAfterConnect();
 
-        invokeRunSubscriptionInitRetry(connector, 250_000L); // would double past the 300s cap
+        invokeRunSubscriptionInitRetry(connector, 250L); // would double past the 300s cap
 
-        assertTrue(statusMap.get(CONNECTOR_IDENTIFIER).getMessage().contains("300000"),
-                "backoff must be capped at 300000ms");
+        assertTrue(statusMap.get(CONNECTOR_IDENTIFIER).getMessage().contains("Retrying in 300s"),
+                "backoff must be capped at 300s");
     }
 
     // ── scheduled retry fails with a non-retryable error → gives up, connector FAILED ──
@@ -281,7 +281,7 @@ class AConnectorClientSubscriptionInitRetryTest {
         doThrow(new SDKException(403, "Forbidden"))
                 .when(mappingService).rebuildMappingCaches(TENANT, connector.connectorId);
 
-        invokeRunSubscriptionInitRetry(connector, 10_000L);
+        invokeRunSubscriptionInitRetry(connector, 10L);
 
         assertEquals(ConnectorStatus.FAILED, connector.getConnectionStateManager().getCurrentStatus());
         assertFalse(retryScheduledFlag(connector), "retry-in-flight flag must reset after giving up");
@@ -296,7 +296,7 @@ class AConnectorClientSubscriptionInitRetryTest {
         connector.initializeSubscriptionsAfterConnect();
 
         connector.getConnectionStateManager().setConnected(false);
-        invokeRunSubscriptionInitRetry(connector, 10_000L);
+        invokeRunSubscriptionInitRetry(connector, 10L);
 
         // No further rebuildMappingCaches attempt, no status flip to CONNECTED/FAILED — the retry
         // just bails out because isConnected() is now false.

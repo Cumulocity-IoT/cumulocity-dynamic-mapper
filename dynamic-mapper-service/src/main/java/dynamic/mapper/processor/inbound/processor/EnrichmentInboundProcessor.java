@@ -153,7 +153,7 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
         } else {
             context.addError(new ProcessingException(errorMessage, e));
         }
-        mappingStatus.errors++;
+        mappingStatus.incrementErrors();
         mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
     }
 

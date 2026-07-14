@@ -313,7 +313,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
             // Update unspecified mapping status
             MappingStatus mappingStatusUnspecified = mappingService.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
             if (mappingStatusUnspecified != null) {
-                mappingStatusUnspecified.errors++;
+                mappingStatusUnspecified.incrementErrors();
             }
             
             return result;

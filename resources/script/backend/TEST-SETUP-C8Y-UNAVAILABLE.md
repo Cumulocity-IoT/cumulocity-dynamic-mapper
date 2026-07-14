@@ -209,14 +209,18 @@ proxy transparently carries the WebSocket traffic too (reverse-proxy mode handle
     `CONNECTED` once it is disabled — no manual reconnect needed. Mappings/subscriptions should be
     present again without restarting the microservice.
 11. Cross-check logs for the exact messages the fix emits: `"Transient error initializing
-    subscriptions for connector {}, will retry in {}ms"` and `"Subscription initialization
-    succeeded after retry for connector {}"`.
+    subscriptions for connector {}, will retry in {}s"` and `"Subscription initialization
+    succeeded after retry for connector {} (after {}s)"`.
 
 #### Verified — real run against a local backend
 
 Ran end-to-end against a local instance with this setup. On reconnect, with the fault active, the
 connector correctly entered the retry/backoff cycle instead of failing outright (tenant ID,
-connector identifiers, and hostnames below are placeholders):
+connector identifiers, and hostnames below are placeholders). This run predates a later cleanup
+that changed the retry mechanism's unit from milliseconds to seconds in both the log messages and
+the `RETRYING` status message (`"Retrying in {}ms"` → `"Retrying in {}s"`) and added elapsed time
+to the recovery log line — the values below are what the ms-based version produced; current code
+logs `10s`/`20s` instead of `10000ms`/`20000ms` for the same delays:
 
 ```
 WARN  AConnectorClient - Transient error initializing subscriptions for connector Mqtt - Hive,
@@ -225,7 +229,7 @@ WARN  AConnectorClient - Retry of subscription initialization failed for connect
       next attempt in 20000ms: Http status code: 502
 ```
 
-Backoff doubled 10000ms → 20000ms exactly as asserted in
+Backoff doubled 10000ms → 20000ms (now logged as 10s → 20s) exactly as asserted in
 `AConnectorClientSubscriptionInitRetryTest`'s `retryStillFailsRetryably_doublesBackoff_staysRetrying`.
 Confirms Path A's unit coverage matches real behavior, not just the mocked path.
 

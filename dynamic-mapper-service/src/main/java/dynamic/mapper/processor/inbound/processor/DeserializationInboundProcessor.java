@@ -115,8 +115,8 @@ public class DeserializationInboundProcessor extends BaseProcessor {
                 tenant, mapping.getMappingType());
         log.error(errorMessage);
         context.addError(new ProcessingException(errorMessage));
-        mappingStatus.errors++;
-        mappingStatusUnspecified.errors++;
+        mappingStatus.incrementErrors();
+        mappingStatusUnspecified.incrementErrors();
         mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
     }
 
@@ -129,7 +129,7 @@ public class DeserializationInboundProcessor extends BaseProcessor {
         log.warn(errorMessage);
         log.debug("{} - Deserialization error details:", tenant, e);
         context.addError(new ProcessingException(errorMessage, e));
-        mappingStatus.errors++;
+        mappingStatus.incrementErrors();
         mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
     }
 
