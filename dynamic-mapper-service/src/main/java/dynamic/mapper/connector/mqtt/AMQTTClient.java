@@ -294,6 +294,7 @@ public abstract class AMQTTClient extends AConnectorClient {
                 }
             } catch (Exception e) {
                 log.error("{} - Error initializing subscriptions after connect: {}", tenant, e.getMessage(), e);
+                connectionStateManager.updateStatusWithError(e);
             }
         }
     }

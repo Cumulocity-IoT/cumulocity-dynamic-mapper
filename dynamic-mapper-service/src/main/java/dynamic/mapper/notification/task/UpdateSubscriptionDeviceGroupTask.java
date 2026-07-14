@@ -72,7 +72,7 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
             Map<String, Object> payload = c8yMessage.getParsedPayload();
 
             log.debug("{} - Group {} UPDATE notification received. Payload top-level keys: {}",
-                    tenant, groupId, payload == null ? "null (unparseable payload)" : payload.keySet());
+                    tenant, groupId, payload == null ? "null (unparsable payload)" : payload.keySet());
 
             // Guard: if the payload contains no childAssets key this is a property update
             // (e.g. group name/description changed), NOT a membership change.
