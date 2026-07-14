@@ -27,7 +27,8 @@ import {
 import { Mapping, Substitution, MappingType, SharedService, isSubstitutionsAsCode, TransformationType } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AiChatComponent, AiChatMessageComponent } from '@c8y/ngx-components/ai/ai-chat';
-import { AIAgentService } from '../core/ai-agent.service';
+import { AIMessage } from '@c8y/ngx-components/ai';
+import { AIAgentService, AgentUsage } from '../core/ai-agent.service';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 import { ServiceConfiguration } from '../../configuration';
 import { base64ToBytes } from '../shared/util';
@@ -94,6 +95,12 @@ export class AIPromptComponent implements OnInit {
   awaitingModeChoice = false;
   /** Cached mapping object (without substitutions) ready to send to AI */
   private mappingForAI: any = null;
+  /** Aborts the in-flight AI request when the user clicks Cancel while loading */
+  private abortController: AbortController | null = null;
+  /** Token usage for the most recently received assistant response, if reported by the backend */
+  lastUsage: AgentUsage | null = null;
+  /** Running total of token usage across the conversation */
+  cumulativeUsage: Required<AgentUsage> = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
 
   // Add getter to check if this is a code-based mapping
   get isCodeMapping(): boolean {
@@ -248,26 +255,33 @@ export class AIPromptComponent implements OnInit {
         role: 'user',
       });
 
+      let variables: Record<string, unknown>;
       try {
-        this.aiAgent.agent.variables = JSON.parse(this.testVars);
+        variables = JSON.parse(this.testVars);
+        this.aiAgent.agent.variables = variables;
       } catch (ex) {
         this.alertService.danger('Invalid JSON in test variables');
         this.isLoadingChat = false;
         return;
       }
 
-      try {
-        const response = await this.aiAgentService.test(this.aiAgent);
+      this.abortController = new AbortController();
 
-        const content =
-          typeof response === 'string'
-            ? response
-            : JSON.stringify(response, null, 2);
+      try {
+        const sdkMessages = this.toSdkMessages(this.aiAgent.agent.messages);
+        const { content, usage } = await this.aiAgentService.test(
+          this.aiAgent,
+          sdkMessages,
+          variables,
+          this.abortController
+        );
 
         this.aiAgent.agent.messages.push({
           content,
           role: 'assistant',
         });
+
+        this.applyUsage(usage);
 
         if (this.isCodeMapping) {
           this.checkIfResponseContainsJavaScript(content);
@@ -275,51 +289,81 @@ export class AIPromptComponent implements OnInit {
           this.checkIfResponseContainsSubstitutions(content);
         }
       } catch (ex) {
-        this.alertService.addServerFailure(ex);
+        if ((ex as { name?: string })?.name !== 'AbortError') {
+          this.alertService.addServerFailure(ex);
+        }
       }
       // After the new message is added I want to scroll to the end of the screen
       // Clear the input field
       this.newMessage = '';
       this.isLoadingChat = false;
+      this.abortController = null;
     }
   }
 
+  /** Cancels the in-flight AI request, triggered by the c8y-ai-chat cancel button. */
+  cancelMessage(): void {
+    this.abortController?.abort();
+  }
+
+  private applyUsage(usage?: AgentUsage): void {
+    if (!usage) {
+      return;
+    }
+    this.lastUsage = usage;
+    this.cumulativeUsage = {
+      inputTokens: this.cumulativeUsage.inputTokens + (usage.inputTokens ?? 0),
+      outputTokens: this.cumulativeUsage.outputTokens + (usage.outputTokens ?? 0),
+      totalTokens: this.cumulativeUsage.totalTokens + (usage.totalTokens ?? 0)
+    };
+  }
+
+  /**
+   * Converts the locally-tracked {role, content} history into the AIMessage shape the AI SDK expects.
+   * `messages` is typed loosely because `this.aiAgent.agent.messages` carries the vendor `ai` package's
+   * `CoreMessage[]` type (whose `content` can be a structured part array), even though this component
+   * only ever pushes plain `{content: string, role: string}` entries onto it at runtime.
+   */
+  private toSdkMessages(messages: { content: unknown; role: string }[]): AIMessage[] {
+    return messages.map(m => {
+      const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+      return m.role === 'assistant'
+        ? { role: 'assistant', content: [{ type: 'text', text: content }] }
+        : { role: m.role as 'user' | 'system', content };
+    });
+  }
+
+  /**
+   * Extracts JavaScript from the latest assistant response, if present, and marks it valid for saving.
+   * A response with no code block (e.g. a clarifying question or acknowledgement) is common in a
+   * multi-turn conversation and must NOT revoke a previously extracted, valid `generatedCode` —
+   * so this only ever flips `valid` from false to true, never the other way around.
+   */
   checkIfResponseContainsJavaScript(content: any): void {
     try {
       // Look for JavaScript code blocks
       const jsBlockRegex = /```javascript\s*([\s\S]*?)\s*```/;
       const match = content.match(jsBlockRegex);
 
+      let jsContent: string | undefined;
       if (match && match[1]) {
-        // Extract the JavaScript content
-        const jsContent = match[1].trim();
-
-        // Validate that it contains a function (basic validation)
-        if (jsContent.includes('function') && jsContent.includes('function onMessage')) {
-          this.generatedCode = this.applyESMExport(jsContent);
-          this.valid = true;
-        } else {
-          this.valid = false;
-        }
+        jsContent = match[1].trim();
       } else {
         // Try alternative patterns for code blocks
         const genericCodeRegex = /```(?:js|javascript)?\s*([\s\S]*?)\s*```/;
         const genericMatch = content.match(genericCodeRegex);
-
         if (genericMatch && genericMatch[1]) {
-          const jsContent = genericMatch[1].trim();
-          if (jsContent.includes('function')) {
-            this.generatedCode = this.applyESMExport(jsContent);
-            this.valid = true;
-          } else {
-            this.valid = false;
-          }
-        } else {
-          this.valid = false;
+          jsContent = genericMatch[1].trim();
         }
       }
+
+      if (jsContent?.includes('function') && jsContent.includes('function onMessage')) {
+        this.generatedCode = this.applyESMExport(jsContent);
+        this.valid = true;
+      }
+      // else: no code block, or one without a recognizable onMessage function — keep the
+      // previous generatedCode/valid state untouched rather than disabling Save.
     } catch (error) {
-      this.valid = false;
       console.error('Error parsing JavaScript from response:', error);
       this.alertService.danger('Failed to parse JavaScript code from AI response');
     }
@@ -337,42 +381,40 @@ export class AIPromptComponent implements OnInit {
       exportStatement + '\n';
   }
 
+  /**
+   * Extracts substitutions from the latest assistant response, if present, and marks them valid for saving.
+   * A response with no JSON block (e.g. a clarifying question or acknowledgement) is common in a
+   * multi-turn conversation and must NOT revoke a previously extracted, valid `substitutions` array —
+   * so this only ever flips `valid` from false to true, never the other way around.
+   */
   checkIfResponseContainsSubstitutions(content: any) {
     try {
       // Look for the pattern ```json followed by content and ending with ```
       const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/;
       const match = content.match(jsonBlockRegex);
 
-      if (match && match[1]) {
-        // Extract the JSON content
-        const jsonContent = match[1].trim();
+      if (!match || !match[1]) {
+        // No JSON block in this response — keep the previous substitutions/valid state untouched.
+        return;
+      }
 
-        // Parse the JSON array
-        const parsedSubstitutions = JSON.parse(jsonContent);
+      const parsedSubstitutions = JSON.parse(match[1].trim());
 
-        // Validate that it's an array
-        if (Array.isArray(parsedSubstitutions)) {
-          // Validate that each item has the expected properties
-          const isValidSubstitutions = parsedSubstitutions.every(sub =>
-            sub.hasOwnProperty('pathSource') &&
-            sub.hasOwnProperty('pathTarget') &&
-            sub.hasOwnProperty('expandArray')
-          );
+      if (!Array.isArray(parsedSubstitutions)) {
+        return;
+      }
 
-          if (isValidSubstitutions) {
-            this.substitutions = parsedSubstitutions;
-            this.valid = true;
-          } else {
-            this.valid = false;
-          }
-        } else {
-          this.valid = false;
-        }
-      } else {
-        this.valid = false;
+      const isValidSubstitutions = parsedSubstitutions.every(sub =>
+        sub.hasOwnProperty('pathSource') &&
+        sub.hasOwnProperty('pathTarget') &&
+        sub.hasOwnProperty('expandArray')
+      );
+
+      if (isValidSubstitutions) {
+        this.substitutions = parsedSubstitutions;
+        this.valid = true;
       }
     } catch (error) {
-      this.valid = false;
       console.error('Error parsing substitutions from response:', error);
       this.alertService.danger('Failed to parse substitutions from AI response');
     }

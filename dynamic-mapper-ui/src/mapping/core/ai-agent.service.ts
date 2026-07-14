@@ -27,13 +27,32 @@ import {
   PATH_AGENT_ENDPOINT,
 } from '../../shared';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
-import { type JSONValue } from 'ai';
+
+import {
+  AIAssistantMessage,
+  AIMessage,
+  AIService,
+  ClientAgentDefinition
+} from '@c8y/ngx-components/ai';
+
+/** Token usage for a single AI response, as reported by the AI Agent Manager. */
+export interface AgentUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+}
+
+export interface AgentTestResult {
+  content: string;
+  usage?: AgentUsage;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class AIAgentService {
   private readonly client: FetchClient = inject(FetchClient);
+  private readonly aiService: AIService = inject(AIService);
 
   async getAIAgents(): Promise<AgentTextDefinition[]> {
     try {
@@ -63,28 +82,61 @@ export class AIAgentService {
     }
   }
 
+  /**
+   * Sends the given message history to the agent via the AI Agent Manager's snapshot/test endpoint
+   * (using `AIService` from `@c8y/ngx-components/ai`), returning both the generated content and,
+   * if reported by the backend, token usage for this request.
+   */
   async test(
-    definition: AgentTextDefinition | AgentObjectDefinition
-  ): Promise<string | JSONValue> {
-    const data = await this.client.fetch(
-      `${BASE_AI_URL}/${PATH_AGENT_ENDPOINT}/test/${definition.type}`,
-      {
-        method: 'POST',
-        body: JSON.stringify(definition),
-        headers: {
-          ...this.client.defaultHeaders,
-          'content-type': 'application/json'
-        }
+    definition: AgentTextDefinition | AgentObjectDefinition,
+    messages: AIMessage[],
+    variables: Record<string, unknown>,
+    abortController: AbortController
+  ): Promise<AgentTestResult> {
+    const clientAgent: ClientAgentDefinition = {
+      snapshot: true,
+      label: definition.name,
+      definition: {
+        name: definition.name,
+        type: definition.type,
+        agent: { system: definition.agent?.system ?? '' },
+        mcp: definition.mcp?.map(m => ({ serverName: m.serverName, tools: m.tools ?? [] }))
       }
-    );
+    };
 
     if (definition.type === 'object') {
-      return data.json();
+      const response = await this.aiService.callObjectAgent(
+        clientAgent,
+        messages,
+        variables,
+        abortController
+      );
+      return { content: JSON.stringify(response.object, null, 2), usage: response.totalUsage };
     }
 
-    return data.text();
-  }
+    const stream$ = await this.aiService.stream$(clientAgent, messages, variables, abortController);
 
+    return new Promise<AgentTestResult>((resolve, reject) => {
+      let finalMessage: AIAssistantMessage | undefined;
+      stream$.subscribe({
+        next: response => {
+          finalMessage = response.message;
+        },
+        error: reject,
+        complete: () => {
+          if (!finalMessage) {
+            reject(new Error('No response received from AI agent'));
+            return;
+          }
+          const text = finalMessage.content
+            .filter((part): part is { type: 'text'; text: string } => part.type === 'text')
+            .map(part => part.text)
+            .join('\n\n');
+          resolve({ content: text, usage: finalMessage.usage });
+        }
+      });
+    });
+  }
 
   async isAIOperable(): Promise<boolean> {
     try {
