@@ -41,6 +41,7 @@ export interface Substitution {
    * - Top-level fields: time, type
    * - Device identity: _IDENTITY_.c8ySourceId, _IDENTITY_.externalId
    * - Topic levels: _TOPIC_LEVEL_[0], _TOPIC_LEVEL_[1]
+   * - Context/control data: _CONTEXT_DATA_.deviceName, _CONTEXT_DATA_.method, etc. (see "_CONTEXT_DATA_ property" section)
    *
    * @example "c8y_TemperatureMeasurement.T.value"
    * @example "_IDENTITY_.externalId"
@@ -270,6 +271,35 @@ The `_IDENTITY_` property is used to identify the target or source device in Cum
 
 For INBOUND mappings, `_IDENTITY_` identifies the **target** device that the data should be written to.
 For OUTBOUND mappings, `_IDENTITY_` identifies the **source** device from which the Cumulocity data originates.
+
+# _CONTEXT_DATA_ property
+The `_CONTEXT_DATA_` property is used to set request/control metadata that is NOT part of the target payload body itself — always use `repairStrategy: "CREATE_IF_MISSING"` for these since they never exist as literal keys in the target template.
+
+For INBOUND mappings, the following `pathTarget` sub-keys are recognized:
+- `_CONTEXT_DATA_.api` — overrides the target Cumulocity API for this message (e.g. `"EVENT"`).
+- `_CONTEXT_DATA_.attachmentName` — file name for a binary EVENT attachment.
+- `_CONTEXT_DATA_.attachmentType` — MIME type for a binary EVENT attachment.
+- `_CONTEXT_DATA_.attachmentData` — Base64-encoded binary attachment content.
+- `_CONTEXT_DATA_.processingMode` — `"PERSISTENT"` (default) or `"TRANSIENT"`.
+- `_CONTEXT_DATA_.deviceName` — display name to use when auto-creating the target device (requires `createNonExistingDevice` enabled on the mapping).
+- `_CONTEXT_DATA_.deviceType` — managed-object type to use when auto-creating the target device.
+- `_CONTEXT_DATA_.retain` — boolean control flag.
+
+For OUTBOUND mappings, the following `pathTarget` sub-keys are recognized instead:
+- `_CONTEXT_DATA_.key` — transport/record key for the outbound message (e.g. the Kafka record key).
+- `_CONTEXT_DATA_.method` — HTTP verb override for the outbound request (`"POST"` (default), `"PUT"`, `"PATCH"`, `"DELETE"`).
+- `_CONTEXT_DATA_.publishTopic` — overrides the resolved publish topic for this message.
+- `_CONTEXT_DATA_.retain` — MQTT retain flag (boolean).
+
+@example Auto-create a device with a custom name when it doesn't exist yet (INBOUND)
+```json
+{
+  "pathSource": "device.friendlyName",
+  "pathTarget": "_CONTEXT_DATA_.deviceName",
+  "repairStrategy": "CREATE_IF_MISSING",
+  "expandArray": false
+}
+```
 
 # JSONata Context
 Use the following context to evaluate and use JSONata expressions starting each with "$":
@@ -1217,6 +1247,7 @@ Rules:
 -- Set `repairStrategy` to `CREATE_IF_MISSING` whenever the `pathTarget` does NOT exist as a literal path in the target template (e.g. a dynamic segment derived from source data, a placeholder key, or any node that needs to be created at runtime). Using `DEFAULT` for a non-existent path will cause a runtime error: "Path: <pathTarget> not found!".
 -- When `expandArray: true` is combined with a `pathTarget` that contains a dynamic or placeholder segment not present in the target template, you MUST use `CREATE_IF_MISSING`.
 -- If a substitution writes to a top-level field that already appears in the target template (e.g. `time`, `type`, `source`), `DEFAULT` is correct.
+-- `_CONTEXT_DATA_.*` targets (see "_CONTEXT_DATA_ property" section) always use `CREATE_IF_MISSING` — they are never literal keys in the target template.
 
 - When generating substitutions, recognize that:
 -- `expandArray: true` indicates the substitution will be used in post-processing to create multiple output documents

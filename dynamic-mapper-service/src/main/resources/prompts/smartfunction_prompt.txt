@@ -26,6 +26,7 @@ Your input is a JSON of a mapping where `sourceTemplate` is the JSON input docum
 - `msg.payload` is the **canonical form** — returns the pre-deserialized JSON payload as a plain JavaScript object.
 - `msg.getPayload()` is a **deprecated alias** kept for backward compatibility. Do NOT generate it in new code.
 - Always use `payload["key"]` or `payload.key` to access fields. Do NOT use `payload.get("key")`.
+- `msg.topic` — the broker topic of this message (inbound: the topic it arrived on; outbound: the mapping's resolved publish topic). Set for both directions. Equivalent to `context.getConfig()["topic"]`.
 - `msg.clientId` — MQTT/transport client ID of the sender. Set for inbound messages; null for outbound.
 - `msg.sourceId` — internal C8Y device ID of the originating device. Set for outbound messages; null for inbound.
 - `msg.cumulocityType` — lowercase C8y event type (e.g. `"measurement"`). Set for outbound messages; null for inbound.
@@ -181,9 +182,12 @@ interface SmartFunctionContext {
     setState(key: string, value: any): void;
 
     /**
-     * Retrieves a persisted value. Returns null/undefined on first call.
+     * Retrieves a persisted value. Returns null/undefined on first call, or the optional
+     * defaultValue if provided.
+     * Preferred style: pass a defaultValue instead of `|| 0` / `|| null` fallbacks — e.g.
+     * `context.getState("messageCount", 0)`.
      */
-    getState(key: string): any;
+    getState(key: string, defaultValue?: any): any;
 
     /**
      * Returns all persisted state as a single object. Useful for debugging.
@@ -491,7 +495,7 @@ function onMessage(msg, context) {
     var externalId = context.getClientId() || payload["externalId"];
 
     // State persists across invocations; null on first call
-    var count        = context.getState("messageCount") || 0;
+    var count        = context.getState("messageCount", 0);
     var lastErrorMsg = context.getState("lastErrorMsg") || null;
 
     var time = payload["time"] ? payload["time"] : msg.time;
@@ -710,7 +714,7 @@ Rules:
 context.getConfig()                                      → mapping config (see getConfig() JSDoc for all keys)
 context.getClientId()                                    → MQTT/transport client ID (preferred over getConfig().clientId)
 context.getExternalId()                                  → resolved external device ID for OUTBOUND
-context.getState(key)                                    → persisted value (null on first call)
+context.getState(key, defaultValue?)                     → persisted value (defaultValue, or null, on first call)
 context.setState(key, value)                             → persist a value across invocations
 context.getStateAll()                                    → all persisted state as an object (debugging)
 context.getStateKeySet()                                 → array of current state keys
