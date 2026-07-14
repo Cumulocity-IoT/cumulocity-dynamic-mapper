@@ -29,6 +29,7 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.*;
 import dynamic.mapper.service.cache.MappingCacheManager;
+import dynamic.mapper.util.CumulocityErrors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
@@ -217,9 +218,9 @@ public class MappingStatusService {
             return;
         }
 
-        status.currentFailureCount++;
+        status.incrementFailureCount();
         log.debug("{} - Incremented failure count to {} for mapping: {}",
-                 tenant, status.currentFailureCount, mapping.getIdentifier());
+                 tenant, status.getCurrentFailureCount(), mapping.getIdentifier());
 
         if (shouldDeactivateMapping(mapping, status)) {
             handleFailureThresholdExceeded(tenant, mapping, status);
@@ -244,7 +245,7 @@ public class MappingStatusService {
         }
         MappingStatus status = getStatusMap(tenant).get(identifier);
         if (status != null) {
-            status.currentFailureCount = 0;
+            status.resetFailureCount();
             log.debug("{} - Reset failure count for: {}", tenant, identifier);
         }
     }
@@ -284,7 +285,20 @@ public class MappingStatusService {
         } catch (IllegalArgumentException e) {
             log.error("{} - Invalid argument when sending status to inventory: {}", tenant, e.getMessage());
         } catch (Exception e) {
-            log.error("{} - Unexpected error sending status to inventory", tenant, e);
+            var transientError = CumulocityErrors.findTransientPlatformError(e);
+            if (transientError.isPresent()) {
+                // Expected during a platform outage/maintenance window — log a compact summary
+                // instead of an "unexpected error" with a full stack trace on every housekeeping
+                // cycle (every HOUSEKEEPING_INTERVAL_SECONDS) for as long as the outage lasts.
+                // It's not otherwise retried: the next scheduled housekeeping run tries again.
+                log.warn("{} - Cumulocity backend temporarily unavailable (HTTP {}), skipping status "
+                                + "update this cycle, will retry next housekeeping cycle: {}",
+                        tenant, transientError.get().getHttpStatus(),
+                        CumulocityErrors.firstLine(e.getMessage()));
+                log.debug("{} - Full details of transient inventory status-push failure", tenant, e);
+            } else {
+                log.error("{} - Unexpected error sending status to inventory", tenant, e);
+            }
         }
     }
 

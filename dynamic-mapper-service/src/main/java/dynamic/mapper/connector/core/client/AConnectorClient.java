@@ -46,6 +46,7 @@ import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;
+import dynamic.mapper.util.CumulocityErrors;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -54,7 +55,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
@@ -66,7 +66,6 @@ import javax.net.ssl.TrustManagerFactory;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.joda.time.DateTime;
 
-import com.cumulocity.sdk.client.SDKException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -81,11 +80,8 @@ public abstract class AConnectorClient {
     protected static final int WAIT_PERIOD_MS = 10000;
     protected static final int CONNECTION_TIMEOUT_SECONDS = 30;
 
-    // HTTP status codes that indicate a transient platform-side error (e.g. during platform
-    // maintenance/rollouts) rather than a genuine configuration/permission problem.
-    private static final Set<Integer> RETRYABLE_HTTP_STATUS_CODES = Set.of(502, 503, 504);
-    private static final long SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_MS = 10_000L;
-    private static final long SUBSCRIPTION_INIT_RETRY_MAX_DELAY_MS = 300_000L;
+    private static final long SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_SECONDS = 10L;
+    private static final long SUBSCRIPTION_INIT_RETRY_MAX_DELAY_SECONDS = 300L;
 
     public static final String MQTT_PROTOCOL_MQTT = "mqtt://";
     public static final String MQTT_PROTOCOL_MQTTS = "mqtts://";
@@ -259,6 +255,9 @@ public abstract class AConnectorClient {
     private final ReentrantLock connectDisconnectExecutionLock = new ReentrantLock();
     // Guards against scheduling overlapping retry chains for initializeSubscriptionsAfterConnect()
     private final AtomicBoolean subscriptionInitRetryScheduled = new AtomicBoolean(false);
+    // When the current subscription-init retry chain started, so the success log can report
+    // how long the connector spent in RETRYING before recovering.
+    private volatile long subscriptionInitRetryStartedAtMs;
 
     // Abstract methods to be implemented by subclasses
     public abstract boolean initialize();
@@ -677,9 +676,9 @@ public abstract class AConnectorClient {
             doInitializeSubscriptionsAfterConnect();
         } catch (Exception e) {
             if (isRetryableConnectorError(e)) {
-                log.warn("{} - Transient error initializing subscriptions for connector {}, will retry in {}ms: {}",
-                        tenant, connectorName, SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_MS, e.getMessage());
-                scheduleSubscriptionInitRetry(SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_MS, e);
+                log.warn("{} - Transient error initializing subscriptions for connector {}, will retry in {}s: {}",
+                        tenant, connectorName, SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_SECONDS, e.getMessage());
+                scheduleSubscriptionInitRetry(SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_SECONDS, e);
             } else {
                 throw e;
             }
@@ -708,39 +707,32 @@ public abstract class AConnectorClient {
      * configuration/permission problem that retrying won't fix.
      */
     private boolean isRetryableConnectorError(Throwable t) {
-        Throwable current = t;
-        while (current != null) {
-            if (current instanceof SDKException sdkException
-                    && RETRYABLE_HTTP_STATUS_CODES.contains(sdkException.getHttpStatus())) {
-                return true;
-            }
-            current = current.getCause();
-        }
-        return false;
+        return CumulocityErrors.isTransientPlatformError(t);
     }
 
     /**
      * Schedules a retry of {@link #doInitializeSubscriptionsAfterConnect()} on the housekeeping
-     * executor after {@code delayMs}, marking the connector as {@link ConnectorStatus#RETRYING}.
-     * The retry chain doubles its delay (capped at {@link #SUBSCRIPTION_INIT_RETRY_MAX_DELAY_MS})
+     * executor after {@code delaySeconds}, marking the connector as {@link ConnectorStatus#RETRYING}.
+     * The retry chain doubles its delay (capped at {@link #SUBSCRIPTION_INIT_RETRY_MAX_DELAY_SECONDS})
      * on each further failure and keeps going until it succeeds or a non-retryable error occurs.
      * Pending retries are cancelled automatically when the connector disconnects, since they run
      * on {@code housekeepingExecutor}, which is shut down in {@link #stopHousekeepingAndClose()}.
      */
-    private void scheduleSubscriptionInitRetry(long delayMs, Exception lastError) {
+    private void scheduleSubscriptionInitRetry(long delaySeconds, Exception lastError) {
         if (!subscriptionInitRetryScheduled.compareAndSet(false, true)) {
             // A retry chain is already in flight for this connector; let it continue.
             return;
         }
-        connectionStateManager.updateStatusRetrying(lastError, delayMs);
+        subscriptionInitRetryStartedAtMs = System.currentTimeMillis();
+        connectionStateManager.updateStatusRetrying(lastError, delaySeconds);
         if (housekeepingExecutor == null || housekeepingExecutor.isShutdown()) {
             subscriptionInitRetryScheduled.set(false);
             return;
         }
-        housekeepingExecutor.schedule(() -> runSubscriptionInitRetry(delayMs), delayMs, TimeUnit.MILLISECONDS);
+        housekeepingExecutor.schedule(() -> runSubscriptionInitRetry(delaySeconds), delaySeconds, TimeUnit.SECONDS);
     }
 
-    private void runSubscriptionInitRetry(long previousDelayMs) {
+    private void runSubscriptionInitRetry(long previousDelaySeconds) {
         if (!isConnected()) {
             log.debug("{} - Connector {} no longer connected, abandoning subscription-init retry",
                     tenant, connectorName);
@@ -749,8 +741,9 @@ public abstract class AConnectorClient {
         }
         try {
             doInitializeSubscriptionsAfterConnect();
-            log.info("{} - Subscription initialization succeeded after retry for connector {}",
-                    tenant, connectorName);
+            long elapsedSeconds = (System.currentTimeMillis() - subscriptionInitRetryStartedAtMs) / 1000;
+            log.info("{} - Subscription initialization succeeded after retry for connector {} (after {}s)",
+                    tenant, connectorName, elapsedSeconds);
             subscriptionInitRetryScheduled.set(false);
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
         } catch (Exception e) {
@@ -761,15 +754,15 @@ public abstract class AConnectorClient {
                 connectionStateManager.updateStatusWithError(e);
                 return;
             }
-            long nextDelayMs = Math.min(previousDelayMs * 2, SUBSCRIPTION_INIT_RETRY_MAX_DELAY_MS);
-            log.warn("{} - Retry of subscription initialization failed for connector {}, next attempt in {}ms: {}",
-                    tenant, connectorName, nextDelayMs, e.getMessage());
-            connectionStateManager.updateStatusRetrying(e, nextDelayMs);
+            long nextDelaySeconds = Math.min(previousDelaySeconds * 2, SUBSCRIPTION_INIT_RETRY_MAX_DELAY_SECONDS);
+            log.warn("{} - Retry of subscription initialization failed for connector {}, next attempt in {}s: {}",
+                    tenant, connectorName, nextDelaySeconds, e.getMessage());
+            connectionStateManager.updateStatusRetrying(e, nextDelaySeconds);
             if (housekeepingExecutor == null || housekeepingExecutor.isShutdown()) {
                 subscriptionInitRetryScheduled.set(false);
                 return;
             }
-            housekeepingExecutor.schedule(() -> runSubscriptionInitRetry(nextDelayMs), nextDelayMs, TimeUnit.MILLISECONDS);
+            housekeepingExecutor.schedule(() -> runSubscriptionInitRetry(nextDelaySeconds), nextDelaySeconds, TimeUnit.SECONDS);
         }
     }
 
