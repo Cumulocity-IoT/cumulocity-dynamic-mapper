@@ -49,6 +49,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Cumulocity MQTT Service Pulsar Connector.
@@ -77,6 +78,12 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     // Cumulocity-specific consumer and producer
     private Consumer<byte[]> platformConsumer;
     private Producer<byte[]> deviceProducer;
+    // Guards all check-then-recreate sequences on platformConsumer/deviceProducer: without it,
+    // concurrent callers (e.g. two publishMEAO() calls racing to recreate a disconnected
+    // deviceProducer, or a housekeeping-triggered resubscribe racing a connect-triggered one)
+    // could each independently decide to recreate the resource, leaking the loser's instance.
+    // A ReentrantLock (not `synchronized`) since it's held across blocking Pulsar client calls.
+    private final ReentrantLock pulsarChannelLock = new ReentrantLock();
 
     private String towardsDeviceTopic;
     private String towardsPlatformTopic;
@@ -323,22 +330,27 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     }
 
     private void cleanupOnConnectionFailure() {
-        if (platformConsumer != null) {
-            try {
-                platformConsumer.close();
-            } catch (Exception e) {
-                log.debug("{} - Error closing consumer during cleanup", tenant);
+        pulsarChannelLock.lock();
+        try {
+            if (platformConsumer != null) {
+                try {
+                    platformConsumer.close();
+                } catch (Exception e) {
+                    log.debug("{} - Error closing consumer during cleanup", tenant);
+                }
+                platformConsumer = null;
             }
-            platformConsumer = null;
-        }
 
-        if (deviceProducer != null) {
-            try {
-                deviceProducer.close();
-            } catch (Exception e) {
-                log.debug("{} - Error closing producer during cleanup", tenant);
+            if (deviceProducer != null) {
+                try {
+                    deviceProducer.close();
+                } catch (Exception e) {
+                    log.debug("{} - Error closing producer during cleanup", tenant);
+                }
+                deviceProducer = null;
             }
-            deviceProducer = null;
+        } finally {
+            pulsarChannelLock.unlock();
         }
     }
 
@@ -346,87 +358,92 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
      * Subscribe to platform topic for inbound messages
      */
     private void subscribeToTowardsPlatformTopic() throws PulsarClientException {
-        if (platformConsumer != null) {
-            log.warn("{} - Platform consumer already exists, closing existing", tenant);
-            platformConsumer.close();
-        }
-
-        String subscriptionName = getSubscriptionName(connectorIdentifier, additionalSubscriptionIdTest);
-        Integer negativeAckRedeliveryDelay = (Integer) connectorConfiguration.getProperties()
-                .getOrDefault("negativeAckRedeliveryDelay", DEFAULT_NEGATIVE_ACK_DELAY)*1000;
-
-        // Try multiple subscription strategies
-
-        // Strategy 1: Standard subscription
+        pulsarChannelLock.lock();
         try {
-            platformConsumer = pulsarClient.newConsumer()
-                    .topic(towardsPlatformTopic)
-                    .subscriptionName(subscriptionName)
-                    .autoUpdatePartitions(false)
-                    // Prevents a default exclusive consumer blocking other instances during restart
-                    .subscriptionType(SubscriptionType.Failover)
-                    .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
-                            .minDelayMs(negativeAckRedeliveryDelay)
-                            .maxDelayMs(negativeAckRedeliveryDelay * 10L)
-                            .multiplier(2)
-                            .build())
-                    .messageListener(mqttServiceCallback)
-                    .subscribe();
+            if (platformConsumer != null) {
+                log.warn("{} - Platform consumer already exists, closing existing", tenant);
+                platformConsumer.close();
+            }
 
-            log.info("{} - Subscribed to platform topic: [{}], subscription: [{}]",
-                    tenant, towardsPlatformTopic, subscriptionName);
-            return;
+            String subscriptionName = getSubscriptionName(connectorIdentifier, additionalSubscriptionIdTest);
+            Integer negativeAckRedeliveryDelay = (Integer) connectorConfiguration.getProperties()
+                    .getOrDefault("negativeAckRedeliveryDelay", DEFAULT_NEGATIVE_ACK_DELAY)*1000;
 
-        } catch (PulsarClientException e) {
-            log.warn("{} - Standard subscription failed (PIP-344), trying async", tenant);
-        }
+            // Try multiple subscription strategies
 
-        // Strategy 2: Async subscription
-        try {
-            platformConsumer = pulsarClient.newConsumer()
-                    .topic(towardsPlatformTopic)
-                    .subscriptionName(subscriptionName)
-                    .autoUpdatePartitions(false)
-                    .messageListener(mqttServiceCallback)
-                    .subscriptionType(SubscriptionType.Failover)
-                    .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
-                            .minDelayMs(negativeAckRedeliveryDelay)
-                            .maxDelayMs(negativeAckRedeliveryDelay * 10)
-                            .multiplier(2)
-                            .build())
-                    .subscribeAsync()
-                    .get(30, TimeUnit.SECONDS);
+            // Strategy 1: Standard subscription
+            try {
+                platformConsumer = pulsarClient.newConsumer()
+                        .topic(towardsPlatformTopic)
+                        .subscriptionName(subscriptionName)
+                        .autoUpdatePartitions(false)
+                        // Prevents a default exclusive consumer blocking other instances during restart
+                        .subscriptionType(SubscriptionType.Failover)
+                        .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
+                                .minDelayMs(negativeAckRedeliveryDelay)
+                                .maxDelayMs(negativeAckRedeliveryDelay * 10L)
+                                .multiplier(2)
+                                .build())
+                        .messageListener(mqttServiceCallback)
+                        .subscribe();
 
-            log.info("{} - Subscribed to platform topic via async: [{}], subscription: [{}]",
-                    tenant, towardsPlatformTopic, subscriptionName);
-            return;
+                log.info("{} - Subscribed to platform topic: [{}], subscription: [{}]",
+                        tenant, towardsPlatformTopic, subscriptionName);
+                return;
 
-        } catch (Exception e) {
-            log.warn("{} - Async subscription failed, trying basic", tenant);
-        }
+            } catch (PulsarClientException e) {
+                log.warn("{} - Standard subscription failed (PIP-344), trying async", tenant);
+            }
 
-        // Strategy 3: Basic subscription
-        try {
-            platformConsumer = pulsarClient.newConsumer()
-                    .topic(towardsPlatformTopic)
-                    .subscriptionName(subscriptionName)
-                    .messageListener(mqttServiceCallback)
-                    .subscriptionType(SubscriptionType.Failover)
-                    .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
-                            .minDelayMs(negativeAckRedeliveryDelay)
-                            .maxDelayMs(negativeAckRedeliveryDelay * 10L)
-                            .multiplier(2)
-                            .build())
-                    .subscribeAsync()
-                    .get(30, TimeUnit.SECONDS);
+            // Strategy 2: Async subscription
+            try {
+                platformConsumer = pulsarClient.newConsumer()
+                        .topic(towardsPlatformTopic)
+                        .subscriptionName(subscriptionName)
+                        .autoUpdatePartitions(false)
+                        .messageListener(mqttServiceCallback)
+                        .subscriptionType(SubscriptionType.Failover)
+                        .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
+                                .minDelayMs(negativeAckRedeliveryDelay)
+                                .maxDelayMs(negativeAckRedeliveryDelay * 10)
+                                .multiplier(2)
+                                .build())
+                        .subscribeAsync()
+                        .get(30, TimeUnit.SECONDS);
 
-            log.info("{} - Subscribed to platform topic via basic async: [{}], subscription: [{}]",
-                    tenant, towardsPlatformTopic, subscriptionName);
+                log.info("{} - Subscribed to platform topic via async: [{}], subscription: [{}]",
+                        tenant, towardsPlatformTopic, subscriptionName);
+                return;
 
-        } catch (Exception e) {
-            log.error("{} - All subscription strategies failed for platform topic", tenant);
-            throw new PulsarClientException(
-                    "Failed to subscribe after trying multiple strategies. Last error: " + e.getMessage(), e);
+            } catch (Exception e) {
+                log.warn("{} - Async subscription failed, trying basic", tenant);
+            }
+
+            // Strategy 3: Basic subscription
+            try {
+                platformConsumer = pulsarClient.newConsumer()
+                        .topic(towardsPlatformTopic)
+                        .subscriptionName(subscriptionName)
+                        .messageListener(mqttServiceCallback)
+                        .subscriptionType(SubscriptionType.Failover)
+                        .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
+                                .minDelayMs(negativeAckRedeliveryDelay)
+                                .maxDelayMs(negativeAckRedeliveryDelay * 10L)
+                                .multiplier(2)
+                                .build())
+                        .subscribeAsync()
+                        .get(30, TimeUnit.SECONDS);
+
+                log.info("{} - Subscribed to platform topic via basic async: [{}], subscription: [{}]",
+                        tenant, towardsPlatformTopic, subscriptionName);
+
+            } catch (Exception e) {
+                log.error("{} - All subscription strategies failed for platform topic", tenant);
+                throw new PulsarClientException(
+                        "Failed to subscribe after trying multiple strategies. Last error: " + e.getMessage(), e);
+            }
+        } finally {
+            pulsarChannelLock.unlock();
         }
     }
 
@@ -434,16 +451,21 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
      * Create producer for device topic
      */
     private void createTowardsDeviceProducer() throws PulsarClientException {
-        if (deviceProducer != null) {
-            log.warn("{} - Device producer already exists, closing existing", tenant);
-            deviceProducer.close();
+        pulsarChannelLock.lock();
+        try {
+            if (deviceProducer != null) {
+                log.warn("{} - Device producer already exists, closing existing", tenant);
+                deviceProducer.close();
+            }
+
+            deviceProducer = pulsarClient.newProducer()
+                    .topic(towardsDeviceTopic)
+                    .create();
+
+            log.info("{} - Created producer for device topic: [{}]", tenant, towardsDeviceTopic);
+        } finally {
+            pulsarChannelLock.unlock();
         }
-
-        deviceProducer = pulsarClient.newProducer()
-                .topic(towardsDeviceTopic)
-                .create();
-
-        log.info("{} - Created producer for device topic: [{}]", tenant, towardsDeviceTopic);
     }
 
     @Override
@@ -639,20 +661,26 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         Qos qos = Qos.AT_LEAST_ONCE; // MQTT Service uses AT_LEAST_ONCE
 
         try {
-            // Check/recreate producer if needed
-            if (deviceProducer == null || !deviceProducer.isConnected()) {
-                log.warn("{} - Device producer disconnected, recreating", tenant);
-                if (deviceProducer != null) {
-                    try {
-                        deviceProducer.close();
-                    } catch (PulsarClientException e) {
-                        log.debug("{} - Error closing disconnected producer: {}", tenant, e.getMessage());
-                    }
+            // Check/recreate producer if needed. The whole decision is made under
+            // pulsarChannelLock (createTowardsDeviceProducer() already does its own
+            // check-close-create under the same lock) so that two concurrent publishMEAO()
+            // calls racing on a disconnected producer can't each independently recreate it,
+            // leaking the loser's instance. The producer reference is captured while still
+            // holding the lock so the actual send below always uses the instance that was just
+            // verified/created, not a possibly-stale re-read of the field.
+            Producer<byte[]> producerToUse;
+            pulsarChannelLock.lock();
+            try {
+                if (deviceProducer == null || !deviceProducer.isConnected()) {
+                    log.warn("{} - Device producer disconnected, recreating", tenant);
+                    createTowardsDeviceProducer();
                 }
-                createTowardsDeviceProducer();
+                producerToUse = deviceProducer;
+            } finally {
+                pulsarChannelLock.unlock();
             }
 
-            sendMessageToDevice(deviceProducer, payloadBytes, originalMqttTopic, qos, context);
+            sendMessageToDevice(producerToUse, payloadBytes, originalMqttTopic, qos, context);
 
         } catch (Exception e) {
             log.error("{} - Error publishing to MQTT Service: {}", tenant, e.getMessage(), e);
@@ -694,9 +722,21 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
     @Override
     protected void connectorSpecificHousekeeping(String tenant) {
-        // Check consumer and producer health
-        if (platformConsumer != null && !platformConsumer.isConnected()) {
-            log.warn("{} - Platform consumer disconnected, will reconnect on next cycle", tenant);
+        // Check consumer and producer health. deviceProducer is self-healing (publishMEAO()
+        // recreates it lazily on the next publish), but platformConsumer has no equivalent
+        // lazy-recreate path — without this, a dropped subscription (e.g. broker-side fencing)
+        // would otherwise silently stop all inbound device->platform traffic forever, since
+        // nothing else ever calls subscribeToTowardsPlatformTopic() again outside of connect().
+        if (platformConsumer != null && !platformConsumer.isConnected()
+                && pulsarClient != null && !pulsarClient.isClosed() && shouldConnect()) {
+            log.warn("{} - Platform consumer disconnected, attempting to resubscribe", tenant);
+            try {
+                subscribeToTowardsPlatformTopic();
+                log.info("{} - Platform consumer resubscribed successfully", tenant);
+            } catch (Exception e) {
+                log.error("{} - Failed to resubscribe platform consumer, will retry next housekeeping cycle: {}",
+                        tenant, e.getMessage(), e);
+            }
         }
 
         if (deviceProducer != null && !deviceProducer.isConnected()) {
@@ -802,8 +842,20 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         if (isSparkplugHost && sparkplugCertificateManager != null) {
             sparkplugCertificateManager.stopPeriodicPublishing();
         }
-        // Call parent disconnect
+        // Call parent disconnect (closes pulsarClient, which implicitly invalidates any
+        // consumer/producer created from it)
         super.disconnect();
+        // Null out platformConsumer/deviceProducer: leaving a stale reference here means the next
+        // connect() -> subscribeToTowardsPlatformTopic()/createTowardsDeviceProducer() would call
+        // .close() on an already-closed object, throwing AlreadyClosedException and wasting the
+        // first reconnect attempt before cleanupOnConnectionFailure() finally clears it.
+        pulsarChannelLock.lock();
+        try {
+            platformConsumer = null;
+            deviceProducer = null;
+        } finally {
+            pulsarChannelLock.unlock();
+        }
     }
 
     /**

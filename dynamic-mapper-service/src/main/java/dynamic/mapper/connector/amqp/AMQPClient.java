@@ -57,9 +57,11 @@ import java.util.concurrent.TimeoutException;
 @Slf4j
 public class AMQPClient extends AConnectorClient {
 
-    // AMQP-specific fields
-    private Connection connection;
-    private Channel channel;
+    // AMQP-specific fields. volatile: read from connect()/disconnect()/publishMEAO()/
+    // monitorSubscriptions(), which can run on different threads (see monitorSubscriptions()'s
+    // background reconnect task) without a lock spanning both the write and the read.
+    private volatile Connection connection;
+    private volatile Channel channel;
     private final Map<String, String> consumerTags = new ConcurrentHashMap<>();
 
     @Getter
@@ -160,6 +162,12 @@ public class AMQPClient extends AConnectorClient {
                 return;
             }
 
+            // Close any connection/channel left over from a previous connect() attempt before
+            // building new ones. Without this, the old connection's socket (and, if RabbitMQ's
+            // automaticRecovery is enabled, its background recovery task) would leak forever
+            // once these fields are overwritten below.
+            closeExistingConnectionQuietly();
+
             // Build connection
             connection = buildConnection();
 
@@ -199,6 +207,30 @@ public class AMQPClient extends AConnectorClient {
             connectionStateManager.updateStatusWithError(e);
         } finally {
             endConnection();
+        }
+    }
+
+    /** Close and null out any previous channel/connection, swallowing errors (best-effort). */
+    private void closeExistingConnectionQuietly() {
+        if (channel != null) {
+            try {
+                if (channel.isOpen()) {
+                    channel.close();
+                }
+            } catch (Exception e) {
+                log.debug("{} - Error closing previous channel before reconnect: {}", tenant, e.getMessage());
+            }
+            channel = null;
+        }
+        if (connection != null) {
+            try {
+                if (connection.isOpen()) {
+                    connection.close();
+                }
+            } catch (Exception e) {
+                log.debug("{} - Error closing previous connection before reconnect: {}", tenant, e.getMessage());
+            }
+            connection = null;
         }
     }
 
@@ -412,7 +444,11 @@ public class AMQPClient extends AConnectorClient {
             virtualThreadPool.submit(() -> {
                 try {
                     Thread.sleep(5000);
-                    connect();
+                    // submitConnect() (not connect() directly): goes through AConnectorClient's
+                    // lifecycleLock/connectDisconnectExecutionLock, so this background reconnect
+                    // can't race a concurrent submitConnect()/submitDisconnect() triggered by a
+                    // user operation or another health check.
+                    submitConnect();
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 } catch (Exception e) {
