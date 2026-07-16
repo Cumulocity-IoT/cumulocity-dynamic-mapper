@@ -405,7 +405,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                         .subscriptionType(SubscriptionType.Failover)
                         .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
                                 .minDelayMs(negativeAckRedeliveryDelay)
-                                .maxDelayMs(negativeAckRedeliveryDelay * 10)
+                                .maxDelayMs(negativeAckRedeliveryDelay * 10L)
                                 .multiplier(2)
                                 .build())
                         .subscribeAsync()
