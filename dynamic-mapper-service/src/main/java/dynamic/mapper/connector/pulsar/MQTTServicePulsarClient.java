@@ -366,7 +366,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             }
 
             String subscriptionName = getSubscriptionName(connectorIdentifier, additionalSubscriptionIdTest);
-            Integer negativeAckRedeliveryDelay = (Integer) connectorConfiguration.getProperties()
+            int negativeAckRedeliveryDelay = (Integer) connectorConfiguration.getProperties()
                     .getOrDefault("negativeAckRedeliveryDelay", DEFAULT_NEGATIVE_ACK_DELAY)*1000;
 
             // Try multiple subscription strategies
