@@ -34,6 +34,7 @@ import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -66,7 +67,7 @@ class DeserializationInboundProcessorErrorHandlingTest {
     @Mock
     private ConnectorMessage connectorMessage;
 
-    @Mock
+    @Mock(answer = Answers.CALLS_REAL_METHODS)
     private MappingStatus mappingStatus;
 
     @Mock
