@@ -496,9 +496,8 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       await this.subscriptionService.resyncTypeSubscription(type);
       this.alertService.add({ text: gettext('Resync request submitted. Existing devices of this type are being subscribed in the background – verify the result in the list below and check Service Events for details.'), type: 'info', timeout: ALERT_INFO_TIMEOUT });
     } catch (error) {
-      this.alertService.danger(
-        gettext('Failed to resync type subscription:') + error
-      );
+      const msg = error instanceof Error ? error.message : String(error);
+      this.alertService.danger(gettext('Failed to resync type subscription: ') + msg);
     }
   }
 
