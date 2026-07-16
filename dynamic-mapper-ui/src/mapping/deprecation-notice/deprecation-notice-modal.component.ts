@@ -23,8 +23,10 @@ import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { DEPRECATION_NOTICE_VERSION, SharedService } from '../../shared';
 
-/** Semver string where SUBSTITUTION_AS_CODE was removed. Users on < this version
- *  still need the action-required banner, not just the historical info note. */
+/** Semver string where SUBSTITUTION_AS_CODE was removed completely (see the v6.3.0
+ *  release notes, #480). Creation was already disabled/deprecated as of 6.2 (see
+ *  USERGUIDE.md), but the type kept executing until this version. Users on < this
+ *  version still need the action-required banner, not just the historical info note. */
 const SUBSTITUTION_AS_CODE_REMOVAL_VERSION = '6.3.0';
 
 function parseSemver(v: string | null | undefined): [number, number, number] {

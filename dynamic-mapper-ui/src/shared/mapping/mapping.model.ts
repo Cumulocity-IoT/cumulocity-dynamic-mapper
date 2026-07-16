@@ -711,11 +711,11 @@ export interface Feature {
   acceptedDeprecationNotice: string;
 }
 
-import packageJson from '../../../package.json';
-
-/** Version of the current SUBSTITUTION_AS_CODE deprecation notice.
- *  Automatically derived from package.json — bump package.json version to update. */
-export const DEPRECATION_NOTICE_VERSION = packageJson.version;
+/** Version identifying the current content of the deprecation notice modal
+ *  (snooping removal + SUBSTITUTION_AS_CODE deprecation). Bump this manually
+ *  only when the notice's content changes — NOT on every package.json release,
+ *  otherwise previously-accepted users would see the modal again on every upgrade. */
+export const DEPRECATION_NOTICE_VERSION = '6.4.0';
 
 export function getDeviceIdentifiers(mapping: Mapping): Substitution[] {
   return mapping.substitutions
