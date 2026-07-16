@@ -474,7 +474,7 @@ public class SubscriptionManager {
             Set<String> alreadyDynamic = fetchDeviceIdsForSubscription(tenant, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
 
             AtomicInteger skipped = new AtomicInteger();
-            List<PendingSubscribe> pending = new CopyOnWriteArrayList<>();
+            List<PendingSubscribe> pending = new ArrayList<>();
             c8yAgent.forEachManagedObjectByType(tenant, type, false, mor -> {
                 String deviceId = mor.getId().getValue();
                 if (alreadyDynamic.contains(deviceId)) {
