@@ -111,7 +111,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
 
             if (!testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-                mappingStatus.errors++;
+                mappingStatus.incrementErrors();
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             }
         }

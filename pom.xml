@@ -34,7 +34,7 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<revision>6.4.1</revision>
+		<revision>6.4.2</revision>
 		<spring-boot-dependencies.version>3.5.13</spring-boot-dependencies.version>
 		<c8y.version>2026.41.0</c8y.version>
 		<lombok.version>1.18.38</lombok.version>
@@ -297,17 +297,20 @@
 				<version>3.3.5</version>
 			</dependency>
 			<!-- Explicitly include the core OpenAPI models -->
+			<!-- Version must match the swagger-core-jakarta pulled in transitively by springdoc-openapi,
+			     otherwise the older Schema class shadows the newer one and springdoc fails at runtime
+			     with NoSuchMethodError on Schema.schemaResolution(). -->
 			<dependency>
 				<groupId>io.swagger.core.v3</groupId>
 				<artifactId>swagger-models</artifactId>
-				<version>2.2.15</version>
+				<version>2.2.28</version>
 			</dependency>
 
 			<!-- Explicitly include the core annotations -->
 			<dependency>
 				<groupId>io.swagger.core.v3</groupId>
 				<artifactId>swagger-annotations</artifactId>
-				<version>2.2.15</version>
+				<version>2.2.28</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springdoc</groupId>

@@ -138,11 +138,11 @@ public class ConnectionStateManager {
      * does not move the connector to FAILED, since the underlying connection is still alive and
      * a retry is already scheduled.
      */
-    public void updateStatusRetrying(Exception e, long nextRetryDelayMs) {
+    public void updateStatusRetrying(Exception e, long nextRetryDelaySeconds) {
         ConnectorStatusEvent newStatus = new ConnectorStatusEvent(ConnectorStatus.RETRYING);
         newStatus.connectorName = connectorName;
         newStatus.connectorIdentifier = connectorIdentifier;
-        newStatus.setMessage(buildErrorMessage(e) + String.format(" --- Retrying in %dms", nextRetryDelayMs));
+        newStatus.setMessage(buildErrorMessage(e) + String.format(" --- Retrying in %ds", nextRetryDelaySeconds));
         connectorStatus.set(newStatus);
 
         Map<String, ConnectorStatusEvent> statusMap = connectorRegistry.getConnectorStatusMap(tenant);

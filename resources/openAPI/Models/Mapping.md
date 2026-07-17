@@ -14,8 +14,8 @@
 | **direction** | **String** | Direction of data flow | [default to null] |
 | **sourceTemplate** | **String** | JSON template for source data structure | [default to null] |
 | **targetTemplate** | **String** | JSON template for target data structure | [default to null] |
-| **mappingType** | **String** | Type of mapping transformation | [default to null] |
-| **transformationType** | **String** | Type of transformation processing to apply | [optional] [default to null] |
+| **mappingType** | **String** | Type of mapping payload | [default to null] |
+| **transformationType** | **String** | Type of processing the transformation | [default to null] |
 | **substitutions** | [**List**](Substitution.md) | Array of field substitutions for data transformation | [default to null] |
 | **active** | **Boolean** | Whether the mapping is currently active | [default to null] |
 | **debug** | **Boolean** | Whether debug mode is enabled for this mapping | [default to null] |
@@ -26,12 +26,18 @@
 | **useExternalId** | **Boolean** | Whether to use external ID for device identification | [default to null] |
 | **externalIdType** | **String** | Type of external ID to use | [optional] [default to null] |
 | **extension** | [**ExtensionEntry**](ExtensionEntry.md) | Extension configuration for custom processing | [optional] [default to null] |
-| **filterMapping** | **String** | Filter expression for mapping conditions | [optional] [default to null] |
+| **filterMapping** | **String** | Filter expression (condition) if mapping should be applied | [optional] [default to null] |
 | **filterInventory** | **String** | Filter expression for inventory queries | [optional] [default to null] |
 | **maxFailureCount** | **Long** | Maximum number of failures before disabling mapping | [default to null] |
 | **qos** | **String** | Quality of Service level for MQTT | [default to null] |
 | **code** | **String** | Base64 encoded code for custom substitutions | [optional] [default to null] |
 | **lastUpdate** | **Long** | Timestamp of last update | [default to null] |
+| **version** | **String** | Semantic version (MAJOR.MINOR.PATCH) of the currently active configuration, unique within a mapping line | [optional] [default to null] |
+| **draftDirty** | **Boolean** | Whether the mapping line has unpublished draft changes that differ from the active version | [optional] [default to null] |
+| **versionNote** | **String** | Free-text change note for the active version | [optional] [default to null] |
+| **tested** | **Boolean** | Whether the mapping has been tested - DEPRECATED: This property is no longer used and will be removed in a future version | [optional] [default to null] |
+| **supportsMessageContext** | **Boolean** | Whether the mapping supports message context - DEPRECATED: This property is no longer used and will be removed in a future version | [optional] [default to null] |
+| **substitutionsAsCode** | **Boolean** | Define substitutions as JavaScript code | [optional] [default to null] |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

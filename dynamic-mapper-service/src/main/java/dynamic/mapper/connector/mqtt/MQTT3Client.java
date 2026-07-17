@@ -137,6 +137,12 @@ public class MQTT3Client extends AMQTTClient {
             log.debug("{} - Using WebSocket with path: {}", tenant, serverPath);
         }
 
+        // Captured at build time: identifies which connect() attempt this listener belongs to,
+        // so a listener still attached to a superseded client (e.g. the reconnect-trigger's
+        // disconnect()->connect() replaced it with a new one before this listener fired) can
+        // recognize itself as stale — see connectGeneration's javadoc in AMQTTClient.
+        final long myGeneration = connectGeneration.get();
+
         // Add listeners — detection only, housekeeping owns all reconnect scheduling
         mqttClient = builder
                 .addDisconnectedListener(context -> {
@@ -145,9 +151,10 @@ public class MQTT3Client extends AMQTTClient {
                     boolean wasConnected = connectionStateManager.isConnected();
                     connectionStateManager.setConnected(false);
 
+                    boolean stale = myGeneration != connectGeneration.get();
                     boolean unexpected;
                     synchronized (disconnectionLock) {
-                        unexpected = !intentionalDisconnect && !isDisconnecting &&
+                        unexpected = !stale && !intentionalDisconnect && !isDisconnecting &&
                                 connectorConfiguration.getEnabled() && wasConnected;
                     }
 
@@ -156,13 +163,13 @@ public class MQTT3Client extends AMQTTClient {
                         log.warn("{} - Unexpected disconnection detected, housekeeping will reconnect", tenant);
                     } else {
                         log.info(
-                                "{} - Intentional disconnect or not reconnecting (intentional={}, disconnecting={}, enabled={}, wasConnected={})",
-                                tenant, intentionalDisconnect, isDisconnecting,
+                                "{} - Intentional disconnect or not reconnecting (stale={}, intentional={}, disconnecting={}, enabled={}, wasConnected={})",
+                                tenant, stale, intentionalDisconnect, isDisconnecting,
                                 connectorConfiguration.getEnabled(), wasConnected);
                     }
                 })
                 .addConnectedListener(context -> {
-                    reconnectAttempt = 0;
+                    reconnectAttempt.set(0);
                     nextReconnectTimeMs = Long.MAX_VALUE;
                     connectionStateManager.setConnected(true);
                     log.info("{} - MQTT3 client connected", tenant);
@@ -433,7 +440,7 @@ public class MQTT3Client extends AMQTTClient {
         if (mqttClient != null && !mqttClient.getState().isConnected() && shouldConnect() && !isConnecting) {
             long now = System.currentTimeMillis();
             if (now >= nextReconnectTimeMs) {
-                int attempt = ++reconnectAttempt;
+                int attempt = reconnectAttempt.incrementAndGet();
                 long delay = Math.min((long) attempt * RECONNECT_DELAY_STEP_MS, RECONNECT_DELAY_MAX_MS);
                 nextReconnectTimeMs = now + delay;
                 log.warn("{} - MQTT3 client disconnected, reconnect attempt {} (next in {} ms)", tenant, attempt, delay);

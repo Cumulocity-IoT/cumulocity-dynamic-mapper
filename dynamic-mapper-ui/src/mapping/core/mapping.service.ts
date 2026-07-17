@@ -50,7 +50,6 @@ import {
   PATH_MAPPING_ENDPOINT,
   LoggingEventTypeMap,
   LoggingEventType,
-  TransformationType,
 } from '../../shared';
 
 import {
@@ -77,7 +76,6 @@ export class MappingService {
   // Cache
   private _agentId: string;
   private readonly JSONATA = require('jsonata');
-  private deprecationWarningsShown: Set<Direction> = new Set();
   deprecationModalShown = false;
   private readonly versionsCache = new Map<string, MappingVersion[]>();
 
@@ -479,28 +477,6 @@ export class MappingService {
       this.reloadInbound$.next();
     } else {
       this.reloadOutbound$.next();
-    }
-  }
-
-  async checkAndShowDeprecationWarning(direction: Direction): Promise<void> {
-    // Kept for backward compatibility; deprecation notice is now shown
-    // as a modal dialog in MappingComponent on first load.
-    if (this.deprecationWarningsShown.has(direction)) {
-      return;
-    }
-
-    const feature = await this.sharedService.getFeatures();
-    if (feature?.suppressDeprecationWarning) {
-      return;
-    }
-
-    const mappings = await this.getMappings(direction);
-    const deprecatedMappings = mappings.filter(
-      m => m.transformationType === TransformationType.SUBSTITUTION_AS_CODE
-    );
-
-    if (deprecatedMappings.length > 0) {
-      this.deprecationWarningsShown.add(direction);
     }
   }
 

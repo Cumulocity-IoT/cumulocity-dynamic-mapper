@@ -181,6 +181,10 @@ public class NotificationSubscriber {
         return subscriptionManager.updateSubscriptionByType(tenant, types);
     }
 
+    public void resyncTypeSubscription(String tenant, String type) {
+        subscriptionManager.resyncTypeSubscription(tenant, type);
+    }
+
     // === Query Methods ===
 
     public NotificationSubscriptionResponse getSubscriptionsDevices(String tenant, String deviceId,
@@ -192,6 +196,12 @@ public class NotificationSubscriber {
             String deviceSubscription, int currentPage, int pageSize, boolean withTotalPages) {
         return queryService.getSubscriptionsDevices(tenant, deviceId, deviceSubscription,
                 currentPage, pageSize, withTotalPages);
+    }
+
+    public NotificationSubscriptionResponse getSubscriptionsDevices(String tenant, String deviceId,
+            String deviceSubscription, int currentPage, int pageSize, boolean withTotalPages, String search) {
+        return queryService.getSubscriptionsDevices(tenant, deviceId, deviceSubscription,
+                currentPage, pageSize, withTotalPages, search);
     }
 
     public NotificationSubscriptionResponse getSubscriptionsByDeviceGroup(String tenant) {

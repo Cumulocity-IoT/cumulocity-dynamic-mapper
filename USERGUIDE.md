@@ -762,14 +762,14 @@ When you choose the mapping type `Extension Source` the wizard for defining your
 Using the tab `Processor Extension` you can upload your own processor extension. After the upload the mircroservice load the extensions dynamically.
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Configuration_ProcessorExtensionSource.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Configuration_ProcessorExtension.png"  style="width: 70%;" />
 </p>
 <br/>
 
 The following guide lays out the steps to create and use a processor extension:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Diagram_ProcessorExtensionSource_Guide.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Diagram_ProcessorExtension_Guide.png"  style="width: 70%;" />
 </p>
 <br/>
 

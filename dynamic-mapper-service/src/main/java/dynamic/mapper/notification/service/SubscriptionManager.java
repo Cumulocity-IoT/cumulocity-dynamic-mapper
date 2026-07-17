@@ -27,6 +27,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.*;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.messaging.notifications.*;
+import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.LoggingEventType;
@@ -39,6 +40,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.*;
 
 /**
@@ -419,6 +421,99 @@ public class SubscriptionManager {
                 throw new RuntimeException("Failed to update type subscription: " + e.getMessage(), e);
             }
         });
+    }
+
+    /**
+     * Resyncs already-existing devices of {@code type} into the dynamic device subscription
+     * bucket. Notification 2.0's tenant-level type filter only fires on future inventory CREATE
+     * events (see the notification package Javadoc) — devices that existed before the type was
+     * added to the filter are never picked up automatically. This scans the current inventory for
+     * {@code type} and subscribes any device not already covered.
+     *
+     * <p>{@code type} must already be part of the tenant's configured type filter
+     * ({@link #updateSubscriptionByType}) — this resyncs an existing configuration, it does not
+     * add a new type. The scan itself runs in the background; this method only validates and
+     * kicks it off.
+     *
+     * @throws IllegalArgumentException if {@code type} is not currently configured
+     */
+    public void resyncTypeSubscription(String tenant, String type) {
+        NotificationSubscriptionRepresentation existing = subscriptionsService.callForTenant(tenant,
+                this::findExistingTypeSubscription);
+        String existingTypeFilter = existing != null && existing.getSubscriptionFilter() != null
+                ? existing.getSubscriptionFilter().getTypeFilter()
+                : null;
+        Set<String> configuredTypes = Utils.parseTypesFromFilter(existingTypeFilter);
+
+        if (!configuredTypes.contains(type)) {
+            throw new IllegalArgumentException(
+                    "Type '" + type + "' is not part of the configured type subscription");
+        }
+
+        backfillDevicesForType(tenant, type);
+    }
+
+    /**
+     * Scans the current inventory for devices of {@code type} and subscribes any that aren't
+     * already dynamically subscribed. Runs as a background job; status/progress/completion is
+     * reported back to Cumulocity as {@link LoggingEventType#BACKFILL_SUBSCRIPTION_EVENT_TYPE}
+     * events rather than via any polling API, matching how connector/mapping lifecycle changes
+     * are already reported elsewhere in this service.
+     */
+    private void backfillDevicesForType(String tenant, String type) {
+        virtualThreadPool.submit(() -> {
+            C8YAgent c8yAgent = configurationRegistry.getC8yAgent();
+            Map<String, String> startProps = new HashMap<>();
+            startProps.put("type", type);
+            c8yAgent.createLoggingEvent("Resync started for type: " + type,
+                    LoggingEventType.BACKFILL_SUBSCRIPTION_EVENT_TYPE, DateTime.now(), tenant, startProps);
+
+            // Batch dedup pre-fetch: one paged query for the whole tenant instead of the
+            // per-device lookup GETs subscribeDeviceAndConnect's checkAndHandleDeduplication
+            // would otherwise issue for every device of this type.
+            Set<String> alreadyDynamic = fetchDeviceIdsForSubscription(tenant, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+
+            AtomicInteger skipped = new AtomicInteger();
+            List<PendingSubscribe> pending = new ArrayList<>();
+            c8yAgent.forEachManagedObjectByType(tenant, type, false, mor -> {
+                String deviceId = mor.getId().getValue();
+                if (alreadyDynamic.contains(deviceId)) {
+                    skipped.incrementAndGet();
+                    return;
+                }
+                // Submits asynchronously (subscribeDeviceAndConnect dispatches its own work to
+                // the virtual thread pool) so subscribe calls for this type run concurrently;
+                // resolved below once the whole inventory scan has been enumerated.
+                pending.add(new PendingSubscribe(deviceId,
+                        subscribeDeviceAndConnect(tenant, mor, API.ALL, Utils.DYNAMIC_DEVICE_SUBSCRIPTION,
+                                alreadyDynamic)));
+            });
+
+            int subscribed = 0, failed = 0;
+            for (PendingSubscribe p : pending) {
+                try {
+                    p.future().get();
+                    subscribed++;
+                } catch (Exception e) {
+                    failed++;
+                    log.warn("{} - Resync: failed to subscribe device {} of type {}",
+                            tenant, p.deviceId(), type, e);
+                }
+            }
+
+            Map<String, String> endProps = new HashMap<>();
+            endProps.put("type", type);
+            endProps.put("subscribed", String.valueOf(subscribed));
+            endProps.put("skipped", String.valueOf(skipped.get()));
+            endProps.put("failed", String.valueOf(failed));
+            c8yAgent.createLoggingEvent(
+                    String.format("Resync finished for type %s: %d subscribed, %d already subscribed, %d failed",
+                            type, subscribed, skipped.get(), failed),
+                    LoggingEventType.BACKFILL_SUBSCRIPTION_EVENT_TYPE, DateTime.now(), tenant, endProps);
+        });
+    }
+
+    private record PendingSubscribe(String deviceId, Future<NotificationSubscriptionRepresentation> future) {
     }
 
     // === Private Helper Methods ===

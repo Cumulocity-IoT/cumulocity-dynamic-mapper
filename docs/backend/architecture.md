@@ -42,7 +42,7 @@ Abstract processor hierarchy:
 
 ## Key Technologies
 
-- Java 21, Spring Boot 3.3.5, Apache Camel 4.x (internal message routing)
+- Java 21, Spring Boot 3.5.13, Apache Camel 4.x (internal message routing)
 - GraalVM polyglot (`org.graalvm.polyglot`) — sandboxed JS for Smart Functions
 - JSONata (`com.dashjoin:jsonata`) — expression language for substitutions
-- Cumulocity Microservice SDK (`c8y.version=2026.13.0`)
+- Cumulocity Microservice SDK (`c8y.version=2026.41.0`)

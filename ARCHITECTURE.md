@@ -29,7 +29,7 @@ The solution is composed of two major components:
 |-----------|-------------|
 | **MQTT 3.1.1** | Uses [hivemq-mqtt-client](https://github.com/hivemq/hivemq-mqtt-client) — connects to any MQTT 3.1.1 broker |
 | **MQTT 5.0** | Uses hivemq-mqtt-client with MQTT 5.0 features (properties, subscription options) |
-| **MQTT Service** | Connects to the Cumulocity built-in MQTT Service *(deprecated)* |
+| **MQTT Service** | Connects to the Cumulocity built-in MQTT Service via the unified Pulsar-based connector path |
 | **Kafka** | Connects to Apache Kafka brokers |
 | **HTTP/REST endpoint** | Receives data pushed by HTTP clients |
 | **AMQP** | Supports AMQP 0.9.x (RabbitMQ) and AMQP 1.0 (Azure Service Bus) |
@@ -79,7 +79,7 @@ A Cumulocity web plugin providing a full UI for:
 | `PROTOBUF_INTERNAL` | Protobuf-encoded payloads |
 | `SPARKPLUGB` | SparkPlug B payloads over MQTT |
 | `ANY_PAYLOAD` | Generic binary/text, processed entirely by an extension or Smart Function |
-| `CODE_BASED` | Payload handled by a code-based (JavaScript) transformation |
+| `CODE_BASED` | Payload handled by a code-based (JavaScript) transformation *(legacy — creation disabled since v6.2, superseded by Smart Functions)* |
 
 ## Transformation Types (TransformationType)
 

@@ -4,30 +4,28 @@ All URIs are relative to *http://localhost:8080*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
-| [**addOrUpdateClientRelations**](ClientRelationControllerApi.md#addOrUpdateClientRelations) | **PUT** /relation/client/{clientId} | Add or update client relations |
+| [**addOrUpdateClientRelations**](ClientRelationControllerApi.md#addOrUpdateClientRelations) | **PUT** /relation/client/{clientId} | Update client relation for client |
 | [**clearAllClientRelations**](ClientRelationControllerApi.md#clearAllClientRelations) | **DELETE** /relation/client | Clear all client relations |
 | [**getAllClientRelations**](ClientRelationControllerApi.md#getAllClientRelations) | **GET** /relation/client | Get all client relations |
 | [**getAllClients**](ClientRelationControllerApi.md#getAllClients) | **GET** /relation/clients | Get all clients |
-| [**getClientForDevice**](ClientRelationControllerApi.md#getClientForDevice) | **GET** /relation/device/{deviceId}/client | Get client for device |
-| [**getDevicesForClient**](ClientRelationControllerApi.md#getDevicesForClient) | **GET** /relation/client/{clientId}/devices | Get devices for client |
-| [**removeAllRelationsForClient**](ClientRelationControllerApi.md#removeAllRelationsForClient) | **DELETE** /relation/client/{clientId}/delete | Remove all relations for client |
-| [**removeRelationForDevice**](ClientRelationControllerApi.md#removeRelationForDevice) | **DELETE** /relation/device/{deviceId} | Remove relation for device |
+| [**getClientForDevice**](ClientRelationControllerApi.md#getClientForDevice) | **GET** /relation/device/{deviceId}/client | Get client mapping for device |
+| [**getDevicesForClient**](ClientRelationControllerApi.md#getDevicesForClient) | **GET** /relation/client/{clientId}/devices | Get all devices mapped to a specific client |
+| [**removeAllRelationsForClient**](ClientRelationControllerApi.md#removeAllRelationsForClient) | **DELETE** /relation/client/{clientId} | Remove all device mappings for a specific client |
+| [**removeRelationForDevice**](ClientRelationControllerApi.md#removeRelationForDevice) | **DELETE** /relation/device/{deviceId} | Remove client mapping for specific device |
 
 
 <a name="addOrUpdateClientRelations"></a>
 # **addOrUpdateClientRelations**
 > Map addOrUpdateClientRelations(clientId, request\_body)
 
-Add or update client relations
-
-    Adds or updates the relation mapping for a specific MQTT client, associating devices with the client.  **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role. 
+Update client relation for client
 
 ### Parameters
 
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **clientId** | **String**| The MQTT client identifier | [default to null] |
-| **request\_body** | [**Map**](../Models/object.md)|  | |
+| **clientId** | **String**|  | [default to null] |
+| **request\_body** | [**List**](../Models/string.md)|  | |
 
 ### Return type
 
@@ -35,7 +33,7 @@ Add or update client relations
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
@@ -44,35 +42,9 @@ No authorization required
 
 <a name="clearAllClientRelations"></a>
 # **clearAllClientRelations**
-> clearAllClientRelations()
+> Map clearAllClientRelations()
 
 Clear all client relations
-
-    Removes all device-to-client relations.  **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role. 
-
-### Parameters
-This endpoint does not need any parameter.
-
-### Return type
-
-null (empty response body)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: Not defined
-
-<a name="getAllClientRelations"></a>
-# **getAllClientRelations**
-> Map getAllClientRelations()
-
-Get all client relations
-
-    Retrieves all device-to-client relations for outbound mappings.
 
 ### Parameters
 This endpoint does not need any parameter.
@@ -83,7 +55,29 @@ This endpoint does not need any parameter.
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+<a name="getAllClientRelations"></a>
+# **getAllClientRelations**
+> Map getAllClientRelations()
+
+Get all client relations
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+**Map**
+
+### Authorization
+
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
@@ -96,8 +90,6 @@ No authorization required
 
 Get all clients
 
-    Retrieves a list of all MQTT client identifiers that have device relations.
-
 ### Parameters
 This endpoint does not need any parameter.
 
@@ -107,7 +99,7 @@ This endpoint does not need any parameter.
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
@@ -118,15 +110,13 @@ No authorization required
 # **getClientForDevice**
 > Map getClientForDevice(deviceId)
 
-Get client for device
-
-    Retrieves the MQTT client associated with a specific device.
+Get client mapping for device
 
 ### Parameters
 
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **deviceId** | **String**| The device identifier | [default to null] |
+| **deviceId** | **String**|  | [default to null] |
 
 ### Return type
 
@@ -134,7 +124,7 @@ Get client for device
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
@@ -145,15 +135,13 @@ No authorization required
 # **getDevicesForClient**
 > Map getDevicesForClient(clientId)
 
-Get devices for client
-
-    Retrieves all devices associated with a specific MQTT client.
+Get all devices mapped to a specific client
 
 ### Parameters
 
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **clientId** | **String**| The MQTT client identifier | [default to null] |
+| **clientId** | **String**|  | [default to null] |
 
 ### Return type
 
@@ -161,7 +149,7 @@ Get devices for client
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
@@ -170,55 +158,51 @@ No authorization required
 
 <a name="removeAllRelationsForClient"></a>
 # **removeAllRelationsForClient**
-> removeAllRelationsForClient(clientId)
+> Map removeAllRelationsForClient(clientId)
 
-Remove all relations for client
-
-    Removes all device relations for a specific MQTT client.  **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role. 
+Remove all device mappings for a specific client
 
 ### Parameters
 
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **clientId** | **String**| The MQTT client identifier | [default to null] |
+| **clientId** | **String**|  | [default to null] |
 
 ### Return type
 
-null (empty response body)
+**Map**
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: Not defined
+- **Accept**: application/json
 
 <a name="removeRelationForDevice"></a>
 # **removeRelationForDevice**
-> removeRelationForDevice(deviceId)
+> Map removeRelationForDevice(deviceId)
 
-Remove relation for device
-
-    Removes the client relation for a specific device.  **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role. 
+Remove client mapping for specific device
 
 ### Parameters
 
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **deviceId** | **String**| The device identifier | [default to null] |
+| **deviceId** | **String**|  | [default to null] |
 
 ### Return type
 
-null (empty response body)
+**Map**
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: Not defined
+- **Accept**: application/json
 

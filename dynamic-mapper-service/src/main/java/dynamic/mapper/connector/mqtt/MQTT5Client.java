@@ -138,6 +138,12 @@ public class MQTT5Client extends AMQTTClient {
             log.debug("{} - Using WebSocket with path: {}", tenant, serverPath);
         }
 
+        // Captured at build time: identifies which connect() attempt this listener belongs to,
+        // so a listener still attached to a superseded client (e.g. the reconnect-trigger's
+        // disconnect()->connect() replaced it with a new one before this listener fired) can
+        // recognize itself as stale — see connectGeneration's javadoc in AMQTTClient.
+        final long myGeneration = connectGeneration.get();
+
         // Add listeners — detection only, housekeeping owns all reconnect scheduling
         mqttClient = builder
                 .addDisconnectedListener(context -> {
@@ -146,9 +152,10 @@ public class MQTT5Client extends AMQTTClient {
                     log.info("{} - MQTT5 client disconnected (reason: {})", tenant, context.getCause().getMessage());
                     connectionStateManager.setConnected(false);
 
+                    boolean stale = myGeneration != connectGeneration.get();
                     boolean unexpected;
                     synchronized (disconnectionLock) {
-                        unexpected = !intentionalDisconnect && !isDisconnecting &&
+                        unexpected = !stale && !intentionalDisconnect && !isDisconnecting &&
                                 connectorConfiguration.getEnabled() && wasConnected;
                     }
 
@@ -156,13 +163,13 @@ public class MQTT5Client extends AMQTTClient {
                         nextReconnectTimeMs = System.currentTimeMillis(); // reconnect on next housekeeping cycle
                         log.warn("{} - Unexpected disconnection detected, housekeeping will reconnect", tenant);
                     } else {
-                        log.info("{} - Intentional disconnect (intentional={}, disconnecting={}, enabled={}, wasConnected={})",
-                                tenant, intentionalDisconnect, isDisconnecting,
+                        log.info("{} - Intentional disconnect (stale={}, intentional={}, disconnecting={}, enabled={}, wasConnected={})",
+                                tenant, stale, intentionalDisconnect, isDisconnecting,
                                 connectorConfiguration.getEnabled(), wasConnected);
                     }
                 })
                 .addConnectedListener(context -> {
-                    reconnectAttempt = 0;
+                    reconnectAttempt.set(0);
                     nextReconnectTimeMs = Long.MAX_VALUE;
                     connectionStateManager.setConnected(true);
                     log.info("{} - MQTT5 client connected", tenant);
@@ -458,7 +465,7 @@ public class MQTT5Client extends AMQTTClient {
         if (mqttClient != null && !mqttClient.getState().isConnected() && shouldConnect() && !isConnecting) {
             long now = System.currentTimeMillis();
             if (now >= nextReconnectTimeMs) {
-                int attempt = ++reconnectAttempt;
+                int attempt = reconnectAttempt.incrementAndGet();
                 long delay = Math.min((long) attempt * RECONNECT_DELAY_STEP_MS, RECONNECT_DELAY_MAX_MS);
                 nextReconnectTimeMs = now + delay;
                 log.warn("{} - MQTT5 client disconnected, reconnect attempt {} (next in {} ms)", tenant, attempt, delay);

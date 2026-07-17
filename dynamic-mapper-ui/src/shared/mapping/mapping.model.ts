@@ -330,16 +330,12 @@ export enum MappingType {
 export const TransformationTypeLabels = {
   [Direction.INBOUND]: {
     [TransformationType.DEFAULT]: 'Default Transformation',
-    // eslint-disable-next-line deprecation/deprecation
-    [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript (removed — export or delete only)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Cumulocity API calls',
     [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
     [TransformationType.EXTENSION_JAVA]: 'Java Extension (Smart Java Function)'
   },
   [Direction.OUTBOUND]: {
     [TransformationType.DEFAULT]: 'Default Transformation',
-    // eslint-disable-next-line deprecation/deprecation
-    [TransformationType.SUBSTITUTION_AS_CODE]: 'Substitution as JavaScript (removed — export or delete only)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Broker Payload',
     [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
     [TransformationType.EXTENSION_JAVA]: 'Java Extension (Smart Java Function)'
@@ -348,8 +344,6 @@ export const TransformationTypeLabels = {
 
 export const TransformationTypeDescriptions = {
   [TransformationType.DEFAULT]: 'Uses the default transformation logic without custom processing',
-  // eslint-disable-next-line deprecation/deprecation
-  [TransformationType.SUBSTITUTION_AS_CODE]: 'Removed in release 6.3 — this mapping can only be exported or deleted.',
   [TransformationType.SMART_FUNCTION]: 'Executes a predefined Smart Function for data transformation and create payload for Cumulocity API calls. Supports setting sourceId to route data to different devices',
   [TransformationType.JSONATA]: 'Uses JSONata query and transformation language for data mapping',
   [TransformationType.EXTENSION_JAVA]: 'Java extension returns domain objects (CumulocityObject[] for inbound, DeviceMessage[] for outbound) using Smart Java Function pattern with builder syntax. Supports setting sourceId to route data to different devices'
@@ -717,11 +711,11 @@ export interface Feature {
   acceptedDeprecationNotice: string;
 }
 
-import packageJson from '../../../package.json';
-
-/** Version of the current SUBSTITUTION_AS_CODE deprecation notice.
- *  Automatically derived from package.json — bump package.json version to update. */
-export const DEPRECATION_NOTICE_VERSION = packageJson.version;
+/** Version identifying the current content of the deprecation notice modal
+ *  (snooping removal + SUBSTITUTION_AS_CODE deprecation). Bump this manually
+ *  only when the notice's content changes — NOT on every package.json release,
+ *  otherwise previously-accepted users would see the modal again on every upgrade. */
+export const DEPRECATION_NOTICE_VERSION = '6.4.0';
 
 export function getDeviceIdentifiers(mapping: Mapping): Substitution[] {
   return mapping.substitutions

@@ -31,6 +31,7 @@ import lombok.ToString;
 
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.util.Objects;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -93,12 +94,37 @@ public class MappingStatus implements Serializable {
 
     @Override
     public boolean equals(Object m) {
-        return (m instanceof MappingStatus) && id == ((MappingStatus) m).id;
+        return (m instanceof MappingStatus) && Objects.equals(id, ((MappingStatus) m).id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 
     public void reset() {
         messagesReceived = 0;
         errors = 0;
         loadingError = "";
+    }
+
+    /**
+     * Counters below are mutated concurrently by multiple Camel processing threads
+     * for the same mapping; synchronize on the instance to avoid lost updates.
+     */
+    public synchronized void incrementMessagesReceived() {
+        messagesReceived++;
+    }
+
+    public synchronized void incrementErrors() {
+        errors++;
+    }
+
+    public synchronized void incrementFailureCount() {
+        currentFailureCount++;
+    }
+
+    public synchronized void resetFailureCount() {
+        currentFailureCount = 0;
     }
 }

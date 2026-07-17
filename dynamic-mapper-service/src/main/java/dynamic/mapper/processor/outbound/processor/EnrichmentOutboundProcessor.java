@@ -231,7 +231,7 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
         log.error(errorMessage, e);
         context.addError(new ProcessingException(errorMessage, e));
         context.setIgnoreFurtherProcessing(true);
-        mappingStatus.errors++;
+        mappingStatus.incrementErrors();
         mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
     }
 

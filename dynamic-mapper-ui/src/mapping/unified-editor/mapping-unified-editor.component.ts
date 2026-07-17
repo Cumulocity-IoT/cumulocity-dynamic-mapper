@@ -911,7 +911,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     if (this.serviceConfiguration?.supportESM) {
       const exportName =
         this.mapping.transformationType === TransformationType.SMART_FUNCTION ? 'onMessage' :
-        this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? 'extractFromSource' :
         null;
 
       if (exportName) {

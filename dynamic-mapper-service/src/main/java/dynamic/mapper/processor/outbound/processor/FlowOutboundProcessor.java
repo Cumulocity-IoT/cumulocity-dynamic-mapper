@@ -136,7 +136,7 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
         MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
         context.addError(new ProcessingException(errorMessage, e));
         context.setIgnoreFurtherProcessing(true);
-        mappingStatus.errors++;
+        mappingStatus.incrementErrors();
         mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
     }
 

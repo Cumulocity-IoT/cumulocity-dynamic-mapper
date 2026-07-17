@@ -29,10 +29,10 @@ public enum TemplateType {
     @Deprecated(since = "6.3", forRemoval = false)
     OUTBOUND,
     /** @deprecated Substitution As Code is no longer supported. Kept for deserialization of existing tenant data. */
-    @Deprecated(since = "6.3", forRemoval = false)
+    @Deprecated(since = "6.3", forRemoval = true)
     INBOUND_SUBSTITUTION_AS_CODE,
     /** @deprecated Substitution As Code is no longer supported. Kept for deserialization of existing tenant data. */
-    @Deprecated(since = "6.3", forRemoval = false)
+    @Deprecated(since = "6.3", forRemoval = true)
     OUTBOUND_SUBSTITUTION_AS_CODE,
     INBOUND_SMART_FUNCTION,
     OUTBOUND_SMART_FUNCTION,

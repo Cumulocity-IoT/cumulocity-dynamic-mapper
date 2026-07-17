@@ -4,54 +4,29 @@ All URIs are relative to *http://localhost:8080*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
+| [**createSubscription**](DeviceSubscriptionControllerApi.md#createSubscription) | **POST** /subscription | Create device notification subscription |
 | [**deleteGroupSubscription**](DeviceSubscriptionControllerApi.md#deleteGroupSubscription) | **DELETE** /subscription/group/{groupId} | Delete device group notification subscription |
+| [**deleteSubscription**](DeviceSubscriptionControllerApi.md#deleteSubscription) | **DELETE** /subscription/{deviceId} | Delete device notification subscription |
 | [**getGroupSubscriptions**](DeviceSubscriptionControllerApi.md#getGroupSubscriptions) | **GET** /subscription/group | Get group notification subscriptions |
+| [**getSubscriptions**](DeviceSubscriptionControllerApi.md#getSubscriptions) | **GET** /subscription | Get device notification subscriptions |
 | [**getTypeSubscriptions**](DeviceSubscriptionControllerApi.md#getTypeSubscriptions) | **GET** /subscription/type | Get device type notification subscriptions |
-| [**subscriptionCreate**](DeviceSubscriptionControllerApi.md#subscriptionCreate) | **POST** /subscription | Create device notification subscription |
-| [**subscriptionDelete**](DeviceSubscriptionControllerApi.md#subscriptionDelete) | **DELETE** /subscription/{deviceId} | Delete device notification subscription |
-| [**subscriptionUpdate**](DeviceSubscriptionControllerApi.md#subscriptionUpdate) | **PUT** /subscription | Update device notification subscription |
-| [**subscriptionsGet**](DeviceSubscriptionControllerApi.md#subscriptionsGet) | **GET** /subscription | Get device notification subscriptions |
-| [**updateGroupSubscription**](DeviceSubscriptionControllerApi.md#updateGroupSubscription) | **PUT** /subscription/group | Update group notification subscription |
+| [**resyncTypeSubscription**](DeviceSubscriptionControllerApi.md#resyncTypeSubscription) | **POST** /subscription/type/resync/{type} | Resync existing devices into a type subscription |
+| [**updateGroupSubscription**](DeviceSubscriptionControllerApi.md#updateGroupSubscription) | **PUT** /subscription/group | Update group notification subscription (desired state) |
+| [**updateSubscription**](DeviceSubscriptionControllerApi.md#updateSubscription) | **PUT** /subscription | Update device notification subscription |
 | [**updateTypeSubscription**](DeviceSubscriptionControllerApi.md#updateTypeSubscription) | **PUT** /subscription/type | Update device type notification subscription |
 
 
-<a name="deleteGroupSubscription"></a>
-# **deleteGroupSubscription**
-> deleteGroupSubscription(groupId)
+<a name="createSubscription"></a>
+# **createSubscription**
+> NotificationSubscriptionResponse createSubscription(NotificationSubscriptionRequest)
 
-Delete device group notification subscription
-
-    Removes notification subscription for a specific device group.  **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role. 
+Create device notification subscription
 
 ### Parameters
 
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **groupId** | **String**| ID of the device group to unsubscribe | [default to null] |
-
-### Return type
-
-null (empty response body)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: Not defined
-
-<a name="getGroupSubscriptions"></a>
-# **getGroupSubscriptions**
-> NotificationSubscriptionResponse getGroupSubscriptions()
-
-Get group notification subscriptions
-
-    Retrieves current notification subscriptions for device groups.
-
-### Parameters
-This endpoint does not need any parameter.
+| **NotificationSubscriptionRequest** | [**NotificationSubscriptionRequest**](../Models/NotificationSubscriptionRequest.md)|  | |
 
 ### Return type
 
@@ -59,7 +34,113 @@ This endpoint does not need any parameter.
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+<a name="deleteGroupSubscription"></a>
+# **deleteGroupSubscription**
+> Object deleteGroupSubscription(groupId)
+
+Delete device group notification subscription
+
+### Parameters
+
+|Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **groupId** | **String**|  | [default to null] |
+
+### Return type
+
+**Object**
+
+### Authorization
+
+[basicAuth](../README.md#basicAuth)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+<a name="deleteSubscription"></a>
+# **deleteSubscription**
+> Object deleteSubscription(deviceId, subscription)
+
+Delete device notification subscription
+
+### Parameters
+
+|Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **deviceId** | **String**|  | [default to null] |
+| **subscription** | **String**|  | [default to null] |
+
+### Return type
+
+**Object**
+
+### Authorization
+
+[basicAuth](../README.md#basicAuth)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+<a name="getGroupSubscriptions"></a>
+# **getGroupSubscriptions**
+> NotificationSubscriptionResponse getGroupSubscriptions(currentPage, pageSize, withTotalPages)
+
+Get group notification subscriptions
+
+### Parameters
+
+|Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **currentPage** | **Integer**|  | [optional] [default to null] |
+| **pageSize** | **Integer**|  | [optional] [default to null] |
+| **withTotalPages** | **Boolean**|  | [optional] [default to true] |
+
+### Return type
+
+[**NotificationSubscriptionResponse**](../Models/NotificationSubscriptionResponse.md)
+
+### Authorization
+
+[basicAuth](../README.md#basicAuth)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+<a name="getSubscriptions"></a>
+# **getSubscriptions**
+> NotificationSubscriptionResponse getSubscriptions(subscription, currentPage, pageSize, withTotalPages)
+
+Get device notification subscriptions
+
+### Parameters
+
+|Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **subscription** | **String**|  | [default to null] |
+| **currentPage** | **Integer**|  | [optional] [default to null] |
+| **pageSize** | **Integer**|  | [optional] [default to null] |
+| **withTotalPages** | **Boolean**|  | [optional] [default to true] |
+
+### Return type
+
+[**NotificationSubscriptionResponse**](../Models/NotificationSubscriptionResponse.md)
+
+### Authorization
+
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
@@ -72,8 +153,6 @@ No authorization required
 
 Get device type notification subscriptions
 
-    Retrieves current notification subscriptions for device types.
-
 ### Parameters
 This endpoint does not need any parameter.
 
@@ -83,53 +162,26 @@ This endpoint does not need any parameter.
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
 - **Content-Type**: Not defined
 - **Accept**: application/json
 
-<a name="subscriptionCreate"></a>
-# **subscriptionCreate**
-> NotificationSubscriptionResponse subscriptionCreate(NotificationSubscriptionRequest)
+<a name="resyncTypeSubscription"></a>
+# **resyncTypeSubscription**
+> resyncTypeSubscription(type)
 
-Create device notification subscription
+Resync existing devices into a type subscription
 
-    Creates notification subscriptions for specified devices to enable outbound mapping functionality. When devices are subscribed, the system will receive real-time notifications about changes to the devices and can trigger outbound mappings accordingly.  **Prerequisites:** - Outbound mapping must be enabled in service configuration - User must have CREATE or ADMIN role  **Behavior:** - Automatically discovers and includes all child devices - Creates subscriptions for all specified API types - Returns the subscription with all included devices  **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role. 
-
-### Parameters
-
-|Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **NotificationSubscriptionRequest** | [**NotificationSubscriptionRequest**](../Models/NotificationSubscriptionRequest.md)| Subscription configuration with devices and API types | |
-
-### Return type
-
-[**NotificationSubscriptionResponse**](../Models/NotificationSubscriptionResponse.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-<a name="subscriptionDelete"></a>
-# **subscriptionDelete**
-> subscriptionDelete(deviceId)
-
-Delete device notification subscription
-
-    Removes notification subscription for a specific device. The device will no longer trigger outbound mappings when its data changes.  **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role. 
+    Notification 2.0&#39;s tenant-level type filter only fires on future inventory CREATE events — devices that existed before the type was added are never picked up automatically. This scans the current inventory for the given (already-configured) type and subscribes any device not yet covered. Runs asynchronously in the background; watch the dynamic device subscription list to see it progress.
 
 ### Parameters
 
 |Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **deviceId** | **String**| ID of the device to unsubscribe | [default to null] |
+| **type** | **String**|  | [default to null] |
 
 ### Return type
 
@@ -137,74 +189,20 @@ null (empty response body)
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: application/json
-
-<a name="subscriptionUpdate"></a>
-# **subscriptionUpdate**
-> NotificationSubscriptionResponse subscriptionUpdate(NotificationSubscriptionRequest)
-
-Update device notification subscription
-
-    Updates an existing notification subscription by comparing the new device list with the current subscriptions.  **Update Logic:** 1. Devices in new list but not in current subscriptions → Subscribe 2. Devices in current subscriptions but not in new list → Unsubscribe 3. Devices in both lists → No change  **Prerequisites:** - Outbound mapping must be enabled in service configuration  **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role. 
-
-### Parameters
-
-|Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **NotificationSubscriptionRequest** | [**NotificationSubscriptionRequest**](../Models/NotificationSubscriptionRequest.md)| Updated subscription configuration | |
-
-### Return type
-
-[**NotificationSubscriptionResponse**](../Models/NotificationSubscriptionResponse.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
-- **Content-Type**: application/json
-- **Accept**: application/json
-
-<a name="subscriptionsGet"></a>
-# **subscriptionsGet**
-> NotificationSubscriptionResponse subscriptionsGet(subscription)
-
-Get device notification subscriptions
-
-    Retrieves current notification subscriptions, optionally filtered by device ID or subscription name. Shows which devices are currently subscribed for outbound notifications. 
-
-### Parameters
-
-|Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **subscription** | **String**| Name of the subscription | [default to null] |
-
-### Return type
-
-[**NotificationSubscriptionResponse**](../Models/NotificationSubscriptionResponse.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
-- **Content-Type**: Not defined
-- **Accept**: application/json
+- **Accept**: Not defined
 
 <a name="updateGroupSubscription"></a>
 # **updateGroupSubscription**
 > NotificationSubscriptionResponse updateGroupSubscription(NotificationSubscriptionRequest)
 
-Update group notification subscription
+Update group notification subscription (desired state)
 
-    Updates the notification subscription for a device group.  **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role. 
+    Accepts the full desired set of subscribed groups. The backend computes the diff against the current state and applies the necessary additions and removals. Sending [A, B] always results in exactly groups A and B being subscribed — nothing more, nothing less.
 
 ### Parameters
 
@@ -218,7 +216,35 @@ Update group notification subscription
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+<a name="updateSubscription"></a>
+# **updateSubscription**
+> NotificationSubscriptionResponse updateSubscription(NotificationSubscriptionRequest, subscription)
+
+Update device notification subscription
+
+    Updates static or dynamic device subscriptions. Pass ?subscription&#x3D;DynamicMapperDynamicDeviceSubscription to target the dynamic bucket.
+
+### Parameters
+
+|Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **NotificationSubscriptionRequest** | [**NotificationSubscriptionRequest**](../Models/NotificationSubscriptionRequest.md)|  | |
+| **subscription** | **String**|  | [optional] [default to DynamicMapperStaticDeviceSubscription] |
+
+### Return type
+
+[**NotificationSubscriptionResponse**](../Models/NotificationSubscriptionResponse.md)
+
+### Authorization
+
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 
@@ -231,8 +257,6 @@ No authorization required
 
 Update device type notification subscription
 
-    Updates the notification subscription for device types.  **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN or ROLE_DYNAMIC_MAPPER_CREATE role. 
-
 ### Parameters
 
 |Name | Type | Description  | Notes |
@@ -245,7 +269,7 @@ Update device type notification subscription
 
 ### Authorization
 
-No authorization required
+[basicAuth](../README.md#basicAuth)
 
 ### HTTP request headers
 

@@ -44,6 +44,8 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -222,6 +224,18 @@ public class SubscriptionQueryService {
      */
     public NotificationSubscriptionResponse getSubscriptionsDevices(String tenant, String deviceId,
             String deviceSubscription, int currentPage, int pageSize, boolean withTotalPages) {
+        return getSubscriptionsDevices(tenant, deviceId, deviceSubscription, currentPage, pageSize, withTotalPages,
+                null);
+    }
+
+    /**
+     * Get a single page of device subscriptions for the static/dynamic device tabs, optionally
+     * restricted to devices whose id/name/type/group matches {@code search} (case-insensitive
+     * substring). The notification-subscription API has no name predicate, so a search request
+     * resolves every subscribed device (see {@link #searchAndPaginate}) instead of a single page.
+     */
+    public NotificationSubscriptionResponse getSubscriptionsDevices(String tenant, String deviceId,
+            String deviceSubscription, int currentPage, int pageSize, boolean withTotalPages, String search) {
 
         if (tenant == null) {
             throw new IllegalArgumentException("Tenant cannot be null");
@@ -236,6 +250,10 @@ public class SubscriptionQueryService {
             filter = filter.bySource(id);
         }
         filter = filter.byContext("mo");
+
+        if (search != null && !search.isBlank()) {
+            return searchAndPaginate(tenant, filter, search, currentPage, pageSize);
+        }
 
         return getSubscriptionsDevicesPaged(tenant, filter, currentPage, pageSize, withTotalPages);
     }
@@ -298,6 +316,100 @@ public class SubscriptionQueryService {
                         .hasNext(hasNext)
                         .build())
                 .build();
+    }
+
+    /**
+     * Resolves every subscription matching {@code filter} (there is no name/text predicate on the
+     * notification-subscription API, so this cannot be pushed down to a single page), keeps the
+     * devices whose id/name/type/group matches {@code search}, then slices the requested page out of
+     * the filtered result. Mirrors the standard Cumulocity device-list search: plain text is a
+     * case-insensitive substring match (no regex needed — "Robot" finds "Multi Robot-001"); {@code *}
+     * / {@code ?} glob wildcards are only engaged when the search text actually contains one (see
+     * {@link #buildSearchMatcher}).
+     */
+    private NotificationSubscriptionResponse searchAndPaginate(String tenant, NotificationSubscriptionFilter filter,
+            String search, int currentPage, int pageSize) {
+
+        int effectivePageSize = pageSize > 0 ? pageSize : 30;
+        int requestedPage = Math.max(1, currentPage);
+        Predicate<String> searchMatcher = buildSearchMatcher(search);
+
+        NotificationSubscriptionResponse.NotificationSubscriptionResponseBuilder responseBuilder =
+                NotificationSubscriptionResponse.builder();
+        List<Device> allDevices = new ArrayList<>();
+
+        subscriptionsService.runForTenant(tenant, () -> {
+            try {
+                Iterator<NotificationSubscriptionRepresentation> subIt = subscriptionAPI
+                        .getSubscriptionsByFilter(filter).get().allPages().iterator();
+
+                while (subIt.hasNext()) {
+                    processDeviceSubscription(tenant, subIt.next(), allDevices, responseBuilder);
+                }
+            } catch (Exception e) {
+                log.error("{} - Error searching device subscriptions: {}", tenant, e.getMessage(), e);
+            }
+        });
+
+        List<Device> matches = allDevices.stream()
+                .filter(d -> matchesSearch(d, searchMatcher))
+                .collect(Collectors.toList());
+
+        int totalElements = matches.size();
+        int fromIndex = Math.min((requestedPage - 1) * effectivePageSize, totalElements);
+        int toIndex = Math.min(fromIndex + effectivePageSize, totalElements);
+        List<Device> pageDevices = matches.subList(fromIndex, toIndex);
+
+        return responseBuilder
+                .devices(pageDevices)
+                .paging(NotificationSubscriptionResponse.Paging.builder()
+                        .currentPage(requestedPage)
+                        .pageSize(effectivePageSize)
+                        .totalPages((int) Math.ceil((double) totalElements / effectivePageSize))
+                        .totalElements((long) totalElements)
+                        .hasNext(toIndex < totalElements)
+                        .build())
+                .build();
+    }
+
+    private boolean matchesSearch(Device device, Predicate<String> searchMatcher) {
+        return matches(device.getId(), searchMatcher)
+                || matches(device.getName(), searchMatcher)
+                || matches(device.getType(), searchMatcher)
+                || (device.getGroups() != null
+                        && device.getGroups().stream().anyMatch(g -> matches(g, searchMatcher)));
+    }
+
+    private boolean matches(String value, Predicate<String> searchMatcher) {
+        return value != null && searchMatcher.test(value);
+    }
+
+    /**
+     * Builds a case-insensitive matcher mirroring the standard Cumulocity device-list search: plain
+     * text is a straight substring check (no regex engine involved), while {@code *} (any number of
+     * characters) and {@code ?} (a single character) are recognized as glob wildcards only when the
+     * search text actually contains one.
+     */
+    private Predicate<String> buildSearchMatcher(String search) {
+        if (search.indexOf('*') < 0 && search.indexOf('?') < 0) {
+            String needle = search.toLowerCase();
+            return value -> value.toLowerCase().contains(needle);
+        }
+
+        StringBuilder regex = new StringBuilder(".*");
+        for (int i = 0; i < search.length(); i++) {
+            char c = search.charAt(i);
+            if (c == '*') {
+                regex.append(".*");
+            } else if (c == '?') {
+                regex.append('.');
+            } else {
+                regex.append(Pattern.quote(String.valueOf(c)));
+            }
+        }
+        regex.append(".*");
+        Pattern pattern = Pattern.compile(regex.toString(), Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+        return value -> pattern.matcher(value).matches();
     }
 
     /**

@@ -107,12 +107,6 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     }
   },
   {
-    condition: (ctx) => ctx.transformationType === TransformationType.SUBSTITUTION_AS_CODE,
-    properties: {
-      allowTemplateExpansion: false
-    }
-  },
-  {
     condition: (ctx) => ctx.transformationType === TransformationType.SMART_FUNCTION,
     properties: {
       allowTemplateExpansion: true

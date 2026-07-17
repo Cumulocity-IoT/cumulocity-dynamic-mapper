@@ -65,3 +65,7 @@ CLAUDE.md
 .vscode/mcp.json
 attic
 resources/script/test/tmp
+resources/image-optimized/
+resources/script/backend/backend_test.argfile
+resources/script/backend/start.md
+resources/script/backend/run_debug.sh

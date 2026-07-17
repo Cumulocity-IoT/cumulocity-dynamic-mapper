@@ -67,6 +67,7 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
 import { DeviceSelectorTreeComponent } from './subscription-static-tree/device-selector-tree.component';
 import { GroupSelectorComponent } from './subscription-dynamic-group/group-selector.component';
 import { TypeSelectorComponent } from './subscription-dynamic-type/type-selector.component';
+import { TypeResyncComponent } from './subscription-dynamic-type/type-resync.component';
 import { DeviceSelectorTableComponent } from './subscription-static-table/device-selector-table.component';
 import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
 
@@ -76,7 +77,7 @@ import { ConfirmationModalService } from '../../shared/service/confirmation-moda
   styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CommonModule, SharedModule, PopoverModule, DeviceSelectorTreeComponent, DeviceSelectorTableComponent, GroupSelectorComponent, TypeSelectorComponent],
+  imports: [CoreModule, CommonModule, SharedModule, PopoverModule, DeviceSelectorTreeComponent, DeviceSelectorTableComponent, GroupSelectorComponent, TypeSelectorComponent, TypeResyncComponent],
   providers: [
     DataGridService]
 
@@ -101,6 +102,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   showConfigSubscription2 = false;
   showConfigSubscription3 = false;
   showConfigSubscription4 = false;
+  showConfigSubscriptionResync = false;
 
   isConnectionToMQTTEstablished = false;
 
@@ -231,8 +233,17 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       : this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION;
     const currentPage = mod.pagination?.currentPage ?? 1;
     const pageSize = mod.pagination?.pageSize ?? this.pagination.pageSize;
+    const searchText = mod.searchText?.trim() || undefined;
 
-    const response = await this.subscriptionService.getSubscriptionDevice(subscription, currentPage, pageSize);
+    // The backend resolves the search against every subscribed device (there is no name/text
+    // predicate on the underlying notification-subscription API), so a search request re-paginates
+    // over the filtered set rather than the full unfiltered one.
+    const response = await this.subscriptionService.getSubscriptionDevice(
+      subscription,
+      currentPage,
+      pageSize,
+      searchText
+    );
     this.subscriptionDevices = response ?? undefined;
 
     const devices = this.enrichDevices(response?.devices ?? []);
@@ -342,6 +353,14 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
 
   onDefineSubscription4(): void {
     this.showConfigSubscription4 = !this.showConfigSubscription4;
+  }
+
+  onDefineSubscriptionResync(): void {
+    this.showConfigSubscriptionResync = !this.showConfigSubscriptionResync;
+  }
+
+  onRefresh(): void {
+    this.subscriptionGrid?.reload();
   }
 
   async deleteSubscription(device: IIdentified): Promise<void> {
@@ -461,6 +480,25 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       );
     }
     this.showConfigSubscription4 = false;
+  }
+
+  async resyncType(type: string): Promise<void> {
+    const confirmed = await this.confirmationService.confirmWarning(
+      gettext('Resync existing devices'),
+      gettext('This rescans the full inventory for type') + ` "${type}" ` +
+      gettext('and subscribes any existing device not already covered. This can take a while on large inventories. Continue?')
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await this.subscriptionService.resyncTypeSubscription(type);
+      this.alertService.add({ text: gettext('Resync request submitted. Existing devices of this type are being subscribed in the background – verify the result in the list below and check Service Events for details.'), type: 'info', timeout: ALERT_INFO_TIMEOUT });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      this.alertService.danger(gettext('Failed to resync type subscription: ') + msg);
+    }
   }
 
   navigateToServiceEvents(): void {

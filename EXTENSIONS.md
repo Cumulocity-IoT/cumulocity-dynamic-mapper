@@ -856,7 +856,7 @@ The following diagram shows how the dispatcher handles messages across all trans
 The following diagram gives an overview of the steps to build and use your own extension:
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Diagram_ProcessorExtensionSource_Guide.png"  style="width: 70%;" />
+<img src="resources/image/Dynamic_Mapper_Diagram_ProcessorExtension_Guide.png"  style="width: 70%;" />
 </p>
 <br/>
 

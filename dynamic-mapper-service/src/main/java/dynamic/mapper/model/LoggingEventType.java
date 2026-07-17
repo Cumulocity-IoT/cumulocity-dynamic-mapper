@@ -55,6 +55,8 @@ public enum LoggingEventType {
             "Connector", "info", "Duplicate subscription removed to prevent multiply processed messages"),
     CODE_TEMPLATE_INIT_EVENT_TYPE("CODE_TEMPLATE_INIT_EVENT_TYPE", "d11r_codeTemplateInitEvent", "d11r_system",
             "System", "info", "System code templates have been re-initialized"),
+    BACKFILL_SUBSCRIPTION_EVENT_TYPE("BACKFILL_SUBSCRIPTION_EVENT_TYPE", "d11r_backfillSubscriptionEvent", "d11r_subscription",
+            "Connector", "info", "Resync of existing devices into a type subscription started/finished"),
     ALL("ALL", "ALL", "d11r_AnyComponent",
             "All Components", "info", "All event types");
 

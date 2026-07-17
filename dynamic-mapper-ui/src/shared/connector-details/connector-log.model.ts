@@ -61,6 +61,7 @@ export enum LoggingEventType {
   NOTIFICATION_EVENT_TYPE = 'NOTIFICATION_EVENT_TYPE',
   SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE = 'SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE',
   CODE_TEMPLATE_INIT_EVENT_TYPE = 'CODE_TEMPLATE_INIT_EVENT_TYPE',
+  BACKFILL_SUBSCRIPTION_EVENT_TYPE = 'BACKFILL_SUBSCRIPTION_EVENT_TYPE',
   ALL = 'ALL'
 }
 
@@ -200,6 +201,14 @@ export const LoggingEventTypeMap: Record<LoggingEventType, LoggingEventTypeDetai
     componentDisplayName: 'System',
     severity: 'info',
     description: 'System code templates have been re-initialized'
+  },
+  [LoggingEventType.BACKFILL_SUBSCRIPTION_EVENT_TYPE]: {
+    name: 'BACKFILL_SUBSCRIPTION_EVENT_TYPE',
+    type: 'd11r_backfillSubscriptionEvent',
+    component: 'd11r_subscription',
+    componentDisplayName: 'Connector',
+    severity: 'info',
+    description: 'Resync of existing devices into a type subscription started/finished'
   },
   [LoggingEventType.ALL]: {
     name: 'ALL',
