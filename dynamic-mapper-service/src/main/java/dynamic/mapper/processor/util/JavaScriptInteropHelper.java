@@ -311,25 +311,40 @@ public class JavaScriptInteropHelper {
     }
 
     static ExternalId convertMapToExternalId(Map<String, Object> map) {
-        // ... (keep existing implementation)
         if (map == null) {
             return null;
         }
 
         ExternalId externalId = new ExternalId();
 
-        if (map.containsKey("externalId")) {
-            externalId.setExternalId(String.valueOf(map.get("externalId")));
+        Object rawExternalId = map.get("externalId");
+        if (rawExternalId != null && !isMissingValue(String.valueOf(rawExternalId))) {
+            externalId.setExternalId(String.valueOf(rawExternalId));
         }
-        if (map.containsKey("type")) {
-            externalId.setType(String.valueOf(map.get("type")));
+        Object rawType = map.get("type");
+        if (rawType != null && !isMissingValue(String.valueOf(rawType))) {
+            externalId.setType(String.valueOf(rawType));
         }
-        // Only return if we have the required fields
-        if (externalId.getType() != null) {
+        // Only return if we have both required fields with valid, non-sentinel values.
+        // A Smart Function returning `undefined`/`null` for externalId must NOT be
+        // silently coerced into the strings "undefined"/"null" and used to create a device.
+        if (externalId.getType() != null && externalId.getExternalId() != null) {
             return externalId;
         }
 
         return null;
+    }
+
+    /**
+     * Detects JS-undefined/null values that GraalVM/String.valueOf coerce into the
+     * literal strings "null" or "undefined", plus blank strings.
+     */
+    private static boolean isMissingValue(String value) {
+        if (value == null) {
+            return true;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() || "null".equalsIgnoreCase(trimmed) || "undefined".equalsIgnoreCase(trimmed);
     }
 
     /**
