@@ -56,7 +56,7 @@ public class SubstitutionEvaluation {
     }
 
     public void setRepairStrategy(String repairStrategy) {
-        this.setRepairStrategy(repairStrategy);
+        this.repairStrategy = repairStrategy;
     }
 
     public static void addNestedValue(DocumentContext jsonObject, String path, Object value) {
@@ -215,6 +215,11 @@ public class SubstitutionEvaluation {
             processingCacheEntry
                     .add(new SubstituteValue(extractedSourceContent,
                             SubstituteValue.TYPE.ARRAY, substitutionValue.getRepairStrategy(),
+                            substitutionValue.getExpandArray()));
+        } else if (SubstitutionEvaluation.isBoolean(extractedSourceContent)) {
+            processingCacheEntry
+                    .add(new SubstituteValue(extractedSourceContent,
+                            SubstituteValue.TYPE.BOOLEAN, substitutionValue.getRepairStrategy(),
                             substitutionValue.getExpandArray()));
         } else {
             processingCacheEntry

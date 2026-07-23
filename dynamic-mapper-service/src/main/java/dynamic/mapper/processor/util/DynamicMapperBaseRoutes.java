@@ -30,6 +30,7 @@ import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.processor.model.TransformationType;
 
 @Component
@@ -174,5 +175,42 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
      * Check if mapping is deployed for the connector
      */
     protected abstract boolean isMappingDeployed(String tenant, Mapping mapping, String connectorIdentifier);
+
+    /**
+     * Shared onException(...) body for the inbound/outbound routes: logs the
+     * caught exception with route/endpoint context and sets an empty
+     * ProcessingResultWrapper header so downstream consumers never see a null result.
+     */
+    protected void handleRouteException(Exchange exchange, String routeLabel) {
+        Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+        String routeId = exchange.getFromRouteId();
+
+        // Safe endpoint access
+        String endpoint = "unknown";
+        try {
+            if (exchange.getFromEndpoint() != null) {
+                endpoint = exchange.getFromEndpoint().getEndpointUri();
+            }
+        } catch (Exception e) {
+            // Ignore endpoint access errors
+        }
+
+        log.error("=== CAMEL {} ROUTE ERROR ===", routeLabel);
+        log.error("Route ID: {}", routeId);
+        log.error("Endpoint: {}", endpoint);
+        if (cause != null) {
+            log.error("Exception Type: {}", cause.getClass().getSimpleName());
+            log.error("Exception Message: {}", cause.getMessage());
+            log.error("Full Stack Trace: ", cause);
+        } else {
+            log.error("Exception Type: unknown (no exception captured on exchange)");
+        }
+
+        ProcessingResultWrapper<Object> result = ProcessingResultWrapper.builder()
+                .pipelineTimeoutMS(0)
+                .build();
+
+        exchange.getIn().setHeader(CamelHeaders.PROCESSING_RESULT, result);
+    }
 
 }

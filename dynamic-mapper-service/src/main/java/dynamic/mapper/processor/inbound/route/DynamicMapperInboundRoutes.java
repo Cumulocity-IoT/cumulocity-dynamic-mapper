@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
-import org.apache.camel.Exchange;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -46,7 +45,6 @@ import dynamic.mapper.processor.inbound.processor.EnrichmentInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SubstitutionResultInboundProcessor;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.processor.util.ProcessingContextAggregationStrategy;
 import dynamic.mapper.processor.util.RequestAggregationStrategy;
 import dynamic.mapper.processor.util.ConsolidationProcessor;
@@ -107,33 +105,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
         // Global error handling
         onException(Exception.class)
                 .handled(true)
-                .process(exchange -> {
-                    Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
-                    String routeId = exchange.getFromRouteId();
-
-                    // Safe endpoint access
-                    String endpoint = "unknown";
-                    try {
-                        if (exchange.getFromEndpoint() != null) {
-                            endpoint = exchange.getFromEndpoint().getEndpointUri();
-                        }
-                    } catch (Exception e) {
-                        // Ignore endpoint access errors
-                    }
-
-                    log.error("=== CAMEL ROUTE ERROR ===");
-                    log.error("Route ID: {}", routeId);
-                    log.error("Endpoint: {}", endpoint);
-                    log.error("Exception Type: {}", cause.getClass().getSimpleName());
-                    log.error("Exception Message: {}", cause.getMessage());
-                    log.error("Full Stack Trace: ", cause);
-
-                    ProcessingResultWrapper<Object> result = ProcessingResultWrapper.builder()
-                            .pipelineTimeoutMS(0)
-                            .build();
-
-                    exchange.getIn().setHeader(CamelHeaders.PROCESSING_RESULT, result);
-                })
+                .process(exchange -> handleRouteException(exchange, "INBOUND"))
                 .to("direct:inboundErrorHandling");
 
         // Main processing entry point (transport agnostic)
@@ -191,7 +163,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
 
                 // Check if further processing should be ignored after enrichment
                 .choice()
-                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
+                .when(this::shouldIgnoreFurtherProcessing)
                 .to("log:inbound-enrichment-filtered-message?level=DEBUG")
                 .process(consolidationProcessor)
                 .stop()
@@ -200,19 +172,19 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 // 1. Branch based on processing type
                 .choice()
                 // 1f. Extension processing path
-                .when(exchange -> isInternalProtobuf(exchange))
+                .when(this::isInternalProtobuf)
                 .to("direct:processInternalProtobuf")
 
                 // 1d. Extension processing path
-                .when(exchange -> isExtension(exchange))
+                .when(this::isExtension)
                 .to("direct:processExtension")
 
                 // 1b. JSONata extraction path
-                .when(exchange -> isJSONataExtraction(exchange))
+                .when(this::isJSONataExtraction)
                 .to("direct:processJSONataExtraction")
 
                 // 1e. Flow function path
-                .when(exchange -> isFlowFunction(exchange))
+                .when(this::isFlowFunction)
                 .to("direct:processFlowFunction")
 
                 // Default fallback — unknown/unmatched TransformationType
@@ -234,7 +206,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .process(jsonataExtractionInboundProcessor)
                 .process(substitutionInboundProcessor)
                 .choice()
-                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
+                .when(this::shouldIgnoreFurtherProcessing)
                 .to("log:filtered-message?level=DEBUG")
                 .process(consolidationProcessor)
                 .stop()
@@ -248,14 +220,14 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .routeId("extension-processor")
                 .process(extensibleProcessor)
                 .choice()
-                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
+                .when(this::shouldIgnoreFurtherProcessing)
                 .to("log:extension-filtered-message?level=DEBUG")
                 .process(consolidationProcessor)
                 .stop()
                 .otherwise()
                 .process(extensibleResultInboundProcessor)
                 .choice()
-                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
+                .when(this::shouldIgnoreFurtherProcessing)
                 .to("log:extension-result-filtered-message?level=DEBUG")
                 .process(consolidationProcessor)
                 .stop()
@@ -277,7 +249,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .process(internalProtobufProcessor)
                 .process(substitutionInboundProcessor)
                 .choice()
-                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
+                .when(this::shouldIgnoreFurtherProcessing)
                 .to("log:internal-protobuf-filtered-message?level=DEBUG")
                 .process(consolidationProcessor)
                 .stop()
@@ -291,7 +263,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .routeId("flow-function-processor")
                 .process(flowInboundProcessor)
                 .choice()
-                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
+                .when(this::shouldIgnoreFurtherProcessing)
                 .to("log:flow-function-filtered-message?level=DEBUG")
                 .process(consolidationProcessor)
                 .stop()

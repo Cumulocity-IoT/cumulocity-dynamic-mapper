@@ -223,8 +223,19 @@ public class SendInboundProcessor extends BaseProcessor {
         Mapping mapping = context.getMapping();
 
         try {
-            // Find the index of this request in the context
-            int requestIndex = context.getRequests().indexOf(request);
+            // Find the index of this exact request instance in the context. Using
+            // List.indexOf() (equals()-based) here would return the first
+            // structurally-equal request when two requests carry identical field
+            // values (e.g. duplicate fanned-out alarms/events), causing the same
+            // entry to be sent twice while a distinct one is silently skipped.
+            List<DynamicMapperRequest> allRequests = context.getRequests();
+            int requestIndex = -1;
+            for (int i = 0; i < allRequests.size(); i++) {
+                if (allRequests.get(i) == request) {
+                    requestIndex = i;
+                    break;
+                }
+            }
             if (requestIndex == -1) {
                 log.warn("{} - Request not found in context", tenant);
                 return;

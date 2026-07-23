@@ -1,7 +1,7 @@
 package dynamic.mapper.processor.inbound.deserializer;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -9,13 +9,13 @@ import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.model.Mapping;
 
 public class FlatFilePayloadDeserializer implements PayloadDeserializer<Object> {
-    
+
     @Override
     public Object deserializePayload(Mapping mapping, ConnectorMessage message) throws IOException {
         try {
 
             String payloadMessage = (message.getPayload() != null
-                    ? new String(message.getPayload(), Charset.defaultCharset())
+                    ? new String(message.getPayload(), StandardCharsets.UTF_8)
                     : "");
             
             // Object payloadObjectNode = objectMapper.valueToTree(new PayloadWrapper(payloadMessage));

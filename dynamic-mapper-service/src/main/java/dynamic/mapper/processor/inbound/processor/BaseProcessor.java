@@ -68,12 +68,17 @@ public abstract class BaseProcessor extends CommonProcessor {
         int countMaxEntries = processingCache.get(entryWithMaxSubstitutes).size();
 
         List<String> pathsTargetForDeviceIdentifiers = context.getPathsTargetForDeviceIdentifiers();
-        String firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.size() > 0
-                ? pathsTargetForDeviceIdentifiers.get(0)
-                : null;
+        if (pathsTargetForDeviceIdentifiers == null || pathsTargetForDeviceIdentifiers.isEmpty()) {
+            // No identifier path configured on this mapping — nothing to replicate against.
+            return;
+        }
+        String firstPathTargetForDeviceIdentifiers = pathsTargetForDeviceIdentifiers.get(0);
 
         List<SubstituteValue> deviceEntries = processingCache
                 .get(firstPathTargetForDeviceIdentifiers);
+        if (deviceEntries == null || deviceEntries.isEmpty()) {
+            return;
+        }
         SubstituteValue toDuplicate = deviceEntries.get(0);
         while (deviceEntries.size() < countMaxEntries) {
             deviceEntries.add(toDuplicate);
