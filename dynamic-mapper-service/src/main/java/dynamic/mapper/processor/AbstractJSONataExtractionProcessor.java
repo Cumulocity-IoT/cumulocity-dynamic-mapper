@@ -23,6 +23,7 @@ package dynamic.mapper.processor;
 
 import dynamic.mapper.processor.util.CamelHeaders;
 
+import static com.dashjoin.jsonata.Jsonata.jsonata;
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ import org.apache.camel.Exchange;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.PayloadContext;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -93,7 +95,7 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
     }
 
     /**
-     * NEW: Extract using focused contexts - cleaner internal implementation.
+     * Extract using focused contexts (RoutingContext, PayloadContext) internally.
      */
     private void extractFromSource(
             RoutingContext routing,
@@ -130,7 +132,6 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
 
     /**
      * Process a single substitution: extract content and add to cache.
-     * NEW: Using focused contexts internally.
      */
     private void processSubstitution(
             RoutingContext routing,
@@ -178,8 +179,10 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
     }
 
     /**
-     * Extract content from payload for a specific substitution.
-     * Subclasses must implement this to provide their extraction strategy.
+     * Extract content from payload for a specific substitution by evaluating the
+     * substitution's JSONata path expression against the payload. Identical for
+     * inbound and outbound — both evaluate the same expression language against
+     * whatever object (device payload or Cumulocity payload) was deserialized.
      *
      * @param context The processing context
      * @param substitution The substitution containing the path to extract
@@ -187,17 +190,24 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
      * @param payloadAsString The payload as a string (for error logging)
      * @return The extracted content, or null if extraction fails
      */
-    protected abstract Object extractContentFromPayload(ProcessingContext<?> context,
-                                                       Substitution substitution,
-                                                       Object payloadObject,
-                                                       String payloadAsString);
+    protected Object extractContentFromPayload(ProcessingContext<?> context,
+                                              Substitution substitution,
+                                              Object payloadObject,
+                                              String payloadAsString) {
+        try {
+            var expr = jsonata(substitution.getPathSource());
+            return expr.evaluate(payloadObject);
+        } catch (Exception e) {
+            log.error("{} - Exception evaluating JSONata expression: {}, {}: ", context.getTenant(),
+                    substitution.getPathSource(), payloadAsString, e);
+            return null;
+        }
+    }
 
     /**
-     * NEW: Hook for subclass-specific post-processing using focused contexts.
-     * Default implementation does nothing.
+     * Hook for subclass-specific post-processing. Default implementation does nothing.
      *
-     * @param state Thread-safe mutable state with processing cache
-     * @param context Legacy context for any remaining needs
+     * @param context The processing context
      * @throws ProcessingException if post-processing fails
      */
     protected void postProcessSubstitutions(ProcessingContext<?> context)
@@ -206,14 +216,33 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
     }
 
     /**
-     * Handle processing errors in a subclass-specific way.
-     * Subclasses must implement this to provide their error handling strategy.
+     * Handle errors during JSONata extraction. Identical for inbound and outbound:
+     * logs, records the error on the context (without double-wrapping an existing
+     * ProcessingException), and — unless this is a test run — increments the mapping's
+     * failure count.
      *
      * @param e The exception that occurred
      * @param context The processing context
      * @param tenant The tenant identifier
      * @param mapping The mapping being processed
      */
-    protected abstract void handleProcessingError(Exception e, ProcessingContext<?> context,
-                                                 String tenant, Mapping mapping);
+    protected void handleProcessingError(Exception e, ProcessingContext<?> context,
+                                        String tenant, Mapping mapping) {
+        String errorMessage = String.format(
+                "%s - Error in %s for mapping: %s: %s",
+                tenant, getClass().getSimpleName(), mapping.getName(), e.getMessage());
+        log.error(errorMessage, e);
+
+        if (e instanceof ProcessingException) {
+            context.addError((ProcessingException) e);
+        } else {
+            context.addError(new ProcessingException(errorMessage, e));
+        }
+
+        if (!context.isTesting()) {
+            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+            mappingStatus.incrementErrors();
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        }
+    }
 }

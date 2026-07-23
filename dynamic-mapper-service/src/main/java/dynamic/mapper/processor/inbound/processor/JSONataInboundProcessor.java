@@ -1,15 +1,8 @@
 package dynamic.mapper.processor.inbound.processor;
 
-import static com.dashjoin.jsonata.Jsonata.jsonata;
-
 import org.springframework.stereotype.Component;
 
-import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.AbstractJSONataExtractionProcessor;
-import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -17,8 +10,9 @@ import lombok.extern.slf4j.Slf4j;
  * Inbound JSONata extraction processor that extracts and processes substitutions
  * from device payloads using JSONata expressions.
  *
- * Includes special handling for time substitutions - if no time substitution is provided
- * and the target API requires time, system time is automatically added.
+ * <p>Extraction and error handling are identical to the outbound side and live in
+ * {@link AbstractJSONataExtractionProcessor}; this class exists only to give the
+ * inbound route its own bean to wire up.
  */
 @Slf4j
 @Component
@@ -26,42 +20,6 @@ public class JSONataInboundProcessor extends AbstractJSONataExtractionProcessor 
 
     public JSONataInboundProcessor(MappingService mappingService) {
         super(mappingService);
-    }
-
-    @Override
-    protected Object extractContentFromPayload(ProcessingContext<?> context,
-                                              Substitution substitution,
-                                              Object payloadObject,
-                                              String payloadAsString) {
-        Object extractedSourceContent = null;
-        try {
-            var expr = jsonata(substitution.getPathSource());
-            extractedSourceContent = expr.evaluate(payloadObject);
-        } catch (Exception e) {
-            log.error("{} - Exception for: {}, {}: ", context.getTenant(),
-                    substitution.getPathSource(), payloadAsString, e);
-        }
-        return extractedSourceContent;
-    }
-
-    @Override
-    protected void handleProcessingError(Exception e, ProcessingContext<?> context, String tenant, Mapping mapping) {
-        String errorMessage = String.format(
-                "%s - Error in JSONataInboundProcessor for mapping: %s: %s",
-                tenant, mapping.getName(), e.getMessage());
-        log.error(errorMessage, e);
-
-        if (e instanceof ProcessingException) {
-            context.addError((ProcessingException) e);
-        } else {
-            context.addError(new ProcessingException(errorMessage, e));
-        }
-
-        if (!context.isTesting()) {
-            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-            mappingStatus.incrementErrors();
-            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
-        }
     }
 
 }
