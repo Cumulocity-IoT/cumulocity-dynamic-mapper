@@ -36,7 +36,7 @@ export default {
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Subscription_Outbound_Resync.png',
         to: 'image/Dynamic_Mapper_Mapping_Subscription_Outbound_Resync.png'
-      }
+      },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Table_Add_Modal.png',
         to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal.png'
