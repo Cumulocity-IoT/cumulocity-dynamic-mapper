@@ -34,7 +34,7 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<revision>6.4.2</revision>
+		<revision>6.4.3-SNAPSHOT</revision>
 		<spring-boot-dependencies.version>3.5.13</spring-boot-dependencies.version>
 		<c8y.version>2026.41.0</c8y.version>
 		<lombok.version>1.18.38</lombok.version>
@@ -49,6 +49,8 @@
 		<spring-ai.version>2.0.0</spring-ai.version>
 		<pulsar.version>4.0.5</pulsar.version>
 		<camel.version>4.18.1</camel.version>
+		<google-cloud-libraries-bom.version>26.85.1</google-cloud-libraries-bom.version>
+		<google-cloud-pubsub.version>1.152.0</google-cloud-pubsub.version>
 		<!-- <spring-ai.version>1.0.1</spring-ai.version> -->
 		<authToken>${env.AUTH_TOKEN}</authToken>
 	</properties>
@@ -148,6 +150,20 @@
 				<groupId>org.apache.pulsar</groupId>
 				<artifactId>bouncy-castle-bc</artifactId>
 				<version>${pulsar.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>com.google.cloud</groupId>
+				<artifactId>libraries-bom</artifactId>
+				<version>${google-cloud-libraries-bom.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>com.google.cloud</groupId>
+				<artifactId>google-cloud-pubsub</artifactId>
+				<version>${google-cloud-pubsub.version}</version>
 			</dependency>
 
 			<dependency>
