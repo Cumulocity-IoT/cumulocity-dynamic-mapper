@@ -213,8 +213,12 @@
 			<artifactId>tahu-core</artifactId>
 			<version>1.0.7</version>
 		</dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents.core5</groupId>
+            <artifactId>httpcore5</artifactId>
+        </dependency>
 
-	</dependencies>
+    </dependencies>
 	<build>
 		<sourceDirectory>../dynamic-mapper-service/src/main/java</sourceDirectory>
 		<plugins>
