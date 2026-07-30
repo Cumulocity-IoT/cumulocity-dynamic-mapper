@@ -223,6 +223,20 @@ public class JavaScriptInteropHelper {
                 list.add(convertValueToJavaObject(value.getArrayElement(i)));
             }
             return list;
+        } else if (value.hasHashEntries()) {
+            // Convert to Java Map. Must be checked before hasMembers(): a host Map
+            // (e.g. msg.getPayload() passed through unchanged) reports hasMembers()
+            // true too, but getMemberKeys() then returns the Map class's own method
+            // names (get, put, keySet, ...) instead of the map's actual data keys.
+            Map<String, Object> map = new HashMap<>();
+            Value keysIterator = value.getHashKeysIterator();
+            while (keysIterator.hasIteratorNextElement()) {
+                Value key = keysIterator.getIteratorNextElement();
+                Value val = value.getHashValueOrDefault(key, null);
+                String keyString = key.isString() ? key.asString() : String.valueOf(convertValueToJavaObject(key));
+                map.put(keyString, val != null ? convertValueToJavaObject(val) : null);
+            }
+            return map;
         } else if (value.hasMembers()) {
             // Convert to Java Map
             Map<String, Object> map = new HashMap<>();
