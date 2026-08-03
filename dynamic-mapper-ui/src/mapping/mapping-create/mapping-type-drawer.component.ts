@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, inject, Input, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, Input, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors } from '@angular/forms';
 import { BottomDrawerRef, BottomDrawerService, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Observable, Subject, map, shareReplay, takeUntil } from 'rxjs';
@@ -72,6 +72,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   @Input() direction: Direction;
 
   // Services
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly sharedService = inject(SharedService);
   private readonly extensionService = inject(ExtensionService);
@@ -138,6 +139,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       this.setupFormSubscriptions();
     } finally {
       this.isLoading = false;
+      this.cdr.detectChanges();
     }
   }
 

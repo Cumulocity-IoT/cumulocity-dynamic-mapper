@@ -348,6 +348,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.sourceTemplate = templates.sourceTemplate;
     this.targetTemplate = templates.targetTemplate;
     this.templatesInitialized = true;
+    this.cdr.detectChanges();
 
     // Snapshot initial state so we can distinguish connector-only changes from content changes
     this.initialMappingJson = JSON.stringify(this.mapping);

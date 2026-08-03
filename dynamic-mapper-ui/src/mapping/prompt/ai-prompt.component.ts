@@ -18,17 +18,20 @@
  * @authors Christof Strack
  */
 import {
+  ChangeDetectorRef,
   Component,
   inject,
   Input,
   OnInit,
+  AfterViewInit,
+  ViewChild,
   ViewEncapsulation
 } from '@angular/core';
 import { Mapping, Substitution, MappingType, SharedService, isSubstitutionsAsCode, TransformationType } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
-import { AiChatComponent, AiChatMessageComponent } from '@c8y/ngx-components/ai/ai-chat';
-import { AIMessage } from '@c8y/ngx-components/ai';
-import { AIAgentService, AgentUsage } from '../core/ai-agent.service';
+import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
+import { AIMessage, ClientAgentDefinition } from '@c8y/ngx-components/ai';
+import { toClientAgentDefinition } from '../core/ai-agent.service';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 import { ServiceConfiguration } from '../../configuration';
 import { base64ToBytes } from '../shared/util';
@@ -41,15 +44,17 @@ import { EditorMode } from '../shared/stepper.model';
   styleUrls: ['./ai-prompt.component.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports:[CoreModule, AiChatComponent, AiChatMessageComponent],
+  imports:[CoreModule, AgentChatComponent],
   host: { class: 'd-contents' }
 })
-export class AIPromptComponent implements OnInit {
+export class AIPromptComponent implements OnInit, AfterViewInit {
 
   private readonly alertService = inject(AlertService);
-  private readonly aiAgentService = inject(AIAgentService);
   private readonly sharedService = inject(SharedService);
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  @ViewChild(AgentChatComponent) agentChat?: AgentChatComponent;
 
   @Input() mapping: Mapping;
   @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
@@ -69,13 +74,15 @@ export class AIPromptComponent implements OnInit {
 
   hasIssue = false;
   isLoading = false;
-  isLoadingChat = false;
   newMessage = '';
-  /** Bound to [prompt] on c8y-ai-chat so the textarea stays empty during auto-send. */
-  chatInput = '';
-  testVars: string = '';
   serviceConfiguration: ServiceConfiguration;
   agentType: MappingType;
+  variables: Record<string, unknown> = {};
+  clientAgentDefinition?: ClientAgentDefinition;
+  assistantMessageDisplayConfig = {
+    showDefaultToolDetails: 'all' as const,
+    experimental_nonFinalStepTextDisplay: 'collapsible-thinking-block' as const
+  };
 
   chatConfig = {
     headline: 'AI Assistant',
@@ -84,7 +91,8 @@ export class AIPromptComponent implements OnInit {
     placeholder: 'Type your message...',
     sendButtonText: 'Send',
     cancelButtonText: 'Cancel',
-    disclaimerText: 'AI-generated responses can contain errors. Verify the details before use.'
+    disclaimerText: 'AI-generated responses can contain errors. Verify the details before use.',
+    showCumulativeUsage: true
   };
 
   /** Set during ngOnInit — true when the mapping already has code or substitutions */
@@ -95,12 +103,8 @@ export class AIPromptComponent implements OnInit {
   awaitingModeChoice = false;
   /** Cached mapping object (without substitutions) ready to send to AI */
   private mappingForAI: any = null;
-  /** Aborts the in-flight AI request when the user clicks Cancel while loading */
-  private abortController: AbortController | null = null;
-  /** Token usage for the most recently received assistant response, if reported by the backend */
-  lastUsage: AgentUsage | null = null;
-  /** Running total of token usage across the conversation */
-  cumulativeUsage: Required<AgentUsage> = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+  /** CREATE mode auto-sends its message from ngAfterViewInit, once #agentChat exists */
+  private pendingAutoSend = false;
 
   // Add getter to check if this is a code-based mapping
   get isCodeMapping(): boolean {
@@ -108,14 +112,12 @@ export class AIPromptComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
-    // console.log(this.mapping);
     this.agentType = this.mapping.mappingType;
     this.serviceConfiguration =
       await this.sharedService.getServiceConfiguration();
 
-    this.testVars = JSON.stringify(
-      this.aiAgent?.agent?.variables || {},
-    );
+    this.variables = this.aiAgent?.agent?.variables ?? {};
+    this.clientAgentDefinition = this.aiAgent ? toClientAgentDefinition(this.aiAgent) : undefined;
 
     this.mappingForAI = this.buildMappingForAI();
 
@@ -130,15 +132,26 @@ export class AIPromptComponent implements OnInit {
       return;
     }
 
-    // CREATE mode — always generate
+    // CREATE mode — always generate. The actual send happens in ngAfterViewInit,
+    // once #agentChat has been created (it doesn't exist yet during ngOnInit).
     this.prepareGenerateMessage();
-    await this.sendMessage();
+    this.pendingAutoSend = true;
+  }
+
+  ngAfterViewInit(): void {
+    if (this.pendingAutoSend) {
+      this.pendingAutoSend = false;
+      void this.sendMessage();
+    }
   }
 
   /** Called when the user picks "Review / Refine" in the choice screen */
   async chooseReview(): Promise<void> {
     this.awaitingModeChoice = false;
     this.isReviewMode = true;
+    // #agentChat doesn't exist until this flips the template's @else-if branch on —
+    // force it to render now so sendMessage() below can find it via @ViewChild.
+    this.cdr.detectChanges();
     this.prepareReviewMessage();
     await this.sendMessage();
   }
@@ -147,6 +160,7 @@ export class AIPromptComponent implements OnInit {
   async chooseGenerate(): Promise<void> {
     this.awaitingModeChoice = false;
     this.isReviewMode = false;
+    this.cdr.detectChanges();
     this.prepareGenerateMessage();
     await this.sendMessage();
   }
@@ -239,98 +253,38 @@ export class AIPromptComponent implements OnInit {
     return mappingCodeTemplateDecoded;
   }
 
-  async sendMessage() {
-    if (!this.aiAgent) {
+  async sendMessage(): Promise<void> {
+    if (!this.aiAgent || !this.newMessage) {
+      return;
+    }
+    if (!this.agentChat) {
+      console.error('AIPromptComponent.sendMessage: #agentChat is not available yet');
+      return;
+    }
+    await this.agentChat.sendMessage({ role: 'user', content: this.newMessage });
+    this.newMessage = '';
+  }
+
+  /** Called via (onMessageFinish) once the agent's response has fully streamed in. */
+  onMessageFinish(message: AIMessage): void {
+    if (message.role !== 'assistant') {
       return;
     }
 
-    if (this.newMessage) {
-      this.isLoadingChat = true;
-      if (this.aiAgent.agent.messages === undefined) {
-        this.aiAgent.agent.messages = [];
-      }
+    const content = message.content
+      .map(part => {
+        if (part.type === 'text') return part.text;
+        if (part.type === 'object') return part.jsonContent;
+        return '';
+      })
+      .filter(text => text.length > 0)
+      .join('\n\n');
 
-      this.aiAgent.agent.messages.push({
-        content: this.newMessage,
-        role: 'user',
-      });
-
-      let variables: Record<string, unknown>;
-      try {
-        variables = JSON.parse(this.testVars);
-        this.aiAgent.agent.variables = variables;
-      } catch (ex) {
-        this.alertService.danger('Invalid JSON in test variables');
-        this.isLoadingChat = false;
-        return;
-      }
-
-      this.abortController = new AbortController();
-
-      try {
-        const sdkMessages = this.toSdkMessages(this.aiAgent.agent.messages);
-        const { content, usage } = await this.aiAgentService.test(
-          this.aiAgent,
-          sdkMessages,
-          variables,
-          this.abortController
-        );
-
-        this.aiAgent.agent.messages.push({
-          content,
-          role: 'assistant',
-        });
-
-        this.applyUsage(usage);
-
-        if (this.isCodeMapping) {
-          this.checkIfResponseContainsJavaScript(content);
-        } else {
-          this.checkIfResponseContainsSubstitutions(content);
-        }
-      } catch (ex) {
-        if ((ex as { name?: string })?.name !== 'AbortError') {
-          this.alertService.addServerFailure(ex);
-        }
-      }
-      // After the new message is added I want to scroll to the end of the screen
-      // Clear the input field
-      this.newMessage = '';
-      this.isLoadingChat = false;
-      this.abortController = null;
+    if (this.isCodeMapping) {
+      this.checkIfResponseContainsJavaScript(content);
+    } else {
+      this.checkIfResponseContainsSubstitutions(content);
     }
-  }
-
-  /** Cancels the in-flight AI request, triggered by the c8y-ai-chat cancel button. */
-  cancelMessage(): void {
-    this.abortController?.abort();
-  }
-
-  private applyUsage(usage?: AgentUsage): void {
-    if (!usage) {
-      return;
-    }
-    this.lastUsage = usage;
-    this.cumulativeUsage = {
-      inputTokens: this.cumulativeUsage.inputTokens + (usage.inputTokens ?? 0),
-      outputTokens: this.cumulativeUsage.outputTokens + (usage.outputTokens ?? 0),
-      totalTokens: this.cumulativeUsage.totalTokens + (usage.totalTokens ?? 0)
-    };
-  }
-
-  /**
-   * Converts the locally-tracked {role, content} history into the AIMessage shape the AI SDK expects.
-   * `messages` is typed loosely because `this.aiAgent.agent.messages` carries the vendor `ai` package's
-   * `CoreMessage[]` type (whose `content` can be a structured part array), even though this component
-   * only ever pushes plain `{content: string, role: string}` entries onto it at runtime.
-   */
-  private toSdkMessages(messages: { content: unknown; role: string }[]): AIMessage[] {
-    return messages.map(m => {
-      const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
-      return m.role === 'assistant'
-        ? { role: 'assistant', content: [{ type: 'text', text: content }] }
-        : { role: m.role as 'user' | 'system', content };
-    });
   }
 
   /**
@@ -418,87 +372,6 @@ export class AIPromptComponent implements OnInit {
       console.error('Error parsing substitutions from response:', error);
       this.alertService.danger('Failed to parse substitutions from AI response');
     }
-  }
-
-  getCompatibleMessages() {
-    if (!this.aiAgent?.agent?.messages) {
-      return [];
-    }
-
-    // Filter out messages with incompatible roles
-    return this.aiAgent.agent.messages.filter(message =>
-      message.role === 'user' ||
-      message.role === 'assistant' ||
-      message.role === 'system'
-    );
-  }
-
-  getMessageContent(message: any): string {
-    if (!message?.content) {
-      return '';
-    }
-
-    // If it's already a string, return it
-    if (typeof message.content === 'string') {
-      return message.content;
-    }
-
-    // If it's an array of parts, extract text content
-    if (Array.isArray(message.content)) {
-      return message.content
-        .map(part => {
-          if (typeof part === 'string') {
-            return part;
-          }
-          if (part && typeof part === 'object' && 'text' in part) {
-            return part.text;
-          }
-          if (part && typeof part === 'object' && 'content' in part) {
-            return part.content;
-          }
-          return '';
-        })
-        .filter(text => text.length > 0)
-        .join(' ');
-    }
-
-    // If it's an object with text property
-    if (typeof message.content === 'object' && 'text' in message.content) {
-      return message.content.text;
-    }
-
-    // Fallback: try to stringify
-    try {
-      return JSON.stringify(message.content);
-    } catch {
-      return '[Unable to display content]';
-    }
-  }
-
-  /**
-   * Handles incoming messages from the c8y-ai-chat component
-   */
-  handleMessage(event: any) {
-    this.newMessage = event.content;
-    this.sendMessage();
-  }
-
-  /**
-   * Formats a message for the c8y-ai-chat-message component
-   */
-  formatMessage(message: any): any {
-    let content = this.getMessageContent(message);
-
-    // For assistant messages with object type, wrap in JSON code block
-    if (this.aiAgent?.type === 'object' && message.role === 'assistant') {
-      content = '```json\n' + content + '\n```';
-    }
-
-    return {
-      role: message.role,
-      content: content,
-      timestamp: message.timestamp || new Date().toISOString()
-    };
   }
 
 }

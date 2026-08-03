@@ -43,25 +43,17 @@
       </button>
     </div>
   </div>
-  } @else if (aiAgent) {
-  <c8y-ai-chat [isLoading]="isLoadingChat" [disabled]="false" [prompt]="chatInput"
-    (onMessage)="handleMessage($event)" (onCancel)="cancelMessage()" [config]="chatConfig">
-    @for (message of getCompatibleMessages(); track $index) {
-    <c8y-ai-chat-message [role]="$any(message.role)" [message]="formatMessage(message)">
-      <div [innerHTML]="getMessageContent(message) | markdownToHtml | async"></div>
-    </c8y-ai-chat-message>
-    }
-  </c8y-ai-chat>
+  } @else if (aiAgent && clientAgentDefinition) {
+  <c8y-agent-chat
+    [agent]="clientAgentDefinition"
+    [variables]="variables"
+    [skipHealthCheck]="true"
+    [chatConfig]="chatConfig"
+    [assistantMessageDisplayConfig]="assistantMessageDisplayConfig"
+    (onMessageFinish)="onMessageFinish($event)">
+  </c8y-agent-chat>
   }
 </div>
-
-@if (cumulativeUsage.totalTokens > 0) {
-<div class="text-muted text-center text-10 p-t-4 p-b-4" data-cy="dm-ai-prompt-usage">
-  <span translate>Tokens used</span>: {{ lastUsage?.totalTokens ?? 0 }} last response
-  ({{ lastUsage?.inputTokens ?? 0 }} in / {{ lastUsage?.outputTokens ?? 0 }} out)
-  &middot; {{ cumulativeUsage.totalTokens }} total
-</div>
-}
 
 <div class="card-footer separator text-center flex-no-shrink">
   <div class="form-group">

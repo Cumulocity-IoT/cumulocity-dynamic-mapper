@@ -8,11 +8,11 @@ export default {
     license,
     version,
     name: 'Dynamic Mapper',
-    contextPath: 'c8y-pkg-dynamic-mapper',
+    contextPath: 'c8y-pkg-dynamic-mapper-dev',
     icon: {
       class: 'c8y-icon-dynamic-mapper'
     },
-    key: 'c8y-pkg-dynamic-mapper-key',
+    key: 'c8y-pkg-dynamic-mapper-dev-key',
     contentSecurityPolicy:
       "base-uri 'none'; default-src 'self' 'unsafe-inline' http: https: ws: wss:; connect-src 'self' http: https: ws: wss:;  script-src 'self' *.bugherd.com *.twitter.com *.twimg.com *.aptrinsic.com 'unsafe-inline' 'unsafe-eval' data:; style-src * 'unsafe-inline' blob:; img-src * data: blob:; font-src * data:; frame-src *; worker-src 'self' blob:;",
     dynamicOptionsUrl: '/apps/public/public-options/options.json',
@@ -36,7 +36,7 @@ export default {
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Subscription_Outbound_Resync.png',
         to: 'image/Dynamic_Mapper_Mapping_Subscription_Outbound_Resync.png'
-      }
+      },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Table_Add_Modal.png',
         to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal.png'
