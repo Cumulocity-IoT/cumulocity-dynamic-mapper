@@ -41,6 +41,54 @@
   margin-bottom: 24px;
 }
 
+/* Markdown-rendered pages (doc-page.component.html): headings/content aren't wrapped
+   in .card-header/.card-block divs, so give the container the same spacing directly. */
+.doc-content {
+  max-width: 1200px;
+  padding-right: 24px;
+}
+
+.doc-content h2,
+.doc-content h3 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  scroll-margin-top: 120px;
+}
+
+.doc-content h4,
+.doc-content h5,
+.doc-content h6 {
+  scroll-margin-top: 120px;
+  margin-top: 16px;
+}
+
+.doc-content h5 {
+  font-size: 16px;
+  color: #444;
+}
+
+.doc-content h6 {
+  font-size: 14px;
+  color: #555;
+}
+
+.doc-content p,
+.doc-content ul,
+.doc-content ol {
+  font-size: 16px;
+  padding-bottom: 8px;
+}
+
+.doc-content img {
+  width: 80%;
+  margin-left: 48px;
+  margin-bottom: 16px;
+}
+
+.doc-content .image-description {
+  margin-left: 48px;
+}
+
 /* ============================================================================ */
 /* TYPOGRAPHY                                                                   */
 /* ============================================================================ */
