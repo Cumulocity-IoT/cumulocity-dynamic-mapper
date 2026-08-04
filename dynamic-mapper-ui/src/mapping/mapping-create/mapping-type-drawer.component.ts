@@ -174,7 +174,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
           // Enrich with full entry details
           const ext = this.extensions.get(extName);
           if (ext?.extensionEntries) {
-            const entry = Object.values(ext.extensionEntries as Map<string, ExtensionEntry>)
+            const entry = Object.values(ext.extensionEntries as Record<string, ExtensionEntry>)
               .find(e => e.eventName === evtName);
             if (entry) {
               Object.assign(extension, {
@@ -409,7 +409,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       this.extensionEvents$.next([]);
       return;
     }
-    const allEntries = Object.values(extension.extensionEntries as Map<string, ExtensionEntry>);
+    const allEntries = Object.values(extension.extensionEntries as Record<string, ExtensionEntry>);
     const targetType = this.direction === Direction.INBOUND
       ? ExtensionType.EXTENSION_INBOUND
       : ExtensionType.EXTENSION_OUTBOUND;
@@ -429,7 +429,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     }
     const extension = this.extensions.get(extensionName);
     if (!extension?.extensionEntries) return;
-    const entry = Object.values(extension.extensionEntries as Map<string, ExtensionEntry>)
+    const entry = Object.values(extension.extensionEntries as Record<string, ExtensionEntry>)
       .find(e => e.eventName === eventName);
     this.hasExtensionParameter = !!entry?.parameter;
   }

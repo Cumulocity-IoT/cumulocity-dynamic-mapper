@@ -551,16 +551,6 @@ describe('MappingStepperComponent', () => {
       expect(mockAlertService.remove).toHaveBeenCalledWith(infoAlert);
       expect(mockAlertService.remove).toHaveBeenCalledWith(warnAlert);
     });
-
-    it('clears info/warning alerts on clearAlerts', () => {
-      const infoAlert = { type: 'info', text: 'info' } as any;
-      Object.defineProperty(mockAlertService, 'state', {
-        get: () => [infoAlert],
-        configurable: true
-      });
-      component.clearAlerts();
-      expect(mockAlertService.remove).toHaveBeenCalledWith(infoAlert);
-    });
   });
 
   describe('Deployment map entry changes', () => {

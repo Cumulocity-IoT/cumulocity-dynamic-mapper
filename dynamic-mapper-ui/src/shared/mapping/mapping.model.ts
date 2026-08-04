@@ -644,7 +644,8 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
 export interface Extension {
   id?: string;
   name: string;
-  extensionEntries: Map<string, ExtensionEntry>;
+  // Deserialized from JSON as a plain object, not a real ES Map — do not treat as one.
+  extensionEntries: Record<string, ExtensionEntry>;
   loaded: boolean;
   external: boolean;
 }
