@@ -21,29 +21,38 @@
 import { Injectable, inject } from '@angular/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { filter, take } from 'rxjs/operators';
-import { Substitution, Mapping, StepperConfiguration, RepairStrategy } from '../../shared';
+import { Substitution, Mapping, StepperConfiguration } from '../../shared';
+import { SubstitutionModel } from '../shared/stepper.model';
 import { EditSubstitutionComponent } from '../substitution/edit/edit-substitution-modal.component';
 
 @Injectable()
 export class SubstitutionManagementService {
   private bsModalService = inject(BsModalService);
 
-  isSubstitutionValid(substitutionModel: any): boolean {
+  isSubstitutionValid(substitutionModel: SubstitutionModel): boolean {
     const { sourceExpression, targetExpression, pathSource, pathTarget } = substitutionModel;
-    return sourceExpression?.valid && 
-           targetExpression?.valid && 
-           pathSource !== '' && 
+    return sourceExpression?.valid &&
+           targetExpression?.valid &&
+           pathSource !== '' &&
            pathTarget !== '';
   }
 
   addSubstitution(
-    substitutionModel: any,
+    substitutionModel: SubstitutionModel,
     mapping: Mapping,
     stepperConfiguration: StepperConfiguration,
     expertMode: boolean,
     onSuccess: () => void
   ): void {
-    const substitution = { ...substitutionModel };
+    // Strip to a plain Substitution: substitutionModel also carries transient UI-only state
+    // (stepperConfiguration, sourceExpression/targetExpression, path*IsExpression) that must not
+    // leak into the persisted mapping.
+    const substitution: Substitution = {
+      pathSource: substitutionModel.pathSource,
+      pathTarget: substitutionModel.pathTarget,
+      repairStrategy: substitutionModel.repairStrategy,
+      expandArray: substitutionModel.expandArray
+    };
     const duplicateIndex = mapping.substitutions.findIndex(
       sub => sub.pathTarget === substitution.pathTarget
     );
@@ -85,7 +94,7 @@ export class SubstitutionManagementService {
 
   updateSubstitution(
     selectedSubstitution: number,
-    substitutionModel: any,
+    substitutionModel: SubstitutionModel,
     mapping: Mapping,
     stepperConfiguration: StepperConfiguration,
     onSuccess: () => void

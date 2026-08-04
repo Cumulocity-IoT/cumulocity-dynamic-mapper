@@ -23,7 +23,7 @@ import {
   RepairStrategy,
   ALERT_INFO_TIMEOUT
 } from '../../shared';
-import { EditorMode } from '../shared/stepper.model';
+import { EditorMode, SubstitutionModel } from '../shared/stepper.model';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
 import { AIPromptComponent } from '../prompt/ai-prompt.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
@@ -66,9 +66,6 @@ export class MappingSubstitutionStepComponent implements OnInit {
   @ViewChild('editorTargetStepSubstitution', { static: false })
   editorTargetStepSubstitution!: JsonEditorComponent;
 
-  @ViewChild(SubstitutionRendererComponent, { static: false })
-  substitutionChild!: SubstitutionRendererComponent;
-
   private alertService = inject(AlertService);
   private bottomDrawerService = inject(BottomDrawerService);
   private stepperService = inject(MappingStepperService);
@@ -94,7 +91,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
   substitutionFormly: FormGroup = new FormGroup({});
   substitutionFormlyFieldsSource: FormlyFieldConfig[];
   substitutionFormlyFieldsTarget: FormlyFieldConfig[];
-  substitutionModel: any = {};
+  substitutionModel: SubstitutionModel = {};
   selectedSubstitution: number = -1;
   expertMode: boolean = false;
   targetTemplateHelp = 'The template contains the dummy field <code>_TOPIC_LEVEL_</code>...';
@@ -347,6 +344,13 @@ export class MappingSubstitutionStepComponent implements OnInit {
       this.mapping,
       this.refreshSubstitutionValidity
     );
+    // Deleting shifts every later index down by one, so a stale selectedSubstitution would
+    // otherwise point at the wrong row (or go out of range) for "Update substitution".
+    if (this.selectedSubstitution === selected) {
+      this.selectedSubstitution = -1;
+    } else if (this.selectedSubstitution > selected) {
+      this.selectedSubstitution--;
+    }
   }
 
   private readonly refreshSubstitutionValidity = (): void => {
@@ -400,6 +404,7 @@ export class MappingSubstitutionStepComponent implements OnInit {
         if (Array.isArray(resultOf) && resultOf.length > 0) {
           this.alertService.success(`Generated ${resultOf.length} substitutions.`);
           this.mapping.substitutions.splice(0);
+          this.selectedSubstitution = -1;
           resultOf.forEach(sub => {
             this.substitutionService.addSubstitution(
               sub,

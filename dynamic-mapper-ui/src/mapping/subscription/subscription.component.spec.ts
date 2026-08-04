@@ -18,16 +18,16 @@
  * @authors Christof Strack
  */
 
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AlertService, DataGridComponent } from '@c8y/ngx-components';
-import { of } from 'rxjs';
+import { AlertService, DataGridService } from '@c8y/ngx-components';
 import { MappingSubscriptionComponent } from './subscription.component';
 import { MappingService } from '../core/mapping.service';
 import { SubscriptionService } from '../core/subscription.service';
 import { SharedService } from '../../shared';
 import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
-import { Direction, Feature } from '../../shared';
+import { Feature } from '../../shared';
 import { Device, NotificationSubscriptionResponse } from '../shared/mapping.model';
 import { IIdentified } from '@c8y/client';
 
@@ -68,8 +68,7 @@ describe('MappingSubscriptionComponent', () => {
   beforeEach(async () => {
     // Create spy objects
     mockMappingService = jasmine.createSpyObj('MappingService', [
-      'refreshMappings',
-      'stopChangedMappingEvents'
+      'refreshMappings'
     ]);
 
     mockSubscriptionService = jasmine.createSpyObj('SubscriptionService', [
@@ -91,7 +90,8 @@ describe('MappingSubscriptionComponent', () => {
 
     mockAlertService = jasmine.createSpyObj('AlertService', [
       'success',
-      'danger'
+      'danger',
+      'add'
     ]);
 
     mockConfirmationService = jasmine.createSpyObj('ConfirmationModalService', [
@@ -115,6 +115,13 @@ describe('MappingSubscriptionComponent', () => {
     mockSharedService.runOperation.and.returnValue(
       Promise.resolve({ status: 200 } as any)
     );
+
+    // Strip CoreModule/child-component imports and the real template: this spec exercises the
+    // component class directly and must not need the full Cumulocity shell context (e.g.
+    // ApplicationService) that CoreModule and the child selector components pull in transitively.
+    TestBed.overrideComponent(MappingSubscriptionComponent, {
+      set: { imports: [], providers: [{ provide: DataGridService, useValue: {} }], schemas: [NO_ERRORS_SCHEMA], template: '<div></div>' }
+    });
 
     await TestBed.configureTestingModule({
       imports: [MappingSubscriptionComponent],
@@ -162,10 +169,11 @@ describe('MappingSubscriptionComponent', () => {
       expect(component.path).toBe('dynamic');
     });
 
-    it('should load all subscriptions in parallel', async () => {
+    it('should load the group/type enrichment context on init', async () => {
       await component.ngOnInit();
 
-      expect(mockSubscriptionService.getSubscriptionDevice).toHaveBeenCalled();
+      // The device list itself is loaded page-by-page by the grid via onDataSourceModifier(),
+      // not eagerly here.
       expect(mockSubscriptionService.getSubscriptionByDeviceGroup).toHaveBeenCalled();
       expect(mockSubscriptionService.getSubscriptionByDeviceType).toHaveBeenCalled();
     });
@@ -185,6 +193,9 @@ describe('MappingSubscriptionComponent', () => {
       };
 
       TestBed.resetTestingModule();
+      TestBed.overrideComponent(MappingSubscriptionComponent, {
+        set: { imports: [], providers: [{ provide: DataGridService, useValue: {} }], schemas: [NO_ERRORS_SCHEMA], template: '<div></div>' }
+      });
       await TestBed.configureTestingModule({
         imports: [MappingSubscriptionComponent],
         providers: [
@@ -220,12 +231,13 @@ describe('MappingSubscriptionComponent', () => {
       await component.ngOnInit();
     });
 
-    it('should load device subscriptions', async () => {
-      await component.loadSubscriptionDevice();
+    it('should load the full subscribed-device list for the manage-subscription drawers', async () => {
+      await component['loadAllSubscribedDevicesForDrawer']();
 
       expect(mockSubscriptionService.getSubscriptionDevice).toHaveBeenCalled();
-      expect(component.subscriptionDevices).toEqual(mockSubscriptionResponse);
-      expect(component.subscribedDevices).toEqual(mockDevices);
+      expect(component.subscribedDevices).toEqual(
+        mockDevices.map(d => ({ ...d, groupNames: '', subscriptionSource: 'Static' }))
+      );
     });
 
     it('should load device group subscriptions', async () => {
@@ -245,7 +257,7 @@ describe('MappingSubscriptionComponent', () => {
 
     it('should use static subscription path', async () => {
       component.path = 'static';
-      await component.loadSubscriptionDevice();
+      await component['loadAllSubscribedDevicesForDrawer']();
 
       expect(mockSubscriptionService.getSubscriptionDevice).toHaveBeenCalledWith(
         mockSubscriptionService.STATIC_DEVICE_SUBSCRIPTION
@@ -254,7 +266,7 @@ describe('MappingSubscriptionComponent', () => {
 
     it('should use dynamic subscription path', async () => {
       component.path = 'dynamic';
-      await component.loadSubscriptionDevice();
+      await component['loadAllSubscribedDevicesForDrawer']();
 
       expect(mockSubscriptionService.getSubscriptionDevice).toHaveBeenCalledWith(
         mockSubscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION
@@ -319,7 +331,7 @@ describe('MappingSubscriptionComponent', () => {
       };
 
       mockConfirmationService.confirmDeletion.and.returnValue(Promise.resolve(true));
-      component.subscriptionGrid = { setAllItemsSelected: jasmine.createSpy() } as any;
+      component.subscriptionGrid = { setAllItemsSelected: jasmine.createSpy(), reload: jasmine.createSpy() } as any;
 
       await component['deleteSubscriptionBulkWithConfirmation'](['1', '2']);
 
@@ -341,7 +353,7 @@ describe('MappingSubscriptionComponent', () => {
       await component.onCommitSubscriptionDevice(mockDevices as IIdentified[]);
 
       expect(mockSubscriptionService.updateSubscriptionDevice).toHaveBeenCalled();
-      expect(mockAlertService.success).toHaveBeenCalled();
+      expect(mockAlertService.add).toHaveBeenCalled();
       expect(component.showConfigSubscription1).toBe(false);
     });
 
@@ -349,7 +361,7 @@ describe('MappingSubscriptionComponent', () => {
       await component.onCommitSubscriptionByDeviceGroup(mockDevices as IIdentified[]);
 
       expect(mockSubscriptionService.updateSubscriptionByDeviceGroup).toHaveBeenCalled();
-      expect(mockAlertService.success).toHaveBeenCalled();
+      expect(mockAlertService.add).toHaveBeenCalled();
       expect(component.showConfigSubscription3).toBe(false);
     });
 
@@ -358,7 +370,7 @@ describe('MappingSubscriptionComponent', () => {
       await component.onCommitSubscriptionByDeviceType(types);
 
       expect(mockSubscriptionService.updateSubscriptionByDeviceType).toHaveBeenCalled();
-      expect(mockAlertService.success).toHaveBeenCalled();
+      expect(mockAlertService.add).toHaveBeenCalled();
       expect(component.showConfigSubscription4).toBe(false);
     });
 
@@ -375,17 +387,17 @@ describe('MappingSubscriptionComponent', () => {
   });
 
   describe('Toggle Visibility', () => {
-    it('should toggle subscription config 1', () => {
+    it('should toggle subscription config 1', async () => {
       expect(component.showConfigSubscription1).toBe(false);
-      component.onDefineSubscription1();
+      await component.onDefineSubscription1();
       expect(component.showConfigSubscription1).toBe(true);
-      component.onDefineSubscription1();
+      await component.onDefineSubscription1();
       expect(component.showConfigSubscription1).toBe(false);
     });
 
-    it('should toggle subscription config 2', () => {
+    it('should toggle subscription config 2', async () => {
       expect(component.showConfigSubscription2).toBe(false);
-      component.onDefineSubscription2();
+      await component.onDefineSubscription2();
       expect(component.showConfigSubscription2).toBe(true);
     });
 
@@ -412,7 +424,6 @@ describe('MappingSubscriptionComponent', () => {
 
       expect(mockSharedService.runOperation).toHaveBeenCalled();
       expect(mockAlertService.success).toHaveBeenCalled();
-      expect(component.isConnectionToMQTTEstablished).toBe(true);
     });
 
     it('should handle reload failure', async () => {
@@ -426,16 +437,4 @@ describe('MappingSubscriptionComponent', () => {
     });
   });
 
-  describe('Component Cleanup', () => {
-    it('should cleanup on destroy', () => {
-      spyOn(component['destroy$'], 'next');
-      spyOn(component['destroy$'], 'complete');
-
-      component.ngOnDestroy();
-
-      expect(component['destroy$'].next).toHaveBeenCalled();
-      expect(component['destroy$'].complete).toHaveBeenCalled();
-      expect(mockMappingService.stopChangedMappingEvents).toHaveBeenCalled();
-    });
-  });
 });

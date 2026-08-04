@@ -19,7 +19,6 @@
  */
 import {
   Component,
-  ElementRef,
   EventEmitter,
   Input,
   OnDestroy,
@@ -31,8 +30,7 @@ import {
   ConfirmationModalComponent,
   definesDeviceIdentifier,
   Mapping,
-  SharedModule,
-  Substitution
+  SharedModule
 } from '../../shared';
 import { EditorMode } from '../shared/stepper.model';
 import { CoreModule } from '@c8y/ngx-components';
@@ -63,16 +61,12 @@ export class SubstitutionRendererComponent implements OnDestroy {
   @Output() deleteSub = new EventEmitter<number>();
   @Output() editSub = new EventEmitter<number>();
 
-  constructor(
-    private elementRef: ElementRef,
-    private bsModalService: BsModalService
-  ) { }
+  constructor(private bsModalService: BsModalService) { }
 
   readonly id = Math.floor(Math.random() * 1000000);
   readonly definesDeviceIdentifier = definesDeviceIdentifier;
   readonly EditorMode = EditorMode;
   readonly substitutionTemplateHelp = 'Substitutions defining the device identifier are marked with an "*". Before adding a substitution target and source property in templates have to be selected.';
-  substitutions: Substitution[] = [];
 
   private destroy$ = new Subject<void>();
 
@@ -84,17 +78,6 @@ export class SubstitutionRendererComponent implements OnDestroy {
   onSubstitutionSelect(index: number): void {
     this.settings.selectedSubstitutionIndex = index;
     this.selectSub.emit(index);
-  }
-
-  scrollToSubstitution(i: number): void {
-    let ix = i;
-    ix++;
-    if (!ix || ix < 0 || ix >= this.substitutions.length) {
-      ix = 0;
-    }
-    this.elementRef.nativeElement
-      .querySelector(`#sub-${this.id}-${ix}`)
-      .scrollIntoView();
   }
 
   onSubstitutionEdit(index: number): void {

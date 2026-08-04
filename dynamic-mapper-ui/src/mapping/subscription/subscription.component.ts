@@ -20,7 +20,6 @@
 import {
   Component,
   inject,
-  OnDestroy,
   OnInit,
   ViewChild,
   ViewEncapsulation
@@ -57,7 +56,6 @@ import {
 
 import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
-import { Subject } from 'rxjs';
 import { SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { Device, NotificationSubscriptionResponse } from '../shared/mapping.model';
@@ -82,7 +80,7 @@ import { ConfirmationModalService } from '../../shared/service/confirmation-moda
     DataGridService]
 
 })
-export class MappingSubscriptionComponent implements OnInit, OnDestroy {
+export class MappingSubscriptionComponent implements OnInit {
   @ViewChild('subscriptionGrid') subscriptionGrid!: DataGridComponent;
 
   constructor() {
@@ -103,8 +101,6 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
   showConfigSubscription3 = false;
   showConfigSubscription4 = false;
   showConfigSubscriptionResync = false;
-
-  isConnectionToMQTTEstablished = false;
 
   subscriptionDevices?: NotificationSubscriptionResponse;
   subscriptionDeviceGroups?: NotificationSubscriptionResponse;
@@ -169,8 +165,6 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     }
   ];
 
-  private readonly destroy$ = new Subject<void>();
-
   readonly pagination: Pagination = {
     pageSize: 30,
     currentPage: 1
@@ -217,6 +211,13 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** The notification-subscription id to operate against for the current route path. */
+  private getDeviceSubscriptionKind(): string {
+    return this.path === 'dynamic'
+      ? this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION
+      : this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION;
+  }
+
   /**
    * Loads data one page at a time when the grid requests it (initial load and each "load more").
    * Only the requested page of devices is fetched from the backend; paging metadata drives whether
@@ -228,9 +229,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
       await this.contextReady;
     }
 
-    const subscription = this.path === 'dynamic'
-      ? this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION
-      : this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION;
+    const subscription = this.getDeviceSubscriptionKind();
     const currentPage = mod.pagination?.currentPage ?? 1;
     const pageSize = mod.pagination?.pageSize ?? this.pagination.pageSize;
     const searchText = mod.searchText?.trim() || undefined;
@@ -314,9 +313,7 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
    * the complete desired set, so they must not operate on a single grid page.
    */
   private async loadAllSubscribedDevicesForDrawer(): Promise<void> {
-    const subscription = this.path === 'dynamic'
-      ? this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION
-      : this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION;
+    const subscription = this.getDeviceSubscriptionKind();
     const response = await this.subscriptionService.getSubscriptionDevice(subscription);
     this.subscribedDevices = this.enrichDevices(response?.devices ?? []);
   }
@@ -363,16 +360,18 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     this.subscriptionGrid?.reload();
   }
 
-  async deleteSubscription(device: IIdentified): Promise<void> {
-    // console.log('Delete device', device);
+  async deleteSubscription(device: IIdentified, options?: { reload?: boolean }): Promise<void> {
+    const reload = options?.reload ?? true;
     try {
-      const subscription = this.path === "dynamic" ? this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION : this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION;
+      const subscription = this.getDeviceSubscriptionKind();
 
       await this.subscriptionService.deleteSubscriptionDevice(device, subscription);
       this.alertService.success(
         gettext('Subscription for this device deleted successfully')
       );
-      this.subscriptionGrid?.reload();
+      if (reload) {
+        this.subscriptionGrid?.reload();
+      }
     } catch (error) {
       this.alertService.danger(
         gettext('Failed to delete subscription:') + error
@@ -390,35 +389,40 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
         continueDelete = await this.deleteSubscriptionWithConfirmation(
           device2Delete,
           true,
-          true
+          true,
+          false
         );
       } else if (continueDelete) {
-        this.deleteSubscription(device2Delete);
+        // Awaited so deletes happen in sequence: N concurrent, unordered deletes would otherwise
+        // race with the grid refresh/selection-clear below, and any error alert for delete #2..N
+        // could surface after the bulk operation already looks finished.
+        await this.deleteSubscription(device2Delete, { reload: false });
       }
     }
-    this.isConnectionToMQTTEstablished = true;
     this.mappingService.refreshMappings(Direction.OUTBOUND);
-    this.subscriptionGrid.setAllItemsSelected(false);
+    this.subscriptionGrid?.setAllItemsSelected(false);
+    this.subscriptionGrid?.reload();
   }
 
   private async deleteSubscriptionWithConfirmation(
     device2Delete: IIdentified,
     confirmation: boolean = true,
-    multiple: boolean = false
+    multiple: boolean = false,
+    reload: boolean = true
   ): Promise<boolean> {
     let result = false;
 
     if (confirmation) {
       result = await this.confirmationService.confirmDeletion('subscription', multiple);
       if (result) {
-        await this.deleteSubscription(device2Delete);
+        await this.deleteSubscription(device2Delete, { reload });
       }
     } else {
-      await this.deleteSubscription(device2Delete);
+      await this.deleteSubscription(device2Delete, { reload });
       result = true;
     }
 
-    this.subscriptionGrid.setAllItemsSelected(false);
+    this.subscriptionGrid?.setAllItemsSelected(false);
     return result;
   }
 
@@ -515,17 +519,10 @@ export class MappingSubscriptionComponent implements OnInit, OnDestroy {
     const response2 = await this.sharedService.runOperation(
       { operation: Operation.RELOAD_MAPPINGS }
     );
-    // console.log('Activate mapping response:', response2);
     if (response2.status < 300) {
       this.alertService.success(gettext('Mappings reloaded'));
-      this.isConnectionToMQTTEstablished = true;
     } else {
       this.alertService.danger(gettext('Failed to activate mappings'));
     }
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 }

@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { Component, Input, OnDestroy, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule } from '@angular/forms';
 import { CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
 import {
@@ -35,7 +35,7 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
 @Component({
   selector: 'd11r-edit-substitution-modal',
   templateUrl: './edit-substitution-modal.component.html',
-  imports:[CoreModule, SharedModule, PopoverModule],
+  imports:[CoreModule, SharedModule, PopoverModule, FormsModule],
   standalone: true
 })
 export class EditSubstitutionComponent implements OnInit, OnDestroy {
@@ -51,7 +51,7 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   closeSubject: Subject<Substitution> = new Subject();
   labels: ModalLabels;
   override: boolean = false;
-  repairStrategyOptions: any[];
+  repairStrategyOptions: { label: string; value: string; disabled: boolean }[];
   substitutionText: string;
   editedSubstitution: Substitution;
   disabled$: BehaviorSubject<boolean> = new BehaviorSubject(false);
@@ -68,18 +68,16 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
     this.createForm();
 
     this.editedSubstitution = this.substitution;
+    const isReadOnly = this.stepperConfiguration.editorMode == EditorMode.READ_ONLY;
     this.repairStrategyOptions = Object.keys(RepairStrategy)
       .filter((key) => key != 'IGNORE')
       .map((key) => {
+        const isArrayOnlyStrategy = key == 'USE_FIRST_VALUE_OF_ARRAY' || key == 'USE_LAST_VALUE_OF_ARRAY';
+        const requiresArrayButNotExpanding = isArrayOnlyStrategy && !this.substitution.expandArray;
         return {
           label: key,
           value: key,
-          disabled:
-            (!this.substitution.expandArray &&
-              key != 'DEFAULT' &&
-              (key == 'USE_FIRST_VALUE_OF_ARRAY' ||
-                key == 'USE_LAST_VALUE_OF_ARRAY')) ||
-            this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
+          disabled: isReadOnly || requiresArrayButNotExpanding
         };
       });
 
@@ -108,7 +106,7 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
       pathTarget: [{ value: '', disabled: true }],
       substitution: [{ value: '', disabled: true }],
       expandArray: [{ value: false, disabled: this.isExpandToArrayDisabled() }],
-      repairStrategy: ['']
+      repairStrategy: [{ value: '', disabled: this.isRepairStrategyDisabled() }]
     });
   }
 
@@ -117,12 +115,17 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   }
 
   onSave() {
-    if (this.substitutionForm.valid) {
-      const formValue = this.substitutionForm.value;
-      // Update editedSubstitution with form values
+    // A duplicate substitution may only be saved once the user has explicitly opted in via the
+    // "Overwrite" toggle — disabled$ tracks that gate (see onOverrideChanged()).
+    if (this.substitutionForm.valid && !this.disabled$.value) {
+      // pathSource/pathTarget/substitution are read-only display fields, not editable here —
+      // only expandArray/repairStrategy are real, user-editable Substitution properties. Read via
+      // getRawValue() since repairStrategy may be a disabled control (see isRepairStrategyDisabled).
+      const { expandArray, repairStrategy } = this.substitutionForm.getRawValue();
       this.editedSubstitution = {
         ...this.editedSubstitution,
-        ...formValue
+        expandArray,
+        repairStrategy
       };
       this.closeSubject.next(this.editedSubstitution);
     }
@@ -143,7 +146,7 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   isRepairStrategyDisabled() {
     const r =
       this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
-      this.stepperConfiguration.direction == Direction.OUTBOUND;
+      this.mapping.direction == Direction.OUTBOUND;
     return r;
   }
 

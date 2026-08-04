@@ -49,15 +49,13 @@ import {
   getSchema,
   JsonEditorComponent,
   Mapping,
-  RepairStrategy,
   SAMPLE_TEMPLATES_C8Y,
   SharedService,
   StepperConfiguration,
   Feature,
   isSubstitutionsAsCode,
   TransformationType,
-  MappingTypeLabels,
-  Substitution
+  MappingTypeLabels
 } from '../../shared';
 import { createCompletionProviderFlowFunction, EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
 import {
@@ -88,17 +86,6 @@ import { MappingTemplateStepComponent } from '../step-template/mapping-template-
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { StepperViewModel, StepperViewModelFactory } from './stepper-view.model';
 import * as jsYaml from 'js-yaml';
-
-/**
- * Extended substitution model used in the stepper with UI-specific properties
- */
-interface SubstitutionModel extends Partial<Substitution> {
-  stepperConfiguration?: StepperConfiguration;
-  pathSourceIsExpression?: boolean;
-  pathTargetIsExpression?: boolean;
-  targetExpression?: { result: string; resultType: string; valid: boolean };
-  sourceExpression?: { result: string; resultType: string; valid: boolean };
-}
 
 const STEP_LABEL_TEST_MAPPING = 'Test mapping';
 const STEP_LABEL_GENERAL_SETTINGS = 'General settings';
@@ -156,7 +143,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   templateForm!: FormGroup;
   filterFormly = new FormGroup({});
   filterFormlyFields!: FormlyFieldConfig[];
-  substitutionModel: SubstitutionModel = {};
   propertyFormly = new FormGroup({});
   isGenerateSubstitutionOpen = false;
 
@@ -262,18 +248,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       renderWhitespace: 'none',
       tabSize: 4,
       readOnly: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
-    };
-
-    this.substitutionModel = {
-      stepperConfiguration: this.stepperConfiguration,
-      pathSource: '',
-      pathTarget: '',
-      pathSourceIsExpression: false,
-      pathTargetIsExpression: false,
-      repairStrategy: RepairStrategy.DEFAULT,
-      expandArray: false,
-      targetExpression: { result: '', resultType: 'empty', valid: false },
-      sourceExpression: { result: '', resultType: 'empty', valid: false }
     };
 
     this.setTemplateForm();

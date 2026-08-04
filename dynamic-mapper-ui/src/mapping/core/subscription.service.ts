@@ -29,8 +29,7 @@ import {
 import {
   NotificationSubscriptionRequest,
   NotificationSubscriptionResponse,
-  SubscriptionStatus,
-  Device
+  SubscriptionStatus
 } from '../shared/mapping.model';
 
 // Custom error types for better error handling
@@ -55,31 +54,10 @@ export class ValidationError extends Error {
   }
 }
 
-// Subscription types enum
-export enum SubscriptionType {
-  DEVICE = 'device',
-  GROUP = 'group',
-  TYPE = 'type'
-}
-
-// Service configuration interface
-interface SubscriptionServiceConfig {
-  enableRetry: boolean;
-  retryAttempts: number;
-  requestTimeout: number;
-}
-
 @Injectable({
   providedIn: 'root'
 })
 export class SubscriptionService {
-  // Configuration
-  private readonly config: SubscriptionServiceConfig = {
-    enableRetry: true,
-    retryAttempts: 3,
-    requestTimeout: 30000
-  };
-
   // Loading states
   private readonly loadingStates = new Map<string, BehaviorSubject<boolean>>();
   public readonly STATIC_DEVICE_SUBSCRIPTION = "DynamicMapperStaticDeviceSubscription";
@@ -101,8 +79,6 @@ export class SubscriptionService {
     request: NotificationSubscriptionRequest,
     subscription?: string
   ): Promise<NotificationSubscriptionResponse> {
-    // this.validateSubscriptionRequest(request, SubscriptionType.DEVICE);
-
     return this.handleOperation(
       'updateSubscriptionDevice',
       async () => {
@@ -135,8 +111,6 @@ export class SubscriptionService {
   async updateSubscriptionByDeviceGroup(
     request: NotificationSubscriptionRequest
   ): Promise<NotificationSubscriptionResponse> {
-    // this.validateSubscriptionRequest(request, SubscriptionType.GROUP);
-
     return this.handleOperation(
       'updateSubscriptionByDeviceGroup',
       async () => {
@@ -166,8 +140,6 @@ export class SubscriptionService {
   async updateSubscriptionByDeviceType(
     request: NotificationSubscriptionRequest
   ): Promise<NotificationSubscriptionResponse> {
-    // this.validateSubscriptionRequest(request, SubscriptionType.TYPE);
-
     return this.handleOperation(
       'updateSubscriptionByDeviceType',
       async () => {
@@ -227,8 +199,6 @@ export class SubscriptionService {
   async createSubscription(
     request: NotificationSubscriptionRequest
   ): Promise<NotificationSubscriptionResponse> {
-    // this.validateSubscriptionRequest(request);
-
     return this.handleOperation(
       'createSubscription',
       async () => {
@@ -479,103 +449,7 @@ export class SubscriptionService {
   // ===== PRIVATE HELPER METHODS =====
 
   /**
-   * Validates subscription request based on type
-   */
-  private validateSubscriptionRequest(
-    request: NotificationSubscriptionRequest,
-    type?: SubscriptionType
-  ): void {
-    const errors: string[] = [];
-
-    if (!request) {
-      throw new ValidationError('Subscription request is required');
-    }
-
-    if (!request.api) {
-      errors.push('API type is required');
-    }
-
-    if (request.subscriptionName && request.subscriptionName.length > 100) {
-      errors.push('Subscription name must not exceed 100 characters');
-    }
-
-    // Validate based on subscription type
-    switch (type) {
-      case SubscriptionType.DEVICE:
-        if (!request.devices || request.devices.length === 0) {
-          errors.push('At least one device must be specified for device subscription');
-        }
-        if (request.devices && request.devices.length > 1000) {
-          errors.push('Cannot subscribe to more than 1000 devices at once');
-        }
-        this.validateDevices(request.devices, errors);
-        break;
-
-      case SubscriptionType.TYPE:
-        if (!request.types || request.types.length === 0) {
-          errors.push('At least one device type must be specified for type subscription');
-        }
-        if (request.types && request.types.length > 50) {
-          errors.push('Cannot subscribe to more than 50 device types at once');
-        }
-        this.validateTypes(request.types, errors);
-        break;
-
-      case SubscriptionType.GROUP:
-        if (!request.devices || request.devices.length === 0) {
-          errors.push('At least one device group must be specified');
-        }
-        this.validateDevices(request.devices, errors);
-        break;
-
-      default:
-        // General validation - must have either devices or types
-        const hasDevices = request.devices && request.devices.length > 0;
-        const hasTypes = request.types && request.types.length > 0;
-
-        if (!hasDevices && !hasTypes) {
-          errors.push('Either devices or types must be specified');
-        }
-
-        if (hasDevices && hasTypes) {
-          errors.push('Cannot specify both devices and types in the same subscription');
-        }
-        break;
-    }
-
-    if (errors.length > 0) {
-      throw new ValidationError('Invalid subscription request', errors);
-    }
-  }
-
-  /**
-   * Validates device list
-   */
-  private validateDevices(devices: Device[] | undefined, errors: string[]): void {
-    if (!devices) return;
-
-    devices.forEach((device, index) => {
-      if (!device.id || device.id.trim() === '') {
-        errors.push(`Device at index ${index} must have a valid ID`);
-      }
-    });
-  }
-
-  /**
-   * Validates device types list
-   */
-  private validateTypes(types: string[] | undefined, errors: string[]): void {
-    if (!types) return;
-
-    types.forEach((type, index) => {
-      if (!type || type.trim() === '') {
-        errors.push(`Type at index ${index} cannot be empty`);
-      }
-    });
-  }
-
-  /**
-   * Handles subscription operations with error handling, loading states, and retry logic
+   * Handles subscription operations with error handling and loading states
    */
   private async handleOperation<T>(
     operationName: string,

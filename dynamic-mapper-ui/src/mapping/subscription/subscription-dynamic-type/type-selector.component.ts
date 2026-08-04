@@ -61,10 +61,20 @@ export class TypeSelectorComponent {
 
   remove(index: number) {
     this.typeListInternal = this.typeListInternal.filter((_, i) => i !== index);
+    // Never leave the list with zero rows: there would be no "+" control left to add one back.
+    if (this.typeListInternal.length === 0) {
+      this.add();
+    }
+  }
+
+  /** True when at least one non-blank type has been entered; gates the Save button. */
+  get hasValidType(): boolean {
+    return this.typeListInternal.some(t => !!t?.trim());
   }
 
   clickedUpdateSubscription() {
-    this.commit.emit(this.typeListInternal);
+    const cleaned = this.typeListInternal.map(t => t?.trim()).filter(t => !!t);
+    this.commit.emit(cleaned);
   }
 
   clickedCancel() {
