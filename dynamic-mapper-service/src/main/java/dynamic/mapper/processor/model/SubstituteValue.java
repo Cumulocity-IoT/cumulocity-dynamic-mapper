@@ -88,6 +88,9 @@ public class SubstituteValue implements Cloneable {
                 if ((substitute.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING_OR_NULL)
                         && subValueMissingOrNull)) {
                     payloadTarget.delete(pathTarget);
+                } else if (substitute.repairStrategy.equals(RepairStrategy.IGNORE) && subValueMissingOrNull) {
+                    // Skip this substitution entirely: leave the target node untouched (whatever
+                    // was already in the template, e.g. a default value, stays as-is).
                 } else if (substitute.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
                     // jsonObject.put("$", keys, sub.value);
                     SubstitutionEvaluation.addNestedValue(payloadTarget, pathTarget, substitute.value);

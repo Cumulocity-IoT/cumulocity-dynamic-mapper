@@ -27,7 +27,7 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { Mapping, Substitution, MappingType, SharedService, isSubstitutionsAsCode, TransformationType } from '../../shared';
+import { Mapping, Substitution, MappingType, RepairStrategy, SharedService, isSubstitutionsAsCode, TransformationType } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
 import { AIMessage, ClientAgentDefinition } from '@c8y/ngx-components/ai';
@@ -365,7 +365,13 @@ export class AIPromptComponent implements OnInit, AfterViewInit {
       );
 
       if (isValidSubstitutions) {
-        this.substitutions = parsedSubstitutions;
+        // The LLM's JSON block may omit repairStrategy (or emit it as null) — default it here so
+        // every downstream consumer (edit modal, persisted mapping) always sees a real value
+        // instead of undefined/null.
+        this.substitutions = parsedSubstitutions.map(sub => ({
+          ...sub,
+          repairStrategy: sub.repairStrategy ?? RepairStrategy.DEFAULT
+        }));
         this.valid = true;
       }
     } catch (error) {

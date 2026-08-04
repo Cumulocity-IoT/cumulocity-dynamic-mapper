@@ -38,6 +38,7 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.PayloadContext;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstitutionEvaluation;
@@ -163,8 +164,20 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
                         substitution, mapping);
             }
         } else {
-            // Single value or array not to be expanded
-            SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, extractedSourceContent,
+            // Single value, or an array not being expanded into multiple substitutions.
+            // USE_FIRST_VALUE_OF_ARRAY/USE_LAST_VALUE_OF_ARRAY reduce that array to a single
+            // scalar element here; any other repair strategy keeps the array as-is (e.g. the
+            // target field itself expects an array value).
+            Object valueToProcess = extractedSourceContent;
+            if (extractedSourceContent != null && SubstitutionEvaluation.isArray(extractedSourceContent)) {
+                List<?> elements = new ArrayList<>((Collection<?>) extractedSourceContent);
+                if (RepairStrategy.USE_FIRST_VALUE_OF_ARRAY.equals(substitution.getRepairStrategy())) {
+                    valueToProcess = elements.isEmpty() ? null : elements.get(0);
+                } else if (RepairStrategy.USE_LAST_VALUE_OF_ARRAY.equals(substitution.getRepairStrategy())) {
+                    valueToProcess = elements.isEmpty() ? null : elements.get(elements.size() - 1);
+                }
+            }
+            SubstitutionEvaluation.processSubstitute(tenant, processingCacheEntry, valueToProcess,
                     substitution, mapping);
         }
 

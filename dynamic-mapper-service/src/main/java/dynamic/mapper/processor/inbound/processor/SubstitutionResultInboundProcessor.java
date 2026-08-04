@@ -335,15 +335,12 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
             if (finalI < pathTargetSubstitute.size()) {
                 substitute = pathTargetSubstitute.get(finalI).clone();
             } else if (pathTargetSubstitute.size() == 1) {
-                // this is an indication that the substitution is the same for all
-                // events/alarms/measurements/inventory
-                if (substitute.repairStrategy.equals(RepairStrategy.USE_FIRST_VALUE_OF_ARRAY) ||
-                        substitute.repairStrategy.equals(RepairStrategy.DEFAULT)) {
-                    substitute = pathTargetSubstitute.get(0).clone();
-                } else if (substitute.repairStrategy.equals(RepairStrategy.USE_LAST_VALUE_OF_ARRAY)) {
-                    int last = pathTargetSubstitute.size() - 1;
-                    substitute = pathTargetSubstitute.get(last).clone();
-                }
+                // This pathTarget only ever produced a single cached value (it wasn't itself
+                // expanded into an array), but another pathTarget's expandArray drove a higher
+                // cardinality — reuse that single value for every output. (With exactly one
+                // cached value, "first" and "last" are the same element, so no repairStrategy
+                // branching is needed here.)
+                substitute = pathTargetSubstitute.get(0).clone();
                 log.warn(
                         "{} - Processing pathTarget: '{}', repairStrategy: '{}'.",
                         tenant,

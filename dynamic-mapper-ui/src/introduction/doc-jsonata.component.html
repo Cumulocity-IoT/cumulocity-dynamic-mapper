@@ -99,6 +99,92 @@
           ExpertMode
           using JSONata.</p>
       </div>
+      <div class="card-block">
+        <div class="card-header" id="jsonata-repair-strategy">
+          <h3>
+            {{ 'Repair strategy' | translate }}
+          </h3>
+        </div>
+        <div class="p-b-8 text-16">
+          Every substitution has a <b>repair strategy</b> that controls what happens at runtime when the
+          <code>pathTarget</code> doesn't already exist in the target template, or the <code>pathSource</code>
+          expression evaluates to a missing/null value or an array.
+        </div>
+        <div class="table-responsive table-width-100">
+          <table class="table table-striped table-layout-fixed">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 25%;">Strategy</th>
+                <th style="width: 75%;">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>DEFAULT</code></td>
+                <td>Process the substitution as defined, without any special handling. Use this only when
+                  <code>pathTarget</code> already exists as a literal key in the target template — using
+                  <code>DEFAULT</code> for a path that isn't already there causes a "Path not found" error at
+                  runtime.</td>
+              </tr>
+              <tr>
+                <td><code>CREATE_IF_MISSING</code></td>
+                <td>Create the target node if it doesn't already exist. Use this whenever <code>pathTarget</code> is
+                  a dynamic or computed segment that isn't a literal path in the target template (e.g. a key derived
+                  from source data, or any node that needs to be created at runtime). This is also required for
+                  every <code>_CONTEXT_DATA_.*</code> target, since those are never literal keys in the target
+                  template.</td>
+              </tr>
+              <tr>
+                <td><code>REMOVE_IF_MISSING_OR_NULL</code></td>
+                <td>Remove the target node entirely if the source evaluation returns undefined, null, or empty.
+                  Use this to omit a field from the output rather than writing a null/empty value into it.</td>
+              </tr>
+              <tr>
+                <td><code>IGNORE</code></td>
+                <td>Skip this substitution entirely if the source path evaluation is missing or null — the target
+                  node is left completely untouched (whatever was already in the template, e.g. a default value,
+                  stays as-is). If the source value is present, the substitution behaves like <code>DEFAULT</code>.
+                </td>
+              </tr>
+              <tr>
+                <td><code>USE_FIRST_VALUE_OF_ARRAY</code></td>
+                <td>If the extracted source content is an array, use only its first element as the value. Only
+                  meaningful when <b>Expand as array</b> is switched off for this substitution — see below.</td>
+              </tr>
+              <tr>
+                <td><code>USE_LAST_VALUE_OF_ARRAY</code></td>
+                <td>If the extracted source content is an array, use only its last element as the value. Only
+                  meaningful when <b>Expand as array</b> is switched off for this substitution — see below.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="p-b-8 text-16">
+          <b>Expand as array</b> controls what happens when a substitution's <code>pathSource</code> extracts an
+          array from the source payload:
+        </div>
+        <ul class="p-b-8 text-16">
+          <li>
+            <b>Switched on:</b> the array is expanded — the mapper generates one target document per array
+            element, using the same target template for each. Use this for multi-value/multi-device messages,
+            e.g. a single payload containing several measurements.
+          </li>
+          <li>
+            <b>Switched off (default):</b> the array is not expanded into multiple documents. By default the whole
+            array is written to <code>pathTarget</code> as-is; set the repair strategy to
+            <code>USE_FIRST_VALUE_OF_ARRAY</code> or <code>USE_LAST_VALUE_OF_ARRAY</code> instead if you want to
+            reduce it to a single scalar element.
+          </li>
+        </ul>
+        <div class="admonition info">
+          <div class="title">Info</div>
+          <div class="content">
+            Because expanding into multiple documents already uses every array element, the editor disables
+            <code>USE_FIRST_VALUE_OF_ARRAY</code> / <code>USE_LAST_VALUE_OF_ARRAY</code> whenever <b>Expand as
+              array</b> is switched on for a substitution.
+          </div>
+        </div>
+      </div>
       <div class="p-b-8"></div>
     </div>
   </div>
