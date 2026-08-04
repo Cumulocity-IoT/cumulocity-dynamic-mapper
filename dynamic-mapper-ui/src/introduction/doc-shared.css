@@ -324,7 +324,9 @@ pre code {
   color: #d4d4d4;
   background-color: transparent;
   display: block;
-  padding: 8px 16px 16px 16px;
+  /* Top padding clears the absolutely-positioned .code-toolbar (height: 32px) added by
+     addCopyButtons() in doc-main.component.ts, so it doesn't cover the first code line. */
+  padding: 40px 16px 16px 16px;
   border: none;
   border-radius: 0;
   white-space: pre;
