@@ -57,6 +57,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonDeserialize(builder = Mapping.MappingBuilder.class)
+// See Substitution.java for why both Jackson 2 and Jackson 3 builder annotations
+// are needed under Spring Boot 4's default Jackson 3 MVC converter.
+@tools.jackson.databind.annotation.JsonDeserialize(builder = Mapping.MappingBuilder.class)
 @ToString(exclude = { "sourceTemplate", "targetTemplate", "code" })
 @Schema(description = "Mapping configuration for transforming data between external systems and Cumulocity IoT")
 public class Mapping implements Serializable {
@@ -83,6 +86,7 @@ public class Mapping implements Serializable {
     }
 
     @JsonPOJOBuilder(withPrefix = "", buildMethodName = "build")
+    @tools.jackson.databind.annotation.JsonPOJOBuilder(withPrefix = "", buildMethodName = "build")
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class MappingBuilder {
         // Lombok will generate all the builder methods

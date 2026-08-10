@@ -317,22 +317,29 @@ public class JavaScriptInteropHelper {
 
         ExternalId externalId = new ExternalId();
 
-        Object rawExternalId = map.get("externalId");
-        if (rawExternalId != null && !isMissingValue(String.valueOf(rawExternalId))) {
-            externalId.setExternalId(String.valueOf(rawExternalId));
-        }
         Object rawType = map.get("type");
         if (rawType != null && !isMissingValue(String.valueOf(rawType))) {
             externalId.setType(String.valueOf(rawType));
         }
-        // Only return if we have both required fields with valid, non-sentinel values.
-        // A Smart Function returning `undefined`/`null` for externalId must NOT be
-        // silently coerced into the strings "undefined"/"null" and used to create a device.
-        if (externalId.getType() != null && externalId.getExternalId() != null) {
-            return externalId;
+        if (externalId.getType() == null) {
+            return null;
         }
 
-        return null;
+        // The externalId field is optional: a Smart Function may return only the type
+        // (e.g. for resolveGlobalId2ExternalId(), where the external id is what's being
+        // resolved, not supplied). But if the key IS present, a Smart Function returning
+        // `undefined`/`null`/blank for it must NOT be silently coerced into the strings
+        // "undefined"/"null" and used to look up or create a device.
+        if (map.containsKey("externalId")) {
+            Object rawExternalId = map.get("externalId");
+            String coerced = rawExternalId == null ? null : String.valueOf(rawExternalId);
+            if (isMissingValue(coerced)) {
+                return null;
+            }
+            externalId.setExternalId(coerced);
+        }
+
+        return externalId;
     }
 
     /**

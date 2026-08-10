@@ -83,13 +83,17 @@ class JavaScriptInteropHelperTest {
     }
 
     @Test
-    void missingExternalIdKeyIsRejected() {
+    void missingExternalIdKeyIsAcceptedAsTypeOnly() {
+        // A type-only entry (no externalId key at all) is valid input for the
+        // internal-id -> external-id direction (resolveGlobalId2ExternalId()),
+        // where the external id is what's being resolved, not supplied.
         Map<String, Object> map = new HashMap<>();
         map.put("type", "c8y_Serial");
 
         ExternalId result = JavaScriptInteropHelper.convertMapToExternalId(map);
 
-        assertNull(result, "A missing externalId key must not produce a usable ExternalId");
+        assertEquals("c8y_Serial", result.getType());
+        assertNull(result.getExternalId(), "A type-only entry must leave externalId unset, not synthesize one");
     }
 
     @Test
