@@ -75,7 +75,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, filter, finalize, Subject, switchMap, take, takeUntil } from 'rxjs';
+import { BehaviorSubject, finalize, Subject, take, takeUntil } from 'rxjs';
 import { CodeTemplate } from '../../configuration/shared/configuration.model';
 import { MappingService } from '../core/mapping.service';
 import { MappingBulkOperationsService } from '../core/mapping-bulk-operations.service';
@@ -94,7 +94,6 @@ import { EditorMode } from '../shared/stepper.model';
 import { isCodeOrExtensionTransformation } from '../shared/util';
 import { CommonModule } from '@angular/common';
 import { MappingStepperComponent } from '../stepper-mapping/mapping-stepper.component';
-import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/code-editor-drawer.component';
 import { DeprecationNoticeModalComponent } from '../deprecation-notice/deprecation-notice-modal.component';
 import { DEPRECATION_NOTICE_VERSION } from '../../shared';
 @Component({
@@ -372,76 +371,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         callback: this.exportMappingBulk.bind(this)
       }
     );
-  }
-
-  async updateCode(m: MappingEnriched) {
-    const { mapping } = m;
-    const sourceSystem =
-      mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
-    const initialState = { encodedCode: mapping.code, sourceSystem };
-    try {
-      const drawer = this.bottomDrawerService.openDrawer(CodeEditorDrawerComponent, { initialState: initialState });
-
-      await new Promise((resolve) => {
-        drawer.instance.closeSubject
-          .pipe(
-            take(1),
-            filter(code => !!code),
-            switchMap(code => this.applyUpdateCode(code, mapping.id)),
-            finalize(() => {
-              drawer.close();
-              resolve(undefined);
-            })
-          )
-          .subscribe({
-            next: () => {
-              // this.alertService.success(`Updated code for mapping ${mapping.name}`);
-            },
-            error: (error) => {
-              this.alertService.danger('Failed to update code', error);
-              resolve(undefined);
-            }
-          });
-      });
-    } catch (error) {
-      this.alertService.danger(`Failed to update code: ${error.message}`);
-    }
-  }
-
-  private async applyMappingFilter(filterMapping: string, mappingId: string): Promise<string> {
-    const params = {
-      filterMapping,
-      id: mappingId
-    };
-
-    await this.sharedService.runOperation({
-      operation: Operation.APPLY_MAPPING_FILTER,
-      parameter: params
-    });
-
-    await this.mappingService.refreshMappings(this.stepperConfiguration.direction);
-    return filterMapping;
-  }
-
-
-  private async applyUpdateCode(code: string, mappingId: string): Promise<string> {
-    const params = {
-      code,
-      id: mappingId
-    };
-
-    await this.sharedService.runOperation({
-      operation: Operation.UPDATE_CODE,
-      parameter: params
-    });
-
-    if (this.stepperConfiguration.direction == Direction.INBOUND) {
-      await this.mappingService.refreshMappings(Direction.INBOUND);
-    } else {
-      await this.mappingService.refreshMappings(Direction.OUTBOUND);
-
-    }
-    return code;
   }
 
   getColumnsMappings(): Column[] {
@@ -746,28 +675,6 @@ export class MappingComponent implements OnInit, OnDestroy {
     }
 
     this.showConfigMapping = true;
-  }
-
-  async activateMapping(m: MappingEnriched) {
-    const { mapping } = m;
-    const newActive = !mapping.active;
-    const parameter = { id: mapping.id, active: newActive };
-    const response =
-      await this.mappingService.changeActivationMapping(parameter);
-    if (response.status != HttpStatusCode.Created) {
-      const failedMap = await response.json();
-      const failedList = Object.values(failedMap).join(',');
-      this.alertService.warning(
-        `Mapping ${mapping.name} could only activate partially. It failed for the following connectors: ${failedList}`
-      );
-    } else {
-      // this.alertService.success(`${action} for mapping: ${mapping.name} was successful`);
-    }
-    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
-
-    if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
-      this.validateSubscriptionOutbound();
-    }
   }
 
   async toggleDebugMapping(m: MappingEnriched) {

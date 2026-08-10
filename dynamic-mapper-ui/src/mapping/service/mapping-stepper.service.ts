@@ -19,9 +19,7 @@
  */
 
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Subject, from } from 'rxjs';
-import { map } from 'rxjs/operators';
-import * as _ from 'lodash';
+import { BehaviorSubject, Subject } from 'rxjs';
 import {
     Direction,
     Extension,
@@ -322,34 +320,29 @@ export class MappingStepperService {
         aiAgentDeployed: boolean;
         aiAgent: any;
     }> {
-        return from(this.aiAgentService.getAIAgents())
-            .pipe(
-                map(agents => {
-                    const agentNames = agents.map(agent => agent.name);
-                    const requiredAgentName = (() => {
-                        switch (mapping.transformationType) {
-                            case TransformationType.JSONATA:
-                            case TransformationType.DEFAULT:
-                                return serviceConfiguration?.jsonataAgent;
-                            case TransformationType.SMART_FUNCTION:
-                                return serviceConfiguration?.smartFunctionAgent;
-                            default:
-                                return serviceConfiguration?.javaScriptAgent;
-                        }
-                    })();
+        const agents = await this.aiAgentService.getAIAgents();
+        const agentNames = agents.map(agent => agent.name);
+        const requiredAgentName = (() => {
+            switch (mapping.transformationType) {
+                case TransformationType.JSONATA:
+                case TransformationType.DEFAULT:
+                    return serviceConfiguration?.jsonataAgent;
+                case TransformationType.SMART_FUNCTION:
+                    return serviceConfiguration?.smartFunctionAgent;
+                default:
+                    return serviceConfiguration?.javaScriptAgent;
+            }
+        })();
 
-                    const hasRequiredAgent = requiredAgentName && agentNames.includes(requiredAgentName);
-                    const selectedAgent = hasRequiredAgent
-                        ? agents.find(agent => agent.name === requiredAgentName)
-                        : null;
+        const hasRequiredAgent = requiredAgentName && agentNames.includes(requiredAgentName);
+        const selectedAgent = hasRequiredAgent
+            ? agents.find(agent => agent.name === requiredAgentName)
+            : null;
 
-                    return {
-                        aiAgentDeployed: agentNames.length > 0 && hasRequiredAgent,
-                        aiAgent: selectedAgent
-                    };
-                })
-            )
-            .toPromise();
+        return {
+            aiAgentDeployed: agentNames.length > 0 && hasRequiredAgent,
+            aiAgent: selectedAgent
+        };
     }
 
     cleanup(): void {

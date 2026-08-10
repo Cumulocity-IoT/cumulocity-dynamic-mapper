@@ -107,6 +107,14 @@ public class ExplorerController {
         if (!isOutbound && (request.getConnectorIdentifier() == null || request.getConnectorIdentifier().isBlank())) {
             return ResponseEntity.badRequest().body(Map.of("error", "connectorIdentifier is required for INBOUND sessions"));
         }
+        // Without a sourceId or deviceType, OUTBOUND sessions create no Notification 2.0
+        // subscription and rely entirely on messages already flowing through an unrelated active
+        // mapping — i.e. the session would silently capture nothing. Require one of the two.
+        if (isOutbound
+                && (request.getSourceId() == null || request.getSourceId().isBlank())
+                && (request.getDeviceType() == null || request.getDeviceType().isBlank())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "sourceId or deviceType is required for OUTBOUND sessions"));
+        }
         try {
             String sessionId = explorerService.startSession(
                     tenant,
