@@ -47,6 +47,9 @@ public enum Destination {
      * Get enum from string value
      */
     public static Destination fromValue(String value) {
+        if (value == null) {
+            return null;
+        }
         for (Destination dest : Destination.values()) {
             if (dest.value.equalsIgnoreCase(value)) {
                 return dest;

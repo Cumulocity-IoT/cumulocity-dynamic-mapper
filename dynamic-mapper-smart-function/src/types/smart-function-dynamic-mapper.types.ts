@@ -672,6 +672,13 @@ export type C8yObjectType = 'measurement' | 'event' | 'alarm' | 'operation' | 'm
 /**
  * Details of external Id for advanced device creation scenarios.
  * For simple lookups, use {@link ExternalId} instead.
+ *
+ * @remarks
+ * **Not yet implemented on the backend.** Only `externalId`/`type` are read by the
+ * runtime today — `autoCreateDeviceMO`, `parentId`, `childReference`, and `clientId`
+ * are accepted by the type system but silently ignored during deserialization
+ * (see `ExternalId.java` / `JavaScriptInteropHelper.convertMapToExternalId`).
+ * Do not rely on them until backend support lands.
  */
 export interface ExternalSource {
   /** External Id to be looked up and/or created to get C8Y "id" */
@@ -683,12 +690,16 @@ export interface ExternalSource {
   /**
    * Whether to automatically create the device managed object if it doesn't exist.
    * Default: true
+   *
+   * @remarks Not yet implemented on the backend — see the interface-level remark.
    */
   autoCreateDeviceMO?: boolean;
 
   /**
    * Parent device ID for creating child devices.
    * Used when creating hierarchical device structures.
+   *
+   * @remarks Not yet implemented on the backend — see the interface-level remark.
    */
   parentId?: string;
 
@@ -697,12 +708,16 @@ export interface ExternalSource {
    * - "device": Child device
    * - "asset": Child asset
    * - "addition": Addition to parent
+   *
+   * @remarks Not yet implemented on the backend — see the interface-level remark.
    */
   childReference?: 'device' | 'asset' | 'addition';
 
   /**
    * Transport/MQTT client ID.
    * Stored on the managed object for use in outbound messages.
+   *
+   * @remarks Not yet implemented on the backend — see the interface-level remark.
    */
   clientId?: string;
 }
@@ -824,7 +839,8 @@ export interface CumulocityObject<
    * External ID configuration for device resolution.
    *
    * - Use ExternalId[] for simple lookups
-   * - Use ExternalSource for advanced device creation scenarios
+   * - Use ExternalSource for advanced device creation scenarios (see {@link ExternalSource} —
+   *   its extra fields are not yet implemented on the backend)
    *
    * When a Cumulocity message (e.g., operation) is received,
    * this will contain all external IDs for the Cumulocity ID.
