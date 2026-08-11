@@ -141,7 +141,27 @@ export class AIPromptComponent implements OnInit, AfterViewInit {
   ngAfterViewInit(): void {
     if (this.pendingAutoSend) {
       this.pendingAutoSend = false;
-      void this.sendMessage();
+      void this.autoSendOnceAgentChatReady();
+    }
+  }
+
+  /**
+   * CREATE mode auto-sends immediately, without any user interaction. But #agentChat
+   * runs its own async health check on init (setting isLoadingAiResponse() true for the
+   * duration), and #agentChat.sendMessage() silently no-ops while that's in flight —
+   * so the very first message would be dropped with no visible error. UPDATE mode never
+   * hits this because it requires a user click first, which naturally happens after the
+   * health check has resolved. Wait for it here before sending.
+   */
+  private async autoSendOnceAgentChatReady(): Promise<void> {
+    await this.waitUntilAgentChatReady();
+    await this.sendMessage();
+  }
+
+  private async waitUntilAgentChatReady(maxWaitMs = 10000, pollMs = 50): Promise<void> {
+    const deadline = Date.now() + maxWaitMs;
+    while (this.agentChat?.isLoadingAiResponse() && Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, pollMs));
     }
   }
 
