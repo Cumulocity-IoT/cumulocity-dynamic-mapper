@@ -377,8 +377,6 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       if (this.shouldRefreshAutomatic) {
         this.countdownIntervalComponent?.start();
       }
-      const deviceLabel = result.deviceName ? ` / device: "${result.deviceName}"` : '';
-      this.alertService.success(`${result.direction === 'OUTBOUND' ? 'Outbound' : 'Inbound'}: exploring "${result.topic}" on "${result.connectorName}"${deviceLabel}`);
     } catch (e: any) {
       this.alertService.danger(`Failed to start explorer session: ${e.message}`);
     }
