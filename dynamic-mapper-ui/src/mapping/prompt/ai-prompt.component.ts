@@ -140,6 +140,16 @@ export class AIPromptComponent implements OnInit {
         { label: `Review / Refine existing ${label}`, prompt: this.buildReviewMessage(), icon: 'search' },
         { label: `Generate new ${label} from scratch`, prompt: this.buildGenerateMessage(), icon: 'plus-circle-o' }
       ];
+      this.chatConfig = {
+        ...this.chatConfig,
+        welcomeText: this.isCodeMapping
+          ? "This mapping already has a Smart Function. I can review the existing code and suggest " +
+            "improvements, or generate a new one from scratch based on the mapping's source and target " +
+            "templates. Pick an option below, or describe what you'd like changed."
+          : "This mapping already has substitutions defined. I can review them and suggest improvements, " +
+            "or generate a new set from scratch based on the mapping's source and target templates. " +
+            "Pick an option below, or describe what you'd like changed."
+      };
       this.cdr.detectChanges();
       return;
     }
@@ -147,7 +157,15 @@ export class AIPromptComponent implements OnInit {
     // CREATE mode — nothing to review yet, so always generate immediately with no
     // user interaction.
     this.drawerTitle = this.isCodeMapping ? 'Generate Smart Function' : 'Generate Substitutions';
-    this.chatConfig = { ...this.chatConfig, title: this.drawerTitle };
+    this.chatConfig = {
+      ...this.chatConfig,
+      title: this.drawerTitle,
+      welcomeText: this.isCodeMapping
+        ? "Generating a Smart Function for this mapping based on its source and target templates. " +
+          "This starts automatically — no action needed."
+        : "Generating substitutions for this mapping based on its source and target templates. " +
+          "This starts automatically — no action needed."
+    };
     this.newMessage = this.buildGenerateMessage();
     await this.sendMessage();
   }
