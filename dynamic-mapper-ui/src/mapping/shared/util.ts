@@ -195,7 +195,19 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
   const splitTTS: string[] = splitTopicExcludingSeparator(
     mappingTopicSample.value, false
   );
-  if (splitTT.length != splitTTS.length) {
+
+  // MQTT semantics: a trailing "#" matches any number (incl. zero) of remaining
+  // levels, so the sample only needs to have AT LEAST as many levels as the
+  // fixed (non-"#") part of the topic. Without a "#" the level count must match
+  // exactly. "+" matches exactly one level regardless of its value.
+  const hasMultiWildcard = splitTT[splitTT.length - 1] == TOPIC_WILDCARD_MULTI;
+  const fixedTT = hasMultiWildcard ? splitTT.slice(0, -1) : splitTT;
+
+  if (
+    hasMultiWildcard
+      ? splitTTS.length < fixedTT.length
+      : splitTTS.length != fixedTT.length
+  ) {
     errors = {
       ...errors,
       MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
@@ -207,8 +219,8 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
       }
     };
   } else {
-    for (let i = 0; i < splitTT.length; i++) {
-      if ('/' == splitTT[i] && !('/' == splitTTS[i])) {
+    for (let i = 0; i < fixedTT.length; i++) {
+      if ('/' == fixedTT[i] && !('/' == splitTTS[i])) {
         errors = {
           ...errors,
           MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
@@ -221,7 +233,7 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
         };
         break;
       }
-      if ('/' == splitTTS[i] && !('/' == splitTT[i])) {
+      if ('/' == splitTTS[i] && !('/' == fixedTT[i])) {
         errors = {
           ...errors,
           MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
@@ -235,11 +247,11 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
         break;
       }
       if (
-        !('/' == splitTT[i]) &&
-        !('+' == splitTT[i]) &&
-        !('#' == splitTT[i])
+        !('/' == fixedTT[i]) &&
+        !(TOPIC_WILDCARD_SINGLE == fixedTT[i]) &&
+        !(TOPIC_WILDCARD_MULTI == fixedTT[i])
       ) {
-        if (splitTT[i] != splitTTS[i]) {
+        if (fixedTT[i] != splitTTS[i]) {
           errors = {
             ...errors,
             MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
