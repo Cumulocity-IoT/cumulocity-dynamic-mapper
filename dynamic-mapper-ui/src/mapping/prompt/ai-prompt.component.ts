@@ -23,7 +23,6 @@ import {
   inject,
   Input,
   OnInit,
-  AfterViewInit,
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
@@ -47,7 +46,7 @@ import { EditorMode } from '../shared/stepper.model';
   imports:[CoreModule, AgentChatComponent],
   host: { class: 'd-contents' }
 })
-export class AIPromptComponent implements OnInit, AfterViewInit {
+export class AIPromptComponent implements OnInit {
 
   private readonly alertService = inject(AlertService);
   private readonly sharedService = inject(SharedService);
@@ -103,8 +102,6 @@ export class AIPromptComponent implements OnInit, AfterViewInit {
   awaitingModeChoice = false;
   /** Cached mapping object (without substitutions) ready to send to AI */
   private mappingForAI: any = null;
-  /** CREATE mode auto-sends its message from ngAfterViewInit, once #agentChat exists */
-  private pendingAutoSend = false;
 
   // Add getter to check if this is a code-based mapping
   get isCodeMapping(): boolean {
@@ -132,37 +129,16 @@ export class AIPromptComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    // CREATE mode — always generate. The actual send happens in ngAfterViewInit,
-    // once #agentChat has been created (it doesn't exist yet during ngOnInit).
+    // CREATE mode — always generate, with no user interaction. ngOnInit is async, and
+    // everything above runs after its first await — by then Angular has already run its
+    // *initial* change detection and ngAfterViewInit (both fire on the same tick as the
+    // synchronous part of ngOnInit, before any await resolves), so relying on either to
+    // pick up state set here doesn't work. #agentChat's host `@else if` depends on
+    // clientAgentDefinition, only just assigned above, so force a render now — same
+    // pattern chooseGenerate()/chooseReview() use — then send directly.
     this.prepareGenerateMessage();
-    this.pendingAutoSend = true;
-  }
-
-  ngAfterViewInit(): void {
-    if (this.pendingAutoSend) {
-      this.pendingAutoSend = false;
-      void this.autoSendOnceAgentChatReady();
-    }
-  }
-
-  /**
-   * CREATE mode auto-sends immediately, without any user interaction. But #agentChat
-   * runs its own async health check on init (setting isLoadingAiResponse() true for the
-   * duration), and #agentChat.sendMessage() silently no-ops while that's in flight —
-   * so the very first message would be dropped with no visible error. UPDATE mode never
-   * hits this because it requires a user click first, which naturally happens after the
-   * health check has resolved. Wait for it here before sending.
-   */
-  private async autoSendOnceAgentChatReady(): Promise<void> {
-    await this.waitUntilAgentChatReady();
+    this.cdr.detectChanges();
     await this.sendMessage();
-  }
-
-  private async waitUntilAgentChatReady(maxWaitMs = 10000, pollMs = 50): Promise<void> {
-    const deadline = Date.now() + maxWaitMs;
-    while (this.agentChat?.isLoadingAiResponse() && Date.now() < deadline) {
-      await new Promise(resolve => setTimeout(resolve, pollMs));
-    }
   }
 
   /** Called when the user picks "Review / Refine" in the choice screen */
