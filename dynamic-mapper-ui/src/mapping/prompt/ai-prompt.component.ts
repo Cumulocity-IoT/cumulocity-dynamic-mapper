@@ -29,7 +29,7 @@ import {
 import { Mapping, Substitution, MappingType, RepairStrategy, SharedService, isSubstitutionsAsCode, TransformationType } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
-import { AIMessage, ClientAgentDefinition } from '@c8y/ngx-components/ai';
+import { AIMessage, ClientAgentDefinition, Suggestion } from '@c8y/ngx-components/ai';
 import { toClientAgentDefinition } from '../core/ai-agent.service';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 import { ServiceConfiguration } from '../../configuration';
@@ -94,12 +94,15 @@ export class AIPromptComponent implements OnInit {
     showCumulativeUsage: true
   };
 
-  /** Set during ngOnInit — true when the mapping already has code or substitutions */
-  isReviewMode = false;
   /** Exposed for the template header */
   drawerTitle = 'AI Mapping Assistant';
-  /** In UPDATE mode: true while the user is choosing review-vs-generate */
-  awaitingModeChoice = false;
+  /**
+   * UPDATE mode: clickable suggestion chips rendered inside the chat (via #agentChat's
+   * own `suggestions` input) so the user can pick review-vs-generate without a separate
+   * blocking screen. Left undefined in CREATE mode, where there's nothing to review yet
+   * and generation is triggered immediately instead.
+   */
+  suggestions?: Suggestion[];
   /** Cached mapping object (without substitutions) ready to send to AI */
   private mappingForAI: any = null;
 
@@ -122,75 +125,54 @@ export class AIPromptComponent implements OnInit {
       this.mappingForAI.code = this.extractExistingJavaScriptCode(this.mapping);
     }
 
+    // ngOnInit is async, and everything above runs after its first await — by then
+    // Angular has already run its *initial* change detection (and ngAfterViewInit), using
+    // whatever state existed at that pause point, so relying on either to pick up state
+    // set here doesn't work. #agentChat's host `@if` depends on clientAgentDefinition,
+    // only just assigned above, so force a render now before touching it further.
+    this.cdr.detectChanges();
+
     if (this.editorMode === EditorMode.UPDATE) {
-      // Let the user decide: review existing or generate from scratch
-      this.awaitingModeChoice = true;
-      this.drawerTitle = 'AI Mapping Assistant';
+      // Existing code/substitutions to review — offer both as suggestion chips inside
+      // the chat itself and let the user pick, instead of auto-sending anything.
+      const label = this.isCodeMapping ? 'Smart Function' : 'substitutions';
+      this.suggestions = [
+        { label: `Review / Refine existing ${label}`, prompt: this.buildReviewMessage(), icon: 'search' },
+        { label: `Generate new ${label} from scratch`, prompt: this.buildGenerateMessage(), icon: 'plus-circle-o' }
+      ];
+      this.cdr.detectChanges();
       return;
     }
 
-    // CREATE mode — always generate, with no user interaction. ngOnInit is async, and
-    // everything above runs after its first await — by then Angular has already run its
-    // *initial* change detection and ngAfterViewInit (both fire on the same tick as the
-    // synchronous part of ngOnInit, before any await resolves), so relying on either to
-    // pick up state set here doesn't work. #agentChat's host `@else if` depends on
-    // clientAgentDefinition, only just assigned above, so force a render now — same
-    // pattern chooseGenerate()/chooseReview() use — then send directly.
-    this.prepareGenerateMessage();
-    this.cdr.detectChanges();
+    // CREATE mode — nothing to review yet, so always generate immediately with no
+    // user interaction.
+    this.drawerTitle = this.isCodeMapping ? 'Generate Smart Function' : 'Generate Substitutions';
+    this.chatConfig = { ...this.chatConfig, title: this.drawerTitle };
+    this.newMessage = this.buildGenerateMessage();
     await this.sendMessage();
   }
 
-  /** Called when the user picks "Review / Refine" in the choice screen */
-  async chooseReview(): Promise<void> {
-    this.awaitingModeChoice = false;
-    this.isReviewMode = true;
-    // #agentChat doesn't exist until this flips the template's @else-if branch on —
-    // force it to render now so sendMessage() below can find it via @ViewChild.
-    this.cdr.detectChanges();
-    this.prepareReviewMessage();
-    await this.sendMessage();
-  }
-
-  /** Called when the user picks "Generate new" in the choice screen */
-  async chooseGenerate(): Promise<void> {
-    this.awaitingModeChoice = false;
-    this.isReviewMode = false;
-    this.cdr.detectChanges();
-    this.prepareGenerateMessage();
-    await this.sendMessage();
-  }
-
-  private prepareReviewMessage(): void {
+  private buildReviewMessage(): string {
     const direction = this.mapping.direction ?? 'INBOUND';
     const targetAPI = this.mapping.targetAPI ?? '';
 
     if (this.isCodeMapping) {
-      this.drawerTitle = 'Review / Refine Smart Function';
-      this.chatConfig = { ...this.chatConfig, title: 'Review / Refine Smart Function' };
-      this.newMessage =
-        `Review the existing ${direction} Smart Function` +
+      return `Review the existing ${direction} Smart Function` +
         (targetAPI ? ` (target: ${targetAPI})` : '') + " in the following mapping" +
         " and suggest improvements.\n\n" +
         "```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
-    } else {
-      this.drawerTitle = 'Review / Refine Substitutions';
-      this.chatConfig = { ...this.chatConfig, title: 'Review / Refine Substitutions' };
-      this.newMessage =
-        `Review the existing substitutions for this ${direction}` +
-        (targetAPI ? ` ${targetAPI}` : '') + " mapping" +
-        " and suggest improvements.\n\n" +
-        "```json\n" + JSON.stringify({ ...this.mappingForAI, substitutions: this.mapping.substitutions }, null, 2) + "\n```\n";
     }
+    return `Review the existing substitutions for this ${direction}` +
+      (targetAPI ? ` ${targetAPI}` : '') + " mapping" +
+      " and suggest improvements.\n\n" +
+      "```json\n" + JSON.stringify({ ...this.mappingForAI, substitutions: this.mapping.substitutions }, null, 2) + "\n```\n";
   }
 
-  private prepareGenerateMessage(): void {
+  private buildGenerateMessage(): string {
     const direction = this.mapping.direction ?? 'INBOUND';
     const targetAPI = this.mapping.targetAPI ?? '';
 
     if (this.isCodeMapping) {
-      this.drawerTitle = 'Generate Smart Function';
-      this.chatConfig = { ...this.chatConfig, title: 'Generate Smart Function' };
       const isOutbound = direction === 'OUTBOUND';
       const targetTemplateIsEmpty = !this.mappingForAI.targetTemplate
         || JSON.stringify(this.mappingForAI.targetTemplate) === '{}';
@@ -201,19 +183,14 @@ export class AIPromptComponent implements OnInit {
           ? "The targetAPI is not set — ask the user what kind of Cumulocity object to produce" +
             " (e.g. MEASUREMENT, ALARM, EVENT, INVENTORY) before generating code.\n"
           : "";
-      this.newMessage =
-        `Generate a ${direction} Smart Function for the following mapping` +
+      return `Generate a ${direction} Smart Function for the following mapping` +
         (targetAPI ? ` (target: ${targetAPI})` : '') + ".\n" +
         missingContextHint +
         "\n```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
-    } else {
-      this.drawerTitle = 'Generate Substitutions';
-      this.chatConfig = { ...this.chatConfig, title: 'Generate Substitutions' };
-      this.newMessage =
-        `Generate JSONata substitutions for this ${direction}` +
-        (targetAPI ? ` ${targetAPI}` : '') + " mapping.\n\n" +
-        "```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
     }
+    return `Generate JSONata substitutions for this ${direction}` +
+      (targetAPI ? ` ${targetAPI}` : '') + " mapping.\n\n" +
+      "```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
   }
 
   save() {

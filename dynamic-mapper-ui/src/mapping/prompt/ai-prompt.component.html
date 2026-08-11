@@ -28,25 +28,11 @@
 </div>
 
 <div class="card-inner-scroll fit-h">
-  @if (awaitingModeChoice) {
-  <!-- UPDATE mode: let the user choose the intent before sending anything to the AI -->
-  <div class="d-flex d-col j-c-center a-i-center fit-h p-24">
-    <p class="text-medium m-b-24" translate>What would you like to do with the existing {{ isCodeMapping ? 'Smart Function' : 'substitutions' }}?</p>
-    <div class="btn-group d-col" style="gap: 12px; min-width: 280px">
-      <button type="button" class="btn btn-ai" (click)="chooseReview()" data-cy="dm-ai-prompt-review">
-        <i c8yIcon="search"></i>&nbsp;
-        <span translate>Review / Refine existing {{ isCodeMapping ? 'Smart Function' : 'substitutions' }}</span>
-      </button>
-      <button type="button" class="btn btn-default" (click)="chooseGenerate()" data-cy="dm-ai-prompt-generate">
-        <i c8yIcon="plus-circle-o"></i>&nbsp;
-        <span translate>Generate new {{ isCodeMapping ? 'Smart Function' : 'substitutions' }} from scratch</span>
-      </button>
-    </div>
-  </div>
-  } @else if (aiAgent && clientAgentDefinition) {
+  @if (aiAgent && clientAgentDefinition) {
   <c8y-agent-chat
     [agent]="clientAgentDefinition"
     [variables]="variables"
+    [suggestions]="suggestions"
     [skipHealthCheck]="true"
     [chatConfig]="chatConfig"
     [assistantMessageDisplayConfig]="assistantMessageDisplayConfig"
