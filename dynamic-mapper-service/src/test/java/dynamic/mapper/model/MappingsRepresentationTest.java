@@ -102,15 +102,23 @@ public class MappingsRepresentationTest {
                 mappingTopic1, mappingTopicSample1);
         assertTrue(errors1.isEmpty(), "Valid topic and sample should have no errors");
 
-        // Test case 2: Different number of levels
+        // Test case 2: trailing "#" matches a sample with more levels than the topic
+        // (MQTT semantics: "#" matches any number, incl. zero, of remaining levels)
         String mappingTopic2 = "/device/#";
         String mappingTopicSample2 = "/device/us/east/";
         List<ValidationError> errors2 = mappingValidator.validateMappingTopicAndSampleConsistency(
                 mappingTopic2, mappingTopicSample2);
-        assertEquals(1, errors2.size());
+        assertTrue(errors2.isEmpty(), "\"#\" should match a sample with more levels than the topic");
+
+        // Test case 2b: without "#", a different number of levels is still an error
+        String mappingTopic2b = "/device/east/";
+        String mappingTopicSample2b = "/device/us/east/";
+        List<ValidationError> errors2b = mappingValidator.validateMappingTopicAndSampleConsistency(
+                mappingTopic2b, mappingTopicSample2b);
+        assertEquals(1, errors2b.size());
         assertEquals(
                 ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
-                errors2.get(0));
+                errors2b.get(0));
 
         // Test case 3: Matching simple topics
         String mappingTopic3 = "/device/";
