@@ -57,3 +57,19 @@ d11r-mapping-ai-prompt c8y-agent-chat pre code {
   font-size: 12px !important;
   line-height: 1.25 !important;
 }
+
+/*
+ * The shared bottom-drawer chrome (@c8y/style) is `position: fixed` with both `top`
+ * and `bottom` set, forcing it to span nearly the full viewport height — and every
+ * nested chat element inside inherits that via `height: 100% !important` (`fit-h`).
+ * With little or no conversation yet, that leaves a large empty gap between the
+ * header and the suggestions/input at the bottom. Break the height chain at the
+ * outermost level instead of fighting the nested `!important` rules: once
+ * `.bottom-drawer` no longer has a definite height, every `fit-h` descendant falls
+ * back to content-based sizing. Scoped via :has() so only this drawer is affected.
+ */
+.bottom-drawer:has(d11r-mapping-ai-prompt) {
+  top: auto;
+  min-height: 40vh;
+  max-height: 70vh;
+}
