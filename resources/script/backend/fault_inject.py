@@ -1,9 +1,12 @@
+import os
+
 from mitmproxy import command, ctx, http
 
-# Set this to your own tenant host before running — e.g. "myTenant.eu-latest.cumulocity.com".
-# Deliberately left as a placeholder: this file is checked into the repo, unlike the gitignored
-# application-dev.properties, so no real tenant hostname belongs here.
-REAL_HOST = "<your-tenant>.cumulocity.com"
+# Set via the REAL_HOST env var before running mitmproxy, e.g.:
+#   REAL_HOST=myTenant.eu-latest.cumulocity.com mitmproxy --mode reverse:https://myTenant.eu-latest.cumulocity.com ...
+# Deliberately left as a placeholder here: this file is checked into the repo, unlike the gitignored
+# application-dev.properties, so no real tenant hostname belongs in the committed default.
+REAL_HOST = os.environ.get("REAL_HOST", "<your-tenant>.cumulocity.com")
 FAULT_PATH_PREFIX = "/inventory/managedObjects"
 
 
