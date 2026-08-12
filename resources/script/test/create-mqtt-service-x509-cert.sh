@@ -98,10 +98,12 @@ do_create() {
 
     dm_step "Generating self-signed certificate (CN=${CLIENT_ID}, ${CERT_DAYS} days) ..."
     mkdir -p "$CERT_DIR"
+    chmod 700 "$CERT_DIR"
     openssl req -x509 -newkey rsa:2048 -nodes \
         -keyout "$_key" -out "$_cert" \
         -days "$CERT_DAYS" -subj "/CN=${CLIENT_ID}" >/dev/null 2>&1 \
         || dm_error "Failed to generate self-signed certificate for ${CLIENT_ID}"
+    chmod 600 "$_key"
 
     # Persist the cert name so 'upload'/'cleanup' can find it without an argument.
     printf '%s\n' "$CLIENT_ID" > "$CERT_NAME_FILE"
