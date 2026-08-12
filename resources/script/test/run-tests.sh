@@ -305,8 +305,11 @@ _DM_SERVICE="${DM_SERVICE:-/service/dynamic-mapper-service}"
 _HEALTH_CHECK_DONE=0
 
 _check_c8y_session() {
-    # Fast path: explicit env-var credentials
-    [ -n "${C8Y_HOST:-}" ] && [ -n "${C8Y_USER:-}" ] && [ -n "${C8Y_PASSWORD:-}" ] && return 0
+    # Fast path: explicit env-var credentials (password or token-based auth)
+    if [ -n "${C8Y_HOST:-}" ] && [ -n "${C8Y_USER:-}" ] \
+            && { [ -n "${C8Y_PASSWORD:-}" ] || [ -n "${C8Y_TOKEN:-}" ]; }; then
+        return 0
+    fi
     # Session-file path: parse the host from the active session.
     # 'c8y sessions current' may exit 0 even when no session is loaded, so
     # we check for an actual non-empty host value in the JSON output.
