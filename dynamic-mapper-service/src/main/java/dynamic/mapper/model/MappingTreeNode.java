@@ -32,9 +32,7 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -60,12 +58,14 @@ public class MappingTreeNode {
     // Core properties
     @Builder.Default
     private final Map<String, List<MappingTreeNode>> childNodes = new ConcurrentHashMap<>();
-    // private final Map<String, List<MappingTreeNode>> childNodes =
-    // Collections.synchronizedMap(new HashMap<>());
     private Mapping mapping;
     @Builder.Default
     private String nodeId = Utils.createCustomUuid();
-    private Boolean mappingNode;
+    // Defaults to false so a builder call that forgets to set this (e.g. via
+    // toBuilder()) can't leave it null and NPE the unboxing call sites
+    // (getMappingNode() is used directly as a Predicate<MappingTreeNode> in streams).
+    @Builder.Default
+    private Boolean mappingNode = false;
     private long depthIndex;
     @ToString.Exclude
     private MappingTreeNode parentNode;
@@ -378,28 +378,20 @@ public class MappingTreeNode {
     }
 
     private boolean processChildNodesForDeletion(Mapping mapping, MappingContext context, MutableInt branchingLevel) {
-        MutableBoolean foundMapping = new MutableBoolean(false);
-        Set<Entry<String, List<MappingTreeNode>>> childNodesEntrySet = childNodes.entrySet();
-
-        childNodesEntrySet
-                .removeIf(entry -> processMappingNodeEntry(entry, mapping, context, branchingLevel, foundMapping));
-
-        return foundMapping.booleanValue();
-    }
-
-    private boolean processMappingNodeEntry(Entry<String, List<MappingTreeNode>> entry, Mapping mapping,
-            MappingContext context, MutableInt branchingLevel, MutableBoolean foundMapping) {
-        List<MappingTreeNode> nodes = entry.getValue();
-        // Mark the mapping as found whenever a matching node is actually removed — not only
-        // when the level becomes empty. Several mappings can share the same topic level, so
-        // removing one still leaves the list non-empty while the deletion did succeed.
-        boolean removedAny = nodes.removeIf(node -> shouldRemoveNode(node, mapping, context, branchingLevel));
-        if (removedAny) {
-            foundMapping.setTrue();
+        List<MappingTreeNode> currentChildNodes = childNodes.get(context.currentLevel);
+        if (currentChildNodes == null) {
+            return false;
         }
 
+        boolean removedAny = currentChildNodes
+                .removeIf(node -> shouldRemoveNode(node, mapping, context, branchingLevel));
+
         // Drop the (now empty) level entry from the parent's child map.
-        return nodes.isEmpty();
+        if (currentChildNodes.isEmpty()) {
+            childNodes.remove(context.currentLevel);
+        }
+
+        return removedAny;
     }
 
     private boolean shouldRemoveNode(MappingTreeNode node, Mapping mapping, MappingContext context,

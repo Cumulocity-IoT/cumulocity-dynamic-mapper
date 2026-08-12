@@ -122,7 +122,7 @@ _expand_index_token() {
         if [ "$lo" -gt "$hi" ]; then
             printf '%sERROR: invalid range %s (start > end)%s\n' \
                 "${C_RED}" "$token" "${C_RESET}" >&2
-            exit 1
+            return 1
         fi
         seq "$lo" "$hi"
     fi
@@ -130,7 +130,10 @@ _expand_index_token() {
 
 # Run all tests identified by one index-like token (number or N-M range).
 _run_index_token() {
-    local num idx
+    local num idx expanded
+    if ! expanded=$(_expand_index_token "$1"); then
+        exit 1
+    fi
     while IFS= read -r num; do
         idx=$(( num - 1 ))
         if [ "$idx" -ge 0 ] && [ "$idx" -lt "$_n_tests" ]; then
@@ -140,7 +143,7 @@ _run_index_token() {
                 "$num" "$_n_tests"
             exit 1
         fi
-    done < <(_expand_index_token "$1")
+    done <<< "$expanded"
 }
 
 _print_header() {
@@ -302,8 +305,11 @@ _DM_SERVICE="${DM_SERVICE:-/service/dynamic-mapper-service}"
 _HEALTH_CHECK_DONE=0
 
 _check_c8y_session() {
-    # Fast path: explicit env-var credentials
-    [ -n "${C8Y_HOST:-}" ] && return 0
+    # Fast path: explicit env-var credentials (password or token-based auth)
+    if [ -n "${C8Y_HOST:-}" ] && [ -n "${C8Y_USER:-}" ] \
+            && { [ -n "${C8Y_PASSWORD:-}" ] || [ -n "${C8Y_TOKEN:-}" ]; }; then
+        return 0
+    fi
     # Session-file path: parse the host from the active session.
     # 'c8y sessions current' may exit 0 even when no session is loaded, so
     # we check for an actual non-empty host value in the JSON output.
@@ -578,7 +584,10 @@ _interactive() {
             selections=($REPLY)
             for sel in "${selections[@]}"; do
                 if _is_index_like "$sel"; then
-                    local num idx
+                    local num idx expanded
+                    if ! expanded=$(_expand_index_token "$sel"); then
+                        continue
+                    fi
                     while IFS= read -r num; do
                         idx=$(( num - 1 ))
                         if [ "$idx" -ge 0 ] && [ "$idx" -lt "$_n_tests" ]; then
@@ -587,7 +596,7 @@ _interactive() {
                             printf "${C_YELLOW}WARN: %s is out of range (1–%d)${C_RESET}\n" \
                                 "$num" "$_n_tests"
                         fi
-                    done < <(_expand_index_token "$sel")
+                    done <<< "$expanded"
                 else
                     printf "${C_YELLOW}WARN: unrecognised selection '%s'${C_RESET}\n" "$sel"
                 fi

@@ -86,17 +86,17 @@
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
   @if (path == 'static') {
-    <button class="btn btn-link" title="{{ 'Manage subscriptions (table)' | translate }}"
+    <button class="btn btn-link" title="{{ 'Add subscriptions (table)' | translate }}"
       (click)="onDefineSubscription2()"
       data-cy="dm-subscription-manage-device-table"
       [disabled]="!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole">
       <i c8yIcon="subscription"></i>
-      {{ 'Manage subscriptions (device table )' | translate }}
+      {{ 'Add subscriptions (device table)' | translate }}
     </button>
   }
   @if (path == 'static') {
 <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
-      'Specify a device or device group using filters in the device table to create subscription. When a device group is added subscriptions for all assigned devices are created. When a device is added/removed from a chosen group the subscription is NOT created/deleted (static).'
+      'Specify devices using filters in the device table to add them to the subscription. This can only add devices — to unsubscribe a device, use the device selection (tree) view instead.'
         | translate
     }}" placement="bottom" triggers="focus" type="button"></button>
   }

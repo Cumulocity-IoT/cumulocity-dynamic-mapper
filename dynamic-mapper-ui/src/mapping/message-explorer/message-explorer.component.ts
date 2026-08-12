@@ -208,10 +208,14 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     const state = {
       sessionId: this.sessionId,
       connectorName: this.connectorName,
+      sessionConnectorIdentifier: this.sessionConnectorIdentifier,
       sessionTopic: this.sessionTopic,
       sessionDirection: this.sessionDirection,
+      sessionMaxMessages: this.sessionMaxMessages,
+      sessionTTLMinutes: this.sessionTTLMinutes,
       sessionDeviceType: this.sessionDeviceType,
-      sessionSourceId: this.sessionSourceId
+      sessionSourceId: this.sessionSourceId,
+      sessionDeviceTypeFilter: this.sessionDeviceTypeFilter
     };
     localStorage.setItem(MessageExplorerComponent.SESSION_STORAGE_KEY, JSON.stringify(state));
   }
@@ -238,10 +242,14 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       const msgs = await this.explorerService.getMessages(state.sessionId);
       this.sessionId = state.sessionId;
       this.connectorName = state.connectorName ?? '';
+      this.sessionConnectorIdentifier = state.sessionConnectorIdentifier ?? '';
       this.sessionTopic = state.sessionTopic ?? '';
       this.sessionDirection = state.sessionDirection ?? 'INBOUND';
+      this.sessionMaxMessages = state.sessionMaxMessages ?? 50;
+      this.sessionTTLMinutes = state.sessionTTLMinutes ?? 10;
       this.sessionDeviceType = state.sessionDeviceType ?? null;
       this.sessionSourceId = state.sessionSourceId ?? null;
+      this.sessionDeviceTypeFilter = state.sessionDeviceTypeFilter ?? null;
       const indexed: IndexedMessage[] = msgs.map(m => {
         const seqNo = this.nextSeqNo++;
         return { ...m, id: seqNo, seqNo };
@@ -369,8 +377,6 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       if (this.shouldRefreshAutomatic) {
         this.countdownIntervalComponent?.start();
       }
-      const deviceLabel = result.deviceName ? ` / device: "${result.deviceName}"` : '';
-      this.alertService.success(`${result.direction === 'OUTBOUND' ? 'Outbound' : 'Inbound'}: exploring "${result.topic}" on "${result.connectorName}"${deviceLabel}`);
     } catch (e: any) {
       this.alertService.danger(`Failed to start explorer session: ${e.message}`);
     }

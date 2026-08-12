@@ -154,7 +154,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
     @Override
     public void onClose(int statusCode, String reason) {
         log.info("{} - WebSocket connection closed", connectorClient.getTenant());
-        if (reason.contains("401"))
+        if (reason != null && reason.contains("401"))
             notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), 401);
         else
             notificationSubscriber.setDeviceConnectionStatus(connectorClient.getTenant(), null);
@@ -196,7 +196,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         }
 
         // Skip UPDATE operations for OPERATION API (unless testing)
-        if (!testing && "UPDATE".equals(notification.getOperation()) && notification.getApi().equals(API.OPERATION)) {
+        if (!testing && "UPDATE".equals(notification.getOperation()) && API.OPERATION.equals(notification.getApi())) {
             log.info("{} - Update Operation message for connector: {} is received, ignoring it",
                     tenant, connectorClient.getConnectorName());
             return result;

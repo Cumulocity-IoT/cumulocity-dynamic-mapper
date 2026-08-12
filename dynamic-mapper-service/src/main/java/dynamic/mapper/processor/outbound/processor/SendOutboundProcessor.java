@@ -105,6 +105,10 @@ public class SendOutboundProcessor extends BaseProcessor {
             log.error(errorMessage, e);
             context.addError(new ProcessingException(errorMessage, e));
 
+            // Ensure the operation isn't left stuck in EXECUTING when send/alarm processing
+            // itself throws before the normal FAILED/SUCCESSFUL ack above is reached.
+            autoAckOperation(context, tenant, mapping, OperationStatus.FAILED);
+
             if (!testing) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 mappingStatus.incrementErrors();
@@ -115,7 +119,7 @@ public class SendOutboundProcessor extends BaseProcessor {
     }
 
     /**
-     * Set operation status to EXECUTING before sending the outbound message.
+     * Update the operation status (EXECUTING, FAILED, or SUCCESSFUL) around sending the outbound message.
      */
     private void autoAckOperation(ProcessingContext<Object> context, String tenant, Mapping mapping, OperationStatus operationStatus) {
         if (!API.OPERATION.equals(context.getApi()) || !Boolean.TRUE.equals(mapping.getAutoAckOperation())
@@ -137,7 +141,7 @@ public class SendOutboundProcessor extends BaseProcessor {
             }
 
         } catch (Exception e) {
-            log.warn("{} - Failed to update operation status to EXECUTING: {}", tenant, e.getMessage());
+            log.warn("{} - Failed to update operation status to {}: {}", tenant, operationStatus, e.getMessage());
         }
     }
 

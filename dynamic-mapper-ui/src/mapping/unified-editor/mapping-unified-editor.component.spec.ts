@@ -41,8 +41,7 @@ import {
   MappingType,
   DeploymentMapEntry,
   Feature,
-  Qos,
-  RepairStrategy
+  Qos
 } from '../../shared';
 import { EditorMode } from '../shared/stepper.model';
 
@@ -179,7 +178,9 @@ describe('MappingUnifiedEditorComponent', () => {
     mockBottomDrawerService = jasmine.createSpyObj('BottomDrawerService', ['openDrawer']);
     mockBsModalService = jasmine.createSpyObj('BsModalService', ['show']);
     mockMappingService = jasmine.createSpyObj('MappingService', [
-      'updateMapping',
+      'saveDraft',
+      'createMapping',
+      'refreshMappings',
       'updateDefinedDeploymentMapEntry'
     ]);
     mockRouter = jasmine.createSpyObj('Router', ['navigateByUrl'], { url: '/mappings/inbound/edit/42' });
@@ -205,7 +206,8 @@ describe('MappingUnifiedEditorComponent', () => {
     mockSharedService.getFeatures.and.returnValue(Promise.resolve(mockFeature));
     mockSharedService.getServiceConfiguration.and.returnValue(Promise.resolve({} as any));
     mockSharedService.getCodeTemplates.and.returnValue(Promise.resolve({} as any));
-    mockMappingService.updateMapping.and.returnValue(Promise.resolve(buildMapping()));
+    mockMappingService.saveDraft.and.returnValue(Promise.resolve(buildMapping()));
+    mockMappingService.createMapping.and.returnValue(Promise.resolve(buildMapping()));
     mockMappingService.updateDefinedDeploymentMapEntry.and.returnValue(Promise.resolve({} as any));
 
     TestBed.overrideComponent(MappingUnifiedEditorComponent, {
@@ -297,37 +299,6 @@ describe('MappingUnifiedEditorComponent', () => {
     });
   });
 
-  describe('onSelectSubstitution', () => {
-    beforeEach(() => {
-      component.mapping = buildMapping({
-        substitutions: [
-          { pathSource: '$.a', pathTarget: '$.x', repairStrategy: RepairStrategy.DEFAULT, expandArray: false },
-          { pathSource: '$.b', pathTarget: '$.y', repairStrategy: RepairStrategy.DEFAULT, expandArray: false }
-        ]
-      });
-      component.stepperConfiguration = buildConfig();
-    });
-
-    it('selects a substitution by index and populates the model', async () => {
-      await component.onSelectSubstitution(1);
-      expect(component.selectedSubstitution).toBe(1);
-      expect(component.substitutionModel.pathSource).toBe('$.b');
-      expect(component.substitutionModel.pathTarget).toBe('$.y');
-    });
-
-    it('ignores a negative index', async () => {
-      component.selectedSubstitution = 0;
-      await component.onSelectSubstitution(-1);
-      expect(component.selectedSubstitution).toBe(0);
-    });
-
-    it('ignores an out-of-range index', async () => {
-      component.selectedSubstitution = 0;
-      await component.onSelectSubstitution(99);
-      expect(component.selectedSubstitution).toBe(0);
-    });
-  });
-
   describe('YAML <-> configuration helpers', () => {
     it('serialises and parses round-trip', () => {
       const yaml = component.configurationToYaml({ a: 1 });
@@ -400,10 +371,10 @@ describe('MappingUnifiedEditorComponent', () => {
       });
     });
 
-    it('persists the mapping and deployment, then navigates back to the grid', async () => {
+    it('persists a draft and deployment, then navigates back to the grid', async () => {
       await component.onCommitButton();
 
-      expect(mockMappingService.updateMapping).toHaveBeenCalled();
+      expect(mockMappingService.saveDraft).toHaveBeenCalledWith(component.mapping.id, component.mapping);
       expect(mockMappingService.updateDefinedDeploymentMapEntry).toHaveBeenCalledWith(deploymentMapEntry);
       expect(mockAlertService.success).toHaveBeenCalled();
       expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/mappings/inbound');
@@ -415,8 +386,8 @@ describe('MappingUnifiedEditorComponent', () => {
       expect(component.mapping.targetTemplate).toBe(JSON.stringify({ b: 2 }));
     });
 
-    it('shows a danger alert and does not navigate when the update fails', async () => {
-      mockMappingService.updateMapping.and.returnValue(Promise.reject(new Error('boom')));
+    it('shows a danger alert and does not navigate when the save fails', async () => {
+      mockMappingService.saveDraft.and.returnValue(Promise.reject(new Error('boom')));
 
       await component.onCommitButton();
 
@@ -425,7 +396,7 @@ describe('MappingUnifiedEditorComponent', () => {
     });
 
     it('blocks the commit and jumps to the Templates tab when a required extension is missing', async () => {
-      component.stepperViewModel = { showExtensionSelectors: true } as any;
+      component.stepperViewModel = { showExtensionSelectorsSource: true, showExtensionSelectorsTarget: false } as any;
       component.templateForm = new FormGroup({
         extensionName: new FormControl('', Validators.required),
         eventName: new FormControl('', Validators.required)
@@ -434,7 +405,7 @@ describe('MappingUnifiedEditorComponent', () => {
       await component.onCommitButton();
 
       expect(component.activeTabIndex).toBe(TAB_SELECT_TEMPLATES);
-      expect(mockMappingService.updateMapping).not.toHaveBeenCalled();
+      expect(mockMappingService.saveDraft).not.toHaveBeenCalled();
     });
   });
 

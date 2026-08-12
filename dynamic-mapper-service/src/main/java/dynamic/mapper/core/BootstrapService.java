@@ -486,13 +486,15 @@ public class BootstrapService {
 
         try {
             connectorConfigurationService.saveConnectorConfiguration(testConnectorConfig);
+            // initializeConnectorByConfiguration() already builds a fully-initialized TestClient
+            // via the factory (initializeManagers() called) and registers its outbound dispatcher.
+            // Do NOT redundantly re-register here with initialTestClient: it was only constructed
+            // via the no-arg constructor to read default connector-spec properties above, so its
+            // explorerListeners/outboundExplorerListeners are never initialized — wiring it in as
+            // the outbound dispatcher replaces the good one and NPEs on the next notification.
             initializeConnectorByConfiguration(testConnectorConfig, serviceConfiguration, tenant);
         } catch (ConnectorException | JsonProcessingException e) {
             throw new ConnectorRegistryException(e.getMessage());
-        }
-
-        if (serviceConfiguration.getOutboundMappingEnabled()) {
-            configurationRegistry.initializeOutboundMapping(tenant, serviceConfiguration, initialTestClient);
         }
     }
 

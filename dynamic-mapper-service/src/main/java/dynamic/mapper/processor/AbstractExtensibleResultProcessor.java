@@ -94,7 +94,12 @@ public abstract class AbstractExtensibleResultProcessor extends CommonProcessor 
             processExtensionResults(routing, state, output, context);
             postProcessExtensionResults(state, output, context);
 
-            // Sync back to context for backward compatibility
+            // Sync back to context for backward compatibility. Without syncFromState(),
+            // state.setIgnoreFurtherProcessing(true) calls made above (e.g. empty extension
+            // result, no requests generated, inventory filter failed) would be silently
+            // discarded and the route's shouldIgnoreFurtherProcessing() check right after
+            // this processor would never see them.
+            context.syncFromState(state);
             syncOutputToContext(output, context);
         } catch (Exception e) {
             handleProcessingError(e, context, tenant, mapping);

@@ -114,7 +114,7 @@ public class ExtensionResultProcessor {
         }
 
         // Sync back to context (for backward compatibility with code that reads from context.getRequests())
-        syncOutputToContext(output, context);
+        context.syncFromOutputCollector(output);
     }
 
     /**
@@ -162,7 +162,7 @@ public class ExtensionResultProcessor {
         }
 
         // Sync back to context (for backward compatibility with code that reads from context.getRequests())
-        syncOutputToContext(output, context);
+        context.syncFromOutputCollector(output);
     }
 
     /**
@@ -390,37 +390,5 @@ public class ExtensionResultProcessor {
         // Note: Attachment handling for events would go here
         // For now, attachment data is in contextData but actual file upload
         // would need to be implemented separately by SendInboundProcessor
-    }
-
-    /**
-     * Synchronizes requests from OutputCollector back to ProcessingContext.
-     *
-     * <p>This method maintains backward compatibility by copying requests from the
-     * thread-safe OutputCollector back to the ProcessingContext. This allows existing
-     * code that reads from context.getRequests() to continue working.</p>
-     *
-     * <p><b>Note:</b> In a fully migrated codebase, this sync would not be necessary
-     * as all code would use OutputCollector directly.</p>
-     *
-     * @param output the OutputCollector containing accumulated requests
-     * @param context the ProcessingContext to sync to
-     */
-    private void syncOutputToContext(
-            dynamic.mapper.processor.model.OutputCollector output,
-            ProcessingContext<?> context) {
-        // Get the new requests from OutputCollector
-        java.util.List<DynamicMapperRequest> newRequests = output.getRequests();
-
-        // Clear and replace context requests (for backward compatibility)
-        context.getRequests().clear();
-        context.getRequests().addAll(newRequests);
-
-        // Also sync errors and warnings if any
-        if (output.hasErrors()) {
-            context.getErrors().addAll(output.getErrors());
-        }
-        if (output.hasWarnings()) {
-            context.getWarnings().addAll(output.getWarnings());
-        }
     }
 }

@@ -24,11 +24,7 @@ import { featureResolver } from '../shared';
 import { DocMainComponent } from './doc-main.component';
 import { DocNavigationFactory } from './doc-navigation.factory';
 import { DocOverviewComponent } from './doc-overview.component';
-import { DocJsonataComponent } from './doc-jsonata.component';
-import { DocSmartFunctionComponent } from './doc-smartfunction.component';
-import { DocJavaExtensionComponent } from './doc-javaextension.component';
-import { DocCustomRoutingComponent } from './doc-customrouting.component';
-import { DocVersioningComponent } from './doc-versioning.component';
+import { DocPageComponent } from './doc-page.component';
 
 const OVERVIEW_SECTIONS = [
   'overview', 'getting-started', 'managing-connectors', 'define-mapping',
@@ -51,11 +47,11 @@ const OVERVIEW_SECTIONS = [
       children: [
         { path: '', pathMatch: 'full', component: DocOverviewComponent, resolve: { feature: featureResolver } },
         ...OVERVIEW_SECTIONS.map(s => ({ path: s, component: DocOverviewComponent, resolve: { feature: featureResolver } })),
-        { path: 'jsonata',        component: DocJsonataComponent },
-        { path: 'smartfunction',  component: DocSmartFunctionComponent },
-        { path: 'javaextension',  component: DocJavaExtensionComponent },
-        { path: 'custom-routing', component: DocCustomRoutingComponent },
-        { path: 'versioning',     component: DocVersioningComponent },
+        { path: 'jsonata',        component: DocPageComponent },
+        { path: 'smartfunction',  component: DocPageComponent },
+        { path: 'javaextension',  component: DocPageComponent },
+        { path: 'custom-routing', component: DocPageComponent },
+        { path: 'versioning',     component: DocPageComponent },
       ]
     }),
     hookNavigator(DocNavigationFactory),

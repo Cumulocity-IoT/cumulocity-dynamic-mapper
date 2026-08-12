@@ -80,7 +80,7 @@ public class JavaScriptInteropHelper {
             } else if (isCumulocityObject(element)) {
                 result[i] = convertToCumulocityObject(element);
             } else {
-                result[i] = element; // Keep as Value for unknown types
+                result[i] = convertValueToJavaObject(element);
             }
         }
 
@@ -94,16 +94,16 @@ public class JavaScriptInteropHelper {
         if (value.hasMember("payload")) {
             msg.setPayload(convertValueToJavaObject(value.getMember("payload")));
         }
-        if (value.hasMember("cumulocityType")) {
+        if (value.hasMember("cumulocityType") && !value.getMember("cumulocityType").isNull()) {
             msg.setCumulocityType(CumulocityType.fromValue(value.getMember("cumulocityType").asString()));
         }
-        if (value.hasMember("action")) {
+        if (value.hasMember("action") && !value.getMember("action").isNull()) {
             msg.setAction(MappingAction.fromValue(value.getMember("action").asString()));
         }
         if (value.hasMember("externalSource")) {
             msg.setExternalSource(convertToExternalIdList(convertValueToJavaObject(value.getMember("externalSource"))));
         }
-        if (value.hasMember("destination")) {
+        if (value.hasMember("destination") && !value.getMember("destination").isNull()) {
             msg.setDestination(Destination.fromValue(value.getMember("destination").asString()));
         }
         if (value.hasMember("contextData")) {
@@ -130,7 +130,7 @@ public class JavaScriptInteropHelper {
         if (value.hasMember("payload")) {
             msg.setPayload(convertValueToJavaObject(value.getMember("payload")));
         }
-        if (value.hasMember("cumulocityType")) {
+        if (value.hasMember("cumulocityType") && !value.getMember("cumulocityType").isNull()) {
             msg.setCumulocityType(CumulocityType.fromValue(value.getMember("cumulocityType").asString()));
         }
         if (value.hasMember("topic")) {
@@ -164,9 +164,7 @@ public class JavaScriptInteropHelper {
             // Convert JS Date to Java Instant
             Value timeValue = value.getMember("time");
             if (timeValue.isDate()) {
-                // GraalJS returns LocalDate, convert to Instant
-                LocalDate localDate = timeValue.asDate();
-                msg.setTime(localDate.atStartOfDay(ZoneOffset.UTC).toInstant());
+                msg.setTime(dateValueToInstant(timeValue));
             } else if (timeValue.isString()) {
                 // Handle string dates (ISO format)
                 try {
@@ -212,9 +210,7 @@ public class JavaScriptInteropHelper {
         } else if (value.isBoolean()) {
             return value.asBoolean();
         } else if (value.isDate()) {
-            // Handle LocalDate properly
-            LocalDate localDate = value.asDate();
-            return localDate.atStartOfDay(ZoneOffset.UTC).toInstant();
+            return dateValueToInstant(value);
         } else if (value.hasArrayElements()) {
             // Convert to Java List
             List<Object> list = new ArrayList<>();
@@ -223,6 +219,20 @@ public class JavaScriptInteropHelper {
                 list.add(convertValueToJavaObject(value.getArrayElement(i)));
             }
             return list;
+        } else if (value.hasHashEntries()) {
+            // Convert to Java Map. Must be checked before hasMembers(): a host Map
+            // (e.g. msg.getPayload() passed through unchanged) reports hasMembers()
+            // true too, but getMemberKeys() then returns the Map class's own method
+            // names (get, put, keySet, ...) instead of the map's actual data keys.
+            Map<String, Object> map = new HashMap<>();
+            Value keysIterator = value.getHashKeysIterator();
+            while (keysIterator.hasIteratorNextElement()) {
+                Value key = keysIterator.getIteratorNextElement();
+                Value val = value.getHashValueOrDefault(key, null);
+                String keyString = key.isString() ? key.asString() : String.valueOf(convertValueToJavaObject(key));
+                map.put(keyString, val != null ? convertValueToJavaObject(val) : null);
+            }
+            return map;
         } else if (value.hasMembers()) {
             // Convert to Java Map
             Map<String, Object> map = new HashMap<>();
@@ -253,9 +263,7 @@ public class JavaScriptInteropHelper {
         }
 
         if (dateValue.isDate()) {
-            // GraalJS Date objects
-            LocalDate localDate = dateValue.asDate();
-            return localDate.atStartOfDay(ZoneOffset.UTC).toInstant();
+            return dateValueToInstant(dateValue);
         } else if (dateValue.isString()) {
             // Handle ISO string dates
             try {
@@ -272,6 +280,20 @@ public class JavaScriptInteropHelper {
             // Fallback to current time
             return Instant.now();
         }
+    }
+
+    /**
+     * Converts a GraalJS date value to an Instant without losing the time-of-day.
+     * A JS Date is a date, time and timezone combined ({@link Value#isInstant()}); using
+     * {@link Value#asDate()} alone only yields the date part (year/month/day), silently
+     * truncating the value to midnight UTC.
+     */
+    private static Instant dateValueToInstant(Value dateValue) {
+        if (dateValue.isInstant()) {
+            return dateValue.asInstant();
+        }
+        LocalDate localDate = dateValue.asDate();
+        return localDate.atStartOfDay(ZoneOffset.UTC).toInstant();
     }
 
     // Keep all existing conversion methods unchanged
@@ -311,25 +333,47 @@ public class JavaScriptInteropHelper {
     }
 
     static ExternalId convertMapToExternalId(Map<String, Object> map) {
-        // ... (keep existing implementation)
         if (map == null) {
             return null;
         }
 
         ExternalId externalId = new ExternalId();
 
-        if (map.containsKey("externalId")) {
-            externalId.setExternalId(String.valueOf(map.get("externalId")));
+        Object rawType = map.get("type");
+        if (rawType != null && !isMissingValue(String.valueOf(rawType))) {
+            externalId.setType(String.valueOf(rawType));
         }
-        if (map.containsKey("type")) {
-            externalId.setType(String.valueOf(map.get("type")));
-        }
-        // Only return if we have the required fields
-        if (externalId.getType() != null) {
-            return externalId;
+        if (externalId.getType() == null) {
+            return null;
         }
 
-        return null;
+        // The externalId field is optional: a Smart Function may return only the type
+        // (e.g. for resolveGlobalId2ExternalId(), where the external id is what's being
+        // resolved, not supplied). But if the key IS present, a Smart Function returning
+        // `undefined`/`null`/blank for it must NOT be silently coerced into the strings
+        // "undefined"/"null" and used to look up or create a device.
+        if (map.containsKey("externalId")) {
+            Object rawExternalId = map.get("externalId");
+            String coerced = rawExternalId == null ? null : String.valueOf(rawExternalId);
+            if (isMissingValue(coerced)) {
+                return null;
+            }
+            externalId.setExternalId(coerced);
+        }
+
+        return externalId;
+    }
+
+    /**
+     * Detects JS-undefined/null values that GraalVM/String.valueOf coerce into the
+     * literal strings "null" or "undefined", plus blank strings.
+     */
+    private static boolean isMissingValue(String value) {
+        if (value == null) {
+            return true;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() || "null".equalsIgnoreCase(trimmed) || "undefined".equalsIgnoreCase(trimmed);
     }
 
     /**

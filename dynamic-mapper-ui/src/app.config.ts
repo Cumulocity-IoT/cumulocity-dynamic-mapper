@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { ApplicationConfig, importProvidersFrom } from '@angular/core';
+import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection } from '@angular/core';
 // provideAnimations is needed to initialize AnimationBuilder before standalone
 // components (NavigatorNodeComponent via CollapseModule from ngx-bootstrap) inject it.
 // Without this, Angular 20 raises NG0200 circular dependency on AnimationBuilder.
@@ -29,6 +29,7 @@ import { DynamicMapperModule } from './dynamic-mapper.module';
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    provideZoneChangeDetection({ eventCoalescing: true }),
     // eslint-disable-next-line @typescript-eslint/no-deprecated
     provideAnimations(),
     importProvidersFrom(RouterModule.forRoot()),

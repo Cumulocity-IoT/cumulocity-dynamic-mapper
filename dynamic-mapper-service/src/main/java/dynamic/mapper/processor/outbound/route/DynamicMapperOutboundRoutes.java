@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
-import org.apache.camel.Exchange;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -37,7 +36,6 @@ import dynamic.mapper.processor.outbound.processor.ExtensibleResultOutboundProce
 import dynamic.mapper.processor.outbound.processor.FlowOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.FlowResultOutboundProcessor;
 import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.processor.outbound.processor.DeserializationOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.ExtensibleOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.JSONataOutboundProcessor;
@@ -94,33 +92,7 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
         // Global error handling for OUTBOUND
         onException(Exception.class)
                 .handled(true)
-                .process(exchange -> {
-                    Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
-                    String routeId = exchange.getFromRouteId();
-
-                    // Safe endpoint access
-                    String endpoint = "unknown";
-                    try {
-                        if (exchange.getFromEndpoint() != null) {
-                            endpoint = exchange.getFromEndpoint().getEndpointUri();
-                        }
-                    } catch (Exception e) {
-                        // Ignore endpoint access errors
-                    }
-
-                    log.error("=== CAMEL OUTBOUND ROUTE ERROR ===");
-                    log.error("Route ID: {}", routeId);
-                    log.error("Endpoint: {}", endpoint);
-                    log.error("Exception Type: {}", cause.getClass().getSimpleName());
-                    log.error("Exception Message: {}", cause.getMessage());
-                    log.error("Full Stack Trace: ", cause);
-
-                    ProcessingResultWrapper<Object> result = ProcessingResultWrapper.builder()
-                            .pipelineTimeoutMS(0)
-                            .build();
-
-                    exchange.getIn().setHeader(CamelHeaders.PROCESSING_RESULT, result);
-                })
+                .process(exchange -> handleRouteException(exchange, "OUTBOUND"))
                 .to("direct:outboundErrorHandling");
 
         // Main processing entry point (transport agnostic)
@@ -152,8 +124,13 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                                 .collect(java.util.stream.Collectors.toList());
 
                         exchange.getIn().setHeader(CamelHeaders.MAPPINGS, validMappings);
-                        log.debug("Filtered {} outbound mappings to {} valid mappings",
-                                allMappings.size(), validMappings.size());
+                        if (validMappings.isEmpty()) {
+                            log.info("{} - All {} candidate mapping(s) filtered out for connector {} — no processing will occur",
+                                    tenant, allMappings.size(), connectorIdentifier);
+                        } else {
+                            log.debug("{} - Filtered {} candidate mapping(s) to {} valid mapping(s) for connector {}",
+                                    tenant, allMappings.size(), validMappings.size(), connectorIdentifier);
+                        }
                     }
                 })
                 .split(header(CamelHeaders.MAPPINGS))
@@ -175,7 +152,7 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
 
                 // Check if further processing should be ignored after enrichment
                 .choice()
-                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
+                .when(this::shouldIgnoreFurtherProcessing)
                 .to("log:outbound-enrichment-filtered-message?level=DEBUG")
                 .process(consolidationProcessor)
                 .stop()
@@ -184,15 +161,15 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 // 1. Branch based on processing type
                 .choice()
                 // 1b. Extension processing path
-                .when(exchange -> isExtension(exchange))
+                .when(this::isExtension)
                 .to("direct:processOutboundExtension")
 
                 // 1c. Flow function path
-                .when(exchange -> isFlowFunction(exchange))
+                .when(this::isFlowFunction)
                 .to("direct:processOutboundFlowFunction")
 
                 // 1e. JSONata extraction path
-                .when(exchange -> isJSONataExtraction(exchange))
+                .when(this::isJSONataExtraction)
                 .to("direct:processOutboundJSONataExtraction")
 
                 // Default fallback — unknown/unmatched TransformationType
@@ -214,15 +191,19 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .routeId("outbound-extension-processor")
                 .process(extensibleOutboundProcessor)
                 .choice()
-                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
+                .when(this::shouldIgnoreFurtherProcessing)
                 .to("log:outbound-extension-filtered-message?level=DEBUG")
+                // Still call SendOutboundProcessor so it can auto-ack the operation as
+                // FAILED when the extension caused processing to be skipped.
+                .process(outboundSendProcessor)
                 .process(consolidationProcessor)
                 .stop()
                 .otherwise()
                 .process(extensibleResultOutboundProcessor)
                 .choice()
-                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
+                .when(this::shouldIgnoreFurtherProcessing)
                 .to("log:outbound-extension-result-filtered-message?level=DEBUG")
+                .process(outboundSendProcessor)
                 .process(consolidationProcessor)
                 .stop()
                 .otherwise()
@@ -236,7 +217,7 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .routeId("outbound-flow-function-processor")
                 .process(flowOutboundProcessor)
                 .choice()
-                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
+                .when(this::shouldIgnoreFurtherProcessing)
                 .to("log:outbound-flow-function-filtered-message?level=DEBUG")
                 // Still call SendOutboundProcessor so it can auto-ack the operation as
                 // FAILED when a JS error caused processing to be skipped.
@@ -255,8 +236,11 @@ public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
                 .process(jsonataExtractionOutboundProcessor)
                 .process(substitutionOutboundProcessor)
                 .choice()
-                .when(exchange -> shouldIgnoreFurtherProcessing(exchange))
+                .when(this::shouldIgnoreFurtherProcessing)
                 .to("log:outbound-jsonata-filtered-message?level=DEBUG")
+                // Still call SendOutboundProcessor so it can auto-ack the operation as
+                // FAILED when substitution/extraction caused processing to be skipped.
+                .process(outboundSendProcessor)
                 .process(consolidationProcessor)
                 .stop()
                 .otherwise()

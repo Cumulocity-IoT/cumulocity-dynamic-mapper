@@ -29,7 +29,7 @@
               }
             ],
             "styles": [
-              "@c8y/style/main.less",
+              "@c8y/style/main.scss",
               "src/styles.less"
             ],
             "aot": false,

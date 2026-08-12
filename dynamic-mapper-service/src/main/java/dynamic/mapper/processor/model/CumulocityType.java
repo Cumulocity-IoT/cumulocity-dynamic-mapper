@@ -50,6 +50,9 @@ public enum CumulocityType {
      * Get enum from string value
      */
     public static CumulocityType fromValue(String value) {
+        if (value == null) {
+            return null;
+        }
         for (CumulocityType type : CumulocityType.values()) {
             if (type.value.equalsIgnoreCase(value)) {
                 return type;

@@ -23,11 +23,12 @@ package dynamic.mapper.processor.model;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.API;
@@ -97,23 +98,20 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     private Object rawPayload;
 
-    // NOTE: ArrayList is not thread-safe. If multiple threads concurrently call addRequest()
-    // on the same ProcessingContext, consider using CopyOnWriteArrayList or Collections.synchronizedList().
-    // Currently safe in parallel processing routes as requests are pre-created and only read/updated, not added.
+    // Thread-safe: the parallel-request-processing route (direct:processRequestsInParallel)
+    // runs SendInboundProcessor concurrently across virtual threads against this SAME
+    // ProcessingContext, and each leg may call addError() on failure.
     @Builder.Default
-    private List<DynamicMapperRequest> requests = new ArrayList<DynamicMapperRequest>();
+    private List<DynamicMapperRequest> requests = new CopyOnWriteArrayList<DynamicMapperRequest>();
 
-    // NOTE: ArrayList is not thread-safe. Review if addError() is called from multiple threads concurrently.
     @Builder.Default
-    private List<Exception> errors = new ArrayList<Exception>();
+    private List<Exception> errors = new CopyOnWriteArrayList<Exception>();
 
-    // NOTE: ArrayList is not thread-safe. Review if concurrent writes occur from multiple threads.
     @Builder.Default
-    private List<String> warnings = new ArrayList<>();
+    private List<String> warnings = new CopyOnWriteArrayList<>();
 
-    // NOTE: ArrayList is not thread-safe. Review if concurrent writes occur from multiple threads.
     @Builder.Default
-    private List<String> logs = new ArrayList<>();
+    private List<String> logs = new CopyOnWriteArrayList<>();
 
     @Builder.Default
     private ProcessingType processingType = ProcessingType.UNDEFINED;
@@ -121,16 +119,11 @@ public class ProcessingContext<O> implements AutoCloseable {
     private MappingType mappingType;
 
     // <pathTarget, substituteValues>
-    // NOTE: TreeMap is not thread-safe. If multiple threads concurrently modify processingCache
-    // (via addSubstitution() or direct put/get operations), consider using ConcurrentHashMap or
-    // Collections.synchronizedMap(). The TreeMap is used for sorted keys to ensure
-    // "_CONTEXT_DATA_.deviceName" is available when creating an implicit device.
+    // ConcurrentSkipListMap: thread-safe NavigableMap with weakly-consistent iterators,
+    // keeping the sorted-keys property (so "_CONTEXT_DATA_.deviceName" is available when
+    // creating an implicit device) while being safe under concurrent access.
     @Builder.Default
-    // private Map<String, List<SubstituteValue>> processingCache = new
-    // HashMap<String, List<SubstituteValue>>();
-    // sort processingCache, so that the "_CONTEXT_DATA_.deviceName" is available
-    // when creating an implicit device
-    private Map<String, List<SubstituteValue>> processingCache = new TreeMap<String, List<SubstituteValue>>();
+    private Map<String, List<SubstituteValue>> processingCache = new ConcurrentSkipListMap<String, List<SubstituteValue>>();
 
     @Builder.Default
     private boolean sendPayload = false;
@@ -190,10 +183,8 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     private Value sourceValue;
 
-    // NOTE: HashSet is not thread-safe. If multiple threads concurrently add alarms,
-    // consider using Collections.synchronizedSet() or ConcurrentHashMap.newKeySet().
     @Builder.Default
-    private Set<String> alarms = new HashSet<>();
+    private Set<String> alarms = ConcurrentHashMap.newKeySet();
 
     @Builder.Default
     private ProcessingMode processingMode = ProcessingMode.PERSISTENT;
@@ -399,6 +390,28 @@ public class ProcessingContext<O> implements AutoCloseable {
     }
 
     /**
+     * Syncs modifications from an OutputCollector back to this ProcessingContext.
+     * Replaces requests, errors, warnings, and logs with the collector's current contents.
+     *
+     * <p>Mirrors {@link #syncFromState(ProcessingState)} for the OutputCollector adapter:
+     * without this, a caller that adds to {@link #getOutputCollector()} has no supported way
+     * to propagate those additions back, and code reading {@code getRequests()}/{@code getErrors()}
+     * on this context would silently miss them.
+     *
+     * @param collector the OutputCollector with accumulated output to sync back
+     */
+    public void syncFromOutputCollector(OutputCollector collector) {
+        if (collector == null) {
+            return;
+        }
+
+        this.requests = new CopyOnWriteArrayList<>(collector.getRequests());
+        this.errors = new CopyOnWriteArrayList<>(collector.getErrors());
+        this.warnings = new CopyOnWriteArrayList<>(collector.getWarnings());
+        this.logs = new CopyOnWriteArrayList<>(collector.getLogs());
+    }
+
+    /**
      * Creates a ProcessingState from this ProcessingContext.
      * Migrates processing cache and flags into a thread-safe state manager.
      *
@@ -450,6 +463,16 @@ public class ProcessingContext<O> implements AutoCloseable {
      * Creates a DeviceContext from this ProcessingContext.
      * Extracts device-related fields into an immutable, thread-safe context.
      *
+     * <p><b>Read-only snapshot, no sync-back:</b> unlike {@link #getProcessingState()} /
+     * {@link #syncFromState(ProcessingState)} and {@link #getOutputCollector()} /
+     * {@link #syncFromOutputCollector(OutputCollector)}, there is no
+     * {@code syncFromDeviceContext(...)} method. {@link DeviceContext} is immutable
+     * ({@code with*} methods return a new instance), so calling e.g.
+     * {@code context.getDeviceContext().withExternalId(...)} does NOT affect this
+     * ProcessingContext — the result is silently discarded unless you use it directly
+     * (current callers only read from the returned DeviceContext) or assign the relevant
+     * field on this ProcessingContext yourself (e.g. {@code context.setExternalId(...)}).
+     *
      * @return a new DeviceContext with device information
      */
     @JsonIgnore
@@ -468,34 +491,6 @@ public class ProcessingContext<O> implements AutoCloseable {
         }
 
         return builder.build();
-    }
-
-    /**
-     * Creates an ExecutionContext from this ProcessingContext.
-     * Extracts GraalVM execution-related fields into an AutoCloseable context.
-     *
-     * WARNING: The returned ExecutionContext references the same GraalVM objects.
-     * Closing the ExecutionContext will close the GraalVM context in this ProcessingContext.
-     *
-     * @return a new ExecutionContext with execution engine information
-     */
-    @JsonIgnore
-    public ExecutionContext getExecutionContext() {
-        return ExecutionContext.builder()
-            .graalEngine(this.graalEngine)
-            .graalContext(this.graalContext)
-            .sharedSource(this.sharedSource)
-            .systemSource(this.systemSource)
-            .mappingSource(this.mappingSource)
-            .sourceValue(this.sourceValue)
-            .sharedCode(this.sharedCode)
-            .systemCode(this.systemCode)
-            .flowContext(this.flowContext)
-            .flowState(this.flowState)
-            .flowResult(this.flowResult)
-            .extensionResult(this.extensionResult)
-            .tenant(this.tenant)
-            .build();
     }
 
     // ===== END ADAPTER METHODS =====

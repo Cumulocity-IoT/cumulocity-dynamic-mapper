@@ -34,7 +34,16 @@ cleanup() {
     echo ""
     echo "=== Cleanup ==="
     dm_delete_device "$DEVICE_ID"
-    dm_set_type_subscriptions MEASUREMENT '[]'
+    # Remove only this test's type, preserving any other subscribed types
+    # (dm_set_type_subscriptions overwrites the whole list, so it's read-modify-write here).
+    local _remaining
+    _remaining=$(dm_api GET /subscription/type | jq -c --arg t "$DEVICE_TYPE" '
+        (if type == "array" then (.[0] // {} | .types // [])
+         elif type == "object" then (.types // [])
+         else [] end)
+        | map(select(. != $t))
+    ' 2>/dev/null || echo '[]')
+    dm_set_type_subscriptions MEASUREMENT "${_remaining:-[]}"
     echo "Cleanup done."
 }
 

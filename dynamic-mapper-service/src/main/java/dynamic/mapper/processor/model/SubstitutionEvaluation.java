@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import com.jayway.jsonpath.DocumentContext;
 
@@ -13,50 +12,15 @@ import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Static utility methods for evaluating extracted substitution content and
+ * building nested JSON structures. Not instantiable.
+ */
 @Slf4j
-public class SubstitutionEvaluation {
-    String key;
-    Object value;
-    String type;
-    public String repairStrategy;
+public final class SubstitutionEvaluation {
 
-    public SubstitutionEvaluation(String key, Object value, String type, String repairStrategy) {
-        this.key = key;
-        this.value = value;
-        this.type = type;
-        this.setRepairStrategy(repairStrategy);
-    }
-
-    public String getKey() {
-        return key;
-    }
-
-    public void setKey(String key) {
-        this.key = key;
-    }
-
-    public Object getValue() {
-        return value;
-    }
-
-    public void setValue(Object value) {
-        this.value = value;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public String getRepairStrategy() {
-        return repairStrategy;
-    }
-
-    public void setRepairStrategy(String repairStrategy) {
-        this.setRepairStrategy(repairStrategy);
+    private SubstitutionEvaluation() {
+        // utility class
     }
 
     public static void addNestedValue(DocumentContext jsonObject, String path, Object value) {
@@ -189,43 +153,6 @@ public class SubstitutionEvaluation {
                             substitution.getExpandArray()));
         }
 
-    }
-
-    public static void processSubstitute(String tenant,
-            List<SubstituteValue> processingCacheEntry,
-            Object extractedSourceContent, SubstituteValue substitutionValue, Mapping mapping) {
-        if (extractedSourceContent == null) {
-            SubstitutionEvaluation.log.warn("{} - Substitution {} not in message payload. Check your mapping {}",
-                    tenant,
-                    substitutionValue, mapping.getMappingTopic());
-            processingCacheEntry
-                    .add(new SubstituteValue(extractedSourceContent,
-                            SubstituteValue.TYPE.IGNORE, substitutionValue.getRepairStrategy(),
-                            substitutionValue.getExpandArray()));
-        } else if (SubstitutionEvaluation.isTextual(extractedSourceContent)) {
-            processingCacheEntry.add(
-                    new SubstituteValue(extractedSourceContent,
-                            TYPE.TEXTUAL, substitutionValue.getRepairStrategy(), substitutionValue.getExpandArray()));
-        } else if (SubstitutionEvaluation.isNumber(extractedSourceContent)) {
-            processingCacheEntry
-                    .add(new SubstituteValue(extractedSourceContent,
-                            SubstituteValue.TYPE.NUMBER, substitutionValue.getRepairStrategy(),
-                            substitutionValue.getExpandArray()));
-        } else if (SubstitutionEvaluation.isArray(extractedSourceContent)) {
-            processingCacheEntry
-                    .add(new SubstituteValue(extractedSourceContent,
-                            SubstituteValue.TYPE.ARRAY, substitutionValue.getRepairStrategy(),
-                            substitutionValue.getExpandArray()));
-        } else {
-            processingCacheEntry
-                    .add(new SubstituteValue(extractedSourceContent,
-                            SubstituteValue.TYPE.OBJECT, substitutionValue.getRepairStrategy(),
-                            substitutionValue.getExpandArray()));
-        }
-    }
-
-    public static Boolean isObject(Object obj) {
-        return obj != null && obj instanceof Map;
     }
 
     public static Boolean isTextual(Object obj) {

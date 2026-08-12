@@ -25,6 +25,7 @@ import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
+import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
@@ -387,12 +388,28 @@ public class ExplorerService {
     // -------------------------------------------------------------------------
 
     private long resolveSessionTtlMs(String tenant) {
-        return SESSION_TTL_MS;
+        ServiceConfiguration config = configurationRegistry.getServiceConfiguration(tenant);
+        Integer minutes = config != null ? config.getExplorerSessionTTLMinutes() : null;
+        return (minutes != null && minutes > 0) ? minutes * 60_000L : SESSION_TTL_MS;
     }
 
     private ExplorerSession findSession(String tenant, String sessionId) {
         Map<String, ExplorerSession> tenantSessions = sessions.get(tenant);
         return tenantSessions != null ? tenantSessions.get(sessionId) : null;
+    }
+
+    /**
+     * Returns {@code true} if another currently active INBOUND session on the same connector is
+     * still using the exact same topic as {@code session}. Called after {@code session} has
+     * already been removed from {@link #sessions}, so the check only sees genuinely other sessions.
+     */
+    private boolean otherSessionStillNeedsTopic(String tenant, ExplorerSession session) {
+        Map<String, ExplorerSession> tenantSessions = sessions.get(tenant);
+        if (tenantSessions == null) return false;
+        return tenantSessions.values().stream().anyMatch(s ->
+                "INBOUND".equals(s.getDirection())
+                        && session.getConnectorIdentifier().equals(s.getConnectorIdentifier())
+                        && session.getTopic().equals(s.getTopic()));
     }
 
     private void unregisterListener(String tenant, String sessionId, ExplorerSession session) {
@@ -432,8 +449,14 @@ public class ExplorerService {
             } else {
                 AConnectorClient client = connectorRegistry.getClientForTenant(tenant, session.getConnectorIdentifier());
                 client.removeExplorerListener(listener);
-                // Unsubscribe the broker topic if no mapping still needs it
-                client.unsubscribeExplorerTopic(session.getTopic());
+                // Unsubscribe the broker topic only if no other still-active explorer session on
+                // the same connector needs the exact same topic. Without this check, stopping one
+                // explorer session (e.g. a different user/tab exploring the same topic) would
+                // unsubscribe the broker topic out from under every other concurrent session —
+                // client.unsubscribeExplorerTopic() itself only guards against active mappings.
+                if (!otherSessionStillNeedsTopic(tenant, session)) {
+                    client.unsubscribeExplorerTopic(session.getTopic());
+                }
             }
         } catch (ConnectorRegistryException e) {
             // Connector may already be gone — safe to ignore

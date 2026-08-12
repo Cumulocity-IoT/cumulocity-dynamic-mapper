@@ -477,6 +477,7 @@ dm_api_json_array() {   # <method> <path> [json_body]
             rm -f "$_err"
             [ -n "$_out" ] && printf '%s\n' "$_out" || printf '[]'
         else
+            [ -s "$_err" ] && dm_warn "dm_api ${_method} ${_path}: $(tr '\n' ' ' <"$_err" | head -c 400)"
             rm -f "$_err"
             printf '[]'
         fi
@@ -670,9 +671,10 @@ dm_create_static_subscription_resolve_name() {  # <api> <device_id> <device_name
 
 # Delete a named static subscription for a device; silently ignores errors.
 dm_delete_static_subscription() {  # <device_id> <subscription_name>
-    local _id=$1 _name=$2
+    local _id=$1 _name=$2 _encoded_name
     [ -z "$_id" ] && return 0
-    dm_api DELETE "/subscription/${_id}?subscription=${_name}" >/dev/null 2>&1 || true
+    _encoded_name=$(jq -rn --arg n "$_name" '$n|@uri')
+    dm_api DELETE "/subscription/${_id}?subscription=${_encoded_name}" >/dev/null 2>&1 || true
     dm_info "Deleted static subscription for device $_id (name=$_name)"
 }
 

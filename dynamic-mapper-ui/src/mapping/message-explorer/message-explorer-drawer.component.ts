@@ -26,7 +26,6 @@ import { IIdentified, InventoryService } from '@c8y/client';
 import { combineLatest } from 'rxjs';
 import { ConnectorConfiguration, Direction } from '../../shared';
 import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
-import { StartSessionRequest } from './message-explorer.service';
 import { AssetSelectionChangeEvent, AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 
 export interface ExplorerStartResult {
@@ -182,9 +181,17 @@ export class MessageExplorerDrawerComponent implements OnInit {
       this.alertService.warning('Please enter a topic to listen on.');
       return;
     }
-    const selected = this.connectors.find(c => c.identifier === this.selectedConnectorIdentifier);
     const useSourceMode = this.direction === 'OUTBOUND' && this.outboundFilterMode === 'source';
     const useTypeMode = this.direction === 'OUTBOUND' && this.outboundFilterMode === 'deviceType';
+    if (useSourceMode && this.selectedDeviceList.length === 0) {
+      this.alertService.warning('Please select a device or group to monitor.');
+      return;
+    }
+    if (useTypeMode && !this.deviceTypeFilter.trim()) {
+      this.alertService.warning('Please enter a device type to monitor.');
+      return;
+    }
+    const selected = this.connectors.find(c => c.identifier === this.selectedConnectorIdentifier);
     const selectedDevice = useSourceMode && this.selectedDeviceList.length > 0 ? this.selectedDeviceList[0] : null;
     const sourceId = selectedDevice ? String((selectedDevice as any).id ?? '') : undefined;
     const deviceName = selectedDevice ? ((selectedDevice as any).name ?? sourceId) : undefined;
@@ -208,14 +215,5 @@ export class MessageExplorerDrawerComponent implements OnInit {
   onCancel(): void {
     this._resolve(null);
     this.bottomDrawerRef.close();
-  }
-
-  buildRequest(): StartSessionRequest {
-    return {
-      connectorIdentifier: this.selectedConnectorIdentifier,
-      topic: this.topic.trim(),
-      maxMessages: this.maxMessages,
-      direction: this.direction
-    };
   }
 }

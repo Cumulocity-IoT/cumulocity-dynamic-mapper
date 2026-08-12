@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { CdkStep } from '@angular/cdk/stepper';
+import { CdkStep, StepperSelectionEvent } from '@angular/cdk/stepper';
 import {
   AfterViewInit,
   ChangeDetectorRef,
@@ -49,15 +49,13 @@ import {
   getSchema,
   JsonEditorComponent,
   Mapping,
-  RepairStrategy,
   SAMPLE_TEMPLATES_C8Y,
   SharedService,
   StepperConfiguration,
   Feature,
   isSubstitutionsAsCode,
   TransformationType,
-  MappingTypeLabels,
-  Substitution
+  MappingTypeLabels
 } from '../../shared';
 import { createCompletionProviderFlowFunction, EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
 import {
@@ -88,17 +86,6 @@ import { MappingTemplateStepComponent } from '../step-template/mapping-template-
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { StepperViewModel, StepperViewModelFactory } from './stepper-view.model';
 import * as jsYaml from 'js-yaml';
-
-/**
- * Extended substitution model used in the stepper with UI-specific properties
- */
-interface SubstitutionModel extends Partial<Substitution> {
-  stepperConfiguration?: StepperConfiguration;
-  pathSourceIsExpression?: boolean;
-  pathTargetIsExpression?: boolean;
-  targetExpression?: { result: string; resultType: string; valid: boolean };
-  sourceExpression?: { result: string; resultType: string; valid: boolean };
-}
 
 const STEP_LABEL_TEST_MAPPING = 'Test mapping';
 const STEP_LABEL_GENERAL_SETTINGS = 'General settings';
@@ -154,10 +141,8 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   schemaTarget: any;
 
   templateForm!: FormGroup;
-  templateModel: { stepperConfiguration?: StepperConfiguration; mapping?: Mapping } = {};
   filterFormly = new FormGroup({});
   filterFormlyFields!: FormlyFieldConfig[];
-  substitutionModel: SubstitutionModel = {};
   propertyFormly = new FormGroup({});
   isGenerateSubstitutionOpen = false;
 
@@ -256,10 +241,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
 
     this.targetSystem = this.mapping.direction === Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem = this.mapping.direction === Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
-    this.templateModel = {
-      stepperConfiguration: this.stepperConfiguration,
-      mapping: this.mapping
-    };
 
     this.editorOptions = {
       minimap: { enabled: true },
@@ -267,18 +248,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       renderWhitespace: 'none',
       tabSize: 4,
       readOnly: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
-    };
-
-    this.substitutionModel = {
-      stepperConfiguration: this.stepperConfiguration,
-      pathSource: '',
-      pathTarget: '',
-      pathSourceIsExpression: false,
-      pathTargetIsExpression: false,
-      repairStrategy: RepairStrategy.DEFAULT,
-      expandArray: false,
-      targetExpression: { result: '', resultType: 'empty', valid: false },
-      sourceExpression: { result: '', resultType: 'empty', valid: false }
     };
 
     this.setTemplateForm();
@@ -463,12 +432,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     this.alertService.add(alert);
   }
 
-  clearAlerts(): void {
-    this.alertService.state.forEach(a => {
-      if (a.type === 'info' || a.type === 'warning') this.alertService.remove(a);
-    });
-  }
-
   async onCommitButton(): Promise<void> {
     if (this.stepperConfiguration.allowTemplateExpansion) {
       this.mapping.sourceTemplate = reduceSourceTemplate(this.sourceTemplate, false);
@@ -478,13 +441,13 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       this.mapping.targetTemplate = JSON.stringify(this.targetTemplate);
     }
 
-    if (this.mapping.code || this.mappingCode) {
+    if (this.mappingCode) {
       this.mapping.code = stringToBase64(stripTemplateMetadataTags(this.mappingCode));
     }
 
     if (isSubstitutionsAsCode(this.mapping) && (!this.mapping.code || this.mapping.code === null || this.mapping.code === '')) {
       this.raiseAlert({ type: 'warning', text: "Internal error in editor. Try again!" });
-      this.commit.emit();
+      return;
     }
 
     this.commit.emit(this.mapping);
@@ -515,13 +478,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   onSelectExtensionName(extensionName: string): void {
-    // console.log('===== onSelectExtensionName COMPONENT DEBUG =====');
-    // console.log('Selected extension name:', extensionName);
-    // console.log('Current mapping:', this.mapping);
-    // console.log('Current extensions:', this.extensions);
-    // console.log('Mapping direction:', this.mapping.direction);
-    // console.log('Mapping transformation type:', this.mapping.transformationType);
-
     // Initialize extension object if it doesn't exist
     if (!this.mapping.extension) {
       this.mapping.extension = {} as any;
@@ -529,8 +485,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
 
     this.mapping.extension.extensionName = extensionName;
     this.stepperService.selectExtensionName(extensionName, this.extensions, this.mapping);
-
-    // console.log('===== onSelectExtensionName COMPONENT DEBUG END =====');
   }
 
   onSelectExtensionEvent(extensionEvent: string): void {
@@ -546,7 +500,7 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       const extension = this.extensions.get(this.mapping.extension.extensionName);
       if (extension && extension.extensionEntries) {
         // Find the matching event entry
-        const eventEntry = Object.values(extension.extensionEntries as Map<string, ExtensionEntry>)
+        const eventEntry = Object.values(extension.extensionEntries)
           .find(entry => entry.eventName === extensionEvent);
 
         if (eventEntry) {
@@ -592,8 +546,8 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
 
-  async onStepChange(event: any): Promise<void> {
-    this.currentStepIndex = event['selectedIndex'];
+  async onStepChange(event: Pick<StepperSelectionEvent, 'selectedIndex'>): Promise<void> {
+    this.currentStepIndex = event.selectedIndex;
     this.stepperService.updateSubstitutionValidity(
       this.mapping,
       this.stepperConfiguration.allowNoDefinedIdentifier,
@@ -617,14 +571,43 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
 
+  /** Patches extensionName/eventName/extensionParameter into templateForm on the next microtask (form isn't ready synchronously right after selectExtensionName). */
+  private patchExtensionFormValues(): void {
+    queueMicrotask(() => {
+      this.templateForm.patchValue({
+        extensionName: this.mapping.extension.extensionName,
+        eventName: this.mapping.extension.eventName,
+        extensionParameter: this.configurationToYaml(this.mapping.extension.parameter)
+      });
+      this.cdr.markForCheck();
+    });
+  }
+
+  /** Builds the mapping snapshot sent to the Testing step / drawer, optionally including the encoded code. */
+  private buildTestMapping(includeCode: boolean): Mapping {
+    const testMapping = structuredClone(this.mapping);
+    testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
+    testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
+    if (includeCode && this.mappingCode) {
+      testMapping.code = stringToBase64(stripTemplateMetadataTags(this.mappingCode));
+    }
+    return testMapping;
+  }
+
   private async handleGeneralSettingsStep(): Promise<void> {
-    this.templateModel.mapping = this.mapping;
     this.templatesInitialized = false;
     this.extensions = await this.stepperService.loadExtensions(this.mapping);
     this.updateExtensionItems(); // Update cached extension items
 
     // Re-patch form values after items are loaded so c8y-select can match them
     if (this.mapping?.extension?.extensionName) {
+      // Guard: the extension may no longer be loaded on the tenant (removed/renamed).
+      if (!this.extensions.get(this.mapping.extension.extensionName)) {
+        const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded...`;
+        this.raiseAlert({ type: 'warning', text: msg });
+        return;
+      }
+
       // First, load the extension events for this extension
       this.stepperService.selectExtensionName(
         this.mapping.extension.extensionName,
@@ -639,19 +622,7 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
 
       // Use queueMicrotask to ensure items are rendered before setting values
       // This allows c8y-select to properly detect and display the selected values
-      queueMicrotask(() => {
-        this.templateForm.patchValue({
-          extensionName: this.mapping.extension.extensionName,
-          eventName: this.mapping.extension.eventName,
-          extensionParameter: this.configurationToYaml(this.mapping.extension.parameter)
-        });
-        this.cdr.markForCheck();
-      });
-
-      if (!this.extensions.get(this.mapping.extension.extensionName)) {
-        const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded...`;
-        this.raiseAlert({ type: 'warning', text: msg });
-      }
+      this.patchExtensionFormValues();
     }
   }
 
@@ -671,15 +642,17 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       );
     }
 
-    if (this.mapping.code) {
+    // Seed mappingCode from the persisted mapping once. mappingCode is the live,
+    // editable state from here on — re-deriving it from mapping.code on every visit
+    // to this step (e.g. after navigating back from Transformation) would clobber
+    // any in-progress code edits, since mapping.code is only updated at save time.
+    if (this.mappingCode === undefined && this.mapping.code) {
       this.mappingCode = stripTemplateMetadataTags(base64ToString(this.mapping.code));
     }
 
     // Trigger extension event filtering if extension is already selected
     // This handles the case when navigating to step 3 with a pre-selected extension
-    if (this.mapping?.extension?.extensionName && this.extensions) {
-      // console.log('===== handleSelectTemplatesStep: Triggering selectExtensionName =====');
-      // console.log('Extension name from mapping:', this.mapping.extension.extensionName);
+    if (this.mapping?.extension?.extensionName && this.extensions?.get(this.mapping.extension.extensionName)) {
       this.stepperService.selectExtensionName(
         this.mapping.extension.extensionName,
         this.extensions,
@@ -687,15 +660,7 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       );
 
       // Patch form values to ensure c8y-select components display the selected values
-      // Use queueMicrotask to ensure the components are rendered before setting values
-      queueMicrotask(() => {
-        this.templateForm.patchValue({
-          extensionName: this.mapping.extension.extensionName,
-          eventName: this.mapping.extension.eventName,
-          extensionParameter: this.configurationToYaml(this.mapping.extension.parameter)
-        });
-        this.cdr.markForCheck();
-      });
+      this.patchExtensionFormValues();
     }
   }
 
@@ -708,20 +673,11 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       this.stepperConfiguration.showCodeEditor
     );
 
-    const testMapping = structuredClone(this.mapping);
-    testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
-    testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
-    this.updateTestingTemplate.next(testMapping);
+    this.updateTestingTemplate.next(this.buildTestMapping(false));
   }
 
   private handleTestMappingStep(): void {
-    const testMapping = structuredClone(this.mapping);
-    testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
-    testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
-    if (this.mapping.code || this.mappingCode) {
-      testMapping.code = stringToBase64(this.mappingCode);
-    }
-    this.updateTestingTemplate.next(testMapping);
+    this.updateTestingTemplate.next(this.buildTestMapping(true));
   }
 
   private updateTemplatesInEditors(): void {
@@ -934,9 +890,7 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   async openGenerateSubstitutionDrawer(): Promise<void> {
     this.isGenerateSubstitutionOpen = true;
 
-    const testMapping = structuredClone(this.mapping);
-    testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
-    testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
+    const testMapping = this.buildTestMapping(false);
 
     const drawer = this.bottomDrawerService.openDrawer(AIPromptComponent, {
       initialState: { mapping: testMapping, aiAgent: this.aiAgent, editorMode: this.stepperConfiguration.editorMode }

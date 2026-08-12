@@ -115,6 +115,12 @@ public abstract class CommonProcessor implements Processor {
         // Use the first external source for resolution
         ExternalId externalSource = externalSources.get(0);
 
+        if (externalSource.getExternalId() == null || externalSource.getExternalId().isEmpty()) {
+            throw new ProcessingException(
+                    "External source has no externalId, cannot resolve device identifier. "
+                            + "Define both type and externalId in the message.");
+        }
+
         try {
             // Use C8YAgent to resolve external ID to global ID
             var globalId = c8yAgent.resolveExternalId2GlobalId(tenant,

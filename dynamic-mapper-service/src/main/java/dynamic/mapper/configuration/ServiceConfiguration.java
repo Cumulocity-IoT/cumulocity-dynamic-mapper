@@ -71,6 +71,7 @@ public class ServiceConfiguration implements Cloneable {
         this.mappingVersionRetention = 5;
         this.engineRotationThreshold = 100;
         this.engineMaxAgeMinutes = 0;
+        this.explorerSessionTTLMinutes = 10;
     }
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of message payloads for debugging purposes. Caution: May expose sensitive data in logs.", example = "false")
@@ -217,5 +218,10 @@ public class ServiceConfiguration implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     private Integer engineMaxAgeMinutes;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Default TTL in minutes for Message Explorer sessions: a session is automatically stopped if the UI has not polled it within this window. Can be overridden per session when starting it.", example = "10", minimum = "1")
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Integer explorerSessionTTLMinutes;
 
 }

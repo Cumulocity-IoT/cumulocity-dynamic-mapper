@@ -31,10 +31,20 @@ import org.apache.camel.Exchange;
  * Sets the exchange body to the current ProcessingContext so that Camel's
  * aggregation strategy ({@link ProcessingContextAggregationStrategy}) can read
  * it after every split leg. Called before each {@code .stop()} and {@code .end()}
- * in the inbound and outbound route pipelines.
+ * in the inbound and outbound route pipelines — i.e. on every terminal path of a
+ * single mapping's processing, whether or not it reached JS execution.
  *
- * <p>The name "ConsolidationProcessor" is historical. Its only responsibility is
- * moving the context from the in-header to the exchange body.
+ * <p>Also closes the ProcessingContext's GraalVM resources here (idempotent —
+ * {@link ProcessingContext#close()} is a no-op if nothing was ever set up). This
+ * is the one point every leg passes through, so it catches the cases where a
+ * SMART_FUNCTION mapping's GraalVM Context was created during enrichment but the
+ * route never reached {@code AbstractFlowProcessor} (e.g. filtered out by
+ * {@code FilterInboundProcessor} right after enrichment) — otherwise that Context
+ * (and its Engine reference) would leak.
+ *
+ * <p>The name "ConsolidationProcessor" is historical. Its responsibility grew from
+ * "move the context from the in-header to the exchange body" to also covering this
+ * cleanup.
  */
 @Component
 public class ConsolidationProcessor extends CommonProcessor {
@@ -43,5 +53,8 @@ public class ConsolidationProcessor extends CommonProcessor {
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
         exchange.getIn().setBody(context);
+        if (context != null) {
+            context.close();
+        }
     }
 }

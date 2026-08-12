@@ -18,24 +18,30 @@
  * @authors Christof Strack
  */
 
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit, ViewEncapsulation } from '@angular/core';
 import { MappingService } from '../mapping/core/mapping.service';
-import { Direction, Feature, NODE1, NODE2, NODE3 } from '../shared';
+import { Direction, Feature, NODE1, NODE3 } from '../shared';
 import { BehaviorSubject, from, Subject } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
 import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { SharedService } from '../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap } from '../configuration/shared/configuration.model';
 import { CodeEditorDrawerComponent } from '../shared/component/code-explorer/code-editor-drawer.component';
+import { DocMarkdownService } from './doc-markdown.service';
 
 @Component({
   selector: 'd11r-doc-overview',
   templateUrl: './doc-overview.component.html',
   styleUrls: ['./doc-shared.css'],
   standalone: true,
-  imports: [CoreModule, CommonModule, RouterLink]
+  imports: [CoreModule, CommonModule, RouterLink],
+  // Most of the body is rendered markdown injected via [innerHTML], which never receives the
+  // _ngcontent-* attribute Angular's default (emulated) encapsulation scopes styles with — so
+  // styleUrls would silently never apply to it (see DocPageComponent for the same fix).
+  encapsulation: ViewEncapsulation.None
 })
 export class DocOverviewComponent implements OnInit {
   codeTemplates: CodeTemplate[] = [];
@@ -44,26 +50,42 @@ export class DocOverviewComponent implements OnInit {
   countConnector$: Subject<any> = new BehaviorSubject<any>(0);
   feature: Feature;
 
+  htmlPart1: SafeHtml = '';
+  htmlPart2: SafeHtml = '';
+  htmlPart3: SafeHtml = '';
+
   ROUTE_INBOUND: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/inbound`;
-  ROUTE_ADD_CONNECTOR: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
-  ROUTE_SERVICE_CONFIGURATION: string = `/c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/general`;
   ROUTE_OUTBOUND: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/outbound`;
   ROUTE_CONNECTORS: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
-  ROUTE_CODE_TEMPLATES_INBOUND_SMART_FUNCTION: string = `/c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`;
-  ROUTE_MONITORING: string = `/c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/inbound`;
-  ROUTE_MESSAGE_EXPLORER: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/messageExplorer`;
+
+  // Internal app routes (e.g. /c8y-pkg-dynamic-mapper/introduction/smartfunction) are
+  // intercepted below so navigation goes through the Angular router instead of a full
+  // page reload; external links (target="_blank") pass through untouched.
+  private static readonly INTERNAL_LINK_PREFIX = '/c8y-pkg-dynamic-mapper/';
 
   constructor(
     private mappingService: MappingService,
     private alertService: AlertService,
     private connectorConfigurationService: ConnectorConfigurationService,
     private route: ActivatedRoute,
+    private router: Router,
     private bottomDrawerService: BottomDrawerService,
-    private sharedService: SharedService
+    private sharedService: SharedService,
+    private markdownService: DocMarkdownService,
+    private sanitizer: DomSanitizer
   ) {}
 
   async ngOnInit(): Promise<void> {
     this.feature = this.route.snapshot.data['feature'];
+
+    const [part1, part2, part3] = await Promise.all([
+      this.markdownService.loadAndRender('overview-part1'),
+      this.markdownService.loadAndRender('overview-part2'),
+      this.markdownService.loadAndRender('overview-part3')
+    ]);
+    this.htmlPart1 = this.sanitizer.bypassSecurityTrustHtml(part1.html);
+    this.htmlPart2 = this.sanitizer.bypassSecurityTrustHtml(part2.html);
+    this.htmlPart3 = this.sanitizer.bypassSecurityTrustHtml(part3.html);
 
     // When navigating to a section anchor within the overview page, scroll to it.
     // Use offsetTop (layout-based, scroll-independent) rather than
@@ -153,5 +175,21 @@ export class DocOverviewComponent implements OnInit {
     if (element) {
       window.scrollTo({ top: element.offsetTop - 120, behavior: 'smooth' });
     }
+  }
+
+  @HostListener('click', ['$event'])
+  onClick(event: MouseEvent): void {
+    const target = (event.target as HTMLElement)?.closest('a');
+    if (!target) return;
+    const href = target.getAttribute('href');
+    if (!href) return;
+    if (href.startsWith('#')) {
+      event.preventDefault();
+      this.scrollToElement(href.slice(1));
+      return;
+    }
+    if (!href.startsWith(DocOverviewComponent.INTERNAL_LINK_PREFIX)) return;
+    event.preventDefault();
+    this.router.navigateByUrl(href);
   }
 }

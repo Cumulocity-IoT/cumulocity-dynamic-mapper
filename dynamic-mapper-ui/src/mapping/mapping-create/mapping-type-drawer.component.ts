@@ -18,10 +18,11 @@
  * @authors Christof Strack
  */
 
-import { Component, inject, Input, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, Input, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors } from '@angular/forms';
 import { BottomDrawerRef, BottomDrawerService, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Observable, Subject, map, shareReplay, takeUntil } from 'rxjs';
+import * as jsYaml from 'js-yaml';
 import {
   Direction,
   Extension,
@@ -72,6 +73,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   @Input() direction: Direction;
 
   // Services
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly sharedService = inject(SharedService);
   private readonly extensionService = inject(ExtensionService);
@@ -138,6 +140,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       this.setupFormSubscriptions();
     } finally {
       this.isLoading = false;
+      this.cdr.detectChanges();
     }
   }
 
@@ -158,7 +161,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     }
     if (!this.formGroup.valid) return;
 
-    const { mappingType, transformationType, codeTemplate, extensionName, eventName } = this.formGroup.getRawValue();
+    const { mappingType, transformationType, codeTemplate, extensionName, eventName, extensionParameter } = this.formGroup.getRawValue();
     const resolvedType: TransformationType = transformationType?.value || TransformationType.DEFAULT;
 
     let extension: Partial<ExtensionEntry> | undefined;
@@ -172,7 +175,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
           // Enrich with full entry details
           const ext = this.extensions.get(extName);
           if (ext?.extensionEntries) {
-            const entry = Object.values(ext.extensionEntries as Map<string, ExtensionEntry>)
+            const entry = Object.values(ext.extensionEntries as Record<string, ExtensionEntry>)
               .find(e => e.eventName === evtName);
             if (entry) {
               Object.assign(extension, {
@@ -181,7 +184,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
                 fqnClassName: entry.fqnClassName,
                 loaded: entry.loaded,
                 message: entry.message,
-                parameter: entry.parameter
+                parameter: entry.parameter ? this.yamlToConfiguration(extensionParameter) : undefined
               });
             }
           }
@@ -407,7 +410,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       this.extensionEvents$.next([]);
       return;
     }
-    const allEntries = Object.values(extension.extensionEntries as Map<string, ExtensionEntry>);
+    const allEntries = Object.values(extension.extensionEntries as Record<string, ExtensionEntry>);
     const targetType = this.direction === Direction.INBOUND
       ? ExtensionType.EXTENSION_INBOUND
       : ExtensionType.EXTENSION_OUTBOUND;
@@ -427,9 +430,32 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     }
     const extension = this.extensions.get(extensionName);
     if (!extension?.extensionEntries) return;
-    const entry = Object.values(extension.extensionEntries as Map<string, ExtensionEntry>)
+    const entry = Object.values(extension.extensionEntries as Record<string, ExtensionEntry>)
       .find(e => e.eventName === eventName);
     this.hasExtensionParameter = !!entry?.parameter;
+    this.formGroup.patchValue(
+      { extensionParameter: this.configurationToYaml(entry?.parameter) },
+      { emitEvent: false }
+    );
+  }
+
+  private configurationToYaml(configuration: Record<string, any> | undefined): string {
+    if (!configuration) return '';
+    try {
+      return jsYaml.dump(configuration, { indent: 2 });
+    } catch {
+      return '';
+    }
+  }
+
+  private yamlToConfiguration(yaml: string): Record<string, any> | undefined {
+    if (!yaml?.trim()) return undefined;
+    try {
+      const parsed = jsYaml.load(yaml);
+      return (parsed && typeof parsed === 'object') ? parsed as Record<string, any> : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   /** Normalize a c8y-select value (may be a plain string or a {value, label} object) to a string. */

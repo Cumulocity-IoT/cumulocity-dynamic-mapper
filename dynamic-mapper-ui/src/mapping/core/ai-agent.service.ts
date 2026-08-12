@@ -29,22 +29,23 @@ import {
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 
 import {
-  AIAssistantMessage,
-  AIMessage,
-  AIService,
   ClientAgentDefinition
 } from '@c8y/ngx-components/ai';
 
-/** Token usage for a single AI response, as reported by the AI Agent Manager. */
-export interface AgentUsage {
-  inputTokens?: number;
-  outputTokens?: number;
-  totalTokens?: number;
-}
-
-export interface AgentTestResult {
-  content: string;
-  usage?: AgentUsage;
+/** Builds the SDK's thinner `ClientAgentDefinition` from this app's richer local agent model. */
+export function toClientAgentDefinition(
+  definition: AgentTextDefinition | AgentObjectDefinition
+): ClientAgentDefinition {
+  return {
+    snapshot: true,
+    label: definition.name,
+    definition: {
+      name: definition.name,
+      type: definition.type,
+      agent: { system: definition.agent?.system ?? '' },
+      mcp: definition.mcp?.map(m => ({ serverName: m.serverName, tools: m.tools ?? [] }))
+    }
+  };
 }
 
 @Injectable({
@@ -52,7 +53,6 @@ export interface AgentTestResult {
 })
 export class AIAgentService {
   private readonly client: FetchClient = inject(FetchClient);
-  private readonly aiService: AIService = inject(AIService);
 
   async getAIAgents(): Promise<AgentTextDefinition[]> {
     try {
@@ -80,62 +80,6 @@ export class AIAgentService {
       console.error('Error fetching AI agents:', error);
       return []; // Return empty array on error
     }
-  }
-
-  /**
-   * Sends the given message history to the agent via the AI Agent Manager's snapshot/test endpoint
-   * (using `AIService` from `@c8y/ngx-components/ai`), returning both the generated content and,
-   * if reported by the backend, token usage for this request.
-   */
-  async test(
-    definition: AgentTextDefinition | AgentObjectDefinition,
-    messages: AIMessage[],
-    variables: Record<string, unknown>,
-    abortController: AbortController
-  ): Promise<AgentTestResult> {
-    const clientAgent: ClientAgentDefinition = {
-      snapshot: true,
-      label: definition.name,
-      definition: {
-        name: definition.name,
-        type: definition.type,
-        agent: { system: definition.agent?.system ?? '' },
-        mcp: definition.mcp?.map(m => ({ serverName: m.serverName, tools: m.tools ?? [] }))
-      }
-    };
-
-    if (definition.type === 'object') {
-      const response = await this.aiService.callObjectAgent(
-        clientAgent,
-        messages,
-        variables,
-        abortController
-      );
-      return { content: JSON.stringify(response.object, null, 2), usage: response.totalUsage };
-    }
-
-    const stream$ = await this.aiService.stream$(clientAgent, messages, variables, abortController);
-
-    return new Promise<AgentTestResult>((resolve, reject) => {
-      let finalMessage: AIAssistantMessage | undefined;
-      stream$.subscribe({
-        next: response => {
-          finalMessage = response.message;
-        },
-        error: reject,
-        complete: () => {
-          if (!finalMessage) {
-            reject(new Error('No response received from AI agent'));
-            return;
-          }
-          const text = finalMessage.content
-            .filter((part): part is { type: 'text'; text: string } => part.type === 'text')
-            .map(part => part.text)
-            .join('\n\n');
-          resolve({ content: text, usage: finalMessage.usage });
-        }
-      });
-    });
   }
 
   async isAIOperable(): Promise<boolean> {

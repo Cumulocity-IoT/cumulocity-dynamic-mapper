@@ -11,13 +11,21 @@ external/
 │   ├── ProcessorExtensionCustomAlarm.java
 │   ├── ProcessorExtensionCustomMeasurement.java
 │   ├── ProcessorExtensionSparkplugBMeasurement.java (Protobuf / SparkplugB)
-│   ├── ProcessorExtensionSmartInbound01..06.java (SMART function examples)
+│   ├── ProcessorExtensionSmartInbound01/02/03/04/06/07.java (SMART function examples)
 │   └── CustomEventOuter.java (Protobuf definition)
 │
 └── outbound/         # Extensions for Cumulocity → device processing
     ├── ProcessorExtensionAlarmToCustomJson.java
-    └── ProcessorExtensionSmartOutbound01..03.java (SMART function examples)
+    └── ProcessorExtensionSmartOutbound01/02/03.java (SMART function examples)
 ```
+
+> **Note:** The `SmartInbound`/`SmartOutbound` samples are Java equivalents of a *subset* of the
+> JS Smart Function templates under `dynamic-mapper-service/src/main/resources/templates/`. The JS
+> side has 11 inbound templates (`template-SMART-INBOUND-01.js` .. `-11.js`) and 5 outbound
+> templates (`template-SMART-OUTBOUND-01.js` .. `-05.js`), but only `01, 02, 03, 04, 06, 07`
+> (inbound) and `01, 02, 03` (outbound) currently have a Java sample. Inbound `05, 08–11` and
+> outbound `04, 05` have no Java equivalent yet — do not assume full parity when using these as a
+> reference for a template you don't see listed here.
 
 ## Directory Purpose
 
@@ -255,9 +263,15 @@ Extension has direction INBOUND but is being used in OUTBOUND processing
 1. **ProcessorExtensionCustomEvent** - Protobuf event parsing
 2. **ProcessorExtensionCustomMeasurement** - JSON measurement parsing
 3. **ProcessorExtensionCustomAlarm** - Complex alarm processing with device lookup
+4. **ProcessorExtensionSparkplugBMeasurement** - SparkplugB / Protobuf measurement parsing
+5. **ProcessorExtensionSmartInbound01/02/03/04/06/07** - Java equivalents of the matching
+   `template-SMART-INBOUND-NN.js` templates (`05, 08–11` have no Java sample yet, see note above)
 
 ### Outbound Examples
 1. **ProcessorExtensionAlarmToCustomJson** - Alarm to custom JSON conversion
+2. **ProcessorExtensionAlarmToSparkplugB** - Alarm to SparkplugB / Protobuf conversion
+3. **ProcessorExtensionSmartOutbound01/02/03** - Java equivalents of the matching
+   `template-SMART-OUTBOUND-NN.js` templates (`04, 05` have no Java sample yet, see note above)
 
 ## Further Reading
 

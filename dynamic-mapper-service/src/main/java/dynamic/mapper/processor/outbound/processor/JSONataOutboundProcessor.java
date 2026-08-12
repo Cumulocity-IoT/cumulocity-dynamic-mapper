@@ -20,16 +20,9 @@
  */
 package dynamic.mapper.processor.outbound.processor;
 
-import static com.dashjoin.jsonata.Jsonata.jsonata;
-
 import org.springframework.stereotype.Component;
 
-import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.AbstractJSONataExtractionProcessor;
-import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,7 +30,9 @@ import lombok.extern.slf4j.Slf4j;
  * Outbound JSONata extraction processor that extracts and processes substitutions
  * from Cumulocity payloads using JSONata expressions.
  *
- * Evaluates JSONata expressions directly against the payload object.
+ * <p>Extraction and error handling are identical to the inbound side and live in
+ * {@link AbstractJSONataExtractionProcessor}; this class exists only to give the
+ * outbound route its own bean to wire up.
  */
 @Slf4j
 @Component
@@ -45,34 +40,6 @@ public class JSONataOutboundProcessor extends AbstractJSONataExtractionProcessor
 
     public JSONataOutboundProcessor(MappingService mappingService) {
         super(mappingService);
-    }
-
-    @Override
-    protected Object extractContentFromPayload(ProcessingContext<?> context,
-                                              Substitution substitution,
-                                              Object payloadObject,
-                                              String payloadAsString) {
-        Object extractedSourceContent = null;
-        try {
-            var expr = jsonata(substitution.getPathSource());
-            extractedSourceContent = expr.evaluate(payloadObject);
-        } catch (Exception e) {
-            log.error("{} - EvaluateRuntimeException for: {}, {}: ", context.getTenant(),
-                    substitution.getPathSource(), payloadAsString, e);
-        }
-        return extractedSourceContent;
-    }
-
-    @Override
-    protected void handleProcessingError(Exception e, ProcessingContext<?> context, String tenant, Mapping mapping) {
-        String errorMessage = String.format(
-                "Tenant %s - Error in JSONataOutboundProcessor for mapping: %s: %s",
-                tenant, mapping.getName(), e.getMessage());
-        log.error(errorMessage, e);
-        MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-        context.addError(new ProcessingException(errorMessage, e));
-        mappingStatus.incrementErrors();
-        mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
     }
 
 }

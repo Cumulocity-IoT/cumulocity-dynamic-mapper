@@ -54,11 +54,11 @@ public class ExtensionsComponent {
 	}
 
 	public List<ManagedObjectRepresentation> getInternal() {
-		return select(get(), ex -> ((Map)ex.get(PROCESSOR_EXTENSION_TYPE)).get("external").equals(false));
+		return select(get(), ex -> Boolean.FALSE.equals(((Map) ex.get(PROCESSOR_EXTENSION_TYPE)).get("external")));
 	}
 
 	public List<ManagedObjectRepresentation> getExternal() {
-		return select(get(), ex -> ((Map)ex.get(PROCESSOR_EXTENSION_TYPE)).get("external").equals(true));
+		return select(get(), ex -> Boolean.TRUE.equals(((Map) ex.get(PROCESSOR_EXTENSION_TYPE)).get("external")));
 	}
 
 	static <T> List<T> select(Iterable<T> it, Predicate<T> pred) {

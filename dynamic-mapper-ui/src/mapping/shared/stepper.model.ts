@@ -18,13 +18,22 @@
  * @authors Christof Strack
  */
 
-import { Direction } from '../../shared/mapping/mapping.model';
+import { Direction, StepperConfiguration, Substitution } from '../../shared/mapping/mapping.model';
 
 export enum EditorMode {
   CREATE = 'CREATE',
   UPDATE = 'UPDATE',
   READ_ONLY = 'READ_ONLY',
   COPY = 'COPY'
+}
+
+/** The in-progress substitution being edited in the stepper/unified-editor's transformation step. */
+export interface SubstitutionModel extends Partial<Substitution> {
+  stepperConfiguration?: StepperConfiguration;
+  pathSourceIsExpression?: boolean;
+  pathTargetIsExpression?: boolean;
+  targetExpression?: { result?: string; resultType?: string; valid: boolean };
+  sourceExpression?: { result?: string; resultType?: string; valid: boolean };
 }
 
 export const STEP_SELECT_CONNECTOR = 0;

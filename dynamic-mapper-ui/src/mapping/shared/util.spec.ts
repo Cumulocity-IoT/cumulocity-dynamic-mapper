@@ -296,6 +296,34 @@ describe('checkTopicsInboundAreValid', () => {
     expect(result).toBeNull();
   });
 
+  it('should return null when # matches a sample with more levels than the topic', () => {
+    const result = checkTopicsInboundAreValid(
+      makeControl('fridgeNew/#', 'fridgeNew/east/sensor-ny-99')
+    );
+    expect(result).toBeNull();
+  });
+
+  it('should return null when # matches the bare parent topic (zero extra levels)', () => {
+    const result = checkTopicsInboundAreValid(makeControl('fridgeNew/#', 'fridgeNew'));
+    expect(result).toBeNull();
+  });
+
+  it('should return error when sample has fewer levels than the fixed prefix before #', () => {
+    const result = checkTopicsInboundAreValid(makeControl('a/b/#', 'a'));
+    expect(result).not.toBeNull();
+    expect(
+      result['MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name']
+    ).toBeDefined();
+  });
+
+  it('should return error when # topic and sample have mismatching static prefix', () => {
+    const result = checkTopicsInboundAreValid(makeControl('a/b/#', 'a/c/d'));
+    expect(result).not.toBeNull();
+    expect(
+      result['MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name']
+    ).toBeDefined();
+  });
+
   it('should return error when mapping topic and sample have different number of levels', () => {
     const result = checkTopicsInboundAreValid(makeControl('a/b', 'a/b/c'));
     expect(result).not.toBeNull();
