@@ -147,6 +147,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   feature!: Feature;
   codeTemplate!: CodeTemplate;
   private extension?: Partial<ExtensionEntry>;
+  private generateSmartFunctionWithAI = false;
 
   get canManageMappings(): boolean {
     return this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole;
@@ -470,6 +471,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.mappingType = resultOf.mappingType;
       this.codeTemplate = resultOf.codeTemplate;
       this.extension = resultOf.extension;
+      this.generateSmartFunctionWithAI = !!resultOf.generateSmartFunctionWithAI;
       this.addMapping();
     }
   }
@@ -482,12 +484,19 @@ export class MappingComponent implements OnInit, OnDestroy {
       EditorMode.CREATE, this.substitutionsAsCode
     );
 
+    // setStepperConfiguration() always builds a fresh StepperConfiguration object, so this flag
+    // must be set on the resulting instance, not before the call.
+    if (this.generateSmartFunctionWithAI) {
+      this.stepperConfiguration.triggerAIGenerationOnStart = true;
+      this.generateSmartFunctionWithAI = false;
+    }
+
     const identifier = createCustomUuid();
     const sub: Substitution[] = [];
     let mapping: Mapping;
     if (this.stepperConfiguration.direction == Direction.INBOUND) {
       let code;
-      if (this.substitutionsAsCode) code = this.codeTemplate.code;
+      if (this.substitutionsAsCode) code = this.codeTemplate?.code;
       mapping = {
         // name: `Mapping - ${identifier.substring(0, 7)}`,
         name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
@@ -518,7 +527,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       };
     } else {
       let code;
-      if (this.substitutionsAsCode) code = this.codeTemplate.code;
+      if (this.substitutionsAsCode) code = this.codeTemplate?.code;
       mapping = {
         name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
         id: identifier,

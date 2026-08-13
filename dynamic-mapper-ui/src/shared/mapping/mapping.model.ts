@@ -303,6 +303,8 @@ export interface StepperConfiguration {
   direction?: Direction;
   advanceFromStepToEndStep?: number;
   allowTemplateExpansion?: boolean;  // Whether to allow template expansion with sample data
+  /** One-shot flag: auto-launch AI Smart Function generation once the transformation step is first reached. */
+  triggerAIGenerationOnStart?: boolean;
 }
 
 export enum TransformationType {

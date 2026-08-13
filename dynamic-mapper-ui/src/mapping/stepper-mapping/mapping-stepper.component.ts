@@ -117,6 +117,7 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   stepperViewModel!: StepperViewModel;
 
   @ViewChild('templateStep', { static: false }) templateStepRef!: MappingTemplateStepComponent;
+  @ViewChild('transformationStepRef', { static: false }) transformationStepRef!: MappingSubstitutionStepComponent;
   @ViewChild('mappingTestingStep', { static: false }) mappingTestingStep!: MappingStepTestingComponent;
   @ViewChild('stepper', { static: false }) stepper!: C8yStepper;
   @ViewChild('codeEditor', { static: false }) codeEditor!: EditorComponent;
@@ -674,19 +675,61 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     );
 
     this.updateTestingTemplate.next(this.buildTestMapping(false));
+
+    // One-shot: user chose "Generate with AI" back in the type-selection drawer, when
+    // source/target templates were still empty placeholders. Now that this step has the
+    // real templates (just updated above), launch the actual generation.
+    if (this.stepperConfiguration.triggerAIGenerationOnStart) {
+      this.stepperConfiguration.triggerAIGenerationOnStart = false;
+      if (this.aiAgentDeployed) {
+        this.launchAIGenerationOnStart();
+      }
+    }
+  }
+
+  /**
+   * Clicking "Next" out of the template step can race a pending edit in the JSON editor:
+   * some content-commit paths (e.g. a tree-node edit) only flush on blur, which may not
+   * have happened yet when the click fired. Blurring the active element and deferring by a
+   * macrotask gives that a chance to land before we re-pull the templates and open the AI
+   * drawer — otherwise the AI agent can receive a stale/default template instead of the
+   * user's latest edit.
+   */
+  private launchAIGenerationOnStart(): void {
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    setTimeout(() => {
+      this.updateTemplatesInEditors();
+      this.cdr.detectChanges();
+      this.transformationStepRef?.openGenerateSubstitutionDrawer();
+    }, 0);
   }
 
   private handleTestMappingStep(): void {
     this.updateTestingTemplate.next(this.buildTestMapping(true));
   }
 
+  /**
+   * Reads content directly from the underlying vanilla-jsoneditor instance, bypassing our own
+   * `(contentChanged)` mirror (`sourceTemplateUpdated`/`targetTemplateUpdated`). That mirror only
+   * updates when the library's `onChange` fires, which in practice doesn't fire for every edit
+   * path (e.g. some tree-mode interactions) — `.get()` is the library's own source of truth and
+   * is never stale.
+   */
+  private tryGetLiveEditorContent(editor: JsonEditorComponent | undefined): any {
+    if (!editor) return undefined;
+    try {
+      return editor.get();
+    } catch (error) {
+      console.warn('Failed to read live editor content, falling back', error);
+      return undefined;
+    }
+  }
+
   private updateTemplatesInEditors(): void {
-    if (this.templateStepRef?.sourceTemplateUpdated) {
-      this.sourceTemplate = this.templateStepRef.sourceTemplateUpdated;
-    }
-    if (this.templateStepRef?.targetTemplateUpdated) {
-      this.targetTemplate = this.templateStepRef.targetTemplateUpdated;
-    }
+    const liveSource = this.tryGetLiveEditorContent(this.templateStepRef?.editorSourceStepTemplate);
+    const liveTarget = this.tryGetLiveEditorContent(this.templateStepRef?.editorTargetStepTemplate);
+    this.sourceTemplate = liveSource ?? this.templateStepRef?.sourceTemplateUpdated ?? this.sourceTemplate;
+    this.targetTemplate = liveTarget ?? this.templateStepRef?.targetTemplateUpdated ?? this.targetTemplate;
   }
 
   onNextStep(event: StepperStepChange): void {

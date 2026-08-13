@@ -41,6 +41,7 @@ import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/
 import { CodeTemplate, ServiceConfiguration } from '../../configuration';
 import { base64ToString, stringToBase64, stripTemplateMetadataTags } from '../shared/util';
 import { ExtensionService } from '../../extension';
+import { AIAgentService } from '../core/ai-agent.service';
 
 // Types
 interface SelectOption<T> {
@@ -59,6 +60,9 @@ interface SaveResult {
   transformationType: TransformationType;
   codeTemplate?: CodeTemplate;
   extension?: Partial<ExtensionEntry>;
+  /** User chose to generate the Smart Function via AI instead of picking a code template.
+   *  The actual generation happens later, once the transformation step has real templates. */
+  generateSmartFunctionWithAI?: boolean;
 }
 
 @Component({
@@ -77,6 +81,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly sharedService = inject(SharedService);
   private readonly extensionService = inject(ExtensionService);
+  private readonly aiAgentService = inject(AIAgentService);
   private readonly fb = inject(FormBuilder);
   private readonly bottomDrawerService = inject(BottomDrawerService);
   private readonly destroy$ = new Subject<void>();
@@ -113,6 +118,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   isLoading = true;
   isLoadingCodeTemplates = false;
   showTransformationType = false;
+  aiAgentDeployed = false;
   private serviceConfiguration: ServiceConfiguration;
 
   // Promise for modal result
@@ -136,6 +142,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     );
     try {
       this.serviceConfiguration = await this.sharedService.getServiceConfiguration();
+      await this.checkAIAgentAvailability();
       await this.initializeForm();
       this.setupFormSubscriptions();
     } finally {
@@ -161,8 +168,9 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     }
     if (!this.formGroup.valid) return;
 
-    const { mappingType, transformationType, codeTemplate, extensionName, eventName, extensionParameter } = this.formGroup.getRawValue();
+    const { mappingType, transformationType, codeTemplate, codeTemplateSource, extensionName, eventName, extensionParameter } = this.formGroup.getRawValue();
     const resolvedType: TransformationType = transformationType?.value || TransformationType.DEFAULT;
+    const generateWithAI = this.isAIGenerationSelected(codeTemplateSource);
 
     let extension: Partial<ExtensionEntry> | undefined;
     if (this.shouldShowExtensionSelectors() && extensionName) {
@@ -195,12 +203,51 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this._resolve({
       mappingType: mappingType.value,
       transformationType: resolvedType,
-      codeTemplate: codeTemplate?.value
+      codeTemplate: !generateWithAI && codeTemplate?.value
         ? this.applyESMToTemplate(codeTemplate.value, resolvedType)
         : undefined,
-      extension
+      extension,
+      generateSmartFunctionWithAI: generateWithAI
     });
     this.bottomDrawerRef.close();
+  }
+
+  /** Only offered for Smart Function, mirroring `MappingStepperService.checkAIAgentDeployment`'s SMART_FUNCTION branch.
+   *  Gates the "Code Template vs. Generate with AI" choice itself. */
+  shouldShowCodeTemplateChoice(): boolean {
+    return this.shouldShowCodeTemplate() && this.aiAgentDeployed;
+  }
+
+  /** Whether the code-template dropdown should be shown — hidden once the user picks "Generate with AI". */
+  shouldShowCodeTemplateDropdown(): boolean {
+    if (!this.shouldShowCodeTemplate()) return false;
+    return !this.isAIGenerationSelected();
+  }
+
+  /**
+   * True once the user has picked "Generate with AI" in the choice control. The actual AI call
+   * happens later, once the transformation step has real source/target templates to work with
+   * (this drawer only has empty placeholders).
+   */
+  isAIGenerationSelected(rawValue?: string): boolean {
+    if (!this.aiAgentDeployed) return false;
+    const value = rawValue ?? this.formGroup?.get('codeTemplateSource')?.value;
+    return value === 'ai';
+  }
+
+  private async checkAIAgentAvailability(): Promise<void> {
+    const agentName = this.serviceConfiguration?.smartFunctionAgent;
+    if (!agentName) {
+      this.aiAgentDeployed = false;
+      return;
+    }
+    try {
+      const agents = await this.aiAgentService.getAIAgents();
+      this.aiAgentDeployed = agents.some(agent => agent.name === agentName);
+    } catch (error) {
+      console.error('Failed to check AI agent availability:', error);
+      this.aiAgentDeployed = false;
+    }
   }
 
   viewCode(): void {
@@ -303,11 +350,13 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     
     await this.loadCodeTemplates(defaultTransformationType);
 
+    const defaultCodeTemplateSource = this.aiAgentDeployed ? 'ai' : 'template';
     this.formGroup = this.fb.group({
       expertMode: [false],
       mappingType: [initialMappingType],
       transformationType: [initialTransformationType],
-      codeTemplate: [this.codeTemplateOptions[0] || null],
+      codeTemplateSource: [defaultCodeTemplateSource],
+      codeTemplate: [defaultCodeTemplateSource === 'ai' ? null : (this.codeTemplateOptions[0] || null)],
       extensionName: [null],
       eventName: [null],
       extensionParameter: [null]
@@ -329,6 +378,18 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     this.formGroup.get('transformationType')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(option => this.onTransformationTypeChange(option));
+
+    this.formGroup.get('codeTemplateSource')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(source => {
+        // Switching to "Generate with AI" clears any picked template; switching back re-selects
+        // the first available template, mirroring the initial default.
+        if (source === 'ai') {
+          this.formGroup.patchValue({ codeTemplate: null }, { emitEvent: false });
+        } else if (!this.formGroup.get('codeTemplate')?.value && this.codeTemplateOptions.length > 0) {
+          this.formGroup.patchValue({ codeTemplate: this.codeTemplateOptions[0] }, { emitEvent: false });
+        }
+      });
 
     this.formGroup.get('extensionName')?.valueChanges
       .pipe(takeUntil(this.destroy$))
@@ -366,8 +427,9 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   private async onTransformationTypeChange(option: TransformationTypeOption): Promise<void> {
     if (!option?.value) return;
 
+    const defaultCodeTemplateSource = this.aiAgentDeployed ? 'ai' : 'template';
     this.isLoadingCodeTemplates = true;
-    this.formGroup.patchValue({ codeTemplate: null, extensionName: null, eventName: null }, { emitEvent: false });
+    this.formGroup.patchValue({ codeTemplateSource: defaultCodeTemplateSource, codeTemplate: null, extensionName: null, eventName: null }, { emitEvent: false });
     this.codeTemplateOptions = [];
     this.extensionItems = [];
     this.extensionEvents$.next([]);
@@ -375,7 +437,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
     await this.loadCodeTemplates(option.value);
 
-    if (this.codeTemplateOptions.length > 0) {
+    if (defaultCodeTemplateSource === 'template' && this.codeTemplateOptions.length > 0) {
       this.formGroup.patchValue({ codeTemplate: this.codeTemplateOptions[0] }, { emitEvent: false });
     }
 
