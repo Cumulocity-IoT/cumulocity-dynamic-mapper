@@ -63,6 +63,7 @@ declare -a TESTS=(
     "inbound|test-inbound-hex|HEX → EVENT"
     "inbound|test-inbound-http-connector|HTTP connector → MEASUREMENT"
     "inbound|test-inbound-implicit-device|Implicit device auto-creation"
+    "inbound|test-inbound-implicit-device-recreate-after-delete|Implicit device recreation after delete (inconsistent-cache regression)"
     "inbound|test-inbound-multi-device|Array payload → multiple devices"
     "inbound|test-inbound-alarm|JSON / DEFAULT → ALARM"
     "inbound|test-inbound-operation|JSON / DEFAULT → OPERATION"

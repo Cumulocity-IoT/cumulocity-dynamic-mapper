@@ -1160,6 +1160,20 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     /**
+     * Evicts a deleted managed object from the inventory cache and from the external-ID
+     * resolution cache. Called when a Notification 2.0 DELETE event for a managed object is
+     * received, so a stale sourceId does not keep being reused/refetched after the device has
+     * been removed from inventory (see {@code attic/fix/inconsistant-cache/ISSUE.md}).
+     */
+    public void evictDeletedManagedObjectFromCaches(String tenant, String sourceId) {
+        InventoryCache inventoryCache = cacheManager.getInventoryCache(tenant);
+        if (inventoryCache != null) {
+            inventoryCache.removeMO(sourceId);
+        }
+        tenantRegistry.removeFromExternalIdCacheByInternalId(tenant, sourceId);
+    }
+
+    /**
      * Uploads an attachment to an event.
      *
      * @param binaryInfo

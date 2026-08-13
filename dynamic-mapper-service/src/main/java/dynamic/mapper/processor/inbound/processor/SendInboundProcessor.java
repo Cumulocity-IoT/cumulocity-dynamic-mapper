@@ -125,8 +125,10 @@ public class SendInboundProcessor extends BaseProcessor {
             createProcessingAlarms(context);
 
         } catch (Exception e) {
-            log.error("{} - Error in inbound send processor for mapping: '{}'",
-                     context.getTenant(), context.getMapping().getName(), e);
+            // Not logged here — rethrown as-is (or wrapped, unchanged) up to process()'s
+            // catch, which is the single place this failure is actually handled (added to
+            // context, mapping status updated) and logged, full stack trace included.
+            // Logging here too just duplicated the same trace under a second message.
             throw e;
         }
     }
@@ -261,7 +263,8 @@ public class SendInboundProcessor extends BaseProcessor {
             }
 
         } catch (Exception e) {
-            log.error("{} - Failed to process request: {}", tenant, e.getMessage(), e);
+            // Not logged here — see the comment in processAllRequests's catch block; this
+            // is rethrown unchanged up to process()'s single logging/handling point.
             request.setError(e);
             throw e;
         }
