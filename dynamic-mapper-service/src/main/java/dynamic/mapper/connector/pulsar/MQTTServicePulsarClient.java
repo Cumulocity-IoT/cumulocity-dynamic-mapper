@@ -320,8 +320,11 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                     log.error("{} - Error connecting MQTT Service Pulsar connector: {}", tenant, e.getMessage(), e);
                 else
                     log.error("{} - Error connecting MQTT Service Pulsar connector: {}", tenant, e.getMessage());
-                connectionStateManager.updateStatusWithError(e);
+                // setConnected() before updateStatusWithError(): the reverse order let a
+                // blank DISCONNECTED event (fired by setConnected's own transition detection)
+                // immediately supersede the FAILED event carrying the actual error message.
                 connectionStateManager.setConnected(false);
+                connectionStateManager.updateStatusWithError(e);
                 attempt++;
                 // Cleanup on failure
                 cleanupOnConnectionFailure();

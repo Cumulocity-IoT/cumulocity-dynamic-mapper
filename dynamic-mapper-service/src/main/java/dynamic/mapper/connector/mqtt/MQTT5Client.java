@@ -149,8 +149,9 @@ public class MQTT5Client extends AMQTTClient {
                 .addDisconnectedListener(context -> {
                     boolean wasConnected = connectionStateManager.isConnected();
                     //We should always log when a client is disconnected!
-                    log.info("{} - MQTT5 client disconnected (reason: {})", tenant, context.getCause().getMessage());
-                    connectionStateManager.setConnected(false);
+                    Throwable cause = context.getCause();
+                    log.info("{} - MQTT5 client disconnected (reason: {})", tenant, cause.getMessage());
+                    connectionStateManager.setConnected(false, cause);
 
                     boolean stale = myGeneration != connectGeneration.get();
                     boolean unexpected;
@@ -211,9 +212,22 @@ public class MQTT5Client extends AMQTTClient {
                     log.info("{} - Connection attempt {} of {}", tenant, attempt + 1, maxAttempts);
                     Thread.sleep(WAIT_PERIOD_MS);
                 }
+
+                // Capture into a local: disconnect()/closeMqttResources() can null the
+                // `mqttClient` field concurrently on another thread (connect() and disconnect()
+                // aren't mutually exclusive — see connectDisconnectExecutionLock's javadoc in
+                // AConnectorClient). Without this, a concurrent teardown between the sleep above
+                // and the connectWith() call below throws an NPE that gets misreported as a
+                // FAILED connection attempt instead of a benign, expected abort.
+                Mqtt5BlockingClient client = mqttClient;
+                if (client == null) {
+                    log.info("{} - Aborting connect attempt: MQTT5 client was torn down concurrently (disconnect in progress)", tenant);
+                    return;
+                }
+
                 Mqtt5ConnAck ack;
                 if (isSparkplugHost) {
-                    ack = mqttClient.connectWith()
+                    ack = client.connectWith()
                             .cleanStart(cleanSession)
                             .willPublish(Mqtt5Publish.builder()
                                     .topic(sparkplugCertificateManager.getStateTopicName())
@@ -225,7 +239,7 @@ public class MQTT5Client extends AMQTTClient {
                             .keepAlive(60)
                             .send();
                 } else {
-                    ack = mqttClient.connectWith()
+                    ack = client.connectWith()
                             .cleanStart(cleanSession)
                             .keepAlive(60)
                             .send();
@@ -239,7 +253,7 @@ public class MQTT5Client extends AMQTTClient {
                 connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
 
                 log.info("{} - MQTT5 client connected successfully to {}:{}",
-                        tenant, mqttClient.getConfig().getServerHost(), mqttClient.getConfig().getServerPort());
+                        tenant, client.getConfig().getServerHost(), client.getConfig().getServerPort());
 
                 if (ack.isSessionPresent()) {
                     log.info("{} - MQTT5 session present, reusing existing session", tenant);

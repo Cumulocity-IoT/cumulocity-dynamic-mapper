@@ -366,8 +366,11 @@ public class KafkaClientV2 extends AConnectorClient {
 
         } catch (Exception e) {
             log.error("{} - Error connecting Kafka connector: {}", tenant, e.getMessage(), e);
-            connectionStateManager.updateStatusWithError(e);
+            // setConnected() before updateStatusWithError(): the reverse order let a
+            // blank DISCONNECTED event (fired by setConnected's own transition detection)
+            // immediately supersede the FAILED event carrying the actual error message.
             connectionStateManager.setConnected(false);
+            connectionStateManager.updateStatusWithError(e);
         } finally {
             endConnection();
         }

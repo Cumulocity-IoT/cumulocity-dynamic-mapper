@@ -73,29 +73,45 @@ public class ConnectionStateManager {
     }
     
     public void setConnected(boolean connected) {
+        setConnected(connected, null);
+    }
+
+    /**
+     * @param cause when {@code connected} is false, the exception that caused the disconnect
+     *              (if known). Its message is attached to the DISCONNECTED event so the UI shows
+     *              the actual reason (e.g. "UnknownHostException: broker.example.com") instead of
+     *              a bare status name. Pass {@code null} when no cause is available.
+     */
+    public void setConnected(boolean connected, Throwable cause) {
         boolean wasConnected = connectionState.booleanValue();
         connectionState.setValue(connected);
-        
+
         if (wasConnected != connected) {
-            log.info("{} - Connection state changed: {} -> {} for connector: {}", 
+            log.info("{} - Connection state changed: {} -> {} for connector: {}",
                     tenant, wasConnected, connected, connectorName);
-            
+
             if (connected) {
                 updateStatus(ConnectorStatus.CONNECTED, true, true);
+            } else if (cause != null) {
+                updateStatus(ConnectorStatus.DISCONNECTED, buildErrorMessage(cause), true);
             } else {
                 updateStatus(ConnectorStatus.DISCONNECTED, true, true);
             }
         }
     }
-    
+
     public void updateStatus(ConnectorStatus status, boolean clearMessage, boolean sendEvent) {
+        updateStatus(status, clearMessage ? null : connectorStatus.get().getMessage(), sendEvent);
+    }
+
+    private void updateStatus(ConnectorStatus status, String message, boolean sendEvent) {
         // Copy-on-write: create a new event instead of mutating the shared object,
         // so concurrent readers never see a partially-updated state.
         ConnectorStatusEvent newStatus = new ConnectorStatusEvent(status);
         newStatus.connectorName = connectorName;
         newStatus.connectorIdentifier = connectorIdentifier;
-        if (!clearMessage) {
-            newStatus.setMessage(connectorStatus.get().getMessage());
+        if (message != null) {
+            newStatus.setMessage(message);
         }
         connectorStatus.set(newStatus);
 
@@ -156,7 +172,7 @@ public class ConnectionStateManager {
         }
     }
 
-    private String buildErrorMessage(Exception e) {
+    private String buildErrorMessage(Throwable e) {
         StringBuilder messageBuilder = new StringBuilder()
                 .append(" --- ")
                 .append(e.getClass().getName())

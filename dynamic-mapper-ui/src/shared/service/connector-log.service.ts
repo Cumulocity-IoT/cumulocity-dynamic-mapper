@@ -192,6 +192,12 @@ export class ConnectorLogService {
     accumulated: ConnectorStatusEvent[],
     newEvents: ConnectorStatusEvent[]
   ): ConnectorStatusEvent[] {
-    return [...newEvents, ...accumulated].slice(0, this.CONFIG.MAX_LOG_ENTRIES);
+    // Historical events arrive as one sorted batch, but realtime events stream in as
+    // independent async HTTP calls (see C8YAgent.createLoggingEvent) that can complete
+    // out of order — so arrival order does not always match each event's own `time`.
+    // Sort explicitly instead of trusting prepend order.
+    return [...newEvents, ...accumulated]
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .slice(0, this.CONFIG.MAX_LOG_ENTRIES);
   }
 }

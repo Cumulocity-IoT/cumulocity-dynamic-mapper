@@ -212,8 +212,7 @@ public class AMQP10Client extends AConnectorClient {
             connection.setExceptionListener(ex -> {
                 log.error("{} - AMQP 1.0 JMS exception: {}", tenant, ex.getMessage());
                 physicallyConnected = false;
-                connectionStateManager.setConnected(false);
-                connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
+                connectionStateManager.setConnected(false, ex);
             });
             connection.start();
 

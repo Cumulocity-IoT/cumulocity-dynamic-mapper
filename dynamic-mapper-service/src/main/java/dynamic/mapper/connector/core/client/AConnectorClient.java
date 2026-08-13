@@ -1209,9 +1209,8 @@ public abstract class AConnectorClient {
     public void sendConnectorLifecycle(ConnectorStatusEvent status) {
         if (serviceConfiguration.getSendConnectorLifecycle()) {
             Map<String, String> statusMap = createStatusMap(status);
-            String message = String.format("Connector status: %s", status);
             c8yAgent.createLoggingEvent(
-                    message,
+                    statusMap.get("message"),
                     LoggingEventType.CONNECTOR_EVENT_TYPE,
                     status.getStatus().toSeverity(),
                     DateTime.now(),
