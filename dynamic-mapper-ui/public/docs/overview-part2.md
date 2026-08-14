@@ -82,13 +82,6 @@ the data transformation logic:
   control and flexibility for complex transformations, calculations, and business logic. Allows access to device
   context and inventory data for enrichment.
 
-:::important Important — Release 6.3
-**Substitution as JavaScript (SUBSTITUTION_AS_CODE) has been removed in release 6.3.** Existing mappings of this
-type are no longer executed. They can only be **exported** and **deleted**. No other operations (edit, activate,
-test) are available for these mappings. Migrate to **Smart Function (JavaScript)** — see the migration guide in
-the [Removed: Substitution as JavaScript](#javascript-substitution) section.
-:::
-
 If you're using **Smart Function (JavaScript)** as Transformation Type, navigate to
 [Code Templates](/c8y-pkg-dynamic-mapper/node3/codeTemplate/INBOUND_SMART_FUNCTION) to see JavaScript code samples
 of transformations.

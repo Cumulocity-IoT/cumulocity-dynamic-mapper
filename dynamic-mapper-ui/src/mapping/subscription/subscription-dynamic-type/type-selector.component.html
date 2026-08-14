@@ -29,10 +29,18 @@
     </div>
     <div class="card-block flex-grow">
       <div class="container-fluid p-24">
+        @if (typeList.length === 0) {
+        <div class="d-flex a-i-center fit-w" style="border: 1px dashed var(--c8y-root-component-separator-color); border-radius: 4px; padding: 8px 8px 8px 16px;">
+          <span class="text-muted flex-grow" translate>No device types defined. Saving now removes the type-based subscription.</span>
+          <button type="button" class="btn btn-dot text-primary" title="{{ 'Add' | translate }}" [attr.aria-label]="'Add' | translate" (click)="add()" data-cy="dm-type-selector-add-first">
+            <i c8yIcon="plus-circle"></i>
+          </button>
+        </div>
+        }
         <ul class="list-unstyled p-t-16" c8yInputGroupListContainer>
           @for (item of typeList; track trackByFn(i, item); let i = $index) {
           <li class="m-b-8 fit-w" [attr.data-cy]="'dm-type-selector-row-' + i">
-            <c8y-input-group-list [index]="i" (onAdd)="add()" (onRemove)="remove(i)" [minus]="typeList.length > 0">
+            <c8y-input-group-list [index]="i" (onAdd)="add()" (onRemove)="remove(i)" [minus]="true">
               <div class="col-xs-11 p-l-0">
                 <input class="form-control" placeholder="{{ 'e.g.' }} placeholder" type="text" [required]="true"
                   [attr.data-cy]="'dm-type-selector-input-' + i"
