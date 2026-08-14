@@ -40,7 +40,7 @@ When publishing a draft, the publish dialog offers three bump buttons that pre-f
 highest version published so far:
 
 | Button | When to use | Example |
-|---|---|---|
+|---|---|:---:|
 | **Patch** | Backwards-compatible bug fix or minor tweak (no change to the data model) | `1.2.0` → `1.2.1` |
 | **Minor** | New optional substitution, new source field, or other additive change | `1.2.1` → `1.3.0` |
 | **Major** | Breaking change: different topic pattern, removed field, restructured template | `1.3.0` → `2.0.0` |

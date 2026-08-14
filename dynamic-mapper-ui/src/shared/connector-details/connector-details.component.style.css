@@ -19,6 +19,15 @@
  */
 
 
+/* The column header lives outside .card-block.inner-scroll (the scrollable area) in the
+   template, so it's always visible without needing position: sticky — which fought the
+   list's own background/pseudo-elements as content scrolled beneath it. Just needs a
+   solid background and bottom border so it reads as a fixed header above the list. */
+d11r-mapping-connector-details .connector-log-header {
+  background-color: var(--c8y-root-component-background-default, #fff);
+  box-shadow: inset 0 -2px 0 var(--c8y-component-border-color);
+}
+
 /* Single-line date: widen column and reposition marker to match.
    Width accounts for the 'medium' c8yDate format (e.g. "14 Aug 2026, 08:15:23 AM"). */
 d11r-mapping-connector-details .c8y-list--timeline .c8y-list--timeline__item__date {

@@ -61,24 +61,27 @@
   <div class="card-header p-l-24 p-r-24 separator">
     <p class="card-title">Connector logs</p>
   </div>
-  <div class="card-block inner-scroll p-l-24 p-r-24">
-    <div class="hidden-xs c8y-list__item c8y-list--timeline m-b-8">
-      <div class="d-flex">
-        <div class="c8y-list--timeline__item__date a-s-center">
-          <p class="m-0 text-medium text-truncate" title="{{ 'Date' | translate }}">
-            <!-- {{ 'Date' | translate }} -->
-          </p>
-        </div>
-        <div class="c8y-list__item__block flex-grow">
-          <div class="c8y-list__item__body">
-            <div class="d-flex">
-              <div class="col-md-3">{{ 'Status' | translate }}</div>
-              <div class="col-md-9">{{ 'Message' | translate }}</div>
-            </div>
+  <!-- Kept outside .card-block.inner-scroll (the scrollable area) so the column header
+       stays visible without needing position: sticky, which fights the list's own
+       background/pseudo-elements as content scrolls beneath it. -->
+  <div class="connector-log-header hidden-xs c8y-list__item c8y-list--timeline m-b-8 p-l-24 p-r-24">
+    <div class="d-flex">
+      <div class="c8y-list--timeline__item__date a-s-center">
+        <p class="m-0 text-medium text-truncate" title="{{ 'Date' | translate }}">
+          <!-- {{ 'Date' | translate }} -->
+        </p>
+      </div>
+      <div class="c8y-list__item__block flex-grow">
+        <div class="c8y-list__item__body">
+          <div class="d-flex">
+            <div class="col-md-3">{{ 'Status' | translate }}</div>
+            <div class="col-md-9">{{ 'Message' | translate }}</div>
           </div>
         </div>
       </div>
     </div>
+  </div>
+  <div class="card-block inner-scroll p-l-24 p-r-24">
     <c8y-list-group class="m-r-8 p-b-8" role="list">
       @for (event of statusLogs$ | async; track event) {
       <c8y-li-timeline>

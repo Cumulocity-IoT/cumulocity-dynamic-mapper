@@ -120,17 +120,17 @@ Webhooks are ideal for outbound integrations to external systems, while the Cumu
 internal Cumulocity REST API operations.
 The mapper supports the following connectors and payload formats:
 
-| Connector | Direction: Inbound | Direction: Outbound | Supports JavaScript | Supported Payload Formats |
-|---|---|---|---|---|
-| **Cumulocity MQTT Service** (device isolation, only one instance per tenant exists) | X | X | X | JSON, Hex, Protobuf, Extension |
-| **MQTT** | X | X | X | JSON, Hex, Protobuf, Extension, **SparkPlug B** |
-| **HTTP Connector** (only one instance per tenant exists) | X | - | X | JSON, Hex, Protobuf, Extension |
-| **Webhook** (for external REST APIs) | - | X | X | JSON |
-| **Cumulocity API** (for internal Cumulocity REST API) | - | X | X | JSON |
-| **Apache Pulsar** | X | X | X | JSON, Hex, Protobuf, Extension |
-| **Kafka** | X | X | X | JSON, Hex, Protobuf, Extension |
-| **AMQP 0-9-1** (RabbitMQ, etc.) | X | X | X | JSON, Hex, Protobuf, Extension |
-| **AMQP 1.0** (Azure Service Bus, Artemis, Solace, etc.) | X | X | X | JSON, Hex, Protobuf, Extension |
+| Connector | Inbound | Outbound | JavaScript | Supported Payload Formats |
+|---|:---:|:---:|:---:|---|
+| **Cumulocity MQTT Service** (device isolation, one instance per tenant) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **MQTT** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension, **SparkPlug B** |
+| **HTTP Connector** (one instance per tenant) | ✓ | – | ✓ | JSON, Hex, Protobuf, Extension |
+| **Webhook** (for external REST APIs) | – | ✓ | ✓ | JSON |
+| **Cumulocity API** (for internal Cumulocity REST API) | – | ✓ | ✓ | JSON |
+| **Apache Pulsar** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **Kafka** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **AMQP 0-9-1** (RabbitMQ, etc.) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **AMQP 1.0** (Azure Service Bus, Artemis, Solace, etc.) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
 
 :::caution
 Some connectors like HTTP Connector and Cumulocity MQTT Service have only one instance per tenant. Multiple
@@ -270,7 +270,7 @@ broker.
 Sparkplug B topics follow the fixed format: `spBv1.0/[Group ID]/[Message Type]/[Edge Node ID]/[Device ID]`
 
 | Message Type | Topic Levels | MO Type (C8Y) | Fragment Stored | Description |
-|---|---|---|---|---|
+|---|:---:|:---:|---|---|
 | `NBIRTH` | 4 | `c8y_Serial` | `sparkPlugB_NBIRTH` | Edge Node birth — metric definitions published when the node comes online. The mapper stores the alias→metric-definition map on the Edge Node managed object so that subsequent NDATA messages can resolve aliases. The Edge Node external ID is `[Group ID]_[Edge Node ID]`. |
 | `NDATA` | 4 | — | — | Edge Node data — metric values published periodically. Aliases are resolved using the `sparkPlugB_NBIRTH` fragment stored on the Edge Node MO. The decoded payload is passed to your Smart Function. |
 | `DBIRTH` | 5 | `c8y_Serial` | `sparkPlugB_DBIRTH_[deviceId]` | Device birth — metric definitions for a device attached to an Edge Node. Per default no managed objects are created for SparkPlug devices. The mapper stores the alias→metric-definition map and metrics on the Edge node managed object so that subsequent DDATA messages can resolve aliases. |
@@ -611,7 +611,7 @@ Extensions when you need enterprise-grade type safety, performance, and access t
 **Quick-reference decision guide:**
 
 | If you need… | Use this type | Notes |
-|---|---|---|
+|---|:---:|---|
 | Simple field-to-field mapping | **JSONata** | Declarative, no JavaScript knowledge required |
 | Complex expressions, conditional logic, math | **JSONata** | JSONata supports functions, predicates, and aggregations natively |
 | Familiar imperative JavaScript syntax per-field | **Smart Function** | JavaScript Substitutions have been removed in release 6.3; Smart Functions offer a superset of capabilities |

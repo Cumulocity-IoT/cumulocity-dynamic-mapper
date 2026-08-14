@@ -33,7 +33,7 @@ type check out the code templates, which contains samples on how to achieve the 
 The following table lists all metadata nodes for inbound mappings:
 
 | Defined in template | Node | Role | Description |
-|---|---|---|---|
+|---|---|:---:|---|
 | Source template (external broker) | `_TOPIC_LEVEL_[.]` | map-from | Topic of the inbound MQTT message. Can be used to identify a device if the topic contains external identifiers, e.g. serial number |
 | Source template (external broker) | `_CONTEXT_DATA_.key` | map-from | Key from Kafka message header |
 | Source template (MQTT 5 only) | `_CONTEXT_DATA_.clientId` | map-from | Client ID from MQTT 5 user properties. The publisher must include `clientId` as a user property when publishing the message. Not available for MQTT 3.1.1 connections. |
@@ -76,7 +76,7 @@ the client ID must be included in the message payload or topic instead.
 The following table lists all metadata nodes for outbound mappings:
 
 | Defined in template | Node | Role | Description |
-|---|---|---|---|
+|---|---|:---:|---|
 | Source template (Cumulocity) | `_IDENTITY_.externalId` | map-from | External Id to identify the external device |
 | Source template (Cumulocity) | `_IDENTITY_.c8ySourceId` | map-from | Cumulocity source id of the device |
 | Target template (external broker) | `_TOPIC_LEVEL_[.]` | map-to | Topic to be used when sending messages. For a Webhook this defines the context path. The context path is then appended to the URL that is defined in the Webhook connector properties. This property has to be used for all transformation types other than Smart Functions, i.e. Substitution as JSONata Expression. |
@@ -126,7 +126,7 @@ Higher QoS levels (1-2) provide better delivery guarantees, but are not supporte
 the most complete QoS support.
 
 | Connector | QoS | Inbound | Outbound |
-|---|---|---|---|
+|---|:---:|---|---|
 | **Http Connector** | 0 | Process asynchronous, send response directly after receiving message | not relevant |
 | **Http Connector** | 1 | not supported | not relevant |
 | **Http Connector** | 2 | not supported | not relevant |
@@ -192,18 +192,18 @@ Key points:
 - All roles can read mappings, connectors, and service configuration.
 
 | Dynamic Mapper Feature | No role | Create | Admin |
-|---|---|---|---|
-| **Mapping Read** | X | X | X |
-| **Mapping Create/Edit** | - | X | X |
-| **Mapping Delete** | - | X | X |
-| **Mapping Activate/Deactivate** | - | X | X |
-| **Mapping Debug/Filter** | - | X | X |
-| **Connector Read** | X | X | X |
-| **Connector Create/Edit** | - | - | X |
-| **Connector Delete** | - | - | X |
-| **Connector Activate/Deactivate** | - | - | X |
-| **Service Configuration Read** | X | X | X |
-| **Service Configuration Edit** | - | - | X |
+|---|:---:|:---:|:---:|
+| **Mapping Read** | ✓ | ✓ | ✓ |
+| **Mapping Create/Edit** | – | ✓ | ✓ |
+| **Mapping Delete** | – | ✓ | ✓ |
+| **Mapping Activate/Deactivate** | – | ✓ | ✓ |
+| **Mapping Debug/Filter** | – | ✓ | ✓ |
+| **Connector Read** | ✓ | ✓ | ✓ |
+| **Connector Create/Edit** | – | – | ✓ |
+| **Connector Delete** | – | – | ✓ |
+| **Connector Activate/Deactivate** | – | – | ✓ |
+| **Service Configuration Read** | ✓ | ✓ | ✓ |
+| **Service Configuration Edit** | – | – | ✓ |
 
 :::info
 To configure roles, navigate to **Administration → Role Management** in Cumulocity. Look for "Dynamic Mapper"
@@ -245,7 +245,7 @@ resumes after a connector reconnect. The chart updates live as messages arrive.
 The Cache statistic view shows two cache panels side by side, each displaying two KPI cards:
 
 | Cache panel | KPI card | Meaning |
-|---|---|---|
+|---|:---:|---|
 | **Inventory Cache** | **# Entries** | Number of managed object fragments currently held in memory. Below the card the configured size limit is shown (default: 100 000). When the limit is reached, the least-recently-used entry is evicted to make room. |
 | **Inventory Cache** | **% Percent** | Fill rate — `Entries / Limit × 100`. A value approaching 100 % means the cache is nearly full and evictions are occurring frequently, which may slow down message processing. |
 | **Inbound ID Cache** | **# Entries** | Number of external-ID → internal managed object ID mappings currently cached. Each mapping is resolved once and then stored here, so subsequent messages skip the identity resolution REST call entirely. |
@@ -324,7 +324,7 @@ Click **Start** to open the session. The action bar switches to show **Stop sess
 Each captured message appears as a row in the message list with the following columns:
 
 | # | Column | Description |
-|---|---|---|
+|:---:|---|---|
 | 1 | **Direction** | INBOUND or OUTBOUND badge. |
 | 2 | **Received at** | Timestamp when the backend captured the message. |
 | 3 | **Connector** | Name of the connector that delivered the message. |

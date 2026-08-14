@@ -96,6 +96,16 @@ function unwrapImageCaptions(html: string): string {
   return html.replace(IMAGE_CAPTION_WRAPPER, '$1\n$2');
 }
 
+// marked emits bare <table> elements with no styling hooks. doc-shared.css already defines
+// borders/padding/striping under the .table/.table-striped classes (used by hand-written doc
+// pages elsewhere), so apply them here too instead of duplicating the rules, and wrap in
+// .table-responsive so wide tables scroll horizontally instead of overflowing the page.
+function styleTables(html: string): string {
+  return html
+    .replace(/<table>/g, '<div class="table-responsive"><table class="table table-striped">')
+    .replace(/<\/table>/g, '</table></div>');
+}
+
 @Injectable({ providedIn: 'root' })
 export class DocMarkdownService {
   private marked: Marked;
@@ -121,7 +131,7 @@ export class DocMarkdownService {
     const { frontMatter, body } = this.extractFrontMatter(raw);
     const withMarkers = withHeadingIdMarkers(body);
     const rawHtml = this.marked.parse(withMarkers, { async: false }) as string;
-    const html = unwrapImageCaptions(applyHeadingIds(rawHtml));
+    const html = styleTables(unwrapImageCaptions(applyHeadingIds(rawHtml)));
     return { title: frontMatter['title'] || '', html };
   }
 

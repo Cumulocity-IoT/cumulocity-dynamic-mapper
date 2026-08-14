@@ -105,7 +105,7 @@ can be called.
 #### Return object properties for custom routing {#custom-routing-properties}
 
 | Property | Required | Description |
-|---|---|---|
+|---|:---:|---|
 | `cumulocityType` | Yes | Must be `"custom"` to activate microservice routing. |
 | `action` | Yes | `"create"` → POST, `"update"` → PUT, `"patch"` → PATCH, `"delete"` → DELETE. |
 | `targetPath` | Yes | Path of the tenant microservice, e.g. `/service/my-processor/ingest`. Must start with `/service/`. |
