@@ -36,6 +36,7 @@ import {
   ConnectorType,
   ALERT_INFO_TIMEOUT
 } from '..';
+import { ServiceConfiguration } from '../../configuration';
 import { ConnectorLogService } from '../service/connector-log.service';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { ActivatedRoute } from '@angular/router';
@@ -60,6 +61,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   statusLogs$: Observable<any[]>;
   configuration: ConnectorConfiguration;
   feature: Feature;
+  serviceConfiguration: ServiceConfiguration;
   filterStatusLog = {
     connectorIdentifier: 'ALL',
     type: LoggingEventType.CONNECTOR_EVENT_TYPE,
@@ -83,6 +85,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   async ngOnInit() {
     this.specifications$ = this.connectorConfigurationService.getSpecifications();
     this.feature = await this.sharedService.getFeatures();
+    this.serviceConfiguration = await this.sharedService.getServiceConfiguration();
     this.contextSubscription = this.route.data.pipe(
       takeUntil(this.destroy$),
       tap(({ connector }) => {
