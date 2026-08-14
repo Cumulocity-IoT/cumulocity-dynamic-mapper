@@ -59,16 +59,16 @@ class InventoryCacheEnrichmentServiceTest {
 
     @BeforeEach
     void setUp() {
-        cacheManager = new CacheManager();
+        notificationSubscriber = mock(NotificationSubscriber.class);
+        when(notificationSubscriber.subscribeMOForInventoryCacheUpdates(anyString(), any()))
+                .thenReturn(mock(Future.class));
+
+        cacheManager = new CacheManager(mock(C8YAgent.class), notificationSubscriber);
         cacheManager.initializeInventoryCache(TENANT, 1000);
 
         tenantRegistry = new TenantRegistry();
         ServiceConfiguration serviceConfiguration = new ServiceConfiguration();
         tenantRegistry.addServiceConfiguration(TENANT, serviceConfiguration);
-
-        notificationSubscriber = mock(NotificationSubscriber.class);
-        when(notificationSubscriber.subscribeMOForInventoryCacheUpdates(anyString(), any()))
-                .thenReturn(mock(Future.class));
 
         identityResolver = mock(IdentityResolver.class);
 

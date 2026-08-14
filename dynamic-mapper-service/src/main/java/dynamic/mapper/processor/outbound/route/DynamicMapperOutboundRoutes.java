@@ -26,11 +26,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.connector.core.client.AConnectorClient;
+import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.outbound.processor.ExtensibleResultOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.FlowOutboundProcessor;
@@ -49,42 +49,58 @@ import dynamic.mapper.processor.util.DynamicMapperBaseRoutes;
 @Component
 public class DynamicMapperOutboundRoutes extends DynamicMapperBaseRoutes {
 
-    @Autowired
-    @Qualifier("virtualThreadPool")
-    private ExecutorService virtualThreadPool;
+    private final ExecutorService virtualThreadPool;
 
-    @Autowired
-    private EnrichmentOutboundProcessor enrichmentProcessor;
+    private final EnrichmentOutboundProcessor enrichmentProcessor;
 
-    @Autowired
-    private ExtensibleOutboundProcessor extensibleOutboundProcessor;
+    private final ExtensibleOutboundProcessor extensibleOutboundProcessor;
 
-    @Autowired
-    private ExtensibleResultOutboundProcessor extensibleResultOutboundProcessor;
+    private final ExtensibleResultOutboundProcessor extensibleResultOutboundProcessor;
 
-    @Autowired
-    private FlowOutboundProcessor flowOutboundProcessor;
+    private final FlowOutboundProcessor flowOutboundProcessor;
 
-    @Autowired
-    private SubstitutionResultOutboundProcessor substitutionOutboundProcessor;
+    private final SubstitutionResultOutboundProcessor substitutionOutboundProcessor;
 
-    @Autowired
-    private DeserializationOutboundProcessor deserializationOutboundProcessor;
+    private final DeserializationOutboundProcessor deserializationOutboundProcessor;
 
-    @Autowired
-    private JSONataOutboundProcessor jsonataExtractionOutboundProcessor;
+    private final JSONataOutboundProcessor jsonataExtractionOutboundProcessor;
 
-    @Autowired
-    private FlowResultOutboundProcessor flowResultOutboundProcessor;
+    private final FlowResultOutboundProcessor flowResultOutboundProcessor;
 
-    @Autowired
-    private SendOutboundProcessor outboundSendProcessor;
+    private final SendOutboundProcessor outboundSendProcessor;
 
-    @Autowired
-    private ConsolidationProcessor consolidationProcessor;
+    private final ConsolidationProcessor consolidationProcessor;
 
-    @Autowired
-    private ProcessingContextAggregationStrategy processingContextAggregationStrategy;
+    private final ProcessingContextAggregationStrategy processingContextAggregationStrategy;
+
+    public DynamicMapperOutboundRoutes(
+            ConnectorRegistry connectorRegistry,
+            @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool,
+            EnrichmentOutboundProcessor enrichmentProcessor,
+            ExtensibleOutboundProcessor extensibleOutboundProcessor,
+            ExtensibleResultOutboundProcessor extensibleResultOutboundProcessor,
+            FlowOutboundProcessor flowOutboundProcessor,
+            SubstitutionResultOutboundProcessor substitutionOutboundProcessor,
+            DeserializationOutboundProcessor deserializationOutboundProcessor,
+            JSONataOutboundProcessor jsonataExtractionOutboundProcessor,
+            FlowResultOutboundProcessor flowResultOutboundProcessor,
+            SendOutboundProcessor outboundSendProcessor,
+            ConsolidationProcessor consolidationProcessor,
+            ProcessingContextAggregationStrategy processingContextAggregationStrategy) {
+        super(connectorRegistry);
+        this.virtualThreadPool = virtualThreadPool;
+        this.enrichmentProcessor = enrichmentProcessor;
+        this.extensibleOutboundProcessor = extensibleOutboundProcessor;
+        this.extensibleResultOutboundProcessor = extensibleResultOutboundProcessor;
+        this.flowOutboundProcessor = flowOutboundProcessor;
+        this.substitutionOutboundProcessor = substitutionOutboundProcessor;
+        this.deserializationOutboundProcessor = deserializationOutboundProcessor;
+        this.jsonataExtractionOutboundProcessor = jsonataExtractionOutboundProcessor;
+        this.flowResultOutboundProcessor = flowResultOutboundProcessor;
+        this.outboundSendProcessor = outboundSendProcessor;
+        this.consolidationProcessor = consolidationProcessor;
+        this.processingContextAggregationStrategy = processingContextAggregationStrategy;
+    }
 
     @Override
     public void configure() throws Exception {

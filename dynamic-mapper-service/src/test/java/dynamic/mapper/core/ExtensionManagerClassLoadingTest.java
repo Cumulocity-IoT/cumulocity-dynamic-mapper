@@ -56,12 +56,9 @@ class ExtensionManagerClassLoadingTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        extensionManager = new ExtensionManager();
         extensionInboundRegistry = new ExtensionInboundRegistry();
         extensionConfiguration = new ExtensionConfiguration();
-
-        setPrivateField(extensionManager, "extensionInboundRegistry", extensionInboundRegistry);
-        setPrivateField(extensionManager, "extensionConfiguration", extensionConfiguration);
+        extensionManager = new ExtensionManager(null, null, extensionInboundRegistry, extensionConfiguration);
     }
 
     @Test

@@ -33,7 +33,6 @@ import java.util.Map;
 import org.yaml.snakeyaml.Yaml;
 
 import org.apache.commons.io.IOUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
@@ -60,21 +59,21 @@ public class ExtensionManager {
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.yaml";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.yaml";
 
-    @Autowired
-    private BinariesApi binaryApi;
+    private final BinariesApi binaryApi;
 
-    private ExtensionsComponent extensionsComponent;
+    private final ExtensionsComponent extensionsComponent;
 
-    @Autowired
-    public void setExtensionsComponent(ExtensionsComponent extensionsComponent) {
+    private final ExtensionInboundRegistry extensionInboundRegistry;
+
+    private final ExtensionConfiguration extensionConfiguration;
+
+    public ExtensionManager(BinariesApi binaryApi, ExtensionsComponent extensionsComponent,
+            ExtensionInboundRegistry extensionInboundRegistry, ExtensionConfiguration extensionConfiguration) {
+        this.binaryApi = binaryApi;
         this.extensionsComponent = extensionsComponent;
+        this.extensionInboundRegistry = extensionInboundRegistry;
+        this.extensionConfiguration = extensionConfiguration;
     }
-
-    @Autowired
-    private ExtensionInboundRegistry extensionInboundRegistry;
-
-    @Autowired
-    private ExtensionConfiguration extensionConfiguration;
 
     // Track classloaders for proper cleanup
     private final Map<String, Map<String, URLClassLoader>> tenantExtensionClassLoaders = new java.util.concurrent.ConcurrentHashMap<>();

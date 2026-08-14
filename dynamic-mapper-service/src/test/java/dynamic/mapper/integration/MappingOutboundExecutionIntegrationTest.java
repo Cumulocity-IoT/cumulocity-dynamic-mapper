@@ -114,11 +114,7 @@ class MappingOutboundExecutionIntegrationTest {
 
         // Create processors
         jsonataProcessor = new JSONataOutboundProcessor(mappingService);
-        substitutionProcessor = new SubstitutionResultOutboundProcessor();
-
-        // Inject dependencies via reflection
-        injectField(substitutionProcessor, "c8yAgent", c8yAgent);
-        injectField(substitutionProcessor, "mappingService", mappingService);
+        substitutionProcessor = new SubstitutionResultOutboundProcessor(c8yAgent, mappingService);
 
         // Setup common mocks
         when(serviceConfiguration.getLogPayload()).thenReturn(false);

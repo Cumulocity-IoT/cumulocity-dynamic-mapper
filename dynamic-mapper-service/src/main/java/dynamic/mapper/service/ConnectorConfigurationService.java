@@ -24,7 +24,6 @@ package dynamic.mapper.service;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
@@ -48,18 +47,15 @@ public class ConnectorConfigurationService {
 
     private final TenantOptionApi tenantOptionApi;
 
-    @Autowired
-    private MicroserviceSubscriptionsService subscriptionsService;
+    private final MicroserviceSubscriptionsService subscriptionsService;
 
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
-    @Autowired
-    public void setObjectMapper(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
-
-    public ConnectorConfigurationService(TenantOptionApi tenantOptionApi) {
+    public ConnectorConfigurationService(TenantOptionApi tenantOptionApi,
+            MicroserviceSubscriptionsService subscriptionsService, ObjectMapper objectMapper) {
         this.tenantOptionApi = tenantOptionApi;
+        this.subscriptionsService = subscriptionsService;
+        this.objectMapper = objectMapper;
     }
 
     public String getConnectorOptionKey(String identifier) {

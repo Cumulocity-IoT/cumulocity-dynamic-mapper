@@ -35,7 +35,6 @@ import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.notification.Utils;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -77,9 +76,9 @@ public class ExplorerService {
     private final C8YAgent c8yAgent;
 
     public ExplorerService(ConnectorRegistry connectorRegistry,
-                            @Lazy ConfigurationRegistry configurationRegistry,
-                            @Lazy NotificationSubscriber notificationSubscriber,
-                            @Lazy C8YAgent c8yAgent) {
+                            ConfigurationRegistry configurationRegistry,
+                            NotificationSubscriber notificationSubscriber,
+                            C8YAgent c8yAgent) {
         this.connectorRegistry = connectorRegistry;
         this.configurationRegistry = configurationRegistry;
         this.notificationSubscriber = notificationSubscriber;

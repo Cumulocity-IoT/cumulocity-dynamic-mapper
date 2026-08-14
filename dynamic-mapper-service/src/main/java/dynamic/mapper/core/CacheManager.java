@@ -24,7 +24,6 @@ package dynamic.mapper.core;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -42,12 +41,14 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class CacheManager {
 
-    @Autowired
-    @Lazy
-    private C8YAgent c8yAgent;
+    private final C8YAgent c8yAgent;
 
-    @Autowired
-    private NotificationSubscriber notificationSubscriber;
+    private final NotificationSubscriber notificationSubscriber;
+
+    public CacheManager(@Lazy C8YAgent c8yAgent, NotificationSubscriber notificationSubscriber) {
+        this.c8yAgent = c8yAgent;
+        this.notificationSubscriber = notificationSubscriber;
+    }
 
     private Map<String, InboundExternalIdCache> inboundExternalIdCaches = new ConcurrentHashMap<>();
     private Map<String, InventoryCache> inventoryCaches = new ConcurrentHashMap<>();

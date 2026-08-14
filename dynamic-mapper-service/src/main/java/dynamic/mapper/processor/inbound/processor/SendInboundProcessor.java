@@ -9,7 +9,6 @@ import java.util.Map;
 
 import org.apache.camel.Exchange;
 import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.model.ID;
@@ -39,20 +38,25 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class SendInboundProcessor extends BaseProcessor {
 
-    @Autowired
-    private C8YAgent c8yAgent;
+    private final C8YAgent c8yAgent;
 
-    @Autowired
-    private ConfigurationRegistry configurationRegistry;
+    private final ConfigurationRegistry configurationRegistry;
 
-    @Autowired
-    private IdentityResolutionService identityResolutionService;
+    private final IdentityResolutionService identityResolutionService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
-    @Autowired
-    private MappingService mappingService;
+    private final MappingService mappingService;
+
+    public SendInboundProcessor(C8YAgent c8yAgent, ConfigurationRegistry configurationRegistry,
+            IdentityResolutionService identityResolutionService, ObjectMapper objectMapper,
+            MappingService mappingService) {
+        this.c8yAgent = c8yAgent;
+        this.configurationRegistry = configurationRegistry;
+        this.identityResolutionService = identityResolutionService;
+        this.objectMapper = objectMapper;
+        this.mappingService = mappingService;
+    }
 
     @Override
     @SuppressWarnings("unchecked")

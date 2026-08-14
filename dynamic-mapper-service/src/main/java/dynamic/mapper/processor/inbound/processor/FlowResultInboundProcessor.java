@@ -30,7 +30,6 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.IdentityResolutionService;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
 @Component
@@ -39,7 +38,6 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
     private final C8YAgent c8yAgent;
     private final IdentityResolutionService identityResolutionService;
 
-    @Autowired
     public FlowResultInboundProcessor(
             MappingService mappingService,
             C8YAgent c8yAgent,

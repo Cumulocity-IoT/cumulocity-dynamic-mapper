@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -80,18 +79,15 @@ public class ServiceConfigurationService {
 
     private final TenantOptionApi tenantOptionApi;
 
-    @Autowired
-    private MicroserviceSubscriptionsService subscriptionsService;
+    private final MicroserviceSubscriptionsService subscriptionsService;
 
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
-    @Autowired
-    public void setObjectMapper(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
-
-    public ServiceConfigurationService(TenantOptionApi tenantOptionApi) {
+    public ServiceConfigurationService(TenantOptionApi tenantOptionApi,
+            MicroserviceSubscriptionsService subscriptionsService, ObjectMapper objectMapper) {
         this.tenantOptionApi = tenantOptionApi;
+        this.subscriptionsService = subscriptionsService;
+        this.objectMapper = objectMapper;
     }
 
     public void initCodeTemplates(ServiceConfiguration configuration, Boolean overrideSystem) {

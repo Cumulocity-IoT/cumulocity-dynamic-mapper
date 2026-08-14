@@ -28,7 +28,6 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.inventory.InventoryApi;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -40,8 +39,11 @@ import java.util.stream.StreamSupport;
 @Component
 public class ExtensionsComponent {
 
-	@Autowired
-	private InventoryApi inventory;
+	private final InventoryApi inventory;
+
+	public ExtensionsComponent(InventoryApi inventory) {
+		this.inventory = inventory;
+	}
 
 	/** Fragment name containing the extension details within the managed object for that extension */
 	public static final String PROCESSOR_EXTENSION_TYPE = "d11r_processorExtension";
