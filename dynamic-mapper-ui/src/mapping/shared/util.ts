@@ -679,14 +679,41 @@ export function bytesToBase64(bytes) {
 // ─── String / template utilities ─────────────────────────────────────────────
 
 /**
- * Removes template-metadata-only JSDoc tag lines from a code string.
- * The tags @defaultTemplate, @internal and @readonly are meaningful on stored
- * CodeTemplate objects but must not be carried over when the template is used
- * as the basis for a mapping's code.
+ * Marks the end of the auto-generated system section of a CodeTemplate's JSDoc
+ * header (@name, @description, @templateType, @direction, @defaultTemplate,
+ * @internal, @readonly). Must match
+ * `ServiceConfigurationService.SYSTEM_SECTION_MARKER` on the backend, which
+ * generates and rewrites this section on every template save
+ * (`rectifyHeaderInCodeTemplate`) — keep the two in sync.
+ */
+const TEMPLATE_SYSTEM_SECTION_MARKER =
+  '--- metadata above is auto-generated, add your documentation below ---';
+
+/**
+ * Removes the auto-generated system-metadata section of a template's JSDoc
+ * header from a code string, so template-only concepts (@name, @templateType,
+ * @direction, ...) aren't carried over when the template is used as the basis
+ * for a mapping's code. Any free-form documentation the template author wrote
+ * below the marker (e.g. a sample payload) is preserved.
+ *
+ * Templates fetched from the backend always contain the marker (it's written
+ * on every create/update), but this falls back to stripping the individual
+ * system tags for any pre-migration data that doesn't have it yet.
  */
 export function stripTemplateMetadataTags(code: string): string {
   if (!code) return code;
-  return code.replace(/^\s*\*\s*@(?:defaultTemplate|internal|readonly)\b[^\n]*\n?/gm, '');
+
+  const markerIndex = code.indexOf(TEMPLATE_SYSTEM_SECTION_MARKER);
+  if (markerIndex !== -1) {
+    const blockStart = code.lastIndexOf('/**', markerIndex);
+    const markerLineEnd = code.indexOf('\n', markerIndex);
+    if (blockStart !== -1 && markerLineEnd !== -1) {
+      return (code.slice(0, blockStart) + code.slice(markerLineEnd + 1)).replace(/^\n+/, '');
+    }
+  }
+
+  // Legacy fallback: no marker present, strip the tags most likely to conflict.
+  return code.replace(/^\s*\*\s*@(?:name|description|templateType|direction|defaultTemplate|internal|readonly)\b[^\n]*\n?/gm, '');
 }
 
 // ─── Object utilities ─────────────────────────────────────────────────────────
