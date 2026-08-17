@@ -42,7 +42,7 @@ export class MappingDeploymentRendererComponent {
   constructor(public readonly context: CellRendererContext) {}
 
   get connectors() {
-    return this.context.value?.connectors;
+    return this.context.value;
   }
 
   get showNoConnectorWarning(): boolean {

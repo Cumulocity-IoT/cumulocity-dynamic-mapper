@@ -65,7 +65,6 @@ export interface Substitution {
 export interface DeploymentMapEntry {
   identifier: string;
   connectors: string[];
-  connectorsDetailed?: ConnectorConfiguration[];
 }
 
 export interface DeploymentMap {
