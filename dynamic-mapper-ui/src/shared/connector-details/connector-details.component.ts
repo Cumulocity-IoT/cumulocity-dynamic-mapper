@@ -43,6 +43,13 @@ import { ActivatedRoute } from '@angular/router';
 import { HttpStatusCode } from '@angular/common/http';
 import { ConnectorConfigurationDrawerComponent } from '../connector-configuration/edit/connector-configuration-drawer.component';
 import { gettext } from '@c8y/ngx-components/gettext';
+// Imported directly (not via the shared barrel): these are referenced inside the @Component
+// decorator's `imports` array, evaluated synchronously at module-load time. The barrel
+// (shared/index.ts) exports this very component before it exports shared.module /
+// connector-status-history.component, so going through the barrel here would read them back
+// as undefined mid-circular-import — see the SharedModule TypeError this replaced.
+import { SharedModule } from '../shared.module';
+import { ConnectorStatusHistoryComponent } from './connector-status-history.component';
 
 @Component({
   selector: 'd11r-mapping-connector-details',
@@ -52,6 +59,8 @@ import { gettext } from '@c8y/ngx-components/gettext';
   standalone: true,
   imports: [
     CoreModule,
+    SharedModule,
+    ConnectorStatusHistoryComponent
   ]
 })
 export class ConnectorDetailsComponent implements OnInit, OnDestroy {

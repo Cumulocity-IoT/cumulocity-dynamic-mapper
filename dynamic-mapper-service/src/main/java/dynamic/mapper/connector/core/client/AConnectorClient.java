@@ -37,6 +37,7 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.ConnectorStatus;
 import dynamic.mapper.model.ConnectorStatusEvent;
+import dynamic.mapper.model.ConnectorStatusHistory;
 import dynamic.mapper.model.DeploymentMapEntry;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.LoggingEventType;
@@ -57,6 +58,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 import javax.net.ssl.HostnameVerifier;
@@ -66,6 +68,7 @@ import javax.net.ssl.TrustManagerFactory;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.joda.time.DateTime;
 
+import com.cumulocity.model.idtype.GId;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -1203,30 +1206,48 @@ public abstract class AConnectorClient {
         return isConfigValid(connectorConfiguration) && connectorConfiguration.getEnabled();
     }
 
+    // Id of the Cumulocity Event backing the currently open connection-lifecycle session (see
+    // ConnectionStateManager.updateSession), so subsequent transitions of the same session are
+    // appended (PUT) to it instead of creating an independent Event per status change.
+    private final AtomicReference<GId> activeConnectorStatusEventId = new AtomicReference<>();
+
     /**
-     * Send connector lifecycle event
+     * Send connector lifecycle event.
+     * <p>
+     * Bundles all transitions of one connection-lifecycle session (e.g. CONNECTING -> CONNECTED,
+     * possibly with RETRYING in between) into a single Cumulocity Event: the first transition of
+     * a session creates the Event, further transitions update it in place — mirroring how a
+     * Cumulocity Operation accumulates its "history of changes" under one record.
      */
-    public void sendConnectorLifecycle(ConnectorStatusEvent status) {
-        if (serviceConfiguration.getSendConnectorLifecycle()) {
-            Map<String, String> statusMap = createStatusMap(status);
-            c8yAgent.createLoggingEvent(
-                    statusMap.get("message"),
-                    LoggingEventType.CONNECTOR_EVENT_TYPE,
-                    status.getStatus().toSeverity(),
-                    DateTime.now(),
-                    tenant,
-                    statusMap);
+    public void sendConnectorLifecycle(ConnectorStatusHistory session, boolean isNewSession) {
+        if (!serviceConfiguration.getSendConnectorLifecycle()) {
+            return;
+        }
+        Map<String, String> statusMap = createStatusMap(session);
+        String message = statusMap.get("message");
+        String severity = session.getCurrentStatus().toSeverity();
+
+        // Defensive fallback: also (re-)create if no event id is on record even though the
+        // session isn't new (e.g. the id was lost across a microservice restart mid-session).
+        GId eventId = isNewSession ? null : activeConnectorStatusEventId.get();
+        if (eventId == null) {
+            eventId = c8yAgent.createConnectorStatusEvent(message, severity, DateTime.now(), tenant, statusMap, session);
+            activeConnectorStatusEventId.set(eventId);
+        } else {
+            c8yAgent.updateConnectorStatusEvent(eventId, message, severity, DateTime.now(), tenant, statusMap, session);
         }
     }
 
-    private Map<String, String> createStatusMap(ConnectorStatusEvent status) {
-        String message = status.getMessage();
-        if ("".equals(status.getMessage())) {
-            message = String.format("Connector status: %s", status.status);
+    private Map<String, String> createStatusMap(ConnectorStatusHistory session) {
+        List<ConnectorStatusEvent> history = session.getHistory();
+        ConnectorStatusEvent latest = history.get(history.size() - 1);
+        String message = latest.getMessage();
+        if (message == null || "".equals(message)) {
+            message = String.format("Connector status: %s", session.getCurrentStatus());
         }
 
         return Map.ofEntries(
-                entry("status", status.getStatus().name()),
+                entry("status", session.getCurrentStatus().name()),
                 entry("message", message),
                 entry("connectorName", getConnectorName()),
                 entry("connectorIdentifier", getConnectorIdentifier()));

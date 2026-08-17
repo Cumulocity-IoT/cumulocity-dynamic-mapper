@@ -75,7 +75,7 @@
   </div>
 
   <c8y-list-group>
-    @for (event of statusLogs$ | async; track event) {
+    @for (event of statusLogs$ | async; track event; let i = $index) {
     <c8y-li-timeline>
       {{ event.time | c8yDate: 'medium' }}
       <c8y-li role="listitem">
@@ -84,11 +84,31 @@
             <span class="text-10 label" [ngClass]="getSeverityClass(event.severity)" [title]="event.description">
               {{ event.status ? event.status : '-' }}
             </span>
+            @if (event.historyCount) {
+            <span class="text-10 label label-default m-l-4" title="{{ 'Number of status transitions bundled into this session' | translate }}">
+              {{ event.historyCount }} {{ event.historyCount === 1 ? 'event' : 'events' }}
+            </span>
+            @if (event.sessionClosed === false) {
+            <span class="text-10 label label-info m-l-4" translate>open</span>
+            }
+            @if (event.statusLog?.hadError) {
+            <span class="text-10 m-l-4" title="{{ 'This session had an error-driven transition (unexpected disconnect, retry, or failure)' | translate }}">
+              <i c8yIcon="exclamation-triangle" class="text-danger"></i>
+            </span>
+            }
+            }
           </div>
           <div class="col-md-9">
             <span>{{ event.message ? event.message : '-' }}</span>
           </div>
         </div>
+        <c8y-list-item-collapse collapseWay="button" id="details-{{ i }}">
+          @if (event.statusLog) {
+          <d11r-connector-status-history [history]="event.statusLog"></d11r-connector-status-history>
+          } @else {
+          <small>{{ event.raw | filterJson:['self', 'source', 'creationTime', 'lastUpdated']:true | json }}</small>
+          }
+        </c8y-list-item-collapse>
       </c8y-li>
     </c8y-li-timeline>
     }

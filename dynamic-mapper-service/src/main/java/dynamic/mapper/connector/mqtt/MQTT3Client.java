@@ -150,22 +150,31 @@ public class MQTT3Client extends AMQTTClient {
                     Throwable cause = context.getCause();
                     log.info("{} - MQTT3 client disconnected (reason: {})", tenant, cause.getMessage());
                     boolean wasConnected = connectionStateManager.isConnected();
-                    connectionStateManager.setConnected(false, cause);
 
                     boolean stale = myGeneration != connectGeneration.get();
-                    boolean unexpected;
+                    boolean intentional;
                     synchronized (disconnectionLock) {
-                        unexpected = !stale && !intentionalDisconnect && !isDisconnecting &&
-                                connectorConfiguration.getEnabled() && wasConnected;
+                        intentional = intentionalDisconnect || isDisconnecting;
                     }
 
+                    // This listener fires as a side effect of our OWN AMQTTClient.disconnect() call
+                    // too (closing the client triggers it), which already reports DISCONNECTED
+                    // itself right after disconnectMqttClient() returns. Without this guard, both
+                    // reports race for the same physical disconnect and can land as two separate
+                    // sessions in the UI instead of one. Only report here when this disconnect was
+                    // NOT requested by us — i.e. a genuine unexpected drop.
+                    if (!intentional) {
+                        connectionStateManager.setConnected(false, cause);
+                    }
+
+                    boolean unexpected = !stale && !intentional && connectorConfiguration.getEnabled() && wasConnected;
                     if (unexpected) {
                         nextReconnectTimeMs = System.currentTimeMillis(); // reconnect on next housekeeping cycle
                         log.warn("{} - Unexpected disconnection detected, housekeeping will reconnect", tenant);
                     } else {
                         log.info(
-                                "{} - Intentional disconnect or not reconnecting (stale={}, intentional={}, disconnecting={}, enabled={}, wasConnected={})",
-                                tenant, stale, intentionalDisconnect, isDisconnecting,
+                                "{} - Intentional disconnect or not reconnecting (stale={}, intentional={}, enabled={}, wasConnected={})",
+                                tenant, stale, intentional,
                                 connectorConfiguration.getEnabled(), wasConnected);
                     }
                 })

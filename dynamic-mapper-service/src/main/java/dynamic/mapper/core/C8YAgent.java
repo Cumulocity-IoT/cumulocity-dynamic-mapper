@@ -376,6 +376,94 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         });
     }
 
+    /**
+     * Creates the Event that opens a new connector connection-lifecycle session, carrying a
+     * {@code d11r_connectorStatusLog} fragment with the session's first {@link ConnectorStatusHistory}
+     * entry. Returns the created Event's id (synchronously) so the caller can remember it and
+     * append further transitions of the same session via {@link #updateConnectorStatusEvent}
+     * instead of creating a new, independent Event per status change.
+     *
+     * @return the created event's id, or {@code null} if creation failed (logged, not thrown —
+     *         callers treat a missing id as "start a fresh session on the next transition").
+     */
+    public GId createConnectorStatusEvent(String message, String severity, DateTime eventTime, String tenant,
+            Map<String, String> properties, dynamic.mapper.model.ConnectorStatusHistory session) {
+        MapperServiceRepresentation source = mapperConfiguration.getMapperServiceRepresentation(tenant);
+        return subscriptionsService.callForTenant(tenant, () -> {
+            MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
+            return contextService.callWithinContext(context, () -> {
+                EventRepresentation er = new EventRepresentation();
+                ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
+                mor.setId(new GId(source.getId()));
+                er.setSource(mor);
+                er.setDateTime(eventTime);
+                er.setType(LoggingEventType.CONNECTOR_EVENT_TYPE.getType());
+                applyConnectorStatusFragments(er, message, severity, properties, session);
+
+                try {
+                    c8ySemaphore.acquire();
+                    EventRepresentation created = this.eventApi.create(er);
+                    return created.getId();
+                } catch (InterruptedException e) {
+                    log.error("{} - Failed to acquire semaphore for creating connector status event", tenant, e);
+                    return null;
+                } catch (SDKException e) {
+                    log.warn("{} - Failed to create connector status event: {}", tenant, e.getMessage());
+                    return null;
+                } finally {
+                    c8ySemaphore.release();
+                }
+            });
+        });
+    }
+
+    /**
+     * Appends a further transition to an already-open connector connection-lifecycle session by
+     * updating (PUT) the existing Event identified by {@code eventId} in place, instead of
+     * creating a new Event — analogous to how a Cumulocity Operation accumulates its
+     * "history of changes" via repeated PUTs to the same operation id.
+     */
+    public void updateConnectorStatusEvent(GId eventId, String message, String severity, DateTime eventTime,
+            String tenant, Map<String, String> properties, dynamic.mapper.model.ConnectorStatusHistory session) {
+        subscriptionsService.runForTenant(tenant, () -> {
+            MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
+            contextService.runWithinContext(context, () -> {
+                EventRepresentation er = new EventRepresentation();
+                er.setId(eventId);
+                applyConnectorStatusFragments(er, message, severity, properties, session);
+
+                try {
+                    c8ySemaphore.acquire();
+                    this.eventApi.update(er);
+                } catch (InterruptedException e) {
+                    log.error("{} - Failed to acquire semaphore for updating connector status event", tenant, e);
+                } catch (SDKException e) {
+                    log.warn("{} - Failed to update connector status event {}: {}",
+                            tenant, eventId.getValue(), e.getMessage());
+                } finally {
+                    c8ySemaphore.release();
+                }
+            });
+        });
+    }
+
+    private void applyConnectorStatusFragments(EventRepresentation er, String message, String severity,
+            Map<String, String> properties, dynamic.mapper.model.ConnectorStatusHistory session) {
+        er.setText(message);
+        if (properties != null) {
+            er.setProperty(LoggingEventType.CONNECTOR_EVENT_TYPE.getComponent(), properties);
+        }
+        er.setProperty("d11r_connectorStatusLog", session);
+
+        Map<String, String> metadata = Map.of(
+            "component", LoggingEventType.CONNECTOR_EVENT_TYPE.getComponent(),
+            "componentDisplayName", LoggingEventType.CONNECTOR_EVENT_TYPE.getComponentDisplayName(),
+            "severity", severity != null ? severity : LoggingEventType.CONNECTOR_EVENT_TYPE.getSeverity(),
+            "description", LoggingEventType.CONNECTOR_EVENT_TYPE.getDescription()
+        );
+        er.setProperty("d11r_metadata", metadata);
+    }
+
     public Certificate loadCertificateByName(String certificateName, String fingerprint,
             String tenant, String connectorName) {
         return certificateService.loadCertificateByName(certificateName, fingerprint, tenant, connectorName);

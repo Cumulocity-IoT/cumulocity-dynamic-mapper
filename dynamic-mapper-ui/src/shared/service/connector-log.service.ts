@@ -164,15 +164,23 @@ export class ConnectorLogService {
     try {
       const fragment = event[CONNECTOR_FRAGMENT];
       const metadata = getEventMetadata(event);
+      const statusLog = event['d11r_connectorStatusLog'];
       return {
         ...fragment,
+        id: event.id,
         type: event.type,
         time: event.time,
+        raw: event,
         ...(metadata && {
           severity: metadata.severity,
           component: metadata.component,
           componentDisplayName: metadata.componentDisplayName,
           description: metadata.description
+        }),
+        ...(statusLog && {
+          historyCount: statusLog.history?.length,
+          sessionClosed: statusLog.sessionClosed,
+          statusLog
         })
       };
     } catch (error) {
@@ -196,7 +204,21 @@ export class ConnectorLogService {
     // independent async HTTP calls (see C8YAgent.createLoggingEvent) that can complete
     // out of order — so arrival order does not always match each event's own `time`.
     // Sort explicitly instead of trusting prepend order.
-    return [...newEvents, ...accumulated]
+    //
+    // Dedupe by event id: a connection-lifecycle session now updates one event in place as it
+    // progresses (see ConnectorStatusHistory / C8YAgent.updateConnectorStatusEvent) instead of
+    // creating a new event per status change, so the realtime stream can push the SAME id more
+    // than once — without this, each push would add another row for what is really one ongoing
+    // session. `newEvents` is placed first so its (newer) snapshot wins over any stale copy
+    // already in `accumulated` for the same id.
+    const byId = new Map<string, ConnectorStatusEvent>();
+    for (const event of [...newEvents, ...accumulated]) {
+      const key = event.id ?? `${event.type}-${event.time}`;
+      if (!byId.has(key)) {
+        byId.set(key, event);
+      }
+    }
+    return Array.from(byId.values())
       .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
       .slice(0, this.CONFIG.MAX_LOG_ENTRIES);
   }

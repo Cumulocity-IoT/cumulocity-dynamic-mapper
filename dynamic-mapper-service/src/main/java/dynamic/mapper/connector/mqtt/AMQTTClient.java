@@ -391,8 +391,9 @@ public abstract class AMQTTClient extends AConnectorClient {
              // Disconnect client (version-specific)
              disconnectMqttClient();
 
+            // setConnected(false) already transitions to DISCONNECTED internally (see
+            // ConnectionStateManager.setConnected) — no need to also call updateStatus explicitly.
             connectionStateManager.setConnected(false);
-            connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
 
             // Clear subscriptions
             if (mappingSubscriptionManager != null) {
@@ -405,7 +406,6 @@ public abstract class AMQTTClient extends AConnectorClient {
             log.error("{} - Error during disconnect: {}", tenant, e.getMessage());
             // Still mark as disconnected even if there was an error
             connectionStateManager.setConnected(false);
-            connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
         } finally {
             endDisconnection();
         }

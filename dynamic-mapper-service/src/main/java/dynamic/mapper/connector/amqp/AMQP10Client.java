@@ -210,6 +210,19 @@ public class AMQP10Client extends AConnectorClient {
 
             connection = factory.createConnection();
             connection.setExceptionListener(ex -> {
+                boolean intentional;
+                synchronized (disconnectionLock) {
+                    intentional = intentionalDisconnect || isDisconnecting;
+                }
+                if (intentional) {
+                    // disconnect() already reports DISCONNECTED itself. Guards against the same
+                    // double-report race fixed for MQTT (see MQTT3Client/MQTT5Client's
+                    // addDisconnectedListener) in case the JMS provider ever invokes this listener
+                    // as a side effect of our own graceful, client-initiated close.
+                    log.debug("{} - AMQP 1.0 JMS exception listener fired during our own disconnect, skipping duplicate report: {}",
+                            tenant, ex.getMessage());
+                    return;
+                }
                 log.error("{} - AMQP 1.0 JMS exception: {}", tenant, ex.getMessage());
                 physicallyConnected = false;
                 connectionStateManager.setConnected(false, ex);
@@ -317,8 +330,9 @@ public class AMQP10Client extends AConnectorClient {
                 }
             }
 
+            // setConnected(false) already transitions to DISCONNECTED internally (see
+            // ConnectionStateManager.setConnected) — no need to also call updateStatus explicitly.
             connectionStateManager.setConnected(false);
-            connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
 
             if (mappingSubscriptionManager != null) {
                 mappingSubscriptionManager.clear();
@@ -329,7 +343,6 @@ public class AMQP10Client extends AConnectorClient {
         } catch (Exception e) {
             log.error("{} - Error during disconnect: {}", tenant, e.getMessage());
             connectionStateManager.setConnected(false);
-            connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
         } finally {
             endDisconnection();
         }

@@ -19,6 +19,11 @@
  */
 
 export interface ConnectorStatusEvent {
+  /** The backing Cumulocity event's id. Since a connection-lifecycle session now updates the
+   * same event in place (see ConnectorStatusHistory) instead of creating a new one per status
+   * change, consumers merging historical + realtime pushes MUST dedupe by this id — the same
+   * id can arrive more than once, each time reflecting that session's latest state. */
+  id?: string;
   connectorIdentifier: string;
   connectorName: string;
   /** @deprecated the backend stopped populating this redundant, per-property date field; use `time` (the event's own timestamp) instead. */
@@ -31,6 +36,17 @@ export interface ConnectorStatusEvent {
   component?: string;
   componentDisplayName?: string;
   description?: string;
+  /** Number of transitions bundled into this event's session (see ConnectorStatusHistory).
+   * Undefined for events without a d11r_connectorStatusLog fragment (other/legacy events). */
+  historyCount?: number;
+  /** False while the session is still ongoing (see ConnectorStatusHistory.sessionClosed). */
+  sessionClosed?: boolean;
+  /** The full bundled session, for rendering inside a collapsible list item. Undefined for
+   * events without a d11r_connectorStatusLog fragment (other/legacy events). */
+  statusLog?: ConnectorStatusHistory;
+  /** The raw Cumulocity event, kept around as a fallback for the collapsible detail panel when
+   * there's no statusLog to show (e.g. legacy events created before this fragment existed). */
+  raw?: any;
 }
 
 export enum ConnectorStatus {
@@ -43,6 +59,42 @@ export enum ConnectorStatus {
   DISCONNECTING = 'DISCONNECTING',
   FAILED = 'FAILED',
   RETRYING = 'RETRYING'
+}
+
+/**
+ * Mirrors {@code ConnectorStatus.toSeverity()} on the backend, so a status badge's color is
+ * derived the same way regardless of which view renders it.
+ */
+export function connectorStatusToSeverity(status?: ConnectorStatus | string | null): 'info' | 'warning' | 'error' {
+  switch (status) {
+    case ConnectorStatus.FAILED: return 'error';
+    case ConnectorStatus.UNKNOWN:
+    case ConnectorStatus.RETRYING: return 'warning';
+    default: return 'info';
+  }
+}
+
+/**
+ * Bundles all {@link ConnectorStatusEvent} transitions of one connection-lifecycle session into
+ * a single structure — the frontend counterpart of the backend's {@code d11r_connectorStatusLog}
+ * event fragment, updated in place (PUT) as the session progresses instead of one independent
+ * event per status transition. See attic/feature/connect-operation/CONCEPT.md.
+ */
+export interface ConnectorStatusHistory {
+  connectorName: string;
+  connectorIdentifier: string;
+  currentStatus: ConnectorStatus;
+  /** True once the session reached a terminal status (CONNECTED/DISCONNECTED/FAILED). Not
+   * sticky — re-evaluated on every append, so a session can re-open (e.g. CONNECTED -> RETRYING). */
+  sessionClosed: boolean;
+  /** True if older entries were dropped to stay within the backend's history cap. */
+  historyTruncated?: boolean;
+  /** Number of entries dropped due to the history cap. */
+  historyOmittedCount?: number;
+  /** True if any transition in this session was error-driven (FAILED, RETRYING, or carried a
+   * non-empty error message) rather than a clean, intentional transition. Sticky for the session. */
+  hadError?: boolean;
+  history: ConnectorStatusEvent[];
 }
 
 export enum LoggingEventType {
