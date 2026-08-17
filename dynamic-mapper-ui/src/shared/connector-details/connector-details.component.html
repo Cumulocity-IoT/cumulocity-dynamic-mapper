@@ -57,19 +57,11 @@
   <c8y-breadcrumb-item [label]="'Details & logs'"></c8y-breadcrumb-item>
 </c8y-breadcrumb>
 
-<div class="card card--fullpage content-fullpage">
-  <div class="card-header p-l-24 p-r-24 separator">
-    <p class="card-title">Connector logs</p>
-  </div>
-  <!-- Kept outside .card-block.inner-scroll (the scrollable area) so the column header
-       stays visible without needing position: sticky, which fights the list's own
-       background/pseudo-elements as content scrolls beneath it. -->
-  <div class="connector-log-header hidden-xs c8y-list__item c8y-list--timeline m-b-8 p-l-24 p-r-24">
+<div class="elevation-sm p-12">
+  <div class="page-sticky-header hidden-xs c8y-list__item c8y-list--timeline">
     <div class="d-flex">
       <div class="c8y-list--timeline__item__date a-s-center">
-        <p class="m-0 text-medium text-truncate" title="{{ 'Date' | translate }}">
-          <!-- {{ 'Date' | translate }} -->
-        </p>
+        <label class="m-0 text-truncate" title="{{ 'Date' | translate }}">{{ 'Date' | translate }}</label>
       </div>
       <div class="c8y-list__item__block flex-grow">
         <div class="c8y-list__item__body">
@@ -81,32 +73,28 @@
       </div>
     </div>
   </div>
-  <div class="card-block inner-scroll p-l-24 p-r-24">
-    <c8y-list-group class="m-r-8 p-b-8" role="list">
-      @for (event of statusLogs$ | async; track event) {
-      <c8y-li-timeline>
-        {{ event.time | c8yDate: 'medium' }}
-        <c8y-li role="listitem">
-          <c8y-li-body>
-            <div class="d-flex">
-              <div class="col-md-3">
-                <div class="label" [ngClass]="getSeverityClass(event.severity)" [title]="event.description">
-                  {{ event.status ? event.status : '-' }}
-                </div>
-              </div>
-              <div class="col-md-9">
-                <div>{{ event.message ? event.message : '-' }}</div>
-              </div>
-            </div>
-          </c8y-li-body>
-        </c8y-li>
-      </c8y-li-timeline>
-      }
-      @if ((statusLogs$ | async)?.length === 0) {
-      <c8y-ui-empty-state [icon]="'logs'" [title]="'No logs entries for this connectors.'"
-        [horizontal]="true"></c8y-ui-empty-state>
-      }
-    </c8y-list-group>
 
-  </div>
+  <c8y-list-group>
+    @for (event of statusLogs$ | async; track event) {
+    <c8y-li-timeline>
+      {{ event.time | c8yDate: 'medium' }}
+      <c8y-li role="listitem">
+        <div class="d-flex">
+          <div class="col-md-3">
+            <span class="text-10 label" [ngClass]="getSeverityClass(event.severity)" [title]="event.description">
+              {{ event.status ? event.status : '-' }}
+            </span>
+          </div>
+          <div class="col-md-9">
+            <span>{{ event.message ? event.message : '-' }}</span>
+          </div>
+        </div>
+      </c8y-li>
+    </c8y-li-timeline>
+    }
+    @if ((statusLogs$ | async)?.length === 0) {
+    <c8y-ui-empty-state [icon]="'logs'" [title]="'No logs entries for this connectors.'"
+      [horizontal]="true"></c8y-ui-empty-state>
+    }
+  </c8y-list-group>
 </div>
