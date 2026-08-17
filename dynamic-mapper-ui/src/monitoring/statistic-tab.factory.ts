@@ -52,6 +52,13 @@ export class StatisticTabFactory implements TabFactory {
         icon: 'swipe-left',
         orientation: 'horizontal',
       } as Tab);
+      tabs.push({
+        path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/chart`,
+        priority: 910,
+        label: 'Chart',
+        icon: 'pie-chart',
+        orientation: 'horizontal',
+      } as Tab);
     }
     return tabs;
   }
