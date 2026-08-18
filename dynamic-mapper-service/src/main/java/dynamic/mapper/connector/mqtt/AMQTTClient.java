@@ -591,7 +591,7 @@ public abstract class AMQTTClient extends AConnectorClient {
 
         configProps.put("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
                 .order(13)
-                .defaultValue(false)
+                .defaultValue(true)
                 .build());
 
         // WebSocket specific configuration (only visible for WS/WSS protocols)
