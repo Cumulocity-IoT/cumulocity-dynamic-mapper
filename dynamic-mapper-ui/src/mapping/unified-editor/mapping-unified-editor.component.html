@@ -55,7 +55,7 @@
 
     <!-- Deprecation notice for legacy SUBSTITUTION_AS_CODE mappings -->
     @if (mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE) {
-    <div class="alert alert-warning m-16" data-cy="dm-unified-editor-deprecated-status">
+    <div class="alert alert-warning m-16" style="max-width: none;" data-cy="dm-unified-editor-deprecated-status">
       <strong translate>Deprecated mapping type</strong>
       &nbsp;
       <span translate>This mapping uses the removed <code>SUBSTITUTION_AS_CODE</code> transformation type. It can only be <strong>exported</strong> or <strong>deleted</strong>. Editing and testing are disabled. Please recreate it using <strong>Smart Function</strong>.</span>
