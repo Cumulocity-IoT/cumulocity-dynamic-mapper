@@ -33,7 +33,7 @@ public class CacheController {
     private final CacheManager cacheManager;
     private final ContextService<UserCredentials> contextService;
 
-    @Operation(summary = "Get cache size", description = "Returns the current number of entries in the specified cache. Supported values for cacheId: INVENTORY_CACHE, INBOUND_ID_CACHE.")
+    @Operation(summary = "Get cache size", description = "Returns the current number of entries in the specified cache. Supported values for cacheId: INVENTORY_CACHE, INBOUND_ID_CACHE, OUTBOUND_ID_CACHE.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Cache size returned successfully",
                     content = @Content(mediaType = "application/json", schema = @Schema(type = "integer", example = "42"))),
@@ -41,7 +41,7 @@ public class CacheController {
     })
     @GetMapping
     public ResponseEntity<Integer> getCacheSize(
-            @Parameter(description = "Identifier of the cache to query. Allowed values: INVENTORY_CACHE, INBOUND_ID_CACHE", required = true, example = "INVENTORY_CACHE")
+            @Parameter(description = "Identifier of the cache to query. Allowed values: INVENTORY_CACHE, INBOUND_ID_CACHE, OUTBOUND_ID_CACHE", required = true, example = "INVENTORY_CACHE")
             @RequestParam("cacheId") String cacheId) {
         String tenant = contextService.getContext().getTenant();
         log.info("{} - Get cache size for {}", tenant, cacheId);
@@ -51,6 +51,9 @@ public class CacheController {
             return new ResponseEntity<>(size, HttpStatus.OK);
         } else if ("INBOUND_ID_CACHE".equals(cacheId)) {
             int size = cacheManager.getSizeInboundExternalIdCache(tenant);
+            return new ResponseEntity<>(size, HttpStatus.OK);
+        } else if ("OUTBOUND_ID_CACHE".equals(cacheId)) {
+            int size = cacheManager.getSizeOutboundExternalIdCache(tenant);
             return new ResponseEntity<>(size, HttpStatus.OK);
         }
 

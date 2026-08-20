@@ -78,6 +78,8 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.client.Certificate;
 import dynamic.mapper.core.cache.InboundExternalIdCache;
 import dynamic.mapper.core.cache.InventoryCache;
+import dynamic.mapper.core.cache.OutboundExternalIdCache;
+import dynamic.mapper.core.cache.OutboundIdKey;
 import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.API;
@@ -242,11 +244,22 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
     public ExternalIDRepresentation resolveGlobalId2ExternalId(String tenant, GId gid, String idType,
             Boolean testing) {
-        // TODO Use Cache
         if (idType == null) {
             idType = "c8y_Serial";
         }
         final String idt = idType;
+
+        OutboundExternalIdCache outboundCache = cacheManager.getOutboundExternalIdCache(tenant);
+        OutboundIdKey cacheKey = new OutboundIdKey(gid.getValue(), idt);
+        if (outboundCache != null && !Boolean.TRUE.equals(testing)) {
+            ExternalIDRepresentation cached = outboundCache.getExternalIdForSource(cacheKey);
+            if (cached != null) {
+                Counter.builder("dynmapper_outbound_identity_cache_hits_total").tag("tenant", tenant)
+                        .register(Metrics.globalRegistry).increment();
+                return cached;
+            }
+        }
+
         ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             try {
                 return identityApi.resolveGlobalId2ExternalId(gid, idt, testing, c8ySemaphore);
@@ -255,6 +268,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             }
             return null;
         });
+
+        if (result != null && outboundCache != null && !Boolean.TRUE.equals(testing)) {
+            outboundCache.putExternalIdForSource(cacheKey, result);
+        }
         return result;
     }
 
@@ -1191,6 +1208,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         cacheManager.initializeInboundExternalIdCache(tenant, size);
     }
 
+    public void initializeOutboundExternalIdCache(String tenant, int size) {
+        cacheManager.initializeOutboundExternalIdCache(tenant, size);
+    }
+
     public void initializeInventoryCache(String tenant, int size) {
         cacheManager.initializeInventoryCache(tenant, size);
     }
@@ -1199,8 +1220,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return cacheManager.removeInboundExternalIdCache(tenant);
     }
 
+    public OutboundExternalIdCache removeOutboundExternalIdCache(String tenant) {
+        return cacheManager.removeOutboundExternalIdCache(tenant);
+    }
+
     public Integer getInboundExternalIdCacheSize(String tenant) {
         return cacheManager.getInboundExternalIdCacheSize(tenant);
+    }
+
+    public Integer getOutboundExternalIdCacheSize(String tenant) {
+        return cacheManager.getOutboundExternalIdCacheSize(tenant);
     }
 
     public InventoryCache removeInventoryCache(String tenant) {
@@ -1221,6 +1250,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
     public int getSizeInboundExternalIdCache(String tenant) {
         return cacheManager.getSizeInboundExternalIdCache(tenant);
+    }
+
+    public void clearOutboundExternalIdCache(String tenant, boolean recreate, int outboundExternalIdCacheSize) {
+        cacheManager.clearOutboundExternalIdCache(tenant, recreate, outboundExternalIdCacheSize);
+    }
+
+    public int getSizeOutboundExternalIdCache(String tenant) {
+        return cacheManager.getSizeOutboundExternalIdCache(tenant);
     }
 
     public void clearInventoryCache(String tenant, boolean recreate, int inventoryCacheSize) {

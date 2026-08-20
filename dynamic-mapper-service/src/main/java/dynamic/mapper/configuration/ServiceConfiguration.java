@@ -55,6 +55,8 @@ public class ServiceConfiguration implements Cloneable {
         this.deviceIsolationMQTTServiceEnabled = false;
         this.inboundExternalIdCacheSize = 0;
         this.inboundExternalIdCacheRetention = 1;
+        this.outboundExternalIdCacheSize = 0;
+        this.outboundExternalIdCacheRetention = 1;
         this.inventoryCacheSize = 0;
         this.inventoryCacheRetention = 1;
         // Default fragments to cache: type, name, id
@@ -132,6 +134,16 @@ public class ServiceConfiguration implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     private Integer inboundExternalIdCacheRetention;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Size of the cache for outbound external ID lookups (internal id -> external id, used by mappings with useExternalId enabled). Set to 0 to disable caching.", example = "1000", minimum = "0")
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Integer outboundExternalIdCacheSize;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Retention time in hours for outbound external ID cache entries.", example = "24", minimum = "1")
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Integer outboundExternalIdCacheRetention;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Size of the inventory cache for device lookups. Set to 0 to disable caching.", example = "500", minimum = "0")
     @NotNull
