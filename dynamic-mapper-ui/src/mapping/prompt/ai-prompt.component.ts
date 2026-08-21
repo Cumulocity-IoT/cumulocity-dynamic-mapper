@@ -26,7 +26,7 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { Mapping, Substitution, MappingType, RepairStrategy, SharedService, isSubstitutionsAsCode, TransformationType } from '../../shared';
+import { Mapping, Substitution, MappingType, RepairStrategy, SAMPLE_TEMPLATES_C8Y, SharedService, isSubstitutionsAsCode, TransformationType } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
 import { AIMessage, ClientAgentDefinition, Suggestion } from '@c8y/ngx-components/ai';
@@ -176,15 +176,30 @@ export class AIPromptComponent implements OnInit {
 
     if (this.isCodeMapping) {
       return `Review the existing ${direction} Smart Function` +
-        (targetAPI ? ` (target: ${targetAPI})` : '') + " in the following mapping" +
-        " and suggest improvements.\n\n" +
-        "```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
+        (targetAPI ? ` (target: ${targetAPI})` : '') +
+        " and suggest improvements.\n";
     }
     return `Review the existing substitutions for this ${direction}` +
       (targetAPI ? ` ${targetAPI}` : '') + " mapping" +
-      " and suggest improvements.\n\n" +
-      "```json\n" + JSON.stringify({ ...this.mappingForAI, substitutions: this.mapping.substitutions }, null, 2) + "\n```\n";
+      " and suggest improvements.\n";
   }
+
+  /**
+   * Grounding context re-sent alongside every user message (per AgentChatComponent's
+   * groundingContextProvider contract) instead of being embedded in the visible chat message.
+   * The mapping JSON can run to dozens of lines (managed-object metadata, self links, etc.) and
+   * rendering it inline made the very first "message" in the chat an unreadable wall of raw JSON —
+   * this keeps the mapping data available to the agent without cluttering the transcript.
+   */
+  private buildMappingContext(): string {
+    const withSubstitutions = this.isCodeMapping
+      ? this.mappingForAI
+      : { ...this.mappingForAI, substitutions: this.mapping.substitutions };
+    return "[MAPPING_CONTEXT] Current state of the mapping being edited (not written by the user):\n" +
+      "```json\n" + JSON.stringify(withSubstitutions, null, 2) + "\n```\n";
+  }
+
+  groundingContextProvider = (): string => this.buildMappingContext();
 
   private buildGenerateMessage(): string {
     const direction = this.mapping.direction ?? 'INBOUND';
@@ -192,23 +207,37 @@ export class AIPromptComponent implements OnInit {
 
     if (this.isCodeMapping) {
       const isOutbound = direction === 'OUTBOUND';
-      const targetTemplateIsEmpty = !this.mappingForAI.targetTemplate
-        || JSON.stringify(this.mappingForAI.targetTemplate) === '{}';
-      const missingContextHint = isOutbound && targetTemplateIsEmpty
-        ? "The targetTemplate is empty — ask the user what device message format or protocol structure" +
-          " is expected (field names, units, nesting) before generating code.\n"
-        : !isOutbound && !targetAPI
+      // Outbound Smart Functions never have a fixed targetTemplate — it is always "{}" by design,
+      // because the function body itself defines whatever message structure the target broker/
+      // protocol expects (there's no fixed Cumulocity-side schema to map into, as there is for
+      // inbound). Treating that as "missing context" made the AI always stop and ask the user a
+      // clarifying question instead of generating code, so the editor stayed empty on every attempt.
+      const inboundSample = !isOutbound && targetAPI ? SAMPLE_TEMPLATES_C8Y[targetAPI] : undefined;
+      const missingContextHint = isOutbound
+        ? "This is an OUTBOUND mapping: there is no fixed targetTemplate/schema — the Smart Function" +
+          " itself builds whatever payload structure the target broker/protocol expects. Use the" +
+          " sourceTemplate (the Cumulocity object being published) plus the topic/description in the" +
+          " mapping context to infer reasonable field names and generate the code directly — do not" +
+          " ask the user for a target format before generating.\n"
+        : !targetAPI
           ? "The targetAPI is not set — ask the user what kind of Cumulocity object to produce" +
             " (e.g. MEASUREMENT, ALARM, EVENT, INVENTORY) before generating code.\n"
-          : "";
+          // INBOUND Smart Functions also always carry an empty targetTemplate ("{}") by design —
+          // the function body constructs the Cumulocity API payload itself instead of mapping into
+          // a fixed template. Without a concrete example the AI has no shape to aim for, so give it
+          // the standard sample payload for the mapping's targetAPI as a reference.
+          : inboundSample
+            ? `There is no fixed targetTemplate — the Smart Function itself builds the Cumulocity` +
+              ` ${targetAPI} API payload from the sourceTemplate fields. A typical ${targetAPI} object` +
+              " looks like:\n```json\n" + inboundSample + "\n```\n" +
+              " Generate the code directly — do not ask the user for a target format before generating.\n"
+            : "";
       return `Generate a ${direction} Smart Function for the following mapping` +
         (targetAPI ? ` (target: ${targetAPI})` : '') + ".\n" +
-        missingContextHint +
-        "\n```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
+        missingContextHint;
     }
     return `Generate JSONata substitutions for this ${direction}` +
-      (targetAPI ? ` ${targetAPI}` : '') + " mapping.\n\n" +
-      "```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
+      (targetAPI ? ` ${targetAPI}` : '') + " mapping.\n";
   }
 
   save() {

@@ -29,10 +29,12 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
+import dynamic.mapper.model.Device;
 import dynamic.mapper.model.ExplorerMessage;
 import dynamic.mapper.model.ExplorerSession;
 import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.notification.Utils;
+import dynamic.mapper.notification.service.DeviceDiscoveryService;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -74,15 +76,18 @@ public class ExplorerService {
     private final ConfigurationRegistry configurationRegistry;
     private final NotificationSubscriber notificationSubscriber;
     private final C8YAgent c8yAgent;
+    private final DeviceDiscoveryService deviceDiscoveryService;
 
     public ExplorerService(ConnectorRegistry connectorRegistry,
                             ConfigurationRegistry configurationRegistry,
                             NotificationSubscriber notificationSubscriber,
-                            C8YAgent c8yAgent) {
+                            C8YAgent c8yAgent,
+                            DeviceDiscoveryService deviceDiscoveryService) {
         this.connectorRegistry = connectorRegistry;
         this.configurationRegistry = configurationRegistry;
         this.notificationSubscriber = notificationSubscriber;
         this.c8yAgent = c8yAgent;
+        this.deviceDiscoveryService = deviceDiscoveryService;
     }
 
     /**
@@ -210,11 +215,34 @@ public class ExplorerService {
             if (resolvedSourceId != null) {
                 ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, resolvedSourceId, false);
                 if (mor != null) {
-                    notificationSubscriber.subscribeDeviceAndConnect(tenant, mor, API.ALL,
-                            Utils.EXPLORER_DEVICE_SUBSCRIPTION);
+                    // The selected source may be a plain device or a device group. Notification 2.0
+                    // subscriptions and the per-message source filter both operate on individual
+                    // device IDs, so a group must be expanded to its member devices here — subscribing
+                    // to the group MO itself receives no device events at all.
+                    List<Device> resolvedDevices = deviceDiscoveryService.findAllRelatedDevicesByMO(
+                            tenant, mor, null, false);
+                    if (resolvedDevices.isEmpty()) {
+                        // MO didn't look like a device or group (missing c8y_IsDevice/c8y_IsDeviceGroup
+                        // fragment) — fall back to subscribing to it directly.
+                        notificationSubscriber.subscribeDeviceAndConnect(tenant, mor, API.ALL,
+                                Utils.EXPLORER_DEVICE_SUBSCRIPTION);
+                        session.addSubscribedDeviceId(resolvedSourceId);
+                    } else {
+                        for (Device device : resolvedDevices) {
+                            ManagedObjectRepresentation deviceMor = device.getId().equals(resolvedSourceId)
+                                    ? mor
+                                    : c8yAgent.getManagedObjectForId(tenant, device.getId(), false);
+                            if (deviceMor != null) {
+                                notificationSubscriber.subscribeDeviceAndConnect(tenant, deviceMor, API.ALL,
+                                        Utils.EXPLORER_DEVICE_SUBSCRIPTION);
+                                session.addSubscribedDeviceId(device.getId());
+                            }
+                        }
+                    }
                     // Also open a subscriber WebSocket for this session so events actually arrive
                     notificationSubscriber.initializeExplorerDeviceClient(tenant, sessionId);
-                    log.info("{} - Explorer subscription created for source {}", tenant, resolvedSourceId);
+                    log.info("{} - Explorer subscription created for source {} ({} device(s))",
+                            tenant, resolvedSourceId, session.getSubscribedDeviceIds().size());
                 } else {
                     log.warn("{} - Source {} not found; explorer will rely on existing subscriptions",
                             tenant, resolvedSourceId);
@@ -421,19 +449,9 @@ public class ExplorerService {
                 for (AConnectorClient client : clients.values()) {
                     client.removeOutboundExplorerListener(listener);
                 }
-                // Remove the dedicated explorer source subscription if one was created
-                if (session.getSourceId() != null) {
-                    // Close the WebSocket first
-                    notificationSubscriber.closeExplorerDeviceClient(session.getSessionId());
-                    ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(
-                            tenant, session.getSourceId(), false);
-                    if (mor != null) {
-                        notificationSubscriber.unsubscribeDeviceAndDisconnect(
-                                tenant, mor, Utils.EXPLORER_DEVICE_SUBSCRIPTION);
-                        log.info("{} - Explorer subscription removed for source {}", tenant, session.getSourceId());
-                    }
-                } else if (!session.getSubscribedDeviceIds().isEmpty()) {
-                    // Close the shared WebSocket for device-type sessions
+                // Remove the dedicated explorer source subscription(s) if any were created —
+                // covers both a single selected device and a group expanded to its member devices.
+                if (!session.getSubscribedDeviceIds().isEmpty()) {
                     notificationSubscriber.closeExplorerDeviceClient(session.getSessionId());
                     for (String devId : session.getSubscribedDeviceIds()) {
                         ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, devId, false);
@@ -442,8 +460,8 @@ public class ExplorerService {
                                     tenant, mor, Utils.EXPLORER_DEVICE_SUBSCRIPTION);
                         }
                     }
-                    log.info("{} - Explorer subscriptions removed for {} devices of type {}",
-                            tenant, session.getSubscribedDeviceIds().size(), session.getDeviceType());
+                    log.info("{} - Explorer subscriptions removed for {} device(s) (source={}, deviceType={})",
+                            tenant, session.getSubscribedDeviceIds().size(), session.getSourceId(), session.getDeviceType());
                 }
             } else {
                 AConnectorClient client = connectorRegistry.getClientForTenant(tenant, session.getConnectorIdentifier());
@@ -470,8 +488,11 @@ public class ExplorerService {
                 return;
             }
 
-            // Optional source filter for OUTBOUND sessions (device or group)
-            if (session.getSourceId() != null && !session.getSourceId().equals(message.getSourceId())) {
+            // Optional source filter for OUTBOUND sessions (device or group). A group is expanded
+            // to its member device IDs at session start, so membership — not equality with the
+            // originally selected sourceId — is what determines a match here.
+            if (session.getSourceId() != null
+                    && !session.getSubscribedDeviceIds().contains(message.getSourceId())) {
                 return;
             }
 

@@ -234,6 +234,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         this.transformationType = navState.transformationType;
         this.substitutionsAsCode = this.transformationType === TransformationType.SMART_FUNCTION;
         this.codeTemplate = navState.codeTemplate;
+        this.generateSmartFunctionWithAI = !!navState.generateSmartFunctionWithAI;
         this.addMapping();
       }
     } finally {

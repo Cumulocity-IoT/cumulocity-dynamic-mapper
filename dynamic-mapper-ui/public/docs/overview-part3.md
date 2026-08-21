@@ -242,20 +242,26 @@ resumes after a connector reconnect. The chart updates live as messages arrive.
 
 #### Cache statistic
 
-The Cache statistic view shows two cache panels side by side, each displaying two KPI cards:
+The Cache statistic view shows three cache panels side by side, each displaying two KPI cards:
 
 | Cache panel | KPI card | Meaning |
 |---|:---:|---|
 | **Inventory Cache** | **# Entries** | Number of managed object fragments currently held in memory. Below the card the configured size limit is shown (default: 100 000). When the limit is reached, the least-recently-used entry is evicted to make room. |
 | **Inventory Cache** | **% Percent** | Fill rate — `Entries / Limit × 100`. A value approaching 100 % means the cache is nearly full and evictions are occurring frequently, which may slow down message processing. |
-| **Inbound ID Cache** | **# Entries** | Number of external-ID → internal managed object ID mappings currently cached. Each mapping is resolved once and then stored here, so subsequent messages skip the identity resolution REST call entirely. |
-| **Inbound ID Cache** | **% Percent** | Fill rate for the ID cache, same calculation as above. A high fill rate with many devices indicates you may want to increase the cache limit in the service configuration. |
+| **Inbound ID Cache** | **# Entries** | Number of external-ID → internal managed object ID mappings currently cached. Each mapping is resolved once and then stored here, so subsequent inbound messages skip the identity resolution REST call entirely. |
+| **Inbound ID Cache** | **% Percent** | Fill rate for the inbound ID cache, same calculation as above. A high fill rate with many devices indicates you may want to increase the cache limit in the service configuration. |
+| **Outbound ID Cache** | **# Entries** | Number of internal managed object ID (+ external ID type) → external-ID resolutions currently cached. Used by outbound mappings with **useExternalId** enabled — e.g. a Smart Function or Flow function reading `context.getConfig().externalId` — to avoid resolving the device's external ID from Cumulocity on every outbound message. |
+| **Outbound ID Cache** | **% Percent** | Fill rate for the outbound ID cache, same calculation as above. |
 
-The action bar at the top of the page provides three buttons:
+The action bar at the top of the page provides four buttons:
 
-- **Clear external ID cache** — removes all cached external-ID-to-internal-ID resolutions. Use this after
-  deleting or re-registering a device to prevent stale identity lookups. The cache is rebuilt automatically as
-  new messages arrive.
+- **Clear inbound external ID cache** — removes all cached external-ID-to-internal-ID resolutions (used by
+  inbound mappings resolving a device from its external ID). Use this after deleting or re-registering a device
+  to prevent stale identity lookups. The cache is rebuilt automatically as new messages arrive.
+- **Clear outbound external ID cache** — removes all cached internal-ID-to-external-ID resolutions (used by
+  outbound mappings with **useExternalId** enabled). Use this after re-enrolling a device under a different
+  external ID, or reassigning an external ID to a different device, to avoid outbound messages being routed
+  using a stale external ID. The cache is rebuilt automatically as new outbound messages arrive.
 - **Clear inventory cache** — removes all cached managed object fragments. Use this after updating a device's
   managed object directly in Cumulocity (outside the mapper) so the mapper picks up the latest values. The
   fragments you configured under **Service Configuration → Function → Fragments from inventory to cache** are
@@ -264,8 +270,16 @@ The action bar at the top of the page provides three buttons:
   current fill levels.
 
 :::caution
-Both caches are held in memory and are lost on microservice restart. After a restart they are rebuilt
+All three caches are held in memory and are lost on microservice restart. After a restart they are rebuilt
 automatically as messages arrive — no manual action is needed.
+:::
+
+:::info
+Both ID caches are also cleared automatically on a configurable schedule — see **Days lifetime inbound Id
+cache** and **Days lifetime outbound Id cache** under
+[**Service Configuration → Caching**](/c8y-pkg-dynamic-mapper/node3/serviceConfiguration/caching). This is a
+full-cache wipe on a timer (not per-entry expiry), so set the retention short enough for your device
+re-enrollment/reassignment cadence if you rely on it instead of manually clearing the cache.
 :::
 
 #### Service events
@@ -398,6 +412,11 @@ The following lists common problems and how to resolve them.
 - Check the **Execution Filter** — if set, it must evaluate to `true` for the triggering payload.
 - Confirm the mapping's **connector** is connected (green status in
   [**Monitoring → Statistics**](/c8y-pkg-dynamic-mapper/node2/monitoring/statistic/inbound)).
+- If the mapping has **useExternalId** enabled and reads `context.getConfig().externalId` in its
+  Smart Function/Flow code, a stale entry in the **Outbound ID Cache** (e.g. after re-enrolling the device under
+  a different external ID) can route the message using the old external ID. Clear it under
+  [**Monitoring → Cache statistic**](/c8y-pkg-dynamic-mapper/node2/monitoring/cache) using
+  **Clear outbound external ID cache**.
 
 #### Smart Function returns stale device inventory data
 
