@@ -177,7 +177,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     if (!this.formGroup.valid) return;
 
     const { mappingType, transformationType, codeTemplate, codeTemplateSource, extensionName, eventName, extensionParameter } = this.formGroup.getRawValue();
-    const resolvedType: TransformationType = transformationType?.value || TransformationType.DEFAULT;
+    const resolvedType: TransformationType = transformationType?.value || TransformationType.JSONATA;
     const generateWithAI = this.isAIGenerationSelected(codeTemplateSource);
 
     let extension: Partial<ExtensionEntry> | undefined;
@@ -221,9 +221,10 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   }
 
   /** Gates the "Choose manually / Choose Code Template vs. Generate with AI" choice, for any
-   *  transformation type that has a deployed AI agent (mirroring `MappingStepperService.checkAIAgentDeployment`). */
+   *  transformation type that has a deployed AI agent (mirroring `MappingStepperService.checkAIAgentDeployment`).
+   *  Shown in both standard and Expert Mode — the transformation type (and thus AI agent) is always
+   *  resolved via the default even when the Transformation Type selector itself is hidden. */
   shouldShowAIGenerationChoice(): boolean {
-    if (!this.showTransformationType) return false;
     const option = this.formGroup?.get('transformationType')?.value as TransformationTypeOption;
     if (!option?.value || !this.AI_GENERATION_TYPES.includes(option.value)) return false;
     return this.isAIAgentDeployedFor(option.value);
@@ -358,17 +359,18 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
   shouldShowTransformationType(): boolean {
     if (!this.showTransformationType) return false;
-    
+
     const option = this.formGroup?.get('mappingType')?.value as MappingTypeOption;
     if (!option?.value) return false;
-    
+
     const config = this.getConfigForMappingType(option.value);
-    return config.supportedTransformationTypes.length > 0;
+    // A single supported type (e.g. PROTOBUF_INTERNAL → DEFAULT) is auto-selected by
+    // updateTransformationTypeOptions() and has nothing for the user to choose — hide the
+    // selector rather than showing a forced, un-actionable dropdown.
+    return config.supportedTransformationTypes.length > 1;
   }
 
   shouldShowCodeTemplate(): boolean {
-    if (!this.showTransformationType) return false;
-    
     const option = this.formGroup?.get('transformationType')?.value as TransformationTypeOption;
     return option?.value ? this.CODE_TEMPLATE_TYPES.includes(option.value) : false;
   }

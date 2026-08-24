@@ -139,9 +139,9 @@ public class Mapping implements Serializable {
     private MappingType mappingType;
 
     @Builder.Default
-    @Schema(description = "Type of processing the transformation", implementation = TransformationType.class, example = "DEFAULT")
+    @Schema(description = "Type of processing the transformation", implementation = TransformationType.class, example = "JSONATA")
     @NotNull
-    private TransformationType transformationType = TransformationType.DEFAULT;
+    private TransformationType transformationType = TransformationType.JSONATA;
 
     @Builder.Default
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Array of field substitutions for data transformation")

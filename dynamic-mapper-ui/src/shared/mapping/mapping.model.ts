@@ -308,6 +308,9 @@ export interface StepperConfiguration {
 }
 
 export enum TransformationType {
+  /** @deprecated Legacy substitution engine, superseded by JSONata. Kept for backward compatibility
+   *  with existing mappings and as the only supported transformation for Protobuf (internal) payloads.
+   *  New mappings should use {@link TransformationType.JSONATA} instead. */
   DEFAULT = 'DEFAULT',
   /** @deprecated removed in 6.3.0 — existing mappings are read-only and can only be exported or deleted. */
   SUBSTITUTION_AS_CODE = 'SUBSTITUTION_AS_CODE',
@@ -331,13 +334,15 @@ export enum MappingType {
 
 export const TransformationTypeLabels = {
   [Direction.INBOUND]: {
-    [TransformationType.DEFAULT]: 'Default Transformation',
+    // eslint-disable-next-line deprecation/deprecation
+    [TransformationType.DEFAULT]: 'Default Transformation (deprecated — use JSONata)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Cumulocity API calls',
     [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
     [TransformationType.EXTENSION_JAVA]: 'Java Extension (Smart Java Function)'
   },
   [Direction.OUTBOUND]: {
-    [TransformationType.DEFAULT]: 'Default Transformation',
+    // eslint-disable-next-line deprecation/deprecation
+    [TransformationType.DEFAULT]: 'Default Transformation (deprecated — use JSONata)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Broker Payload',
     [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
     [TransformationType.EXTENSION_JAVA]: 'Java Extension (Smart Java Function)'
@@ -345,7 +350,8 @@ export const TransformationTypeLabels = {
 } as const;
 
 export const TransformationTypeDescriptions = {
-  [TransformationType.DEFAULT]: 'Uses the default transformation logic without custom processing',
+  // eslint-disable-next-line deprecation/deprecation
+  [TransformationType.DEFAULT]: 'Deprecated — uses the legacy substitution logic without custom processing. Use JSONata instead for new mappings.',
   [TransformationType.SMART_FUNCTION]: 'Executes a predefined Smart Function for data transformation and create payload for Cumulocity API calls. Supports setting sourceId to route data to different devices',
   [TransformationType.JSONATA]: 'Uses JSONata query and transformation language for data mapping',
   [TransformationType.EXTENSION_JAVA]: 'Java extension returns domain objects (CumulocityObject[] for inbound, DeviceMessage[] for outbound) using Smart Java Function pattern with builder syntax. Supports setting sourceId to route data to different devices'
@@ -431,7 +437,6 @@ export const MappingTypeDescriptionMap: Record<
         directionSupported: true,
         substitutionsAsCodeSupported: true,
         supportedTransformationTypes: [
-          TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SMART_FUNCTION
         ]
@@ -440,7 +445,6 @@ export const MappingTypeDescriptionMap: Record<
         directionSupported: true,
         substitutionsAsCodeSupported: true,
         supportedTransformationTypes: [
-          TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SMART_FUNCTION,
           TransformationType.EXTENSION_JAVA
@@ -466,7 +470,6 @@ export const MappingTypeDescriptionMap: Record<
         directionSupported: true,
         substitutionsAsCodeSupported: true,
         supportedTransformationTypes: [
-          TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SMART_FUNCTION
         ]
@@ -475,7 +478,6 @@ export const MappingTypeDescriptionMap: Record<
         directionSupported: false,
         substitutionsAsCodeSupported: false,
         supportedTransformationTypes: [
-          TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SMART_FUNCTION
         ]
@@ -494,7 +496,6 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
         directionSupported: true,
         substitutionsAsCodeSupported: true,
         supportedTransformationTypes: [
-          TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SMART_FUNCTION
         ]
@@ -503,7 +504,6 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
         directionSupported: false,
         substitutionsAsCodeSupported: false,
         supportedTransformationTypes: [
-          TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SMART_FUNCTION
         ]
@@ -520,6 +520,8 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       [Direction.INBOUND]: {
         directionSupported: true,
         substitutionsAsCodeSupported: false,
+        // Only the deprecated DEFAULT transformation is currently supported for Protobuf (internal) payloads.
+        // eslint-disable-next-line deprecation/deprecation
         supportedTransformationTypes: [TransformationType.DEFAULT]
       },
       [Direction.OUTBOUND]: {
