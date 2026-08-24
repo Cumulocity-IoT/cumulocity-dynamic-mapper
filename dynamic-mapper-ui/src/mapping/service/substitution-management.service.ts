@@ -37,6 +37,37 @@ export class SubstitutionManagementService {
            pathTarget !== '';
   }
 
+  /**
+   * Bulk-replaces all substitutions in one shot, without the per-item duplicate/expert-mode
+   * confirmation modal `addSubstitution()` shows below — appropriate for programmatic
+   * replacement (e.g. applying a freshly AI-generated set) where the caller already means to
+   * replace the full set atomically. Looping `addSubstitution()` instead is unsafe here: it's
+   * fire-and-forget (no return value to await), so if the generated set contains two entries
+   * sharing a `pathTarget` — plausible for JSONata expressions — or expert mode is on, each
+   * hit opens its own confirmation modal while the loop keeps running, stacking dialogs.
+   */
+  replaceAllSubstitutions(
+    substitutionModels: SubstitutionModel[],
+    mapping: Mapping,
+    onSuccess: () => void
+  ): void {
+    const substitutions = substitutionModels.map(model => this.toSubstitution(model));
+    mapping.substitutions.splice(0, mapping.substitutions.length, ...substitutions);
+    onSuccess();
+  }
+
+  private toSubstitution(substitutionModel: SubstitutionModel): Substitution {
+    // Strip to a plain Substitution: substitutionModel also carries transient UI-only state
+    // (stepperConfiguration, sourceExpression/targetExpression, path*IsExpression) that must not
+    // leak into the persisted mapping.
+    return {
+      pathSource: substitutionModel.pathSource,
+      pathTarget: substitutionModel.pathTarget,
+      repairStrategy: substitutionModel.repairStrategy,
+      expandArray: substitutionModel.expandArray
+    };
+  }
+
   addSubstitution(
     substitutionModel: SubstitutionModel,
     mapping: Mapping,
@@ -44,15 +75,7 @@ export class SubstitutionManagementService {
     expertMode: boolean,
     onSuccess: () => void
   ): void {
-    // Strip to a plain Substitution: substitutionModel also carries transient UI-only state
-    // (stepperConfiguration, sourceExpression/targetExpression, path*IsExpression) that must not
-    // leak into the persisted mapping.
-    const substitution: Substitution = {
-      pathSource: substitutionModel.pathSource,
-      pathTarget: substitutionModel.pathTarget,
-      repairStrategy: substitutionModel.repairStrategy,
-      expandArray: substitutionModel.expandArray
-    };
+    const substitution: Substitution = this.toSubstitution(substitutionModel);
     const duplicateIndex = mapping.substitutions.findIndex(
       sub => sub.pathTarget === substitution.pathTarget
     );

@@ -403,17 +403,15 @@ export class MappingSubstitutionStepComponent implements OnInit {
       } else {
         if (Array.isArray(resultOf) && resultOf.length > 0) {
           this.alertService.success(`Generated ${resultOf.length} substitutions.`);
-          this.mapping.substitutions.splice(0);
           this.selectedSubstitution = -1;
-          resultOf.forEach(sub => {
-            this.substitutionService.addSubstitution(
-              sub,
-              this.mapping,
-              this.stepperConfiguration,
-              this.expertMode,
-              this.refreshSubstitutionValidity
-            );
-          });
+          // Bulk-replace rather than looping addSubstitution(): that method is fire-and-forget
+          // and opens a blocking confirmation modal per duplicate/expert-mode hit, which stacks
+          // dialogs when applying a freshly-generated set wholesale.
+          this.substitutionService.replaceAllSubstitutions(
+            resultOf,
+            this.mapping,
+            this.refreshSubstitutionValidity
+          );
         } else {
           this.alertService.warning('No substitutions were generated.');
         }

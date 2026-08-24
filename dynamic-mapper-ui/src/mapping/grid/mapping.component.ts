@@ -557,7 +557,15 @@ export class MappingComponent implements OnInit, OnDestroy {
         lastUpdate: Date.now()
       };
     }
-    mapping.targetTemplate = getExternalTemplate(mapping);
+    // getExternalTemplate() returns a device-facing "external" sample (no top-level `type`,
+    // no C8Y fragment) — only appropriate as a reference payload for code/extension-based
+    // transformations, whose target template starts as '{}' above. Applying it unconditionally
+    // clobbered the proper C8Y-schema sample (which does include `type`) just set above for
+    // JSONata/other API-driven transformations, causing a bogus "must have required property
+    // 'type'" validation warning on the Select Templates step.
+    if (isCodeOrExtensionTransformation(mapping.transformationType)) {
+      mapping.targetTemplate = getExternalTemplate(mapping);
+    }
     if (this.mappingType == MappingType.FLAT_FILE) {
       const sampleSource = JSON.stringify({
         payload: '10,temp,1666963367'

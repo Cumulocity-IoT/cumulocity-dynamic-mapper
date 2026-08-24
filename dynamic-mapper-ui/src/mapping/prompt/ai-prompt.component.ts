@@ -365,14 +365,26 @@ export class AIPromptComponent implements OnInit {
     try {
       // Look for the pattern ```json followed by content and ending with ```
       const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/;
-      const match = content.match(jsonBlockRegex);
+      let match = content.match(jsonBlockRegex);
 
       if (!match || !match[1]) {
+        // Some agents (e.g. object-type/schema-based ones) omit the "json" language tag —
+        // fall back to a generic fenced block, mirroring checkIfResponseContainsJavaScript.
+        const genericBlockRegex = /```(?:json)?\s*([\s\S]*?)\s*```/;
+        match = content.match(genericBlockRegex);
+      }
+
+      const trimmedContent = typeof content === 'string' ? content.trim() : '';
+      // Last resort: the agent may have returned bare JSON with no code fence at all.
+      const looksLikeRawJson = trimmedContent.startsWith('[') || trimmedContent.startsWith('{');
+      const rawJson = match?.[1]?.trim() ?? (looksLikeRawJson ? trimmedContent : undefined);
+
+      if (!rawJson) {
         // No JSON block in this response — keep the previous substitutions/valid state untouched.
         return;
       }
 
-      const parsedSubstitutions = JSON.parse(match[1].trim());
+      const parsedSubstitutions = JSON.parse(rawJson);
 
       if (!Array.isArray(parsedSubstitutions)) {
         return;
