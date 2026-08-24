@@ -26,7 +26,7 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { Mapping, Substitution, MappingType, RepairStrategy, SAMPLE_TEMPLATES_C8Y, SharedService, isSubstitutionsAsCode, TransformationType } from '../../shared';
+import { Mapping, Substitution, MappingType, RepairStrategy, SAMPLE_TEMPLATES_C8Y, SharedService, isSubstitutionsAsCode, TransformationType, getGenericDeviceIdentifier } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
 import { AIMessage, ClientAgentDefinition, Suggestion } from '@c8y/ngx-components/ai';
@@ -236,8 +236,12 @@ export class AIPromptComponent implements OnInit {
         (targetAPI ? ` (target: ${targetAPI})` : '') + ".\n" +
         missingContextHint;
     }
+    const identityTarget = getGenericDeviceIdentifier(this.mapping);
     return `Generate JSONata substitutions for this ${direction}` +
-      (targetAPI ? ` ${targetAPI}` : '') + " mapping.\n";
+      (targetAPI ? ` ${targetAPI}` : '') + " mapping.\n" +
+      `Map the device identity to \`${identityTarget}\` — this mapping has` +
+      ` useExternalId=${!!this.mapping.useExternalId} — do not use the other` +
+      " `_IDENTITY_` field.\n";
   }
 
   save() {
@@ -362,41 +366,39 @@ export class AIPromptComponent implements OnInit {
    * so this only ever flips `valid` from false to true, never the other way around.
    */
   checkIfResponseContainsSubstitutions(content: any) {
-    try {
-      // Look for the pattern ```json followed by content and ending with ```
-      const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/;
-      let match = content.match(jsonBlockRegex);
+    const trimmedContent = typeof content === 'string' ? content.trim() : '';
+    if (!trimmedContent) return;
 
-      if (!match || !match[1]) {
-        // Some agents (e.g. object-type/schema-based ones) omit the "json" language tag —
-        // fall back to a generic fenced block, mirroring checkIfResponseContainsJavaScript.
-        const genericBlockRegex = /```(?:json)?\s*([\s\S]*?)\s*```/;
-        match = content.match(genericBlockRegex);
-      }
+    // A response may contain multiple fenced code blocks — e.g. the agent illustrating
+    // alternative approaches before presenting its final answer — so candidates are tried
+    // most-recent-first: last ```json-tagged block, then last generic ``` block, then (some
+    // agents, e.g. object-type/schema-based ones, omit fences entirely) the raw body itself.
+    // Trying only the FIRST match previously grabbed an earlier example/alternative instead of
+    // the final answer, which failed to parse and surfaced a spurious error.
+    const strictBlocks = [...trimmedContent.matchAll(/```json\s*([\s\S]*?)\s*```/g)].map(m => m[1]);
+    const genericBlocks = [...trimmedContent.matchAll(/```(?:json)?\s*([\s\S]*?)\s*```/g)].map(m => m[1]);
+    const looksLikeRawJson = trimmedContent.startsWith('[') || trimmedContent.startsWith('{');
+    const candidates = [
+      ...strictBlocks.reverse(),
+      ...genericBlocks.reverse(),
+      ...(looksLikeRawJson ? [trimmedContent] : [])
+    ];
 
-      const trimmedContent = typeof content === 'string' ? content.trim() : '';
-      // Last resort: the agent may have returned bare JSON with no code fence at all.
-      const looksLikeRawJson = trimmedContent.startsWith('[') || trimmedContent.startsWith('{');
-      const rawJson = match?.[1]?.trim() ?? (looksLikeRawJson ? trimmedContent : undefined);
+    for (const candidate of candidates) {
+      const trimmedCandidate = candidate?.trim();
+      if (!trimmedCandidate) continue;
 
-      if (!rawJson) {
-        // No JSON block in this response — keep the previous substitutions/valid state untouched.
-        return;
-      }
+      try {
+        const parsedSubstitutions = JSON.parse(trimmedCandidate);
+        if (!Array.isArray(parsedSubstitutions)) continue;
 
-      const parsedSubstitutions = JSON.parse(rawJson);
+        const isValidSubstitutions = parsedSubstitutions.every(sub =>
+          sub.hasOwnProperty('pathSource') &&
+          sub.hasOwnProperty('pathTarget') &&
+          sub.hasOwnProperty('expandArray')
+        );
+        if (!isValidSubstitutions) continue;
 
-      if (!Array.isArray(parsedSubstitutions)) {
-        return;
-      }
-
-      const isValidSubstitutions = parsedSubstitutions.every(sub =>
-        sub.hasOwnProperty('pathSource') &&
-        sub.hasOwnProperty('pathTarget') &&
-        sub.hasOwnProperty('expandArray')
-      );
-
-      if (isValidSubstitutions) {
         // The LLM's JSON block may omit repairStrategy (or emit it as null) — default it here so
         // every downstream consumer (edit modal, persisted mapping) always sees a real value
         // instead of undefined/null.
@@ -405,11 +407,14 @@ export class AIPromptComponent implements OnInit {
           repairStrategy: sub.repairStrategy ?? RepairStrategy.DEFAULT
         }));
         this.valid = true;
+        return;
+      } catch {
+        // Not a valid substitutions array — try the next candidate rather than failing outright.
+        continue;
       }
-    } catch (error) {
-      console.error('Error parsing substitutions from response:', error);
-      this.alertService.danger('Failed to parse substitutions from AI response');
     }
+    // No candidate parsed into a valid substitutions array — keep the previous substitutions/valid
+    // state untouched (common mid-conversation, e.g. a clarifying question with no final answer yet).
   }
 
 }

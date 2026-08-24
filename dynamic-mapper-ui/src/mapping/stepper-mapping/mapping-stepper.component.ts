@@ -217,6 +217,15 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   stepperForward = true;
   currentStepIndex!: number;
 
+  /**
+   * Snapshot of the Cumulocity-side template's freshly-expanded default content, taken once when
+   * "Generate with AI" was chosen at mapping creation. Used to detect whether the user has since
+   * customized it before allowing them to leave the Select Templates step — an unedited generic
+   * default (or an empty Smart Function target) makes for a poor AI generation prompt. Cleared
+   * (undefined) once the check has passed, so it only ever gates the first attempt to move on.
+   */
+  private aiReviewBaseline?: string;
+
   private completionProviderDisposable: any;
   private readonly destroy$ = new Subject<void>();
   codeEditorHelp!: string;
@@ -745,6 +754,18 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       }
     }
 
+    if (this.currentStepIndex === STEP_SELECT_TEMPLATES && this.aiReviewBaseline !== undefined) {
+      if (!this.hasReviewedAITemplate()) {
+        const side = this.stepperConfiguration.direction === Direction.OUTBOUND ? 'source' : 'target';
+        this.alertService.warning(
+          `Please review and adjust the ${side} template to reflect your actual data before generating with AI in the next step.`
+        );
+        return;
+      }
+      // One-shot: only gate the first attempt to leave this step.
+      this.aiReviewBaseline = undefined;
+    }
+
     if (this.stepperConfiguration.advanceFromStepToEndStep != null &&
       this.stepperConfiguration.advanceFromStepToEndStep === this.currentStepIndex) {
       this.goToLastStep();
@@ -791,9 +812,13 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   private expandTemplates(): void {
     if (this.stepperConfiguration.editorMode === EditorMode.CREATE && !this.templatesInitialized) {
       this.templatesInitialized = true;
-      // If sourceTemplate was pre-filled (e.g. from Message Explorer), honour it directly
-      // instead of overwriting with the generic SAMPLE_TEMPLATES_C8Y default.
-      const hasPrefilledSource = this.mapping.sourceTemplate && this.mapping.sourceTemplate !== '{}';
+      // If the broker/external-side field was pre-filled (e.g. from Message Explorer), honour it
+      // directly instead of overwriting with the generic SAMPLE_TEMPLATES_C8Y default. Which
+      // field is the broker side flips with direction — see addMapping()'s comment for why.
+      const brokerSideTemplate = this.stepperConfiguration.direction === Direction.OUTBOUND
+        ? this.mapping.targetTemplate
+        : this.mapping.sourceTemplate;
+      const hasPrefilledSource = brokerSideTemplate && brokerSideTemplate !== '{}';
       if (hasPrefilledSource) {
         const templates = this.stepperService.expandExistingTemplates(
           this.mapping,
@@ -811,6 +836,7 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
         this.sourceTemplate = templates.sourceTemplate;
         this.targetTemplate = templates.targetTemplate;
       }
+      this.captureAIReviewBaselineIfNeeded();
       return;
     }
 
@@ -821,6 +847,29 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     );
     this.sourceTemplate = templates.sourceTemplate;
     this.targetTemplate = templates.targetTemplate;
+  }
+
+  /**
+   * Only relevant when the user chose "Generate with AI" at creation time. Snapshots the
+   * Cumulocity-side field's just-expanded default content so `hasReviewedAITemplate()` can later
+   * detect, when leaving this step, whether the user customized it — an untouched generic
+   * default (or an empty Smart Function target) makes for a poor AI generation prompt.
+   */
+  private captureAIReviewBaselineIfNeeded(): void {
+    if (!this.stepperConfiguration.triggerAIGenerationOnStart) return;
+    const cumulocitySideTemplate = this.stepperConfiguration.direction === Direction.OUTBOUND
+      ? this.sourceTemplate
+      : this.targetTemplate;
+    this.aiReviewBaseline = JSON.stringify(cumulocitySideTemplate);
+  }
+
+  /** True if the user has edited the Cumulocity-side template since `aiReviewBaseline` was captured. */
+  private hasReviewedAITemplate(): boolean {
+    const liveCumulocitySide = this.stepperConfiguration.direction === Direction.OUTBOUND
+      ? this.tryGetLiveEditorContent(this.templateStepRef?.editorSourceStepTemplate)
+      : this.tryGetLiveEditorContent(this.templateStepRef?.editorTargetStepTemplate);
+    if (liveCumulocitySide === undefined) return true; // can't verify — don't block on a guess
+    return JSON.stringify(liveCumulocitySide) !== this.aiReviewBaseline;
   }
 
   async onTargetAPIChanged(changedTargetAPI: string): Promise<void> {

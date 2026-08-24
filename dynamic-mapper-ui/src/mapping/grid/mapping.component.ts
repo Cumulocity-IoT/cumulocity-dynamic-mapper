@@ -46,7 +46,6 @@ import {
   Direction,
   ExtensionEntry,
   Feature,
-  getExternalTemplate,
   isSubstitutionsAsCode,
   LabelTaggedRendererComponent,
   Mapping,
@@ -494,8 +493,25 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     const identifier = createCustomUuid();
     const sub: Substitution[] = [];
+    const direction = this.stepperConfiguration.direction;
+
+    // Only the Cumulocity-side field has a well-known, schema-valid sample (SAMPLE_TEMPLATES_C8Y)
+    // — the broker/external-side field is always blank, since no generic schema exists for an
+    // arbitrary device payload. Which physical field ("sourceTemplate" vs "targetTemplate") is
+    // the Cumulocity side flips with direction: target for INBOUND, source for OUTBOUND — matching
+    // the "Source/Target Template - Cumulocity/Broker" panel labels and
+    // MappingStepperService.expandTemplates()'s direction-aware swap.
+    // Code/extension-based transformations (Smart Function, Java extension) get '{}' even on the
+    // Cumulocity side: the actual shape is produced by code, not a template, and seeding a generic
+    // sample there previously misled both users and the AI generation flow.
+    const cumulocitySample = isCodeOrExtensionTransformation(this.transformationType)
+      ? '{}'
+      : SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name];
+    const defaultSourceTemplate = direction === Direction.OUTBOUND ? cumulocitySample : '{}';
+    const defaultTargetTemplate = direction === Direction.OUTBOUND ? '{}' : cumulocitySample;
+
     let mapping: Mapping;
-    if (this.stepperConfiguration.direction == Direction.INBOUND) {
+    if (direction == Direction.INBOUND) {
       let code;
       if (this.substitutionsAsCode) code = this.codeTemplate?.code;
       mapping = {
@@ -506,10 +522,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         mappingTopic: '',
         mappingTopicSample: '',
         targetAPI: API.MEASUREMENT.name,
-        sourceTemplate: '{}',
-        targetTemplate: isCodeOrExtensionTransformation(this.transformationType)
-          ? '{}'
-          : SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
+        sourceTemplate: defaultSourceTemplate,
+        targetTemplate: defaultTargetTemplate,
         active: false,
         maxFailureCount: 0,
         qos: Qos.AT_LEAST_ONCE,
@@ -521,7 +535,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
         code,
-        direction: this.stepperConfiguration.direction,
+        direction: direction,
         autoAckOperation: true,
         debug: false,
         lastUpdate: Date.now()
@@ -536,10 +550,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         // publishTopic: '',
         // publishTopicSample: '',
         targetAPI: API.MEASUREMENT.name,
-        sourceTemplate: '{}',
-        targetTemplate: isCodeOrExtensionTransformation(this.transformationType)
-          ? '{}'
-          : SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
+        sourceTemplate: defaultSourceTemplate,
+        targetTemplate: defaultTargetTemplate,
         active: false,
         maxFailureCount: 0,
         qos: Qos.AT_LEAST_ONCE,
@@ -551,20 +563,11 @@ export class MappingComponent implements OnInit, OnDestroy {
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
         code,
-        direction: this.stepperConfiguration.direction,
+        direction: direction,
         autoAckOperation: true,
         debug: false,
         lastUpdate: Date.now()
       };
-    }
-    // getExternalTemplate() returns a device-facing "external" sample (no top-level `type`,
-    // no C8Y fragment) — only appropriate as a reference payload for code/extension-based
-    // transformations, whose target template starts as '{}' above. Applying it unconditionally
-    // clobbered the proper C8Y-schema sample (which does include `type`) just set above for
-    // JSONata/other API-driven transformations, causing a bogus "must have required property
-    // 'type'" validation warning on the Select Templates step.
-    if (isCodeOrExtensionTransformation(mapping.transformationType)) {
-      mapping.targetTemplate = getExternalTemplate(mapping);
     }
     if (this.mappingType == MappingType.FLAT_FILE) {
       const sampleSource = JSON.stringify({
@@ -578,19 +581,31 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     // Apply pre-fill from Message Explorer (topic + payload + targetAPI)
     if (this.explorerPreFill) {
-      if (this.stepperConfiguration.direction === Direction.INBOUND) {
+      const isInbound = direction === Direction.INBOUND;
+      if (isInbound) {
         // sessionTopic is the subscription pattern (e.g. fridge/#); topic is the
         // concrete received topic (e.g. fridge/sensor-ny-99). Use the pattern as
         // mappingTopic so wildcards are preserved, and the concrete topic as sample.
         mapping.mappingTopic = this.explorerPreFill.sessionTopic ?? this.explorerPreFill.topic;
         mapping.mappingTopicSample = this.explorerPreFill.topic;
       }
-      mapping.sourceTemplate = this.explorerPreFill.payload;
+      // The captured message always belongs on the broker/external side, which flips with
+      // direction — see the comment above the mapping literal for the full explanation.
+      if (isInbound) {
+        mapping.sourceTemplate = this.explorerPreFill.payload;
+      } else {
+        mapping.targetTemplate = this.explorerPreFill.payload;
+      }
       if (this.explorerPreFill.targetAPI) {
         mapping.targetAPI = this.explorerPreFill.targetAPI;
-        mapping.targetTemplate = isCodeOrExtensionTransformation(mapping.transformationType)
+        const sample = isCodeOrExtensionTransformation(mapping.transformationType)
           ? '{}'
-          : SAMPLE_TEMPLATES_C8Y[this.explorerPreFill.targetAPI] ?? mapping.targetTemplate;
+          : SAMPLE_TEMPLATES_C8Y[this.explorerPreFill.targetAPI];
+        if (isInbound) {
+          mapping.targetTemplate = sample ?? mapping.targetTemplate;
+        } else {
+          mapping.sourceTemplate = sample ?? mapping.sourceTemplate;
+        }
       }
       if (this.explorerPreFill.publishTopic) {
         mapping.publishTopic = this.explorerPreFill.publishTopic;
