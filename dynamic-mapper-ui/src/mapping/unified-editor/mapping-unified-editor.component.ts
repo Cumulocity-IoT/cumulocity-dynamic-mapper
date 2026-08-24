@@ -28,7 +28,6 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { Location } from '@angular/common';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { EditorComponent } from '@c8y/ngx-components/editor';
 import { Alert, AlertService, BottomDrawerService, CoreModule, TabComponent, TabsOutletComponent } from '@c8y/ngx-components';
@@ -102,7 +101,7 @@ const TAB_TEST_MAPPING = 4;
 @Component({
   selector: 'd11r-mapping-unified-editor',
   templateUrl: 'mapping-unified-editor.component.html',
-  styleUrls: ['../shared/mapping.style.css', './mapping-unified-editor.component.css'],
+  styleUrls: ['../shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   providers: [MappingStepperService, SubstitutionManagementService],
@@ -142,7 +141,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   private readonly mappingService = inject(MappingService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly location = inject(Location);
   private readonly globalContextService = inject(GlobalContextService);
 
   readonly checkTransformationType = checkTransformationType;
@@ -152,12 +150,18 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   readonly TransformationType = TransformationType;
   readonly EditorMode = EditorMode;
 
+  // Exposed so the template can reference named tabs instead of magic numbers
+  readonly TAB_CONNECTOR = TAB_CONNECTOR;
+  readonly TAB_GENERAL_SETTINGS = TAB_GENERAL_SETTINGS;
+  readonly TAB_SELECT_TEMPLATES = TAB_SELECT_TEMPLATES;
+  readonly TAB_DEFINE_TRANSFORMATION = TAB_DEFINE_TRANSFORMATION;
+  readonly TAB_TEST_MAPPING = TAB_TEST_MAPPING;
+
   updateTestingTemplate = new ReplaySubject<Mapping>(1);
   schemaSource: any;
   schemaTarget: any;
 
   templateForm!: FormGroup;
-  templateModel: { stepperConfiguration?: StepperConfiguration; mapping?: Mapping } = {};
   filterFormly = new FormGroup({});
   filterFormlyFields!: FormlyFieldConfig[];
   propertyFormly = new FormGroup({});
@@ -227,6 +231,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   codeEditorLabel!: string;
 
   private completionProviderDisposable: any;
+  private completionProviderRegistering = false;
   private readonly destroy$ = new Subject<void>();
 
   // Snapshots for change detection — set once at load time
@@ -281,10 +286,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
 
     this.targetSystem = this.mapping.direction === Direction.INBOUND ? 'Cumulocity' : 'Broker';
     this.sourceSystem = this.mapping.direction === Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
-    this.templateModel = {
-      stepperConfiguration: this.stepperConfiguration,
-      mapping: this.mapping
-    };
 
     this.editorOptions = {
       minimap: { enabled: true },
@@ -326,6 +327,18 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.schemaTarget = getSchema(this.mapping.targetAPI, this.mapping.direction, true, false);
   }
 
+  /** Patches extensionName/eventName/extensionParameter into templateForm on the next microtask (form isn't ready synchronously right after selectExtensionName). */
+  private patchExtensionFormValues(): void {
+    queueMicrotask(() => {
+      this.templateForm.patchValue({
+        extensionName: this.mapping.extension.extensionName,
+        eventName: this.mapping.extension.eventName,
+        extensionParameter: this.configurationToYaml(this.mapping.extension.parameter)
+      });
+      this.cdr.markForCheck();
+    });
+  }
+
   private async initializeTemplates(): Promise<void> {
     // Load extensions needed for the template display
     this.extensions = await this.stepperService.loadExtensions(this.mapping);
@@ -334,8 +347,10 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     // Load filter model – handled by MappingTemplateStepComponent on init
     // when filterFormly changes; no action needed here.
 
-    // Load code if present
-    if (this.mapping.code) {
+    // Seed mappingCode from the persisted mapping once. mappingCode is the live,
+    // editable state from here on — it must never be re-derived from mapping.code
+    // later (mapping.code is stale until save), or in-progress edits get clobbered.
+    if (this.mappingCode === undefined && this.mapping.code) {
       this.mappingCode = stripTemplateMetadataTags(base64ToString(this.mapping.code));
     }
 
@@ -348,6 +363,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.sourceTemplate = templates.sourceTemplate;
     this.targetTemplate = templates.targetTemplate;
     this.templatesInitialized = true;
+    this.cdr.detectChanges();
 
     // Snapshot initial state so we can distinguish connector-only changes from content changes
     this.initialMappingJson = JSON.stringify(this.mapping);
@@ -362,14 +378,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
         this.extensions,
         this.mapping
       );
-      queueMicrotask(() => {
-        this.templateForm.patchValue({
-          extensionName: this.mapping.extension.extensionName,
-          eventName: this.mapping.extension.eventName,
-          extensionParameter: this.configurationToYaml(this.mapping.extension.parameter)
-        });
-        this.cdr.markForCheck();
-      });
+      this.patchExtensionFormValues();
     }
 
     // Validate substitutions with initial tab index
@@ -431,13 +440,25 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   }
 
   async registerCompletionProvider(): Promise<void> {
-    if (this.completionProviderDisposable) {
-      this.completionProviderDisposable.dispose();
+    // Re-entrancy guard: the editor emits editorInit each time it's (re)mounted
+    // (e.g. fast tab toggling), and overlapping calls could race on
+    // completionProviderDisposable and leak an undisposed provider.
+    if (this.completionProviderRegistering) {
+      return;
     }
-    const monacoModule = await import('monaco-editor');
-    const monaco = (monacoModule as any).default || monacoModule;
-    const d1 = createCompletionProviderFlowFunction(monaco, this.mapping.direction);
-    this.completionProviderDisposable = { dispose: () => { d1.dispose(); } };
+    this.completionProviderRegistering = true;
+    try {
+      if (this.completionProviderDisposable) {
+        this.completionProviderDisposable.dispose();
+        this.completionProviderDisposable = undefined;
+      }
+      const monacoModule = await import('monaco-editor');
+      const monaco = (monacoModule as any).default || monacoModule;
+      const d1 = createCompletionProviderFlowFunction(monaco, this.mapping.direction);
+      this.completionProviderDisposable = { dispose: () => { d1.dispose(); } };
+    } finally {
+      this.completionProviderRegistering = false;
+    }
   }
 
   private setTemplateForm(): void {
@@ -557,11 +578,16 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   }
 
   private async handleGeneralSettingsTab(): Promise<void> {
-    this.templateModel.mapping = this.mapping;
     this.extensions = await this.stepperService.loadExtensions(this.mapping);
     this.updateExtensionItems();
 
     if (this.mapping?.extension?.extensionName) {
+      // Guard: the extension may no longer be loaded on the tenant (removed/renamed).
+      if (!this.extensions.get(this.mapping.extension.extensionName)) {
+        const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded...`;
+        this.raiseAlert({ type: 'warning', text: msg });
+        return;
+      }
       this.stepperService.selectExtensionName(
         this.mapping.extension.extensionName,
         this.extensions,
@@ -571,19 +597,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       if (this.mapping.extension.parameter) {
         this.hasExtensionParameter = true;
       }
-      queueMicrotask(() => {
-        this.templateForm.patchValue({
-          extensionName: this.mapping.extension.extensionName,
-          eventName: this.mapping.extension.eventName,
-          extensionParameter: this.configurationToYaml(this.mapping.extension.parameter)
-        });
-        this.cdr.markForCheck();
-      });
-
-      if (!this.extensions.get(this.mapping.extension.extensionName)) {
-        const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded...`;
-        this.raiseAlert({ type: 'warning', text: msg });
-      }
+      this.patchExtensionFormValues();
     }
   }
 
@@ -592,24 +606,17 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       await this.templateStepRef?.updateFilterExpressionResult(this.mapping.filterMapping);
     }
 
-    if (this.mapping.code) {
-      this.mappingCode = stripTemplateMetadataTags(base64ToString(this.mapping.code));
-    }
+    // Do NOT re-derive mappingCode from mapping.code here: mapping.code is only
+    // updated at save time, so this would clobber any in-progress code edits made
+    // on the Transformation tab. Seeding already happened once in initializeTemplates().
 
-    if (this.mapping?.extension?.extensionName && this.extensions) {
+    if (this.mapping?.extension?.extensionName && this.extensions?.get(this.mapping.extension.extensionName)) {
       this.stepperService.selectExtensionName(
         this.mapping.extension.extensionName,
         this.extensions,
         this.mapping
       );
-      queueMicrotask(() => {
-        this.templateForm.patchValue({
-          extensionName: this.mapping.extension.extensionName,
-          eventName: this.mapping.extension.eventName,
-          extensionParameter: this.configurationToYaml(this.mapping.extension.parameter)
-        });
-        this.cdr.markForCheck();
-      });
+      this.patchExtensionFormValues();
     }
   }
 
@@ -632,8 +639,8 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     const testMapping = structuredClone(this.mapping);
     testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
     testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
-    if (this.mapping.code || this.mappingCode) {
-      testMapping.code = stringToBase64(this.mappingCode);
+    if (this.mappingCode) {
+      testMapping.code = stringToBase64(stripTemplateMetadataTags(this.mappingCode));
     }
     this.updateTestingTemplate.next(testMapping);
   }
@@ -653,12 +660,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       if (a.type === 'info' || a.type === 'warning') this.alertService.remove(a);
     });
     this.alertService.add(alert);
-  }
-
-  clearAlerts(): void {
-    this.alertService.state.forEach(a => {
-      if (a.type === 'info' || a.type === 'warning') this.alertService.remove(a);
-    });
   }
 
   async onCommitButton(): Promise<void> {
@@ -693,7 +694,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       extensionName?.markAsTouched();
       eventName?.markAsTouched();
       if (extensionName?.invalid || eventName?.invalid) {
-        this.activeTabIndex = 2; // navigate to Templates tab
+        this.activeTabIndex = TAB_SELECT_TEMPLATES;
         return;
       }
     }
@@ -717,7 +718,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       this.mapping.targetTemplate = JSON.stringify(this.targetTemplate);
     }
 
-    if (this.mapping.code || this.mappingCode) {
+    if (this.mappingCode) {
       this.mapping.code = stringToBase64(stripTemplateMetadataTags(this.mappingCode));
     }
 
@@ -817,7 +818,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     if (this.mapping.extension.extensionName && this.extensions) {
       const extension = this.extensions.get(this.mapping.extension.extensionName);
       if (extension && extension.extensionEntries) {
-        const eventEntry = Object.values(extension.extensionEntries as Map<string, ExtensionEntry>)
+        const eventEntry = Object.values(extension.extensionEntries)
           .find(entry => entry.eventName === extensionEvent);
 
         if (eventEntry) {

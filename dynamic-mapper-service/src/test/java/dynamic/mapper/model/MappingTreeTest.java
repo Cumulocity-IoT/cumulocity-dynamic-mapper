@@ -201,6 +201,25 @@ class MappingTreeTest {
         }
 
         @Test
+        @DisplayName("Should not disturb a sibling branch at the same depth when deleting a mapping")
+        void testDeleteMappingDoesNotAffectSiblingBranchAtSameLevel() throws ResolveException {
+            MappingTreeNode tree = MappingTreeNode.createRootNode("TEST_TENANT");
+            Mapping m1 = Mapping.builder().id("b1").name("Branch - 1").mappingTopic("device/branchA").active(true)
+                    .build();
+            Mapping m2 = Mapping.builder().id("b2").name("Branch - 2").mappingTopic("device/branchB").active(true)
+                    .build();
+            tree.addMapping(m1);
+            tree.addMapping(m2);
+
+            tree.deleteMapping(m1);
+
+            assertTrue(tree.resolveMapping("device/branchA").isEmpty(), "Deleted mapping must no longer resolve");
+            List<Mapping> sibling = tree.resolveMapping("device/branchB");
+            assertEquals(1, sibling.size(), "Sibling branch at the same tree depth must be untouched");
+            assertEquals("Branch - 2", sibling.get(0).getName());
+        }
+
+        @Test
         @DisplayName("Should ignore mappings without a usable mapping topic")
         void testAddAndDeleteMappingWithBlankTopicIsIgnored() throws ResolveException {
             MappingTreeNode tree = MappingTreeNode.createRootNode("TEST_TENANT");

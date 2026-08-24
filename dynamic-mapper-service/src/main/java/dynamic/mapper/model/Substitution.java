@@ -47,6 +47,11 @@ import java.util.Map;
 @Builder
 @ToString()
 @JsonDeserialize(builder = Substitution.SubstitutionBuilder.class)
+// Spring Boot 4's default MVC JSON converter is Jackson 3 (tools.jackson.databind),
+// a separate library whose introspector does not see the Jackson 2 annotation above.
+// Without this, Jackson 3 falls back to a no-arg constructor, which Lombok's
+// @Builder never generates, and request-body deserialization fails.
+@tools.jackson.databind.annotation.JsonDeserialize(builder = Substitution.SubstitutionBuilder.class)
 @Schema(description = "Field substitution configuration for transforming data between source and target formats during mapping execution")
 public class Substitution implements Serializable {
 
@@ -86,6 +91,7 @@ public class Substitution implements Serializable {
 
     // Add the builder configuration
     @JsonPOJOBuilder(withPrefix = "", buildMethodName = "build")
+    @tools.jackson.databind.annotation.JsonPOJOBuilder(withPrefix = "", buildMethodName = "build")
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class SubstitutionBuilder {
         // Lombok will generate the builder methods

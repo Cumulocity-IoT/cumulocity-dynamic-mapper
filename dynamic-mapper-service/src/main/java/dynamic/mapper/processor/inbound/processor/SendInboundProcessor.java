@@ -9,7 +9,6 @@ import java.util.Map;
 
 import org.apache.camel.Exchange;
 import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.model.ID;
@@ -39,20 +38,25 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class SendInboundProcessor extends BaseProcessor {
 
-    @Autowired
-    private C8YAgent c8yAgent;
+    private final C8YAgent c8yAgent;
 
-    @Autowired
-    private ConfigurationRegistry configurationRegistry;
+    private final ConfigurationRegistry configurationRegistry;
 
-    @Autowired
-    private IdentityResolutionService identityResolutionService;
+    private final IdentityResolutionService identityResolutionService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
-    @Autowired
-    private MappingService mappingService;
+    private final MappingService mappingService;
+
+    public SendInboundProcessor(C8YAgent c8yAgent, ConfigurationRegistry configurationRegistry,
+            IdentityResolutionService identityResolutionService, ObjectMapper objectMapper,
+            MappingService mappingService) {
+        this.c8yAgent = c8yAgent;
+        this.configurationRegistry = configurationRegistry;
+        this.identityResolutionService = identityResolutionService;
+        this.objectMapper = objectMapper;
+        this.mappingService = mappingService;
+    }
 
     @Override
     @SuppressWarnings("unchecked")
@@ -125,8 +129,10 @@ public class SendInboundProcessor extends BaseProcessor {
             createProcessingAlarms(context);
 
         } catch (Exception e) {
-            log.error("{} - Error in inbound send processor for mapping: '{}'",
-                     context.getTenant(), context.getMapping().getName(), e);
+            // Not logged here — rethrown as-is (or wrapped, unchanged) up to process()'s
+            // catch, which is the single place this failure is actually handled (added to
+            // context, mapping status updated) and logged, full stack trace included.
+            // Logging here too just duplicated the same trace under a second message.
             throw e;
         }
     }
@@ -261,7 +267,8 @@ public class SendInboundProcessor extends BaseProcessor {
             }
 
         } catch (Exception e) {
-            log.error("{} - Failed to process request: {}", tenant, e.getMessage(), e);
+            // Not logged here — see the comment in processAllRequests's catch block; this
+            // is rethrown unchanged up to process()'s single logging/handling point.
             request.setError(e);
             throw e;
         }

@@ -48,12 +48,12 @@ public class DeploymentMapEntry implements Serializable {
 		example = "l19zjk"
 	)
 	@NotNull
-	public String identifier;
+	private String identifier;
 
 	@Schema(
 		requiredMode = Schema.RequiredMode.REQUIRED,
 		description = "List of connector configurations where this mapping is deployed"
 	)
 	@NotNull
-	public ArrayList<ConnectorConfiguration> connectors;
+	private ArrayList<ConnectorConfiguration> connectors = new ArrayList<>();
 }

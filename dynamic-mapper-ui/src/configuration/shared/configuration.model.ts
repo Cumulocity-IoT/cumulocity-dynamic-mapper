@@ -32,6 +32,8 @@ export interface ServiceConfiguration {
   deviceIsolationMQTTServiceEnabled: boolean;
   inboundExternalIdCacheSize: number;
   inboundExternalIdCacheRetention: number;
+  outboundExternalIdCacheSize: number;
+  outboundExternalIdCacheRetention: number;
   inventoryCacheSize: number;
   inventoryCacheRetention: number;
   flowStateRetention: number;

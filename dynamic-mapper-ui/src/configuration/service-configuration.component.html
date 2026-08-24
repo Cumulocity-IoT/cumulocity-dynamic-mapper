@@ -31,10 +31,17 @@
 }
 @if (section == 'caching'){
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Clear external ID cache' | translate }}"
+  <button class="btn btn-link" title="{{ 'Clear inbound external ID cache' | translate }}"
     (click)="clickedClearInboundExternalIdCache()" [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="clear"></i>
-    {{ 'Clear external ID cache' | translate }}
+    {{ 'Clear inbound external ID cache' | translate }}
+  </button>
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" title="{{ 'Clear outbound external ID cache' | translate }}"
+    (click)="clickedClearOutboundExternalIdCache()" [disabled]="!feature?.userHasMappingAdminRole">
+    <i c8yIcon="clear"></i>
+    {{ 'Clear outbound external ID cache' | translate }}
   </button>
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
@@ -412,6 +419,26 @@
           </c8y-li>
 
           <c8y-li>
+            <c8y-li-icon icon="clock-o"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Message Explorer session TTL (minutes)' | translate }}</p>
+                <p>
+                  <small translate>Default lifetime of a Message Explorer session: it is automatically stopped once
+                    the UI has not polled it for this long. Can be overridden per session when starting it.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Message Explorer session TTL (minutes)' | translate }}">
+                  <input class="form-control" name="explorerSessionTTLMinutes" type="number" min="1"
+                    formControlName="explorerSessionTTLMinutes" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
             <c8y-li-icon icon="package"></c8y-li-icon>
             <div class="d-flex a-i-center">
               <div>
@@ -467,6 +494,48 @@
                 <label class="editable" title="{{ 'Days lifetime ' | translate }}">
                   <input class="form-control" name="inboundExternalIdCacheRetention" type="number"
                     formControlName="inboundExternalIdCacheRetention" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="numbered-list"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Size outbound Id cache' | translate }}</p>
+                <p>
+                  <small translate>Set size of the outbound external Id cache. Used by outbound mappings
+                    with "useExternalId" enabled to avoid resolving the external Id from Cumulocity on every
+                    message. After changing the size you have to clear the cache to take effect</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Size outbound Id cache' | translate }}">
+                  <input class="form-control" name="outboundExternalIdCacheSize" type="number"
+                    formControlName="outboundExternalIdCacheSize" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
+            <c8y-li-icon icon="time-machine"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Days lifetime outbound Id cache' | translate }}</p>
+                <p>
+                  <small translate>Set time after which complete outbound Id cache is cleared. This is
+                    useful when you plan to delete a device or re-assign an
+                    external id to a different device</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Days lifetime' | translate }}">
+                  <input class="form-control" name="outboundExternalIdCacheRetention" type="number"
+                    formControlName="outboundExternalIdCacheRetention" />
                   <span></span>
                 </label>
               </div>

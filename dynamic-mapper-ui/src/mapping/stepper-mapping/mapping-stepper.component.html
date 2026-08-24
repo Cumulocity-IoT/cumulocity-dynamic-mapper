@@ -99,7 +99,7 @@
 
   <cdk-step label="Transformation" [stepControl]="templateForm">
     <div class="card-block flex-grow overflow-auto fit-w">
-      <d11r-mapping-transformation-step [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
+      <d11r-mapping-transformation-step #transformationStepRef [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
         [sourceTemplate]="sourceTemplate" [targetTemplate]="targetTemplate" [sourceSystem]="sourceSystem"
         [targetSystem]="targetSystem" [feature]="feature" [aiAgentDeployed]="aiAgentDeployed" [aiAgent]="aiAgent"
         [schemaSource]="schemaSource" [schemaTarget]="schemaTarget" [mappingCode]="mappingCode"

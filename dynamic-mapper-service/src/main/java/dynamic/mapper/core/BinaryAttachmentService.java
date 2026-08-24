@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.concurrent.Semaphore;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -51,13 +50,16 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class BinaryAttachmentService {
 
-    @Autowired
-    private ContextService<MicroserviceCredentials> contextService;
+    private final ContextService<MicroserviceCredentials> contextService;
 
-    @Autowired
-    private CumulocityClientProperties clientProperties;
+    private final CumulocityClientProperties clientProperties;
 
-   
+    public BinaryAttachmentService(ContextService<MicroserviceCredentials> contextService,
+            CumulocityClientProperties clientProperties) {
+        this.contextService = contextService;
+        this.clientProperties = clientProperties;
+    }
+
     public int uploadEventAttachment(final BinaryInfo binaryInfo, final String eventId, boolean overwrites, Semaphore c8ySemaphore)
             throws ProcessingException {
         try {

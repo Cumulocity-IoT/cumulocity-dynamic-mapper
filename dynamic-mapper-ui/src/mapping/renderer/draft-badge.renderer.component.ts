@@ -19,20 +19,19 @@
  */
 
 import { Component } from '@angular/core';
-import { CoreModule } from '@c8y/ngx-components';
+import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 
 @Component({
-  selector: 'd11r-doc-javaextension',
-  templateUrl: './doc-javaextension.component.html',
-  styleUrls: ['./doc-shared.css'],
+  selector: 'd11r-draft-badge-renderer',
+  template: `
+    @if (context.value) {
+      <span class="text-12 label label-info" [attr.data-cy]="'dm-versions-draft-' + context.item.id"
+        title="This mapping has an unpublished draft version">draft</span>
+    }
+  `,
   standalone: true,
   imports: [CoreModule]
 })
-export class DocJavaExtensionComponent {
-  scrollToElement(elementId: string): void {
-    const element = document.getElementById(elementId);
-    if (element) {
-      window.scrollTo({ top: element.offsetTop - 80, behavior: 'smooth' });
-    }
-  }
+export class DraftBadgeRendererComponent {
+  constructor(public readonly context: CellRendererContext) {}
 }

@@ -32,7 +32,6 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 
@@ -75,15 +74,7 @@ class ConnectorConfigurationServiceTest {
     @BeforeEach
     void setUp() throws Exception {
         // Create the component with the mocked dependencies
-        configurationService = new ConnectorConfigurationService(tenantOptionApi);
-
-        // Use reflection to set the private subscriptionsService field
-        Field subscriptionsServiceField = ConnectorConfigurationService.class.getDeclaredField("subscriptionsService");
-        subscriptionsServiceField.setAccessible(true);
-        subscriptionsServiceField.set(configurationService, subscriptionsService);
-
-        // Set ObjectMapper
-        configurationService.setObjectMapper(objectMapper);
+        configurationService = new ConnectorConfigurationService(tenantOptionApi, subscriptionsService, objectMapper);
     }
 
     @Test

@@ -55,20 +55,13 @@ export class DeviceSelectorTableComponent implements OnInit {
     this.columns = this.getColumns();
   }
 
+  /**
+   * This can only ADD devices, never remove one: c8y-device-grid has no way to pre-select rows
+   * for already-subscribed devices, so there is no checkbox state that represents "currently
+   * subscribed" to uncheck. Use the tree selector (which two-way binds the full device list) to
+   * unsubscribe a device.
+   */
   clickedUpdateSubscription() {
-    // contains:
-    //   [
-    //   {
-    //       "id": "4827613",
-    //       "name": "Pressure_d21",
-    //       "type": "type_A"
-    //   },
-    //   {
-    //       "id": "2129684",
-    //       "name": "Pressure_d21",
-    //       "type": "type_A"
-    //   }
-    //  ]
     const existingIds = new Set(this.deviceList.map(device => device.id));
 
     // Only add new IDs that don't already exist
@@ -82,13 +75,6 @@ export class DeviceSelectorTableComponent implements OnInit {
 
   clickedCancel() {
     this.cancel.emit();
-  }
-
-  onDeviceQueryStringChange(deviceQueryString: string): void {
-    // the query string is based on currently selected filters and sorting in columns:
-
-    // eslint-disable-next-line no-console
-    // console.log({ deviceQueryString });
   }
 
   /** Executes an action on selected items, whenever the selection changes. */

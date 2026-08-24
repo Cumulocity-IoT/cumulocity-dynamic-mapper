@@ -108,11 +108,12 @@ MAPPING_JSON=$(jq -cn \
     --arg name         "test-sf-04-$$" \
     --arg identifier   "sf-04-$$" \
     --arg code         "$SF_CODE_B64" \
+    --arg extId        "$EXT_ID" \
     '{
       name: $name,
       identifier: $identifier,
       mappingTopic: "flowState/+",
-      mappingTopicSample: ("flowState/" + "sensor-berlin-01"),
+      mappingTopicSample: ("flowState/" + $extId),
       targetAPI: "MEASUREMENT",
       direction: "INBOUND",
       mappingType: "JSON",

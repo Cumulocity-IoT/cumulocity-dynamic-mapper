@@ -47,7 +47,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     overviewNode: new NavigatorNode({
       parent: gettext('Home'),
-      icon: 'empty',
+      icon: 'book',
       label: gettext('Overview'),
       path: '/c8y-pkg-dynamic-mapper/introduction/overview',
       priority: 613,
@@ -55,7 +55,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     gettingStartedNode: new NavigatorNode({
       parent: gettext('Home'),
-      icon: 'empty',
+      icon: 'rocket',
       label: gettext('Getting started'),
       path: '/c8y-pkg-dynamic-mapper/introduction/getting-started',
       priority: 612,
@@ -63,7 +63,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     messageExplorerNode: new NavigatorNode({
       parent: gettext('Home'),
-      icon: 'empty',
+      icon: 'search',
       label: gettext('Message Explorer'),
       path: '/c8y-pkg-dynamic-mapper/introduction/message-explorer',
       priority: 611.5,
@@ -71,7 +71,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     managingConnectorsNode: new NavigatorNode({
       parent: gettext('Home'),
-      icon: 'empty',
+      icon: 'plug',
       label: gettext('Managing connectors'),
       path: '/c8y-pkg-dynamic-mapper/introduction/managing-connectors',
       priority: 611,
@@ -79,7 +79,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     monitoringNode: new NavigatorNode({
       parent: gettext('Home'),
-      icon: 'empty',
+      icon: 'line-chart',
       label: gettext('Monitoring overview'),
       path: '/c8y-pkg-dynamic-mapper/introduction/monitoring',
       priority: 598.5,
@@ -87,7 +87,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     definingMappingNode: new NavigatorNode({
       parent: gettext('Home'),
-      icon: 'empty',
+      icon: 'exchange',
       label: gettext('Defining a mapping'),
       path: '/c8y-pkg-dynamic-mapper/introduction/define-mapping',
       priority: 610,
@@ -95,7 +95,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     versioningNode: new NavigatorNode({
       parent: gettext('Home'),
-      icon: 'empty',
+      icon: 'history',
       label: gettext('Versioning mappings'),
       path: '/c8y-pkg-dynamic-mapper/introduction/versioning',
       priority: 609.8,
@@ -103,7 +103,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     sparkPlugBNode: new NavigatorNode({
       parent: gettext('Home'),
-      icon: 'empty',
+      icon: 'bolt',
       label: gettext('SparkPlug B'),
       path: '/c8y-pkg-dynamic-mapper/introduction/sparkplugb',
       priority: 609.5,
@@ -111,7 +111,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     subscriptionOutboundNode: new NavigatorNode({
       parent: gettext('Home'),
-      icon: 'empty',
+      icon: 'upload',
       label: gettext('Outbound mapping'),
       path: '/c8y-pkg-dynamic-mapper/introduction/define-subscription-for-outbound',
       priority: 609,
@@ -119,7 +119,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     transformationTypesNode: new NavigatorNode({
       parent: gettext('Home'),
-      icon: 'empty',
+      icon: 'sitemap',
       label: gettext('Transformation Types'),
       path: '/c8y-pkg-dynamic-mapper/introduction/transformation-types',
       priority: 608,
@@ -127,7 +127,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     jsonNataNode: new NavigatorNode({
       parent: gettext('Transformation Types'),
-      icon: 'empty',
+      icon: 'terminal',
       label: gettext('JSONata'),
       path: '/c8y-pkg-dynamic-mapper/introduction/jsonata',
       priority: 607,
@@ -135,7 +135,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     smartFunctionNode: new NavigatorNode({
       parent: gettext('Transformation Types'),
-      icon: 'empty',
+      icon: 'code',
       label: gettext('Smart Function'),
       path: '/c8y-pkg-dynamic-mapper/introduction/smartfunction',
       priority: 606,
@@ -143,7 +143,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     javaExtensionNode: new NavigatorNode({
       parent: gettext('Transformation Types'),
-      icon: 'empty',
+      icon: 'java',
       label: gettext('Java Extension'),
       path: '/c8y-pkg-dynamic-mapper/introduction/javaextension',
       priority: 604,
@@ -151,7 +151,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     customRoutingNode: new NavigatorNode({
       parent: gettext('Transformation Types'),
-      icon: 'empty',
+      icon: 'random',
       label: gettext('Custom Routing'),
       path: '/c8y-pkg-dynamic-mapper/introduction/custom-routing',
       priority: 603.5,
@@ -159,7 +159,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     flowStateNode: new NavigatorNode({
       parent: gettext('Home'),
-      icon: 'empty',
+      icon: 'flow-chart',
       label: gettext('Flow State'),
       path: '/c8y-pkg-dynamic-mapper/introduction/flow-state',
       priority: 603.5,
@@ -167,7 +167,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     codeTemplatesNode: new NavigatorNode({
       parent: gettext('Home'),
-      icon: 'empty',
+      icon: 'file-text',
       label: gettext('Code Templates'),
       path: '/c8y-pkg-dynamic-mapper/introduction/code-templates',
       priority: 603,
@@ -175,7 +175,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     metadataNode: new NavigatorNode({
       parent: gettext('Home'),
-      icon: 'empty',
+      icon: 'tags',
       label: gettext('Metadata'),
       path: '/c8y-pkg-dynamic-mapper/introduction/metadata',
       priority: 602,
@@ -183,7 +183,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     reliabilitySettingsNode: new NavigatorNode({
       parent: gettext('Home'),
-      icon: 'empty',
+      icon: 'shield',
       label: gettext('Reliability settings'),
       path: '/c8y-pkg-dynamic-mapper/introduction/reliability-settings',
       priority: 600,
@@ -191,7 +191,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     accessControlNode: new NavigatorNode({
       parent: gettext('Home'),
-      icon: 'empty',
+      icon: 'lock',
       label: gettext('Managing permissions'),
       path: '/c8y-pkg-dynamic-mapper/introduction/access-control',
       priority: 599,
@@ -199,7 +199,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     }),
     troubleshootingNode: new NavigatorNode({
       parent: gettext('Home'),
-      icon: 'empty',
+      icon: 'wrench',
       label: gettext('Troubleshooting'),
       path: '/c8y-pkg-dynamic-mapper/introduction/troubleshooting',
       priority: 598,

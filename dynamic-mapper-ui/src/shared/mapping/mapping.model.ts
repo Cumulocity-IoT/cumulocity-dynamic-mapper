@@ -65,7 +65,6 @@ export interface Substitution {
 export interface DeploymentMapEntry {
   identifier: string;
   connectors: string[];
-  connectorsDetailed?: ConnectorConfiguration[];
 }
 
 export interface DeploymentMap {
@@ -303,6 +302,9 @@ export interface StepperConfiguration {
   direction?: Direction;
   advanceFromStepToEndStep?: number;
   allowTemplateExpansion?: boolean;  // Whether to allow template expansion with sample data
+  /** One-shot flag: auto-launch AI generation (Smart Function code or JSONata substitutions)
+   *  once the transformation step is first reached. */
+  triggerAIGenerationOnStart?: boolean;
 }
 
 export enum TransformationType {
@@ -644,7 +646,8 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
 export interface Extension {
   id?: string;
   name: string;
-  extensionEntries: Map<string, ExtensionEntry>;
+  // Deserialized from JSON as a plain object, not a real ES Map — do not treat as one.
+  extensionEntries: Record<string, ExtensionEntry>;
   loaded: boolean;
   external: boolean;
 }

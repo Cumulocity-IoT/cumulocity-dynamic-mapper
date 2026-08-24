@@ -147,24 +147,34 @@ public class MQTT3Client extends AMQTTClient {
         mqttClient = builder
                 .addDisconnectedListener(context -> {
                     //We should always log when a client is disconnected!
-                    log.info("{} - MQTT3 client disconnected (reason: {})", tenant, context.getCause().getMessage());
+                    Throwable cause = context.getCause();
+                    log.info("{} - MQTT3 client disconnected (reason: {})", tenant, cause.getMessage());
                     boolean wasConnected = connectionStateManager.isConnected();
-                    connectionStateManager.setConnected(false);
 
                     boolean stale = myGeneration != connectGeneration.get();
-                    boolean unexpected;
+                    boolean intentional;
                     synchronized (disconnectionLock) {
-                        unexpected = !stale && !intentionalDisconnect && !isDisconnecting &&
-                                connectorConfiguration.getEnabled() && wasConnected;
+                        intentional = intentionalDisconnect || isDisconnecting;
                     }
 
+                    // This listener fires as a side effect of our OWN AMQTTClient.disconnect() call
+                    // too (closing the client triggers it), which already reports DISCONNECTED
+                    // itself right after disconnectMqttClient() returns. Without this guard, both
+                    // reports race for the same physical disconnect and can land as two separate
+                    // sessions in the UI instead of one. Only report here when this disconnect was
+                    // NOT requested by us — i.e. a genuine unexpected drop.
+                    if (!intentional) {
+                        connectionStateManager.setConnected(false, cause);
+                    }
+
+                    boolean unexpected = !stale && !intentional && connectorConfiguration.getEnabled() && wasConnected;
                     if (unexpected) {
                         nextReconnectTimeMs = System.currentTimeMillis(); // reconnect on next housekeeping cycle
                         log.warn("{} - Unexpected disconnection detected, housekeeping will reconnect", tenant);
                     } else {
                         log.info(
-                                "{} - Intentional disconnect or not reconnecting (stale={}, intentional={}, disconnecting={}, enabled={}, wasConnected={})",
-                                tenant, stale, intentionalDisconnect, isDisconnecting,
+                                "{} - Intentional disconnect or not reconnecting (stale={}, intentional={}, enabled={}, wasConnected={})",
+                                tenant, stale, intentional,
                                 connectorConfiguration.getEnabled(), wasConnected);
                     }
                 })
@@ -213,9 +223,22 @@ public class MQTT3Client extends AMQTTClient {
                     log.info("{} - Connection attempt {} of {}", tenant, attempt + 1, maxAttempts);
                     Thread.sleep(WAIT_PERIOD_MS);
                 }
+
+                // Capture into a local: disconnect()/closeMqttResources() can null the
+                // `mqttClient` field concurrently on another thread (connect() and disconnect()
+                // aren't mutually exclusive — see connectDisconnectExecutionLock's javadoc in
+                // AConnectorClient). Without this, a concurrent teardown between the sleep above
+                // and the connectWith() call below throws an NPE that gets misreported as a
+                // FAILED connection attempt instead of a benign, expected abort.
+                Mqtt3BlockingClient client = mqttClient;
+                if (client == null) {
+                    log.info("{} - Aborting connect attempt: MQTT3 client was torn down concurrently (disconnect in progress)", tenant);
+                    return;
+                }
+
                 Mqtt3ConnAck ack;
                 if(isSparkplugHost) {
-                    ack = mqttClient.connectWith()
+                    ack = client.connectWith()
                             .cleanSession(cleanSession)
                             .willPublish(Mqtt3Publish.builder()
                                     .topic(sparkplugCertificateManager.getStateTopicName())
@@ -227,7 +250,7 @@ public class MQTT3Client extends AMQTTClient {
                             .keepAlive(60)
                             .send();
                 } else {
-                    ack = mqttClient.connectWith()
+                    ack = client.connectWith()
                             .cleanSession(cleanSession)
                             .keepAlive(60)
                             .send();
@@ -242,7 +265,7 @@ public class MQTT3Client extends AMQTTClient {
                 connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
 
                 log.info("{} - MQTT client connected successfully to {}:{}",
-                        tenant, mqttClient.getConfig().getServerHost(), mqttClient.getConfig().getServerPort());
+                        tenant, client.getConfig().getServerHost(), client.getConfig().getServerPort());
 
             } catch (Exception e) {
                 attempt++;

@@ -90,6 +90,11 @@ public class InventoryCacheEnrichmentService {
             effectiveFragments.forEach(frag -> {
                 processFragment(frag.trim(), sourceId, device, attrs, newMO);
             });
+        } else {
+            // sourceId no longer resolves in inventory (e.g. the managed object was deleted) —
+            // drop any external-ID cache entry still pointing at it so the next message for the
+            // same external ID re-resolves instead of reusing this stale, deleted id forever.
+            tenantRegistry.removeFromExternalIdCacheByInternalId(tenant, sourceId);
         }
 
         return newMO;
@@ -127,6 +132,11 @@ public class InventoryCacheEnrichmentService {
             effectiveFragments.forEach(frag -> {
                 processFragment(frag.trim(), sourceId, device, attrs, newMO);
             });
+        } else {
+            // sourceId no longer resolves in inventory (e.g. the managed object was deleted) —
+            // drop any external-ID cache entry still pointing at it so the next message for the
+            // same external ID re-resolves instead of reusing this stale, deleted id forever.
+            tenantRegistry.removeFromExternalIdCacheByInternalId(tenant, sourceId);
         }
 
         // Store the fully-populated map. A concurrent thread that resolved the same

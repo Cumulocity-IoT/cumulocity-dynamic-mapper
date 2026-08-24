@@ -91,18 +91,21 @@ export class MonitoringService {
 
   async getKpisDetails(_tenantId?: string): Promise<Array<KpiDetails>> {
     try {
-      const [inventorySize, inboundSize] = await Promise.all([
+      const [inventorySize, inboundSize, outboundSize] = await Promise.all([
         this.getCacheSize('INVENTORY_CACHE'),
-        this.getCacheSize('INBOUND_ID_CACHE')
+        this.getCacheSize('INBOUND_ID_CACHE'),
+        this.getCacheSize('OUTBOUND_ID_CACHE')
       ]);
       // include configured limits from service configuration
       const config = await this.sharedService.getServiceConfiguration();
       const inventoryLimit = (config && typeof config.inventoryCacheSize === 'number') ? config.inventoryCacheSize : 0;
       const inboundLimit = (config && typeof config.inboundExternalIdCacheSize === 'number') ? config.inboundExternalIdCacheSize : 0;
+      const outboundLimit = (config && typeof config.outboundExternalIdCacheSize === 'number') ? config.outboundExternalIdCacheSize : 0;
 
       return [
         { domain: 'inventoryCache', id: 'inventoryCacheRaw', name: 'Inventory cache', value: inventorySize ?? 0, itemName: 'Entries', icon: 'hashtag', domainIcon: 'more-details', limit: inventoryLimit },
-        { domain: 'inboundIdCache', id: 'inboundIdCacheRaw', name: 'Inbound ID cache', value: inboundSize ?? 0, itemName: 'Entries', icon: 'hashtag', domainIcon: 'pin-code', limit: inboundLimit }
+        { domain: 'inboundIdCache', id: 'inboundIdCacheRaw', name: 'Inbound ID cache', value: inboundSize ?? 0, itemName: 'Entries', icon: 'hashtag', domainIcon: 'pin-code', limit: inboundLimit },
+        { domain: 'outboundIdCache', id: 'outboundIdCacheRaw', name: 'Outbound ID cache', value: outboundSize ?? 0, itemName: 'Entries', icon: 'hashtag', domainIcon: 'pin-code', limit: outboundLimit }
       ];
     } catch (err) {
       console.error('Failed to get KPIs details', err);

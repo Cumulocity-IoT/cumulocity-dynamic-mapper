@@ -34,9 +34,9 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<revision>6.4.3-SNAPSHOT</revision>
-		<spring-boot-dependencies.version>3.5.13</spring-boot-dependencies.version>
-		<c8y.version>2026.41.0</c8y.version>
+		<revision>6.4.4-SNAPSHOT</revision>
+		<spring-boot-dependencies.version>4.0.7</spring-boot-dependencies.version>
+		<c8y.version>2026.43.0</c8y.version>
 		<lombok.version>1.18.38</lombok.version>
 		<slf4j.version>2.0.17</slf4j.version>
 		<maven.compiler.source>21</maven.compiler.source>
@@ -306,11 +306,6 @@
 				<artifactId>js</artifactId>
 				<version>${graalvm.js.version}</version>
 				<type>pom</type>
-			</dependency>
-			<dependency>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-starter-webflux</artifactId>
-				<version>3.3.5</version>
 			</dependency>
 			<!-- Explicitly include the core OpenAPI models -->
 			<!-- Version must match the swagger-core-jakarta pulled in transitively by springdoc-openapi,

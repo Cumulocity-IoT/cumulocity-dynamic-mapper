@@ -190,7 +190,7 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
                     // Device is not enrolled with this external ID type — the mapping does not apply
                     // to this device. Skip without counting as an error: a missing external ID is a
                     // device-enrollment issue, not a mapping configuration failure.
-                    log.debug("{} - Skipping mapping '{}': device {} has no external ID of type '{}'",
+                    log.info("{} - Skipping mapping '{}': device {} has no external ID of type '{}'",
                             tenant, mapping.getName(), sourceId, mapping.getExternalIdType());
                     context.setIgnoreFurtherProcessing(true);
                     return;

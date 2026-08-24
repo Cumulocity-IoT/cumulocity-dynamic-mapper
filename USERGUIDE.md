@@ -696,6 +696,11 @@ The result can then be `Saved` to the mapping. Note: AI generation of `Substitut
 You can apply a filter for a mapping, in case the mapping should only be processed if the payload meets a certain condition. This might be the case, if you want to turn a rather generic payload into a measurement, an event and an alarm depending on content of the payload.
 In this case you can apply a filter by defining a `JSONata` expression that evaluates to `true` or `false`:
 
+For `OUTBOUND` mappings there are two separate filter fields, evaluated against two different documents:
+
+- `filterMapping` is evaluated against the **raw incoming Cumulocity notification payload** as it was received (e.g. from the Notification 2.0 subscription).
+- `filterInventory` is evaluated against the **full managed object fetched from the inventory cache** for the message's source device.
+
 ---
 
 ### Test transformation from source to target format

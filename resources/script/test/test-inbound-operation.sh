@@ -54,7 +54,7 @@ MAPPING_JSON=$(jq -cn \
       mappingType: "JSON",
       transformationType: "DEFAULT",
       sourceTemplate: "{\"operationType\":\"\",\"commandName\":\"\",\"status\":\"\"}",
-      targetTemplate: "{\"deviceId\":\"${DEVICE_ID}\",\"status\":\"PENDING\",\"c8y_Restart\":{}}",
+      targetTemplate: "{\"status\":\"PENDING\",\"c8y_Restart\":{}}",
       substitutions: [
                 {"pathSource":"_TOPIC_LEVEL_[2]","pathTarget":"_IDENTITY_.externalId","repairStrategy":"DEFAULT","expandArray":false}
       ],
@@ -109,6 +109,8 @@ OPERATION_STATUS=$(echo "$OPERATION" | jq -rs '.[0].status // empty')
 OPERATION_TYPE=$(echo "$OPERATION" | jq -rs '.[0] | keys[] | select(startswith("c8y_"))' 2>/dev/null | head -n 1 || echo "unknown")
 dm_info "Operation status: $OPERATION_STATUS"
 dm_info "Operation type: $OPERATION_TYPE"
+dm_assert_eq "Operation status" "PENDING" "$OPERATION_STATUS"
+dm_assert_eq "Operation type" "c8y_Restart" "$OPERATION_TYPE"
 
 dm_done "$TEST_TITLE"
 dm_print_summary

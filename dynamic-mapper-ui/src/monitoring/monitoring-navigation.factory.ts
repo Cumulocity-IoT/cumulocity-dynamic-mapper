@@ -47,14 +47,6 @@ export class MonitoringNavigationFactory implements NavigatorNodeFactory {
       priority: 530,
       preventDuplicates: true
     }),
-    monitoringChartNode: new NavigatorNode({
-      parent: gettext('Monitoring'),
-      label: gettext('Chart processed'),
-      icon: 'pie-chart',
-      path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/chart`,
-      priority: 520,
-      preventDuplicates: true
-    }),
     monitoringMappingEventsNode: new NavigatorNode({
       parent: gettext('Monitoring'),
       label: gettext('Service events'),

@@ -32,7 +32,6 @@ import dynamic.mapper.configuration.ServiceConfiguration;import dynamic.mapper.m
 import dynamic.mapper.service.ServiceConfigurationService;import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
@@ -52,25 +51,24 @@ import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 @Slf4j
 public class AIAgentService {
 
-    @Autowired
-    private ContextService<MicroserviceCredentials> contextService;
+    private final ContextService<MicroserviceCredentials> contextService;
 
-    @Autowired
-    MicroserviceSubscriptionsService subscriptionsService;
+    private final CumulocityClientProperties clientProperties;
 
-    @Autowired
-    CumulocityClientProperties clientProperties;
+    private final ServiceConfigurationService serviceConfigurationService;
 
-    @Autowired
-    public RestConnector restConnector;
-
-    @Autowired
-    private ServiceConfigurationService serviceConfigurationService;
+    public AIAgentService(ContextService<MicroserviceCredentials> contextService,
+            MicroserviceSubscriptionsService subscriptionsService,
+            CumulocityClientProperties clientProperties,
+            RestConnector restConnector,
+            ServiceConfigurationService serviceConfigurationService) {
+        this.contextService = contextService;
+        this.clientProperties = clientProperties;
+        this.serviceConfigurationService = serviceConfigurationService;
+    }
 
     private static final String DEFAULT_JSONATA_AGENT_NAME = "dynamic-mapper-jsonata-agent";
     private static final String DEFAULT_SMART_FUNCTION_AGENT_NAME = "dynamic-mapper-smart-function-agent";
-    private static final String MCP_STREAMABLE_ENDPOINT = "/service/dynamic-mapper-service/mcp";
-    private static final String MCP_SSE_ENDPOINT = "/service/dynamic-mapper-service/sse";
     private static final String JSONATA_TOOL_NAME = "evaluateJsonataExpression";
     private static final String MCP_SERVER_NAME = "dynamic-mapper-mcp-server";
     private static final String AI_AGENT_MCP_SERVER_PATH = "/service/ai/mcp/servers";
@@ -79,71 +77,6 @@ public class AIAgentService {
 
     public void initializeAIAgents() {
         if (checkAIAgentAvailable()) {
-            /*
-            MCPServer mcpServer = null;
-            ResponseEntity<MCPServers> mcpServerResponse = getMCPServer();
-            if (mcpServerResponse != null && mcpServerResponse.getStatusCode().is2xxSuccessful()
-                    && mcpServerResponse.getBody() != null) {
-                MCPServers mcpServers = mcpServerResponse.getBody();
-                if (mcpServers.getServers().isEmpty()) {
-                    log.info("{} - No MCP Servers found in AI Agent Manager, creating MCP Server...",
-                            contextService.getContext().getTenant());
-                    mcpServer = new MCPServer();
-                    mcpServer.setUrl(MCP_SSE_ENDPOINT);
-                    mcpServer.setName(MCP_SERVER_NAME);
-                    mcpServer.setDescription("MCP Server for dynamic mapper service");
-                    mcpServer.setSendAuthentication(true);
-                    mcpServer.setType(MCPServer.typeEnum.SSE);
-                    try {
-                        ResponseEntity<String> response = createMCPServer(mcpServer);
-                        if (response != null && !response.getStatusCode().is2xxSuccessful()) {
-                            log.error("{} - Failed to create MCP Server: {}", contextService.getContext().getTenant(),
-                                    response.getBody());
-                        } else {
-                            log.info("{} - MCP Server created successfully", contextService.getContext().getTenant());
-                        }
-                    } catch (Exception e) {
-                        log.error("{} - Failed to create MCP Server", contextService.getContext().getTenant(), e);
-                    }
-
-                } else {
-                    if (mcpServers.getServers().stream()
-                            .anyMatch(server -> server.getUrl().equals(MCP_SSE_ENDPOINT)
-                                    || server.getName().equals(MCP_SERVER_NAME))) {
-                        log.info("{} - MCP Server already exists, not re-creating it",
-                                contextService.getContext().getTenant());
-                        mcpServer = mcpServers.getServers().stream()
-                                .filter(server -> server.getUrl()
-                                        .equals(MCP_SSE_ENDPOINT)
-                                        || server.getName().equals(MCP_SERVER_NAME))
-                                .findFirst()
-                                .orElse(null);
-                    } else {
-                        log.info("{} - MCP Server not found, creating MCP Server...",
-                                contextService.getContext().getTenant());
-                        mcpServer = new MCPServer();
-                        mcpServer.setUrl(MCP_SSE_ENDPOINT);
-                        mcpServer.setName(MCP_SERVER_NAME);
-                        mcpServer.setDescription("MCP Server for dynamic mapper service");
-                        mcpServer.setSendAuthentication(true);
-                        try {
-                            ResponseEntity<String> response = createMCPServer(mcpServer);
-                            if (response != null && !response.getStatusCode().is2xxSuccessful()) {
-                                log.error("{} - Failed to create MCP Server: {}",
-                                        contextService.getContext().getTenant(), response.getBody());
-                            } else {
-                                log.info("{} - MCP Server created successfully",
-                                        contextService.getContext().getTenant());
-                            }
-                        } catch (Exception e) {
-                            log.error("{} - Failed to create MCP Server", contextService.getContext().getTenant(), e);
-                        }
-                    }
-                }
-            } else {
-                log.info("{} - Failed to retrieve MCP Servers", contextService.getContext().getTenant());
-            }
-                */
             ResponseEntity<AIAgent[]> response = getAIAgents();
             if (response != null && response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 List<AIAgent> agents = Arrays.asList(response.getBody());

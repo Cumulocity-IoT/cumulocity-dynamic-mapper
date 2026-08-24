@@ -25,8 +25,10 @@ import { EventService, IEvent, IResultList, InventoryService } from '@c8y/client
 import { CoreModule, Pagination } from '@c8y/ngx-components';
 import { saveAs } from 'file-saver';
 import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
-import { BehaviorSubject, catchError, from, Observable, of, Subject, switchMap, takeUntil, tap } from 'rxjs';
+import { BehaviorSubject, catchError, combineLatest, from, map, Observable, of, startWith, Subject, switchMap, takeUntil, tap } from 'rxjs';
 import {
+  ConnectorStatusHistory,
+  ConnectorStatusHistoryComponent,
   EventMetadata,
   getEventMetadata as getEventMetadataShared,
   getSeverityBadgeClass,
@@ -42,7 +44,7 @@ import {
   styleUrls: ['../../mapping/shared/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CommonModule, SharedModule, BsDatepickerModule, ReactiveFormsModule]
+  imports: [CoreModule, CommonModule, SharedModule, BsDatepickerModule, ReactiveFormsModule, ConnectorStatusHistoryComponent]
 })
 export class MappingServiceEventComponent implements OnInit, OnDestroy {
 
@@ -84,7 +86,8 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
     this.filterForm = this.fb.group({
       type: new FormControl('ALL'),
       dateFrom: new FormControl(null),
-      dateTo: new FormControl(null)
+      dateTo: new FormControl(null),
+      onlyOpenSessions: new FormControl(false)
     });
   }
 
@@ -128,7 +131,7 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
   }
 
   private setupEventsObservable(): void {
-    this.events$ = this.filterSubject$.pipe(
+    const fetched$ = this.filterSubject$.pipe(
       tap(() => {
         this.isLoading$.next(true);
         this.error$.next(null);
@@ -148,6 +151,28 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
         return of({ data: [], paging: {} } as IResultList<IEvent>);
       }),
       takeUntil(this.destroy$)
+    );
+
+    // "Only open sessions" is applied client-side on top of the already-fetched page: it's a
+    // property of the (unindexed) d11r_connectorStatusLog fragment, not something the event API
+    // can filter by, and re-fetching for a purely local toggle would be wasteful.
+    const onlyOpenSessions$ = this.filterForm.get('onlyOpenSessions').valueChanges.pipe(
+      startWith(false)
+    );
+
+    this.events$ = combineLatest([
+      fetched$,
+      onlyOpenSessions$.pipe(takeUntil(this.destroy$))
+    ]).pipe(
+      map(([result, onlyOpenSessions]) => {
+        if (!onlyOpenSessions) {
+          return result;
+        }
+        const filtered = (result.data ?? []).filter(event =>
+          this.getConnectorStatusHistory(event)?.sessionClosed === false
+        );
+        return { ...result, data: filtered };
+      })
     );
   }
 
@@ -179,7 +204,8 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
     this.filterForm.patchValue({
       type: 'ALL',
       dateFrom: null,
-      dateTo: null
+      dateTo: null,
+      onlyOpenSessions: false
     });
     delete this.baseFilter['type'];
     delete this.baseFilter['dateFrom'];
@@ -197,6 +223,15 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
 
   extractManagedObjectId(event: IEvent): string | null {
     return event?.['d11r_system']?.['id'] ?? null;
+  }
+
+  /**
+   * Returns the bundled connection-lifecycle session for a connector-status event, or null for
+   * events that don't carry one (other event types, or events created before this fragment
+   * existed) — callers fall back to the raw-JSON view for those, see the template.
+   */
+  getConnectorStatusHistory(event: IEvent): ConnectorStatusHistory | null {
+    return event?.['d11r_connectorStatusLog'] ?? null;
   }
 
   async downloadMapping(event: IEvent): Promise<void> {

@@ -19,19 +19,20 @@
  */
 
 
-/* Single-line date: widen column and reposition marker to match */
+/* Single-line date: widen column and reposition marker to match.
+   Width accounts for the 'medium' c8yDate format (e.g. "14 Aug 2026, 08:15:23 AM"). */
 d11r-mapping-connector-details .c8y-list--timeline .c8y-list--timeline__item__date {
-  width: 95px;
+  width: 190px;
   white-space: nowrap;
 }
 
 d11r-mapping-connector-details .c8y-list--timeline .c8y-list--timeline__item::before,
 d11r-mapping-connector-details .c8y-list--timeline .c8y-list--timeline__item::after {
-  left: 111px;
+  left: 206px;
 }
 
 d11r-mapping-connector-details .c8y-list--timeline .c8y-list--timeline__item .c8y-list__item {
-  max-width: calc(100% - 137px);
+  max-width: calc(100% - 232px);
 }
 
 .button-bottom-margin{

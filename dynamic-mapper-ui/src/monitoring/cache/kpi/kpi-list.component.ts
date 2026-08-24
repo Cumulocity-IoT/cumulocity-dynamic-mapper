@@ -52,7 +52,8 @@ export class KpListComponent {
     getDomainDisplayName(domain: string): string {
         const displayNames: { [key: string]: string } = {
             'inventoryCache': 'Inventory Cache',
-            'inboundIdCache': 'Inbound ID Cache'
+            'inboundIdCache': 'Inbound ID Cache',
+            'outboundIdCache': 'Outbound ID Cache'
         };
         return displayNames[domain] || domain;
     }

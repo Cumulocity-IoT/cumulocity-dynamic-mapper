@@ -64,6 +64,8 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     deviceIsolationMQTTServiceEnabled: false,
     inboundExternalIdCacheSize: 0,
     inboundExternalIdCacheRetention: 0,
+    outboundExternalIdCacheSize: 0,
+    outboundExternalIdCacheRetention: 0,
     inventoryCacheSize: 0,
     inventoryCacheRetention: 0,
     flowStateRetention: 1440,
@@ -73,6 +75,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     pipelineTimeoutMS: 8000,  // 8 seconds
     engineRotationThreshold: 100,
     engineMaxAgeMinutes: 0,
+    explorerSessionTTLMinutes: 10,
     jsonataAgent: undefined,
     javaScriptAgent: undefined,
     smartFunctionAgent: undefined,
@@ -137,6 +140,8 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       deviceIsolationMQTTServiceEnabled: [''],
       inboundExternalIdCacheSize: [''],
       inboundExternalIdCacheRetention: [''],
+      outboundExternalIdCacheSize: [''],
+      outboundExternalIdCacheRetention: [''],
       inventoryCacheRetention: [''],
       inventoryCacheSize: [''],
       flowStateRetention: [''],
@@ -145,6 +150,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       pipelineTimeoutMS: [''],
       engineRotationThreshold: [''],
       engineMaxAgeMinutes: [''],
+      explorerSessionTTLMinutes: [''],
       supportESM: [''],
       jsonataAgent: [{ value: '', disabled: true }],
       javaScriptAgent: [{ value: '', disabled: true }],
@@ -196,6 +202,10 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
 
   async clickedClearInboundExternalIdCache() {
     await this.clearCache('INBOUND_ID_CACHE');
+  }
+
+  async clickedClearOutboundExternalIdCache() {
+    await this.clearCache('OUTBOUND_ID_CACHE');
   }
 
   async clickedClearInventoryCache() {

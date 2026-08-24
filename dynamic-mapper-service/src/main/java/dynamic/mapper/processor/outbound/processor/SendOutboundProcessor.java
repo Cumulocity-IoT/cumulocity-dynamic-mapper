@@ -24,7 +24,6 @@ import dynamic.mapper.processor.util.CamelHeaders;
 
 import org.apache.camel.Exchange;
 import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.model.JSONBase;
@@ -54,14 +53,18 @@ import java.util.stream.Collectors;
 @Component
 public class SendOutboundProcessor extends BaseProcessor {
 
-    @Autowired
-    private C8YAgent c8yAgent;
+    private final C8YAgent c8yAgent;
 
-    @Autowired
-    private ConnectorRegistry connectorRegistry;
+    private final ConnectorRegistry connectorRegistry;
 
-    @Autowired
-    private MappingService mappingService;
+    private final MappingService mappingService;
+
+    public SendOutboundProcessor(C8YAgent c8yAgent, ConnectorRegistry connectorRegistry,
+            MappingService mappingService) {
+        this.c8yAgent = c8yAgent;
+        this.connectorRegistry = connectorRegistry;
+        this.mappingService = mappingService;
+    }
 
     @Override
     @SuppressWarnings("unchecked")

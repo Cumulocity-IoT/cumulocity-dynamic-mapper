@@ -185,6 +185,18 @@ public class AMQPClient extends AConnectorClient {
 
                 @Override
                 public void handleRecoveryStarted(Recoverable recoverable) {
+                    boolean intentional;
+                    synchronized (disconnectionLock) {
+                        intentional = intentionalDisconnect || isDisconnecting;
+                    }
+                    if (intentional) {
+                        // disconnect() already reports DISCONNECTED itself. Guards against the same
+                        // double-report race fixed for MQTT (see MQTT3Client/MQTT5Client's
+                        // addDisconnectedListener) in case RabbitMQ's client ever fires recovery
+                        // machinery as a side effect of our own graceful, client-initiated close.
+                        log.debug("{} - AMQP recovery-started listener fired during our own disconnect, skipping duplicate report", tenant);
+                        return;
+                    }
                     log.warn("{} - AMQP connection recovery started", tenant);
                     connectionStateManager.setConnected(false);
                 }
@@ -398,8 +410,9 @@ public class AMQPClient extends AConnectorClient {
                 }
             }
 
+            // setConnected(false) already transitions to DISCONNECTED internally (see
+            // ConnectionStateManager.setConnected) — no need to also call updateStatus explicitly.
             connectionStateManager.setConnected(false);
-            connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
 
             // Clear subscriptions
             if (mappingSubscriptionManager != null) {
@@ -411,7 +424,6 @@ public class AMQPClient extends AConnectorClient {
         } catch (Exception e) {
             log.error("{} - Error during disconnect: {}", tenant, e.getMessage());
             connectionStateManager.setConnected(false);
-            connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
         } finally {
             endDisconnection();
         }

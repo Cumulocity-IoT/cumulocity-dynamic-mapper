@@ -38,9 +38,6 @@ import { CoreModule } from '@c8y/ngx-components';
 export class TypeSelectorComponent {
   @Input() set typeList(list: string[]) {
     this.typeListInternal = [...list];
-    if (this.typeListInternal.length === 0) {
-      this.add();
-    }
   }
   get typeList(): string[] {
     return this.typeListInternal;
@@ -63,8 +60,17 @@ export class TypeSelectorComponent {
     this.typeListInternal = this.typeListInternal.filter((_, i) => i !== index);
   }
 
+  /**
+   * True when either no type filter is defined (subscribe to all types, a valid
+   * backend state) or at least one non-blank type has been entered. Gates Save.
+   */
+  get hasValidType(): boolean {
+    return this.typeListInternal.length === 0 || this.typeListInternal.some(t => !!t?.trim());
+  }
+
   clickedUpdateSubscription() {
-    this.commit.emit(this.typeListInternal);
+    const cleaned = this.typeListInternal.map(t => t?.trim()).filter(t => !!t);
+    this.commit.emit(cleaned);
   }
 
   clickedCancel() {

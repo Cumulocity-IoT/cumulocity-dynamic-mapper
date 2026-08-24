@@ -24,7 +24,6 @@ package dynamic.mapper.core;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
@@ -40,11 +39,14 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class CertificateService {
 
-    @Autowired
-    private Platform platform;
+    private final Platform platform;
 
-    @Autowired
-    private MicroserviceSubscriptionsService subscriptionsService;
+    private final MicroserviceSubscriptionsService subscriptionsService;
+
+    public CertificateService(Platform platform, MicroserviceSubscriptionsService subscriptionsService) {
+        this.platform = platform;
+        this.subscriptionsService = subscriptionsService;
+    }
 
     public Certificate loadCertificateByName(String certificateName, String fingerprint,
             String tenant, String connectorName) {

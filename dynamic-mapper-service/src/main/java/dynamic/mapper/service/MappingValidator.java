@@ -212,19 +212,32 @@ public class MappingValidator {
 
         List<ValidationError> errors = new ArrayList<>();
 
-        String[] topicParts = Mapping.splitTopicIncludingSeparatorAsArray(mappingTopic);
-        String[] sampleParts = Mapping.splitTopicIncludingSeparatorAsArray(mappingTopicSample);
+        String[] topicParts = Mapping.splitTopicExcludingSeparatorAsArray(mappingTopic, false);
+        String[] sampleParts = Mapping.splitTopicExcludingSeparatorAsArray(mappingTopicSample, false);
 
-        // Check same number of levels
-        if (topicParts.length != sampleParts.length) {
+        // MQTT semantics: a trailing "#" matches any number (incl. zero) of
+        // remaining levels, so the sample only needs to have AT LEAST as many
+        // levels as the fixed (non-"#") part of the topic. Without a "#" the
+        // level count must match exactly. "+" matches exactly one level.
+        boolean hasMultiWildcard = topicParts.length > 0
+                && "#".equals(topicParts[topicParts.length - 1]);
+        String[] fixedTopicParts = hasMultiWildcard
+                ? Arrays.copyOf(topicParts, topicParts.length - 1)
+                : topicParts;
+
+        // Check number of levels
+        boolean levelMismatch = hasMultiWildcard
+                ? sampleParts.length < fixedTopicParts.length
+                : sampleParts.length != fixedTopicParts.length;
+        if (levelMismatch) {
             errors.add(
                     ValidationError.MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name);
             return errors;
         }
 
         // Check structure consistency
-        for (int i = 0; i < topicParts.length; i++) {
-            String topicPart = topicParts[i];
+        for (int i = 0; i < fixedTopicParts.length; i++) {
+            String topicPart = fixedTopicParts[i];
             String samplePart = sampleParts[i];
 
             // Both should be separators or both should not be

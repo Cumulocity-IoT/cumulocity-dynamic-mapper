@@ -21,7 +21,6 @@
 
 package dynamic.mapper.processor.inbound.processor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.core.C8YAgent;
@@ -56,16 +55,18 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
 
-    @Autowired
-    private C8YAgent c8yAgent;
+    private final C8YAgent c8yAgent;
 
-    @Autowired
-    private FlowStateStore flowStateStore;
+    private final FlowStateStore flowStateStore;
 
     public ExtensibleInboundProcessor(
             MappingService mappingService,
-            ExtensionInboundRegistry extensionInboundRegistry) {
+            ExtensionInboundRegistry extensionInboundRegistry,
+            C8YAgent c8yAgent,
+            FlowStateStore flowStateStore) {
         super(mappingService, extensionInboundRegistry);
+        this.c8yAgent = c8yAgent;
+        this.flowStateStore = flowStateStore;
     }
 
     @Override

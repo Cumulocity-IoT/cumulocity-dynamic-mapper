@@ -26,7 +26,6 @@ import { IIdentified, InventoryService } from '@c8y/client';
 import { combineLatest } from 'rxjs';
 import { ConnectorConfiguration, Direction } from '../../shared';
 import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
-import { StartSessionRequest } from './message-explorer.service';
 import { AssetSelectionChangeEvent, AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
 
 export interface ExplorerStartResult {
@@ -49,6 +48,7 @@ export interface ExplorerSessionSnapshot {
   sessionTTLMinutes: number;
   direction: 'INBOUND' | 'OUTBOUND';
   sourceId?: string;
+  deviceName?: string;
   deviceTypeFilter?: string;
 }
 
@@ -101,6 +101,7 @@ export class MessageExplorerDrawerComponent implements OnInit {
       this.deviceTypeFilter = this.editSnapshot.deviceTypeFilter ?? '';
       if (this.editSnapshot.sourceId) {
         this.outboundFilterMode = 'source';
+        await this.restoreSelectedDevice(this.editSnapshot.sourceId, this.editSnapshot.deviceName);
       } else if (this.editSnapshot.deviceTypeFilter) {
         this.outboundFilterMode = 'deviceType';
       }
@@ -120,6 +121,23 @@ export class MessageExplorerDrawerComponent implements OnInit {
         this.selectedConnectorIdentifier = this.editSnapshot.connectorIdentifier;
       }
     });
+  }
+
+  private async restoreSelectedDevice(sourceId: string, knownName?: string): Promise<void> {
+    if (knownName) {
+      this.selectedDeviceList = [{ id: sourceId, name: knownName } as unknown as IIdentified];
+    }
+    try {
+      const { data } = await this.inventoryService.detail(sourceId);
+      const device = data as any;
+      this.selectedDeviceList = [{ id: sourceId, name: device.name ?? knownName, type: device.type } as unknown as IIdentified];
+      this.selectedDeviceType = device.type ?? null;
+      this.deviceTypeFetch = Promise.resolve(this.selectedDeviceType);
+    } catch (err) {
+      this.selectedDeviceList = [{ id: sourceId, name: knownName } as unknown as IIdentified];
+      this.selectedDeviceType = null;
+      this.deviceTypeFetch = Promise.resolve(null);
+    }
   }
 
   onDirectionChange(): void {
@@ -182,9 +200,17 @@ export class MessageExplorerDrawerComponent implements OnInit {
       this.alertService.warning('Please enter a topic to listen on.');
       return;
     }
-    const selected = this.connectors.find(c => c.identifier === this.selectedConnectorIdentifier);
     const useSourceMode = this.direction === 'OUTBOUND' && this.outboundFilterMode === 'source';
     const useTypeMode = this.direction === 'OUTBOUND' && this.outboundFilterMode === 'deviceType';
+    if (useSourceMode && this.selectedDeviceList.length === 0) {
+      this.alertService.warning('Please select a device or group to monitor.');
+      return;
+    }
+    if (useTypeMode && !this.deviceTypeFilter.trim()) {
+      this.alertService.warning('Please enter a device type to monitor.');
+      return;
+    }
+    const selected = this.connectors.find(c => c.identifier === this.selectedConnectorIdentifier);
     const selectedDevice = useSourceMode && this.selectedDeviceList.length > 0 ? this.selectedDeviceList[0] : null;
     const sourceId = selectedDevice ? String((selectedDevice as any).id ?? '') : undefined;
     const deviceName = selectedDevice ? ((selectedDevice as any).name ?? sourceId) : undefined;
@@ -208,14 +234,5 @@ export class MessageExplorerDrawerComponent implements OnInit {
   onCancel(): void {
     this._resolve(null);
     this.bottomDrawerRef.close();
-  }
-
-  buildRequest(): StartSessionRequest {
-    return {
-      connectorIdentifier: this.selectedConnectorIdentifier,
-      topic: this.topic.trim(),
-      maxMessages: this.maxMessages,
-      direction: this.direction
-    };
   }
 }

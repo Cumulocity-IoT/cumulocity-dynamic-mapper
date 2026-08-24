@@ -205,6 +205,12 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                                         tenant, context.getCurrentRequest().getExternalId());
                                 ID identity = new ID(context.getCurrentRequest().getExternalIdType(), context.getExternalId());
                                 this.connectorClient.getC8yAgent().removeDeviceFromInboundExternalIdCache(tenant, identity);
+                                // Also evict the implicit-device-creation cache
+                                // (IdentityResolutionService.getOrCreateDeviceThreadSafe reads from
+                                // this one, not InboundExternalIdCache above) — otherwise the resend
+                                // below re-substitutes the same stale, no-longer-existing sourceId and
+                                // fails identically. See attic/fix/inconsistant-cache/ISSUE.md.
+                                this.configurationRegistry.getTenantRegistry().removeFromExternalIdCache(tenant, identity);
                                 if(context.getMapping().getCreateNonExistingDevice())
                                     resend = true;
                             }

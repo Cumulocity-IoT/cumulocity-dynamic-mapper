@@ -19,7 +19,8 @@
 ~
 -->
 <c8y-modal [title]="isDuplicate || isUpdate ? 'Update properties of substitution' : 'Edit properties of substitution' "
-  (onClose)="onSave()" (onDismiss)="onDismiss()" [labels]="labels" [headerClasses]="'modal-header dialog-header'">
+  (onClose)="onSave()" (onDismiss)="onDismiss()" [labels]="labels" [headerClasses]="'modal-header dialog-header'"
+  [disabled]="disabled$ | async">
   <ng-container c8y-modal-title>
     <span [c8yIcon]="'pencil'"></span>
   </ng-container>
@@ -27,12 +28,20 @@
     @if (isDuplicate) {
       <div>
         <p class="text-medium">
-          {{ 'You are about to overwrite the existing substitution: # ' + duplicateSubstitutionIndex | translate }}
+          {{ 'You are about to overwrite the existing substitution: # ' + (duplicateSubstitutionIndex + 1) | translate }}
         </p>
         <br />
         <div class="text-center">
           <pre>{{ substitutionText }}</pre>
         </div>
+        <label class="c8y-switch d-inline p-t-8">
+          <input type="checkbox" [(ngModel)]="override" [ngModelOptions]="{standalone: true}"
+            (ngModelChange)="onOverrideChanged()" data-cy="dm-substitution-edit-override-toggle" />
+          <span></span>
+          <span>
+            {{ 'Overwrite existing substitution' | translate }}
+          </span>
+        </label>
       </div>
     }
     <form [formGroup]="substitutionForm">

@@ -46,7 +46,6 @@ import {
   Direction,
   ExtensionEntry,
   Feature,
-  getExternalTemplate,
   isSubstitutionsAsCode,
   LabelTaggedRendererComponent,
   Mapping,
@@ -75,7 +74,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, filter, finalize, Subject, switchMap, take, takeUntil } from 'rxjs';
+import { BehaviorSubject, finalize, Subject, take, takeUntil } from 'rxjs';
 import { CodeTemplate } from '../../configuration/shared/configuration.model';
 import { MappingService } from '../core/mapping.service';
 import { MappingBulkOperationsService } from '../core/mapping-bulk-operations.service';
@@ -94,7 +93,6 @@ import { EditorMode } from '../shared/stepper.model';
 import { isCodeOrExtensionTransformation } from '../shared/util';
 import { CommonModule } from '@angular/common';
 import { MappingStepperComponent } from '../stepper-mapping/mapping-stepper.component';
-import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/code-editor-drawer.component';
 import { DeprecationNoticeModalComponent } from '../deprecation-notice/deprecation-notice-modal.component';
 import { DEPRECATION_NOTICE_VERSION } from '../../shared';
 @Component({
@@ -148,6 +146,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   feature!: Feature;
   codeTemplate!: CodeTemplate;
   private extension?: Partial<ExtensionEntry>;
+  private generateSmartFunctionWithAI = false;
 
   get canManageMappings(): boolean {
     return this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole;
@@ -234,6 +233,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         this.transformationType = navState.transformationType;
         this.substitutionsAsCode = this.transformationType === TransformationType.SMART_FUNCTION;
         this.codeTemplate = navState.codeTemplate;
+        this.generateSmartFunctionWithAI = !!navState.generateSmartFunctionWithAI;
         this.addMapping();
       }
     } finally {
@@ -374,76 +374,6 @@ export class MappingComponent implements OnInit, OnDestroy {
     );
   }
 
-  async updateCode(m: MappingEnriched) {
-    const { mapping } = m;
-    const sourceSystem =
-      mapping.direction == Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
-    const initialState = { encodedCode: mapping.code, sourceSystem };
-    try {
-      const drawer = this.bottomDrawerService.openDrawer(CodeEditorDrawerComponent, { initialState: initialState });
-
-      await new Promise((resolve) => {
-        drawer.instance.closeSubject
-          .pipe(
-            take(1),
-            filter(code => !!code),
-            switchMap(code => this.applyUpdateCode(code, mapping.id)),
-            finalize(() => {
-              drawer.close();
-              resolve(undefined);
-            })
-          )
-          .subscribe({
-            next: () => {
-              // this.alertService.success(`Updated code for mapping ${mapping.name}`);
-            },
-            error: (error) => {
-              this.alertService.danger('Failed to update code', error);
-              resolve(undefined);
-            }
-          });
-      });
-    } catch (error) {
-      this.alertService.danger(`Failed to update code: ${error.message}`);
-    }
-  }
-
-  private async applyMappingFilter(filterMapping: string, mappingId: string): Promise<string> {
-    const params = {
-      filterMapping,
-      id: mappingId
-    };
-
-    await this.sharedService.runOperation({
-      operation: Operation.APPLY_MAPPING_FILTER,
-      parameter: params
-    });
-
-    await this.mappingService.refreshMappings(this.stepperConfiguration.direction);
-    return filterMapping;
-  }
-
-
-  private async applyUpdateCode(code: string, mappingId: string): Promise<string> {
-    const params = {
-      code,
-      id: mappingId
-    };
-
-    await this.sharedService.runOperation({
-      operation: Operation.UPDATE_CODE,
-      parameter: params
-    });
-
-    if (this.stepperConfiguration.direction == Direction.INBOUND) {
-      await this.mappingService.refreshMappings(Direction.INBOUND);
-    } else {
-      await this.mappingService.refreshMappings(Direction.OUTBOUND);
-
-    }
-    return code;
-  }
-
   getColumnsMappings(): Column[] {
     const cols: Column[] = [
       {
@@ -541,6 +471,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.mappingType = resultOf.mappingType;
       this.codeTemplate = resultOf.codeTemplate;
       this.extension = resultOf.extension;
+      this.generateSmartFunctionWithAI = !!resultOf.generateSmartFunctionWithAI;
       this.addMapping();
     }
   }
@@ -553,12 +484,36 @@ export class MappingComponent implements OnInit, OnDestroy {
       EditorMode.CREATE, this.substitutionsAsCode
     );
 
+    // setStepperConfiguration() always builds a fresh StepperConfiguration object, so this flag
+    // must be set on the resulting instance, not before the call.
+    if (this.generateSmartFunctionWithAI) {
+      this.stepperConfiguration.triggerAIGenerationOnStart = true;
+      this.generateSmartFunctionWithAI = false;
+    }
+
     const identifier = createCustomUuid();
     const sub: Substitution[] = [];
+    const direction = this.stepperConfiguration.direction;
+
+    // Only the Cumulocity-side field has a well-known, schema-valid sample (SAMPLE_TEMPLATES_C8Y)
+    // — the broker/external-side field is always blank, since no generic schema exists for an
+    // arbitrary device payload. Which physical field ("sourceTemplate" vs "targetTemplate") is
+    // the Cumulocity side flips with direction: target for INBOUND, source for OUTBOUND — matching
+    // the "Source/Target Template - Cumulocity/Broker" panel labels and
+    // MappingStepperService.expandTemplates()'s direction-aware swap.
+    // Code/extension-based transformations (Smart Function, Java extension) get '{}' even on the
+    // Cumulocity side: the actual shape is produced by code, not a template, and seeding a generic
+    // sample there previously misled both users and the AI generation flow.
+    const cumulocitySample = isCodeOrExtensionTransformation(this.transformationType)
+      ? '{}'
+      : SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name];
+    const defaultSourceTemplate = direction === Direction.OUTBOUND ? cumulocitySample : '{}';
+    const defaultTargetTemplate = direction === Direction.OUTBOUND ? '{}' : cumulocitySample;
+
     let mapping: Mapping;
-    if (this.stepperConfiguration.direction == Direction.INBOUND) {
+    if (direction == Direction.INBOUND) {
       let code;
-      if (this.substitutionsAsCode) code = this.codeTemplate.code;
+      if (this.substitutionsAsCode) code = this.codeTemplate?.code;
       mapping = {
         // name: `Mapping - ${identifier.substring(0, 7)}`,
         name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
@@ -567,10 +522,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         mappingTopic: '',
         mappingTopicSample: '',
         targetAPI: API.MEASUREMENT.name,
-        sourceTemplate: '{}',
-        targetTemplate: isCodeOrExtensionTransformation(this.transformationType)
-          ? '{}'
-          : SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
+        sourceTemplate: defaultSourceTemplate,
+        targetTemplate: defaultTargetTemplate,
         active: false,
         maxFailureCount: 0,
         qos: Qos.AT_LEAST_ONCE,
@@ -582,14 +535,14 @@ export class MappingComponent implements OnInit, OnDestroy {
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
         code,
-        direction: this.stepperConfiguration.direction,
+        direction: direction,
         autoAckOperation: true,
         debug: false,
         lastUpdate: Date.now()
       };
     } else {
       let code;
-      if (this.substitutionsAsCode) code = this.codeTemplate.code;
+      if (this.substitutionsAsCode) code = this.codeTemplate?.code;
       mapping = {
         name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
         id: identifier,
@@ -597,10 +550,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         // publishTopic: '',
         // publishTopicSample: '',
         targetAPI: API.MEASUREMENT.name,
-        sourceTemplate: '{}',
-        targetTemplate: isCodeOrExtensionTransformation(this.transformationType)
-          ? '{}'
-          : SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
+        sourceTemplate: defaultSourceTemplate,
+        targetTemplate: defaultTargetTemplate,
         active: false,
         maxFailureCount: 0,
         qos: Qos.AT_LEAST_ONCE,
@@ -612,13 +563,12 @@ export class MappingComponent implements OnInit, OnDestroy {
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
         code,
-        direction: this.stepperConfiguration.direction,
+        direction: direction,
         autoAckOperation: true,
         debug: false,
         lastUpdate: Date.now()
       };
     }
-    mapping.targetTemplate = getExternalTemplate(mapping);
     if (this.mappingType == MappingType.FLAT_FILE) {
       const sampleSource = JSON.stringify({
         payload: '10,temp,1666963367'
@@ -631,19 +581,31 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     // Apply pre-fill from Message Explorer (topic + payload + targetAPI)
     if (this.explorerPreFill) {
-      if (this.stepperConfiguration.direction === Direction.INBOUND) {
+      const isInbound = direction === Direction.INBOUND;
+      if (isInbound) {
         // sessionTopic is the subscription pattern (e.g. fridge/#); topic is the
         // concrete received topic (e.g. fridge/sensor-ny-99). Use the pattern as
         // mappingTopic so wildcards are preserved, and the concrete topic as sample.
         mapping.mappingTopic = this.explorerPreFill.sessionTopic ?? this.explorerPreFill.topic;
         mapping.mappingTopicSample = this.explorerPreFill.topic;
       }
-      mapping.sourceTemplate = this.explorerPreFill.payload;
+      // The captured message always belongs on the broker/external side, which flips with
+      // direction — see the comment above the mapping literal for the full explanation.
+      if (isInbound) {
+        mapping.sourceTemplate = this.explorerPreFill.payload;
+      } else {
+        mapping.targetTemplate = this.explorerPreFill.payload;
+      }
       if (this.explorerPreFill.targetAPI) {
         mapping.targetAPI = this.explorerPreFill.targetAPI;
-        mapping.targetTemplate = isCodeOrExtensionTransformation(mapping.transformationType)
+        const sample = isCodeOrExtensionTransformation(mapping.transformationType)
           ? '{}'
-          : SAMPLE_TEMPLATES_C8Y[this.explorerPreFill.targetAPI] ?? mapping.targetTemplate;
+          : SAMPLE_TEMPLATES_C8Y[this.explorerPreFill.targetAPI];
+        if (isInbound) {
+          mapping.targetTemplate = sample ?? mapping.targetTemplate;
+        } else {
+          mapping.sourceTemplate = sample ?? mapping.sourceTemplate;
+        }
       }
       if (this.explorerPreFill.publishTopic) {
         mapping.publishTopic = this.explorerPreFill.publishTopic;
@@ -746,28 +708,6 @@ export class MappingComponent implements OnInit, OnDestroy {
     }
 
     this.showConfigMapping = true;
-  }
-
-  async activateMapping(m: MappingEnriched) {
-    const { mapping } = m;
-    const newActive = !mapping.active;
-    const parameter = { id: mapping.id, active: newActive };
-    const response =
-      await this.mappingService.changeActivationMapping(parameter);
-    if (response.status != HttpStatusCode.Created) {
-      const failedMap = await response.json();
-      const failedList = Object.values(failedMap).join(',');
-      this.alertService.warning(
-        `Mapping ${mapping.name} could only activate partially. It failed for the following connectors: ${failedList}`
-      );
-    } else {
-      // this.alertService.success(`${action} for mapping: ${mapping.name} was successful`);
-    }
-    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
-
-    if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
-      this.validateSubscriptionOutbound();
-    }
   }
 
   async toggleDebugMapping(m: MappingEnriched) {

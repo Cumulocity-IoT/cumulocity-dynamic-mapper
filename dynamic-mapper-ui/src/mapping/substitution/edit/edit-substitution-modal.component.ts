@@ -18,9 +18,9 @@
  * @authors Christof Strack
  */
 import { Component, Input, OnDestroy, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule } from '@angular/forms';
 import { CoreModule, ModalLabels } from '@c8y/ngx-components';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
 import {
   Direction,
   Mapping,
@@ -35,7 +35,7 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
 @Component({
   selector: 'd11r-edit-substitution-modal',
   templateUrl: './edit-substitution-modal.component.html',
-  imports:[CoreModule, SharedModule, PopoverModule],
+  imports:[CoreModule, SharedModule, PopoverModule, FormsModule],
   standalone: true
 })
 export class EditSubstitutionComponent implements OnInit, OnDestroy {
@@ -51,11 +51,12 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   closeSubject: Subject<Substitution> = new Subject();
   labels: ModalLabels;
   override: boolean = false;
-  repairStrategyOptions: any[];
+  repairStrategyOptions: { label: string; value: string; disabled: boolean }[];
   substitutionText: string;
   editedSubstitution: Substitution;
   disabled$: BehaviorSubject<boolean> = new BehaviorSubject(false);
   Direction = Direction;
+  private readonly destroy$ = new Subject<void>();
 
   constructor(private fb: FormBuilder) {
   }
@@ -68,20 +69,12 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
     this.createForm();
 
     this.editedSubstitution = this.substitution;
-    this.repairStrategyOptions = Object.keys(RepairStrategy)
-      .filter((key) => key != 'IGNORE')
-      .map((key) => {
-        return {
-          label: key,
-          value: key,
-          disabled:
-            (!this.substitution.expandArray &&
-              key != 'DEFAULT' &&
-              (key == 'USE_FIRST_VALUE_OF_ARRAY' ||
-                key == 'USE_LAST_VALUE_OF_ARRAY')) ||
-            this.stepperConfiguration.editorMode == EditorMode.READ_ONLY
-        };
-      });
+    this.updateRepairStrategyOptions(this.substitution.expandArray);
+    // Array-only strategies (USE_FIRST/LAST_VALUE_OF_ARRAY) become meaningless/meaningful again
+    // as the user toggles "Expand as array" within this same modal session — recompute live.
+    this.substitutionForm.get('expandArray')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(expandArray => this.updateRepairStrategyOptions(expandArray));
 
     const marksDeviceIdentifier = definesDeviceIdentifier(
       this.mapping,
@@ -102,13 +95,30 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
     });
   }
 
+  private updateRepairStrategyOptions(expandArray: boolean): void {
+    const isReadOnly = this.stepperConfiguration.editorMode == EditorMode.READ_ONLY;
+    this.repairStrategyOptions = Object.keys(RepairStrategy)
+      .map((key) => {
+        const isArrayOnlyStrategy = key == 'USE_FIRST_VALUE_OF_ARRAY' || key == 'USE_LAST_VALUE_OF_ARRAY';
+        // These strategies collapse an extracted array to a single element instead of expanding
+        // it into multiple substitutions — meaningless once "Expand as array" already splits the
+        // array into N outputs, so disable them exactly when expandArray is on (not off).
+        const meaninglessWhileExpanding = isArrayOnlyStrategy && expandArray;
+        return {
+          label: key,
+          value: key,
+          disabled: isReadOnly || meaninglessWhileExpanding
+        };
+      });
+  }
+
   createForm() {
     this.substitutionForm = this.fb.group({
       pathSource: [{ value: '', disabled: true }],
       pathTarget: [{ value: '', disabled: true }],
       substitution: [{ value: '', disabled: true }],
       expandArray: [{ value: false, disabled: this.isExpandToArrayDisabled() }],
-      repairStrategy: ['']
+      repairStrategy: [{ value: '', disabled: this.isRepairStrategyDisabled() }]
     });
   }
 
@@ -117,12 +127,17 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
   }
 
   onSave() {
-    if (this.substitutionForm.valid) {
-      const formValue = this.substitutionForm.value;
-      // Update editedSubstitution with form values
+    // A duplicate substitution may only be saved once the user has explicitly opted in via the
+    // "Overwrite" toggle — disabled$ tracks that gate (see onOverrideChanged()).
+    if (this.substitutionForm.valid && !this.disabled$.value) {
+      // pathSource/pathTarget/substitution are read-only display fields, not editable here —
+      // only expandArray/repairStrategy are real, user-editable Substitution properties. Read via
+      // getRawValue() since repairStrategy may be a disabled control (see isRepairStrategyDisabled).
+      const { expandArray, repairStrategy } = this.substitutionForm.getRawValue();
       this.editedSubstitution = {
         ...this.editedSubstitution,
-        ...formValue
+        expandArray,
+        repairStrategy
       };
       this.closeSubject.next(this.editedSubstitution);
     }
@@ -133,21 +148,24 @@ export class EditSubstitutionComponent implements OnInit, OnDestroy {
     this.disabled$.next(result);
   }
 
+  /** OUTBOUND mappings always produce exactly one target message — there is no fan-out to
+   *  expand into, so "Expand as array" has no effect and stays locked for that direction. */
   isExpandToArrayDisabled() {
-    const d0 = this.stepperConfiguration.editorMode == EditorMode.READ_ONLY;
-    const d1 = this.mapping.direction == Direction.OUTBOUND;
-    const r = d0 || d1;
-    return r;
+    const isReadOnly = this.stepperConfiguration.editorMode == EditorMode.READ_ONLY;
+    const isOutbound = this.mapping.direction == Direction.OUTBOUND;
+    return isReadOnly || isOutbound;
   }
 
+  /** Unlike expandArray, repairStrategy (CREATE_IF_MISSING, REMOVE_IF_MISSING_OR_NULL, IGNORE,
+   *  USE_FIRST/LAST_VALUE_OF_ARRAY) is applied identically for both directions on the backend,
+   *  so it must stay editable for OUTBOUND too — only READ_ONLY mode locks it. */
   isRepairStrategyDisabled() {
-    const r =
-      this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
-      this.stepperConfiguration.direction == Direction.OUTBOUND;
-    return r;
+    return this.stepperConfiguration.editorMode == EditorMode.READ_ONLY;
   }
 
   ngOnDestroy(): void {
     this.disabled$.complete();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

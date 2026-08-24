@@ -274,16 +274,15 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
     combineLatest([this.selected$, this.configurations$]).pipe(takeUntil(this.destroy$)).subscribe(([selected, configurations]) => {
       this.configurations = configurations;
       if (this.selectable) {
-        this.updateDeploymentMapEntry(selected, configurations);
+        this.updateDeploymentMapEntry(selected);
       }
     });
   }
 
-  private updateDeploymentMapEntry(selected: string[], configurations: ConnectorConfiguration[]): void {
+  private updateDeploymentMapEntry(selected: string[]): void {
     if (!this.deploymentMapEntry) return;
 
     this.deploymentMapEntry.connectors = selected;
-    this.deploymentMapEntry.connectorsDetailed = configurations.filter(con => selected.includes(con.identifier));
     this.deploymentMapEntryChange.emit(this.deploymentMapEntry);
 
     if (this.readOnly) {

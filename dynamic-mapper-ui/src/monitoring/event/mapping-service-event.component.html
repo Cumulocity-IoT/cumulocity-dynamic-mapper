@@ -46,11 +46,19 @@
 
     <div class="p-l-16">
       <input id="toPicker" formControlName="dateTo" class="form-control" [attr.aria-label]="'Date to' | translate"
-        placeholder="{{ 'Date to' | translate }}" [bsConfig]="{ 
+        placeholder="{{ 'Date to' | translate }}" [bsConfig]="{
             dateInputFormat: 'YYYY-MM-DD',
-            customTodayClass: 'today', 
-            adaptivePosition: true 
+            customTodayClass: 'today',
+            adaptivePosition: true
           }" bsDatepicker />
+    </div>
+
+    <div class="p-l-16 checkbox c8y-checkbox">
+      <label>
+        <input type="checkbox" formControlName="onlyOpenSessions" />
+        <span></span>
+        <span translate>Only open sessions</span>
+      </label>
     </div>
   </form>
 </c8y-action-bar-item>
@@ -130,10 +138,27 @@
                 {{ event?.d11r_connector?.connectorName ? ( event?.d11r_connector?.connectorName ) : 'System'
                 }}
               </span>
+              @if (getConnectorStatusHistory(event); as connectorStatusHistory) {
+              <span class="text-10 label label-default m-l-4" title="{{ 'Number of status transitions bundled into this session' | translate }}">
+                {{ connectorStatusHistory.history.length }} {{ connectorStatusHistory.history.length === 1 ? 'event' : 'events' }}
+              </span>
+              @if (!connectorStatusHistory.sessionClosed) {
+              <span class="text-10 label label-info m-l-4" translate>open</span>
+              }
+              @if (connectorStatusHistory.hadError) {
+              <span class="text-10 m-l-4" title="{{ 'This session had an error-driven transition (unexpected disconnect, retry, or failure)' | translate }}">
+                <i c8yIcon="exclamation-triangle" class="text-danger"></i>
+              </span>
+              }
+              }
             </div>
           </div>
           <c8y-list-item-collapse collapseWay="button" id="detail-{{i}}">
+            @if (getConnectorStatusHistory(event); as connectorStatusHistory) {
+            <d11r-connector-status-history [history]="connectorStatusHistory"></d11r-connector-status-history>
+            } @else {
             <small>{{event | filterJson:['self', 'source', 'creationTime', 'lastUpdated']:true | json}}</small>
+            }
           </c8y-list-item-collapse>
         </c8y-li>
       </c8y-li-timeline>

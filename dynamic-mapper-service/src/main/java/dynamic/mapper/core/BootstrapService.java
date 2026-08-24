@@ -77,8 +77,10 @@ public class BootstrapService {
     private final MicroserviceSubscriptionsService subscriptionsService;
     private final String additionalSubscriptionIdTest;
     private final Integer inboundExternalIdCacheSize;
+    private final Integer outboundExternalIdCacheSize;
     private final Integer inventoryCacheSize;
     private final Map<String, Instant> cacheInboundExternalIdRetentionStartMap;
+    private final Map<String, Instant> cacheOutboundExternalIdRetentionStartMap;
     private final Map<String, Instant> cacheInventoryRetentionStartMap;
     private final ExtensionInboundRegistry extensionInboundRegistry;
 
@@ -101,6 +103,7 @@ public class BootstrapService {
             dynamic.mapper.service.cache.FlowStateStore flowStateStore,
             @Value("${APP.additionalSubscriptionIdTest:}") String additionalSubscriptionIdTest,
             @Value("#{new Integer('${APP.inboundExternalIdCacheSize}')}") Integer inboundExternalIdCacheSize,
+            @Value("#{new Integer('${APP.outboundExternalIdCacheSize}')}") Integer outboundExternalIdCacheSize,
             @Value("#{new Integer('${APP.inventoryCacheSize}')}") Integer inventoryCacheSize) {
 
         this.connectorRegistry = connectorRegistry;
@@ -117,8 +120,10 @@ public class BootstrapService {
         this.flowStateStore = flowStateStore;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
         this.inboundExternalIdCacheSize = inboundExternalIdCacheSize;
+        this.outboundExternalIdCacheSize = outboundExternalIdCacheSize;
         this.inventoryCacheSize = inventoryCacheSize;
         this.cacheInboundExternalIdRetentionStartMap = new ConcurrentHashMap<>();
+        this.cacheOutboundExternalIdRetentionStartMap = new ConcurrentHashMap<>();
         this.cacheInventoryRetentionStartMap = new ConcurrentHashMap<>();
         TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"));
     }
@@ -242,6 +247,7 @@ public class BootstrapService {
 
         try {
             c8YAgent.removeInboundExternalIdCache(tenant);
+            c8YAgent.removeOutboundExternalIdCache(tenant);
             c8YAgent.removeInventoryCache(tenant);
             log.debug("{} - Removed C8Y agent caches", tenant);
         } catch (Exception e) {
@@ -367,6 +373,17 @@ public class BootstrapService {
             requiresSave = true;
         }
 
+        if (serviceConfig.getOutboundExternalIdCacheSize() == null
+                || serviceConfig.getOutboundExternalIdCacheSize() == 0) {
+            serviceConfig.setOutboundExternalIdCacheSize(outboundExternalIdCacheSize);
+            requiresSave = true;
+        }
+
+        if (serviceConfig.getOutboundExternalIdCacheRetention() == null) {
+            serviceConfig.setOutboundExternalIdCacheRetention(1);
+            requiresSave = true;
+        }
+
         if (serviceConfig.getInventoryCacheSize() == null || serviceConfig.getInventoryCacheSize() == 0) {
             serviceConfig.setInventoryCacheSize(inventoryCacheSize);
             requiresSave = true;
@@ -401,17 +418,23 @@ public class BootstrapService {
                 .filter(size -> size != 0)
                 .orElse(inboundExternalIdCacheSize);
 
+        int cacheSizeOutbound = Optional.ofNullable(serviceConfig.getOutboundExternalIdCacheSize())
+                .filter(size -> size != 0)
+                .orElse(outboundExternalIdCacheSize);
+
         int cacheSizeInventory = Optional.ofNullable(serviceConfig.getInventoryCacheSize())
                 .filter(size -> size != 0)
                 .orElse(inventoryCacheSize);
 
         c8YAgent.initializeInboundExternalIdCache(tenant, cacheSizeInbound);
+        c8YAgent.initializeOutboundExternalIdCache(tenant, cacheSizeOutbound);
 
         // to test cache eviction
         // c8YAgent.initializeInventoryCache(tenant, 1);
         c8YAgent.initializeInventoryCache(tenant, cacheSizeInventory);
 
         cacheInboundExternalIdRetentionStartMap.put(tenant, Instant.now());
+        cacheOutboundExternalIdRetentionStartMap.put(tenant, Instant.now());
         cacheInventoryRetentionStartMap.put(tenant, Instant.now());
     }
 
@@ -486,13 +509,15 @@ public class BootstrapService {
 
         try {
             connectorConfigurationService.saveConnectorConfiguration(testConnectorConfig);
+            // initializeConnectorByConfiguration() already builds a fully-initialized TestClient
+            // via the factory (initializeManagers() called) and registers its outbound dispatcher.
+            // Do NOT redundantly re-register here with initialTestClient: it was only constructed
+            // via the no-arg constructor to read default connector-spec properties above, so its
+            // explorerListeners/outboundExplorerListeners are never initialized — wiring it in as
+            // the outbound dispatcher replaces the good one and NPEs on the next notification.
             initializeConnectorByConfiguration(testConnectorConfig, serviceConfiguration, tenant);
         } catch (ConnectorException | JsonProcessingException e) {
             throw new ConnectorRegistryException(e.getMessage());
-        }
-
-        if (serviceConfiguration.getOutboundMappingEnabled()) {
-            configurationRegistry.initializeOutboundMapping(tenant, serviceConfiguration, initialTestClient);
         }
     }
 
@@ -649,6 +674,21 @@ public class BootstrapService {
 
                 log.info("{} - Identity cache cleared. Old Size: {}, New size: {}",
                         tenant, cacheSize, c8YAgent.getInboundExternalIdCacheSize(tenant));
+            }
+        }
+
+        Instant cacheRetentionStartOutbound = cacheOutboundExternalIdRetentionStartMap.get(tenant);
+        if (cacheRetentionStartOutbound != null) {
+
+            int retentionDaysOutbound = serviceConfig.getOutboundExternalIdCacheRetention();
+
+            if (shouldClearCache(cacheRetentionStartOutbound, retentionDaysOutbound)) {
+                int cacheSize = c8YAgent.getOutboundExternalIdCacheSize(tenant);
+                c8YAgent.clearOutboundExternalIdCache(tenant, false, cacheSize);
+                cacheOutboundExternalIdRetentionStartMap.put(tenant, Instant.now());
+
+                log.info("{} - Outbound identity cache cleared. Old Size: {}, New size: {}",
+                        tenant, cacheSize, c8YAgent.getOutboundExternalIdCacheSize(tenant));
             }
         }
 

@@ -34,7 +34,7 @@ cleanup() {
     if [ -n "${DEVICE_ID:-}" ]; then
         c8y inventory delete --id "$DEVICE_ID" 2>/dev/null || true
     fi
-    if [ -n "${DEVICE_NAME:-}" ]; then
+    if [ -n "${EXT_ID:-}" ]; then
         c8y identity delete --name "$EXT_ID" --type "c8y_Serial" 2>/dev/null || true
     fi
     if [ -n "${TEMP_FILE:-}" ] && [ -f "$TEMP_FILE" ]; then

@@ -38,16 +38,18 @@ import dynamic.mapper.processor.model.RepairStrategy;
 
 import org.apache.camel.Exchange;
 import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
 public class InternalProtobufProcessor extends BaseProcessor {
 
-    @Autowired
-    private MappingService mappingService;
-   
+    private final MappingService mappingService;
+
+    public InternalProtobufProcessor(MappingService mappingService) {
+        this.mappingService = mappingService;
+    }
+
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<byte[]> context = getProcessingContextAsByteArray(exchange);

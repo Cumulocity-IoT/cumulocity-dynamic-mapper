@@ -18,17 +18,19 @@
  * @authors Christof Strack
  */
 import {
+  ChangeDetectorRef,
   Component,
   inject,
   Input,
   OnInit,
+  ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { Mapping, Substitution, MappingType, SharedService, isSubstitutionsAsCode, TransformationType } from '../../shared';
+import { Mapping, Substitution, MappingType, RepairStrategy, SAMPLE_TEMPLATES_C8Y, SharedService, isSubstitutionsAsCode, TransformationType, getGenericDeviceIdentifier } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
-import { AiChatComponent, AiChatMessageComponent } from '@c8y/ngx-components/ai/ai-chat';
-import { AIMessage } from '@c8y/ngx-components/ai';
-import { AIAgentService, AgentUsage } from '../core/ai-agent.service';
+import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
+import { AIMessage, ClientAgentDefinition, Suggestion } from '@c8y/ngx-components/ai';
+import { toClientAgentDefinition } from '../core/ai-agent.service';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 import { ServiceConfiguration } from '../../configuration';
 import { base64ToBytes } from '../shared/util';
@@ -41,15 +43,17 @@ import { EditorMode } from '../shared/stepper.model';
   styleUrls: ['./ai-prompt.component.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports:[CoreModule, AiChatComponent, AiChatMessageComponent],
+  imports:[CoreModule, AgentChatComponent],
   host: { class: 'd-contents' }
 })
 export class AIPromptComponent implements OnInit {
 
   private readonly alertService = inject(AlertService);
-  private readonly aiAgentService = inject(AIAgentService);
   private readonly sharedService = inject(SharedService);
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  @ViewChild(AgentChatComponent) agentChat?: AgentChatComponent;
 
   @Input() mapping: Mapping;
   @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
@@ -69,13 +73,15 @@ export class AIPromptComponent implements OnInit {
 
   hasIssue = false;
   isLoading = false;
-  isLoadingChat = false;
   newMessage = '';
-  /** Bound to [prompt] on c8y-ai-chat so the textarea stays empty during auto-send. */
-  chatInput = '';
-  testVars: string = '';
   serviceConfiguration: ServiceConfiguration;
   agentType: MappingType;
+  variables: Record<string, unknown> = {};
+  clientAgentDefinition?: ClientAgentDefinition;
+  assistantMessageDisplayConfig = {
+    showDefaultToolDetails: 'all' as const,
+    experimental_nonFinalStepTextDisplay: 'collapsible-thinking-block' as const
+  };
 
   chatConfig = {
     headline: 'AI Assistant',
@@ -84,23 +90,21 @@ export class AIPromptComponent implements OnInit {
     placeholder: 'Type your message...',
     sendButtonText: 'Send',
     cancelButtonText: 'Cancel',
-    disclaimerText: 'AI-generated responses can contain errors. Verify the details before use.'
+    disclaimerText: 'AI-generated responses can contain errors. Verify the details before use.',
+    showCumulativeUsage: true
   };
 
-  /** Set during ngOnInit — true when the mapping already has code or substitutions */
-  isReviewMode = false;
   /** Exposed for the template header */
   drawerTitle = 'AI Mapping Assistant';
-  /** In UPDATE mode: true while the user is choosing review-vs-generate */
-  awaitingModeChoice = false;
+  /**
+   * UPDATE mode: clickable suggestion chips rendered inside the chat (via #agentChat's
+   * own `suggestions` input) so the user can pick review-vs-generate without a separate
+   * blocking screen. Left undefined in CREATE mode, where there's nothing to review yet
+   * and generation is triggered immediately instead.
+   */
+  suggestions?: Suggestion[];
   /** Cached mapping object (without substitutions) ready to send to AI */
   private mappingForAI: any = null;
-  /** Aborts the in-flight AI request when the user clicks Cancel while loading */
-  private abortController: AbortController | null = null;
-  /** Token usage for the most recently received assistant response, if reported by the backend */
-  lastUsage: AgentUsage | null = null;
-  /** Running total of token usage across the conversation */
-  cumulativeUsage: Required<AgentUsage> = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
 
   // Add getter to check if this is a code-based mapping
   get isCodeMapping(): boolean {
@@ -108,14 +112,12 @@ export class AIPromptComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
-    // console.log(this.mapping);
     this.agentType = this.mapping.mappingType;
     this.serviceConfiguration =
       await this.sharedService.getServiceConfiguration();
 
-    this.testVars = JSON.stringify(
-      this.aiAgent?.agent?.variables || {},
-    );
+    this.variables = this.aiAgent?.agent?.variables ?? {};
+    this.clientAgentDefinition = this.aiAgent ? toClientAgentDefinition(this.aiAgent) : undefined;
 
     this.mappingForAI = this.buildMappingForAI();
 
@@ -123,87 +125,123 @@ export class AIPromptComponent implements OnInit {
       this.mappingForAI.code = this.extractExistingJavaScriptCode(this.mapping);
     }
 
+    // ngOnInit is async, and everything above runs after its first await — by then
+    // Angular has already run its *initial* change detection (and ngAfterViewInit), using
+    // whatever state existed at that pause point, so relying on either to pick up state
+    // set here doesn't work. #agentChat's host `@if` depends on clientAgentDefinition,
+    // only just assigned above, so force a render now before touching it further.
+    this.cdr.detectChanges();
+
     if (this.editorMode === EditorMode.UPDATE) {
-      // Let the user decide: review existing or generate from scratch
-      this.awaitingModeChoice = true;
-      this.drawerTitle = 'AI Mapping Assistant';
+      // Existing code/substitutions to review — offer both as suggestion chips inside
+      // the chat itself and let the user pick, instead of auto-sending anything.
+      const label = this.isCodeMapping ? 'Smart Function' : 'substitutions';
+      this.suggestions = [
+        { label: `Review / Refine existing ${label}`, prompt: this.buildReviewMessage(), icon: 'search' },
+        { label: `Generate new ${label} from scratch`, prompt: this.buildGenerateMessage(), icon: 'plus-circle-o' }
+      ];
+      this.chatConfig = {
+        ...this.chatConfig,
+        welcomeText: this.isCodeMapping
+          ? "This mapping already has a Smart Function. I can review the existing code and suggest " +
+            "improvements, or generate a new one from scratch based on the mapping's source and target " +
+            "templates. Pick an option below, or describe what you'd like changed."
+          : "This mapping already has substitutions defined. I can review them and suggest improvements, " +
+            "or generate a new set from scratch based on the mapping's source and target templates. " +
+            "Pick an option below, or describe what you'd like changed."
+      };
+      this.cdr.detectChanges();
       return;
     }
 
-    // CREATE mode — always generate
-    this.prepareGenerateMessage();
+    // CREATE mode — nothing to review yet, so always generate immediately with no
+    // user interaction.
+    this.drawerTitle = this.isCodeMapping ? 'Generate Smart Function' : 'Generate Substitutions';
+    this.chatConfig = {
+      ...this.chatConfig,
+      title: this.drawerTitle,
+      welcomeText: this.isCodeMapping
+        ? "Generating a Smart Function for this mapping based on its source and target templates. " +
+          "This starts automatically — no action needed."
+        : "Generating substitutions for this mapping based on its source and target templates. " +
+          "This starts automatically — no action needed."
+    };
+    this.newMessage = this.buildGenerateMessage();
     await this.sendMessage();
   }
 
-  /** Called when the user picks "Review / Refine" in the choice screen */
-  async chooseReview(): Promise<void> {
-    this.awaitingModeChoice = false;
-    this.isReviewMode = true;
-    this.prepareReviewMessage();
-    await this.sendMessage();
-  }
-
-  /** Called when the user picks "Generate new" in the choice screen */
-  async chooseGenerate(): Promise<void> {
-    this.awaitingModeChoice = false;
-    this.isReviewMode = false;
-    this.prepareGenerateMessage();
-    await this.sendMessage();
-  }
-
-  private prepareReviewMessage(): void {
+  private buildReviewMessage(): string {
     const direction = this.mapping.direction ?? 'INBOUND';
     const targetAPI = this.mapping.targetAPI ?? '';
 
     if (this.isCodeMapping) {
-      this.drawerTitle = 'Review / Refine Smart Function';
-      this.chatConfig = { ...this.chatConfig, title: 'Review / Refine Smart Function' };
-      this.newMessage =
-        `Review the existing ${direction} Smart Function` +
-        (targetAPI ? ` (target: ${targetAPI})` : '') + " in the following mapping" +
-        " and suggest improvements.\n\n" +
-        "```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
-    } else {
-      this.drawerTitle = 'Review / Refine Substitutions';
-      this.chatConfig = { ...this.chatConfig, title: 'Review / Refine Substitutions' };
-      this.newMessage =
-        `Review the existing substitutions for this ${direction}` +
-        (targetAPI ? ` ${targetAPI}` : '') + " mapping" +
-        " and suggest improvements.\n\n" +
-        "```json\n" + JSON.stringify({ ...this.mappingForAI, substitutions: this.mapping.substitutions }, null, 2) + "\n```\n";
+      return `Review the existing ${direction} Smart Function` +
+        (targetAPI ? ` (target: ${targetAPI})` : '') +
+        " and suggest improvements.\n";
     }
+    return `Review the existing substitutions for this ${direction}` +
+      (targetAPI ? ` ${targetAPI}` : '') + " mapping" +
+      " and suggest improvements.\n";
   }
 
-  private prepareGenerateMessage(): void {
+  /**
+   * Grounding context re-sent alongside every user message (per AgentChatComponent's
+   * groundingContextProvider contract) instead of being embedded in the visible chat message.
+   * The mapping JSON can run to dozens of lines (managed-object metadata, self links, etc.) and
+   * rendering it inline made the very first "message" in the chat an unreadable wall of raw JSON —
+   * this keeps the mapping data available to the agent without cluttering the transcript.
+   */
+  private buildMappingContext(): string {
+    const withSubstitutions = this.isCodeMapping
+      ? this.mappingForAI
+      : { ...this.mappingForAI, substitutions: this.mapping.substitutions };
+    return "[MAPPING_CONTEXT] Current state of the mapping being edited (not written by the user):\n" +
+      "```json\n" + JSON.stringify(withSubstitutions, null, 2) + "\n```\n";
+  }
+
+  groundingContextProvider = (): string => this.buildMappingContext();
+
+  private buildGenerateMessage(): string {
     const direction = this.mapping.direction ?? 'INBOUND';
     const targetAPI = this.mapping.targetAPI ?? '';
 
     if (this.isCodeMapping) {
-      this.drawerTitle = 'Generate Smart Function';
-      this.chatConfig = { ...this.chatConfig, title: 'Generate Smart Function' };
       const isOutbound = direction === 'OUTBOUND';
-      const targetTemplateIsEmpty = !this.mappingForAI.targetTemplate
-        || JSON.stringify(this.mappingForAI.targetTemplate) === '{}';
-      const missingContextHint = isOutbound && targetTemplateIsEmpty
-        ? "The targetTemplate is empty — ask the user what device message format or protocol structure" +
-          " is expected (field names, units, nesting) before generating code.\n"
-        : !isOutbound && !targetAPI
+      // Outbound Smart Functions never have a fixed targetTemplate — it is always "{}" by design,
+      // because the function body itself defines whatever message structure the target broker/
+      // protocol expects (there's no fixed Cumulocity-side schema to map into, as there is for
+      // inbound). Treating that as "missing context" made the AI always stop and ask the user a
+      // clarifying question instead of generating code, so the editor stayed empty on every attempt.
+      const inboundSample = !isOutbound && targetAPI ? SAMPLE_TEMPLATES_C8Y[targetAPI] : undefined;
+      const missingContextHint = isOutbound
+        ? "This is an OUTBOUND mapping: there is no fixed targetTemplate/schema — the Smart Function" +
+          " itself builds whatever payload structure the target broker/protocol expects. Use the" +
+          " sourceTemplate (the Cumulocity object being published) plus the topic/description in the" +
+          " mapping context to infer reasonable field names and generate the code directly — do not" +
+          " ask the user for a target format before generating.\n"
+        : !targetAPI
           ? "The targetAPI is not set — ask the user what kind of Cumulocity object to produce" +
             " (e.g. MEASUREMENT, ALARM, EVENT, INVENTORY) before generating code.\n"
-          : "";
-      this.newMessage =
-        `Generate a ${direction} Smart Function for the following mapping` +
+          // INBOUND Smart Functions also always carry an empty targetTemplate ("{}") by design —
+          // the function body constructs the Cumulocity API payload itself instead of mapping into
+          // a fixed template. Without a concrete example the AI has no shape to aim for, so give it
+          // the standard sample payload for the mapping's targetAPI as a reference.
+          : inboundSample
+            ? `There is no fixed targetTemplate — the Smart Function itself builds the Cumulocity` +
+              ` ${targetAPI} API payload from the sourceTemplate fields. A typical ${targetAPI} object` +
+              " looks like:\n```json\n" + inboundSample + "\n```\n" +
+              " Generate the code directly — do not ask the user for a target format before generating.\n"
+            : "";
+      return `Generate a ${direction} Smart Function for the following mapping` +
         (targetAPI ? ` (target: ${targetAPI})` : '') + ".\n" +
-        missingContextHint +
-        "\n```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
-    } else {
-      this.drawerTitle = 'Generate Substitutions';
-      this.chatConfig = { ...this.chatConfig, title: 'Generate Substitutions' };
-      this.newMessage =
-        `Generate JSONata substitutions for this ${direction}` +
-        (targetAPI ? ` ${targetAPI}` : '') + " mapping.\n\n" +
-        "```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
+        missingContextHint;
     }
+    const identityTarget = getGenericDeviceIdentifier(this.mapping);
+    return `Generate JSONata substitutions for this ${direction}` +
+      (targetAPI ? ` ${targetAPI}` : '') + " mapping.\n" +
+      `Map the device identity to \`${identityTarget}\` — this mapping has` +
+      ` useExternalId=${!!this.mapping.useExternalId} — do not use the other` +
+      " `_IDENTITY_` field.\n";
   }
 
   save() {
@@ -239,98 +277,38 @@ export class AIPromptComponent implements OnInit {
     return mappingCodeTemplateDecoded;
   }
 
-  async sendMessage() {
-    if (!this.aiAgent) {
+  async sendMessage(): Promise<void> {
+    if (!this.aiAgent || !this.newMessage) {
+      return;
+    }
+    if (!this.agentChat) {
+      console.error('AIPromptComponent.sendMessage: #agentChat is not available yet');
+      return;
+    }
+    await this.agentChat.sendMessage({ role: 'user', content: this.newMessage });
+    this.newMessage = '';
+  }
+
+  /** Called via (onMessageFinish) once the agent's response has fully streamed in. */
+  onMessageFinish(message: AIMessage): void {
+    if (message.role !== 'assistant') {
       return;
     }
 
-    if (this.newMessage) {
-      this.isLoadingChat = true;
-      if (this.aiAgent.agent.messages === undefined) {
-        this.aiAgent.agent.messages = [];
-      }
+    const content = message.content
+      .map(part => {
+        if (part.type === 'text') return part.text;
+        if (part.type === 'object') return part.jsonContent;
+        return '';
+      })
+      .filter(text => text.length > 0)
+      .join('\n\n');
 
-      this.aiAgent.agent.messages.push({
-        content: this.newMessage,
-        role: 'user',
-      });
-
-      let variables: Record<string, unknown>;
-      try {
-        variables = JSON.parse(this.testVars);
-        this.aiAgent.agent.variables = variables;
-      } catch (ex) {
-        this.alertService.danger('Invalid JSON in test variables');
-        this.isLoadingChat = false;
-        return;
-      }
-
-      this.abortController = new AbortController();
-
-      try {
-        const sdkMessages = this.toSdkMessages(this.aiAgent.agent.messages);
-        const { content, usage } = await this.aiAgentService.test(
-          this.aiAgent,
-          sdkMessages,
-          variables,
-          this.abortController
-        );
-
-        this.aiAgent.agent.messages.push({
-          content,
-          role: 'assistant',
-        });
-
-        this.applyUsage(usage);
-
-        if (this.isCodeMapping) {
-          this.checkIfResponseContainsJavaScript(content);
-        } else {
-          this.checkIfResponseContainsSubstitutions(content);
-        }
-      } catch (ex) {
-        if ((ex as { name?: string })?.name !== 'AbortError') {
-          this.alertService.addServerFailure(ex);
-        }
-      }
-      // After the new message is added I want to scroll to the end of the screen
-      // Clear the input field
-      this.newMessage = '';
-      this.isLoadingChat = false;
-      this.abortController = null;
+    if (this.isCodeMapping) {
+      this.checkIfResponseContainsJavaScript(content);
+    } else {
+      this.checkIfResponseContainsSubstitutions(content);
     }
-  }
-
-  /** Cancels the in-flight AI request, triggered by the c8y-ai-chat cancel button. */
-  cancelMessage(): void {
-    this.abortController?.abort();
-  }
-
-  private applyUsage(usage?: AgentUsage): void {
-    if (!usage) {
-      return;
-    }
-    this.lastUsage = usage;
-    this.cumulativeUsage = {
-      inputTokens: this.cumulativeUsage.inputTokens + (usage.inputTokens ?? 0),
-      outputTokens: this.cumulativeUsage.outputTokens + (usage.outputTokens ?? 0),
-      totalTokens: this.cumulativeUsage.totalTokens + (usage.totalTokens ?? 0)
-    };
-  }
-
-  /**
-   * Converts the locally-tracked {role, content} history into the AIMessage shape the AI SDK expects.
-   * `messages` is typed loosely because `this.aiAgent.agent.messages` carries the vendor `ai` package's
-   * `CoreMessage[]` type (whose `content` can be a structured part array), even though this component
-   * only ever pushes plain `{content: string, role: string}` entries onto it at runtime.
-   */
-  private toSdkMessages(messages: { content: unknown; role: string }[]): AIMessage[] {
-    return messages.map(m => {
-      const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
-      return m.role === 'assistant'
-        ? { role: 'assistant', content: [{ type: 'text', text: content }] }
-        : { role: m.role as 'user' | 'system', content };
-    });
   }
 
   /**
@@ -388,117 +366,55 @@ export class AIPromptComponent implements OnInit {
    * so this only ever flips `valid` from false to true, never the other way around.
    */
   checkIfResponseContainsSubstitutions(content: any) {
-    try {
-      // Look for the pattern ```json followed by content and ending with ```
-      const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/;
-      const match = content.match(jsonBlockRegex);
+    const trimmedContent = typeof content === 'string' ? content.trim() : '';
+    if (!trimmedContent) return;
 
-      if (!match || !match[1]) {
-        // No JSON block in this response — keep the previous substitutions/valid state untouched.
-        return;
-      }
+    // A response may contain multiple fenced code blocks — e.g. the agent illustrating
+    // alternative approaches before presenting its final answer — so candidates are tried
+    // most-recent-first: last ```json-tagged block, then last generic ``` block, then (some
+    // agents, e.g. object-type/schema-based ones, omit fences entirely) the raw body itself.
+    // Trying only the FIRST match previously grabbed an earlier example/alternative instead of
+    // the final answer, which failed to parse and surfaced a spurious error.
+    const strictBlocks = [...trimmedContent.matchAll(/```json\s*([\s\S]*?)\s*```/g)].map(m => m[1]);
+    const genericBlocks = [...trimmedContent.matchAll(/```(?:json)?\s*([\s\S]*?)\s*```/g)].map(m => m[1]);
+    const looksLikeRawJson = trimmedContent.startsWith('[') || trimmedContent.startsWith('{');
+    const candidates = [
+      ...strictBlocks.reverse(),
+      ...genericBlocks.reverse(),
+      ...(looksLikeRawJson ? [trimmedContent] : [])
+    ];
 
-      const parsedSubstitutions = JSON.parse(match[1].trim());
+    for (const candidate of candidates) {
+      const trimmedCandidate = candidate?.trim();
+      if (!trimmedCandidate) continue;
 
-      if (!Array.isArray(parsedSubstitutions)) {
-        return;
-      }
+      try {
+        const parsedSubstitutions = JSON.parse(trimmedCandidate);
+        if (!Array.isArray(parsedSubstitutions)) continue;
 
-      const isValidSubstitutions = parsedSubstitutions.every(sub =>
-        sub.hasOwnProperty('pathSource') &&
-        sub.hasOwnProperty('pathTarget') &&
-        sub.hasOwnProperty('expandArray')
-      );
+        const isValidSubstitutions = parsedSubstitutions.every(sub =>
+          sub.hasOwnProperty('pathSource') &&
+          sub.hasOwnProperty('pathTarget') &&
+          sub.hasOwnProperty('expandArray')
+        );
+        if (!isValidSubstitutions) continue;
 
-      if (isValidSubstitutions) {
-        this.substitutions = parsedSubstitutions;
+        // The LLM's JSON block may omit repairStrategy (or emit it as null) — default it here so
+        // every downstream consumer (edit modal, persisted mapping) always sees a real value
+        // instead of undefined/null.
+        this.substitutions = parsedSubstitutions.map(sub => ({
+          ...sub,
+          repairStrategy: sub.repairStrategy ?? RepairStrategy.DEFAULT
+        }));
         this.valid = true;
+        return;
+      } catch {
+        // Not a valid substitutions array — try the next candidate rather than failing outright.
+        continue;
       }
-    } catch (error) {
-      console.error('Error parsing substitutions from response:', error);
-      this.alertService.danger('Failed to parse substitutions from AI response');
     }
-  }
-
-  getCompatibleMessages() {
-    if (!this.aiAgent?.agent?.messages) {
-      return [];
-    }
-
-    // Filter out messages with incompatible roles
-    return this.aiAgent.agent.messages.filter(message =>
-      message.role === 'user' ||
-      message.role === 'assistant' ||
-      message.role === 'system'
-    );
-  }
-
-  getMessageContent(message: any): string {
-    if (!message?.content) {
-      return '';
-    }
-
-    // If it's already a string, return it
-    if (typeof message.content === 'string') {
-      return message.content;
-    }
-
-    // If it's an array of parts, extract text content
-    if (Array.isArray(message.content)) {
-      return message.content
-        .map(part => {
-          if (typeof part === 'string') {
-            return part;
-          }
-          if (part && typeof part === 'object' && 'text' in part) {
-            return part.text;
-          }
-          if (part && typeof part === 'object' && 'content' in part) {
-            return part.content;
-          }
-          return '';
-        })
-        .filter(text => text.length > 0)
-        .join(' ');
-    }
-
-    // If it's an object with text property
-    if (typeof message.content === 'object' && 'text' in message.content) {
-      return message.content.text;
-    }
-
-    // Fallback: try to stringify
-    try {
-      return JSON.stringify(message.content);
-    } catch {
-      return '[Unable to display content]';
-    }
-  }
-
-  /**
-   * Handles incoming messages from the c8y-ai-chat component
-   */
-  handleMessage(event: any) {
-    this.newMessage = event.content;
-    this.sendMessage();
-  }
-
-  /**
-   * Formats a message for the c8y-ai-chat-message component
-   */
-  formatMessage(message: any): any {
-    let content = this.getMessageContent(message);
-
-    // For assistant messages with object type, wrap in JSON code block
-    if (this.aiAgent?.type === 'object' && message.role === 'assistant') {
-      content = '```json\n' + content + '\n```';
-    }
-
-    return {
-      role: message.role,
-      content: content,
-      timestamp: message.timestamp || new Date().toISOString()
-    };
+    // No candidate parsed into a valid substitutions array — keep the previous substitutions/valid
+    // state untouched (common mid-conversation, e.g. a clarifying question with no final answer yet).
   }
 
 }

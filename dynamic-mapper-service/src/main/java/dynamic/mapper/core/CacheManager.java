@@ -24,7 +24,6 @@ package dynamic.mapper.core;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -34,6 +33,8 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 
 import dynamic.mapper.core.cache.InboundExternalIdCache;
 import dynamic.mapper.core.cache.InventoryCache;
+import dynamic.mapper.core.cache.OutboundExternalIdCache;
+import dynamic.mapper.core.cache.OutboundIdKey;
 import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.notification.NotificationSubscriber;
 import lombok.extern.slf4j.Slf4j;
@@ -42,19 +43,27 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class CacheManager {
 
-    @Autowired
-    @Lazy
-    private C8YAgent c8yAgent;
+    private final C8YAgent c8yAgent;
 
-    @Autowired
-    private NotificationSubscriber notificationSubscriber;
+    private final NotificationSubscriber notificationSubscriber;
+
+    public CacheManager(@Lazy C8YAgent c8yAgent, NotificationSubscriber notificationSubscriber) {
+        this.c8yAgent = c8yAgent;
+        this.notificationSubscriber = notificationSubscriber;
+    }
 
     private Map<String, InboundExternalIdCache> inboundExternalIdCaches = new ConcurrentHashMap<>();
+    private Map<String, OutboundExternalIdCache> outboundExternalIdCaches = new ConcurrentHashMap<>();
     private Map<String, InventoryCache> inventoryCaches = new ConcurrentHashMap<>();
 
     public void initializeInboundExternalIdCache(String tenant, int inboundExternalIdCacheSize) {
         log.info("{} - Initialize inboundExternalIdCache {}", tenant, inboundExternalIdCacheSize);
         inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
+    }
+
+    public void initializeOutboundExternalIdCache(String tenant, int outboundExternalIdCacheSize) {
+        log.info("{} - Initialize outboundExternalIdCache {}", tenant, outboundExternalIdCacheSize);
+        outboundExternalIdCaches.put(tenant, new OutboundExternalIdCache(outboundExternalIdCacheSize, tenant));
     }
 
     public void initializeInventoryCache(String tenant, int inventoryCacheSize) {
@@ -83,8 +92,26 @@ public class CacheManager {
     }
 
     public Integer getInboundExternalIdCacheSize(String tenant) {
-        return (inboundExternalIdCaches.get(tenant) != null 
+        return (inboundExternalIdCaches.get(tenant) != null
                 ? inboundExternalIdCaches.get(tenant).getCacheSize() : 0);
+    }
+
+    public OutboundExternalIdCache getOutboundExternalIdCache(String tenant) {
+        return outboundExternalIdCaches.get(tenant);
+    }
+
+    public OutboundExternalIdCache removeOutboundExternalIdCache(String tenant) {
+        OutboundExternalIdCache removed = outboundExternalIdCaches.remove(tenant);
+        if (removed != null) {
+            // Deregister the size gauge so it does not leak across tenant churn
+            removed.close();
+        }
+        return removed;
+    }
+
+    public Integer getOutboundExternalIdCacheSize(String tenant) {
+        return (outboundExternalIdCaches.get(tenant) != null
+                ? outboundExternalIdCaches.get(tenant).getCacheSize() : 0);
     }
 
     public InventoryCache removeInventoryCache(String tenant) {
@@ -146,6 +173,57 @@ public class CacheManager {
         InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
         if (inboundExternalIdCache != null) {
             return inboundExternalIdCache.getCacheSize();
+        } else {
+            return 0;
+        }
+    }
+
+    public void clearOutboundExternalIdCache(String tenant, boolean recreate, int outboundExternalIdCacheSize) {
+        OutboundExternalIdCache outboundExternalIdCache = outboundExternalIdCaches.get(tenant);
+
+        if (outboundExternalIdCache != null) {
+            String action = recreate ? "recreated" : "cleared";
+            int previousSize = outboundExternalIdCache.getCacheSize();
+
+            if (recreate) {
+                // Deregister the old gauge before the replacement registers a new
+                // one under the same name+tags, otherwise Micrometer keeps the old
+                // meter bound to the discarded map.
+                outboundExternalIdCaches.remove(tenant);
+                outboundExternalIdCache.close();
+                outboundExternalIdCaches.put(tenant, new OutboundExternalIdCache(outboundExternalIdCacheSize, tenant));
+            } else {
+                outboundExternalIdCache.clearCache();
+            }
+
+            String message = String.format("OutboundExternalIdCache %s (previous size: %d entries, new capacity: %d)",
+                    action, previousSize, outboundExternalIdCacheSize);
+
+            c8yAgent.createLoggingEvent(
+                    message,
+                    LoggingEventType.CACHE_EVENT_TYPE,
+                    org.joda.time.DateTime.now(),
+                    tenant,
+                    Map.of("cache", "OutboundExternalIdCache", "action", action,
+                            "previousSize", String.valueOf(previousSize),
+                            "newCapacity", String.valueOf(outboundExternalIdCacheSize)));
+
+            log.info("{} - {}", tenant, message);
+        }
+    }
+
+    public void removeDeviceFromOutboundExternalIdCache(String tenant, OutboundIdKey key) {
+        OutboundExternalIdCache outboundExternalIdCache = outboundExternalIdCaches.get(tenant);
+        if (outboundExternalIdCache != null) {
+            outboundExternalIdCache.removeExternalIdForSource(key);
+        }
+        log.info("{} - Removed device {} from OutboundExternalIdCache", tenant, key.sourceId());
+    }
+
+    public int getSizeOutboundExternalIdCache(String tenant) {
+        OutboundExternalIdCache outboundExternalIdCache = outboundExternalIdCaches.get(tenant);
+        if (outboundExternalIdCache != null) {
+            return outboundExternalIdCache.getCacheSize();
         } else {
             return 0;
         }
