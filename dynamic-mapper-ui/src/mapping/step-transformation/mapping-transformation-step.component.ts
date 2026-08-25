@@ -77,14 +77,8 @@ export class MappingSubstitutionStepComponent implements OnInit {
 
   get identitySubstitutionHint(): string {
     const side = this.mapping?.direction === Direction.OUTBOUND ? 'source' : 'target';
-    if (this.mapping?.direction === Direction.OUTBOUND && this.mapping?.useExternalId) {
-      return `One substitution with ${side} <code class="text-warning text-10">_IDENTITY_.externalId</code>`
-        + ` or <code class="text-warning text-10">_IDENTITY_.c8ySourceId</code> must exist.`;
-    }
-    const path = this.mapping?.useExternalId
-      ? '_IDENTITY_.externalId'
-      : '_IDENTITY_.c8ySourceId';
-    return `One substitution with ${side} <code class="text-warning text-10">${path}</code> must exist.`;
+    return `One substitution with ${side} <code class="text-warning text-10">_IDENTITY_.externalId</code>`
+      + ` or <code class="text-warning text-10">_IDENTITY_.c8ySourceId</code> must exist.`;
   }
 
   templateForm: FormGroup = new FormGroup({});

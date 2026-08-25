@@ -279,7 +279,8 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
     /**
      * Builds the base config map shared by inbound and outbound Smart Function
      * contexts: {@code tenant}, {@code topic}, {@code clientId},
-     * {@code mappingName}, {@code mappingId}, {@code targetAPI}, {@code debug}.
+     * {@code mappingName}, {@code mappingId}, {@code version}, {@code targetAPI},
+     * {@code debug}.
      * Subclasses add their own keys on top.
      */
     protected Map<String, Object> buildBaseSmartFunctionConfig(ProcessingContext<?> context) {
@@ -290,6 +291,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         config.put("clientId", context.getClientId());
         config.put("mappingName", mapping.getName());
         config.put("mappingId", mapping.getId());
+        config.put("version", mapping.getVersion());
         config.put("targetAPI", mapping.getTargetAPI().toString());
         config.put(ProcessingContext.DEBUG, mapping.getDebug());
         return config;

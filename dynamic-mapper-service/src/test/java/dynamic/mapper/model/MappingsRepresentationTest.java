@@ -418,4 +418,97 @@ void testValidateSubstitutions() {
     assertTrue(errors3.contains(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used));
 }
 
+@Test
+void testValidateSubstitutionsOutbound() {
+    Substitution dataSub = Substitution.builder()
+            .pathSource("temperature")
+            .pathTarget("c8y_Temperature.T.value")
+            .build();
+
+    // Outbound with no identifier substitution must be rejected
+    Mapping noDeviceIdMapping = Mapping.builder()
+            .id("test-outbound-1")
+            .identifier("test-outbound-1")
+            .name("Outbound Without Identifier")
+            .direction(Direction.OUTBOUND)
+            .targetAPI(API.EVENT)
+            .useExternalId(true)
+            .externalIdType("c8y_Serial")
+            .mappingType(dynamic.mapper.processor.model.MappingType.JSON)
+            .transformationType(dynamic.mapper.processor.model.TransformationType.DEFAULT)
+            .active(false)
+            .debug(false)
+            .qos(Qos.AT_MOST_ONCE)
+            .lastUpdate(System.currentTimeMillis())
+            .sourceTemplate("{}")
+            .targetTemplate("{}")
+            .substitutions(new Substitution[] { dataSub })
+            .build();
+
+    List<ValidationError> errors1 = mappingValidator.validateSubstitutions(noDeviceIdMapping);
+    assertTrue(errors1.contains(ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used),
+            "Outbound mapping without a device identifier substitution should be rejected");
+
+    // Outbound: identifier embedded in a compound expression (e.g. concatenation)
+    // must still be recognized, using either externalId or c8ySourceId
+    Substitution compoundExternalIdSub = Substitution.builder()
+            .pathSource("\"externalId_.\" & _IDENTITY_.externalId")
+            .pathTarget("_TOPIC_LEVEL_[3]")
+            .build();
+
+    Mapping compoundExpressionMapping = Mapping.builder()
+            .id("test-outbound-2")
+            .identifier("test-outbound-2")
+            .name("Outbound With Compound Identifier Expression")
+            .direction(Direction.OUTBOUND)
+            .targetAPI(API.EVENT)
+            .useExternalId(true)
+            .externalIdType("c8y_Serial")
+            .mappingType(dynamic.mapper.processor.model.MappingType.JSON)
+            .transformationType(dynamic.mapper.processor.model.TransformationType.DEFAULT)
+            .active(false)
+            .debug(false)
+            .qos(Qos.AT_MOST_ONCE)
+            .lastUpdate(System.currentTimeMillis())
+            .sourceTemplate("{}")
+            .targetTemplate("{}")
+            .substitutions(new Substitution[] { compoundExternalIdSub, dataSub })
+            .build();
+
+    List<ValidationError> errors2 = mappingValidator.validateSubstitutions(compoundExpressionMapping);
+    assertTrue(errors2.isEmpty(),
+            "Identifier referenced inside a compound expression should satisfy the device identifier rule, but got: "
+                    + errors2);
+
+    // Outbound: c8ySourceId is also accepted even when useExternalId=true (either/or)
+    Substitution c8ySourceIdSub = Substitution.builder()
+            .pathSource("_IDENTITY_.c8ySourceId")
+            .pathTarget("_TOPIC_LEVEL_[3]")
+            .build();
+
+    Mapping c8ySourceIdMapping = Mapping.builder()
+            .id("test-outbound-3")
+            .identifier("test-outbound-3")
+            .name("Outbound With c8ySourceId Despite useExternalId")
+            .direction(Direction.OUTBOUND)
+            .targetAPI(API.EVENT)
+            .useExternalId(true)
+            .externalIdType("c8y_Serial")
+            .mappingType(dynamic.mapper.processor.model.MappingType.JSON)
+            .transformationType(dynamic.mapper.processor.model.TransformationType.DEFAULT)
+            .active(false)
+            .debug(false)
+            .qos(Qos.AT_MOST_ONCE)
+            .lastUpdate(System.currentTimeMillis())
+            .sourceTemplate("{}")
+            .targetTemplate("{}")
+            .substitutions(new Substitution[] { c8ySourceIdSub, dataSub })
+            .build();
+
+    List<ValidationError> errors3 = mappingValidator.validateSubstitutions(c8ySourceIdMapping);
+    assertTrue(errors3.isEmpty(),
+            "c8ySourceId should be accepted as a device identifier even when useExternalId=true, but got: "
+                    + errors3);
+}
+
  }

@@ -766,26 +766,28 @@ export function cloneSubstitution(
     expandArray: sub.expandArray,
   };
 }
+function referencesIdentityToken(text: string, token: string): boolean {
+  if (!text) {
+    return false;
+  }
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^\\w])${escaped}(?![\\w])`).test(text);
+}
+
 export function definesDeviceIdentifier(
   mapping: Mapping,
   sub: Substitution
 ): boolean {
-  if (mapping.direction === Direction.INBOUND) {
-    if (mapping.useExternalId) {
-      return sub?.pathTarget === `${MappingTokens.IDENTITY}.externalId`;
-    } else {
-      return sub?.pathTarget === `${MappingTokens.IDENTITY}.c8ySourceId`;
-    }
-  } else {
-    if (mapping.useExternalId) {
-      // When useExternalId is true, either _IDENTITY_.externalId or
-      // _IDENTITY_.c8ySourceId is acceptable as the source identifier.
-      return sub?.pathSource === `${MappingTokens.IDENTITY}.externalId`
-          || sub?.pathSource === `${MappingTokens.IDENTITY}.c8ySourceId`;
-    } else {
-      return sub?.pathSource === `${MappingTokens.IDENTITY}.c8ySourceId`;
-    }
-  }
+  // A substitution defines the device identifier if it references either
+  // _IDENTITY_.externalId or _IDENTITY_.c8ySourceId, be it as the whole
+  // path or embedded in a larger expression (e.g. a concatenation).
+  const path = mapping.direction === Direction.INBOUND
+    ? sub?.pathTarget
+    : sub?.pathSource;
+  return (
+    referencesIdentityToken(path, `${MappingTokens.IDENTITY}.externalId`) ||
+    referencesIdentityToken(path, `${MappingTokens.IDENTITY}.c8ySourceId`)
+  );
 }
 export function isSubstitutionValid(mapping: Mapping): boolean {
   const count = mapping.substitutions

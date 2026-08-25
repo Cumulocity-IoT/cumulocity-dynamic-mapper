@@ -756,9 +756,8 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
 
     if (this.currentStepIndex === STEP_SELECT_TEMPLATES && this.aiReviewBaseline !== undefined) {
       if (!this.hasReviewedAITemplate()) {
-        const side = this.stepperConfiguration.direction === Direction.OUTBOUND ? 'source' : 'target';
         this.alertService.warning(
-          `Please review and adjust the ${side} template to reflect your actual data before generating with AI in the next step.`
+          'Please review and adjust the target template to reflect your actual data before generating with AI in the next step.'
         );
         return;
       }
@@ -812,13 +811,10 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   private expandTemplates(): void {
     if (this.stepperConfiguration.editorMode === EditorMode.CREATE && !this.templatesInitialized) {
       this.templatesInitialized = true;
-      // If the broker/external-side field was pre-filled (e.g. from Message Explorer), honour it
-      // directly instead of overwriting with the generic SAMPLE_TEMPLATES_C8Y default. Which
-      // field is the broker side flips with direction — see addMapping()'s comment for why.
-      const brokerSideTemplate = this.stepperConfiguration.direction === Direction.OUTBOUND
-        ? this.mapping.targetTemplate
-        : this.mapping.sourceTemplate;
-      const hasPrefilledSource = brokerSideTemplate && brokerSideTemplate !== '{}';
+      // Message Explorer prefill always lands on sourceTemplate, regardless of direction (see
+      // addMapping()'s comment: sourceTemplate is always "the side Message Explorer captured").
+      // Honour it directly instead of overwriting with the generic SAMPLE_TEMPLATES_C8Y default.
+      const hasPrefilledSource = this.mapping.sourceTemplate && this.mapping.sourceTemplate !== '{}';
       if (hasPrefilledSource) {
         const templates = this.stepperService.expandExistingTemplates(
           this.mapping,
@@ -851,25 +847,23 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
 
   /**
    * Only relevant when the user chose "Generate with AI" at creation time. Snapshots the
-   * Cumulocity-side field's just-expanded default content so `hasReviewedAITemplate()` can later
+   * target template's just-expanded default content so `hasReviewedAITemplate()` can later
    * detect, when leaving this step, whether the user customized it — an untouched generic
    * default (or an empty Smart Function target) makes for a poor AI generation prompt.
+   *
+   * Always the target template — for INBOUND/OUTBOUND and for both JSONata and Smart Function,
+   * regardless of whether the source side was prefilled (e.g. via Message Explorer).
    */
   private captureAIReviewBaselineIfNeeded(): void {
     if (!this.stepperConfiguration.triggerAIGenerationOnStart) return;
-    const cumulocitySideTemplate = this.stepperConfiguration.direction === Direction.OUTBOUND
-      ? this.sourceTemplate
-      : this.targetTemplate;
-    this.aiReviewBaseline = JSON.stringify(cumulocitySideTemplate);
+    this.aiReviewBaseline = JSON.stringify(this.targetTemplate);
   }
 
-  /** True if the user has edited the Cumulocity-side template since `aiReviewBaseline` was captured. */
+  /** True if the user has edited the target template since `aiReviewBaseline` was captured. */
   private hasReviewedAITemplate(): boolean {
-    const liveCumulocitySide = this.stepperConfiguration.direction === Direction.OUTBOUND
-      ? this.tryGetLiveEditorContent(this.templateStepRef?.editorSourceStepTemplate)
-      : this.tryGetLiveEditorContent(this.templateStepRef?.editorTargetStepTemplate);
-    if (liveCumulocitySide === undefined) return true; // can't verify — don't block on a guess
-    return JSON.stringify(liveCumulocitySide) !== this.aiReviewBaseline;
+    const liveTarget = this.tryGetLiveEditorContent(this.templateStepRef?.editorTargetStepTemplate);
+    if (liveTarget === undefined) return true; // can't verify — don't block on a guess
+    return JSON.stringify(liveTarget) !== this.aiReviewBaseline;
   }
 
   async onTargetAPIChanged(changedTargetAPI: string): Promise<void> {
