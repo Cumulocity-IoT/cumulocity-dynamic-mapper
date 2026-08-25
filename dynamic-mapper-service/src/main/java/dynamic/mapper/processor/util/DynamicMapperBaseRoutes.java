@@ -141,14 +141,14 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
 
             // Check if mapping is active
             if (!mapping.getActive()) {
-                log.debug("Mapping {} is inactive, skipping", mapping.getName());
+                log.debug("Mapping {} [{}] is inactive, skipping", mapping.getName(), mapping.getId());
                 return false;
             }
 
             // Check if mapping is deployed (you'll need to get connector info)
             if (connectorIdentifier != null && !isMappingDeployed(tenant, mapping, connectorIdentifier)) {
-                log.info("Mapping {} not deployed for connector {}, skipping",
-                        mapping.getName(), connectorIdentifier);
+                log.info("Mapping {} [{}] not deployed for connector {}, skipping",
+                        mapping.getName(), mapping.getId(), connectorIdentifier);
                 return false;
             }
 

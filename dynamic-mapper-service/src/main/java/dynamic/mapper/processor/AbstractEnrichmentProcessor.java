@@ -205,13 +205,13 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 ppLog = pp.toString();
             }
             log.info(
-                    "{} - PROCESSING message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}, wrapped message: {}",
-                    tenant, context.getTopic(), connectorIdentifier, mapping.getName(),
+                    "{} - PROCESSING message on topic: [{}], on  connector: {}, for Mapping {} [{}] with QoS: {}, wrapped message: {}",
+                    tenant, context.getTopic(), connectorIdentifier, mapping.getName(), mapping.getId(),
                     mapping.getQos().ordinal(), ppLog);
         } else {
             log.debug(
-                    "{} - PROCESSING message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}",
-                    tenant, context.getTopic(), connectorIdentifier, mapping.getName(),
+                    "{} - PROCESSING message on topic: [{}], on  connector: {}, for Mapping {} [{}] with QoS: {}",
+                    tenant, context.getTopic(), connectorIdentifier, mapping.getName(), mapping.getId(),
                     mapping.getQos().ordinal());
         }
     }
