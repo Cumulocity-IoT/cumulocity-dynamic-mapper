@@ -154,20 +154,49 @@ export class AIPromptComponent implements OnInit {
       return;
     }
 
-    // CREATE mode — nothing to review yet, so always generate immediately with no
+    // CREATE mode, Smart Function: ask what to generate first, via the same suggestion-chip
+    // mechanism as UPDATE mode's Review/Generate choice — targetTemplate is always empty by
+    // design for code mappings (see buildGenerateMessage()), so a sample payload is the only
+    // way the user can hand the AI concrete context beyond the source template/targetAPI.
+    if (this.isCodeMapping) {
+      this.drawerTitle = 'Generate Smart Function';
+      this.suggestions = [
+        { label: 'Let AI propose a target structure', prompt: this.buildGenerateMessage(), icon: 'magic' },
+        { label: 'I want to provide a sample target payload', prompt: this.buildProvideSampleMessage(), icon: 'code' }
+      ];
+      this.chatConfig = {
+        ...this.chatConfig,
+        title: this.drawerTitle,
+        welcomeText: "I can generate a Smart Function for this mapping based on its source template. " +
+          "There's no fixed target template — pick an option below, or describe the target payload" +
+          " you'd like it to produce."
+      };
+      this.cdr.detectChanges();
+      return;
+    }
+
+    // CREATE mode, JSONata — nothing to review yet, so always generate immediately with no
     // user interaction.
-    this.drawerTitle = this.isCodeMapping ? 'Generate Smart Function' : 'Generate Substitutions';
+    this.drawerTitle = 'Generate Substitutions';
     this.chatConfig = {
       ...this.chatConfig,
       title: this.drawerTitle,
-      welcomeText: this.isCodeMapping
-        ? "Generating a Smart Function for this mapping based on its source and target templates. " +
-          "This starts automatically — no action needed."
-        : "Generating substitutions for this mapping based on its source and target templates. " +
-          "This starts automatically — no action needed."
+      welcomeText: "Generating substitutions for this mapping based on its source and target templates. " +
+        "This starts automatically — no action needed."
     };
     this.newMessage = this.buildGenerateMessage();
     await this.sendMessage();
+  }
+
+  /**
+   * "I want to provide a sample target payload" suggestion prompt (Smart Function, CREATE mode).
+   * Asks the agent to wait for the user's next message — a pasted JSON sample — before
+   * generating, rather than proceeding on generic assumptions.
+   */
+  private buildProvideSampleMessage(): string {
+    return "I'd like to provide a sample of the expected target payload before you generate the" +
+      " Smart Function. Ask me to paste it, then wait for my next message and use it as the" +
+      " authoritative shape to produce — do not generate code yet.\n";
   }
 
   private buildReviewMessage(): string {

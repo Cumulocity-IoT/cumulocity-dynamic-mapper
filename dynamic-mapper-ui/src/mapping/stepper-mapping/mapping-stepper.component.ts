@@ -846,16 +846,20 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   /**
-   * Only relevant when the user chose "Generate with AI" at creation time. Snapshots the
-   * target template's just-expanded default content so `hasReviewedAITemplate()` can later
-   * detect, when leaving this step, whether the user customized it — an untouched generic
-   * default (or an empty Smart Function target) makes for a poor AI generation prompt.
+   * Only relevant when the user chose "Generate with AI" at creation time, and only for JSONata.
+   * Snapshots the target template's just-expanded default content so `hasReviewedAITemplate()`
+   * can later detect, when leaving this step, whether the user customized it — an untouched
+   * generic default makes for a poor AI generation prompt.
    *
-   * Always the target template — for INBOUND/OUTBOUND and for both JSONata and Smart Function,
-   * regardless of whether the source side was prefilled (e.g. via Message Explorer).
+   * Smart Function is excluded: its targetTemplate is always forced back to `{}` by
+   * `onTargetAPIChanged()` and is explicitly ignored by both the generation prompt and the
+   * deployed agent's system prompt, so there is nothing there to meaningfully review — the
+   * AI prompt drawer's own pre-generation screen (targetAPI + optional sample payload) is the
+   * actual review step for Smart Function instead.
    */
   private captureAIReviewBaselineIfNeeded(): void {
     if (!this.stepperConfiguration.triggerAIGenerationOnStart) return;
+    if (isCodeOrExtensionTransformation(this.mapping.transformationType)) return;
     this.aiReviewBaseline = JSON.stringify(this.targetTemplate);
   }
 
