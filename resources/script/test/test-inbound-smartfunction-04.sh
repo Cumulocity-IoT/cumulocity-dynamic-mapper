@@ -13,7 +13,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="14. Inbound: Pattern 04: Dual payload type + deduplication"
+TEST_TITLE="15. Inbound: Pattern 04: Dual payload type + deduplication"
 
 EXT_ID="dmtest-dual-payload-$(date +%s)"
 MAPPING_ID=""

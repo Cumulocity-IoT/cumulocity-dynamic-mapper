@@ -13,7 +13,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="10. JSON / DEFAULT → OPERATION"
+TEST_TITLE="11. JSON / DEFAULT → OPERATION"
 
 EXT_ID="dmtest-operation-$(date +%s)"
 MAPPING_ID=""

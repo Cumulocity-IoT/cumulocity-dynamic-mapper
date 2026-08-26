@@ -13,7 +13,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="28. Smart Function: Measurement → MQTT JSON"
+TEST_TITLE="29. Smart Function: Measurement → MQTT JSON"
 
 SUBSCRIPTION_NAME=""
 EXT_ID="dmtest-sf-out-$(date +%s)"

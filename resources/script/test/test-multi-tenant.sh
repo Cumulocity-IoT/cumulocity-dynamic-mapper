@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="36. Mapping CRUD / tenant isolation"
+TEST_TITLE="37. Mapping CRUD / tenant isolation"
 
 MAPPING_ID=""
 

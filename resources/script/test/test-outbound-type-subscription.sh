@@ -23,7 +23,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="32. Dynamic type subscription"
+TEST_TITLE="33. Dynamic type subscription"
 
 DEVICE_TYPE="auto-type"
 DEVICE_NAME="test-dynamic-type-device-01"

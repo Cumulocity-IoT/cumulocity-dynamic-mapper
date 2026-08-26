@@ -13,7 +13,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="12. Inbound: Pattern 02: Topic-based external ID + sensor filter"
+TEST_TITLE="13. Inbound: Pattern 02: Topic-based external ID + sensor filter"
 
 # Unique per run so a stale c8y_Serial identity binding from a previous run
 # can't shadow this run's device. The SF derives the external id from the last
