@@ -72,5 +72,9 @@
       "type": "sse",
       "sendAuthentication": true
     }
-  ]
+  ],
+  "openApiSpec": "api-docs",
+  "icon": {
+    "class": "c8y-dynamic-mapper"
+  }
 }
