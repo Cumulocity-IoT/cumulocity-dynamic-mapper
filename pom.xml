@@ -38,7 +38,7 @@
 		<spring-boot-dependencies.version>4.0.7</spring-boot-dependencies.version>
 		<c8y.version>2026.43.0</c8y.version>
 		<lombok.version>1.18.46</lombok.version>
-		<slf4j.version>2.0.17</slf4j.version>
+		<slf4j.version>2.0.18</slf4j.version>
 		<maven.compiler.source>25</maven.compiler.source>
 		<maven.compiler.target>25</maven.compiler.target>
 		<java.version>25</java.version>
@@ -46,9 +46,9 @@
 		<graalvm.version>25.3.4.1</graalvm.version>
 		<graalvm.js.version>25.3.4.1</graalvm.js.version>
 		<springdoc.version>2.8.5</springdoc.version>
-		<spring-ai.version>2.0.0</spring-ai.version>
-		<pulsar.version>4.0.5</pulsar.version>
-		<camel.version>4.18.1</camel.version>
+		<spring-ai.version>2.0.1</spring-ai.version>
+		<pulsar.version>4.2.4</pulsar.version>
+		<camel.version>4.22.0</camel.version>
 		<!-- <spring-ai.version>1.0.1</spring-ai.version> -->
 		<authToken>${env.AUTH_TOKEN}</authToken>
 	</properties>
@@ -114,6 +114,21 @@
 			<version>${spring-ai.version}</version>
 			<type>pom</type>
 			<scope>import</scope>
+		</dependency>
+
+		<!-- tahu-core (>= 1.0.8) transitively pulls victools 4.38.0, which is binary-incompatible
+		     with the 5.0.0 API spring-ai-model's JsonSchemaGenerator is compiled against. Pin to
+		     the version spring-ai-bom expects so tahu-core's transitive copy doesn't win via
+		     nearest-wins mediation. -->
+		<dependency>
+			<groupId>com.github.victools</groupId>
+			<artifactId>jsonschema-generator</artifactId>
+			<version>5.0.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.github.victools</groupId>
+			<artifactId>jsonschema-module-jackson</artifactId>
+			<version>5.0.0</version>
 		</dependency>
 
 			<dependency>
