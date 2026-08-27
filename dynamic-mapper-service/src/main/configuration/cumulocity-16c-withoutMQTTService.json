@@ -73,6 +73,6 @@
   ],
   "openApiSpec": "api-docs",
   "icon": {
-    "class": "c8y-dynamic-mapper"
+    "class": "c8y-icon-dynamic-mapper"
   }
 }
