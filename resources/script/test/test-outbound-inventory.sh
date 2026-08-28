@@ -96,6 +96,7 @@ MAPPING_JSON=$(cat <<EOF
   "sourceTemplate": "{\"type\":\"dmtest-out-inv-type\",\"name\":\"device name\",\"dmtest_Trigger\":{\"rev\":1}}",
   "targetTemplate": "{\"deviceId\":\"source-id\",\"deviceType\":\"a-type\",\"rev\":0}",
   "substitutions": [
+    {"pathSource":"_IDENTITY_.externalId","pathTarget":"deviceId","repairStrategy":"DEFAULT","expandArray":false},
     {"pathSource":"type","pathTarget":"deviceType","repairStrategy":"DEFAULT","expandArray":false},
     {"pathSource":"dmtest_Trigger.rev","pathTarget":"rev","repairStrategy":"DEFAULT","expandArray":false}
   ],

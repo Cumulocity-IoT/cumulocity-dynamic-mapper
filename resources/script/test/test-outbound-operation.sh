@@ -84,8 +84,10 @@ MAPPING_JSON=$(cat <<EOF
   "transformationType": "DEFAULT",
   "filterMapping": "true",
   "sourceTemplate": "{\"description\":\"restart\",\"type\":\"maker_Vibration_Sensor\"}",
-  "targetTemplate": "{\"command\":\"restart\"}",
-  "substitutions": [],
+  "targetTemplate": "{\"command\":\"restart\",\"deviceId\":\"source-id\"}",
+  "substitutions": [
+    {"pathSource":"_IDENTITY_.externalId","pathTarget":"deviceId","repairStrategy":"DEFAULT","expandArray":false}
+  ],
   "active": false,
   "debug": false,
   "useExternalId": true,
