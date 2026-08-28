@@ -32,5 +32,6 @@ public enum ConnectorType {
     CUMULOCITY_MQTT_SERVICE_PULSAR,
     AMQP_091,
     AMQP_10,
+    GOOGLE_PUBSUB,
     TEST,
 }

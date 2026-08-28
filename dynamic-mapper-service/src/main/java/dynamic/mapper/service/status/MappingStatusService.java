@@ -467,7 +467,7 @@ public class MappingStatusService {
             try {
                 inventoryApi.update(updateMor, false);
             } catch (jakarta.ws.rs.ProcessingException e) {
-                if (e.getCause() instanceof org.apache.http.NoHttpResponseException) {
+                if (e.getCause() instanceof org.apache.hc.core5.http.NoHttpResponseException) {
                     log.warn("{} - Stale connection detected, retrying inventory update", tenant);
                     inventoryApi.update(updateMor, false);
                 } else {
