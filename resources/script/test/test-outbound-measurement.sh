@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="21. C8Y Measurement → MQTT broker"
+TEST_TITLE="22. C8Y Measurement → MQTT broker"
 
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 DEVICE_NAME="dmtest-out-mea-$(date +%s)"
@@ -81,7 +81,9 @@ MAPPING_JSON=$(cat <<EOF
   "filterMapping": "true",
   "sourceTemplate": "{\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":110,\"unit\":\"C\"}},\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TemperatureMeasurement\"}",
   "targetTemplate": "{\"temperature\":110,\"deviceId\":\"source-id\"}",
-  "substitutions": [],
+  "substitutions": [
+    {"pathSource":"_IDENTITY_.externalId","pathTarget":"deviceId","repairStrategy":"DEFAULT","expandArray":false}
+  ],
   "active": false,
   "debug": false,
   "useExternalId": true,

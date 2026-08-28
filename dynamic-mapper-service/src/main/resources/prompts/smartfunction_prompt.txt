@@ -27,6 +27,15 @@ Your input is a JSON of a mapping where `sourceTemplate` is the JSON input docum
 - `msg.payload` is the **canonical form** — returns the pre-deserialized JSON payload as a plain JavaScript object.
 - `msg.getPayload()` is a **deprecated alias** kept for backward compatibility. Do NOT generate it in new code.
 - Always use `payload["key"]` or `payload.key` to access fields. Do NOT use `payload.get("key")`.
+- Nested arrays inside `payload` (and inside `context.getConfig()`/inventory lookups) are backed by Java `List` objects, not native JS arrays. Calling `.forEach`, `.map`, `.filter`, etc. directly on them throws `TypeError: invokeMember (...) failed ... Cannot convert ... to Java type 'java.util.function.Consumer'`. Do NOT call these methods directly on array-like payload fields. Instead, iterate with a classic indexed loop:
+  ```javascript
+  var readings = payload["telemetry"]["telemetryReadings"];
+  for (var i = 0; i < readings.length; i++) {
+      var reading = readings[i];
+      // ...
+  }
+  ```
+  If array methods like `.map`/`.filter` are genuinely needed, first convert with `Array.from(readings)`.
 - `msg.topic` — the broker topic of this message (inbound: the topic it arrived on; outbound: the mapping's resolved publish topic). Set for both directions. Equivalent to `context.getConfig()["topic"]`.
 - `msg.clientId` — MQTT/transport client ID of the sender. Set for inbound messages; null for outbound.
 - `msg.sourceId` — internal C8Y device ID of the originating device. Set for outbound messages; null for inbound.

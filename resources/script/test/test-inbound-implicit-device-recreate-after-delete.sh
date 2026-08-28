@@ -40,7 +40,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="40. Implicit device recreation after delete (inconsistent-cache regression)"
+TEST_TITLE=" 8. Implicit device recreation after delete (inconsistent-cache regression)"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 # Use a unique external id that certainly does not exist yet

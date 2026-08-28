@@ -22,6 +22,10 @@
 package dynamic.mapper.processor.model;
 
 public enum TransformationType {
+    /** @deprecated Legacy substitution engine, superseded by JSONata. Kept for backward compatibility
+     *  with existing mappings and as the only supported transformation for Protobuf (internal) payloads.
+     *  New mappings should use {@link #JSONATA} instead. */
+    @Deprecated
     DEFAULT("DEFAULT"),
     /** @deprecated Substitution As Code is no longer supported. Use {@link #SMART_FUNCTION} instead. */
     @Deprecated(since = "6.3", forRemoval = true)

@@ -29,6 +29,7 @@ import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
 
 import dynamic.mapper.core.InventoryEnrichmentClient;
+import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.service.cache.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 
@@ -111,7 +112,7 @@ public class SmartFunctionContext implements DataPrepContext {
         if (graalContext == null || config == null) {
             return null;
         }
-        return graalContext.asValue(config);
+        return graalContext.asValue(JavaScriptInteropHelper.toJsInterop(config));
     }
 
     @Override
@@ -149,7 +150,7 @@ public class SmartFunctionContext implements DataPrepContext {
         }
 
         // Convert back to GraalJS Value
-        return graalContext.asValue(javaValue);
+        return graalContext.asValue(JavaScriptInteropHelper.toJsInterop(javaValue));
     }
 
     /**
@@ -170,7 +171,7 @@ public class SmartFunctionContext implements DataPrepContext {
             return graalContext.asValue(defaultValue);
         }
         Object javaValue = state.get(key);
-        return graalContext.asValue(javaValue);
+        return graalContext.asValue(JavaScriptInteropHelper.toJsInterop(javaValue));
     }
 
     @Override
@@ -187,7 +188,7 @@ public class SmartFunctionContext implements DataPrepContext {
         properties.put("found", false);
         properties.put("message", "DTM lookup not implemented");
 
-        return graalContext.asValue(properties);
+        return graalContext.asValue(JavaScriptInteropHelper.toJsInterop(properties));
     }
 
     /**
@@ -241,7 +242,7 @@ public class SmartFunctionContext implements DataPrepContext {
         }
 
         // Convert back to GraalJS Value
-        return graalContext.asValue(javaValue);
+        return graalContext.asValue(JavaScriptInteropHelper.toJsInterop(javaValue));
     }
 
     @Override
@@ -256,7 +257,7 @@ public class SmartFunctionContext implements DataPrepContext {
         }
 
         // Convert back to GraalJS Value
-        return graalContext.asValue(javaValue);
+        return graalContext.asValue(JavaScriptInteropHelper.toJsInterop(javaValue));
     }
 
     @Override
@@ -265,7 +266,7 @@ public class SmartFunctionContext implements DataPrepContext {
         if (javaValue == null) {
             addWarning(String.format("Device not found in inventory cache: %s", c8ySourceId));
         }
-        return graalContext.asValue(javaValue);
+        return graalContext.asValue(JavaScriptInteropHelper.toJsInterop(javaValue));
     }
 
     @Override
@@ -275,7 +276,7 @@ public class SmartFunctionContext implements DataPrepContext {
         if (javaValue == null) {
             addWarning(String.format("ExternalId not found in inventory cache: %s", externalId));
         }
-        return graalContext.asValue(javaValue);
+        return graalContext.asValue(JavaScriptInteropHelper.toJsInterop(javaValue));
     }
 
     @Override
@@ -306,7 +307,7 @@ public class SmartFunctionContext implements DataPrepContext {
             if (javaValue == null) {
                 addWarning(String.format("ExternalId not found in inventory cache: %s", extId));
             }
-            return graalContext.asValue(javaValue);
+            return graalContext.asValue(JavaScriptInteropHelper.toJsInterop(javaValue));
 
         } catch (Exception e) {
             addWarning("Failed to process externalId: " + e.getMessage());

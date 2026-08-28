@@ -4,12 +4,16 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
+import org.graalvm.polyglot.proxy.ProxyArray;
+import org.graalvm.polyglot.proxy.ProxyObject;
 
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.CumulocityType;
@@ -24,6 +28,46 @@ import dynamic.mapper.processor.model.ProcessingContext;
  * Helper class for working with JavaScript union types and arrays in GraalJS
  */
 public class JavaScriptInteropHelper {
+
+    /**
+     * Recursively converts nested {@link Map}/{@link List} values (e.g. from JSON payloads
+     * deserialized outside GraalVM, such as JSONata's {@code LinkedHashMap}/{@code ArrayList}
+     * trees) into {@link ProxyObject}/{@link ProxyArray} wrappers.
+     *
+     * <p>Plain GraalVM host-object exposure of a {@code java.util.List} (via
+     * {@code HostAccess.allowListAccess(true)}) only grants index/length access — it does NOT
+     * make JavaScript treat the value as a native array. Because
+     * {@code HostAccess.allowPublicAccess(true)} is also enabled, real Java methods like
+     * {@code List.forEach(Consumer)} are exposed as members too, so a script calling
+     * {@code someList.forEach(fn)} resolves to the Java method and fails trying to convert the
+     * JS callback into a {@code java.util.function.Consumer}. Wrapping nested collections as
+     * {@link ProxyArray}/{@link ProxyObject} instead makes GraalJS treat them as genuine
+     * JS-array/object exotic values, so {@code .forEach}/{@code .map}/{@code .filter} etc. work
+     * as expected in Smart Functions.
+     *
+     * @param value arbitrary Java value (possibly containing nested Map/List); non-collection
+     *              values are returned unchanged
+     * @return a value safe to pass into {@link Context#asValue(Object)} for JS consumption
+     */
+    public static Object toJsInterop(Object value) {
+        if (value instanceof Map<?, ?> mapValue) {
+            Map<String, Object> converted = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : mapValue.entrySet()) {
+                converted.put(String.valueOf(entry.getKey()), toJsInterop(entry.getValue()));
+            }
+            return ProxyObject.fromMap(converted);
+        } else if (value instanceof Collection<?> collectionValue) {
+            // Covers List as well as Set (e.g. context.getStateKeySet()) — both expose a
+            // forEach(Consumer) Java method that shadows JS's Array.prototype.forEach the
+            // same way List does.
+            List<Object> converted = new ArrayList<>(collectionValue.size());
+            for (Object element : collectionValue) {
+                converted.add(toJsInterop(element));
+            }
+            return ProxyArray.fromList(converted);
+        }
+        return value;
+    }
 
     /**
      * Creates a JavaScript-compatible message object from Java objects

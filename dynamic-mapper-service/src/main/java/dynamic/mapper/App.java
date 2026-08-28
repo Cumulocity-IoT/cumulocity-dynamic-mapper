@@ -54,10 +54,7 @@ import org.springframework.boot.micrometer.metrics.autoconfigure.MeterRegistryCu
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
-import org.springframework.core.task.TaskExecutor;
-import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.svenson.AbstractDynamicProperties;
 import org.svenson.JSONParser;
 import org.svenson.converter.DefaultTypeConverterRepository;
@@ -73,7 +70,6 @@ import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 @MicroserviceApplication
 @EnableContextSupport
 @SpringBootApplication
-@EnableAsync
 @EnableScheduling
 public class App {
 
@@ -81,15 +77,6 @@ public class App {
     MeterRegistryCustomizer<MeterRegistry> configurer(
             @Value("${application.name}") String applicationName) {
         return (registry) -> registry.config().commonTags("application", applicationName);
-    }
-
-    @Bean
-    public TaskExecutor taskExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(5);
-        executor.setMaxPoolSize(10);
-        executor.setQueueCapacity(25);
-        return executor;
     }
 
     @Bean("virtualThreadPool")

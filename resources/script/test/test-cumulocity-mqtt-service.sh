@@ -37,7 +37,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="39. Cumulocity MQTT Service connector lifecycle"
+TEST_TITLE="40. Cumulocity MQTT Service connector lifecycle"
 
 CONNECTOR_TYPE="CUMULOCITY_MQTT_SERVICE_PULSAR"
 

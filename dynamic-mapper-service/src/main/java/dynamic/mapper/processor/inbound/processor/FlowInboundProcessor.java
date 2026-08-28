@@ -54,6 +54,10 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
         if (payload instanceof byte[] && mappingType != null && "ANY_PAYLOAD".equals(mappingType.toString())) {
             payload = Base64.getEncoder().encodeToString((byte[]) payload);
         }
+        // Convert nested Map/List (e.g. JSONata's LinkedHashMap/ArrayList payload tree) into
+        // ProxyObject/ProxyArray so Smart Functions can use native JS array methods like
+        // .forEach()/.map() instead of hitting GraalVM's List<->Consumer interop failure.
+        payload = JavaScriptInteropHelper.toJsInterop(payload);
         Map<String, String> transportFields = Collections.emptyMap();
         if (context.getKey() != null) {
             transportFields = new HashMap<>();

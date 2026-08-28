@@ -589,22 +589,21 @@ export class MappingComponent implements OnInit, OnDestroy {
         mapping.mappingTopic = this.explorerPreFill.sessionTopic ?? this.explorerPreFill.topic;
         mapping.mappingTopicSample = this.explorerPreFill.topic;
       }
-      // The captured message always belongs on the broker/external side, which flips with
-      // direction — see the comment above the mapping literal for the full explanation.
-      if (isInbound) {
-        mapping.sourceTemplate = this.explorerPreFill.payload;
-      } else {
-        mapping.targetTemplate = this.explorerPreFill.payload;
-      }
+      // The Message Explorer always captures the "source" side of the mapping — the broker/
+      // device payload for INBOUND sessions, or the real Cumulocity event for OUTBOUND
+      // sessions (sourceSystem/targetSystem swap the same way in mapping-stepper.component.ts).
+      // So the captured payload always belongs on sourceTemplate, regardless of direction.
+      mapping.sourceTemplate = this.explorerPreFill.payload;
       if (this.explorerPreFill.targetAPI) {
         mapping.targetAPI = this.explorerPreFill.targetAPI;
-        const sample = isCodeOrExtensionTransformation(mapping.transformationType)
-          ? '{}'
-          : SAMPLE_TEMPLATES_C8Y[this.explorerPreFill.targetAPI];
+        // Only INBOUND's target side (Cumulocity) has a generic schema sample to seed with.
+        // OUTBOUND's target side (Broker) has no generic schema, and its source already holds
+        // the real captured Cumulocity payload — nothing further needs seeding there.
         if (isInbound) {
+          const sample = isCodeOrExtensionTransformation(mapping.transformationType)
+            ? '{}'
+            : SAMPLE_TEMPLATES_C8Y[this.explorerPreFill.targetAPI];
           mapping.targetTemplate = sample ?? mapping.targetTemplate;
-        } else {
-          mapping.sourceTemplate = sample ?? mapping.sourceTemplate;
         }
       }
       if (this.explorerPreFill.publishTopic) {

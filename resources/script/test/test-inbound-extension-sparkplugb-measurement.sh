@@ -13,7 +13,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="19. Extension: Sparkplug B → Measurement"
+TEST_TITLE="20. Extension: Sparkplug B → Measurement"
 
 EXT_ID="dmtest-sparkplug-measure-$(date +%s)"
 MAPPING_ID=""

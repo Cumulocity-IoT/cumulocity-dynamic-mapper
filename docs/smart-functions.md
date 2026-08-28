@@ -57,7 +57,7 @@ context.getStateKeySet()             // retrieve all state keys as string[]
 ### Mapping config (read-only, reset each message)
 
 ```ts
-context.getConfig()           // full mapping config (mappingId, mappingName, tenant, topic, targetAPI, debug, ...)
+context.getConfig()           // full mapping config (mappingId, mappingName, version, tenant, topic, targetAPI, debug, ...)
 context.getExternalId()       // resolved external ID of source device (outbound only, when useExternalId is set)
 context.getClientId()         // transport client ID (inbound only)
 ```

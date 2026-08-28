@@ -300,8 +300,8 @@ export interface SmartFunctionContext extends DataPrepContext {
   /**
    * Retrieves read-only mapping configuration for the current invocation.
    *
-   * Contains mapping metadata such as `mappingId`, `mappingName`, `tenant`,
-   * `topic`, `targetAPI`, `debug`, `clientId`, and optional flags like
+   * Contains mapping metadata such as `mappingId`, `mappingName`, `version`,
+   * `tenant`, `topic`, `targetAPI`, `debug`, `clientId`, and optional flags like
    * `createNonExistingDevice` or `eventWithAttachment`.
    *
    * This is populated before the Smart Function is called and does **not**
@@ -1310,7 +1310,7 @@ export type OutboundMessageV2<T extends C8yObjectType = C8yObjectType> = Outboun
  *
  * @example
  * type MyCtx = SmartFunctionContextV2<
- *   { mappingName: string; externalId: string },
+ *   { mappingName: string; version: string; externalId: string },
  *   { lastTemperature: number; forwardedCount: number }
  * >;
  * const name: string = context.getConfig().mappingName;     // typed

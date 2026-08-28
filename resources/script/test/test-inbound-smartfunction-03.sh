@@ -19,7 +19,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="13. Inbound: Pattern 03: getManagedObjectByExternalId — MO enrichment"
+TEST_TITLE="14. Inbound: Pattern 03: getManagedObjectByExternalId — MO enrichment"
 
 EXT_ID="dmtest-mo-lookup-$(date +%s)"
 MAPPING_ID=""

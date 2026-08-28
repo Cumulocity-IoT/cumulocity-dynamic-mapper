@@ -211,7 +211,7 @@
 		<dependency>
 			<groupId>org.eclipse.tahu</groupId>
 			<artifactId>tahu-core</artifactId>
-			<version>1.0.7</version>
+			<version>1.0.21</version>
 		</dependency>
         <dependency>
             <groupId>org.apache.httpcomponents.core5</groupId>
@@ -245,7 +245,7 @@
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>build-helper-maven-plugin</artifactId>
-				<version>3.6.0</version>
+				<version>3.6.1</version>
 				<executions>
 					<execution>
 						<id>add-source</id>
@@ -263,7 +263,7 @@
 			</plugin>
 			<plugin>
 				<artifactId>maven-jar-plugin</artifactId>
-				<version>3.4.2</version>
+				<version>3.5.1</version>
 				<configuration>
 					<includes>
 						<include>dynamic/mapper/model/*</include>

@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE=" 8. Array payload → multiple devices"
+TEST_TITLE=" 9. Array payload → multiple devices"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 TS=$(date +%s)

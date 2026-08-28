@@ -649,6 +649,9 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     if (this.templateStepRef?.sourceTemplateUpdated) {
       this.sourceTemplate = this.templateStepRef.sourceTemplateUpdated;
     }
+    if (this.templateStepRef?.targetTemplateUpdated) {
+      this.targetTemplate = this.templateStepRef.targetTemplateUpdated;
+    }
   }
 
   onTestingSourceTemplateChanged(template: any): void {

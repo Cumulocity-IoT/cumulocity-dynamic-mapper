@@ -139,15 +139,23 @@ public class MappingValidator {
                 mapping.getMappingType() == MappingType.ANY_PAYLOAD ||
                 mapping.getMappingType() == MappingType.SPARKPLUGB ||
                 mapping.getTransformationType() == TransformationType.EXTENSION_JAVA ||
-                mapping.getTransformationType() == TransformationType.SMART_FUNCTION ||
-                mapping.getDirection() == Direction.OUTBOUND;
+                mapping.getTransformationType() == TransformationType.SMART_FUNCTION;
 
         if (!skipDeviceIdentifierValidation) {
-            if (deviceIdentifierCount > 1) {
-                errors.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);
-            }
-            if (deviceIdentifierCount < 1) {
-                errors.add(ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used);
+            if (mapping.getDirection() == Direction.OUTBOUND) {
+                // Outbound: at least one substitution must derive from
+                // _IDENTITY_.externalId or _IDENTITY_.c8ySourceId; several are allowed
+                // (e.g. one per topic level built from the identity).
+                if (deviceIdentifierCount < 1) {
+                    errors.add(ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used);
+                }
+            } else {
+                if (deviceIdentifierCount > 1) {
+                    errors.add(ValidationError.Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used);
+                }
+                if (deviceIdentifierCount < 1) {
+                    errors.add(ValidationError.One_Substitution_Defining_Device_Identifier_Must_Be_Used);
+                }
             }
         }
 

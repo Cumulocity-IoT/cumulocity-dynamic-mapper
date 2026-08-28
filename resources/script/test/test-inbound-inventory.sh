@@ -30,7 +30,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="11. JSON / DEFAULT → INVENTORY (device metadata update)"
+TEST_TITLE="12. JSON / DEFAULT → INVENTORY (device metadata update)"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 DEVICE_NAME="dmtest-inv-$(date +%s)"

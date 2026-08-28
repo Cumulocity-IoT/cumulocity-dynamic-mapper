@@ -75,6 +75,13 @@ public class SubscriptionManager {
     // and keys are tenant-scoped to avoid cross-tenant collisions.
     private final Set<String> processingDevices = ConcurrentHashMap.newKeySet();
 
+    // Pool size no longer implicitly throttles concurrency now that subscription creation runs
+    // on the unbounded virtualThreadPool, so bulk callers (e.g. backfillDevicesForType scanning
+    // a type with thousands of devices) would otherwise fire that many concurrent C8Y REST calls
+    // at once. Bound it explicitly instead.
+    private static final int MAX_CONCURRENT_SUBSCRIPTION_CREATIONS = 20;
+    private final Semaphore subscriptionCreationSemaphore = new Semaphore(MAX_CONCURRENT_SUBSCRIPTION_CREATIONS);
+
     // === Public API ===
 
     public boolean isNotificationServiceAvailable(String tenant) {
@@ -112,34 +119,43 @@ public class SubscriptionManager {
 
         return virtualThreadPool.submit(() -> {
             try {
-                return subscriptionsService.callForTenant(tenant, () -> {
-                    // Deduplication: enforce priority order group/dynamic (2/3) > static (1)
-                    if (checkAndHandleDeduplication(tenant, deviceId, subscription)) {
-                        log.info("{} - Skipping subscription for device {} due to deduplication (subscription={})",
-                                tenant, deviceId, subscription);
-                        return null;
-                    }
+                subscriptionCreationSemaphore.acquire();
+                try {
+                    return subscriptionsService.callForTenant(tenant, () -> {
+                        // Deduplication: enforce priority order group/dynamic (2/3) > static (1)
+                        if (checkAndHandleDeduplication(tenant, deviceId, subscription)) {
+                            log.info(
+                                    "{} - Skipping subscription for device {} due to deduplication (subscription={})",
+                                    tenant, deviceId, subscription);
+                            return null;
+                        }
 
-                    log.info("{} - Creating subscription for device: {}", tenant, deviceId);
+                        log.info("{} - Creating subscription for device: {}", tenant, deviceId);
 
-                    // Create subscription
-                    NotificationSubscriptionRepresentation nsr = createSubscriptionByMO(
-                            tenant, mor, api, subscription);
+                        // Create subscription
+                        NotificationSubscriptionRepresentation nsr = createSubscriptionByMO(
+                                tenant, mor, api, subscription);
 
-                    // Reconnect existing static AND dynamic WebSocket clients so they immediately
-                    // receive notifications from the newly created device subscription without
-                    // waiting for the 60-second reconnect cycle. Both must be triggered: a device
-                    // subscription can land in either bucket, and an already-open client in either
-                    // one never learns about a device added afterward otherwise.
-                    connectionManager.reconnectStaticDeviceClientsForNewSubscription(tenant);
-                    connectionManager.reconnectDynamicDeviceClientsForNewSubscription(tenant);
+                        // Reconnect existing static AND dynamic WebSocket clients so they immediately
+                        // receive notifications from the newly created device subscription without
+                        // waiting for the 60-second reconnect cycle. Both must be triggered: a device
+                        // subscription can land in either bucket, and an already-open client in either
+                        // one never learns about a device added afterward otherwise.
+                        connectionManager.reconnectStaticDeviceClientsForNewSubscription(tenant);
+                        connectionManager.reconnectDynamicDeviceClientsForNewSubscription(tenant);
 
-                    // Activate push connectivity
-                    mqttPushManager.activatePushConnectivityForDevice(tenant, mor);
+                        // Activate push connectivity
+                        mqttPushManager.activatePushConnectivityForDevice(tenant, mor);
 
-                    log.info("{} - Successfully subscribed device {}", tenant, deviceId);
-                    return nsr;
-                });
+                        log.info("{} - Successfully subscribed device {}", tenant, deviceId);
+                        return nsr;
+                    });
+                } finally {
+                    subscriptionCreationSemaphore.release();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Interrupted while waiting to subscribe device: " + deviceId, e);
             } catch (Exception e) {
                 log.error("{} - Error subscribing device {}: {}", tenant, deviceId, e.getMessage(), e);
                 throw new RuntimeException("Failed to subscribe device: " + e.getMessage(), e);

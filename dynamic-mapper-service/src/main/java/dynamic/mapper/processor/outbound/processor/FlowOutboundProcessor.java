@@ -73,8 +73,13 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
         // casting. Inbound messages leave cumulocityType null via the 4-arg constructor.
         String c8yObjectType = context.getApi() != null ? context.getApi().toC8yObjectType() : null;
 
+        // Convert nested Map/List payload into ProxyObject/ProxyArray so Smart Functions can
+        // use native JS array methods like .forEach()/.map() instead of hitting GraalVM's
+        // List<->Consumer interop failure. See JavaScriptInteropHelper.toJsInterop().
+        Object payload = JavaScriptInteropHelper.toJsInterop(context.getPayload());
+
         return graalContext.asValue(new dynamic.mapper.processor.model.InputMessage(
-                context.getPayload(),
+                payload,
                 context.getTopic(),
                 null,
                 context.getSourceId(),
