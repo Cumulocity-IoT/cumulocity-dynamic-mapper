@@ -49,7 +49,6 @@
 		<spring-ai.version>2.0.1</spring-ai.version>
 		<pulsar.version>4.2.4</pulsar.version>
 		<camel.version>4.22.0</camel.version>
-		<google-cloud-libraries-bom.version>26.85.1</google-cloud-libraries-bom.version>
 		<google-cloud-pubsub.version>1.152.0</google-cloud-pubsub.version>
 		<!-- <spring-ai.version>1.0.1</spring-ai.version> -->
 		<authToken>${env.AUTH_TOKEN}</authToken>
