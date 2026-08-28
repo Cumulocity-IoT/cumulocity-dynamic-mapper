@@ -395,7 +395,7 @@ public class GooglePubSubClient extends AConnectorClient {
         if (configuration == null) {
             return false;
         }
-        if (!validateRequiredProperties(configuration, "projectId", "topicId", "authMode")) {
+        if (!validateRequiredProperties(configuration, "projectId", "topicId")) {
             return false;
         }
         String authMode = (String) configuration.getProperties().getOrDefault("authMode", "serviceAccountKey");
@@ -454,7 +454,7 @@ public class GooglePubSubClient extends AConnectorClient {
                         .description("Authentication method used to connect to Google Cloud Pub/Sub."))
 
                 .property("serviceAccountKey", ConnectorPropertyBuilder.create(ConnectorPropertyType.SENSITIVE_STRING_LARGE_PROPERTY)
-                        .required(false)
+                        .required(true)
                         .order(3)
                         .condition("authMode", "serviceAccountKey")
                         .description("Full JSON key of the Google Cloud Service Account used to authenticate " +
