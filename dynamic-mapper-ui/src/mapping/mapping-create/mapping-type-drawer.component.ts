@@ -90,7 +90,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   // Constants - Remove 'as const' to allow normal type checking
   private readonly DEFAULTS = {
     MAPPING_TYPE: MappingType.JSON,
-    TRANSFORMATION_TYPE: TransformationType.JSONATA
+    TRANSFORMATION_TYPE: TransformationType.SMART_FUNCTION
   };
 
   private readonly EXPERT_MODE_EXCLUDED_TYPES: MappingType[] = [
@@ -177,7 +177,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     if (!this.formGroup.valid) return;
 
     const { mappingType, transformationType, codeTemplate, codeTemplateSource, extensionName, eventName, extensionParameter } = this.formGroup.getRawValue();
-    const resolvedType: TransformationType = transformationType?.value || TransformationType.JSONATA;
+    const resolvedType: TransformationType = transformationType?.value || TransformationType.SMART_FUNCTION;
     const generateWithAI = this.isAIGenerationSelected(codeTemplateSource);
 
     let extension: Partial<ExtensionEntry> | undefined;
