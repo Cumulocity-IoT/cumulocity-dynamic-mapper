@@ -213,8 +213,8 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   private createOptionField(entry: PropertyEntry): FormlyFieldConfig {
     const options = entry.property.options;
     return this.createBaseFormField(entry, 'select', {
-      options: options ? Object.values(options).map((key: string) => ({
-        label: key,
+      options: options ? Object.entries(options).map(([key, label]: [string, string]) => ({
+        label,
         value: key
       })) : []
     });
