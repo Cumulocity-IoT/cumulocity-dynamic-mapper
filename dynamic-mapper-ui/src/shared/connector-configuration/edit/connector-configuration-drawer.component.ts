@@ -93,6 +93,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     [ConnectorPropertyType.BOOLEAN_PROPERTY, this.createBooleanField.bind(this)],
     [ConnectorPropertyType.OPTION_PROPERTY, this.createOptionField.bind(this)],
     [ConnectorPropertyType.STRING_LARGE_PROPERTY, this.createLargeStringField.bind(this)],
+    [ConnectorPropertyType.SENSITIVE_STRING_LARGE_PROPERTY, this.createSensitiveLargeStringField.bind(this)],
     [ConnectorPropertyType.MAP_PROPERTY, this.createMapField.bind(this)]
   ]);
 
@@ -224,6 +225,14 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     return this.createBaseFormField(entry, 'd11r-textarea', {
       cols: 120,
       rows: 6
+    });
+  }
+
+  private createSensitiveLargeStringField(entry: PropertyEntry): FormlyFieldConfig {
+    return this.createBaseFormField(entry, 'd11r-textarea', {
+      cols: 120,
+      rows: 6,
+      sensitive: true
     });
   }
 

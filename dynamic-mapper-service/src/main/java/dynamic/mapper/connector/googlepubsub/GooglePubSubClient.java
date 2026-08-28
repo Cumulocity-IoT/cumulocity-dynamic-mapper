@@ -22,7 +22,9 @@
 package dynamic.mapper.connector.googlepubsub;
 
 import com.google.api.core.ApiFuture;
+import com.google.api.gax.batching.BatchingSettings;
 import com.google.api.gax.core.FixedCredentialsProvider;
+import com.google.api.gax.retrying.RetrySettings;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.pubsub.v1.Publisher;
 import com.google.protobuf.ByteString;
@@ -52,6 +54,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -79,6 +82,13 @@ public class GooglePubSubClient extends AConnectorClient {
     private static final int DEFAULT_PUBLISH_TIMEOUT_SECONDS = 30;
     private static final int MAX_PUBLISHER_CREATE_RETRIES = 3;
     private static final int PUBLISHER_CREATE_RETRY_DELAY_MS = 1000;
+    /**
+     * The Publisher library defaults to a 600-second total retry timeout, which means a stuck
+     * gRPC call silently retries for up to 10 minutes. We cap it at publishTimeoutSeconds + a
+     * small buffer so the library gives up around the same time our future.get() times out,
+     * allowing publisher.awaitTermination() during disconnect to return quickly.
+     */
+    private static final int PUBLISHER_RETRY_OVERHEAD_SECONDS = 5;
 
     protected final Map<String, Publisher> publishers = new ConcurrentHashMap<>();
     protected FixedCredentialsProvider credentialsProvider;
@@ -228,7 +238,9 @@ public class GooglePubSubClient extends AConnectorClient {
             publishers.values().forEach(publisher -> {
                 try {
                     publisher.shutdown();
-                    publisher.awaitTermination(10, TimeUnit.SECONDS);
+                    // Keep well within the 5-second budget that ConnectorRegistry.unregisterClient()
+                    // allows for the whole disconnect() call (submitDisconnect().get(5s)).
+                    publisher.awaitTermination(3, TimeUnit.SECONDS);
                 } catch (Exception e) {
                     log.warn("{} - Error shutting down Pub/Sub publisher: {}", tenant, e.getMessage());
                 }
@@ -283,6 +295,15 @@ public class GooglePubSubClient extends AConnectorClient {
                 .getOrDefault("publishTimeoutSeconds", DEFAULT_PUBLISH_TIMEOUT_SECONDS)).intValue();
 
         for (int i = 0; i < requests.size(); i++) {
+            // Honour pipeline cancellation: if the processing thread was interrupted (e.g. by a
+            // pipeline timeout in CustomWebSocketClient), stop publishing remaining messages.
+            if (Thread.currentThread().isInterrupted()) {
+                log.warn("{} - Thread interrupted, aborting publish loop at message ({}/{}), connector: {}",
+                        tenant, i + 1, requests.size(), connectorName);
+                Thread.currentThread().interrupt(); // restore interrupt flag
+                break;
+            }
+
             DynamicMapperRequest request = requests.get(i);
 
             if (request == null || (request.getRequest() == null && request.getBinaryPayload() == null)) {
@@ -325,6 +346,13 @@ public class GooglePubSubClient extends AConnectorClient {
                             tenant, i + 1, requests.size(), topic, messageType, request.getRequest());
                 }
 
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); // restore interrupt flag
+                log.warn("{} - Publish interrupted at message ({}/{}), connector: {}", tenant, i + 1, requests.size(), connectorName);
+                request.setError(e);
+                context.addError(new ProcessingException(
+                        "Publish interrupted at message " + (i + 1) + "/" + requests.size(), e));
+                break;
             } catch (Exception e) {
                 log.error("{} - Error publishing to topic: {} ({}/{})", tenant, topic, i + 1, requests.size(), e);
                 request.setError(e);
@@ -425,14 +453,14 @@ public class GooglePubSubClient extends AConnectorClient {
                                 "applicationDefaultCredentials", "Application Default Credentials (ADC)")
                         .description("Authentication method used to connect to Google Cloud Pub/Sub."))
 
-                .property("serviceAccountKey", ConnectorPropertyBuilder.create(ConnectorPropertyType.STRING_LARGE_PROPERTY)
+                .property("serviceAccountKey", ConnectorPropertyBuilder.create(ConnectorPropertyType.SENSITIVE_STRING_LARGE_PROPERTY)
                         .required(false)
                         .order(3)
                         .condition("authMode", "serviceAccountKey")
                         .description("Full JSON key of the Google Cloud Service Account used to authenticate " +
                                 "against Pub/Sub (requires the roles/pubsub.publisher role)."))
 
-                .property("adcCredentialsJson", ConnectorPropertyBuilder.create(ConnectorPropertyType.STRING_LARGE_PROPERTY)
+                .property("adcCredentialsJson", ConnectorPropertyBuilder.create(ConnectorPropertyType.SENSITIVE_STRING_LARGE_PROPERTY)
                         .required(false)
                         .order(4)
                         .condition("authMode", "applicationDefaultCredentials")

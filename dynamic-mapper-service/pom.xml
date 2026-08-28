@@ -438,6 +438,10 @@
                             <encoding>UTF-8</encoding>
                             <rpmSkip>true</rpmSkip>
                             <containerSkip>false</containerSkip>
+                            <metaspace>
+                                <min>300m</min>
+                                <max>500m</max>
+                            </metaspace>
                             <!--<jvmArgs>
                                 <jvmArg>-XX:+UseG1GC</jvmArg>
                                 <jvmArg>-XX:+UseStringDeduplication</jvmArg>

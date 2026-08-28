@@ -91,7 +91,8 @@ public class ConnectorSpecification implements Cloneable {
 			return false;
 		}
 
-		return ConnectorPropertyType.SENSITIVE_STRING_PROPERTY == propertyType.type;
+		return ConnectorPropertyType.SENSITIVE_STRING_PROPERTY == propertyType.type
+				|| ConnectorPropertyType.SENSITIVE_STRING_LARGE_PROPERTY == propertyType.type;
 	}
 
 	@Override
