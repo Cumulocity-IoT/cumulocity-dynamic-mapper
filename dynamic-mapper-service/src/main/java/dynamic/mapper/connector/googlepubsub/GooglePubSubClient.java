@@ -381,13 +381,19 @@ public class GooglePubSubClient extends AConnectorClient {
             return publisher;
         }
 
-        publisher = retryOperation("Create Pub/Sub publisher for topic: " + topic,
+        Publisher created = retryOperation("Create Pub/Sub publisher for topic: " + topic,
                 MAX_PUBLISHER_CREATE_RETRIES, PUBLISHER_CREATE_RETRY_DELAY_MS,
                 () -> Publisher.newBuilder(TopicName.of(projectId, topic))
                         .setCredentialsProvider(credentialsProvider)
                         .build());
-        publishers.put(topic, publisher);
-        return publisher;
+
+        Publisher existing = publishers.putIfAbsent(topic, created);
+        if (existing != null) {
+            created.shutdown();
+            return existing;
+        }
+
+        return created;
     }
 
     @Override
