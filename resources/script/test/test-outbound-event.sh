@@ -77,8 +77,10 @@ MAPPING_JSON=$(cat <<EOF
   "transformationType": "DEFAULT",
   "filterMapping": "true",
   "sourceTemplate": "{\"text\":\"event text\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TestEvent\"}",
-  "targetTemplate": "{\"type\":\"c8y_TestEvent\",\"text\":\"hello\"}",
-  "substitutions": [],
+  "targetTemplate": "{\"type\":\"c8y_TestEvent\",\"text\":\"hello\",\"deviceId\":\"source-id\"}",
+  "substitutions": [
+    {"pathSource":"_IDENTITY_.externalId","pathTarget":"deviceId","repairStrategy":"DEFAULT","expandArray":false}
+  ],
   "active": false,
   "debug": false,
   "useExternalId": true,

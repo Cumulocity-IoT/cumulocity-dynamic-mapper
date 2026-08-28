@@ -86,8 +86,10 @@ MAPPING_A_JSON=$(cat <<EOF
   "transformationType": "DEFAULT",
   "filterMapping": "type = \"c8y_BusEvent\"",
   "sourceTemplate": "{\"text\":\"bus event\",\"type\":\"c8y_BusEvent\"}",
-  "targetTemplate": "{\"type\":\"c8y_BusEvent\"}",
-  "substitutions": [],
+  "targetTemplate": "{\"type\":\"c8y_BusEvent\",\"deviceId\":\"source-id\"}",
+  "substitutions": [
+    {"pathSource":"_IDENTITY_.externalId","pathTarget":"deviceId","repairStrategy":"DEFAULT","expandArray":false}
+  ],
   "active": false,
   "debug": false,
   "useExternalId": true,
@@ -117,8 +119,10 @@ MAPPING_B_JSON=$(cat <<EOF
   "transformationType": "DEFAULT",
   "filterMapping": "true",
   "sourceTemplate": "{\"text\":\"any event\",\"type\":\"c8y_TestEvent\"}",
-  "targetTemplate": "{\"type\":\"c8y_TestEvent\"}",
-  "substitutions": [],
+  "targetTemplate": "{\"type\":\"c8y_TestEvent\",\"deviceId\":\"source-id\"}",
+  "substitutions": [
+    {"pathSource":"_IDENTITY_.externalId","pathTarget":"deviceId","repairStrategy":"DEFAULT","expandArray":false}
+  ],
   "active": false,
   "debug": false,
   "useExternalId": true,
