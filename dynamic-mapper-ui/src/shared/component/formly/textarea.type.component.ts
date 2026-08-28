@@ -46,7 +46,10 @@ import { FieldType, FormlyModule } from '@ngx-formly/core';
 </textarea>
         @if (!isServerMasked) {
           <button type="button" class="btn btn-clean" style="position: absolute; right: 8px; top: 6px;"
-            (click)="showSensitive = !showSensitive" [title]="showSensitive ? 'Hide' : 'Show'">
+            (click)="showSensitive = !showSensitive"
+            [title]="showSensitive ? 'Hide' : 'Show'"
+            [attr.aria-label]="showSensitive ? 'Hide sensitive value' : 'Show sensitive value'"
+            [attr.aria-pressed]="showSensitive">
             <i [class]="'dlt-c8y-icon-' + (showSensitive ? 'eye-slash' : 'eye')"></i>
           </button>
         }
