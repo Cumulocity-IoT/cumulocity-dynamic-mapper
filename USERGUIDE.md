@@ -129,6 +129,13 @@ The mapper supports the following connectors:
           <td class="text-center"><strong>X</strong><br></td>
           <td>JSON, Flat File, Hex, Any Payload</td>
         </tr>
+        <tr class="table-light">
+          <td><strong>Google Cloud Pub/Sub</strong><br><small class="text-muted">(e.g. Google Manufacturing Data Engine)</small></td>
+          <td class="text-center text-muted">-</td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON</td>
+        </tr>
     </table>
   </div>
 </div>
@@ -143,6 +150,7 @@ Furthermore, new connectors can be added. The UI is shown on the following scree
 - Apache Pulsar: supports connections to Apache Pulsar brokers
 - AMQP 0.9.1: supports connections to AMQP 0.9.1 brokers
 - AMQP 1.0: supports connections to AMQP 1.0 brokers
+- Google Cloud Pub/Sub: outbound-only connector that publishes Cumulocity data (Measurements, Alarms, Events, ...) to a Google Cloud Pub/Sub topic, e.g. for ingestion into Google's Manufacturing Data Engine (MDE). Every published message carries the attributes `sourceSystem=cumulocity` and `messageType=<measurement|alarm|event|...>` in addition to the mapping-defined JSON body. Supports authentication via a Service Account Key or Application Default Credentials (ADC).
 
 The configuration properties are dynamically adapted to the configuration parameter for the chosen connector type:
 
