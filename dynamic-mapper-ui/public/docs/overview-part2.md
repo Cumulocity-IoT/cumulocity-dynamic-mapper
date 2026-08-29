@@ -42,6 +42,8 @@ supports various connector types:
 - **AMQP 0-9-1** - Connect to AMQP 0-9-1 brokers like RabbitMQ for reliable message queuing
 - **AMQP 1.0** - Connect to AMQP 1.0 brokers (Azure Service Bus, ActiveMQ Artemis, Solace, etc.) using the Apache
   Qpid JMS client
+- **Google Cloud Pub/Sub** - Outbound-only connector that publishes Cumulocity data to a Google Cloud Pub/Sub
+  topic, e.g. for ingestion into Google's Manufacturing Data Engine (MDE)
 
 Use the [wizard](/c8y-pkg-dynamic-mapper/node3/connectorConfiguration) and **Add Connector** to create your
 connector. Refer to the [Managing Connectors](#managing-connectors) section for detailed guidance.
@@ -124,6 +126,7 @@ The mapper supports the following connectors and payload formats:
 | **Kafka** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
 | **AMQP 0-9-1** (RabbitMQ, etc.) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
 | **AMQP 1.0** (Azure Service Bus, Artemis, Solace, etc.) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **Google Cloud Pub/Sub** (e.g. Google Manufacturing Data Engine) | – | ✓ | ✓ | JSON |
 
 :::caution
 Some connectors like HTTP Connector and Cumulocity MQTT Service have only one instance per tenant. Multiple
