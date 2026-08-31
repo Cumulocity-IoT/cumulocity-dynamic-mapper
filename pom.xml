@@ -34,7 +34,7 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<revision>6.5.0-SNAPSHOT</revision>
+		<revision>6.5.0</revision>
 		<spring-boot-dependencies.version>4.0.7</spring-boot-dependencies.version>
 		<c8y.version>2026.43.0</c8y.version>
 		<lombok.version>1.18.46</lombok.version>
