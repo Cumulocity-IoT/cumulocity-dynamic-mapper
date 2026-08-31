@@ -27,15 +27,15 @@ The solution is composed of two major components:
 
 | Connector | Description |
 |-----------|-------------|
+| **AMQP** | Supports AMQP 0.9.x (RabbitMQ) and AMQP 1.0 (Azure Service Bus) |
+| **Apache Pulsar** | Connects to Pulsar brokers (native Pulsar protocol and MQTT-over-Pulsar) |
+| **Google Cloud Pub/Sub** | Bidirectional — publishes Cumulocity data (Measurements, Alarms, Events, ...) to a Pub/Sub topic (e.g. for ingestion into Google's Manufacturing Data Engine) and consumes inbound messages from a pre-existing Pub/Sub subscription |
+| **HTTP/REST endpoint** | Receives data pushed by HTTP clients |
+| **Kafka** | Connects to Apache Kafka brokers |
 | **MQTT 3.1.1** | Uses [hivemq-mqtt-client](https://github.com/hivemq/hivemq-mqtt-client) — connects to any MQTT 3.1.1 broker |
 | **MQTT 5.0** | Uses hivemq-mqtt-client with MQTT 5.0 features (properties, subscription options) |
 | **MQTT Service** | Connects to the Cumulocity built-in MQTT Service via the unified Pulsar-based connector path |
-| **Kafka** | Connects to Apache Kafka brokers |
-| **HTTP/REST endpoint** | Receives data pushed by HTTP clients |
-| **AMQP** | Supports AMQP 0.9.x (RabbitMQ) and AMQP 1.0 (Azure Service Bus) |
-| **Apache Pulsar** | Connects to Pulsar brokers (native Pulsar protocol and MQTT-over-Pulsar) |
 | **Webhook** | Exposes an HTTP endpoint accepting inbound push payloads |
-| **Google Cloud Pub/Sub** | Bidirectional — publishes Cumulocity data (Measurements, Alarms, Events, ...) to a Pub/Sub topic (e.g. for ingestion into Google's Manufacturing Data Engine) and consumes inbound messages from a pre-existing Pub/Sub subscription |
 
 Custom connectors can be added by extending `AConnectorClient` — see [EXTENSIONS.md](EXTENSIONS.md).
 

@@ -30,16 +30,16 @@ It supports zero-code mapping, code-based mapping, and AI-assisted mapping sugge
 
 | Connector | Purpose |
 |---|---|
-| MQTT Broker | Connect to third-party MQTT brokers (HiveMQ, Mosquitto, etc.) |
-| Cumulocity MQTT Service | Use Cumulocity's built-in MQTT broker with device isolation |
-| HTTP Connector | Receive payloads via REST endpoints |
-| Webhook | Forward data to external REST APIs |
-| Cumulocity API | Create/update/delete managed objects, events, alarms, measurements |
-| Apache Kafka | Integrate with Kafka topics |
-| Apache Pulsar | Integrate with Pulsar topics |
 | AMQP 0-9-1 | Connect to brokers like RabbitMQ |
 | AMQP 1.0 | Connect to AMQP 1.0 systems (Azure Service Bus, Artemis, Solace, etc.) |
+| Apache Kafka | Integrate with Kafka topics |
+| Apache Pulsar | Integrate with Pulsar topics |
+| Cumulocity API | Create/update/delete managed objects, events, alarms, measurements |
+| Cumulocity MQTT Service | Use Cumulocity's built-in MQTT broker with device isolation |
 | Google Cloud Pub/Sub | Publish/subscribe data via a Google Cloud Pub/Sub topic and subscription, e.g. for ingestion into Google's Manufacturing Data Engine (MDE) |
+| HTTP Connector | Receive payloads via REST endpoints |
+| MQTT Broker | Connect to third-party MQTT brokers (HiveMQ, Mosquitto, etc.) |
+| Webhook | Forward data to external REST APIs |
 
 ## Documentation
 

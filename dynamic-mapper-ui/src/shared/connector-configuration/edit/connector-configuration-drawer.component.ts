@@ -134,7 +134,8 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
               value: sp.connectorType,
               disabled: !this.allowedConnectors.includes(sp.connectorType)
             };
-          }),
+          })
+          .sort((a, b) => a.label.localeCompare(b.label)),
         change: () => this.createDynamicForm(this.brokerForm.get('connectorType').value),
         required: true,
         disabled: this.readOnly

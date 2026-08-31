@@ -29,22 +29,22 @@ transformations:
 First, create a connector to establish communication with your message broker or data source. The Dynamic Mapper
 supports various connector types:
 
-- **External MQTT Broker** - Connect to third-party MQTT brokers such as HiveMQ, Mosquitto, Eclipse Mosquitto, or
-  any MQTT-compliant broker
-- **Cumulocity MQTT Service** - Use the built-in Cumulocity IoT MQTT broker for device communication with device
-  isolation
-- **HTTP Connector** - Receive data via REST endpoints
-- **Webhook** - Send data to external REST APIs
-- **Cumulocity API** - Use the internal Cumulocity REST API for creating, updating, and deleting managed objects,
-  events, alarms, and measurements
-- **Apache Kafka** - Integrate with Kafka topics for high-throughput messaging
-- **Apache Pulsar** - Connect to Pulsar topics for cloud-native messaging
 - **AMQP 0-9-1** - Connect to AMQP 0-9-1 brokers like RabbitMQ for reliable message queuing
 - **AMQP 1.0** - Connect to AMQP 1.0 brokers (Azure Service Bus, ActiveMQ Artemis, Solace, etc.) using the Apache
   Qpid JMS client
+- **Apache Kafka** - Integrate with Kafka topics for high-throughput messaging
+- **Apache Pulsar** - Connect to Pulsar topics for cloud-native messaging
+- **Cumulocity API** - Use the internal Cumulocity REST API for creating, updating, and deleting managed objects,
+  events, alarms, and measurements
+- **Cumulocity MQTT Service** - Use the built-in Cumulocity IoT MQTT broker for device communication with device
+  isolation
+- **External MQTT Broker** - Connect to third-party MQTT brokers such as HiveMQ, Mosquitto, Eclipse Mosquitto, or
+  any MQTT-compliant broker
 - **Google Cloud Pub/Sub** - Bidirectional connector: publishes Cumulocity data to a Pub/Sub topic (e.g. for
   ingestion into Google's Manufacturing Data Engine, MDE) and consumes inbound messages from a pre-existing
   Pub/Sub subscription
+- **HTTP Connector** - Receive data via REST endpoints
+- **Webhook** - Send data to external REST APIs
 
 Use the [wizard](/c8y-pkg-dynamic-mapper/node3/connectorConfiguration) and **Add Connector** to create your
 connector. Refer to the [Managing Connectors](#managing-connectors) section for detailed guidance.
@@ -118,16 +118,16 @@ The mapper supports the following connectors and payload formats:
 
 | Connector | Inbound | Outbound | JavaScript | Supported Payload Formats |
 |---|:---:|:---:|:---:|---|
-| **Cumulocity MQTT Service** (device isolation, one instance per tenant) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
-| **MQTT** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension, **SparkPlug B** |
-| **HTTP Connector** (one instance per tenant) | ✓ | – | ✓ | JSON, Hex, Protobuf, Extension |
-| **Webhook** (for external REST APIs) | – | ✓ | ✓ | JSON |
-| **Cumulocity API** (for internal Cumulocity REST API) | – | ✓ | ✓ | JSON |
-| **Apache Pulsar** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
-| **Kafka** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
 | **AMQP 0-9-1** (RabbitMQ, etc.) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
 | **AMQP 1.0** (Azure Service Bus, Artemis, Solace, etc.) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **Apache Pulsar** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **Cumulocity API** (for internal Cumulocity REST API) | – | ✓ | ✓ | JSON |
+| **Cumulocity MQTT Service** (device isolation, one instance per tenant) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
 | **Google Cloud Pub/Sub** (e.g. Google Manufacturing Data Engine) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **HTTP Connector** (one instance per tenant) | ✓ | – | ✓ | JSON, Hex, Protobuf, Extension |
+| **Kafka** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **MQTT** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension, **SparkPlug B** |
+| **Webhook** (for external REST APIs) | – | ✓ | ✓ | JSON |
 
 :::caution
 Some connectors like HTTP Connector and Cumulocity MQTT Service have only one instance per tenant. Multiple
