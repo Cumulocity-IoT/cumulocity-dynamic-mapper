@@ -25,20 +25,51 @@ import { FieldType, FormlyModule } from '@ngx-formly/core';
 @Component({
   selector: 'd11r-formly-field-textarea',
   template: `
-    <textarea
-       c8y-textarea-autoresize
-      [class]="class"
-      [readonly]="props.readonly"
-      [required]="props.required"
-      [formControl]="formControl"
-      [cols]="props.cols"
-      [rows]="props.rows"
-      [formlyAttributes]="field"
-      [placeholder]="props.placeholder"
-      #textareaRef
-    >
+    @if (props['sensitive']) {
+      <div style="position: relative;">
+        <textarea
+          c8y-textarea-autoresize
+          [class]="class"
+          [readonly]="props.readonly"
+          [required]="props.required"
+          [formControl]="formControl"
+          [cols]="props.cols"
+          [rows]="props.rows"
+          [formlyAttributes]="field"
+          [placeholder]="props.placeholder"
+          [style.-webkit-text-security]="(!isServerMasked && !showSensitive) ? 'disc' : 'none'"
+          [style.color]="(!isServerMasked && !showSensitive) ? 'transparent' : null"
+          [style.text-shadow]="(!isServerMasked && !showSensitive) ? '0 0 8px rgba(0,0,0,0.5)' : null"
+          #textareaRef
+        >
  {{ formControl.value }}
 </textarea>
+        @if (!isServerMasked) {
+          <button type="button" class="btn btn-clean" style="position: absolute; right: 8px; top: 6px;"
+            (click)="showSensitive = !showSensitive"
+            [title]="showSensitive ? 'Hide' : 'Show'"
+            [attr.aria-label]="showSensitive ? 'Hide sensitive value' : 'Show sensitive value'"
+            [attr.aria-pressed]="showSensitive">
+            <i [class]="'dlt-c8y-icon-' + (showSensitive ? 'eye-slash' : 'eye')"></i>
+          </button>
+        }
+      </div>
+    } @else {
+      <textarea
+        c8y-textarea-autoresize
+        [class]="class"
+        [readonly]="props.readonly"
+        [required]="props.required"
+        [formControl]="formControl"
+        [cols]="props.cols"
+        [rows]="props.rows"
+        [formlyAttributes]="field"
+        [placeholder]="props.placeholder"
+        #textareaRef
+      >
+ {{ formControl.value }}
+</textarea>
+    }
   `,
   styleUrls: ['./textarea.type.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,6 +78,11 @@ import { FieldType, FormlyModule } from '@ngx-formly/core';
 })
 export class CustomFieldTextarea extends FieldType implements AfterViewInit {
   @ViewChild('textareaRef') textareaRef: ElementRef<HTMLTextAreaElement>;
+  showSensitive = false;
+
+  get isServerMasked(): boolean {
+    return this.formControl.value === '****';
+  }
 
   get class() {
     return `form-control ${this.props['class']}`;

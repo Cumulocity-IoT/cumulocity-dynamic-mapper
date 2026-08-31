@@ -33,7 +33,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="25. C8Y managed-object change → MQTT broker (metadata)"
+TEST_TITLE="26. C8Y managed-object change → MQTT broker (metadata)"
 
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 DEVICE_NAME="dmtest-out-inv-$(date +%s)"
@@ -96,6 +96,7 @@ MAPPING_JSON=$(cat <<EOF
   "sourceTemplate": "{\"type\":\"dmtest-out-inv-type\",\"name\":\"device name\",\"dmtest_Trigger\":{\"rev\":1}}",
   "targetTemplate": "{\"deviceId\":\"source-id\",\"deviceType\":\"a-type\",\"rev\":0}",
   "substitutions": [
+    {"pathSource":"_IDENTITY_.externalId","pathTarget":"deviceId","repairStrategy":"DEFAULT","expandArray":false},
     {"pathSource":"type","pathTarget":"deviceType","repairStrategy":"DEFAULT","expandArray":false},
     {"pathSource":"dmtest_Trigger.rev","pathTarget":"rev","repairStrategy":"DEFAULT","expandArray":false}
   ],

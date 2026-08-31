@@ -82,6 +82,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   sessionTTLMinutes: number = 10;
   sessionDeviceType: string | null = null;
   sessionSourceId: string | null = null;
+  sessionDeviceName: string | null = null;
   sessionDeviceTypeFilter: string | null = null;
   messages: IndexedMessage[] = [];
   paused: boolean = false;
@@ -215,6 +216,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       sessionTTLMinutes: this.sessionTTLMinutes,
       sessionDeviceType: this.sessionDeviceType,
       sessionSourceId: this.sessionSourceId,
+      sessionDeviceName: this.sessionDeviceName,
       sessionDeviceTypeFilter: this.sessionDeviceTypeFilter
     };
     localStorage.setItem(MessageExplorerComponent.SESSION_STORAGE_KEY, JSON.stringify(state));
@@ -249,6 +251,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.sessionTTLMinutes = state.sessionTTLMinutes ?? 10;
       this.sessionDeviceType = state.sessionDeviceType ?? null;
       this.sessionSourceId = state.sessionSourceId ?? null;
+      this.sessionDeviceName = state.sessionDeviceName ?? null;
       this.sessionDeviceTypeFilter = state.sessionDeviceTypeFilter ?? null;
       const indexed: IndexedMessage[] = msgs.map(m => {
         const seqNo = this.nextSeqNo++;
@@ -367,6 +370,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.sessionTTLMinutes = result.sessionTTLMinutes;
       this.sessionDeviceType = result.deviceType ?? null;
       this.sessionSourceId = result.sourceId ?? null;
+      this.sessionDeviceName = result.deviceName ?? null;
       this.sessionDeviceTypeFilter = result.deviceTypeFilter ?? null;
       this.nextSeqNo = 1;
       this.paused = false;
@@ -391,6 +395,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       sessionTTLMinutes: this.sessionTTLMinutes,
       direction: this.sessionDirection,
       sourceId: this.sessionSourceId ?? undefined,
+      deviceName: this.sessionDeviceName ?? undefined,
       deviceTypeFilter: this.sessionDeviceTypeFilter ?? undefined
     };
     const drawer = this.bottomDrawerService.openDrawer(MessageExplorerDrawerComponent, {
@@ -422,6 +427,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.sessionTTLMinutes = result.sessionTTLMinutes;
       this.sessionDeviceType = result.deviceType ?? null;
       this.sessionSourceId = result.sourceId ?? null;
+      this.sessionDeviceName = result.deviceName ?? null;
       this.sessionDeviceTypeFilter = result.deviceTypeFilter ?? null;
       this.nextSeqNo = 1;
       this.paused = false;
@@ -460,6 +466,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     this.sessionTTLMinutes = 10;
     this.sessionDeviceType = null;
     this.sessionSourceId = null;
+    this.sessionDeviceName = null;
     this.sessionDeviceTypeFilter = null;
     this.paused = false;
     this.countdownIntervalComponent?.stop();
@@ -493,12 +500,15 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
 
     // Step 2 (OUTBOUND only): optionally create a subscription inline
     if (direction === Direction.OUTBOUND) {
-      // Use device type already fetched when the session was started (from the selected device).
-      // Fall back to fetching from msg.sourceId only if it wasn't available.
-      let deviceType: string | null = this.sessionDeviceType;
-      let deviceGroups: { id: string; name: string }[] = [];
       // Use msg.sourceId if available, otherwise fall back to the session's selected device
       const effectiveDeviceId = msg.sourceId ?? this.sessionSourceId;
+      // Reuse the type already fetched when the session started only if the message actually
+      // originated from that exact source. When the session source is a device group, messages
+      // arrive from its member devices — sessionDeviceType would then be the group's own type
+      // (e.g. "c8y_DeviceGroup"), not the originating device's, so it must be refetched below.
+      let deviceType: string | null =
+        effectiveDeviceId && effectiveDeviceId === this.sessionSourceId ? this.sessionDeviceType : null;
+      let deviceGroups: { id: string; name: string }[] = [];
       if (effectiveDeviceId) {
         try {
           const { data } = await this.inventoryService.detail(effectiveDeviceId, { withParents: true });
@@ -571,6 +581,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         mappingType: mappingResult.mappingType,
         transformationType: mappingResult.transformationType,
         codeTemplate: mappingResult.codeTemplate,
+        generateSmartFunctionWithAI: mappingResult.generateSmartFunctionWithAI,
         targetAPI,
         publishTopic,
         publishTopicSample

@@ -26,11 +26,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.connector.core.client.AConnectorClient;
+import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.inbound.processor.DeserializationInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.ExtensibleInboundProcessor;
@@ -53,51 +53,70 @@ import dynamic.mapper.processor.util.DynamicMapperBaseRoutes;
 @Component
 public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
 
-    @Autowired
-    @Qualifier("virtualThreadPool")
-    private ExecutorService virtualThreadPool;
+    private final ExecutorService virtualThreadPool;
 
-    @Autowired
-    private ExtensibleInboundProcessor extensibleProcessor;
+    private final ExtensibleInboundProcessor extensibleProcessor;
 
-    @Autowired
-    private ExtensibleResultInboundProcessor extensibleResultInboundProcessor;
+    private final ExtensibleResultInboundProcessor extensibleResultInboundProcessor;
 
-    @Autowired
-    private InternalProtobufProcessor internalProtobufProcessor;
+    private final InternalProtobufProcessor internalProtobufProcessor;
 
-    @Autowired
-    private EnrichmentInboundProcessor enrichmentProcessor;
+    private final EnrichmentInboundProcessor enrichmentProcessor;
 
-    @Autowired
-    private FlowInboundProcessor flowInboundProcessor;
+    private final FlowInboundProcessor flowInboundProcessor;
 
-    @Autowired
-    private SubstitutionResultInboundProcessor substitutionInboundProcessor;
+    private final SubstitutionResultInboundProcessor substitutionInboundProcessor;
 
-    @Autowired
-    private DeserializationInboundProcessor deserializationInboundProcessor;
+    private final DeserializationInboundProcessor deserializationInboundProcessor;
 
-    @Autowired
-    private JSONataInboundProcessor jsonataExtractionInboundProcessor;
+    private final JSONataInboundProcessor jsonataExtractionInboundProcessor;
 
-    @Autowired
-    private FlowResultInboundProcessor flowResultInboundProcessor;
+    private final FlowResultInboundProcessor flowResultInboundProcessor;
 
-    @Autowired
-    private FilterInboundProcessor filterInboundProcessor;
+    private final FilterInboundProcessor filterInboundProcessor;
 
-    @Autowired
-    private SendInboundProcessor inboundSendProcessor;
+    private final SendInboundProcessor inboundSendProcessor;
 
-    @Autowired
-    private ConsolidationProcessor consolidationProcessor;
+    private final ConsolidationProcessor consolidationProcessor;
 
-    @Autowired
-    private ProcessingContextAggregationStrategy processingContextAggregationStrategy;
+    private final ProcessingContextAggregationStrategy processingContextAggregationStrategy;
 
-    @Autowired
-    private RequestAggregationStrategy requestAggregationStrategy;
+    private final RequestAggregationStrategy requestAggregationStrategy;
+
+    public DynamicMapperInboundRoutes(
+            ConnectorRegistry connectorRegistry,
+            @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool,
+            ExtensibleInboundProcessor extensibleProcessor,
+            ExtensibleResultInboundProcessor extensibleResultInboundProcessor,
+            InternalProtobufProcessor internalProtobufProcessor,
+            EnrichmentInboundProcessor enrichmentProcessor,
+            FlowInboundProcessor flowInboundProcessor,
+            SubstitutionResultInboundProcessor substitutionInboundProcessor,
+            DeserializationInboundProcessor deserializationInboundProcessor,
+            JSONataInboundProcessor jsonataExtractionInboundProcessor,
+            FlowResultInboundProcessor flowResultInboundProcessor,
+            FilterInboundProcessor filterInboundProcessor,
+            SendInboundProcessor inboundSendProcessor,
+            ConsolidationProcessor consolidationProcessor,
+            ProcessingContextAggregationStrategy processingContextAggregationStrategy,
+            RequestAggregationStrategy requestAggregationStrategy) {
+        super(connectorRegistry);
+        this.virtualThreadPool = virtualThreadPool;
+        this.extensibleProcessor = extensibleProcessor;
+        this.extensibleResultInboundProcessor = extensibleResultInboundProcessor;
+        this.internalProtobufProcessor = internalProtobufProcessor;
+        this.enrichmentProcessor = enrichmentProcessor;
+        this.flowInboundProcessor = flowInboundProcessor;
+        this.substitutionInboundProcessor = substitutionInboundProcessor;
+        this.deserializationInboundProcessor = deserializationInboundProcessor;
+        this.jsonataExtractionInboundProcessor = jsonataExtractionInboundProcessor;
+        this.flowResultInboundProcessor = flowResultInboundProcessor;
+        this.filterInboundProcessor = filterInboundProcessor;
+        this.inboundSendProcessor = inboundSendProcessor;
+        this.consolidationProcessor = consolidationProcessor;
+        this.processingContextAggregationStrategy = processingContextAggregationStrategy;
+        this.requestAggregationStrategy = requestAggregationStrategy;
+    }
 
     @Override
     public void configure() throws Exception {

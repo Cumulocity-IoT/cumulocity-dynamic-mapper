@@ -117,6 +117,7 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   stepperViewModel!: StepperViewModel;
 
   @ViewChild('templateStep', { static: false }) templateStepRef!: MappingTemplateStepComponent;
+  @ViewChild('transformationStepRef', { static: false }) transformationStepRef!: MappingSubstitutionStepComponent;
   @ViewChild('mappingTestingStep', { static: false }) mappingTestingStep!: MappingStepTestingComponent;
   @ViewChild('stepper', { static: false }) stepper!: C8yStepper;
   @ViewChild('codeEditor', { static: false }) codeEditor!: EditorComponent;
@@ -215,6 +216,15 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   editorOptions?: EditorComponent['editorOptions'];
   stepperForward = true;
   currentStepIndex!: number;
+
+  /**
+   * Snapshot of the Cumulocity-side template's freshly-expanded default content, taken once when
+   * "Generate with AI" was chosen at mapping creation. Used to detect whether the user has since
+   * customized it before allowing them to leave the Select Templates step — an unedited generic
+   * default (or an empty Smart Function target) makes for a poor AI generation prompt. Cleared
+   * (undefined) once the check has passed, so it only ever gates the first attempt to move on.
+   */
+  private aiReviewBaseline?: string;
 
   private completionProviderDisposable: any;
   private readonly destroy$ = new Subject<void>();
@@ -674,19 +684,61 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     );
 
     this.updateTestingTemplate.next(this.buildTestMapping(false));
+
+    // One-shot: user chose "Generate with AI" back in the type-selection drawer, when
+    // source/target templates were still empty placeholders. Now that this step has the
+    // real templates (just updated above), launch the actual generation.
+    if (this.stepperConfiguration.triggerAIGenerationOnStart) {
+      this.stepperConfiguration.triggerAIGenerationOnStart = false;
+      if (this.aiAgentDeployed) {
+        this.launchAIGenerationOnStart();
+      }
+    }
+  }
+
+  /**
+   * Clicking "Next" out of the template step can race a pending edit in the JSON editor:
+   * some content-commit paths (e.g. a tree-node edit) only flush on blur, which may not
+   * have happened yet when the click fired. Blurring the active element and deferring by a
+   * macrotask gives that a chance to land before we re-pull the templates and open the AI
+   * drawer — otherwise the AI agent can receive a stale/default template instead of the
+   * user's latest edit.
+   */
+  private launchAIGenerationOnStart(): void {
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    setTimeout(() => {
+      this.updateTemplatesInEditors();
+      this.cdr.detectChanges();
+      this.transformationStepRef?.openGenerateSubstitutionDrawer();
+    }, 0);
   }
 
   private handleTestMappingStep(): void {
     this.updateTestingTemplate.next(this.buildTestMapping(true));
   }
 
+  /**
+   * Reads content directly from the underlying vanilla-jsoneditor instance, bypassing our own
+   * `(contentChanged)` mirror (`sourceTemplateUpdated`/`targetTemplateUpdated`). That mirror only
+   * updates when the library's `onChange` fires, which in practice doesn't fire for every edit
+   * path (e.g. some tree-mode interactions) — `.get()` is the library's own source of truth and
+   * is never stale.
+   */
+  private tryGetLiveEditorContent(editor: JsonEditorComponent | undefined): any {
+    if (!editor) return undefined;
+    try {
+      return editor.get();
+    } catch (error) {
+      console.warn('Failed to read live editor content, falling back', error);
+      return undefined;
+    }
+  }
+
   private updateTemplatesInEditors(): void {
-    if (this.templateStepRef?.sourceTemplateUpdated) {
-      this.sourceTemplate = this.templateStepRef.sourceTemplateUpdated;
-    }
-    if (this.templateStepRef?.targetTemplateUpdated) {
-      this.targetTemplate = this.templateStepRef.targetTemplateUpdated;
-    }
+    const liveSource = this.tryGetLiveEditorContent(this.templateStepRef?.editorSourceStepTemplate);
+    const liveTarget = this.tryGetLiveEditorContent(this.templateStepRef?.editorTargetStepTemplate);
+    this.sourceTemplate = liveSource ?? this.templateStepRef?.sourceTemplateUpdated ?? this.sourceTemplate;
+    this.targetTemplate = liveTarget ?? this.templateStepRef?.targetTemplateUpdated ?? this.targetTemplate;
   }
 
   onNextStep(event: StepperStepChange): void {
@@ -700,6 +752,17 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       if (extensionName?.invalid || eventName?.invalid) {
         return;
       }
+    }
+
+    if (this.currentStepIndex === STEP_SELECT_TEMPLATES && this.aiReviewBaseline !== undefined) {
+      if (!this.hasReviewedAITemplate()) {
+        this.alertService.warning(
+          'Please review and adjust the target template to reflect your actual data before generating with AI in the next step.'
+        );
+        return;
+      }
+      // One-shot: only gate the first attempt to leave this step.
+      this.aiReviewBaseline = undefined;
     }
 
     if (this.stepperConfiguration.advanceFromStepToEndStep != null &&
@@ -748,8 +811,9 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   private expandTemplates(): void {
     if (this.stepperConfiguration.editorMode === EditorMode.CREATE && !this.templatesInitialized) {
       this.templatesInitialized = true;
-      // If sourceTemplate was pre-filled (e.g. from Message Explorer), honour it directly
-      // instead of overwriting with the generic SAMPLE_TEMPLATES_C8Y default.
+      // Message Explorer prefill always lands on sourceTemplate, regardless of direction (see
+      // addMapping()'s comment: sourceTemplate is always "the side Message Explorer captured").
+      // Honour it directly instead of overwriting with the generic SAMPLE_TEMPLATES_C8Y default.
       const hasPrefilledSource = this.mapping.sourceTemplate && this.mapping.sourceTemplate !== '{}';
       if (hasPrefilledSource) {
         const templates = this.stepperService.expandExistingTemplates(
@@ -768,6 +832,7 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
         this.sourceTemplate = templates.sourceTemplate;
         this.targetTemplate = templates.targetTemplate;
       }
+      this.captureAIReviewBaselineIfNeeded();
       return;
     }
 
@@ -778,6 +843,31 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     );
     this.sourceTemplate = templates.sourceTemplate;
     this.targetTemplate = templates.targetTemplate;
+  }
+
+  /**
+   * Only relevant when the user chose "Generate with AI" at creation time, and only for JSONata.
+   * Snapshots the target template's just-expanded default content so `hasReviewedAITemplate()`
+   * can later detect, when leaving this step, whether the user customized it — an untouched
+   * generic default makes for a poor AI generation prompt.
+   *
+   * Smart Function is excluded: its targetTemplate is always forced back to `{}` by
+   * `onTargetAPIChanged()` and is explicitly ignored by both the generation prompt and the
+   * deployed agent's system prompt, so there is nothing there to meaningfully review — the
+   * AI prompt drawer's own pre-generation screen (targetAPI + optional sample payload) is the
+   * actual review step for Smart Function instead.
+   */
+  private captureAIReviewBaselineIfNeeded(): void {
+    if (!this.stepperConfiguration.triggerAIGenerationOnStart) return;
+    if (isCodeOrExtensionTransformation(this.mapping.transformationType)) return;
+    this.aiReviewBaseline = JSON.stringify(this.targetTemplate);
+  }
+
+  /** True if the user has edited the target template since `aiReviewBaseline` was captured. */
+  private hasReviewedAITemplate(): boolean {
+    const liveTarget = this.tryGetLiveEditorContent(this.templateStepRef?.editorTargetStepTemplate);
+    if (liveTarget === undefined) return true; // can't verify — don't block on a guess
+    return JSON.stringify(liveTarget) !== this.aiReviewBaseline;
   }
 
   async onTargetAPIChanged(changedTargetAPI: string): Promise<void> {

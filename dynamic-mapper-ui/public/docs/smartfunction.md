@@ -239,7 +239,7 @@ return JavaScript objects with specific properties that control how the mapper p
 For **inbound** mappings, your Smart Function should return an array of objects with the following properties:
 
 | Property | Required | Description |
-|---|---|---|
+|---|:---:|---|
 | `cumulocityType` | Yes | The Cumulocity API to use: `"measurement"`, `"event"`, `"alarm"`, `"operation"`, `"managedObject"`, or `"custom"`. Use `"custom"` to forward the payload directly to a tenant-local microservice instead of a built-in Cumulocity API. When `"custom"` is set, the `targetPath` property is required and device identity resolution is skipped. |
 | `action` | Yes | The action to perform: `"create"`, `"update"`, `"patch"`, or `"delete"`. **Note:** Measurements are immutable time-series data and don't support `"update"` or `"patch"` operations. If you specify these actions for measurements, the mapper automatically converts them to `"create"` to create a new measurement instead. For other Cumulocity objects (events, alarms, inventory), all actions are supported. |
 | `payload` | Yes | The actual data object to send to Cumulocity (e.g., measurement, event, alarm) |
@@ -248,22 +248,22 @@ For **inbound** mappings, your Smart Function should return an array of objects 
 
 **Context Methods for Accessing Incoming Metadata**
 
-| Method | | Description |
-|---|---|---|
-| `context.getClientId()` | Access | Returns the publisher's client ID from MQTT 5 user properties. Returns `null` if not available. **MQTT 5 only** — the publisher must include `clientId` as a user property. Example: `var clientId = context.getClientId();` |
-| `context.getManagedObject()` | Access | Lookup device properties by Cumulocity internal source ID. Returns device object or `null`. Example: `var device = context.getManagedObject("12345");` |
-| `context.getManagedObjectByExternalId()` | Access | Lookup device properties by external ID. Requires object with `externalId` and `type`. Example: `var device = context.getManagedObjectByExternalId({externalId: "sensor-01", type: "c8y_Serial"});` |
+| Method | Description |
+|---|---|
+| `context.getClientId()` | Returns the publisher's client ID from MQTT 5 user properties. Returns `null` if not available. **MQTT 5 only** — the publisher must include `clientId` as a user property. Example: `var clientId = context.getClientId();` |
+| `context.getManagedObject()` | Lookup device properties by Cumulocity internal source ID. Returns device object or `null`. Example: `var device = context.getManagedObject("12345");` |
+| `context.getManagedObjectByExternalId()` | Lookup device properties by external ID. Requires object with `externalId` and `type`. Example: `var device = context.getManagedObjectByExternalId({externalId: "sensor-01", type: "c8y_Serial"});` |
 
 **Context Config Properties — available via `context.getConfig()`**
 
-| Property | | Description |
-|---|---|---|
-| `tenant` | Access (all) | The Cumulocity tenant identifier. |
-| `topic` | Access (all) | The MQTT topic or URL path of the inbound message. |
-| `clientId` | Access (connector-dependent) | The publisher or producer client identifier. Its value depends on the connector type: **MQTT 5** — the publisher's client ID read from the MQTT 5 user property named `clientId` (`null` if not included; same value as `context.getClientId()`); **MQTT 3** — always `null`, MQTT 3.1.1 does not carry a per-message publisher identity; **Kafka** — always `null`, Kafka identifies messages by topic/partition/offset, use `payload["_KEY_"]` for the record key instead; **HTTP / Webhook / AMQP 0-9-1 / AMQP 1.0** — always `null`; **Pulsar / MQTT-over-Pulsar** — the value of the Pulsar message property `clientID` (may be `null`). Example: `var id = context.getConfig().clientId \|\| context.getConfig().topic;` |
-| `mappingName` | Access (all) | The name of the mapping. |
-| `mappingId` | Access (all) | The internal ID of the mapping. |
-| `targetAPI` | Access (all) | The Cumulocity target API (e.g. `"MEASUREMENT"`, `"EVENT"`). |
+| Property | Scope | Description |
+|---|:---:|---|
+| `tenant` | All | The Cumulocity tenant identifier. |
+| `topic` | All | The MQTT topic or URL path of the inbound message. |
+| `clientId` | Connector-dependent | The publisher or producer client identifier. Its value depends on the connector type: **MQTT 5** — the publisher's client ID read from the MQTT 5 user property named `clientId` (`null` if not included; same value as `context.getClientId()`); **MQTT 3** — always `null`, MQTT 3.1.1 does not carry a per-message publisher identity; **Kafka** — always `null`, Kafka identifies messages by topic/partition/offset, use `payload["_KEY_"]` for the record key instead; **HTTP / Webhook / AMQP 0-9-1 / AMQP 1.0** — always `null`; **Pulsar / MQTT-over-Pulsar** — the value of the Pulsar message property `clientID` (may be `null`). Example: `var id = context.getConfig().clientId \|\| context.getConfig().topic;` |
+| `mappingName` | All | The name of the mapping. |
+| `mappingId` | All | The internal ID of the mapping. |
+| `targetAPI` | All | The Cumulocity target API (e.g. `"MEASUREMENT"`, `"EVENT"`). |
 | `aliasMap` / `isActive` | Outbound only | SparkPlug B-specific context properties (`aliasMap` and `isActive`) are available for **outbound** SparkPlug B mappings only. See the *Metadata Properties for Outbound Smart Functions* table for details. |
 
 :::info Info - Context Methods for Accessing Metadata
@@ -459,7 +459,7 @@ For **outbound** mappings, your Smart Function should return an object (or array
 properties:
 
 | Property | Required | Description |
-|---|---|---|
+|---|:---:|---|
 | `topic` | Yes* | The MQTT topic or URL path to publish to. Can include dynamic values like device IDs. For Webhook connectors, this is appended to the base URL as the context path. **For Webhook connectors with Cumulocity Internal enabled:** If `cumulocityType` is not specified, the `topic` is used to derive the Cumulocity API endpoint. Topics should start with the API name (e.g., `"measurement"`, `"event"`, `"alarm"`, `"inventory"`) to automatically route to the correct Cumulocity REST API endpoint. However, using `cumulocityType` is recommended for more reliable API routing. |
 | `payload` | Yes | The data object or array to send to the external broker/system |
 | `action` | No | The action to perform: `"create"` (POST), `"update"` (PUT), `"patch"` (PATCH), or `"delete"` (DELETE). The action is automatically mapped to the corresponding HTTP method. **For Webhook connectors with Cumulocity Internal enabled:** The `action` property is essential for determining how to interact with the Cumulocity REST API. Combined with the `topic`, it controls whether to create, update, patch, or delete Cumulocity objects (measurements, events, alarms, inventory). **Special case:** Measurements are immutable time-series data and don't support update or patch operations. If you specify `action: "update"` or `action: "patch"` for measurements, the mapper automatically converts it to `"create"` (POST) to create a new measurement instead. |
@@ -471,16 +471,16 @@ properties:
 
 **Context Properties — available via `context.getConfig()`**
 
-| Property | | Description |
-|---|---|---|
-| `tenant` | Access (all) | The Cumulocity tenant identifier. |
-| `topic` | Access (all) | The inbound topic that triggered the outbound mapping. |
-| `mappingName` | Access (all) | The name of the mapping. |
-| `mappingId` | Access (all) | The internal ID of the mapping. |
-| `targetAPI` | Access (all) | The Cumulocity target API (e.g. `"MEASUREMENT"`, `"EVENT"`). |
-| `externalId` | Access (all) | The resolved external ID of the source device (present when `useExternalId` is enabled on the mapping). |
-| `aliasMap` | Access (SparkPlug B only) | A `{ metricName → alias }` map loaded from the `sparkPlugB_NBIRTH` (or `sparkPlugB_DBIRTH`) fragment stored on the device managed object during inbound BIRTH processing. Use it to include numeric aliases in outbound NCMD / DCMD metrics so that the edge node can match them without a full name lookup: <br>`const aliasMap = context.getConfig().aliasMap \|\| {};`<br>`function metric(name, type, value) {`<br>`  const m = { name, type, value };`<br>`  if (aliasMap[name] !== undefined)`<br>`    m.alias = parseInt(aliasMap[name], 10);`<br>`  return m;`<br>`}` |
-| `isActive` | Access (SparkPlug B only) | Boolean flag reflecting the current online/offline state of the target Edge Node or Device. Set to `true` when a NBIRTH / DBIRTH / NDATA / DDATA message was last received, and `false` after a NDEATH / DDEATH message. Defaults to `true` when no status fragment is present yet. Use it to suppress outbound commands to devices that have gone offline: <br>`if (!context.getConfig().isActive) {`<br>`  return null; // device offline — suppress command`<br>`}` |
+| Property | Scope | Description |
+|---|:---:|---|
+| `tenant` | All | The Cumulocity tenant identifier. |
+| `topic` | All | The inbound topic that triggered the outbound mapping. |
+| `mappingName` | All | The name of the mapping. |
+| `mappingId` | All | The internal ID of the mapping. |
+| `targetAPI` | All | The Cumulocity target API (e.g. `"MEASUREMENT"`, `"EVENT"`). |
+| `externalId` | All | The resolved external ID of the source device (present when `useExternalId` is enabled on the mapping). |
+| `aliasMap` | SparkPlug B only | A `{ metricName → alias }` map loaded from the `sparkPlugB_NBIRTH` (or `sparkPlugB_DBIRTH`) fragment stored on the device managed object during inbound BIRTH processing. Use it to include numeric aliases in outbound NCMD / DCMD metrics so that the edge node can match them without a full name lookup: <br>`const aliasMap = context.getConfig().aliasMap \|\| {};`<br>`function metric(name, type, value) {`<br>`  const m = { name, type, value };`<br>`  if (aliasMap[name] !== undefined)`<br>`    m.alias = parseInt(aliasMap[name], 10);`<br>`  return m;`<br>`}` |
+| `isActive` | SparkPlug B only | Boolean flag reflecting the current online/offline state of the target Edge Node or Device. Set to `true` when a NBIRTH / DBIRTH / NDATA / DDATA message was last received, and `false` after a NDEATH / DDEATH message. Defaults to `true` when no status fragment is present yet. Use it to suppress outbound commands to devices that have gone offline: <br>`if (!context.getConfig().isActive) {`<br>`  return null; // device offline — suppress command`<br>`}` |
 
 :::important Important: Webhook with Cumulocity Internal
 **Using Webhook connectors with Cumulocity Internal enabled:**

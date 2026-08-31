@@ -20,7 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="24. C8Y Operation → MQTT broker"
+TEST_TITLE="25. C8Y Operation → MQTT broker"
 
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 DEVICE_NAME="dmtest-out-op-$(date +%s)"
@@ -84,8 +84,10 @@ MAPPING_JSON=$(cat <<EOF
   "transformationType": "DEFAULT",
   "filterMapping": "true",
   "sourceTemplate": "{\"description\":\"restart\",\"type\":\"maker_Vibration_Sensor\"}",
-  "targetTemplate": "{\"command\":\"restart\"}",
-  "substitutions": [],
+  "targetTemplate": "{\"command\":\"restart\",\"deviceId\":\"source-id\"}",
+  "substitutions": [
+    {"pathSource":"_IDENTITY_.externalId","pathTarget":"deviceId","repairStrategy":"DEFAULT","expandArray":false}
+  ],
   "active": false,
   "debug": false,
   "useExternalId": true,

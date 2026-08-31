@@ -21,7 +21,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="38. Connector disconnect / reconnect cycle"
+TEST_TITLE="39. Connector disconnect / reconnect cycle"
 
 CONNECTOR_ID="${DM_CONNECTOR_ID:-}"
 

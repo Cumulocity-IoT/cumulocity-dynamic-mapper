@@ -27,6 +27,7 @@ import dynamic.mapper.connector.amqp.AMQP10Client;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
+import dynamic.mapper.connector.googlepubsub.GooglePubSubClient;
 import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.connector.kafka.KafkaClientV2;
 import dynamic.mapper.connector.mqtt.MQTT3Client;
@@ -158,6 +159,13 @@ public class ConnectorClientFactory {
                 connectorClient = new TestClient(configurationRegistry, connectorRegistry,
                         connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
                 log.info("{} - TestClient Connector created, identifier: {}", tenant,
+                        connectorConfiguration.getIdentifier());
+                break;
+
+            case GOOGLE_PUBSUB:
+                connectorClient = new GooglePubSubClient(configurationRegistry, connectorRegistry,
+                        connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
+                log.info("{} - Google Pub/Sub Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 

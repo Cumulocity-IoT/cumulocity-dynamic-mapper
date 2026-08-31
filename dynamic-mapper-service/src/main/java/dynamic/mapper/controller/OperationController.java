@@ -124,7 +124,7 @@ public class OperationController {
             - `RESET_DEPLOYMENT_MAP`: Resets the deployment map for the current tenant.
             - `RELOAD_EXTENSIONS`: Reloads all extensions for the current tenant.
             - `REFRESH_NOTIFICATIONS_SUBSCRIPTIONS`: Refreshes notification subscriptions for the current tenant.
-            - `CLEAR_CACHE`: Clears a specific cache (e.g., inbound ID cache, inventory cache).
+            - `CLEAR_CACHE`: Clears a specific cache (e.g., inbound ID cache, outbound ID cache, inventory cache).
             - `INIT_CODE_TEMPLATES`: Initializes code templates for the current tenant.
 
             """, requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Service operation to execute with parameters", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = ServiceOperation.class), examples = {
@@ -563,6 +563,12 @@ public class OperationController {
             Integer cacheSize = serviceConfigurationService
                     .getServiceConfiguration(tenant).getInboundExternalIdCacheSize();
             configurationRegistry.getC8yAgent().clearInboundExternalIdCache(tenant, false, cacheSize);
+            log.info("{} - Cache cleared: {}", tenant, cacheId);
+            return ResponseEntity.status(HttpStatus.CREATED).build();
+        } else if ("OUTBOUND_ID_CACHE".equals(cacheId)) {
+            Integer cacheSize = serviceConfigurationService
+                    .getServiceConfiguration(tenant).getOutboundExternalIdCacheSize();
+            configurationRegistry.getC8yAgent().clearOutboundExternalIdCache(tenant, false, cacheSize);
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } else if ("INVENTORY_CACHE".equals(cacheId)) {

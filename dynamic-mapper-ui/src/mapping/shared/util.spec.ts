@@ -27,7 +27,8 @@ import {
   normalizeTopic,
   splitTopicExcludingSeparator,
   splitTopicIncludingSeparator,
-  checkTopicsInboundAreValid
+  checkTopicsInboundAreValid,
+  stripTemplateMetadataTags
 } from './util';
 import { Direction, Mapping, MappingType, RepairStrategy, TransformationType } from '../../shared';
 
@@ -343,5 +344,84 @@ describe('checkTopicsInboundAreValid', () => {
     expect(
       result['MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name']
     ).toBeDefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// stripTemplateMetadataTags
+// ---------------------------------------------------------------------------
+
+describe('stripTemplateMetadataTags', () => {
+  it('should return falsy input unchanged', () => {
+    expect(stripTemplateMetadataTags('')).toBe('');
+    expect(stripTemplateMetadataTags(undefined)).toBeUndefined();
+  });
+
+  it('should strip the whole auto-generated system section up to and including the marker', () => {
+    const code =
+      '/**\n' +
+      ' * @name My Template\n' +
+      ' * @description A description\n' +
+      ' * @templateType INBOUND_SMART_FUNCTION\n' +
+      ' * @defaultTemplate true\n' +
+      ' * @internal true\n' +
+      ' * @readonly true\n' +
+      ' * --- metadata above is auto-generated, add your documentation below ---\n' +
+      ' */\n\n' +
+      'function onMessage(msg, context) { return []; }\n';
+
+    const result = stripTemplateMetadataTags(code);
+
+    expect(result).not.toContain('@name');
+    expect(result).not.toContain('@description');
+    expect(result).not.toContain('@templateType');
+    expect(result).not.toContain('@defaultTemplate');
+    expect(result).not.toContain('@internal');
+    expect(result).not.toContain('@readonly');
+    expect(result).not.toContain('metadata above is auto-generated');
+    expect(result).toContain('function onMessage(msg, context) { return []; }');
+  });
+
+  it('should preserve free-form documentation written below the marker', () => {
+    const code =
+      '/**\n' +
+      ' * @name My Template\n' +
+      ' * @templateType INBOUND_SMART_FUNCTION\n' +
+      ' * --- metadata above is auto-generated, add your documentation below ---\n' +
+      ' * Sample payload\n' +
+      ' * { "foo": "bar" }\n' +
+      ' */\n\n' +
+      'function onMessage(msg, context) { return []; }\n';
+
+    const result = stripTemplateMetadataTags(code);
+
+    expect(result).not.toContain('@name');
+    expect(result).not.toContain('@templateType');
+    expect(result).toContain('Sample payload');
+    expect(result).toContain('{ "foo": "bar" }');
+    expect(result).toContain('function onMessage(msg, context) { return []; }');
+  });
+
+  it('should fall back to stripping individual system tags when no marker is present (legacy templates)', () => {
+    const code =
+      '/**\n' +
+      ' * @name Legacy Template\n' +
+      ' * @description Legacy description\n' +
+      ' * @templateType INBOUND_SMART_FUNCTION\n' +
+      ' * @defaultTemplate true\n' +
+      ' * @internal true\n' +
+      ' * @readonly true\n' +
+      ' */\n\n' +
+      'function onMessage(msg, context) { return []; }\n';
+
+    const result = stripTemplateMetadataTags(code);
+
+    expect(result).not.toContain('@defaultTemplate');
+    expect(result).not.toContain('@internal');
+    expect(result).not.toContain('@readonly');
+    expect(result).not.toContain('@name');
+    expect(result).not.toContain('@description');
+    expect(result).not.toContain('@templateType');
+    expect(result).toContain('function onMessage(msg, context) { return []; }');
   });
 });

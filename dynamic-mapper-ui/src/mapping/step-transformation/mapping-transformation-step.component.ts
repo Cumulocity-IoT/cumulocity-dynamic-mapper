@@ -77,14 +77,8 @@ export class MappingSubstitutionStepComponent implements OnInit {
 
   get identitySubstitutionHint(): string {
     const side = this.mapping?.direction === Direction.OUTBOUND ? 'source' : 'target';
-    if (this.mapping?.direction === Direction.OUTBOUND && this.mapping?.useExternalId) {
-      return `One substitution with ${side} <code class="text-warning text-10">_IDENTITY_.externalId</code>`
-        + ` or <code class="text-warning text-10">_IDENTITY_.c8ySourceId</code> must exist.`;
-    }
-    const path = this.mapping?.useExternalId
-      ? '_IDENTITY_.externalId'
-      : '_IDENTITY_.c8ySourceId';
-    return `One substitution with ${side} <code class="text-warning text-10">${path}</code> must exist.`;
+    return `One substitution with ${side} <code class="text-warning text-10">_IDENTITY_.externalId</code>`
+      + ` or <code class="text-warning text-10">_IDENTITY_.c8ySourceId</code> must exist.`;
   }
 
   templateForm: FormGroup = new FormGroup({});
@@ -403,17 +397,15 @@ export class MappingSubstitutionStepComponent implements OnInit {
       } else {
         if (Array.isArray(resultOf) && resultOf.length > 0) {
           this.alertService.success(`Generated ${resultOf.length} substitutions.`);
-          this.mapping.substitutions.splice(0);
           this.selectedSubstitution = -1;
-          resultOf.forEach(sub => {
-            this.substitutionService.addSubstitution(
-              sub,
-              this.mapping,
-              this.stepperConfiguration,
-              this.expertMode,
-              this.refreshSubstitutionValidity
-            );
-          });
+          // Bulk-replace rather than looping addSubstitution(): that method is fire-and-forget
+          // and opens a blocking confirmation modal per duplicate/expert-mode hit, which stacks
+          // dialogs when applying a freshly-generated set wholesale.
+          this.substitutionService.replaceAllSubstitutions(
+            resultOf,
+            this.mapping,
+            this.refreshSubstitutionValidity
+          );
         } else {
           this.alertService.warning('No substitutions were generated.');
         }

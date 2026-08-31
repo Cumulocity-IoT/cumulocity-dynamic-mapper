@@ -184,7 +184,11 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
       xAxis: {
         type: 'value',
         boundaryGap: [0, 0.01],
-        axisLabel: textStyle
+        minInterval: 1,
+        axisLabel: {
+          ...textStyle,
+          formatter: (value: number) => Math.round(value).toString()
+        }
       },
       yAxis: {
         axisTick: { show: false },

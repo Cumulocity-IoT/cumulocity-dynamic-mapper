@@ -93,6 +93,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     [ConnectorPropertyType.BOOLEAN_PROPERTY, this.createBooleanField.bind(this)],
     [ConnectorPropertyType.OPTION_PROPERTY, this.createOptionField.bind(this)],
     [ConnectorPropertyType.STRING_LARGE_PROPERTY, this.createLargeStringField.bind(this)],
+    [ConnectorPropertyType.SENSITIVE_STRING_LARGE_PROPERTY, this.createSensitiveLargeStringField.bind(this)],
     [ConnectorPropertyType.MAP_PROPERTY, this.createMapField.bind(this)]
   ]);
 
@@ -133,7 +134,8 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
               value: sp.connectorType,
               disabled: !this.allowedConnectors.includes(sp.connectorType)
             };
-          }),
+          })
+          .sort((a, b) => a.label.localeCompare(b.label)),
         change: () => this.createDynamicForm(this.brokerForm.get('connectorType').value),
         required: true,
         disabled: this.readOnly
@@ -213,8 +215,8 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   private createOptionField(entry: PropertyEntry): FormlyFieldConfig {
     const options = entry.property.options;
     return this.createBaseFormField(entry, 'select', {
-      options: options ? Object.values(options).map((key: string) => ({
-        label: key,
+      options: options ? Object.entries(options).map(([key, label]: [string, string]) => ({
+        label,
         value: key
       })) : []
     });
@@ -224,6 +226,14 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     return this.createBaseFormField(entry, 'd11r-textarea', {
       cols: 120,
       rows: 6
+    });
+  }
+
+  private createSensitiveLargeStringField(entry: PropertyEntry): FormlyFieldConfig {
+    return this.createBaseFormField(entry, 'd11r-textarea', {
+      cols: 120,
+      rows: 6,
+      sensitive: true
     });
   }
 

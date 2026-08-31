@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -66,6 +67,14 @@ public class Mapping implements Serializable {
 
     public static final String TOKEN_IDENTITY = "_IDENTITY_";
     public static final String TOKEN_TOPIC_LEVEL = "_TOPIC_LEVEL_";
+
+    // Matches "_IDENTITY_.externalId" / "_IDENTITY_.c8ySourceId" as a whole token,
+    // whether it is the entire path or embedded in a larger JSONata expression,
+    // e.g. "\"externalId_.\" & _IDENTITY_.externalId"
+    private static final Pattern IDENTITY_EXTERNAL_ID_REFERENCE = Pattern
+            .compile("(?<![\\w])" + Pattern.quote(TOKEN_IDENTITY + ".externalId") + "(?![\\w])");
+    private static final Pattern IDENTITY_C8Y_SOURCE_ID_REFERENCE = Pattern
+            .compile("(?<![\\w])" + Pattern.quote(TOKEN_IDENTITY + ".c8ySourceId") + "(?![\\w])");
     public static final String TOKEN_CONTEXT_DATA = "_CONTEXT_DATA_";
     public static final String CONTEXT_DATA_KEY_NAME = "key";
     public static final String CONTEXT_DATA_METHOD_NAME = "method";
@@ -139,9 +148,9 @@ public class Mapping implements Serializable {
     private MappingType mappingType;
 
     @Builder.Default
-    @Schema(description = "Type of processing the transformation", implementation = TransformationType.class, example = "DEFAULT")
+    @Schema(description = "Type of processing the transformation", implementation = TransformationType.class, example = "JSONATA")
     @NotNull
-    private TransformationType transformationType = TransformationType.DEFAULT;
+    private TransformationType transformationType = TransformationType.JSONATA;
 
     @Builder.Default
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Array of field substitutions for data transformation")
@@ -284,19 +293,12 @@ public class Mapping implements Serializable {
     @JsonIgnore
     public Boolean definesDeviceIdentifier(
             Substitution sub) {
-        if (Direction.INBOUND.equals(direction)) {
-            if (useExternalId && !("").equals(externalIdType)) {
-                return (Mapping.TOKEN_IDENTITY + ".externalId").equals(sub.getPathTarget());
-            } else {
-                return (Mapping.TOKEN_IDENTITY + ".c8ySourceId").equals(sub.getPathTarget());
-            }
-        } else {
-            if (useExternalId && !("").equals(externalIdType)) {
-                return (Mapping.TOKEN_IDENTITY + ".externalId").equals(sub.getPathSource());
-            } else {
-                return (Mapping.TOKEN_IDENTITY + ".c8ySourceId").equals(sub.getPathSource());
-            }
+        String path = Direction.INBOUND.equals(direction) ? sub.getPathTarget() : sub.getPathSource();
+        if (path == null) {
+            return false;
         }
+        return IDENTITY_EXTERNAL_ID_REFERENCE.matcher(path).find()
+                || IDENTITY_C8Y_SOURCE_ID_REFERENCE.matcher(path).find();
     }
 
     @JsonIgnore

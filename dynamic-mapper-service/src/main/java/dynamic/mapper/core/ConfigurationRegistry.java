@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.camel.CamelContext;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -60,7 +59,7 @@ public class ConfigurationRegistry implements IMapperConfiguration {
     private final GraalVMContextService graalVMContextService;
 
     @Getter
-    private C8YAgent c8yAgent;
+    private final C8YAgent c8yAgent;
 
     @Value("${APP.mqttServiceUrl}")
     @Getter
@@ -69,11 +68,6 @@ public class ConfigurationRegistry implements IMapperConfiguration {
     @Value("${C8Y_BASEURL_PULSAR:}")
     @Getter
     String mqttServicePulsarUrl;
-
-    @Autowired
-    public void setC8yAgent(@Lazy C8YAgent c8yAgent) {
-        this.c8yAgent = c8yAgent;
-    }
 
     @Getter
     private final ConnectorRegistry connectorRegistry;
@@ -85,29 +79,13 @@ public class ConfigurationRegistry implements IMapperConfiguration {
     private final ObjectMapper objectMapper;
 
     @Getter
-    private MappingService mappingService;
-
-    @Autowired
-    public void setMappingComponent(@Lazy MappingService mappingService) {
-        this.mappingService = mappingService;
-    }
+    private final MappingService mappingService;
 
     @Getter
-    private ConnectorConfigurationService connectorConfigurationService;
-
-    @Autowired
-    public void setConnectorConfigurationService(
-            @Lazy ConnectorConfigurationService connectorConfigurationService) {
-        this.connectorConfigurationService = connectorConfigurationService;
-    }
+    private final ConnectorConfigurationService connectorConfigurationService;
 
     @Getter
-    public ServiceConfigurationService serviceConfigurationService;
-
-    @Autowired
-    public void setServiceConfigurationService(@Lazy ServiceConfigurationService serviceConfigurationService) {
-        this.serviceConfigurationService = serviceConfigurationService;
-    }
+    public final ServiceConfigurationService serviceConfigurationService;
 
     @Getter
     private final ExecutorService virtualThreadPool;
@@ -127,7 +105,11 @@ public class ConfigurationRegistry implements IMapperConfiguration {
             NotificationSubscriber notificationSubscriber,
             ObjectMapper objectMapper,
             @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool,
-            @Lazy CamelContext camelContext) {
+            @Lazy CamelContext camelContext,
+            @Lazy C8YAgent c8yAgent,
+            @Lazy MappingService mappingService,
+            @Lazy ConnectorConfigurationService connectorConfigurationService,
+            @Lazy ServiceConfigurationService serviceConfigurationService) {
         this.tenantRegistry = tenantRegistry;
         this.graalVMContextService = graalVMContextService;
         this.connectorRegistry = connectorRegistry;
@@ -135,6 +117,10 @@ public class ConfigurationRegistry implements IMapperConfiguration {
         this.objectMapper = objectMapper;
         this.virtualThreadPool = virtualThreadPool;
         this.camelContext = camelContext;
+        this.c8yAgent = c8yAgent;
+        this.mappingService = mappingService;
+        this.connectorConfigurationService = connectorConfigurationService;
+        this.serviceConfigurationService = serviceConfigurationService;
     }
 
     public boolean isPulsarAvailable(String tenant) {

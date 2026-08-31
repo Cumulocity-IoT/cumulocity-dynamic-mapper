@@ -6,7 +6,6 @@ import static com.dashjoin.jsonata.Jsonata.jsonata;
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
 import org.apache.camel.Exchange;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.core.ConfigurationRegistry;
@@ -19,8 +18,11 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class FilterInboundProcessor extends BaseProcessor {
 
-    @Autowired
-    ConfigurationRegistry configurationRegistry;
+    final ConfigurationRegistry configurationRegistry;
+
+    public FilterInboundProcessor(ConfigurationRegistry configurationRegistry) {
+        this.configurationRegistry = configurationRegistry;
+    }
 
     @Override
     public void process(Exchange exchange) throws Exception {

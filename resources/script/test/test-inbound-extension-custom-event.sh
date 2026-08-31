@@ -13,7 +13,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="18. Extension: Protobuf → Event"
+TEST_TITLE="19. Extension: Protobuf → Event"
 
 EXT_ID="dmtest-ext-event-$(date +%s)"
 MAPPING_ID=""

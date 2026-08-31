@@ -74,7 +74,6 @@ public class InventoryCacheEnrichmentService {
         InventoryCache inventoryCache = cacheManager.getInventoryCache(tenant);
 
         final Map<String, Object> newMO = new HashMap<>();
-        inventoryCache.putMO(sourceId, newMO);
 
         ServiceConfiguration serviceConfiguration = tenantRegistry.getServiceConfiguration(tenant);
         List<String> effectiveFragments = buildEffectiveFragmentList(serviceConfiguration);
@@ -90,7 +89,19 @@ public class InventoryCacheEnrichmentService {
             effectiveFragments.forEach(frag -> {
                 processFragment(frag.trim(), sourceId, device, attrs, newMO);
             });
+        } else {
+            // sourceId no longer resolves in inventory (e.g. the managed object was deleted) —
+            // drop any external-ID cache entry still pointing at it so the next message for the
+            // same external ID re-resolves instead of reusing this stale, deleted id forever.
+            tenantRegistry.removeFromExternalIdCacheByInternalId(tenant, sourceId);
         }
+
+        // Publish the fully-populated map only once it is complete. Putting a placeholder
+        // before the (blocking) fetch above would let a concurrent getMOFromInventoryCache()
+        // read the still-empty map — e.g. a JSONata filterInventory check would then see no
+        // "type" fragment and evaluate to false — instead of falling back to the previous,
+        // still-valid cached entry.
+        inventoryCache.putMO(sourceId, newMO);
 
         return newMO;
     }
@@ -127,6 +138,11 @@ public class InventoryCacheEnrichmentService {
             effectiveFragments.forEach(frag -> {
                 processFragment(frag.trim(), sourceId, device, attrs, newMO);
             });
+        } else {
+            // sourceId no longer resolves in inventory (e.g. the managed object was deleted) —
+            // drop any external-ID cache entry still pointing at it so the next message for the
+            // same external ID re-resolves instead of reusing this stale, deleted id forever.
+            tenantRegistry.removeFromExternalIdCacheByInternalId(tenant, sourceId);
         }
 
         // Store the fully-populated map. A concurrent thread that resolved the same

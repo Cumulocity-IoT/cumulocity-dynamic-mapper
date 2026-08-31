@@ -65,6 +65,34 @@ The mapper supports the following connectors:
       </thead>
       <tbody>
         <tr>
+          <td><strong>AMQP 0.9.1</strong><br><small class="text-muted">(RabbitMQ, etc.)</small></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON, Flat File, Hex, Any Payload</td>
+        </tr>
+        <tr class="table-light">
+          <td><strong>AMQP 1.0.0</strong><br><small class="text-muted">(Azure Service Bus, Artemis, Solace, etc.)</small></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON, Flat File, Hex, Any Payload</td>
+        </tr>
+        <tr>
+          <td><strong>Apache Pulsar </strong><small class="text-muted"></small></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON, Flat File, Hex, Any Payload</td>
+        </tr>
+        <tr class="table-light">
+          <td><strong>Cumulocity API</strong></td>
+          <td class="text-center text-muted">-</td>
+          <td class="text-center"><strong>X</strong></td>
+          <td class="text-center"><strong>X</strong><br></td>
+          <td>JSON</td>
+        </tr>
+        <tr>
           <td><strong>Cumulocity MQTT Service</strong><small class="text-muted">(device
               isolation, only one instance per tenant exists)</small></td>
           <td class="text-center"><strong>X</strong></td>
@@ -80,31 +108,17 @@ The mapper supports the following connectors:
           <td>JSON, Flat File, Hex, SparkPlugB, Any Payload</td>
         </tr>
         <tr>
-          <td><strong>HTTP Connector</strong><br><small class="text-muted">(only one instance per tenant
-              exists)</small></td>
+          <td><strong>Google Cloud Pub/Sub</strong><br><small class="text-muted">(e.g. Google Manufacturing Data Engine)</small></td>
           <td class="text-center"><strong>X</strong></td>
-          <td class="text-center text-muted">-</td>
+          <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
           <td>JSON, Flat File, Hex, Any Payload</td>
         </tr>
         <tr class="table-light">
-          <td><strong>Webhook</strong><br></td>
+          <td><strong>HTTP Connector</strong><br><small class="text-muted">(only one instance per tenant
+              exists)</small></td>
+          <td class="text-center"><strong>X</strong></td>
           <td class="text-center text-muted">-</td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong><br></td>
-          <td>JSON</td>
-        </tr>
-        <tr>
-          <td><strong>Cumulocity API</strong></td>
-          <td class="text-center text-muted">-</td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong><br></td>
-          <td>JSON</td>
-        </tr>
-        <tr>
-          <td><strong>Apache Pulsar </strong><small class="text-muted"></small></td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
           <td>JSON, Flat File, Hex, Any Payload</td>
         </tr>
@@ -115,19 +129,12 @@ The mapper supports the following connectors:
           <td class="text-center"><strong>X</strong><br></td>
           <td>JSON, Flat File, Hex, Any Payload</td>
         </tr>
-        <tr>
-          <td><strong>AMQP 0.9.1</strong><br><small class="text-muted">(RabbitMQ, etc.)</small></td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong></td>
-          <td class="text-center"><strong>X</strong><br></td>
-          <td>JSON, Flat File, Hex, Any Payload</td>
-        </tr>
-        <tr>
-          <td><strong>AMQP 1.0.0</strong><br><small class="text-muted">(Azure Service Bus, Artemis, Solace, etc.)</small></td>
-          <td class="text-center"><strong>X</strong></td>
+        <tr class="table-light">
+          <td><strong>Webhook</strong><br></td>
+          <td class="text-center text-muted">-</td>
           <td class="text-center"><strong>X</strong></td>
           <td class="text-center"><strong>X</strong><br></td>
-          <td>JSON, Flat File, Hex, Any Payload</td>
+          <td>JSON</td>
         </tr>
     </table>
   </div>
@@ -135,14 +142,15 @@ The mapper supports the following connectors:
 
 Furthermore, new connectors can be added. The UI is shown on the following screenshot. In the modal dialog, you have to first select the type of connector. Currently, we support the following connectors:
 
-- MQTT: supports connections to MQTT version 3.1.1 or 5 over websocket and tcp
-- MQTT Service: this connector is a special case of the MQTT connector, to connect to the Cumulocity MQTT Service
-- Kafka: is an initial implementation for connecting to Kafka brokers. It is expected that the implementation of the connector has to be adapted to the specific needs of your project. This applies to configuration for security, transactions, key and payload serialization (currently StringSerializer)...
-- HTTP Connector: the `HTTP Connector` is a HTTP endpoint where custom payload can be sent to the mapper over HTTP
-- Webhook: the `Webhook` sends outbound messages to the configured REST endpoints as POST in JSON format.
-- Apache Pulsar: supports connections to Apache Pulsar brokers
 - AMQP 0.9.1: supports connections to AMQP 0.9.1 brokers
 - AMQP 1.0: supports connections to AMQP 1.0 brokers
+- Apache Pulsar: supports connections to Apache Pulsar brokers
+- Google Cloud Pub/Sub: bidirectional connector for Google Cloud Pub/Sub. Outbound, it publishes Cumulocity data (Measurements, Alarms, Events, ...) to a Pub/Sub topic, e.g. for ingestion into Google's Manufacturing Data Engine (MDE) — every published message carries the attributes `sourceSystem=cumulocity` and `messageType=<measurement|alarm|event|...>` in addition to the mapping-defined message body (JSON, Hex, Protobuf, or Any Payload). Inbound, it consumes messages from a pre-existing Pub/Sub subscription (configured via `subscriptionId`, bound to the inbound topic in advance) and dispatches them through the configured inbound mappings. Supports authentication via a Service Account Key or Application Default Credentials (ADC); the service account needs `roles/pubsub.publisher` for outbound and `roles/pubsub.subscriber` for inbound usage.
+- HTTP Connector: the `HTTP Connector` is a HTTP endpoint where custom payload can be sent to the mapper over HTTP
+- Kafka: is an initial implementation for connecting to Kafka brokers. It is expected that the implementation of the connector has to be adapted to the specific needs of your project. This applies to configuration for security, transactions, key and payload serialization (currently StringSerializer)...
+- MQTT: supports connections to MQTT version 3.1.1 or 5 over websocket and tcp
+- MQTT Service: this connector is a special case of the MQTT connector, to connect to the Cumulocity MQTT Service
+- Webhook: the `Webhook` sends outbound messages to the configured REST endpoints as POST in JSON format.
 
 The configuration properties are dynamically adapted to the configuration parameter for the chosen connector type:
 
@@ -695,6 +703,11 @@ The result can then be `Saved` to the mapping. Note: AI generation of `Substitut
 
 You can apply a filter for a mapping, in case the mapping should only be processed if the payload meets a certain condition. This might be the case, if you want to turn a rather generic payload into a measurement, an event and an alarm depending on content of the payload.
 In this case you can apply a filter by defining a `JSONata` expression that evaluates to `true` or `false`:
+
+For `OUTBOUND` mappings there are two separate filter fields, evaluated against two different documents:
+
+- `filterMapping` is evaluated against the **raw incoming Cumulocity notification payload** as it was received (e.g. from the Notification 2.0 subscription).
+- `filterInventory` is evaluated against the **full managed object fetched from the inventory cache** for the message's source device.
 
 ---
 

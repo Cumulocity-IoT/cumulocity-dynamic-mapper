@@ -32,6 +32,7 @@ import dynamic.mapper.connector.amqp.AMQP10Client;
 import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.connector.kafka.KafkaClientV2;
 import dynamic.mapper.connector.mqtt.MQTT3Client;
+import dynamic.mapper.connector.googlepubsub.GooglePubSubClient;
 import dynamic.mapper.connector.pulsar.MQTTServicePulsarClient;
 import dynamic.mapper.connector.pulsar.PulsarConnectorClient;
 import dynamic.mapper.connector.webhook.WebHook;
@@ -213,6 +214,7 @@ public class ConnectorRegistry {
                 new MQTTServicePulsarClient().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.AMQP_091, new AMQPClient().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.AMQP_10, new AMQP10Client().getConnectorSpecification());
+        connectorSpecificationMap.put(ConnectorType.GOOGLE_PUBSUB, new GooglePubSubClient().getConnectorSpecification());
     }
 
     // === New Methods for NotificationSubscriber Support ===

@@ -5,14 +5,19 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.servers.Server;
 
-import java.util.Collections;
+import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class OpenAPIConfig {
+
+    @Value("${application.version}")
+    private String applicationVersion;
 
     @Bean
     public OpenAPI myOpenAPI() {
@@ -26,18 +31,22 @@ public class OpenAPIConfig {
 
         Info info = new Info()
                 .title("Cumulocity Dynamic Mapper")
-                .version("5.0.0")
+                .version(applicationVersion)
                 .contact(contact)
                 .description("This API exposes endpoints to manage resources for the Cumulocity Dynamic Mapper.")
                 .termsOfService(
                         "https://raw.githubusercontent.com/Cumulocity-IoT/cumulocity-dynamic-mapper/refs/heads/main/LICENSE")
                 .license(mitLicense);
 
+        Server server = new Server()
+                .url("/service/dynamic-mapper-service")
+                .description("Cumulocity Dynamic Mapper Service");
+
         return new OpenAPI()
                 .info(info)
                 .externalDocs(new ExternalDocumentation()
                         .description("Additional Documentation")
                         .url("https://cumulocity.com/docs/"))
-                .servers(Collections.emptyList());
+                .servers(List.of(server));
     }
 }

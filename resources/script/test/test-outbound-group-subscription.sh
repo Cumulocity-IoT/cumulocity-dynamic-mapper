@@ -27,7 +27,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="33. Dynamic group subscription"
+TEST_TITLE="34. Dynamic group subscription"
 
 GROUP_NAME="auto-group"
 DEVICE_NAME="test-group-device-01"

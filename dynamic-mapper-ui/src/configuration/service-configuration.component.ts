@@ -64,6 +64,8 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     deviceIsolationMQTTServiceEnabled: false,
     inboundExternalIdCacheSize: 0,
     inboundExternalIdCacheRetention: 0,
+    outboundExternalIdCacheSize: 0,
+    outboundExternalIdCacheRetention: 0,
     inventoryCacheSize: 0,
     inventoryCacheRetention: 0,
     flowStateRetention: 1440,
@@ -138,6 +140,8 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       deviceIsolationMQTTServiceEnabled: [''],
       inboundExternalIdCacheSize: [''],
       inboundExternalIdCacheRetention: [''],
+      outboundExternalIdCacheSize: [''],
+      outboundExternalIdCacheRetention: [''],
       inventoryCacheRetention: [''],
       inventoryCacheSize: [''],
       flowStateRetention: [''],
@@ -198,6 +202,10 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
 
   async clickedClearInboundExternalIdCache() {
     await this.clearCache('INBOUND_ID_CACHE');
+  }
+
+  async clickedClearOutboundExternalIdCache() {
+    await this.clearCache('OUTBOUND_ID_CACHE');
   }
 
   async clickedClearInventoryCache() {

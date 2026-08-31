@@ -26,7 +26,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="35. Subscription persistence after restart"
+TEST_TITLE="36. Subscription persistence after restart"
 
 DM_MICROSERVICE_NAME="dynamic-mapper-service"
 STATIC_DEVICE_NAME="test-restart-static-device"

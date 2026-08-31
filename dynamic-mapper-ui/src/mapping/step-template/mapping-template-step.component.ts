@@ -212,12 +212,14 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   }
 
   onTargetTemplateChanged(contentChanges: ContentChanges): void {
-    this.onTemplateChanged(contentChanges, this.targetTemplate, json => {
-      this.targetTemplateUpdated = json;
-      // Emit immediately so the parent's this.targetTemplate stays current.
-      // The data setter's isReverting guard prevents the editor from being re-seeded.
-      this.targetTemplateChange.emit(json);
-    });
+    // Like onSourceTemplateChanged: only update the local mirror here, don't emit upward.
+    // This used to emit targetTemplateChange on every keystroke so the parent's targetTemplate
+    // stayed "live" — but that reassignment flows straight back down through the parent's
+    // [data]="targetTemplate" binding into JsonEditorComponent's data setter, which calls
+    // editor.set() and resets the editor's content/cursor, visibly interrupting typing. The
+    // parent instead reads targetTemplateUpdated via templateStepRef when it actually needs the
+    // value (leaving the step, triggering AI generation, etc.).
+    this.onTemplateChanged(contentChanges, this.targetTemplate, json => { this.targetTemplateUpdated = json; });
   }
 
   private onTemplateChanged(

@@ -78,6 +78,8 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.client.Certificate;
 import dynamic.mapper.core.cache.InboundExternalIdCache;
 import dynamic.mapper.core.cache.InventoryCache;
+import dynamic.mapper.core.cache.OutboundExternalIdCache;
+import dynamic.mapper.core.cache.OutboundIdKey;
 import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.API;
@@ -242,11 +244,22 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
     public ExternalIDRepresentation resolveGlobalId2ExternalId(String tenant, GId gid, String idType,
             Boolean testing) {
-        // TODO Use Cache
         if (idType == null) {
             idType = "c8y_Serial";
         }
         final String idt = idType;
+
+        OutboundExternalIdCache outboundCache = cacheManager.getOutboundExternalIdCache(tenant);
+        OutboundIdKey cacheKey = new OutboundIdKey(gid.getValue(), idt);
+        if (outboundCache != null && !Boolean.TRUE.equals(testing)) {
+            ExternalIDRepresentation cached = outboundCache.getExternalIdForSource(cacheKey);
+            if (cached != null) {
+                Counter.builder("dynmapper_outbound_identity_cache_hits_total").tag("tenant", tenant)
+                        .register(Metrics.globalRegistry).increment();
+                return cached;
+            }
+        }
+
         ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             try {
                 return identityApi.resolveGlobalId2ExternalId(gid, idt, testing, c8ySemaphore);
@@ -255,6 +268,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             }
             return null;
         });
+
+        if (result != null && outboundCache != null && !Boolean.TRUE.equals(testing)) {
+            outboundCache.putExternalIdForSource(cacheKey, result);
+        }
         return result;
     }
 
@@ -374,6 +391,94 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 }
             });
         });
+    }
+
+    /**
+     * Creates the Event that opens a new connector connection-lifecycle session, carrying a
+     * {@code d11r_connectorStatusLog} fragment with the session's first {@link ConnectorStatusHistory}
+     * entry. Returns the created Event's id (synchronously) so the caller can remember it and
+     * append further transitions of the same session via {@link #updateConnectorStatusEvent}
+     * instead of creating a new, independent Event per status change.
+     *
+     * @return the created event's id, or {@code null} if creation failed (logged, not thrown —
+     *         callers treat a missing id as "start a fresh session on the next transition").
+     */
+    public GId createConnectorStatusEvent(String message, String severity, DateTime eventTime, String tenant,
+            Map<String, String> properties, dynamic.mapper.model.ConnectorStatusHistory session) {
+        MapperServiceRepresentation source = mapperConfiguration.getMapperServiceRepresentation(tenant);
+        return subscriptionsService.callForTenant(tenant, () -> {
+            MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
+            return contextService.callWithinContext(context, () -> {
+                EventRepresentation er = new EventRepresentation();
+                ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
+                mor.setId(new GId(source.getId()));
+                er.setSource(mor);
+                er.setDateTime(eventTime);
+                er.setType(LoggingEventType.CONNECTOR_EVENT_TYPE.getType());
+                applyConnectorStatusFragments(er, message, severity, properties, session);
+
+                try {
+                    c8ySemaphore.acquire();
+                    EventRepresentation created = this.eventApi.create(er);
+                    return created.getId();
+                } catch (InterruptedException e) {
+                    log.error("{} - Failed to acquire semaphore for creating connector status event", tenant, e);
+                    return null;
+                } catch (SDKException e) {
+                    log.warn("{} - Failed to create connector status event: {}", tenant, e.getMessage());
+                    return null;
+                } finally {
+                    c8ySemaphore.release();
+                }
+            });
+        });
+    }
+
+    /**
+     * Appends a further transition to an already-open connector connection-lifecycle session by
+     * updating (PUT) the existing Event identified by {@code eventId} in place, instead of
+     * creating a new Event — analogous to how a Cumulocity Operation accumulates its
+     * "history of changes" via repeated PUTs to the same operation id.
+     */
+    public void updateConnectorStatusEvent(GId eventId, String message, String severity, DateTime eventTime,
+            String tenant, Map<String, String> properties, dynamic.mapper.model.ConnectorStatusHistory session) {
+        subscriptionsService.runForTenant(tenant, () -> {
+            MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
+            contextService.runWithinContext(context, () -> {
+                EventRepresentation er = new EventRepresentation();
+                er.setId(eventId);
+                applyConnectorStatusFragments(er, message, severity, properties, session);
+
+                try {
+                    c8ySemaphore.acquire();
+                    this.eventApi.update(er);
+                } catch (InterruptedException e) {
+                    log.error("{} - Failed to acquire semaphore for updating connector status event", tenant, e);
+                } catch (SDKException e) {
+                    log.warn("{} - Failed to update connector status event {}: {}",
+                            tenant, eventId.getValue(), e.getMessage());
+                } finally {
+                    c8ySemaphore.release();
+                }
+            });
+        });
+    }
+
+    private void applyConnectorStatusFragments(EventRepresentation er, String message, String severity,
+            Map<String, String> properties, dynamic.mapper.model.ConnectorStatusHistory session) {
+        er.setText(message);
+        if (properties != null) {
+            er.setProperty(LoggingEventType.CONNECTOR_EVENT_TYPE.getComponent(), properties);
+        }
+        er.setProperty("d11r_connectorStatusLog", session);
+
+        Map<String, String> metadata = Map.of(
+            "component", LoggingEventType.CONNECTOR_EVENT_TYPE.getComponent(),
+            "componentDisplayName", LoggingEventType.CONNECTOR_EVENT_TYPE.getComponentDisplayName(),
+            "severity", severity != null ? severity : LoggingEventType.CONNECTOR_EVENT_TYPE.getSeverity(),
+            "description", LoggingEventType.CONNECTOR_EVENT_TYPE.getDescription()
+        );
+        er.setProperty("d11r_metadata", metadata);
     }
 
     public Certificate loadCertificateByName(String certificateName, String fingerprint,
@@ -1103,6 +1208,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         cacheManager.initializeInboundExternalIdCache(tenant, size);
     }
 
+    public void initializeOutboundExternalIdCache(String tenant, int size) {
+        cacheManager.initializeOutboundExternalIdCache(tenant, size);
+    }
+
     public void initializeInventoryCache(String tenant, int size) {
         cacheManager.initializeInventoryCache(tenant, size);
     }
@@ -1111,8 +1220,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return cacheManager.removeInboundExternalIdCache(tenant);
     }
 
+    public OutboundExternalIdCache removeOutboundExternalIdCache(String tenant) {
+        return cacheManager.removeOutboundExternalIdCache(tenant);
+    }
+
     public Integer getInboundExternalIdCacheSize(String tenant) {
         return cacheManager.getInboundExternalIdCacheSize(tenant);
+    }
+
+    public Integer getOutboundExternalIdCacheSize(String tenant) {
+        return cacheManager.getOutboundExternalIdCacheSize(tenant);
     }
 
     public InventoryCache removeInventoryCache(String tenant) {
@@ -1133,6 +1250,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
     public int getSizeInboundExternalIdCache(String tenant) {
         return cacheManager.getSizeInboundExternalIdCache(tenant);
+    }
+
+    public void clearOutboundExternalIdCache(String tenant, boolean recreate, int outboundExternalIdCacheSize) {
+        cacheManager.clearOutboundExternalIdCache(tenant, recreate, outboundExternalIdCacheSize);
+    }
+
+    public int getSizeOutboundExternalIdCache(String tenant) {
+        return cacheManager.getSizeOutboundExternalIdCache(tenant);
     }
 
     public void clearInventoryCache(String tenant, boolean recreate, int inventoryCacheSize) {
@@ -1157,6 +1282,20 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     public Map<String, Object> getMOFromInventoryCache(String tenant, String sourceId, Boolean testing) {
 
         return inventoryCacheEnrichmentService.getMOFromInventoryCache(tenant, sourceId, testing, this);
+    }
+
+    /**
+     * Evicts a deleted managed object from the inventory cache and from the external-ID
+     * resolution cache. Called when a Notification 2.0 DELETE event for a managed object is
+     * received, so a stale sourceId does not keep being reused/refetched after the device has
+     * been removed from inventory (see {@code attic/fix/inconsistant-cache/ISSUE.md}).
+     */
+    public void evictDeletedManagedObjectFromCaches(String tenant, String sourceId) {
+        InventoryCache inventoryCache = cacheManager.getInventoryCache(tenant);
+        if (inventoryCache != null) {
+            inventoryCache.removeMO(sourceId);
+        }
+        tenantRegistry.removeFromExternalIdCacheByInternalId(tenant, sourceId);
     }
 
     /**

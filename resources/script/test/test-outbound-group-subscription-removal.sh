@@ -24,7 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="34. Group subscription removal"
+TEST_TITLE="35. Group subscription removal"
 
 STATE_FILE="/tmp/dm-test-III-state.env"
 REMOVAL_WAIT=10

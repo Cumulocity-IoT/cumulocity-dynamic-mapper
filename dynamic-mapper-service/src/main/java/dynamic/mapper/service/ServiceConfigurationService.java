@@ -32,9 +32,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -80,18 +81,15 @@ public class ServiceConfigurationService {
 
     private final TenantOptionApi tenantOptionApi;
 
-    @Autowired
-    private MicroserviceSubscriptionsService subscriptionsService;
+    private final MicroserviceSubscriptionsService subscriptionsService;
 
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
-    @Autowired
-    public void setObjectMapper(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
-
-    public ServiceConfigurationService(TenantOptionApi tenantOptionApi) {
+    public ServiceConfigurationService(TenantOptionApi tenantOptionApi,
+            MicroserviceSubscriptionsService subscriptionsService, ObjectMapper objectMapper) {
         this.tenantOptionApi = tenantOptionApi;
+        this.subscriptionsService = subscriptionsService;
+        this.objectMapper = objectMapper;
     }
 
     public void initCodeTemplates(ServiceConfiguration configuration, Boolean overrideSystem) {
@@ -277,31 +275,25 @@ public class ServiceConfigurationService {
 
     /**
      * Extracts annotation value from the file content.
-     * 
+     *
+     * <p>Matches only occurrences anchored at the start of a JSDoc comment line
+     * (e.g. {@code " * @name Foo"}), not a bare substring search — otherwise an
+     * annotation-like token appearing inside the free-form documentation area
+     * (below the {@link #SYSTEM_SECTION_MARKER}) could be mistaken for the real
+     * system annotation.
+     *
      * @param content    The content of the template file
-     * @param annotation The annotation name to extract
+     * @param annotation The annotation name to extract (e.g. {@code "@name"})
      * @return The value of the annotation or empty string if not found
      */
     private String extractAnnotation(String content, String annotation) {
-        // Find the annotation in the content
-        int annotationIndex = content.indexOf(annotation);
-        if (annotationIndex == -1) {
+        if (content == null) {
             return "";
         }
-
-        // Extract the value after the annotation
-        int valueStartIndex = annotationIndex + annotation.length();
-        while (valueStartIndex < content.length() &&
-                (content.charAt(valueStartIndex) == ' ' || content.charAt(valueStartIndex) == ':')) {
-            valueStartIndex++;
-        }
-
-        int valueEndIndex = content.indexOf('\n', valueStartIndex);
-        if (valueEndIndex == -1) {
-            valueEndIndex = content.length();
-        }
-
-        return content.substring(valueStartIndex, valueEndIndex).trim();
+        Pattern pattern = Pattern.compile(
+                "(?m)^[ \\t]*\\*[ \\t]*" + Pattern.quote(annotation) + "\\b[ \\t:]*(.*)$");
+        Matcher matcher = pattern.matcher(content);
+        return matcher.find() ? matcher.group(1).trim() : "";
     }
 
     public String validateAndConvert(Resource resource) {
@@ -388,11 +380,6 @@ public class ServiceConfigurationService {
                 .collect(Collectors.joining());
     }
 
-    /**
-     * Updates the annotation values in the code header to match the values in the
-     * CodeTemplate object. Ensures that the header's metadata is consistent with
-     * the object's properties.
-     */
     /**
      * Synchronizes the JSDoc header inside the code with the POJO fields.
      * The POJO is always the single source of truth — header annotations are

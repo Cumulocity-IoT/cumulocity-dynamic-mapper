@@ -32,7 +32,6 @@ import java.util.Set;
 import org.apache.camel.Exchange;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestMethod;
 
@@ -62,11 +61,14 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 @Component
 public class SubstitutionResultOutboundProcessor extends BaseProcessor {
 
-    @Autowired
-    private C8YAgent c8yAgent;
+    private final C8YAgent c8yAgent;
 
-    @Autowired
-    private MappingService mappingService;
+    private final MappingService mappingService;
+
+    public SubstitutionResultOutboundProcessor(C8YAgent c8yAgent, MappingService mappingService) {
+        this.c8yAgent = c8yAgent;
+        this.mappingService = mappingService;
+    }
 
     @Override
     public void process(Exchange exchange) throws Exception {

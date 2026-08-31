@@ -19,6 +19,14 @@
 ~
 -->
 <c8y-title>{{ configuration?.name }}</c8y-title>
+@if (serviceConfiguration && !serviceConfiguration.sendConnectorLifecycle) {
+<c8y-action-bar-item [placement]="'left'">
+  <span class="text-warning d-flex a-i-center" title="{{ 'Enable \'Send connector lifecycle\' in Service configuration to record connector status logs.' | translate }}">
+    <i c8yIcon="exclamation-triangle" class="m-r-4"></i>
+    {{ 'Logs not updated: lifecycle logging disabled.' | translate }}
+  </span>
+</c8y-action-bar-item>
+}
 <c8y-action-bar-item [placement]="'right'">
   <label class="c8y-switch c8y-switch--inline" title="{{ 'Enabled / Disabled' | translate }}">
     <input type="checkbox" [ngModel]="configuration?.enabled" (ngModelChange)="onConfigurationToggle()"
@@ -49,51 +57,64 @@
   <c8y-breadcrumb-item [label]="'Details & logs'"></c8y-breadcrumb-item>
 </c8y-breadcrumb>
 
-<div class="card card--fullpage content-fullpage">
-  <div class="card-header p-l-24 p-r-24 separator">
-    <p class="card-title">Connector logs</p>
-  </div>
-  <div class="card-block inner-scroll p-l-24 p-r-24">
-    <div class="hidden-xs c8y-list__item c8y-list--timeline m-b-8">
-      <div class="d-flex">
-        <div class="c8y-list--timeline__item__date a-s-center m-l-16 m-r-24">
-          <label translate>Date</label>
-        </div>
-        <div class="c8y-list__item__block flex-grow">
-          <div class="c8y-list__item__body">
-            <div class="d-flex">
-              <div class="col-md-3"><label translate>Status</label></div>
-              <div class="col-md-9"><label translate>Message</label></div>
-            </div>
+<div class="elevation-sm p-12">
+  <div class="page-sticky-header hidden-xs c8y-list__item c8y-list--timeline">
+    <div class="d-flex">
+      <div class="c8y-list--timeline__item__date a-s-center">
+        <label class="m-0 text-truncate" title="{{ 'Date' | translate }}">{{ 'Date' | translate }}</label>
+      </div>
+      <div class="c8y-list__item__block flex-grow">
+        <div class="c8y-list__item__body">
+          <div class="d-flex">
+            <div class="col-md-3">{{ 'Status' | translate }}</div>
+            <div class="col-md-9">{{ 'Message' | translate }}</div>
           </div>
         </div>
       </div>
     </div>
-    <c8y-list-group class="m-r-8 p-b-8">
-      @for (event of statusLogs$ | async; track event) {
-      <c8y-li-timeline>
-        {{ event.time | date: 'dd.MM.yy HH:mm' }}
-        <c8y-li>
-          <c8y-li-body>
-            <div class="d-flex">
-              <div class="col-md-3">
-                <div class="label" [ngClass]="getSeverityClass(event.severity)" [title]="event.description">
-                  {{ event.status ? event.status : '-' }}
-                </div>
-              </div>
-              <div class="col-md-9">
-                <div>{{ event.message ? event.message : '-' }}</div>
-              </div>
-            </div>
-          </c8y-li-body>
-        </c8y-li>
-      </c8y-li-timeline>
-      }
-      @if ((statusLogs$ | async)?.length === 0) {
-      <c8y-ui-empty-state [icon]="'logs'" [title]="'No logs entries for this connectors.'"
-        [horizontal]="true"></c8y-ui-empty-state>
-      }
-    </c8y-list-group>
-
   </div>
+
+  <c8y-list-group>
+    @for (event of statusLogs$ | async; track event; let i = $index) {
+    <c8y-li-timeline>
+      {{ event.time | c8yDate: 'medium' }}
+      <c8y-li role="listitem">
+        <div class="d-flex">
+          <div class="col-md-3">
+            <span class="text-10 label" [ngClass]="getSeverityClass(event.severity)" [title]="event.description">
+              {{ event.status ? event.status : '-' }}
+            </span>
+            @if (event.historyCount) {
+            <span class="text-10 label label-default m-l-4" title="{{ 'Number of status transitions bundled into this session' | translate }}">
+              {{ event.historyCount }} {{ event.historyCount === 1 ? 'event' : 'events' }}
+            </span>
+            @if (event.sessionClosed === false) {
+            <span class="text-10 label label-info m-l-4" translate>open</span>
+            }
+            @if (event.statusLog?.hadError) {
+            <span class="text-10 m-l-4" title="{{ 'This session had an error-driven transition (unexpected disconnect, retry, or failure)' | translate }}">
+              <i c8yIcon="exclamation-triangle" class="text-danger"></i>
+            </span>
+            }
+            }
+          </div>
+          <div class="col-md-9">
+            <span>{{ event.message ? event.message : '-' }}</span>
+          </div>
+        </div>
+        <c8y-list-item-collapse collapseWay="button" id="details-{{ i }}">
+          @if (event.statusLog) {
+          <d11r-connector-status-history [history]="event.statusLog"></d11r-connector-status-history>
+          } @else {
+          <small>{{ event.raw | filterJson:['self', 'source', 'creationTime', 'lastUpdated']:true | json }}</small>
+          }
+        </c8y-list-item-collapse>
+      </c8y-li>
+    </c8y-li-timeline>
+    }
+    @if ((statusLogs$ | async)?.length === 0) {
+    <c8y-ui-empty-state [icon]="'logs'" [title]="'No logs entries for this connectors.'"
+      [horizontal]="true"></c8y-ui-empty-state>
+    }
+  </c8y-list-group>
 </div>

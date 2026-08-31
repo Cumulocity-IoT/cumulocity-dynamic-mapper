@@ -205,13 +205,13 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 ppLog = pp.toString();
             }
             log.info(
-                    "{} - PROCESSING message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}, wrapped message: {}",
-                    tenant, context.getTopic(), connectorIdentifier, mapping.getName(),
+                    "{} - PROCESSING message on topic: [{}], on  connector: {}, for Mapping {} [{}] with QoS: {}, wrapped message: {}",
+                    tenant, context.getTopic(), connectorIdentifier, mapping.getName(), mapping.getId(),
                     mapping.getQos().ordinal(), ppLog);
         } else {
             log.debug(
-                    "{} - PROCESSING message on topic: [{}], on  connector: {}, for Mapping {} with QoS: {}",
-                    tenant, context.getTopic(), connectorIdentifier, mapping.getName(),
+                    "{} - PROCESSING message on topic: [{}], on  connector: {}, for Mapping {} [{}] with QoS: {}",
+                    tenant, context.getTopic(), connectorIdentifier, mapping.getName(), mapping.getId(),
                     mapping.getQos().ordinal());
         }
     }
@@ -279,7 +279,8 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
     /**
      * Builds the base config map shared by inbound and outbound Smart Function
      * contexts: {@code tenant}, {@code topic}, {@code clientId},
-     * {@code mappingName}, {@code mappingId}, {@code targetAPI}, {@code debug}.
+     * {@code mappingName}, {@code mappingId}, {@code version}, {@code targetAPI},
+     * {@code debug}.
      * Subclasses add their own keys on top.
      */
     protected Map<String, Object> buildBaseSmartFunctionConfig(ProcessingContext<?> context) {
@@ -290,6 +291,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         config.put("clientId", context.getClientId());
         config.put("mappingName", mapping.getName());
         config.put("mappingId", mapping.getId());
+        config.put("version", mapping.getVersion());
         config.put("targetAPI", mapping.getTargetAPI().toString());
         config.put(ProcessingContext.DEBUG, mapping.getDebug());
         return config;

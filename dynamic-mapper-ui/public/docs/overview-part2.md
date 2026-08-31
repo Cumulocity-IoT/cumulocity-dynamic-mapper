@@ -29,19 +29,22 @@ transformations:
 First, create a connector to establish communication with your message broker or data source. The Dynamic Mapper
 supports various connector types:
 
-- **External MQTT Broker** - Connect to third-party MQTT brokers such as HiveMQ, Mosquitto, Eclipse Mosquitto, or
-  any MQTT-compliant broker
-- **Cumulocity MQTT Service** - Use the built-in Cumulocity IoT MQTT broker for device communication with device
-  isolation
-- **HTTP Connector** - Receive data via REST endpoints
-- **Webhook** - Send data to external REST APIs
-- **Cumulocity API** - Use the internal Cumulocity REST API for creating, updating, and deleting managed objects,
-  events, alarms, and measurements
-- **Apache Kafka** - Integrate with Kafka topics for high-throughput messaging
-- **Apache Pulsar** - Connect to Pulsar topics for cloud-native messaging
 - **AMQP 0-9-1** - Connect to AMQP 0-9-1 brokers like RabbitMQ for reliable message queuing
 - **AMQP 1.0** - Connect to AMQP 1.0 brokers (Azure Service Bus, ActiveMQ Artemis, Solace, etc.) using the Apache
   Qpid JMS client
+- **Apache Kafka** - Integrate with Kafka topics for high-throughput messaging
+- **Apache Pulsar** - Connect to Pulsar topics for cloud-native messaging
+- **Cumulocity API** - Use the internal Cumulocity REST API for creating, updating, and deleting managed objects,
+  events, alarms, and measurements
+- **Cumulocity MQTT Service** - Use the built-in Cumulocity IoT MQTT broker for device communication with device
+  isolation
+- **External MQTT Broker** - Connect to third-party MQTT brokers such as HiveMQ, Mosquitto, Eclipse Mosquitto, or
+  any MQTT-compliant broker
+- **Google Cloud Pub/Sub** - Bidirectional connector: publishes Cumulocity data to a Pub/Sub topic (e.g. for
+  ingestion into Google's Manufacturing Data Engine, MDE) and consumes inbound messages from a pre-existing
+  Pub/Sub subscription
+- **HTTP Connector** - Receive data via REST endpoints
+- **Webhook** - Send data to external REST APIs
 
 Use the [wizard](/c8y-pkg-dynamic-mapper/node3/connectorConfiguration) and **Add Connector** to create your
 connector. Refer to the [Managing Connectors](#managing-connectors) section for detailed guidance.
@@ -82,13 +85,6 @@ the data transformation logic:
   control and flexibility for complex transformations, calculations, and business logic. Allows access to device
   context and inventory data for enrichment.
 
-:::important Important — Release 6.3
-**Substitution as JavaScript (SUBSTITUTION_AS_CODE) has been removed in release 6.3.** Existing mappings of this
-type are no longer executed. They can only be **exported** and **deleted**. No other operations (edit, activate,
-test) are available for these mappings. Migrate to **Smart Function (JavaScript)** — see the migration guide in
-the [Removed: Substitution as JavaScript](#javascript-substitution) section.
-:::
-
 If you're using **Smart Function (JavaScript)** as Transformation Type, navigate to
 [Code Templates](/c8y-pkg-dynamic-mapper/node3/codeTemplate/INBOUND_SMART_FUNCTION) to see JavaScript code samples
 of transformations.
@@ -120,17 +116,18 @@ Webhooks are ideal for outbound integrations to external systems, while the Cumu
 internal Cumulocity REST API operations.
 The mapper supports the following connectors and payload formats:
 
-| Connector | Direction: Inbound | Direction: Outbound | Supports JavaScript | Supported Payload Formats |
-|---|---|---|---|---|
-| **Cumulocity MQTT Service** (device isolation, only one instance per tenant exists) | X | X | X | JSON, Hex, Protobuf, Extension |
-| **MQTT** | X | X | X | JSON, Hex, Protobuf, Extension, **SparkPlug B** |
-| **HTTP Connector** (only one instance per tenant exists) | X | - | X | JSON, Hex, Protobuf, Extension |
-| **Webhook** (for external REST APIs) | - | X | X | JSON |
-| **Cumulocity API** (for internal Cumulocity REST API) | - | X | X | JSON |
-| **Apache Pulsar** | X | X | X | JSON, Hex, Protobuf, Extension |
-| **Kafka** | X | X | X | JSON, Hex, Protobuf, Extension |
-| **AMQP 0-9-1** (RabbitMQ, etc.) | X | X | X | JSON, Hex, Protobuf, Extension |
-| **AMQP 1.0** (Azure Service Bus, Artemis, Solace, etc.) | X | X | X | JSON, Hex, Protobuf, Extension |
+| Connector | Inbound | Outbound | JavaScript | Supported Payload Formats |
+|---|:---:|:---:|:---:|---|
+| **AMQP 0-9-1** (RabbitMQ, etc.) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **AMQP 1.0** (Azure Service Bus, Artemis, Solace, etc.) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **Apache Pulsar** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **Cumulocity API** (for internal Cumulocity REST API) | – | ✓ | ✓ | JSON |
+| **Cumulocity MQTT Service** (device isolation, one instance per tenant) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **Google Cloud Pub/Sub** (e.g. Google Manufacturing Data Engine) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **HTTP Connector** (one instance per tenant) | ✓ | – | ✓ | JSON, Hex, Protobuf, Extension |
+| **Kafka** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **MQTT** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension, **SparkPlug B** |
+| **Webhook** (for external REST APIs) | – | ✓ | ✓ | JSON |
 
 :::caution
 Some connectors like HTTP Connector and Cumulocity MQTT Service have only one instance per tenant. Multiple
@@ -270,7 +267,7 @@ broker.
 Sparkplug B topics follow the fixed format: `spBv1.0/[Group ID]/[Message Type]/[Edge Node ID]/[Device ID]`
 
 | Message Type | Topic Levels | MO Type (C8Y) | Fragment Stored | Description |
-|---|---|---|---|---|
+|---|:---:|:---:|---|---|
 | `NBIRTH` | 4 | `c8y_Serial` | `sparkPlugB_NBIRTH` | Edge Node birth — metric definitions published when the node comes online. The mapper stores the alias→metric-definition map on the Edge Node managed object so that subsequent NDATA messages can resolve aliases. The Edge Node external ID is `[Group ID]_[Edge Node ID]`. |
 | `NDATA` | 4 | — | — | Edge Node data — metric values published periodically. Aliases are resolved using the `sparkPlugB_NBIRTH` fragment stored on the Edge Node MO. The decoded payload is passed to your Smart Function. |
 | `DBIRTH` | 5 | `c8y_Serial` | `sparkPlugB_DBIRTH_[deviceId]` | Device birth — metric definitions for a device attached to an Edge Node. Per default no managed objects are created for SparkPlug devices. The mapper stores the alias→metric-definition map and metrics on the Edge node managed object so that subsequent DDATA messages can resolve aliases. |
@@ -611,7 +608,7 @@ Extensions when you need enterprise-grade type safety, performance, and access t
 **Quick-reference decision guide:**
 
 | If you need… | Use this type | Notes |
-|---|---|---|
+|---|:---:|---|
 | Simple field-to-field mapping | **JSONata** | Declarative, no JavaScript knowledge required |
 | Complex expressions, conditional logic, math | **JSONata** | JSONata supports functions, predicates, and aggregations natively |
 | Familiar imperative JavaScript syntax per-field | **Smart Function** | JavaScript Substitutions have been removed in release 6.3; Smart Functions offer a superset of capabilities |

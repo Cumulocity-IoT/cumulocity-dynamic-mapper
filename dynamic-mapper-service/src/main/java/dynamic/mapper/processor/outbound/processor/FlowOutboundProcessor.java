@@ -27,7 +27,6 @@ import java.util.List;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
 import org.joda.time.DateTime;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.model.idtype.GId;
@@ -54,11 +53,12 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class FlowOutboundProcessor extends AbstractFlowProcessor {
 
-    @Autowired
-    private C8YAgent c8yAgent;
+    private final C8YAgent c8yAgent;
 
-    public FlowOutboundProcessor(MappingService mappingService, GraalVMContextService graalVMContextService) {
+    public FlowOutboundProcessor(MappingService mappingService, GraalVMContextService graalVMContextService,
+            C8YAgent c8yAgent) {
         super(mappingService, graalVMContextService);
+        this.c8yAgent = c8yAgent;
     }
 
     @Override
@@ -73,8 +73,13 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
         // casting. Inbound messages leave cumulocityType null via the 4-arg constructor.
         String c8yObjectType = context.getApi() != null ? context.getApi().toC8yObjectType() : null;
 
+        // Convert nested Map/List payload into ProxyObject/ProxyArray so Smart Functions can
+        // use native JS array methods like .forEach()/.map() instead of hitting GraalVM's
+        // List<->Consumer interop failure. See JavaScriptInteropHelper.toJsInterop().
+        Object payload = JavaScriptInteropHelper.toJsInterop(context.getPayload());
+
         return graalContext.asValue(new dynamic.mapper.processor.model.InputMessage(
-                context.getPayload(),
+                payload,
                 context.getTopic(),
                 null,
                 context.getSourceId(),

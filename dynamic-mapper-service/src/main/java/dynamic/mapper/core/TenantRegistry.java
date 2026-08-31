@@ -86,6 +86,11 @@ public class TenantRegistry {
     // Structure: < tenant|externalIdType|externalId, internalC8YId >
     private final Map<String, String> externalIdCache = new ConcurrentHashMap<>();
 
+    // Structure: < tenant|internalC8YId, tenant|externalIdType|externalId > — reverse index
+    // enabling eviction of a stale externalIdCache entry when only the internal id (e.g. from a
+    // deleted managed object) is known.
+    private final Map<String, String> externalIdCacheReverse = new ConcurrentHashMap<>();
+
     // Structure: < tenant|externalIdType|externalId, lock object > — per-ID monitor for double-check locking during implicit device creation
     private final Map<String, Object> externalIdLocks = new ConcurrentHashMap<>();
 
@@ -263,6 +268,8 @@ public class TenantRegistry {
 
     public void cacheExternalId(String cacheKey, String internalId) {
         externalIdCache.put(cacheKey, internalId);
+        String tenant = cacheKey.substring(0, cacheKey.indexOf('|'));
+        externalIdCacheReverse.put(tenant + "|" + internalId, cacheKey);
     }
 
     /**
@@ -271,9 +278,31 @@ public class TenantRegistry {
      */
     public void removeFromExternalIdCache(String tenant, ID identity) {
         String cacheKey = tenant + "|" + identity.getType() + "|" + identity.getValue();
-        externalIdCache.remove(cacheKey);
+        String internalId = externalIdCache.remove(cacheKey);
         externalIdLocks.remove(cacheKey);
+        if (internalId != null) {
+            externalIdCacheReverse.remove(tenant + "|" + internalId);
+        }
         log.debug("{} - Removed external ID from cache: {}", tenant, cacheKey);
+    }
+
+    /**
+     * Removes the external-ID cache entry that resolves to {@code internalId}, if any.
+     * Used when a cached device id is discovered to no longer exist upstream (e.g. the managed
+     * object was deleted from inventory) so the next message for the same external ID
+     * re-triggers resolution instead of indefinitely reusing the stale, deleted id.
+     */
+    public void removeFromExternalIdCacheByInternalId(String tenant, String internalId) {
+        if (internalId == null) {
+            return;
+        }
+        String cacheKey = externalIdCacheReverse.remove(tenant + "|" + internalId);
+        if (cacheKey != null) {
+            externalIdCache.remove(cacheKey);
+            externalIdLocks.remove(cacheKey);
+            log.debug("{} - Removed stale external ID cache entry for deleted device {}: {}",
+                    tenant, internalId, cacheKey);
+        }
     }
 
     /**
@@ -284,9 +313,11 @@ public class TenantRegistry {
     public void clearExternalIdCache(String tenant) {
         if (tenant == null) {
             externalIdCache.clear();
+            externalIdCacheReverse.clear();
             log.info("Cleared entire external ID cache");
         } else {
             externalIdCache.entrySet().removeIf(entry -> entry.getKey().startsWith(tenant + "|"));
+            externalIdCacheReverse.entrySet().removeIf(entry -> entry.getKey().startsWith(tenant + "|"));
             log.debug("{} - Cleared external ID cache", tenant);
         }
     }

@@ -31,7 +31,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="29. Smart Function externalSource → _externalId_ topic (broker round-trip)"
+TEST_TITLE="30. Smart Function externalSource → _externalId_ topic (broker round-trip)"
 
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 DEVICE_NAME="dmtest-sfext-$(date +%s)"

@@ -220,15 +220,19 @@ public class MappingRepository {
                     moId), MigrationNotice.LOADING_ERROR);
         }
 
-        // Migrate legacy JSON mappings without transformationType to JSONATA
-        if (MappingType.JSON.equals(mapping.getMappingType()) &&
-                (mapping.getTransformationType() == null
-                        || TransformationType.DEFAULT.equals(mapping.getTransformationType()))) {
-            log.info("{} - Migrating legacy JSON mapping {} to JSONATA transformation", tenant, moId);
+        // Migrate legacy mappings without transformationType, or using the deprecated DEFAULT
+        // transformation, to JSONATA. DEFAULT and JSONATA are processed by the identical
+        // extraction path (see DynamicMapperBaseRoutes#isJSONataExtraction), so this is a
+        // behavior-neutral relabeling across all mapping types, including PROTOBUF_INTERNAL
+        // (which is routed by mappingType before transformationType is even considered).
+        if (mapping.getTransformationType() == null
+                || TransformationType.DEFAULT.equals(mapping.getTransformationType())) {
+            log.info("{} - Migrating legacy mapping {} ({}) to JSONATA transformation", tenant, moId,
+                    mapping.getMappingType());
             mapping.setTransformationType(TransformationType.JSONATA);
             return new Migration(String.format(
-                    "Mapping %s [%s] was automatically migrated: transformationType set to JSONATA for legacy JSON mapping",
-                    mapping.getName(), moId), MigrationNotice.OPERATION_EVENT);
+                    "Mapping %s [%s] was automatically migrated: transformationType set to JSONATA for legacy %s mapping",
+                    mapping.getName(), moId, mapping.getMappingType()), MigrationNotice.OPERATION_EVENT);
         }
 
         // Migrate deprecated EXTENSION_JAVA mappingType to ANY_PAYLOAD + EXTENSION_JAVA transformation

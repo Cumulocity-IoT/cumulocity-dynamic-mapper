@@ -107,8 +107,37 @@
           </c8y-form-group>
           }
           }
+          <!-- Manual vs. Generate with AI - Choice (only offered when an AI agent is deployed for this transformation type) -->
+          @if (shouldShowAIGenerationChoice()) {
+          <c8y-form-group class="p-l-16 p-r-16">
+            <label>{{ getAIGenerationChoiceHeading() | translate }}</label>
+            <div class="d-flex g-24">
+              <label class="c8y-radio radio-inline" title="{{ 'Generate with AI' | translate }}" aria-label="{{ 'Generate with AI' | translate }}">
+                <input type="radio" formControlName="codeTemplateSource" value="ai" data-cy="dm-mapping-type-code-source-ai"
+                  [attr.aria-checked]="formGroup.get('codeTemplateSource')?.value === 'ai'" />
+                <span></span>
+                <span translate>Generate with AI</span>
+              </label>
+              <label class="c8y-radio radio-inline" title="{{ getManualChoiceLabel() | translate }}" aria-label="{{ getManualChoiceLabel() | translate }}">
+                <input type="radio" formControlName="codeTemplateSource" value="template" data-cy="dm-mapping-type-code-source-template"
+                  [attr.aria-checked]="formGroup.get('codeTemplateSource')?.value === 'template'" />
+                <span></span>
+                <span>{{ getManualChoiceLabel() | translate }}</span>
+              </label>
+            </div>
+          </c8y-form-group>
+          }
+          <!-- Generate with AI selected - explanation only, no template dropdown -->
+          @if (shouldShowAIGenerationChoice() && isAIGenerationSelected()) {
+          <c8y-form-group class="p-l-16 p-r-16">
+            <div class="alert alert-info" style="max-width: none;">
+              <i c8yIcon="info"></i>
+              {{ getAIGenerationExplanationText() | translate }}
+            </div>
+          </c8y-form-group>
+          }
           <!-- Code Template Selection - Loading State -->
-          @if (shouldShowCodeTemplate() && isLoadingCodeTemplates) {
+          @if (shouldShowCodeTemplateDropdown() && isLoadingCodeTemplates) {
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'JavaScript Code Template' | translate }}</label>
             <div class="text-center p-24">
@@ -118,7 +147,7 @@
           </c8y-form-group>
           }
           <!-- Code Template Selection - With Templates -->
-          @if (shouldShowCodeTemplate() && !isLoadingCodeTemplates && codeTemplateOptions.length > 0) {
+          @if (shouldShowCodeTemplateDropdown() && !isLoadingCodeTemplates && codeTemplateOptions.length > 0) {
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'JavaScript Code Template' | translate }}</label>
             <div class="input-group">
@@ -138,7 +167,7 @@
           </c8y-form-group>
           }
           <!-- Code Template - No Templates Available -->
-          @if (shouldShowCodeTemplate() && !isLoadingCodeTemplates && codeTemplateOptions.length === 0) {
+          @if (shouldShowCodeTemplateDropdown() && !isLoadingCodeTemplates && codeTemplateOptions.length === 0) {
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'JavaScript Code Template' | translate }}</label>
             <div class="alert alert-info">

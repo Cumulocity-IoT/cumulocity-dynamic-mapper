@@ -46,7 +46,6 @@ import {
   Direction,
   ExtensionEntry,
   Feature,
-  getExternalTemplate,
   isSubstitutionsAsCode,
   LabelTaggedRendererComponent,
   Mapping,
@@ -147,6 +146,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   feature!: Feature;
   codeTemplate!: CodeTemplate;
   private extension?: Partial<ExtensionEntry>;
+  private generateSmartFunctionWithAI = false;
 
   get canManageMappings(): boolean {
     return this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole;
@@ -233,6 +233,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         this.transformationType = navState.transformationType;
         this.substitutionsAsCode = this.transformationType === TransformationType.SMART_FUNCTION;
         this.codeTemplate = navState.codeTemplate;
+        this.generateSmartFunctionWithAI = !!navState.generateSmartFunctionWithAI;
         this.addMapping();
       }
     } finally {
@@ -470,6 +471,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.mappingType = resultOf.mappingType;
       this.codeTemplate = resultOf.codeTemplate;
       this.extension = resultOf.extension;
+      this.generateSmartFunctionWithAI = !!resultOf.generateSmartFunctionWithAI;
       this.addMapping();
     }
   }
@@ -482,12 +484,36 @@ export class MappingComponent implements OnInit, OnDestroy {
       EditorMode.CREATE, this.substitutionsAsCode
     );
 
+    // setStepperConfiguration() always builds a fresh StepperConfiguration object, so this flag
+    // must be set on the resulting instance, not before the call.
+    if (this.generateSmartFunctionWithAI) {
+      this.stepperConfiguration.triggerAIGenerationOnStart = true;
+      this.generateSmartFunctionWithAI = false;
+    }
+
     const identifier = createCustomUuid();
     const sub: Substitution[] = [];
+    const direction = this.stepperConfiguration.direction;
+
+    // Only the Cumulocity-side field has a well-known, schema-valid sample (SAMPLE_TEMPLATES_C8Y)
+    // — the broker/external-side field is always blank, since no generic schema exists for an
+    // arbitrary device payload. Which physical field ("sourceTemplate" vs "targetTemplate") is
+    // the Cumulocity side flips with direction: target for INBOUND, source for OUTBOUND — matching
+    // the "Source/Target Template - Cumulocity/Broker" panel labels and
+    // MappingStepperService.expandTemplates()'s direction-aware swap.
+    // Code/extension-based transformations (Smart Function, Java extension) get '{}' even on the
+    // Cumulocity side: the actual shape is produced by code, not a template, and seeding a generic
+    // sample there previously misled both users and the AI generation flow.
+    const cumulocitySample = isCodeOrExtensionTransformation(this.transformationType)
+      ? '{}'
+      : SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name];
+    const defaultSourceTemplate = direction === Direction.OUTBOUND ? cumulocitySample : '{}';
+    const defaultTargetTemplate = direction === Direction.OUTBOUND ? '{}' : cumulocitySample;
+
     let mapping: Mapping;
-    if (this.stepperConfiguration.direction == Direction.INBOUND) {
+    if (direction == Direction.INBOUND) {
       let code;
-      if (this.substitutionsAsCode) code = this.codeTemplate.code;
+      if (this.substitutionsAsCode) code = this.codeTemplate?.code;
       mapping = {
         // name: `Mapping - ${identifier.substring(0, 7)}`,
         name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
@@ -496,10 +522,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         mappingTopic: '',
         mappingTopicSample: '',
         targetAPI: API.MEASUREMENT.name,
-        sourceTemplate: '{}',
-        targetTemplate: isCodeOrExtensionTransformation(this.transformationType)
-          ? '{}'
-          : SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
+        sourceTemplate: defaultSourceTemplate,
+        targetTemplate: defaultTargetTemplate,
         active: false,
         maxFailureCount: 0,
         qos: Qos.AT_LEAST_ONCE,
@@ -511,14 +535,14 @@ export class MappingComponent implements OnInit, OnDestroy {
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
         code,
-        direction: this.stepperConfiguration.direction,
+        direction: direction,
         autoAckOperation: true,
         debug: false,
         lastUpdate: Date.now()
       };
     } else {
       let code;
-      if (this.substitutionsAsCode) code = this.codeTemplate.code;
+      if (this.substitutionsAsCode) code = this.codeTemplate?.code;
       mapping = {
         name: `Mapping - ${nextIdAndPad(this.mappingsCount, 2)}`,
         id: identifier,
@@ -526,10 +550,8 @@ export class MappingComponent implements OnInit, OnDestroy {
         // publishTopic: '',
         // publishTopicSample: '',
         targetAPI: API.MEASUREMENT.name,
-        sourceTemplate: '{}',
-        targetTemplate: isCodeOrExtensionTransformation(this.transformationType)
-          ? '{}'
-          : SAMPLE_TEMPLATES_C8Y[API.MEASUREMENT.name],
+        sourceTemplate: defaultSourceTemplate,
+        targetTemplate: defaultTargetTemplate,
         active: false,
         maxFailureCount: 0,
         qos: Qos.AT_LEAST_ONCE,
@@ -541,13 +563,12 @@ export class MappingComponent implements OnInit, OnDestroy {
         updateExistingDevice: false,
         externalIdType: 'c8y_Serial',
         code,
-        direction: this.stepperConfiguration.direction,
+        direction: direction,
         autoAckOperation: true,
         debug: false,
         lastUpdate: Date.now()
       };
     }
-    mapping.targetTemplate = getExternalTemplate(mapping);
     if (this.mappingType == MappingType.FLAT_FILE) {
       const sampleSource = JSON.stringify({
         payload: '10,temp,1666963367'
@@ -560,19 +581,30 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     // Apply pre-fill from Message Explorer (topic + payload + targetAPI)
     if (this.explorerPreFill) {
-      if (this.stepperConfiguration.direction === Direction.INBOUND) {
+      const isInbound = direction === Direction.INBOUND;
+      if (isInbound) {
         // sessionTopic is the subscription pattern (e.g. fridge/#); topic is the
         // concrete received topic (e.g. fridge/sensor-ny-99). Use the pattern as
         // mappingTopic so wildcards are preserved, and the concrete topic as sample.
         mapping.mappingTopic = this.explorerPreFill.sessionTopic ?? this.explorerPreFill.topic;
         mapping.mappingTopicSample = this.explorerPreFill.topic;
       }
+      // The Message Explorer always captures the "source" side of the mapping — the broker/
+      // device payload for INBOUND sessions, or the real Cumulocity event for OUTBOUND
+      // sessions (sourceSystem/targetSystem swap the same way in mapping-stepper.component.ts).
+      // So the captured payload always belongs on sourceTemplate, regardless of direction.
       mapping.sourceTemplate = this.explorerPreFill.payload;
       if (this.explorerPreFill.targetAPI) {
         mapping.targetAPI = this.explorerPreFill.targetAPI;
-        mapping.targetTemplate = isCodeOrExtensionTransformation(mapping.transformationType)
-          ? '{}'
-          : SAMPLE_TEMPLATES_C8Y[this.explorerPreFill.targetAPI] ?? mapping.targetTemplate;
+        // Only INBOUND's target side (Cumulocity) has a generic schema sample to seed with.
+        // OUTBOUND's target side (Broker) has no generic schema, and its source already holds
+        // the real captured Cumulocity payload — nothing further needs seeding there.
+        if (isInbound) {
+          const sample = isCodeOrExtensionTransformation(mapping.transformationType)
+            ? '{}'
+            : SAMPLE_TEMPLATES_C8Y[this.explorerPreFill.targetAPI];
+          mapping.targetTemplate = sample ?? mapping.targetTemplate;
+        }
       }
       if (this.explorerPreFill.publishTopic) {
         mapping.publishTopic = this.explorerPreFill.publishTopic;

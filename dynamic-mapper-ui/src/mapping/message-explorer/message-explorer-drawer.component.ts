@@ -48,6 +48,7 @@ export interface ExplorerSessionSnapshot {
   sessionTTLMinutes: number;
   direction: 'INBOUND' | 'OUTBOUND';
   sourceId?: string;
+  deviceName?: string;
   deviceTypeFilter?: string;
 }
 
@@ -100,6 +101,7 @@ export class MessageExplorerDrawerComponent implements OnInit {
       this.deviceTypeFilter = this.editSnapshot.deviceTypeFilter ?? '';
       if (this.editSnapshot.sourceId) {
         this.outboundFilterMode = 'source';
+        await this.restoreSelectedDevice(this.editSnapshot.sourceId, this.editSnapshot.deviceName);
       } else if (this.editSnapshot.deviceTypeFilter) {
         this.outboundFilterMode = 'deviceType';
       }
@@ -119,6 +121,23 @@ export class MessageExplorerDrawerComponent implements OnInit {
         this.selectedConnectorIdentifier = this.editSnapshot.connectorIdentifier;
       }
     });
+  }
+
+  private async restoreSelectedDevice(sourceId: string, knownName?: string): Promise<void> {
+    if (knownName) {
+      this.selectedDeviceList = [{ id: sourceId, name: knownName } as unknown as IIdentified];
+    }
+    try {
+      const { data } = await this.inventoryService.detail(sourceId);
+      const device = data as any;
+      this.selectedDeviceList = [{ id: sourceId, name: device.name ?? knownName, type: device.type } as unknown as IIdentified];
+      this.selectedDeviceType = device.type ?? null;
+      this.deviceTypeFetch = Promise.resolve(this.selectedDeviceType);
+    } catch (err) {
+      this.selectedDeviceList = [{ id: sourceId, name: knownName } as unknown as IIdentified];
+      this.selectedDeviceType = null;
+      this.deviceTypeFetch = Promise.resolve(null);
+    }
   }
 
   onDirectionChange(): void {

@@ -121,6 +121,12 @@
         </span>
         connector: <strong>{{ sessionDirection === 'OUTBOUND' ? ('all connectors' | translate) : connectorName }}</strong>,
         topic: <code>{{ sessionTopic }}</code>
+        @if (sessionDirection === 'OUTBOUND' && sessionSourceId) {
+          , source: <strong>{{ sessionDeviceName ?? sessionSourceId }}</strong>
+        }
+        @if (sessionDirection === 'OUTBOUND' && sessionDeviceTypeFilter) {
+          , device type: <strong>{{ sessionDeviceTypeFilter }}</strong>
+        }
         @if (paused) {
           &mdash; <span class="text-muted" translate>polling suspended, session still alive on broker</span>
         }

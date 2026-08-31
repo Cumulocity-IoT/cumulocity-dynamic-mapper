@@ -65,7 +65,6 @@ export interface Substitution {
 export interface DeploymentMapEntry {
   identifier: string;
   connectors: string[];
-  connectorsDetailed?: ConnectorConfiguration[];
 }
 
 export interface DeploymentMap {
@@ -303,9 +302,15 @@ export interface StepperConfiguration {
   direction?: Direction;
   advanceFromStepToEndStep?: number;
   allowTemplateExpansion?: boolean;  // Whether to allow template expansion with sample data
+  /** One-shot flag: auto-launch AI generation (Smart Function code or JSONata substitutions)
+   *  once the transformation step is first reached. */
+  triggerAIGenerationOnStart?: boolean;
 }
 
 export enum TransformationType {
+  /** @deprecated Legacy substitution engine, superseded by JSONata. Kept for backward compatibility
+   *  with existing mappings and as the only supported transformation for Protobuf (internal) payloads.
+   *  New mappings should use {@link TransformationType.JSONATA} instead. */
   DEFAULT = 'DEFAULT',
   /** @deprecated removed in 6.3.0 — existing mappings are read-only and can only be exported or deleted. */
   SUBSTITUTION_AS_CODE = 'SUBSTITUTION_AS_CODE',
@@ -329,13 +334,15 @@ export enum MappingType {
 
 export const TransformationTypeLabels = {
   [Direction.INBOUND]: {
-    [TransformationType.DEFAULT]: 'Default Transformation',
+    // eslint-disable-next-line deprecation/deprecation
+    [TransformationType.DEFAULT]: 'Default Transformation (deprecated — use JSONata)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Cumulocity API calls',
     [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
     [TransformationType.EXTENSION_JAVA]: 'Java Extension (Smart Java Function)'
   },
   [Direction.OUTBOUND]: {
-    [TransformationType.DEFAULT]: 'Default Transformation',
+    // eslint-disable-next-line deprecation/deprecation
+    [TransformationType.DEFAULT]: 'Default Transformation (deprecated — use JSONata)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Broker Payload',
     [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
     [TransformationType.EXTENSION_JAVA]: 'Java Extension (Smart Java Function)'
@@ -343,7 +350,8 @@ export const TransformationTypeLabels = {
 } as const;
 
 export const TransformationTypeDescriptions = {
-  [TransformationType.DEFAULT]: 'Uses the default transformation logic without custom processing',
+  // eslint-disable-next-line deprecation/deprecation
+  [TransformationType.DEFAULT]: 'Deprecated — uses the legacy substitution logic without custom processing. Use JSONata instead for new mappings.',
   [TransformationType.SMART_FUNCTION]: 'Executes a predefined Smart Function for data transformation and create payload for Cumulocity API calls. Supports setting sourceId to route data to different devices',
   [TransformationType.JSONATA]: 'Uses JSONata query and transformation language for data mapping',
   [TransformationType.EXTENSION_JAVA]: 'Java extension returns domain objects (CumulocityObject[] for inbound, DeviceMessage[] for outbound) using Smart Java Function pattern with builder syntax. Supports setting sourceId to route data to different devices'
@@ -429,7 +437,6 @@ export const MappingTypeDescriptionMap: Record<
         directionSupported: true,
         substitutionsAsCodeSupported: true,
         supportedTransformationTypes: [
-          TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SMART_FUNCTION
         ]
@@ -438,7 +445,6 @@ export const MappingTypeDescriptionMap: Record<
         directionSupported: true,
         substitutionsAsCodeSupported: true,
         supportedTransformationTypes: [
-          TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SMART_FUNCTION,
           TransformationType.EXTENSION_JAVA
@@ -464,7 +470,6 @@ export const MappingTypeDescriptionMap: Record<
         directionSupported: true,
         substitutionsAsCodeSupported: true,
         supportedTransformationTypes: [
-          TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SMART_FUNCTION
         ]
@@ -473,7 +478,6 @@ export const MappingTypeDescriptionMap: Record<
         directionSupported: false,
         substitutionsAsCodeSupported: false,
         supportedTransformationTypes: [
-          TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SMART_FUNCTION
         ]
@@ -492,7 +496,6 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
         directionSupported: true,
         substitutionsAsCodeSupported: true,
         supportedTransformationTypes: [
-          TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SMART_FUNCTION
         ]
@@ -501,7 +504,6 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
         directionSupported: false,
         substitutionsAsCodeSupported: false,
         supportedTransformationTypes: [
-          TransformationType.DEFAULT,
           TransformationType.JSONATA,
           TransformationType.SMART_FUNCTION
         ]
@@ -518,6 +520,8 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       [Direction.INBOUND]: {
         directionSupported: true,
         substitutionsAsCodeSupported: false,
+        // Only the deprecated DEFAULT transformation is currently supported for Protobuf (internal) payloads.
+        // eslint-disable-next-line deprecation/deprecation
         supportedTransformationTypes: [TransformationType.DEFAULT]
       },
       [Direction.OUTBOUND]: {
@@ -762,26 +766,28 @@ export function cloneSubstitution(
     expandArray: sub.expandArray,
   };
 }
+function referencesIdentityToken(text: string, token: string): boolean {
+  if (!text) {
+    return false;
+  }
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^\\w])${escaped}(?![\\w])`).test(text);
+}
+
 export function definesDeviceIdentifier(
   mapping: Mapping,
   sub: Substitution
 ): boolean {
-  if (mapping.direction === Direction.INBOUND) {
-    if (mapping.useExternalId) {
-      return sub?.pathTarget === `${MappingTokens.IDENTITY}.externalId`;
-    } else {
-      return sub?.pathTarget === `${MappingTokens.IDENTITY}.c8ySourceId`;
-    }
-  } else {
-    if (mapping.useExternalId) {
-      // When useExternalId is true, either _IDENTITY_.externalId or
-      // _IDENTITY_.c8ySourceId is acceptable as the source identifier.
-      return sub?.pathSource === `${MappingTokens.IDENTITY}.externalId`
-          || sub?.pathSource === `${MappingTokens.IDENTITY}.c8ySourceId`;
-    } else {
-      return sub?.pathSource === `${MappingTokens.IDENTITY}.c8ySourceId`;
-    }
-  }
+  // A substitution defines the device identifier if it references either
+  // _IDENTITY_.externalId or _IDENTITY_.c8ySourceId, be it as the whole
+  // path or embedded in a larger expression (e.g. a concatenation).
+  const path = mapping.direction === Direction.INBOUND
+    ? sub?.pathTarget
+    : sub?.pathSource;
+  return (
+    referencesIdentityToken(path, `${MappingTokens.IDENTITY}.externalId`) ||
+    referencesIdentityToken(path, `${MappingTokens.IDENTITY}.c8ySourceId`)
+  );
 }
 export function isSubstitutionValid(mapping: Mapping): boolean {
   const count = mapping.substitutions

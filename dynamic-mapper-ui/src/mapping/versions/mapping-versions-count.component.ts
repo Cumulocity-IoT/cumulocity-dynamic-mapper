@@ -25,20 +25,24 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import {
+  ActionControl,
   AlertService,
+  BottomDrawerService,
   Column,
   ColumnDataType,
   CommonModule,
   CoreModule,
   Pagination
 } from '@c8y/ngx-components';
-import { BehaviorSubject, firstValueFrom, Subject } from 'rxjs';
-import { Router } from '@angular/router';
-import { Direction } from '../../shared';
+import { BehaviorSubject, firstValueFrom, Subject, takeUntil } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Direction, Feature, Mapping } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { NumberRendererComponent } from '../../monitoring/renderer/number.renderer.component';
 import { NameRendererComponent } from '../renderer/name.renderer.component';
 import { VersionBadgeRendererComponent } from '../renderer/version-badge.renderer.component';
+import { DraftBadgeRendererComponent } from '../renderer/draft-badge.renderer.component';
+import { MappingVersionDrawerComponent } from './mapping-version-drawer.component';
 
 interface VersionCountRow {
   id: string;
@@ -47,6 +51,8 @@ interface VersionCountRow {
   topic: string;
   activeVersion: string;
   versionCount: number;
+  draftExists: boolean;
+  mapping: Mapping;
 }
 
 @Component({
@@ -61,6 +67,8 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
   private readonly mappingService = inject(MappingService);
   private readonly alertService = inject(AlertService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly bottomDrawerService = inject(BottomDrawerService);
   private readonly destroy$ = new Subject<void>();
 
   readonly rows$ = new BehaviorSubject<VersionCountRow[]>([]);
@@ -69,15 +77,23 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
   direction: Direction;
   title: string;
   columns: Column[] = [];
+  actionControls: ActionControl[] = [];
+  private feature: Feature;
+
+  get canManageMappings(): boolean {
+    return this.feature?.userHasMappingAdminRole || this.feature?.userHasMappingCreateRole;
+  }
 
   readonly pagination: Pagination = { pageSize: 30, currentPage: 1 };
 
   async ngOnInit(): Promise<void> {
+    this.feature = this.route.snapshot.data['feature'];
     this.direction = this.router.url.includes('/monitoring/versions/inbound')
       ? Direction.INBOUND
       : Direction.OUTBOUND;
     this.title = `Versions ${this.direction.toLowerCase()}`;
     this.buildColumns();
+    this.setupActionControls();
     await this.loadRows();
   }
 
@@ -109,7 +125,9 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
           ? (e.mapping.mappingTopic ?? '—')
           : (e.mapping.publishTopic ?? '—'),
         activeVersion: e.mapping.version ?? '—',
-        versionCount: countById.get(e.mapping.id) ?? 0
+        versionCount: countById.get(e.mapping.id) ?? 0,
+        draftExists: !!e.mapping.draftDirty,
+        mapping: e.mapping
       }));
 
       this.rows$.next(rows);
@@ -118,6 +136,30 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
     } finally {
       this.isLoading$.next(false);
     }
+  }
+
+  openVersions(row: VersionCountRow): void {
+    const drawer = this.bottomDrawerService.openDrawer(MappingVersionDrawerComponent, {
+      initialState: { mapping: row.mapping, canManage: this.canManageMappings }
+    });
+    drawer.instance.closeSubject
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((changed: boolean) => {
+        if (changed) {
+          this.refresh();
+        }
+      });
+  }
+
+  private setupActionControls(): void {
+    this.actionControls = [
+      {
+        text: 'Versions',
+        type: 'VERSIONS',
+        icon: 'list',
+        callback: this.openVersions.bind(this)
+      }
+    ];
   }
 
   private buildColumns(): void {
@@ -157,6 +199,15 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
         cellRendererComponent: NumberRendererComponent,
         dataType: ColumnDataType.Numeric,
         gridTrackSize: '12%'
+      },
+      {
+        name: 'draftExists',
+        header: 'Status',
+        path: 'draftExists',
+        filterable: false,
+        cellRendererComponent: DraftBadgeRendererComponent,
+        dataType: ColumnDataType.TextShort,
+        gridTrackSize: '10%'
       }
     ];
   }

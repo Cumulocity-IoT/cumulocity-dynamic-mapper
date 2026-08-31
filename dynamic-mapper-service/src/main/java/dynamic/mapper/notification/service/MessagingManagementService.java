@@ -25,8 +25,10 @@ import com.cumulocity.microservice.api.CumulocityClientProperties;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
@@ -48,14 +50,22 @@ public class MessagingManagementService {
 
     private final CumulocityClientProperties clientProperties;
     private final ContextService<MicroserviceCredentials> contextService;
+    private final RestTemplate restTemplate;
 
     public MessagingManagementService(CumulocityClientProperties clientProperties,
-                                       ContextService<MicroserviceCredentials> contextService) {
+                                       ContextService<MicroserviceCredentials> contextService,
+                                       ObjectMapper objectMapper) {
         this.clientProperties = clientProperties;
         this.contextService = contextService;
+        // Spring's default RestTemplate() auto-detects HttpMessageConverters from the classpath,
+        // and picks up Spring Framework 7's Jackson-3-backed JacksonJsonHttpMessageConverter
+        // because io.modelcontextprotocol.sdk:mcp-json-jackson3 (pulled in transitively by the
+        // Spring AI MCP server starter, unrelated to this class) puts Jackson 3 on the classpath.
+        // That converter can't deserialize the classic Jackson 2 com.fasterxml.jackson.databind.JsonNode
+        // used here, so pin this RestTemplate to the app's own Jackson 2 ObjectMapper explicitly.
+        this.restTemplate = new RestTemplate(
+                List.of(new MappingJackson2HttpMessageConverter(objectMapper)));
     }
-
-    private final RestTemplate restTemplate = new RestTemplate();
 
     /**
      * List all subscriber names for the given Notifications 2.0 topic.

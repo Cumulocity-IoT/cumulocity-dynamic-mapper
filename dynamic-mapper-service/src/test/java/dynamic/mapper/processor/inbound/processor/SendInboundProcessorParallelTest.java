@@ -105,13 +105,8 @@ class SendInboundProcessorParallelTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        processor = new SendInboundProcessor();
-        // Inject @Autowired dependencies via reflection
-        ProcessorTestHelper.injectField(processor, "c8yAgent", c8yAgent);
-        ProcessorTestHelper.injectField(processor, "configurationRegistry", configurationRegistry);
-        ProcessorTestHelper.injectField(processor, "identityResolutionService", identityResolutionService);
-        ProcessorTestHelper.injectField(processor, "objectMapper", new ObjectMapper());
-        ProcessorTestHelper.injectField(processor, "mappingService", mappingService);
+        processor = new SendInboundProcessor(c8yAgent, configurationRegistry, identityResolutionService,
+                new ObjectMapper(), mappingService);
 
         mapping = buildJsonMapping();
 

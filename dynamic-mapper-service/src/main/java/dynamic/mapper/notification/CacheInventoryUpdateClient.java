@@ -21,6 +21,8 @@
 
 package dynamic.mapper.notification;
 
+import com.cumulocity.model.idtype.GId;
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.notification.websocket.NotificationCallback;
@@ -34,7 +36,9 @@ import java.util.*;
 
 /**
  * Handles inventory cache update notifications.
- * Processes UPDATE operations to keep the local inventory cache synchronized.
+ * Processes UPDATE operations to keep the local inventory cache synchronized, and DELETE
+ * operations to evict the deleted managed object from the inventory and external-ID caches
+ * so it is not reused/refetched after it no longer exists.
  */
 @Slf4j
 public class CacheInventoryUpdateClient implements NotificationCallback {
@@ -61,8 +65,14 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
 
     @Override
     public ProcessingResultWrapper<?> onNotification(Notification notification) {
-        if (!"UPDATE".equals(notification.getOperation())) {
-            log.debug("{} - Ignoring non-UPDATE notification", tenant);
+        String operation = notification.getOperation();
+
+        if ("DELETE".equals(operation)) {
+            return handleDelete(notification);
+        }
+
+        if (!"UPDATE".equals(operation)) {
+            log.debug("{} - Ignoring non-UPDATE/DELETE notification", tenant);
             return ProcessingResultWrapper.builder()
                 .consolidatedQos(Qos.AT_LEAST_ONCE)
                 .build();
@@ -71,25 +81,58 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
         try {
             String notificationTenant = NotificationHelper.extractTenant(
                 notification.getNotificationHeaders(), tenant);
-            
+
             Map<String, Object> update = NotificationHelper.parsePayload(notification.getMessage());
             String sourceId = NotificationHelper.extractSourceId(update, notification.getApi());
-            
+
             if (sourceId != null) {
                 c8yAgent.updateMOInInventoryCache(notificationTenant, sourceId, update, false);
                 log.debug("{} - Updated inventory cache for MO: {}", notificationTenant, sourceId);
             }
-            
+
             return ProcessingResultWrapper.builder()
                 .consolidatedQos(Qos.AT_LEAST_ONCE)
                 .build();
-                
+
         } catch (Exception e) {
             log.error("{} - Error processing inventory cache update: {}", tenant, e.getMessage(), e);
             return ProcessingResultWrapper.builder()
                 .consolidatedQos(Qos.AT_LEAST_ONCE)
                 .build();
         }
+    }
+
+    /**
+     * A subscribed managed object was deleted from inventory: evict it from the inventory and
+     * external-ID caches, and stop its (now pointless) cache-inventory subscription. Without
+     * this, a device deleted while still subscribed would keep its stale cache entries forever,
+     * since nothing else in the mapper corrects them proactively.
+     */
+    private ProcessingResultWrapper<?> handleDelete(Notification notification) {
+        try {
+            String notificationTenant = NotificationHelper.extractTenant(
+                notification.getNotificationHeaders(), tenant);
+
+            Map<String, Object> payload = NotificationHelper.parsePayload(notification.getMessage());
+            String sourceId = NotificationHelper.extractSourceId(payload, notification.getApi());
+
+            if (sourceId != null) {
+                c8yAgent.evictDeletedManagedObjectFromCaches(notificationTenant, sourceId);
+
+                ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
+                mor.setId(new GId(sourceId));
+                notificationSubscriber.unsubscribeMOForInventoryCacheUpdates(notificationTenant, mor);
+
+                log.info("{} - Evicted deleted MO {} from inventory/external-ID cache and stopped its subscription",
+                        notificationTenant, sourceId);
+            }
+        } catch (Exception e) {
+            log.error("{} - Error processing inventory cache delete: {}", tenant, e.getMessage(), e);
+        }
+
+        return ProcessingResultWrapper.builder()
+            .consolidatedQos(Qos.AT_LEAST_ONCE)
+            .build();
     }
 
     @Override

@@ -45,7 +45,7 @@ import { VersionsTabFactory } from './versions-tab.factory';
       }
     }),
     hookRoute({
-      path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/chart`,
+      path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/chart`,
       component: MonitoringChartComponent
     }),
     hookRoute({

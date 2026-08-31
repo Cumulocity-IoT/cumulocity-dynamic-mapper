@@ -376,7 +376,9 @@ export class MappingService {
 
   // ===== DEPLOYMENT OPERATIONS =====
 
-  async getEffectiveDeploymentMap(): Promise<DeploymentMapEntryDetailed[]> {
+  async getEffectiveDeploymentMap(): Promise<
+    Record<string, DeploymentMapEntryDetailed>
+  > {
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_DEPLOYMENT_EFFECTIVE_ENDPOINT}`,
       {
@@ -387,7 +389,9 @@ export class MappingService {
       }
     );
     if (!response.ok) throw new Error(await this.extractErrorMessage(response));
-    const mappings: DeploymentMapEntryDetailed[] = await response.json();
+    // Backend returns a map keyed by mapping identifier, not an array.
+    const mappings: Record<string, DeploymentMapEntryDetailed> =
+      await response.json();
     return mappings;
   }
 
@@ -502,7 +506,7 @@ export class MappingService {
         return mappings.map(mapping => ({
           id: mapping.id,
           mapping,
-          connectors: mappingsDeployed[mapping.identifier]
+          connectors: mappingsDeployed[mapping.identifier]?.connectors
         }));
       }),
       shareReplay(1)
@@ -519,7 +523,7 @@ export class MappingService {
         return mappings?.map(mapping => ({
           id: mapping.id,
           mapping,
-          connectors: mappingsDeployed[mapping.identifier]
+          connectors: mappingsDeployed[mapping.identifier]?.connectors
         })) || [];
       }),
       shareReplay(1)

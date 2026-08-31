@@ -38,9 +38,6 @@ import { CoreModule } from '@c8y/ngx-components';
 export class TypeSelectorComponent {
   @Input() set typeList(list: string[]) {
     this.typeListInternal = [...list];
-    if (this.typeListInternal.length === 0) {
-      this.add();
-    }
   }
   get typeList(): string[] {
     return this.typeListInternal;
@@ -61,15 +58,14 @@ export class TypeSelectorComponent {
 
   remove(index: number) {
     this.typeListInternal = this.typeListInternal.filter((_, i) => i !== index);
-    // Never leave the list with zero rows: there would be no "+" control left to add one back.
-    if (this.typeListInternal.length === 0) {
-      this.add();
-    }
   }
 
-  /** True when at least one non-blank type has been entered; gates the Save button. */
+  /**
+   * True when either no type filter is defined (subscribe to all types, a valid
+   * backend state) or at least one non-blank type has been entered. Gates Save.
+   */
   get hasValidType(): boolean {
-    return this.typeListInternal.some(t => !!t?.trim());
+    return this.typeListInternal.length === 0 || this.typeListInternal.some(t => !!t?.trim());
   }
 
   clickedUpdateSubscription() {

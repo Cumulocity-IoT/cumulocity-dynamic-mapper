@@ -22,7 +22,6 @@ package dynamic.mapper.processor.util;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -36,8 +35,11 @@ import dynamic.mapper.processor.model.TransformationType;
 @Component
 public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
 
-    @Autowired
-    protected ConnectorRegistry connectorRegistry;
+    protected final ConnectorRegistry connectorRegistry;
+
+    protected DynamicMapperBaseRoutes(ConnectorRegistry connectorRegistry) {
+        this.connectorRegistry = connectorRegistry;
+    }
 
     public abstract void configure() throws Exception;
 
@@ -139,14 +141,14 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
 
             // Check if mapping is active
             if (!mapping.getActive()) {
-                log.debug("Mapping {} is inactive, skipping", mapping.getName());
+                log.debug("Mapping {} [{}] is inactive, skipping", mapping.getName(), mapping.getId());
                 return false;
             }
 
             // Check if mapping is deployed (you'll need to get connector info)
             if (connectorIdentifier != null && !isMappingDeployed(tenant, mapping, connectorIdentifier)) {
-                log.info("Mapping {} not deployed for connector {}, skipping",
-                        mapping.getName(), connectorIdentifier);
+                log.info("Mapping {} [{}] not deployed for connector {}, skipping",
+                        mapping.getName(), mapping.getId(), connectorIdentifier);
                 return false;
             }
 

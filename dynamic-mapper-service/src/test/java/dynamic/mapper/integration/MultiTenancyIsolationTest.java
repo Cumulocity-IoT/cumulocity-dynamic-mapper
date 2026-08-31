@@ -51,7 +51,7 @@ class MultiTenancyIsolationTest {
 
     @BeforeEach
     void setUp() {
-        cacheManager = new CacheManager();
+        cacheManager = new CacheManager(null, null);
         cacheManager.initializeInboundExternalIdCache(TENANT_A, CACHE_SIZE);
         cacheManager.initializeInboundExternalIdCache(TENANT_B, CACHE_SIZE);
     }

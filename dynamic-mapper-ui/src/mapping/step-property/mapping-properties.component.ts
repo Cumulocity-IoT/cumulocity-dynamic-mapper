@@ -48,7 +48,7 @@ import { MappingService } from '../core/mapping.service';
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import { ValidationError } from '../shared/mapping.model';
 import { EditorMode } from '../shared/stepper.model';
-import { deriveSampleTopicFromTopic, getTypeOf } from '../shared/util';
+import { deriveSampleTopicFromTopic, getTypeOf, topicsHaveSameStructure } from '../shared/util';
 
 interface FilterExpressionModel {
   filterExpression: {
@@ -132,18 +132,16 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               disabled: this.isFieldDisabled,
               description: 'Mapping Topic',
               change: () => {
-                const newDerivedTopic = deriveSampleTopicFromTopic(
-                  this.propertyFormly.get('mappingTopic').value
-                );
-                if (this.stepperConfiguration.direction === Direction.INBOUND) {
-                  this.propertyFormly
-                    .get('mappingTopicSample')
-                    .setValue(newDerivedTopic);
-                } else {
-                  this.propertyFormly
-                    .get('publishTopicSample')
-                    .setValue(newDerivedTopic);
+                const newTopic = this.propertyFormly.get('mappingTopic').value;
+                const sampleKey =
+                  this.stepperConfiguration.direction === Direction.INBOUND
+                    ? 'mappingTopicSample'
+                    : 'publishTopicSample';
+                const sampleControl = this.propertyFormly.get(sampleKey);
+                if (topicsHaveSameStructure(newTopic, sampleControl.value)) {
+                  return;
                 }
+                sampleControl.setValue(deriveSampleTopicFromTopic(newTopic));
               },
               required: this.stepperConfiguration.direction === Direction.INBOUND
             },
@@ -160,12 +158,12 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               placeholder: 'Publish Topic ...',
               disabled: this.isFieldDisabled,
               change: () => {
-                const newDerivedTopic = deriveSampleTopicFromTopic(
-                  this.propertyFormly.get('publishTopic').value
-                );
-                this.propertyFormly
-                  .get('publishTopicSample')
-                  .setValue(newDerivedTopic);
+                const newTopic = this.propertyFormly.get('publishTopic').value;
+                const sampleControl = this.propertyFormly.get('publishTopicSample');
+                if (topicsHaveSameStructure(newTopic, sampleControl.value)) {
+                  return;
+                }
+                sampleControl.setValue(deriveSampleTopicFromTopic(newTopic));
               },
               required:
                 true

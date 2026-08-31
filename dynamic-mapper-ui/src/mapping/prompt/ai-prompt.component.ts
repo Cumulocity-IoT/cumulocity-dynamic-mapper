@@ -26,7 +26,7 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { Mapping, Substitution, MappingType, RepairStrategy, SharedService, isSubstitutionsAsCode, TransformationType } from '../../shared';
+import { Mapping, Substitution, MappingType, RepairStrategy, SAMPLE_TEMPLATES_C8Y, SharedService, isSubstitutionsAsCode, TransformationType, getGenericDeviceIdentifier } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
 import { AIMessage, ClientAgentDefinition, Suggestion } from '@c8y/ngx-components/ai';
@@ -154,20 +154,49 @@ export class AIPromptComponent implements OnInit {
       return;
     }
 
-    // CREATE mode — nothing to review yet, so always generate immediately with no
+    // CREATE mode, Smart Function: ask what to generate first, via the same suggestion-chip
+    // mechanism as UPDATE mode's Review/Generate choice — targetTemplate is always empty by
+    // design for code mappings (see buildGenerateMessage()), so a sample payload is the only
+    // way the user can hand the AI concrete context beyond the source template/targetAPI.
+    if (this.isCodeMapping) {
+      this.drawerTitle = 'Generate Smart Function';
+      this.suggestions = [
+        { label: 'Let AI propose a target structure', prompt: this.buildGenerateMessage(), icon: 'magic' },
+        { label: 'I want to provide a sample target payload', prompt: this.buildProvideSampleMessage(), icon: 'code' }
+      ];
+      this.chatConfig = {
+        ...this.chatConfig,
+        title: this.drawerTitle,
+        welcomeText: "I can generate a Smart Function for this mapping based on its source template. " +
+          "There's no fixed target template — pick an option below, or describe the target payload" +
+          " you'd like it to produce."
+      };
+      this.cdr.detectChanges();
+      return;
+    }
+
+    // CREATE mode, JSONata — nothing to review yet, so always generate immediately with no
     // user interaction.
-    this.drawerTitle = this.isCodeMapping ? 'Generate Smart Function' : 'Generate Substitutions';
+    this.drawerTitle = 'Generate Substitutions';
     this.chatConfig = {
       ...this.chatConfig,
       title: this.drawerTitle,
-      welcomeText: this.isCodeMapping
-        ? "Generating a Smart Function for this mapping based on its source and target templates. " +
-          "This starts automatically — no action needed."
-        : "Generating substitutions for this mapping based on its source and target templates. " +
-          "This starts automatically — no action needed."
+      welcomeText: "Generating substitutions for this mapping based on its source and target templates. " +
+        "This starts automatically — no action needed."
     };
     this.newMessage = this.buildGenerateMessage();
     await this.sendMessage();
+  }
+
+  /**
+   * "I want to provide a sample target payload" suggestion prompt (Smart Function, CREATE mode).
+   * Asks the agent to wait for the user's next message — a pasted JSON sample — before
+   * generating, rather than proceeding on generic assumptions.
+   */
+  private buildProvideSampleMessage(): string {
+    return "I'd like to provide a sample of the expected target payload before you generate the" +
+      " Smart Function. Ask me to paste it, then wait for my next message and use it as the" +
+      " authoritative shape to produce — do not generate code yet.\n";
   }
 
   private buildReviewMessage(): string {
@@ -176,15 +205,30 @@ export class AIPromptComponent implements OnInit {
 
     if (this.isCodeMapping) {
       return `Review the existing ${direction} Smart Function` +
-        (targetAPI ? ` (target: ${targetAPI})` : '') + " in the following mapping" +
-        " and suggest improvements.\n\n" +
-        "```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
+        (targetAPI ? ` (target: ${targetAPI})` : '') +
+        " and suggest improvements.\n";
     }
     return `Review the existing substitutions for this ${direction}` +
       (targetAPI ? ` ${targetAPI}` : '') + " mapping" +
-      " and suggest improvements.\n\n" +
-      "```json\n" + JSON.stringify({ ...this.mappingForAI, substitutions: this.mapping.substitutions }, null, 2) + "\n```\n";
+      " and suggest improvements.\n";
   }
+
+  /**
+   * Grounding context re-sent alongside every user message (per AgentChatComponent's
+   * groundingContextProvider contract) instead of being embedded in the visible chat message.
+   * The mapping JSON can run to dozens of lines (managed-object metadata, self links, etc.) and
+   * rendering it inline made the very first "message" in the chat an unreadable wall of raw JSON —
+   * this keeps the mapping data available to the agent without cluttering the transcript.
+   */
+  private buildMappingContext(): string {
+    const withSubstitutions = this.isCodeMapping
+      ? this.mappingForAI
+      : { ...this.mappingForAI, substitutions: this.mapping.substitutions };
+    return "[MAPPING_CONTEXT] Current state of the mapping being edited (not written by the user):\n" +
+      "```json\n" + JSON.stringify(withSubstitutions, null, 2) + "\n```\n";
+  }
+
+  groundingContextProvider = (): string => this.buildMappingContext();
 
   private buildGenerateMessage(): string {
     const direction = this.mapping.direction ?? 'INBOUND';
@@ -192,23 +236,41 @@ export class AIPromptComponent implements OnInit {
 
     if (this.isCodeMapping) {
       const isOutbound = direction === 'OUTBOUND';
-      const targetTemplateIsEmpty = !this.mappingForAI.targetTemplate
-        || JSON.stringify(this.mappingForAI.targetTemplate) === '{}';
-      const missingContextHint = isOutbound && targetTemplateIsEmpty
-        ? "The targetTemplate is empty — ask the user what device message format or protocol structure" +
-          " is expected (field names, units, nesting) before generating code.\n"
-        : !isOutbound && !targetAPI
+      // Outbound Smart Functions never have a fixed targetTemplate — it is always "{}" by design,
+      // because the function body itself defines whatever message structure the target broker/
+      // protocol expects (there's no fixed Cumulocity-side schema to map into, as there is for
+      // inbound). Treating that as "missing context" made the AI always stop and ask the user a
+      // clarifying question instead of generating code, so the editor stayed empty on every attempt.
+      const inboundSample = !isOutbound && targetAPI ? SAMPLE_TEMPLATES_C8Y[targetAPI] : undefined;
+      const missingContextHint = isOutbound
+        ? "This is an OUTBOUND mapping: there is no fixed targetTemplate/schema — the Smart Function" +
+          " itself builds whatever payload structure the target broker/protocol expects. Use the" +
+          " sourceTemplate (the Cumulocity object being published) plus the topic/description in the" +
+          " mapping context to infer reasonable field names and generate the code directly — do not" +
+          " ask the user for a target format before generating.\n"
+        : !targetAPI
           ? "The targetAPI is not set — ask the user what kind of Cumulocity object to produce" +
             " (e.g. MEASUREMENT, ALARM, EVENT, INVENTORY) before generating code.\n"
-          : "";
+          // INBOUND Smart Functions also always carry an empty targetTemplate ("{}") by design —
+          // the function body constructs the Cumulocity API payload itself instead of mapping into
+          // a fixed template. Without a concrete example the AI has no shape to aim for, so give it
+          // the standard sample payload for the mapping's targetAPI as a reference.
+          : inboundSample
+            ? `There is no fixed targetTemplate — the Smart Function itself builds the Cumulocity` +
+              ` ${targetAPI} API payload from the sourceTemplate fields. A typical ${targetAPI} object` +
+              " looks like:\n```json\n" + inboundSample + "\n```\n" +
+              " Generate the code directly — do not ask the user for a target format before generating.\n"
+            : "";
       return `Generate a ${direction} Smart Function for the following mapping` +
         (targetAPI ? ` (target: ${targetAPI})` : '') + ".\n" +
-        missingContextHint +
-        "\n```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
+        missingContextHint;
     }
+    const identityTarget = getGenericDeviceIdentifier(this.mapping);
     return `Generate JSONata substitutions for this ${direction}` +
-      (targetAPI ? ` ${targetAPI}` : '') + " mapping.\n\n" +
-      "```json\n" + JSON.stringify(this.mappingForAI, null, 2) + "\n```\n";
+      (targetAPI ? ` ${targetAPI}` : '') + " mapping.\n" +
+      `Map the device identity to \`${identityTarget}\` — this mapping has` +
+      ` useExternalId=${!!this.mapping.useExternalId} — do not use the other` +
+      " `_IDENTITY_` field.\n";
   }
 
   save() {
@@ -333,29 +395,39 @@ export class AIPromptComponent implements OnInit {
    * so this only ever flips `valid` from false to true, never the other way around.
    */
   checkIfResponseContainsSubstitutions(content: any) {
-    try {
-      // Look for the pattern ```json followed by content and ending with ```
-      const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/;
-      const match = content.match(jsonBlockRegex);
+    const trimmedContent = typeof content === 'string' ? content.trim() : '';
+    if (!trimmedContent) return;
 
-      if (!match || !match[1]) {
-        // No JSON block in this response — keep the previous substitutions/valid state untouched.
-        return;
-      }
+    // A response may contain multiple fenced code blocks — e.g. the agent illustrating
+    // alternative approaches before presenting its final answer — so candidates are tried
+    // most-recent-first: last ```json-tagged block, then last generic ``` block, then (some
+    // agents, e.g. object-type/schema-based ones, omit fences entirely) the raw body itself.
+    // Trying only the FIRST match previously grabbed an earlier example/alternative instead of
+    // the final answer, which failed to parse and surfaced a spurious error.
+    const strictBlocks = [...trimmedContent.matchAll(/```json\s*([\s\S]*?)\s*```/g)].map(m => m[1]);
+    const genericBlocks = [...trimmedContent.matchAll(/```(?:json)?\s*([\s\S]*?)\s*```/g)].map(m => m[1]);
+    const looksLikeRawJson = trimmedContent.startsWith('[') || trimmedContent.startsWith('{');
+    const candidates = [
+      ...strictBlocks.reverse(),
+      ...genericBlocks.reverse(),
+      ...(looksLikeRawJson ? [trimmedContent] : [])
+    ];
 
-      const parsedSubstitutions = JSON.parse(match[1].trim());
+    for (const candidate of candidates) {
+      const trimmedCandidate = candidate?.trim();
+      if (!trimmedCandidate) continue;
 
-      if (!Array.isArray(parsedSubstitutions)) {
-        return;
-      }
+      try {
+        const parsedSubstitutions = JSON.parse(trimmedCandidate);
+        if (!Array.isArray(parsedSubstitutions)) continue;
 
-      const isValidSubstitutions = parsedSubstitutions.every(sub =>
-        sub.hasOwnProperty('pathSource') &&
-        sub.hasOwnProperty('pathTarget') &&
-        sub.hasOwnProperty('expandArray')
-      );
+        const isValidSubstitutions = parsedSubstitutions.every(sub =>
+          sub.hasOwnProperty('pathSource') &&
+          sub.hasOwnProperty('pathTarget') &&
+          sub.hasOwnProperty('expandArray')
+        );
+        if (!isValidSubstitutions) continue;
 
-      if (isValidSubstitutions) {
         // The LLM's JSON block may omit repairStrategy (or emit it as null) — default it here so
         // every downstream consumer (edit modal, persisted mapping) always sees a real value
         // instead of undefined/null.
@@ -364,11 +436,14 @@ export class AIPromptComponent implements OnInit {
           repairStrategy: sub.repairStrategy ?? RepairStrategy.DEFAULT
         }));
         this.valid = true;
+        return;
+      } catch {
+        // Not a valid substitutions array — try the next candidate rather than failing outright.
+        continue;
       }
-    } catch (error) {
-      console.error('Error parsing substitutions from response:', error);
-      this.alertService.danger('Failed to parse substitutions from AI response');
     }
+    // No candidate parsed into a valid substitutions array — keep the previous substitutions/valid
+    // state untouched (common mid-conversation, e.g. a clarifying question with no final answer yet).
   }
 
 }

@@ -325,6 +325,46 @@ public class NotificationConnectionManager {
         }
     }
 
+    /**
+     * Reconnects existing dynamic device WebSocket clients so they pick up pending
+     * notifications from a newly created device subscription (e.g. a group or type
+     * resolving to this device) without waiting for the 60-second {@link #reconnectAll()}
+     * cycle. Mirrors {@link #reconnectStaticDeviceClientsForNewSubscription(String)} —
+     * see that method's Javadoc for why an immediate reconnect is needed: without it, a
+     * dynamic client that is already open from an earlier subscription never learns about
+     * devices added afterward, since {@link #initializeDynamicDeviceConnections(String)}
+     * skips any client that is already open.
+     */
+    public void reconnectDynamicDeviceClientsForNewSubscription(String tenant) {
+        if (tenant == null) {
+            return;
+        }
+        Map<String, CustomWebSocketClient> clients = dynamicDeviceClients.get(tenant);
+        if (clients == null || clients.isEmpty()) {
+            // No existing clients yet — initialize from scratch
+            try {
+                initializeDynamicDeviceConnections(tenant);
+            } catch (URISyntaxException e) {
+                log.error("{} - Error initializing dynamic device connections after subscription: {}", tenant,
+                        e.getMessage(), e);
+            }
+            return;
+        }
+        for (Map.Entry<String, CustomWebSocketClient> entry : clients.entrySet()) {
+            CustomWebSocketClient client = entry.getValue();
+            if (client != null && client.isOpen()) {
+                try {
+                    client.reconnect();
+                    log.info("{} - Triggered dynamic device WebSocket reconnect for connector {} after new subscription",
+                            tenant, entry.getKey());
+                } catch (Exception e) {
+                    log.warn("{} - Error reconnecting dynamic device client after subscription: {}", tenant,
+                            e.getMessage());
+                }
+            }
+        }
+    }
+
     public void reconnect(String tenant) {
         if (tenant == null) {
             log.warn("Cannot reconnect: tenant is null");
