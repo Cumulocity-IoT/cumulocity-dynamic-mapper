@@ -107,8 +107,10 @@ processing mappings, depending on the connector (message source):
 - **Kafka**: Limited to QoS 0 for outbound operations.
 - **AMQP 0-9-1**: Supports QoS 0 and 1 (non-persistent and persistent delivery).
 - **AMQP 1.0**: Supports QoS 0 and 1 (non-persistent and persistent delivery via JMS delivery modes).
-- **Google Cloud Pub/Sub**: Outbound only; always waits for the Pub/Sub publish acknowledgement (message ID)
-  before considering a message sent, regardless of the mapping's QoS setting.
+- **Google Cloud Pub/Sub**: Outbound always waits for the Pub/Sub publish acknowledgement (message ID) before
+  considering a message sent, regardless of the mapping's QoS setting. Inbound, QoS 0 acks the message
+  immediately before processing (at-most-once); QoS 1 and 2 ack only after successful processing and nack on
+  error to trigger redelivery (at-least-once, no de-duplication for QoS 2).
 
 :::info
 **Understanding QoS Levels:**
@@ -153,7 +155,9 @@ the most complete QoS support.
 | **AMQP 1.0** (Azure Service Bus, Artemis, Solace, etc.) | 0 | not relevant | NON_PERSISTENT delivery mode, no acknowledgment guarantee |
 | **AMQP 1.0** (Azure Service Bus, Artemis, Solace, etc.) | 1 | not relevant | PERSISTENT delivery mode with CLIENT_ACKNOWLEDGE after processing |
 | **AMQP 1.0** (Azure Service Bus, Artemis, Solace, etc.) | 2 | not relevant | not supported |
-| **Google Cloud Pub/Sub** | 0-2 | not relevant | QoS setting has no effect — every publish always waits for the Pub/Sub publish acknowledgement (message ID) |
+| **Google Cloud Pub/Sub** | 0 | Ack sent immediately, before processing (at-most-once) | QoS setting has no effect — publish always waits for the Pub/Sub publish acknowledgement (message ID) |
+| **Google Cloud Pub/Sub** | 1 | Ack sent only after successful processing; nack (redelivery) on error | QoS setting has no effect — publish always waits for the Pub/Sub publish acknowledgement (message ID) |
+| **Google Cloud Pub/Sub** | 2 | Handled as QoS 1, no logic to check for de-duplication | QoS setting has no effect — publish always waits for the Pub/Sub publish acknowledgement (message ID) |
 
 :::info Info — "not relevant" in the table above
 **"not relevant"** in the Inbound column means the QoS setting on the mapping has *no effect* on inbound behavior

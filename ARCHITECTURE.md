@@ -35,7 +35,7 @@ The solution is composed of two major components:
 | **AMQP** | Supports AMQP 0.9.x (RabbitMQ) and AMQP 1.0 (Azure Service Bus) |
 | **Apache Pulsar** | Connects to Pulsar brokers (native Pulsar protocol and MQTT-over-Pulsar) |
 | **Webhook** | Exposes an HTTP endpoint accepting inbound push payloads |
-| **Google Cloud Pub/Sub** | Outbound-only — publishes Cumulocity data (Measurements, Alarms, Events, ...) to a Pub/Sub topic, e.g. for ingestion into Google's Manufacturing Data Engine (MDE) |
+| **Google Cloud Pub/Sub** | Bidirectional — publishes Cumulocity data (Measurements, Alarms, Events, ...) to a Pub/Sub topic (e.g. for ingestion into Google's Manufacturing Data Engine) and consumes inbound messages from a pre-existing Pub/Sub subscription |
 
 Custom connectors can be added by extending `AConnectorClient` — see [EXTENSIONS.md](EXTENSIONS.md).
 
