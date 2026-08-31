@@ -26,8 +26,12 @@ import com.google.api.gax.batching.BatchingSettings;
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.api.gax.retrying.RetrySettings;
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.cloud.pubsub.v1.AckReplyConsumer;
+import com.google.cloud.pubsub.v1.MessageReceiver;
 import com.google.cloud.pubsub.v1.Publisher;
+import com.google.cloud.pubsub.v1.Subscriber;
 import com.google.protobuf.ByteString;
+import com.google.pubsub.v1.ProjectSubscriptionName;
 import com.google.pubsub.v1.PubsubMessage;
 import com.google.pubsub.v1.TopicName;
 import dynamic.mapper.configuration.ConnectorConfiguration;
@@ -36,6 +40,7 @@ import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
+import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
@@ -48,7 +53,7 @@ import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
-import jakarta.ws.rs.NotSupportedException;
+import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayInputStream;
@@ -64,14 +69,17 @@ import java.util.concurrent.TimeUnit;
 /**
  * Google Cloud Pub/Sub Connector Client.
  * <p>
- * Outbound-only connector that publishes Cumulocity Measurements, Alarms, Events (and, generically,
+ * Bidirectional connector that publishes Cumulocity Measurements, Alarms, Events (and, generically,
  * any other API type) to a Google Cloud Pub/Sub topic — e.g. for ingestion into Google's Manufacturing
- * Data Engine (MDE), which reads all data from a single Pub/Sub topic ({@code input-messages} by
- * default) and dispatches it via custom parsers keyed off message attributes.
+ * Data Engine (MDE) — and subscribes to an existing Pub/Sub subscription to receive inbound messages.
  * <p>
  * Every published message carries the fixed attributes {@code sourceSystem=cumulocity} and
  * {@code messageType=<measurement|alarm|event|...>} (derived from {@link dynamic.mapper.model.API#toC8yObjectType()})
  * in addition to the mapping-defined JSON body, which is published unchanged as the message data.
+ * <p>
+ * Inbound consumption requires a pre-created Pub/Sub subscription. The subscription name is
+ * configured via the {@code subscriptionId} property. The service account must have
+ * {@code roles/pubsub.subscriber} in addition to {@code roles/pubsub.publisher}.
  */
 @Slf4j
 public class GooglePubSubClient extends AConnectorClient {
@@ -91,6 +99,7 @@ public class GooglePubSubClient extends AConnectorClient {
     private static final int PUBLISHER_RETRY_OVERHEAD_SECONDS = 5;
 
     protected final Map<String, Publisher> publishers = new ConcurrentHashMap<>();
+    protected final Map<String, Subscriber> subscribers = new ConcurrentHashMap<>();
     protected FixedCredentialsProvider credentialsProvider;
     protected String projectId;
 
@@ -246,6 +255,10 @@ public class GooglePubSubClient extends AConnectorClient {
                 }
             });
             publishers.clear();
+
+            subscribers.forEach((topic, subscriber) -> stopSubscriberQuietly(subscriber, topic));
+            subscribers.clear();
+
             credentialsProvider = null;
 
             connectionStateManager.setConnected(false);
@@ -263,18 +276,145 @@ public class GooglePubSubClient extends AConnectorClient {
     @Override
     protected boolean isPhysicallyConnected() {
         // The Pub/Sub client library manages its own gRPC channels lazily, per topic - there is no
-        // single persistent socket to probe, so readiness is approximated by credential state.
-        return credentialsProvider != null;
+        // single persistent socket to probe, so readiness is approximated by credential state and
+        // whether all running subscribers are still in a running/healthy state.
+        if (credentialsProvider == null) {
+            return false;
+        }
+        for (Subscriber subscriber : subscribers.values()) {
+            if (!subscriber.isRunning()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
     protected void subscribe(String topic, Qos qos) throws ConnectorException {
-        throw new NotSupportedException("Google Pub/Sub connector does not support inbound mappings");
+        if (!isConnected()) {
+            throw new ConnectorException("Google Pub/Sub connector is not connected");
+        }
+
+        String subscriptionId = (String) connectorConfiguration.getProperties().get("subscriptionId");
+        if (subscriptionId == null || subscriptionId.isEmpty()) {
+            throw new ConnectorException(
+                    "Google Pub/Sub connector requires 'subscriptionId' configuration for inbound mappings");
+        }
+
+        log.debug("{} - Subscribing to Pub/Sub subscription: [{}] for topic: [{}]", tenant, subscriptionId, topic);
+
+        try {
+            ProjectSubscriptionName subscriptionName = ProjectSubscriptionName.of(projectId, subscriptionId);
+
+            MessageReceiver receiver = (PubsubMessage message, AckReplyConsumer consumer) ->
+                    processPubSubMessage(message, consumer, topic, qos);
+
+            Subscriber subscriber = Subscriber.newBuilder(subscriptionName, receiver)
+                    .setCredentialsProvider(credentialsProvider)
+                    .build();
+
+            subscriber.startAsync().awaitRunning();
+
+            Subscriber existing = subscribers.put(topic, subscriber);
+            if (existing != null) {
+                stopSubscriberQuietly(existing, topic);
+            }
+
+            log.info("{} - Successfully subscribed to Pub/Sub subscription: [{}] for topic: [{}]",
+                    tenant, subscriptionId, topic);
+            sendSubscriptionEvents(topic, "Subscribed");
+
+        } catch (Exception e) {
+            throw new ConnectorException("Failed to subscribe to Pub/Sub subscription: " + subscriptionId, e);
+        }
     }
 
     @Override
     protected void unsubscribe(String topic) throws ConnectorException {
-        throw new NotSupportedException("Google Pub/Sub connector does not support inbound mappings");
+        log.debug("{} - Unsubscribing from Pub/Sub topic: [{}]", tenant, topic);
+
+        Subscriber subscriber = subscribers.remove(topic);
+        if (subscriber != null) {
+            stopSubscriberQuietly(subscriber, topic);
+        }
+
+        log.info("{} - Successfully unsubscribed from Pub/Sub topic: [{}]", tenant, topic);
+        sendSubscriptionEvents(topic, "Unsubscribed");
+    }
+
+    /**
+     * Process an inbound Pub/Sub message: build a {@link ConnectorMessage}, dispatch it through the
+     * inbound pipeline, and ack or nack based on the result and configured QoS.
+     * <ul>
+     *   <li>QoS 0 (at-most-once): ack immediately before processing.</li>
+     *   <li>QoS &gt; 0 (at-least-once): ack after successful processing; nack on error so the
+     *       message is redelivered.</li>
+     * </ul>
+     * Package-private to allow unit testing without a live Pub/Sub client.
+     */
+    void processPubSubMessage(PubsubMessage message, AckReplyConsumer consumer,
+            String topic, Qos qos) {
+        byte[] payload = message.getData().toByteArray();
+        String messageId = message.getMessageId();
+
+        ConnectorMessage connectorMessage = ConnectorMessage.builder()
+                .tenant(tenant)
+                .topic(topic)
+                .sendPayload(true)
+                .connectorIdentifier(connectorIdentifier)
+                .payload(payload)
+                .build();
+
+        if (serviceConfiguration.getLogPayload()) {
+            log.info("{} - INITIAL: Pub/Sub message on topic: [{}], messageId: {}, connector: {}",
+                    tenant, topic, messageId, connectorName);
+        }
+
+        if (qos == Qos.AT_MOST_ONCE) {
+            // Ack immediately — at-most-once delivery
+            consumer.ack();
+            dispatcher.onMessage(connectorMessage);
+            return;
+        }
+
+        // At-least-once: ack only after successful processing
+        try {
+            ProcessingResultWrapper<?> result = dispatcher.onMessage(connectorMessage);
+            int timeout = result.getPipelineTimeoutMS();
+
+            List<? extends ProcessingContext<?>> contexts;
+            if (timeout > 0) {
+                contexts = result.getProcessingResult().get(timeout, TimeUnit.MILLISECONDS);
+            } else {
+                contexts = result.getProcessingResult().get();
+            }
+
+            boolean hasError = contexts != null && contexts.stream().anyMatch(ProcessingContext::hasError);
+            if (hasError) {
+                log.warn("{} - Processing error for Pub/Sub message: topic=[{}], messageId={} — nacking",
+                        tenant, topic, messageId);
+                consumer.nack();
+            } else {
+                consumer.ack();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("{} - Processing interrupted for Pub/Sub message: topic=[{}], messageId={} — nacking",
+                    tenant, topic, messageId);
+            consumer.nack();
+        } catch (Exception e) {
+            log.error("{} - Processing failed for Pub/Sub message: topic=[{}], messageId={} — nacking",
+                    tenant, topic, messageId, e);
+            consumer.nack();
+        }
+    }
+
+    private void stopSubscriberQuietly(Subscriber subscriber, String topic) {
+        try {
+            subscriber.stopAsync().awaitTerminated(3, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("{} - Error stopping Pub/Sub subscriber for topic: [{}]: {}", tenant, topic, e.getMessage());
+        }
     }
 
     @Override
@@ -425,7 +565,7 @@ public class GooglePubSubClient extends AConnectorClient {
 
     @Override
     public List<Direction> supportedDirections() {
-        return Arrays.asList(Direction.OUTBOUND);
+        return Arrays.asList(Direction.INBOUND, Direction.OUTBOUND);
     }
 
     /**
@@ -434,25 +574,34 @@ public class GooglePubSubClient extends AConnectorClient {
     private ConnectorSpecification createConnectorSpecification() {
         return ConnectorSpecificationBuilder
                 .create("Google Cloud Pub/Sub", ConnectorType.GOOGLE_PUBSUB)
-                .description("Connector for publishing outbound Cumulocity data (Measurements, Alarms, Events, ...) " +
-                        "to a Google Cloud Pub/Sub topic, e.g. for ingestion into Google's Manufacturing Data Engine (MDE). " +
-                        "Every published message carries the attributes sourceSystem=cumulocity and " +
-                        "messageType=<measurement|alarm|event|...> in addition to the mapping-defined JSON body.")
+                .description("Bidirectional connector for Google Cloud Pub/Sub. Publishes outbound Cumulocity data " +
+                        "(Measurements, Alarms, Events, ...) to a Pub/Sub topic and subscribes to a Pub/Sub " +
+                        "subscription to receive inbound messages. Inbound messages are dispatched through the " +
+                        "configured inbound mappings. The service account must have roles/pubsub.publisher for " +
+                        "outbound and roles/pubsub.subscriber for inbound usage.")
                 .supportedDirections(supportedDirections())
 
                 .property("projectId", ConnectorPropertyBuilder.requiredString()
                         .order(0)
-                        .description("Google Cloud project ID that owns the Pub/Sub topic"))
+                        .description("Google Cloud project ID that owns the Pub/Sub topic and subscription"))
 
                 .property("topicId", ConnectorPropertyBuilder.requiredString()
                         .order(1)
                         .defaultValue("input-messages")
-                        .description("Default Pub/Sub topic to publish to. A mapping's own publish topic, " +
+                        .description("Default Pub/Sub topic to publish to (outbound). A mapping's own publish topic, " +
                                 "if set, overrides this per request."))
+
+                .property("subscriptionId", ConnectorPropertyBuilder.create(ConnectorPropertyType.STRING_PROPERTY)
+                        .required(false)
+                        .order(2)
+                        .description("Name of the pre-existing Pub/Sub subscription to consume from (inbound). " +
+                                "Required when inbound mappings are configured. The subscription must be created " +
+                                "in advance and bound to the inbound topic. " +
+                                "The service account needs the roles/pubsub.subscriber role."))
 
                 .property("authMode", ConnectorPropertyBuilder.create(ConnectorPropertyType.OPTION_PROPERTY)
                         .required(true)
-                        .order(2)
+                        .order(3)
                         .defaultValue("serviceAccountKey")
                         .optionsWithLabels(
                                 "serviceAccountKey", "Service Account Key",
@@ -461,20 +610,20 @@ public class GooglePubSubClient extends AConnectorClient {
 
                 .property("serviceAccountKey", ConnectorPropertyBuilder.create(ConnectorPropertyType.SENSITIVE_STRING_LARGE_PROPERTY)
                         .required(true)
-                        .order(3)
+                        .order(4)
                         .condition("authMode", "serviceAccountKey")
                         .description("Full JSON key of the Google Cloud Service Account used to authenticate " +
-                                "against Pub/Sub (requires the roles/pubsub.publisher role)."))
+                                "against Pub/Sub (requires roles/pubsub.publisher and/or roles/pubsub.subscriber)."))
 
                 .property("adcCredentialsJson", ConnectorPropertyBuilder.create(ConnectorPropertyType.SENSITIVE_STRING_LARGE_PROPERTY)
                         .required(false)
-                        .order(4)
+                        .order(5)
                         .condition("authMode", "applicationDefaultCredentials")
                         .description("Contents of the Application Default Credentials JSON file generated by " +
                                 "'gcloud auth application-default login' (typically ~/.config/gcloud/application_default_credentials.json)."))
 
                 .property("publishTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
-                        .order(5)
+                        .order(6)
                         .defaultValue(DEFAULT_PUBLISH_TIMEOUT_SECONDS)
                         .description("How long to wait for a publish acknowledgement before treating the request as failed."))
 
