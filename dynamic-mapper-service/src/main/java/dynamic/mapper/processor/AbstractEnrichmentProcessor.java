@@ -34,6 +34,7 @@ import dynamic.mapper.processor.model.TransformationType;
 import org.apache.camel.Exchange;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
+import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.io.IOAccess;
 
 import dynamic.mapper.configuration.CodeTemplate;
@@ -44,6 +45,7 @@ import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.model.PooledGraalContext;
 import dynamic.mapper.processor.model.RoutingContext;
 import dynamic.mapper.processor.model.SmartFunctionContext;
 import dynamic.mapper.service.MappingService;
@@ -102,16 +104,15 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 && TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
             try {
                 var graalVMContextService = configurationRegistry.getGraalVMContextService();
-                var graalEngine = graalVMContextService.getGraalEngine(tenant);
-                var graalContext = createGraalContext(graalEngine, supportESM);
-
-                // Register release callback so GraalVMContextService can close a retired
-                // Engine once all its in-flight Contexts have drained.
-                context.setEngineReleaseAction(() -> graalVMContextService.releaseEngine(graalEngine));
+                // peekGraalEngine does rotation checks without incrementing the engine counter;
+                // borrowOrCreateContext handles the counter at borrow time.
+                var graalEngine = graalVMContextService.peekGraalEngine(tenant);
 
                 // Set cached Source objects for performance
-                context.setSharedSource(graalVMContextService.getGraalsSourceShared(tenant));
-                context.setSystemSource(graalVMContextService.getGraalsSourceSystem(tenant));
+                Source sharedSource = graalVMContextService.getGraalsSourceShared(tenant);
+                Source systemSource = graalVMContextService.getGraalsSourceSystem(tenant);
+                context.setSharedSource(sharedSource);
+                context.setSystemSource(systemSource);
 
                 // Keep Base64 strings for backward compatibility if needed
                 CodeTemplate sharedTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SHARED.name());
@@ -127,12 +128,28 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 context.setSharedCode(sharedTemplate.getCode());
                 context.setSystemCode(systemTemplate.getCode());
 
-                context.setGraalContext(graalContext);
+                // Build the pool key: tenant:mappingId:codeHash
+                String codeHash = Integer.toHexString(mapping.getCode().hashCode());
+                String poolKey = tenant + ":" + mapping.getIdentifier() + ":" + codeHash;
+
+                // Borrow a pre-warmed context from the pool (or create one on first use)
+                PooledGraalContext pooledCtx = graalVMContextService.borrowOrCreateContext(
+                        poolKey, tenant, graalEngine, supportESM,
+                        sharedSource, systemSource,
+                        mapping.getCode(), mapping.getIdentifier());
+
+                context.setPooledGraalContext(pooledCtx);
+                context.setGraalContext(pooledCtx.getGraalContext());
                 context.setFlowState(new HashMap<String, Object>());
                 Map<String, Object> initialState = flowStateStore.loadState(tenant, mapping.getIdentifier());
-                context.setFlowContext(new SmartFunctionContext(graalContext, tenant,
+                context.setFlowContext(new SmartFunctionContext(pooledCtx.getGraalContext(), tenant,
                         (InventoryEnrichmentClient) configurationRegistry.getC8yAgent(),
                         context.isTesting(), flowStateStore, mapping.getIdentifier(), initialState));
+
+                // engineReleaseAction returns the borrowed context to the pool (or closes it if
+                // killed) AND decrements the engine's in-flight counter.
+                context.setEngineReleaseAction(
+                        () -> graalVMContextService.returnContext(poolKey, pooledCtx, graalEngine));
             } catch (Exception e) {
                 handleGraalVMError(tenant, mapping, e, context);
                 return;

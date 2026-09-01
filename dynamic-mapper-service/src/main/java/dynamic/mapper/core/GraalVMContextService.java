@@ -27,20 +27,25 @@ import java.lang.management.MemoryUsage;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.Deque;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
+import org.graalvm.polyglot.Value;
 import org.graalvm.polyglot.io.IOAccess;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
+import dynamic.mapper.model.Mapping;
+import dynamic.mapper.processor.model.PooledGraalContext;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import lombok.extern.slf4j.Slf4j;
 
@@ -136,6 +141,41 @@ public class GraalVMContextService {
      */
     static final Duration ENGINE_MAX_AGE = Duration.ofHours(24);
 
+    /**
+     * Default maximum number of idle {@link PooledGraalContext} instances kept per
+     * pool key (tenant + mapping identifier + code hash). Overridable via
+     * {@link ServiceConfiguration#getContextPoolSize()}.
+     */
+    static final int DEFAULT_POOL_SIZE = 20;
+
+    /**
+     * Polyfill for browser-standard {@code atob()} / {@code btoa()} functions.
+     * GraalVM's JS engine is ECMAScript-only — it does not include Web APIs.
+     * The polyfill uses the already-sandboxed {@code java.util.Base64} host class so no
+     * additional host-class permissions are required.
+     *
+     * <p>Kept here (rather than in {@code AbstractFlowProcessor}) so the pool can
+     * evaluate it once when creating a new context, avoiding the per-message cost.
+     */
+    static final Source BASE64_POLYFILL_SOURCE = Source.newBuilder("js", """
+            (function() {
+              var _Base64   = Java.type('java.util.Base64');
+              var _JString  = Java.type('java.lang.String');
+              var _Charsets = Java.type('java.nio.charset.StandardCharsets');
+              var _Arrays   = Java.type('java.util.Arrays');
+              globalThis.atob = function(encoded) {
+                return new _JString(_Base64.getDecoder().decode(encoded), _Charsets.UTF_8);
+              };
+              globalThis.btoa = function(plain) {
+                var buf = _Charsets.UTF_8.encode(plain);
+                return _Base64.getEncoder().encodeToString(
+                  _Arrays.copyOfRange(buf.array(), buf.position(), buf.limit()));
+              };
+            })();
+            """, "__base64_polyfill__.js")
+            .cached(true)
+            .buildLiteral();
+
     // Structure: < Tenant, Engine >
     private final Map<String, Engine> graalEngines = new ConcurrentHashMap<>();
 
@@ -144,6 +184,12 @@ public class GraalVMContextService {
 
     // Structure: < Tenant, Source > — pre-compiled system/built-in code (globalThis scope)
     private final Map<String, Source> graalSourceSystem = new ConcurrentHashMap<>();
+
+    // Context pool: poolKey (tenant:mappingId:codeHash) → deque of idle PooledGraalContext instances.
+    // Contexts are borrowed before message processing and returned (or discarded) afterwards.
+    // GraalVM Context is not thread-safe, so each idle entry is exclusively owned by at most
+    // one thread at a time (enforced by the poll/offer contract of ConcurrentLinkedDeque).
+    private final Map<String, Deque<PooledGraalContext>> contextPool = new ConcurrentHashMap<>();
 
     // Number of unique JS source compilations per tenant since the last Engine rotation.
     // Incremented only when a new (sourceName, contentHash) pair is compiled — repeated
@@ -300,6 +346,274 @@ public class GraalVMContextService {
     }
 
     /**
+     * Returns the shared GraalVM {@link Engine} for the tenant without incrementing
+     * the in-flight context counter.
+     *
+     * <p>Used by the context pool path: the counter is incremented later inside
+     * {@link #borrowOrCreateContext} at borrow time, and decremented inside
+     * {@link #returnContext} at return/discard time.
+     */
+    public Engine peekGraalEngine(String tenant) {
+        Engine currentEngine = graalEngines.get(tenant);
+
+        // Same time-based rotation check as getGraalEngine
+        ServiceConfiguration config = tenantServiceConfigs.get(tenant);
+        int maxAgeMinutes = (config != null && config.getEngineMaxAgeMinutes() != null)
+                ? config.getEngineMaxAgeMinutes()
+                : 0;
+        if (maxAgeMinutes > 0) {
+            Instant createdAt = engineCreatedAt.get(tenant);
+            boolean tooOld = createdAt != null
+                    && Duration.between(createdAt, Instant.now()).compareTo(Duration.ofMinutes(maxAgeMinutes)) > 0;
+            if (tooOld) {
+                rotateEngine(tenant);
+                currentEngine = graalEngines.get(tenant);
+            }
+        }
+        return currentEngine;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Context pool — borrow / return / invalidate
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Borrows a pre-warmed {@link PooledGraalContext} from the per-mapping pool or
+     * creates a new one on a cache miss.
+     *
+     * <p>The pool key combines tenant, mapping identifier, and a hash of the Base64
+     * mapping code so that any code change automatically uses a fresh slot.
+     *
+     * <p>The returned context has already been initialised with the Base64 polyfill,
+     * shared code, system code, and the mapping's {@code onMessage} function — the
+     * caller only needs to inject per-message bindings ({@code console},
+     * {@code __cancellationHelper}) before calling {@code execute()}.
+     *
+     * <p>The caller <strong>must</strong> call {@link #returnContext} (or
+     * {@link PooledGraalContext#kill()} followed by {@link #returnContext}) after
+     * processing completes so the engine's in-flight counter stays correct.
+     *
+     * @param poolKey         pool key (tenant:mappingId:codeHash)
+     * @param tenant          tenant identifier (for logging)
+     * @param engine          the shared engine for this tenant
+     * @param supportESM      whether ESM module evaluation is enabled
+     * @param sharedSource    pre-compiled shared-code {@link Source}
+     * @param systemSource    pre-compiled system-code {@link Source}
+     * @param mappingCode     Base64-encoded mapping JavaScript
+     * @param mappingIdentifier  mapping identifier (used to name the source)
+     */
+    public PooledGraalContext borrowOrCreateContext(
+            String poolKey,
+            String tenant,
+            Engine engine,
+            boolean supportESM,
+            Source sharedSource,
+            Source systemSource,
+            String mappingCode,
+            String mappingIdentifier) {
+
+        Deque<PooledGraalContext> deque =
+                contextPool.computeIfAbsent(poolKey, k -> new ConcurrentLinkedDeque<>());
+
+        PooledGraalContext pooled = deque.pollFirst();
+        if (pooled != null) {
+            // Fast path: reuse idle context
+            AtomicInteger activeCount = engineActiveContexts.get(engine);
+            if (activeCount != null) {
+                activeCount.incrementAndGet();
+            }
+            log.debug("{} - Reusing pooled GraalVM context for mapping [{}]", tenant, mappingIdentifier);
+            return pooled;
+        }
+
+        // Slow path: create a new context, load all code once
+        log.debug("{} - Creating new pooled GraalVM context for mapping [{}]", tenant, mappingIdentifier);
+        try {
+            Context ctx = createFreshGraalContext(engine, supportESM);
+
+            // Base64 polyfill — sets atob/btoa on globalThis
+            ctx.eval(BASE64_POLYFILL_SOURCE);
+
+            // Shared and system code — sets helpers on globalThis
+            if (sharedSource != null) {
+                ctx.eval(sharedSource);
+            }
+            if (systemSource != null) {
+                ctx.eval(systemSource);
+            }
+
+            // Mapping-specific code — defines the onMessage function
+            byte[] decodedBytes = Base64.getDecoder().decode(mappingCode);
+            String decodedCode = new String(decodedBytes);
+
+            String identifier = Mapping.SMART_FUNCTION_NAME + "_" + mappingIdentifier;
+            Value onMessageFunction;
+
+            if (supportESM) {
+                Source source = Source.newBuilder("js", decodedCode, identifier + ".mjs")
+                        .cached(true)
+                        .buildLiteral();
+                recordCompilation(tenant, source.getName(), source.getCharacters().toString());
+                Value exports = ctx.eval(source);
+                onMessageFunction = exports.getMember(Mapping.SMART_FUNCTION_NAME);
+            } else {
+                decodedCode = JavaScriptModuleStripper.toPlainScript(decodedCode);
+                String wrappedCode = "(function() {\n"
+                        + decodedCode + "\n"
+                        + "globalThis['" + Mapping.SMART_FUNCTION_NAME + "'] = " + Mapping.SMART_FUNCTION_NAME + ";\n"
+                        + "})();";
+                Source source = Source.newBuilder("js", wrappedCode, identifier + ".js")
+                        .cached(true)
+                        .buildLiteral();
+                recordCompilation(tenant, source.getName(), source.getCharacters().toString());
+                ctx.eval(source);
+                onMessageFunction = ctx.getBindings("js").getMember(Mapping.SMART_FUNCTION_NAME);
+            }
+
+            if (onMessageFunction == null || onMessageFunction.isNull()) {
+                ctx.close();
+                throw new IllegalStateException(String.format(
+                        "Function '%s' not found in mapping code for [%s]",
+                        Mapping.SMART_FUNCTION_NAME, mappingIdentifier));
+            }
+
+            PooledGraalContext newPooled = new PooledGraalContext(ctx, onMessageFunction, engine);
+
+            // Count as in-flight immediately (will be decremented by returnContext)
+            AtomicInteger activeCount = engineActiveContexts.get(engine);
+            if (activeCount != null) {
+                activeCount.incrementAndGet();
+            }
+            return newPooled;
+
+        } catch (Exception e) {
+            log.error("{} - Failed to create pooled GraalVM context for mapping [{}]: {}",
+                    tenant, mappingIdentifier, e.getMessage(), e);
+            throw new RuntimeException("Failed to create pooled GraalVM context for mapping " + mappingIdentifier, e);
+        }
+    }
+
+    /**
+     * Returns a borrowed {@link PooledGraalContext} to the pool or discards it.
+     *
+     * <ul>
+     *   <li>Decrements the engine's in-flight counter (always).</li>
+     *   <li>If the context was killed (cancel/timeout), it is already closed — nothing more.</li>
+     *   <li>Otherwise the context is offered back to the pool deque. If the deque is at
+     *       capacity the context is closed immediately.</li>
+     * </ul>
+     *
+     * @param poolKey  pool key originally passed to {@link #borrowOrCreateContext}
+     * @param pooled   the context to return
+     * @param engine   the engine that backed this context (for counter decrement)
+     */
+    public void returnContext(String poolKey, PooledGraalContext pooled, Engine engine) {
+        // Always decrement in-flight counter first
+        releaseEngine(engine);
+
+        if (pooled.isKilled()) {
+            // Context was forcibly closed — nothing to return
+            log.debug("Not returning killed pooled GraalVM context to pool [{}]", poolKey);
+            return;
+        }
+
+        // Determine max pool size from tenant config
+        String tenant = poolKey.contains(":") ? poolKey.substring(0, poolKey.indexOf(":")) : poolKey;
+        ServiceConfiguration config = tenantServiceConfigs.get(tenant);
+        int maxSize = (config != null && config.getContextPoolSize() != null)
+                ? config.getContextPoolSize()
+                : DEFAULT_POOL_SIZE;
+
+        Deque<PooledGraalContext> deque = contextPool.get(poolKey);
+        if (deque != null && deque.size() < maxSize) {
+            deque.offerFirst(pooled);
+            log.debug("Returned GraalVM context to pool [{}] (idle={})", poolKey, deque.size());
+        } else {
+            pooled.closeQuietly();
+            log.debug("Pool [{}] full or missing — closed returned context", poolKey);
+        }
+    }
+
+    /**
+     * Evicts all idle pooled contexts for a specific mapping (across all code versions).
+     * Call this when a mapping's JavaScript code is updated so stale pre-loaded functions
+     * are not reused.
+     *
+     * @param tenant     tenant identifier
+     * @param mappingId  mapping identifier
+     */
+    public void invalidateMappingPool(String tenant, String mappingId) {
+        String prefix = tenant + ":" + mappingId + ":";
+        int closed = 0;
+        for (Map.Entry<String, Deque<PooledGraalContext>> entry : contextPool.entrySet()) {
+            if (entry.getKey().startsWith(prefix)) {
+                Deque<PooledGraalContext> deque = contextPool.remove(entry.getKey());
+                if (deque != null) {
+                    PooledGraalContext p;
+                    while ((p = deque.poll()) != null) {
+                        p.closeQuietly();
+                        closed++;
+                    }
+                }
+            }
+        }
+        if (closed > 0) {
+            log.info("{} - Invalidated {} pooled GraalVM context(s) for mapping [{}]",
+                    tenant, closed, mappingId);
+        }
+    }
+
+    /**
+     * Evicts and closes all idle pooled contexts for a tenant.
+     * Called before engine rotation and tenant removal so the old engine's references
+     * are fully released.
+     *
+     * <p>Only idle (un-borrowed) contexts are closed here. In-flight (borrowed) contexts
+     * will be returned/discarded via {@link #returnContext} when their processing completes.
+     *
+     * @param tenant tenant identifier
+     */
+    private void invalidateTenantPool(String tenant) {
+        String prefix = tenant + ":";
+        int closed = 0;
+        for (Map.Entry<String, Deque<PooledGraalContext>> entry : contextPool.entrySet()) {
+            if (entry.getKey().startsWith(prefix)) {
+                Deque<PooledGraalContext> deque = contextPool.remove(entry.getKey());
+                if (deque != null) {
+                    PooledGraalContext p;
+                    while ((p = deque.poll()) != null) {
+                        p.closeQuietly();
+                        closed++;
+                    }
+                }
+            }
+        }
+        if (closed > 0) {
+            log.info("{} - Invalidated {} idle pooled GraalVM context(s) before engine rotation/removal",
+                    tenant, closed);
+        }
+    }
+
+    /**
+     * Creates a fresh GraalVM {@link Context} with the standard security settings used
+     * for Smart Function execution.  Centralised here so the pool and warm-up paths
+     * always produce identically-configured contexts.
+     */
+    private Context createFreshGraalContext(Engine engine, boolean supportESM) {
+        Context.Builder builder = Context.newBuilder("js")
+                .engine(engine)
+                .option("js.text-encoding", "true")
+                .allowHostAccess(getHostAccess())
+                .allowHostClassLookup(GraalVMContextService::isAllowedHostClass);
+        if (supportESM) {
+            builder.allowIO(IOAccess.ALL)
+                    .allowExperimentalOptions(true)
+                    .option("js.esm-eval-returns-exports", "true");
+        }
+        return builder.build();
+    }
+
+    /**
      * Records that a unique JS source has been compiled into the tenant's Engine and
      * triggers rotation when the compilation count reaches the configured threshold.
      *
@@ -360,6 +674,9 @@ public class GraalVMContextService {
         }
         log.info("{} - Rotating GraalVM Engine to release Metaspace ({} retired engine(s) pending drain) — {}",
                 tenant, retiredEngines.size(), metaspaceUsageSummary());
+        // Close all idle pooled contexts before retiring the engine so their references
+        // to the old engine are released immediately.
+        invalidateTenantPool(tenant);
         // Retire the current Engine before creating the replacement.
         Engine oldEngine = graalEngines.get(tenant);
         if (oldEngine != null) {
@@ -474,6 +791,8 @@ public class GraalVMContextService {
             config.getCodeTemplates().computeIfPresent(TemplateType.SHARED.name(),
                     (k, t) -> { t.setCode(code); return t; });
         }
+        // Pooled contexts have the old shared code pre-loaded — evict them
+        invalidateTenantPool(tenant);
         log.info("{} - Updated cached shared code source", tenant);
     }
 
@@ -495,6 +814,8 @@ public class GraalVMContextService {
             config.getCodeTemplates().computeIfPresent(TemplateType.SYSTEM.name(),
                     (k, t) -> { t.setCode(code); return t; });
         }
+        // Pooled contexts have the old system code pre-loaded — evict them
+        invalidateTenantPool(tenant);
         log.info("{} - Updated cached system code source", tenant);
     }
 
@@ -583,6 +904,8 @@ public class GraalVMContextService {
     }
 
     public void removeGraalsResources(String tenant) {
+        // Close all idle pooled contexts first to release references to the old engine
+        invalidateTenantPool(tenant);
         Engine eng = graalEngines.remove(tenant);
         if (eng != null) {
             // Retire the engine; close immediately if idle, or let the last in-flight

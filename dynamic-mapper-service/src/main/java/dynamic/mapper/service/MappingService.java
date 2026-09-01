@@ -603,6 +603,10 @@ public class MappingService {
         updateMapping(tenant, mapping, true, false);
         updateCacheAfterChange(tenant, mapping);
 
+        // Evict pooled GraalVM contexts that pre-loaded the old code
+        configurationRegistry.getGraalVMContextService()
+                .invalidateMappingPool(tenant, mapping.getIdentifier());
+
         configurationRegistry.getC8yAgent().createLoggingEvent(
                 String.format("Mapping %s [%s] code updated", mapping.getName(), mappingId),
                 LoggingEventType.MAPPING_UPDATED_EVENT_TYPE,
