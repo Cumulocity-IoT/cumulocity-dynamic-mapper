@@ -419,6 +419,28 @@
           </c8y-li>
 
           <c8y-li>
+            <c8y-li-icon icon="numbered-list"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'GraalVM context pool size' | translate }}</p>
+                <p>
+                  <small translate>Maximum number of GraalVM contexts kept idle in the per-mapping context pool.
+                    Higher values reduce per-message context-creation overhead at high throughput; lower values
+                    reduce memory usage. Each pooled context holds a pre-loaded onMessage function and shared/system
+                    code. Default: 20.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'GraalVM context pool size' | translate }}">
+                  <input class="form-control" name="contextPoolSize" type="number" min="1" max="100"
+                    formControlName="contextPoolSize" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+
+          <c8y-li>
             <c8y-li-icon icon="clock-o"></c8y-li-icon>
             <div class="d-flex a-i-center">
               <div>

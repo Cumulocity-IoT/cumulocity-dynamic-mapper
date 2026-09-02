@@ -53,6 +53,7 @@ export interface ServiceConfiguration {
   explorerSessionTTLMinutes?: number;
   engineRotationThreshold?: number;
   engineMaxAgeMinutes?: number;
+  contextPoolSize?: number;
 }
 
 export enum TemplateType {
