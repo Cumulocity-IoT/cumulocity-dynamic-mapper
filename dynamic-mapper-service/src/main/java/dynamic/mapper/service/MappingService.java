@@ -220,6 +220,17 @@ public class MappingService {
             }
         }
 
+        // Capture the currently stored code so pooled GraalVM contexts can be evicted
+        // if this update changes it. Every path that can persist a new mapping.code
+        // (generic PUT, version switch on activation, setCodeMapping) routes through
+        // here, so this is the single place that needs to catch code changes.
+        String previousCode = null;
+        if (TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
+            Mapping existing = getMapping(tenant, mapping.getId());
+            previousCode = existing == null ? null : existing.getCode();
+        }
+        final String previousCodeFinal = previousCode;
+
         // Update with proper tenant scope
         return subscriptionsService.callForTenant(tenant, () -> {
             mappingRepository.prepareForUpdate(tenant, mapping, allowUpdateWhenActive, ignoreValidation);
@@ -233,6 +244,12 @@ public class MappingService {
             mor.setId(GId.asGId(mapping.getId()));
             mor.setName(mapping.getName());
             inventoryApi.update(mor, false);
+
+            if (TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())
+                    && !Objects.equals(previousCodeFinal, mapping.getCode())) {
+                configurationRegistry.getGraalVMContextService()
+                        .invalidateMappingPool(tenant, mapping.getIdentifier());
+            }
 
             if (logEvent) {
                 configurationRegistry.getC8yAgent().createLoggingEvent(
@@ -602,10 +619,6 @@ public class MappingService {
 
         updateMapping(tenant, mapping, true, false);
         updateCacheAfterChange(tenant, mapping);
-
-        // Evict pooled GraalVM contexts that pre-loaded the old code
-        configurationRegistry.getGraalVMContextService()
-                .invalidateMappingPool(tenant, mapping.getIdentifier());
 
         configurationRegistry.getC8yAgent().createLoggingEvent(
                 String.format("Mapping %s [%s] code updated", mapping.getName(), mappingId),
