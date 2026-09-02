@@ -1,9 +1,12 @@
-from threading import Thread, Lock, Event
+from threading import Thread, Lock, Event, local
 import queue
 import uuid
 import logging
 import subprocess
 import os, time, random, json, signal, sys, math
+from datetime import datetime, timezone
+from urllib.parse import urlsplit
+import http.client
 
 
 logger = logging.getLogger("")
@@ -26,7 +29,8 @@ _message_fail_count = 0
 
 stop_event = Event()
 active_process_lock = Lock()
-active_process = None
+active_processes = set()
+_thread_local = local()
 
 
 def inc_created():
@@ -55,9 +59,13 @@ def snapshot_counters():
 #### Test parameters
 EVENT_NUM = 10
 QUEUE_SIZE = 5000
-TOTAL_TPS = 5
+TOTAL_TPS = 250
 MAX_TPS_PER_WORKER = 50
-WORKERS = math.ceil(TOTAL_TPS / MAX_TPS_PER_WORKER)
+# HTTP API calls are much cheaper than spawning the c8y CLI, so more concurrent
+# worker threads (each with its own persistent connection) than the pure
+# TOTAL_TPS/MAX_TPS_PER_WORKER split can still push more throughput in practice.
+MIN_WORKERS = 20
+WORKERS = max(math.ceil(TOTAL_TPS / MAX_TPS_PER_WORKER), MIN_WORKERS)
 TPS_PER_WORKER = TOTAL_TPS / WORKERS
 
 message_type = ["telemetry", "error"]
@@ -136,6 +144,88 @@ def ensure_devices():
         device_id_map[serial] = internal_id
 
 
+def _resolve_base_url():
+    base_url = get_env("C8Y_BASEURL") or get_env("C8Y_URL") or get_env("C8Y_DOMAIN")
+    if not base_url:
+        raise SystemExit("ERROR: Missing C8Y_BASEURL/C8Y_URL/C8Y_DOMAIN for HTTP API mode.")
+    if not base_url.startswith("http://") and not base_url.startswith("https://"):
+        base_url = f"https://{base_url}"
+    return base_url.rstrip("/")
+
+
+def _resolve_auth_header():
+    auth_header = get_env("C8Y_HEADER_AUTHORIZATION", "").strip()
+    if auth_header:
+        return auth_header
+
+    tenant = get_env("C8Y_TENANT", "").strip()
+    username = (get_env("C8Y_USERNAME") or get_env("C8Y_USER") or "").strip()
+    password = get_env("C8Y_PASSWORD", "").strip()
+    if tenant and username and password:
+        import base64
+
+        token = base64.b64encode(f"{tenant}/{username}:{password}".encode("utf-8")).decode("ascii")
+        return f"Basic {token}"
+
+    raise SystemExit(
+        "ERROR: Missing auth for HTTP API mode. Set C8Y_HEADER_AUTHORIZATION or C8Y_TENANT+C8Y_USERNAME+C8Y_PASSWORD."
+    )
+
+
+def _get_thread_connection():
+    """
+    Each worker thread keeps its own persistent (keep-alive) HTTP(S) connection,
+    so requests don't pay TCP/TLS setup cost per message and threads never
+    contend on a shared socket/opener.
+    """
+    conn = getattr(_thread_local, "conn", None)
+    if conn is not None:
+        return conn
+    split = urlsplit(BASE_URL)
+    if split.scheme == "https":
+        conn = http.client.HTTPSConnection(split.hostname, split.port or 443, timeout=10)
+    else:
+        conn = http.client.HTTPConnection(split.hostname, split.port or 80, timeout=10)
+    _thread_local.conn = conn
+    return conn
+
+
+def _reset_thread_connection():
+    conn = getattr(_thread_local, "conn", None)
+    if conn is not None:
+        try:
+            conn.close()
+        except Exception:
+            pass
+        _thread_local.conn = None
+
+
+def _post_json(path, payload):
+    body = json.dumps(payload).encode("utf-8")
+    headers = {
+        "Authorization": AUTH_HEADER,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    conn = _get_thread_connection()
+    try:
+        conn.request("POST", path, body=body, headers=headers)
+        resp = conn.getresponse()
+        status = resp.status
+        resp.read()  # drain response so the keep-alive connection can be reused
+        return status
+    except Exception:
+        # Connection may have gone stale (broker closed keep-alive, network blip, etc).
+        # Reset and retry once with a fresh connection before giving up.
+        _reset_thread_connection()
+        conn = _get_thread_connection()
+        conn.request("POST", path, body=body, headers=headers)
+        resp = conn.getresponse()
+        status = resp.status
+        resp.read()
+        return status
+
+
 def create_payload(cap_id: str):
     selected_type = random.choice(message_type)
     if selected_type == "telemetry":
@@ -166,56 +256,41 @@ def queue_tasks():
 
 
 def publish_via_c8y(payload):
-    global active_process
     internal_id = device_id_map[payload["clientId"]]
+    now_iso = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
     if payload["payloadType"] == "telemetry":
-        measurement_data = {"c8y_Steam": {"Temperature": {"unit": "C", "value": payload["sensorData"]["temp_val"]}}}
-        cmd = [
-            "c8y",
-            "measurements",
-            "create",
-            "--force",
-            "--device",
-            internal_id,
-            "--type",
-            "c8y_TemperatureMeasurement",
-            "--time",
-            time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
-            "--data",
-            json.dumps(measurement_data),
-        ]
+        body = {
+            "source": {"id": internal_id},
+            "type": "c8y_TemperatureMeasurement",
+            "time": now_iso,
+            "c8y_Steam": {"Temperature": {"unit": "C", "value": payload["sensorData"]["temp_val"]}},
+        }
+        path = "/measurement/measurements"
     else:
-        event_data = {"severity": "MAJOR", "status": "ACTIVE"}
-        cmd = [
-            "c8y",
-            "events",
-            "create",
-            "--force",
-            "--device",
-            internal_id,
-            "--type",
-            "c8y_ErrorEvent",
-            "--time",
-            time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime()),
-            "--text",
-            payload["logMessage"],
-            "--data",
-            json.dumps(event_data),
-        ]
+        body = {
+            "source": {"id": internal_id},
+            "type": "c8y_ErrorEvent",
+            "time": now_iso,
+            "text": payload["logMessage"],
+            "severity": "MAJOR",
+            "status": "ACTIVE",
+        }
+        path = "/event/events"
 
-    with active_process_lock:
-        if stop_event.is_set():
-            return
-        active_process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    stdout, stderr = active_process.communicate()
-    return_code = active_process.returncode
-    with active_process_lock:
-        active_process = None
-    if return_code == 0:
+    if stop_event.is_set():
+        return
+    try:
+        status = _post_json(path, body)
+    except Exception as ex:
+        inc_failed()
+        logger.error(f"c8y http publish failed: {ex}")
+        return
+
+    if 200 <= status < 300:
         inc_published()
     else:
         inc_failed()
-        logger.error(f"c8y cli publish failed: {stderr.strip()}")
+        logger.error(f"c8y http publish failed: status={status}")
 
 
 def consume_tasks(tps_per_worker=TPS_PER_WORKER):
@@ -229,9 +304,11 @@ def consume_tasks(tps_per_worker=TPS_PER_WORKER):
         now = time.monotonic()
         if now < next_send:
             time.sleep(next_send - now)
-        publish_via_c8y(new_task)
-        next_send = max(time.monotonic(), next_send + min_interval)
-        task_queue.task_done()
+        try:
+            publish_via_c8y(new_task)
+        finally:
+            next_send = max(time.monotonic(), next_send + min_interval)
+            task_queue.task_done()
 
 
 def print_stats(start_time):
@@ -286,13 +363,17 @@ def run(start_time):
 
 
 def main():
+    global BASE_URL, AUTH_HEADER
     create_capid(device_num)
+    BASE_URL = _resolve_base_url()
+    AUTH_HEADER = _resolve_auth_header()
     def _shutdown(sig, frame):
         logger.info("Shutdown signal received. Stopping ...")
         stop_event.set()
         with active_process_lock:
-            if active_process is not None and active_process.poll() is None:
-                active_process.terminate()
+            for process in list(active_processes):
+                if process.poll() is None:
+                    process.terminate()
 
     signal.signal(signal.SIGINT, _shutdown)
     signal.signal(signal.SIGTERM, _shutdown)
