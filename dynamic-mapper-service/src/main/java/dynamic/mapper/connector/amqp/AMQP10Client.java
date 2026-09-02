@@ -467,8 +467,8 @@ public class AMQP10Client extends AConnectorClient {
                 }
 
                 if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
-                    log.info("{} - AMQP 1.0 published ({}/{}): address=[{}], QoS: {}, payload: {}",
-                            tenant, i + 1, requests.size(), address, context.getQos(), payload);
+                    log.info("{} - OUTBOUND SEND: connector={}, topic={}, qos={}, payload={}",
+                            tenant, getConnectorName(), address, context.getQos(), payload);
                 } else {
                     log.debug("{} - AMQP 1.0 published ({}/{}): address=[{}], QoS: {}",
                             tenant, i + 1, requests.size(), address, context.getQos());

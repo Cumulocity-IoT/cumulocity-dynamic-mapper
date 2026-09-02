@@ -449,8 +449,8 @@ public class MQTT5Client extends AMQTTClient {
                 mqttClient.publish(message);
 
                 if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
-                    log.info("{} - Published message ({}/{}): topic=[{}], QoS: {}, payload: {} bytes",
-                            tenant, i + 1, requests.size(), topic, mqttQos, payloadBytes.length);
+                    log.info("{} - OUTBOUND SEND: connector={}, topic={}, qos={}, payload={}",
+                            tenant, getConnectorName(), topic, mqttQos, new String(payloadBytes, StandardCharsets.UTF_8));
                 } else {
                     log.debug("{} - Published message ({}/{}): topic=[{}], QoS: {}", tenant, i + 1, requests.size(), topic, mqttQos);
                 }

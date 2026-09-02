@@ -518,8 +518,8 @@ public class AMQPClient extends AConnectorClient {
                 channel.basicPublish(exchangeName, routingKey, props, payload.getBytes(StandardCharsets.UTF_8));
 
                 if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
-                    log.info("{} - Published message ({}/{}): exchange=[{}], routingKey=[{}], QoS: {}, payload: {}",
-                            tenant, i + 1, requests.size(), exchangeName, routingKey, context.getQos(), payload);
+                    log.info("{} - OUTBOUND SEND: connector={}, topic={}, qos={}, payload={}",
+                            tenant, getConnectorName(), topic, context.getQos(), payload);
                 } else {
                     log.debug("{} - Published message ({}/{}): exchange=[{}], routingKey=[{}], QoS: {}",
                             tenant, i + 1, requests.size(), exchangeName, routingKey, context.getQos());
