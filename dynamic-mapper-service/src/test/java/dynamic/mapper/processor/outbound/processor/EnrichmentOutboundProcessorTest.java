@@ -157,7 +157,7 @@ class EnrichmentOutboundProcessorTest {
 
         // Setup configuration registry defaults
         when(configurationRegistry.getGraalVMContextService()).thenReturn(graalVMContextService);
-        when(graalVMContextService.getGraalEngine(anyString())).thenReturn(graalEngine);
+        when(graalVMContextService.peekGraalEngine(anyString())).thenReturn(graalEngine);
         when(graalVMContextService.getHostAccess()).thenReturn(hostAccess);
     }
 
@@ -372,13 +372,13 @@ class EnrichmentOutboundProcessorTest {
         mapping.setCode("function onMessage(message) { return message; }");
 
         // The mocked engine will cause GraalVM context creation to fail
-        when(graalVMContextService.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
+        when(graalVMContextService.peekGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
 
         // When
         processor.process(exchange);
 
         // Then - Verify configuration registry was called (GraalVM setup attempted)
-        verify(graalVMContextService).getGraalEngine(TEST_TENANT);
+        verify(graalVMContextService).peekGraalEngine(TEST_TENANT);
 
         // In test environment, GraalVM setup will fail with mocked Engine
         assertTrue(mappingStatus.errors >= 1L,
@@ -401,13 +401,13 @@ class EnrichmentOutboundProcessorTest {
         mapping.setCode("function onMessage(message) { return message; }");
 
         // GraalVM Engine mock will cause context creation to fail
-        when(graalVMContextService.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
+        when(graalVMContextService.peekGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
 
         // When
         processor.process(exchange);
 
         // Then - Verify error handling
-        verify(graalVMContextService).getGraalEngine(TEST_TENANT);
+        verify(graalVMContextService).peekGraalEngine(TEST_TENANT);
 
         assertTrue(mappingStatus.errors >= 1L,
                 "Should have recorded GraalVM setup error");
@@ -428,13 +428,13 @@ class EnrichmentOutboundProcessorTest {
         when(serviceConfiguration.getLogPayload()).thenReturn(true);
 
         // GraalVM Engine mock will cause context creation to fail
-        when(graalVMContextService.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
+        when(graalVMContextService.peekGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
 
         // When
         processor.process(exchange);
 
         // Then - Verify GraalVM setup was attempted and error was handled
-        verify(graalVMContextService).getGraalEngine(TEST_TENANT);
+        verify(graalVMContextService).peekGraalEngine(TEST_TENANT);
 
         assertTrue(mappingStatus.errors >= 1L,
                 "Should have recorded GraalVM setup error");
@@ -471,7 +471,7 @@ class EnrichmentOutboundProcessorTest {
         verify(processingContext, never()).setFlowContext(any());
 
         // Should not call GraalVM-related methods
-        verify(graalVMContextService, never()).getGraalEngine(anyString());
+        verify(graalVMContextService, never()).peekGraalEngine(anyString());
 
         log.info("✅ Default transformation test passed - no GraalVM setup required");
     }
@@ -492,7 +492,7 @@ class EnrichmentOutboundProcessorTest {
 
         // Verify no GraalVM context was set up
         verify(processingContext, never()).setGraalContext(any());
-        verify(graalVMContextService, never()).getGraalEngine(anyString());
+        verify(graalVMContextService, never()).peekGraalEngine(anyString());
 
         log.info("✅ Code with non-matching transformation type test passed");
     }
@@ -518,7 +518,7 @@ class EnrichmentOutboundProcessorTest {
         verify(processingContext, atLeastOnce()).getTopic();
 
         // Verify no GraalVM setup was needed/attempted
-        verify(graalVMContextService, never()).getGraalEngine(anyString());
+        verify(graalVMContextService, never()).peekGraalEngine(anyString());
         verify(processingContext, never()).setGraalContext(any());
 
         log.info("✅ Complete outbound flow test passed:");
@@ -537,7 +537,7 @@ class EnrichmentOutboundProcessorTest {
         mapping.setCode("function transform(input) { return input; }");
 
         // Force an exception from the configuration registry
-        when(graalVMContextService.getGraalEngine(TEST_TENANT))
+        when(graalVMContextService.peekGraalEngine(TEST_TENANT))
                 .thenThrow(new RuntimeException("GraalVM setup failed"));
 
         // When
@@ -561,7 +561,7 @@ class EnrichmentOutboundProcessorTest {
         mapping.setCode("function transform(input) { return input; }");
 
         // GraalVM Engine mock will cause context creation to fail
-        when(graalVMContextService.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
+        when(graalVMContextService.peekGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
 
         // When - Process twice
         processor.process(exchange);
@@ -580,7 +580,7 @@ class EnrichmentOutboundProcessorTest {
                 "Second call should also fail with mocked Engine");
 
         // Should call getGraalEngine twice (once per process call)
-        verify(graalVMContextService, times(2)).getGraalEngine(TEST_TENANT);
+        verify(graalVMContextService, times(2)).peekGraalEngine(TEST_TENANT);
 
         log.info("✅ GraalContext builder reuse test passed");
         log.info("   - Consistent error handling across multiple calls");

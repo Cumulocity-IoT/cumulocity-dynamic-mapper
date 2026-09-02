@@ -29,12 +29,14 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
+import dynamic.mapper.processor.model.PooledGraalContext;
 import dynamic.mapper.service.cache.FlowStateStore;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
+import org.graalvm.polyglot.Value;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -98,6 +100,7 @@ class AbstractEnrichmentProcessorTest {
 
     // Real GraalVM engine and context (not mocked) as they need to work together
     private Engine graalEngine;
+    private PooledGraalContext pooledContext;
 
     private TestableAbstractEnrichmentProcessor processor;
 
@@ -199,16 +202,35 @@ class AbstractEnrichmentProcessorTest {
 
         when(serviceConfiguration.getCodeTemplates()).thenReturn(codeTemplates);
 
-        // Setup GraalVM engine and host access
+        // Setup GraalVM engine and host access — use peekGraalEngine (pool path)
         when(configurationRegistry.getGraalVMContextService()).thenReturn(graalVMContextService);
-        when(graalVMContextService.getGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
+        when(graalVMContextService.peekGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
         when(graalVMContextService.getHostAccess()).thenReturn(HostAccess.ALL);
+        when(graalVMContextService.getGraalsSourceShared(TEST_TENANT)).thenReturn(null);
+        when(graalVMContextService.getGraalsSourceSystem(TEST_TENANT)).thenReturn(null);
+
+        // Create a real pooled context for borrowOrCreateContext to return
+        Context poolCtx = Context.newBuilder("js")
+                .engine(graalEngine)
+                .allowHostAccess(HostAccess.ALL)
+                .build();
+        poolCtx.eval("js", "function onMessage(msg, ctx) { return []; }");
+        Value onMsgFn = poolCtx.getBindings("js").getMember("onMessage");
+        pooledContext = new PooledGraalContext(poolCtx, onMsgFn, graalEngine);
+        when(graalVMContextService.borrowOrCreateContext(
+                anyString(), anyString(), any(), anyBoolean(), any(), any(), anyString(), anyString()))
+                .thenReturn(pooledContext);
+
         when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
     }
 
     @AfterEach
     void tearDown() {
-        // Clean up GraalVM context if it exists
+        // Clean up pooled GraalVM context if it exists
+        if (pooledContext != null) {
+            pooledContext.closeQuietly();
+            pooledContext = null;
+        }
         if (graalContext != null) {
             try {
                 graalContext.close();
@@ -275,7 +297,7 @@ class AbstractEnrichmentProcessorTest {
         processor.process(exchange);
 
         // Then
-        verify(graalVMContextService).getGraalEngine(TEST_TENANT);
+        verify(graalVMContextService).peekGraalEngine(TEST_TENANT);
         assertNotNull(processingContext.getSharedCode(), "Should have set shared code");
         assertNotNull(processingContext.getSystemCode(), "Should have set system code");
         assertTrue(processor.wasEnrichPayloadCalled(), "Should have called enrichPayload");
@@ -291,7 +313,7 @@ class AbstractEnrichmentProcessorTest {
         processor.process(exchange);
 
         // Then
-        verify(graalVMContextService).getGraalEngine(TEST_TENANT);
+        verify(graalVMContextService).peekGraalEngine(TEST_TENANT);
         assertNotNull(processingContext.getSystemCode(), "Should have set system code");
         assertNotNull(processingContext.getFlowState(), "Should have initialized flow state");
         assertNotNull(processingContext.getFlowContext(), "Should have created flow context");
@@ -309,7 +331,7 @@ class AbstractEnrichmentProcessorTest {
         processor.process(exchange);
 
         // Then
-        verify(graalVMContextService, never()).getGraalEngine(any());
+        verify(graalVMContextService, never()).peekGraalEngine(any());
         assertNull(processingContext.getGraalContext(), "Should not have created GraalVM context");
         assertTrue(processor.wasEnrichPayloadCalled(), "Should still call enrichPayload");
 
@@ -347,7 +369,7 @@ class AbstractEnrichmentProcessorTest {
     @Test
     void testProcessHandlesGraalVMSetupError() throws Exception {
         // Given
-        when(graalVMContextService.getGraalEngine(TEST_TENANT))
+        when(graalVMContextService.peekGraalEngine(TEST_TENANT))
                 .thenThrow(new RuntimeException("Failed to get GraalVM engine"));
 
         // When
@@ -670,15 +692,15 @@ class AbstractEnrichmentProcessorTest {
     @Test
     void testContextCloseCallsReleaseEngineOnService() throws Exception {
         // Given — process() sets an engineReleaseAction that delegates to
-        // graalVMContextService.releaseEngine(graalEngine).
+        // graalVMContextService.returnContext(poolKey, pooledCtx, graalEngine).
         processor.process(exchange);
 
         // When — simulate the context lifecycle ending
         processingContext.close();
 
-        // Then — the service must be notified so it can drain retired Engines
-        verify(graalVMContextService).releaseEngine(graalEngine);
+        // Then — the service must be notified so it can return/discard the pooled context
+        verify(graalVMContextService).returnContext(anyString(), any(PooledGraalContext.class), eq(graalEngine));
 
-        log.info("✅ ProcessingContext.close() calls GraalVMContextService.releaseEngine()");
+        log.info("✅ ProcessingContext.close() calls GraalVMContextService.returnContext()");
     }
 }

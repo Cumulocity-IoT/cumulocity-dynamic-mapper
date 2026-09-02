@@ -85,11 +85,15 @@ public class MappingResolverService {
     // ========== Private Helper Methods ==========
 
     private Boolean shouldProcessMapping(String tenant, Mapping mapping, C8YMessage message, API api) {
-        // Check if mapping is active and API matches
-        if (!mapping.getActive() || !mapping.getTargetAPI().equals(api)) {
-            logMappingSkipped(tenant, mapping, "inactive or API mismatch", 
-                String.format("active=%s, expectedAPI=%s, actualAPI=%s", 
-                    mapping.getActive(), mapping.getTargetAPI(), api));
+        if (!mapping.getActive()) {
+            logMappingSkipped(tenant, mapping, "mapping is inactive", "active=false");
+            return false;
+        }
+
+        // Check source API filter: the mapping's targetAPI selects which notification API it applies to
+        if (!mapping.getTargetAPI().equals(api)) {
+            logMappingSkipped(tenant, mapping, "source API filter mismatch",
+                String.format("sourceAPI=%s, notificationAPI=%s", mapping.getTargetAPI(), api));
             return false;
         }
 
@@ -172,7 +176,7 @@ public class MappingResolverService {
 
     private void logMappingSkipped(String tenant, Mapping mapping, String reason, String details) {
         if (mapping.getDebug()) {
-            log.debug("{} - Outbound mapping {}/{} not resolved - {}: {}",
+            log.info("{} - Outbound mapping {}/{} filtered out - {}: {}",
                 tenant, mapping.getName(), mapping.getIdentifier(), reason, details);
         }
     }

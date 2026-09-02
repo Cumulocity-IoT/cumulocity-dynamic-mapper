@@ -274,6 +274,10 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             templateOptions: {
               label: this.stepperConfiguration.direction === Direction.INBOUND ? 'Target API' : 'Source API',
+              description:
+                this.stepperConfiguration.direction === Direction.OUTBOUND
+                  ? 'Used as a filter to select which mappings apply when a notification arrives.'
+                  : undefined,
               options: Object.keys(API)
                 .filter((key) => key !== API.ALL.name)
                 .map((key) => {

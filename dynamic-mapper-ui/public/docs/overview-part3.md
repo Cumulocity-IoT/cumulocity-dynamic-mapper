@@ -413,6 +413,9 @@ The following lists common problems and how to resolve them.
 
 #### Outbound mapping does not trigger
 
+- Check the mapping's **Source API** — it is used as a filter to select which mappings apply when a
+  notification arrives. If it does not match the API of the incoming notification (e.g. **Measurement** vs.
+  **Event**), the mapping is silently ignored for that notification.
 - Verify that a **subscription** exists for the device. Without a subscription, no outbound messages are
   processed regardless of mapping state.
 - Check the **Inventory Filter** — if set, it must evaluate to `true` for the device's managed object.
