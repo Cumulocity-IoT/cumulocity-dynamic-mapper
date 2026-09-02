@@ -46,7 +46,7 @@ if not password:
 logger.info(f"MQTT broker={broker}  port={port}  username={username}")
 logger.info(f"Auth: {'JWT token (Bearer)' if _jwt_token else 'MQTT_PASSWORD env var'}")
 
-root_topic = "smartfunction/performance"
+root_topics = ["smartfunction/performance", "smartfunction/performance2"]
 qos = 0
 
 task_queue = queue.Queue()
@@ -87,7 +87,7 @@ QUEUE_SIZE = 5000
 # Target aggregate throughput. WORKERS and TPS_PER_CLIENT are derived automatically.
 # The broker enforces a hard limit of 100 msg/s per MQTT client; MAX_TPS_PER_CLIENT
 # stays slightly below that to give headroom.
-TOTAL_TPS = 750
+TOTAL_TPS = 10
 MAX_TPS_PER_CLIENT = 90
 
 WORKERS = math.ceil(TOTAL_TPS / MAX_TPS_PER_CLIENT)
@@ -217,7 +217,7 @@ def consume_tasks(client, tps_per_client=TPS_PER_CLIENT):
         now = time.monotonic()
         if now < next_send:
             time.sleep(next_send - now)
-        publish(client, json.dumps(new_task), root_topic)
+        publish(client, json.dumps(new_task), random.choice(root_topics))
         # Advance the schedule by one slot; if we are already behind, catch up immediately
         # (don't accumulate a debt of sleeps).
         next_send = max(time.monotonic(), next_send + min_interval)
@@ -286,4 +286,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
