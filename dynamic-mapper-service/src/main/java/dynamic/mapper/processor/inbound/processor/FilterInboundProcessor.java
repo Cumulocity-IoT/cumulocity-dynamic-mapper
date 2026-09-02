@@ -44,8 +44,8 @@ public class FilterInboundProcessor extends BaseProcessor {
                 var expr = jsonata(mappingFilter);
                 Object extractedSourceContent = expr.evaluate(payloadObjectNode);
                 if (!Utils.isNodeTrue(extractedSourceContent)) {
-                    log.info("{} - Payload will be ignored due to filter: {}, {}", tenant, mappingFilter,
-                            payload);
+                    log.info("{} - Inbound mapping {}/{} filtered out - message filter mismatch: filter={}, payload={}",
+                            tenant, mapping.getName(), mapping.getIdentifier(), mappingFilter, payload);
                     context.getWarnings().add("Payload will be ignored due to filter: " + mappingFilter);
                     context.setIgnoreFurtherProcessing(true);
                 }
