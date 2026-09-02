@@ -362,7 +362,6 @@ public class CamelDispatcherOutbound implements NotificationCallback {
                 @SuppressWarnings("unchecked")
                 List<ProcessingContext<Object>> contexts = resultExchange.getIn().getHeader(CamelHeaders.PROCESSED_CONTEXTS,
                         List.class);
-                timer.stop(outboundProcessingTimer);
                 return contexts != null ? contexts : new ArrayList<>();
 
             } catch (Exception e) {
@@ -382,6 +381,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
                 log.error("{} - Error processing outbound message through Camel routes: {}", tenant, e.getMessage(), e);
                 throw new RuntimeException("Camel processing failed", e);
             } finally {
+                timer.stop(outboundProcessingTimer);
             }
         });
         result.setProcessingResult((Future) futureProcessingResult);
