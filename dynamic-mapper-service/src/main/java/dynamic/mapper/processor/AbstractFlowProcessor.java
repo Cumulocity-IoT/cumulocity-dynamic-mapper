@@ -284,8 +284,8 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                      // Load shared/system code and evaluate mapping source.
                      loadSharedCode(graalContext, context);
 
-                     byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
-                     String decodedCode = new String(decodedBytes);
+                      byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
+                      String decodedCode = new String(decodedBytes, java.nio.charset.StandardCharsets.UTF_8);
 
                      boolean supportESM = Boolean.TRUE.equals(serviceConfiguration.getSupportESM());
                      Source source;
