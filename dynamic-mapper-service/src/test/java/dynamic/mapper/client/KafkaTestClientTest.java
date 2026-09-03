@@ -119,7 +119,8 @@ class KafkaTestClientTest {
 
     @Test
     void saslProperties_scramSha512_configuredCorrectly() {
-        Properties props = buildSaslProps("testUser", "testPass", "broker:9092", "SCRAM-SHA-512");
+        Properties props = KafkaTestClient.buildProducerProps(
+                "broker:9092", "SASL_SSL", "SCRAM-SHA-512", "testUser", "testPass");
 
         assertEquals("SASL_SSL",         props.getProperty("security.protocol"),
                 "security.protocol must be SASL_SSL");
@@ -141,38 +142,58 @@ class KafkaTestClientTest {
 
     @Test
     void saslProperties_plain_configuredCorrectly() {
-        Properties props = buildSaslProps("alice", "secret", "broker:9093", "PLAIN");
+        Properties props = KafkaTestClient.buildProducerProps(
+                "broker:9093", "SASL_SSL", "PLAIN", "alice", "secret");
 
         assertEquals("PLAIN", props.getProperty("sasl.mechanism"));
     }
 
     @Test
     void multipleBootstrapServers_areAccepted() {
-        Properties props = buildSaslProps("u", "p", "broker1:9092,broker2:9092", "SCRAM-SHA-512");
+        Properties props = KafkaTestClient.buildProducerProps(
+                "broker1:9092,broker2:9092", "SASL_SSL", "SCRAM-SHA-512", "u", "p");
 
         assertEquals("broker1:9092,broker2:9092", props.getProperty("bootstrap.servers"));
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────
+    // ── Local (PLAINTEXT) test broker scenario ──────────────────────────────
 
-    /**
-     * Builds Kafka producer properties the same way {@link KafkaTestClient#main} does,
-     * allowing us to test the property composition without a live broker.
-     */
-    private static Properties buildSaslProps(String username, String password,
-            String brokerHost, String saslMechanism) {
-        String jaasTemplate =
-                "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"%s\" password=\"%s\";";
-        String jaasCfg    = String.format(jaasTemplate, username, password);
-        String serializer = StringSerializer.class.getName();
+    @Test
+    void plaintextProperties_forLocalTestBroker_haveNoSaslConfig() {
+        Properties props = KafkaTestClient.buildProducerProps(
+                "localhost:9093", "PLAINTEXT", "SCRAM-SHA-512", null, null);
 
-        Properties props = new Properties();
-        props.put("key.serializer",    serializer);
-        props.put("value.serializer",  serializer);
-        props.put("security.protocol", "SASL_SSL");
-        props.put("sasl.mechanism",    saslMechanism);
-        props.put("bootstrap.servers", brokerHost);
-        props.put("sasl.jaas.config",  jaasCfg);
-        return props;
+        assertEquals("PLAINTEXT",      props.getProperty("security.protocol"));
+        assertEquals("localhost:9093", props.getProperty("bootstrap.servers"));
+        assertNull(props.getProperty("sasl.mechanism"),
+                "PLAINTEXT config must not set sasl.mechanism");
+        assertNull(props.getProperty("sasl.jaas.config"),
+                "PLAINTEXT config must not set sasl.jaas.config");
+    }
+
+    @Test
+    void requiresAuth_isFalseOnlyForPlaintext() {
+        assertFalse(KafkaTestClient.requiresAuth("PLAINTEXT"));
+        assertFalse(KafkaTestClient.requiresAuth("plaintext"));
+        assertTrue(KafkaTestClient.requiresAuth("SASL_SSL"));
+        assertTrue(KafkaTestClient.requiresAuth("SASL_PLAINTEXT"));
+    }
+
+    @Test
+    void publishToLocalPlaintextBroker_sendsExpectedRecord() {
+        // Simulates the local docker-compose Kafka test broker (resources/test-env/kafka),
+        // which runs PLAINTEXT with no SASL auth on localhost:9093.
+        Properties props = KafkaTestClient.buildProducerProps(
+                "localhost:9093", "PLAINTEXT", "SCRAM-SHA-512", null, null);
+        assertEquals("PLAINTEXT", props.getProperty("security.protocol"));
+
+        ArgumentCaptor<ProducerRecord<String, String>> captor =
+                ArgumentCaptor.forClass(ProducerRecord.class);
+
+        client.testSendMeasurement();
+        verify(kafkaProducer).send(captor.capture());
+
+        assertEquals("test-topic", captor.getValue().topic());
+        assertTrue(captor.getValue().value().contains("\"deviceId\""));
     }
 }

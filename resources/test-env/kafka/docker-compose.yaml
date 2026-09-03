@@ -4,8 +4,7 @@ services:
     container_name: broker
     hostname: broker
     ports:
-      - "9092:9092"      # For external clients
-      - "9093:9093" 
+      - "9093:9093"      # For external clients (host machine)
       - "9094:9094"      # For controller (if needed externally)
     environment:
       # KRaft configuration
@@ -35,7 +34,7 @@ services:
       - kafka-data:/var/lib/kafka/data
     
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 9092 && nc -z localhost 9093 || exit 1"]
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"]
       interval: 20s
       timeout: 10s
       retries: 5
