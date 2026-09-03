@@ -45,12 +45,11 @@ docker compose down -v
 - **Password**: `guest`
 - **Virtual Host**: `/`
 
-### AMQPS Connection (SSL/TLS)
-- **Protocol**: `amqps://`
-- **Host**: `localhost`
-- **Port**: `5671`
-- **Username**: `guest`
-- **Password**: `guest`
+> This compose file does not configure TLS certificates, so the AMQPS
+> (`amqps://`, port 5671) listener is **not** enabled — RabbitMQ only starts
+> it when `RABBITMQ_SSL_CERTFILE`/`RABBITMQ_SSL_KEYFILE`/`RABBITMQ_SSL_CACERTFILE`
+> (or equivalent `rabbitmq.conf` settings) are provided. Use plain `amqp://`
+> on port 5672 for local testing.
 
 ### Management UI
 - **URL**: http://localhost:15672
