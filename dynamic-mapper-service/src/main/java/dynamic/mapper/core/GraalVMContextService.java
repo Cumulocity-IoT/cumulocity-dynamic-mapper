@@ -39,7 +39,6 @@ import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
-import org.graalvm.polyglot.io.IOAccess;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -294,8 +293,7 @@ public class GraalVMContextService {
                 .allowHostAccess(getHostAccess())
                 .allowHostClassLookup(GraalVMContextService::isAllowedHostClass);
         if (supportESM) {
-            warmupBuilder.allowIO(IOAccess.ALL)
-                    .allowExperimentalOptions(true)
+            warmupBuilder.allowExperimentalOptions(true)
                     .option("js.esm-eval-returns-exports", "true");
         }
         try (Context warmupCtx = warmupBuilder.build()) {
@@ -606,8 +604,7 @@ public class GraalVMContextService {
                 .allowHostAccess(getHostAccess())
                 .allowHostClassLookup(GraalVMContextService::isAllowedHostClass);
         if (supportESM) {
-            builder.allowIO(IOAccess.ALL)
-                    .allowExperimentalOptions(true)
+            builder.allowExperimentalOptions(true)
                     .option("js.esm-eval-returns-exports", "true");
         }
         return builder.build();

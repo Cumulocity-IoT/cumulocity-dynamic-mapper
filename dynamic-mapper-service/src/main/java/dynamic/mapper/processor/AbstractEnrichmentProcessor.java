@@ -35,7 +35,6 @@ import org.apache.camel.Exchange;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Source;
-import org.graalvm.polyglot.io.IOAccess;
 
 import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -198,8 +197,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                         || className.equals("java.util.HashSet"));
 
         if (supportESM) {
-            builder.allowIO(IOAccess.ALL)
-                    .allowExperimentalOptions(true)
+            builder.allowExperimentalOptions(true)
                     .option("js.esm-eval-returns-exports", "true");
         }
 
