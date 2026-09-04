@@ -189,8 +189,15 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onClassName(path: JSONPath, value: any): string | undefined {
-    let result = undefined;
-    return result;
+    if (path.length === 0 || typeof path[0] !== 'string' || !path[0].startsWith('_')) {
+      return undefined;
+    }
+    // Color only the root _IDENTITY_/_TOPIC_LEVEL_/_CONTEXT_DATA_ node itself, not its nested
+    // content. The nested-content class below exists purely to reset the CSS coloring that the
+    // root's descendant selector would otherwise also apply to it (the JSON tree editor nests
+    // every node's DOM inside its parent's, so a plain descendant selector can't tell the root
+    // node's own key/value apart from its children's).
+    return path.length === 1 ? 'jse-metadata-node' : 'jse-metadata-node-content';
   }
 
   onRenderMenu(items: MenuItem[]): MenuItem[] | undefined {
