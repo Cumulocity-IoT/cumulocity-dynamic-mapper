@@ -55,14 +55,12 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.Substitution;
-import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.TransformationType;
 import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.resolver.MappingResolverService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -90,9 +88,6 @@ class SubstitutionResultInboundProcessorTest {
 
     @Mock
     private IdentityResolutionService identityResolutionService;
-
-    @Mock
-    private MappingResolverService mappingResolverService;
 
     private SubstitutionResultInboundProcessor processor;
 
@@ -140,13 +135,6 @@ class SubstitutionResultInboundProcessorTest {
         // Setup the mock
         when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class)))
                 .thenReturn(mockExternalIdRep);
-
-        // Mock inventory filter
-        lenient().when(mappingResolverService.evaluateInventoryFilter(
-                anyString(), // tenant
-                any(Mapping.class), // mapping
-                any(C8YMessage.class) // message
-        )).thenReturn(true);
     }
 
     private Mapping createCompleteMapping() {
@@ -363,13 +351,6 @@ class SubstitutionResultInboundProcessorTest {
         // Given
         mapping.setFilterInventory("has(c8y_IsDevice)");
         mapping.setCreateNonExistingDevice(false);
-
-        // Mock the inventory filter to return false
-        when(mappingResolverService.evaluateInventoryFilter(
-                anyString(), // tenant
-                any(Mapping.class), // mapping
-                any(C8YMessage.class) // message
-        )).thenReturn(true);
 
         // When
         processor.process(exchange);
