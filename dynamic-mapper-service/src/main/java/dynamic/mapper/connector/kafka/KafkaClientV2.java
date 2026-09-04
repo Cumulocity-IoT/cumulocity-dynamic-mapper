@@ -244,6 +244,23 @@ public class KafkaClientV2 extends AConnectorClient {
     }
 
     /**
+     * Build the SASL JAAS config string for the given mechanism. Falls back to
+     * {@code ScramLoginModule} (with a warning) for an unrecognized mechanism, preserving
+     * behavior for any connector configuration saved before {@code PLAIN} support was added.
+     */
+    private String buildJaasConfig(String saslMechanism, String username, String password) {
+        String moduleClass = switch (saslMechanism) {
+            case "PLAIN" -> "org.apache.kafka.common.security.plain.PlainLoginModule";
+            case "SCRAM-SHA-256", "SCRAM-SHA-512" -> "org.apache.kafka.common.security.scram.ScramLoginModule";
+            default -> {
+                log.warn("{} - Unrecognized SASL mechanism '{}', falling back to ScramLoginModule", tenant, saslMechanism);
+                yield "org.apache.kafka.common.security.scram.ScramLoginModule";
+            }
+        };
+        return String.format("%s required username=\"%s\" password=\"%s\";", moduleClass, username, password);
+    }
+
+    /**
      * Build Kafka properties from configuration
      */
     private void buildKafkaProperties() {
@@ -264,6 +281,10 @@ public class KafkaClientV2 extends AConnectorClient {
         String saslMechanism = (String) connectorConfiguration.getProperties()
                 .getOrDefault("saslMechanism", "SCRAM-SHA-256");
         String groupId = (String) connectorConfiguration.getProperties().get("groupId");
+        boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("useSelfSignedCertificate", false);
+        boolean disableHostnameValidation = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("disableHostnameValidation", false);
 
         // Generate default groupId if not provided
         if (groupId == null || groupId.trim().isEmpty()) {
@@ -284,14 +305,14 @@ public class KafkaClientV2 extends AConnectorClient {
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
 
-        // Configure security if credentials provided
-        if (username != null && !username.trim().isEmpty() &&
-                password != null && !password.trim().isEmpty()) {
+        boolean hasCredentials = username != null && !username.trim().isEmpty() &&
+                password != null && !password.trim().isEmpty();
 
+        // Configure security if credentials provided
+        if (hasCredentials) {
             log.info("{} - Configuring SASL authentication with mechanism: {}", tenant, saslMechanism);
 
-            String jaasTemplate = "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"%s\" password=\"%s\";";
-            String jaasCfg = String.format(jaasTemplate, username, password);
+            String jaasCfg = buildJaasConfig(saslMechanism, username, password);
 
             consumerProps.put("sasl.jaas.config", jaasCfg);
             consumerProps.put("sasl.mechanism", saslMechanism);
@@ -300,10 +321,38 @@ public class KafkaClientV2 extends AConnectorClient {
             producerProps.put("sasl.jaas.config", jaasCfg);
             producerProps.put("sasl.mechanism", saslMechanism);
             producerProps.put("security.protocol", "SASL_SSL");
+        } else if (useSelfSignedCertificate) {
+            log.info("{} - Using SSL security protocol (no authentication, custom CA trust)", tenant);
+            consumerProps.put("security.protocol", "SSL");
+            producerProps.put("security.protocol", "SSL");
         } else {
             log.info("{} - Using PLAINTEXT security protocol (no authentication)", tenant);
             consumerProps.put("security.protocol", "PLAINTEXT");
             producerProps.put("security.protocol", "PLAINTEXT");
+        }
+
+        // Custom/self-signed CA trust - Kafka's client supports inline PEM truststores natively
+        // (KIP-651), so no manual KeyStore/SSLContext plumbing is needed here, unlike MQTT/AMQP.
+        if (useSelfSignedCertificate) {
+            try {
+                dynamic.mapper.connector.core.client.Certificate cert = loadCertificateFromConfiguration();
+                String certPem = cert.getCertInPemFormat();
+
+                consumerProps.put("ssl.truststore.type", "PEM");
+                consumerProps.put("ssl.truststore.certificates", certPem);
+                producerProps.put("ssl.truststore.type", "PEM");
+                producerProps.put("ssl.truststore.certificates", certPem);
+
+                if (disableHostnameValidation) {
+                    log.warn("{} - ⚠️  HOSTNAME VALIDATION DISABLED for Kafka TLS - insecure, development/testing only!", tenant);
+                    consumerProps.put("ssl.endpoint.identification.algorithm", "");
+                    producerProps.put("ssl.endpoint.identification.algorithm", "");
+                }
+
+                log.info("{} - Configured custom CA trust for Kafka TLS connection", tenant);
+            } catch (Exception e) {
+                throw new IllegalStateException("Failed to load custom CA certificate for Kafka connector: " + e.getMessage(), e);
+            }
         }
 
         // Add serializers/deserializers
@@ -984,6 +1033,12 @@ public class KafkaClientV2 extends AConnectorClient {
             }
         }
 
+        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
+                .getOrDefault("useSelfSignedCertificate", false);
+        if (useSelfSignedCertificate && !validateCertificateConfig(configuration)) {
+            return false;
+        }
+
         return true;
     }
 
@@ -1112,7 +1167,8 @@ public class KafkaClientV2 extends AConnectorClient {
                         "Inbound mappings allow to extract values from the payload and the key and map these to the Cumulocity payload. " +
                         "The relevant setting in a mapping is 'supportsMessageContext'.\n" +
                         "In outbound mappings any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record key.\n" +
-                        "The connector uses SASL_SSL as security protocol.")
+                        "Security protocol is derived automatically: SASL_SSL when a username/password is set, " +
+                        "SSL when only a custom/self-signed CA is trusted, otherwise PLAINTEXT.")
                 .supportsMessageContext(true)
                 .supportedDirections(supportedDirections())
 
@@ -1120,33 +1176,60 @@ public class KafkaClientV2 extends AConnectorClient {
                 .property("bootstrapServers", ConnectorPropertyBuilder.requiredString()
                         .order(0))
 
+                // TLS / custom CA trust (optional) - same pattern as the MQTT/AMQP/Pulsar connectors
+                .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(1)
+                        .defaultValue(false)
+                        .description("Trust a self-signed/internal CA certificate for TLS connections"))
+
+                .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                        .order(2)
+                        .description("Name of the certificate in the Cumulocity certificate store")
+                        .condition("useSelfSignedCertificate", "true"))
+
+                .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.optionalString()
+                        .order(3)
+                        .description("Fingerprint of the certificate in the Cumulocity certificate store")
+                        .condition("useSelfSignedCertificate", "true"))
+
+                .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
+                        .order(4)
+                        .description("Certificate chain in PEM format (alternative to referencing the Cumulocity certificate store)")
+                        .condition("useSelfSignedCertificate", "true"))
+
+                .property("disableHostnameValidation", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(5)
+                        .defaultValue(false)
+                        .description("Disable TLS hostname verification (insecure, for development/testing only)")
+                        .condition("useSelfSignedCertificate", "true"))
+
                 // SASL authentication (optional)
                 .property("username", ConnectorPropertyBuilder.optionalString()
-                        .order(1))
+                        .order(6))
 
                 .property("password", ConnectorPropertyBuilder.optionalSensitive()
-                        .order(2)
+                        .order(7)
                         .condition("username", "*"))
 
                 .property("saslMechanism", ConnectorPropertyBuilder.optionalOption()
-                        .order(3)
+                        .order(8)
                         .defaultValue("SCRAM-SHA-256")
-                        .options("SCRAM-SHA-256", "SCRAM-SHA-512")
+                        .options("SCRAM-SHA-256", "SCRAM-SHA-512", "PLAIN")
                         .condition("username", "*"))
 
                 // Consumer group
                 .property("groupId", ConnectorPropertyBuilder.requiredString()
-                        .order(4))
+                        .order(9))
 
                 // Custom properties
                 .property("defaultPropertiesProducer", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
-                        .order(5)
+                        .order(10)
                         .description("Producer properties")
                         .required(false)
                         .defaultValue(new HashMap<String, String>()))
 
                 .property("defaultPropertiesConsumer", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
-                        .order(7)
+                        .order(12)
                         .description("Consumer properties")
                         .required(false)
                         .defaultValue(new HashMap<String, String>()));
@@ -1157,7 +1240,7 @@ public class KafkaClientV2 extends AConnectorClient {
             defaultPropertiesProducer.store(writerProducer,
                     "properties can only be edited in the property file: kafka-producer.properties");
             builder.property("propertiesProducer", ConnectorPropertyBuilder.largeText()
-                    .order(6)
+                    .order(11)
                     .description("Predefined producer properties")
                     .readonly(true)
                     .defaultValue(removeDateCommentLine(writerProducer.getBuffer().toString())));
@@ -1166,7 +1249,7 @@ public class KafkaClientV2 extends AConnectorClient {
             defaultPropertiesConsumer.store(writerConsumer,
                     "properties can only be edited in the property file: kafka-consumer.properties");
             builder.property("propertiesConsumer", ConnectorPropertyBuilder.largeText()
-                    .order(8)
+                    .order(13)
                     .description("Predefined consumer properties")
                     .readonly(true)
                     .defaultValue(removeDateCommentLine(writerConsumer.getBuffer().toString())));
