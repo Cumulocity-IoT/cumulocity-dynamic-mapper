@@ -12,7 +12,7 @@
               <label translate>Source Template - {{ sourceSystem }}</label>
               <button type="button" placement="right"
                 popover="Click a node in the source template to select it as the source of a substitution."
-                triggers="focus" class="btn-help" aria-label="Help content">
+                triggers="focus" container="body" class="btn-help" aria-label="Help content">
               </button>
             </div>
             @if (stepperConfiguration.showEditorSource) {
@@ -42,7 +42,7 @@
                 <div [innerHtml]="targetTemplateHelp"></div>
               </ng-template>
               <button type="button" placement="right" [popover]="popupTargetTemplateHelp" triggers="click"
-                class="btn-help" aria-label="Help content">
+                container="body" class="btn-help" aria-label="Help content">
               </button>
             </div>
             <d11r-mapping-json-editor [schema]="schemaTarget" [options]="editorOptionsTargetSubstitution"

@@ -14,7 +14,7 @@
               <i [class]="'m-r-4 dlt-c8y-icon-' + (showSourceMetadata ? 'eye-slash' : 'eye')"></i>
               {{ (showSourceMetadata ? 'Hide metadata' : 'Show metadata') | translate }}
             </button>
-            <button type="button" placement="right" [popover]="popupMetadataTemplateHelp" triggers="click"
+            <button type="button" placement="right" [popover]="popupMetadataTemplateHelp" triggers="click" container="body"
               class="btn-help" aria-label="Help content">
             </button>
           </div>
@@ -27,7 +27,7 @@
               <i [class]="'m-r-4 dlt-c8y-icon-' + (showTargetMetadata ? 'eye-slash' : 'eye')"></i>
               {{ (showTargetMetadata ? 'Hide metadata' : 'Show metadata') | translate }}
             </button>
-            <button type="button" placement="right" [popover]="popupMetadataTemplateHelp" triggers="click"
+            <button type="button" placement="right" [popover]="popupMetadataTemplateHelp" triggers="click" container="body"
               class="btn-help" aria-label="Help content">
             </button>
             @if (stepperViewModel.showTargetContent) {

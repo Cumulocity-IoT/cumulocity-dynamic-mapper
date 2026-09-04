@@ -84,6 +84,18 @@ export class SubstitutionRendererComponent implements OnDestroy {
   readonly targetHelp = 'The JSON path in the target template where the value extracted from the source is written to.';
   readonly expandArrayHelp = 'When the source expression extracts an array, create one substitution per array element instead of a single combined value. Not available for outbound mappings.';
   readonly repairStrategyHelp = 'How to handle a missing, null, or array source value: skip the substitution, remove the target node, create the target node if missing, or use the first/last element of an extracted array.';
+  /**
+   * One combined popover for all column meanings, shown above the table, rather than one
+   * popover per header cell. A popover inside a narrow, table-layout: fixed <th> nested in a
+   * position: sticky header consistently mispositioned itself (even with container="body") -
+   * this sidesteps that fragile combination entirely instead of continuing to chase it.
+   */
+  readonly columnsHelpText = `
+    <p><strong>Source</strong> - ${this.substitutionTemplateHelp}</p>
+    <p><strong>Target</strong> - ${this.targetHelp}</p>
+    <p><strong>Expand as array</strong> - ${this.expandArrayHelp}</p>
+    <p><strong>Repair strategy</strong> - ${this.repairStrategyHelp}</p>
+  `;
 
   private static readonly ARRAY_ONLY_STRATEGIES: string[] = [
     RepairStrategy.USE_FIRST_VALUE_OF_ARRAY,

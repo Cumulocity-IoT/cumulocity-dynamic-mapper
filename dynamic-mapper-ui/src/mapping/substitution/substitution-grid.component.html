@@ -20,6 +20,13 @@
 -->
 
 <div class="p-t-16">
+  <ng-template #columnsHelp>
+    <div [innerHtml]="columnsHelpText"></div>
+  </ng-template>
+  <div class="d-flex j-c-end p-b-4">
+    <button type="button" class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate"
+      [popover]="columnsHelp" placement="left" triggers="focus" container="body"></button>
+  </div>
   <!-- Reserves the same scrollbar-width gutter as .substitution-grid-body below, so this table's
        columns (which never scroll) line up with the scrollable body table's columns regardless
        of the browser/OS scrollbar width. -->
@@ -38,35 +45,10 @@
         <tr>
           <th class="bg-level-1"></th>
           <th class="bg-level-1">#</th>
-          <th class="bg-level-1">
-            <div class="d-flex a-i-center">
-              Source
-              <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
-        substitutionTemplateHelp
-      }}" placement="top" triggers="focus" type="button"></button>
-            </div>
-          </th>
-          <th class="bg-level-1">
-            <div class="d-flex">
-              Target
-              <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{ targetHelp }}"
-                placement="top" triggers="focus" type="button"></button>
-            </div>
-          </th>
-          <th class="bg-level-1">
-            <div class="d-flex">
-              Expand as array
-              <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{ expandArrayHelp }}"
-                placement="top" triggers="focus" type="button"></button>
-            </div>
-          </th>
-          <th class="bg-level-1">
-            <div class="d-flex">
-              Repair strategy
-              <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{ repairStrategyHelp }}"
-                placement="top" triggers="focus" type="button"></button>
-            </div>
-          </th>
+          <th class="bg-level-1">Source</th>
+          <th class="bg-level-1">Target</th>
+          <th class="bg-level-1">Expand as array</th>
+          <th class="bg-level-1">Repair strategy</th>
           <th class="bg-level-1"></th>
         </tr>
       </thead>
