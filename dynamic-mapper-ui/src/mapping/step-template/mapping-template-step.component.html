@@ -1,6 +1,19 @@
 <div class="inner-scroll fit-h">
   <div class="card-block p-b-0">
     <div [formGroup]="templateForm">
+      <div class="text-center m-b-4">
+        <button type="button" name="toggleMetadata" class="btn btn-default btn-sm"
+          data-cy="dm-mapping-template-toggle-metadata" (click)="toggleMetadataVisibility()">
+          <i [class]="'m-r-4 dlt-c8y-icon-' + (showMetadata ? 'eye-slash' : 'eye')"></i>
+          {{ (showMetadata ? 'Hide metadata' : 'Show metadata') | translate }}
+        </button>
+        <ng-template #popupMetadataTemplateHelp>
+          <div [innerHtml]="metadataHelpText"></div>
+        </ng-template>
+        <button type="button" placement="right" [popover]="popupMetadataTemplateHelp" triggers="click" class="btn-help"
+          aria-label="Help content">
+        </button>
+      </div>
       <!-- Label row: both cells are in the same CSS grid row, so they are always the same height -->
       <div class="d-grid grid__col--6-6 gap-4 m-b-4">
         <div class="p-r-2">
@@ -9,10 +22,8 @@
         <div class="p-l-2 d-flex j-c-between a-i-center">
           <label translate class="m-b-0">Target Template - {{ targetSystem }}</label>
           @if (stepperViewModel.showTargetContent) {
-          <button type="button" name="sample" class="btn btn-default btn-xs"
-            data-cy="dm-mapping-template-reset-target"
-            (click)="onSampleTargetTemplatesButton()" translate
-            title="{{ 'Use Sample Target Templates' | translate }}"
+          <button type="button" name="sample" class="btn btn-default btn-xs" data-cy="dm-mapping-template-reset-target"
+            (click)="onSampleTargetTemplatesButton()" translate title="{{ 'Use Sample Target Templates' | translate }}"
             [disabled]="templateForm.get('sampleTargetTemplatesButton')?.value || (!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)">
             <i c8yIcon="enter-right"></i>Reset to default
           </button>
@@ -24,9 +35,8 @@
         <div class="column-right-border p-r-2">
           @if (stepperViewModel.showSourceEditor) {
           <d11r-mapping-json-editor [schema]="schemaSource" [options]="editorOptionsSourceTemplate"
-            [class]="'jse-main-small'"
-            (contentChanged)="onSourceTemplateChanged($event)" [data]="sourceTemplate"
-            (pathChanged)="onSelectedPathFilterMappingChanged($event)"
+            [class]="'jse-main-small'" (contentChanged)="onSourceTemplateChanged($event)"
+            [data]="displayedSourceTemplate" (pathChanged)="onSelectedPathFilterMappingChanged($event)"
             #editorSourceStepTemplate></d11r-mapping-json-editor>
           }
           @if (stepperViewModel.showExtensionSelectorsSource) {
@@ -44,9 +54,8 @@
         <div class="column-left-border p-l-2">
           @if (stepperViewModel.showTargetEditor) {
           <d11r-mapping-json-editor [schema]="schemaTarget" [options]="editorOptionsTargetTemplate"
-            [class]="'jse-main-small'"
-            (contentChanged)="onTargetTemplateChanged($event)" [data]="targetTemplate"
-            #editorTargetStepTemplate>
+            [class]="'jse-main-small'" (contentChanged)="onTargetTemplateChanged($event)"
+            [data]="displayedTargetTemplate" #editorTargetStepTemplate>
           </d11r-mapping-json-editor>
           }
           @if (stepperViewModel.showExtensionSelectors) {
@@ -82,10 +91,8 @@
         <div class="col-lg-6 d-col g-8">
           <div>
             <button type="button" name="updateFilterExecutionMapping" class="btn btn-default btn-sm m-b-4 m-t-8"
-              data-cy="dm-mapping-template-update-filter"
-              (click)="onOverwriteFilterMapping()" translate
-              title="{{ 'Update Filter Execution Mapping' | translate }}"
-              [disabled]="!selectedPathFilterFilterMapping">
+              data-cy="dm-mapping-template-update-filter" (click)="onOverwriteFilterMapping()" translate
+              title="{{ 'Update Filter Execution Mapping' | translate }}" [disabled]="!selectedPathFilterFilterMapping">
               <i c8yIcon="filter"></i>Update Filter Execution Mapping
             </button>
           </div>

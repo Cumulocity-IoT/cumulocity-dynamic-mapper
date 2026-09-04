@@ -98,7 +98,7 @@ public class MappingResolverService {
         }
 
         // Check message filter
-        if (!mapping.getFilterMapping().isBlank()) {
+        if (mapping.getFilterMapping() != null && !mapping.getFilterMapping().isBlank()) {
             if (!evaluateMessageFilter(tenant, mapping, message)) {
                 return false;
             }

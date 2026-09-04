@@ -26,7 +26,7 @@ import {
   TransformationType
 } from '../../shared';
 import { ValidationFormlyError } from './mapping.model';
-import { MappingTokens } from '../core/processor/processor.model';
+import { MappingTokens, PROTECTED_TOKENS } from '../core/processor/processor.model';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -428,9 +428,7 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
 }
 
 export function validateProtectedFields(original: any, updated: any): boolean {
-  const protectedFields = ['_IDENTITY_', '_TOPIC_LEVEL_', '_CONTEXT_DATA_'];
-
-  for (const field of protectedFields) {
+  for (const field of PROTECTED_TOKENS) {
     const originalValue = findFieldInObject(original, field);
     const updatedValue = findFieldInObject(updated, field);
 

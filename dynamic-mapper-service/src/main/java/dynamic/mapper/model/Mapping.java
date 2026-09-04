@@ -231,9 +231,10 @@ public class Mapping implements Serializable {
     @JsonSetter(nulls = Nulls.SKIP)
     private ExtensionEntry extension;
 
+    @Builder.Default
     @Schema(description = "Filter expression (condition) if mapping should be applied", example = "telemetry.telemetryReadings[0].value >15")
     @JsonSetter(nulls = Nulls.SKIP)
-    private String filterMapping;
+    private String filterMapping = "true";
 
     @Schema(description = "Filter expression for inventory queries", example = "has(c8y_IsDevice)")
     @JsonSetter(nulls = Nulls.SKIP)

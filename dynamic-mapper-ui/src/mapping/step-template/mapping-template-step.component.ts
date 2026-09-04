@@ -56,13 +56,15 @@ import {
 import { StepperViewModel } from '../stepper-mapping/stepper-view.model';
 import { CommonModule } from '@angular/common';
 import { MappingStepperService } from '../service/mapping-stepper.service';
+import { PROTECTED_TOKENS } from '../core/processor/processor.model';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 @Component({
   selector: 'd11r-mapping-template-step',
   templateUrl: './mapping-template-step.component.html',
   styleUrls: ['../shared/mapping.style.css'],
   standalone: true,
-  imports: [CoreModule, CommonModule, JsonEditorComponent]
+  imports: [CoreModule, CommonModule, PopoverModule,JsonEditorComponent]
 })
 export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   // ─── Inputs ───────────────────────────────────────────────────────────────
@@ -92,6 +94,14 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   sourceTemplateUpdated: any;
   targetTemplateUpdated: any;
   selectedPathFilterFilterMapping: string;
+  /** _IDENTITY_/_TOPIC_LEVEL_/_CONTEXT_DATA_ are only relevant for the Transformation step; hide them here by default. */
+  showMetadata = false;
+  readonly metadataHelpText = `Metadata fields (<code>_IDENTITY_</code>, <code>_TOPIC_LEVEL_</code>,
+    <code>_CONTEXT_DATA_</code>) identify the target device and carry topic/context information.
+    They are not needed to author the templates here - use the Transformation step to build substitutions
+    from them. Edits made while they are hidden are preserved.`;
+  displayedSourceTemplate: any;
+  displayedTargetTemplate: any;
   private readonly destroy$ = new Subject<void>();
 
   // ─── ViewChild refs (public so tests can reach them if needed) ─────────────
@@ -146,11 +156,56 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
     if (changes['sourceTemplate'] && this.sourceTemplate && this.mapping?.filterMapping) {
       this.updateFilterExpressionResult(this.mapping.filterMapping);
     }
+
+    if (changes['sourceTemplate']) {
+      this.displayedSourceTemplate = this.computeDisplayedTemplate(this.sourceTemplate);
+    }
+    if (changes['targetTemplate']) {
+      this.displayedTargetTemplate = this.computeDisplayedTemplate(this.targetTemplate);
+    }
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  // ─── Metadata visibility ────────────────────────────────────────────────────
+
+  toggleMetadataVisibility(): void {
+    this.showMetadata = !this.showMetadata;
+    this.displayedSourceTemplate = this.computeDisplayedTemplate(this.sourceTemplate);
+    this.displayedTargetTemplate = this.computeDisplayedTemplate(this.targetTemplate);
+  }
+
+  private computeDisplayedTemplate(template: any): any {
+    return this.showMetadata ? template : this.stripMetadataKeys(template);
+  }
+
+  private stripMetadataKeys(template: any): any {
+    if (!template || typeof template !== 'object' || Array.isArray(template)) {
+      return template;
+    }
+    const result: any = { ...template };
+    PROTECTED_TOKENS.forEach(token => delete result[token]);
+    return result;
+  }
+
+  /** Restores top-level metadata keys stripped for display so they are never lost on save. */
+  private restoreMetadataKeys(updated: any, full: any): any {
+    if (!updated || typeof updated !== 'object' || Array.isArray(updated)) {
+      return updated;
+    }
+    if (!full || typeof full !== 'object') {
+      return updated;
+    }
+    const merged = { ...updated };
+    PROTECTED_TOKENS.forEach(token => {
+      if (token in full && !(token in merged)) {
+        merged[token] = full[token];
+      }
+    });
+    return merged;
   }
 
   // ─── Filter expression ─────────────────────────────────────────────────────
@@ -171,7 +226,9 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
       // has already expanded the templates but Angular hasn't yet propagated the
       // @Input change to this child). Fall back to the live editor content, then
       // to the @Input sourceTemplate as a last resort.
-      const template = templateOverride ?? this.editorSourceStepTemplate?.get() ?? this.sourceTemplate;
+      const editorTemplate = this.editorSourceStepTemplate?.get() ?? this.sourceTemplate;
+      const template = templateOverride
+        ?? (this.showMetadata ? editorTemplate : this.restoreMetadataKeys(editorTemplate, this.sourceTemplate));
       const result = await this.stepperService.evaluateFilterExpression(
         template,
         path
@@ -241,6 +298,13 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
       updatedJson = updatedContent['json'];
     }
 
+    // Metadata keys (_IDENTITY_, _TOPIC_LEVEL_, _CONTEXT_DATA_) are hidden from the editor
+    // when showMetadata is false, so they are absent from updatedJson. Restore them from the
+    // original (full) template so they are never dropped on save.
+    if (!this.showMetadata) {
+      updatedJson = this.restoreMetadataKeys(updatedJson, baseline);
+    }
+
     onUpdated?.(updatedJson);
 
     if (previousContent) {
@@ -251,7 +315,10 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
       }
     }
 
-    const hasProtectedChanges = this.stepperConfiguration.allowTemplateExpansion
+    // Metadata keys can't be edited via the UI while hidden, so there is nothing to protect
+    // against — skip the check to avoid false positives from their absence in the editor content.
+    const hasProtectedChanges = this.showMetadata
+      && this.stepperConfiguration.allowTemplateExpansion
       && !validateProtectedFields(baseline, updatedJson);
     const isTransformationTypeValid = checkTransformationType(this.mapping.transformationType, updatedJson);
     const isValid = !hasProtectedChanges && isTransformationTypeValid;
@@ -282,7 +349,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
         ? expandExternalTemplate(template, this.mapping, levels)
         : template;
     }
-    this.editorTargetStepTemplate?.set(newTarget);
+    this.editorTargetStepTemplate?.set(this.computeDisplayedTemplate(newTarget));
     this.targetTemplateChange.emit(newTarget);
   }
 

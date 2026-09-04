@@ -590,10 +590,13 @@ class MappingScenarioIntegrationTest {
 
     @Test
     void testFilterMappingExpression() {
-        // Given - Test filterMapping for conditional processing
+        // Given - Test filterMapping for conditional processing.
+        // Mapping.filterMapping defaults to "true" (Mapping.java @Builder.Default) when a sample
+        // doesn't configure a real filter, so "true" - not null - is what "no filter set" looks
+        // like after deserialization; only a non-default value is an actual filter expression.
         Mapping mapping = findMappingByName(inboundMappings, "Mapping - 03");
 
-        if (mapping != null && mapping.getFilterMapping() != null) {
+        if (mapping != null && mapping.getFilterMapping() != null && !"true".equals(mapping.getFilterMapping())) {
             // Then - Verify filter expression
             assertNotNull(mapping.getFilterMapping());
             assertTrue(mapping.getFilterMapping().contains("$number") ||

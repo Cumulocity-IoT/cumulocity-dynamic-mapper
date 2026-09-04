@@ -538,6 +538,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         direction: direction,
         autoAckOperation: true,
         debug: false,
+        filterMapping: 'true',
         lastUpdate: Date.now()
       };
     } else {
@@ -566,6 +567,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         direction: direction,
         autoAckOperation: true,
         debug: false,
+        filterMapping: 'true',
         lastUpdate: Date.now()
       };
     }
