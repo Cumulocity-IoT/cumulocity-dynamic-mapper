@@ -54,3 +54,43 @@ tbody tr td button i {
   position: sticky;
   top: 0;
 }
+
+.substitution-row-selected {
+  background-color: var(--palette-status-info-light, var(--c8y-palette-status-info-light));
+}
+
+/* Reserves a permanent scrollbar-width gutter (like .substitution-grid-body's overflow-y: scroll
+   below) so the header table - which never scrolls - renders at the same effective width as the
+   scrollable body table. Without this, columns visibly drift out of alignment on platforms whose
+   scrollbars take up layout space (most non-macOS browsers, or macOS with "always show
+   scrollbars"). */
+.substitution-grid-head-scroll-spacer {
+  overflow-y: scroll;
+}
+
+/* Fixed layout so the header and body tables' percentage-width columns line up, and so
+   .substitution-path-cell's ellipsis truncation has a bounded width to truncate against. */
+.substitution-grid-head-scroll-spacer table.table-condensed,
+.substitution-grid-body table.table-condensed {
+  table-layout: fixed;
+}
+
+/* table-layout: fixed keeps each header cell's own width fixed, but does NOT stop its content
+   from visually overflowing into neighbouring cells - which throws off the (correctly
+   positioned) columns below by making every subsequent header look shifted right. Clip it. */
+.substitution-grid-thead th {
+  overflow: hidden;
+}
+
+.substitution-path-cell {
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.substitution-repair-strategy-select select {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

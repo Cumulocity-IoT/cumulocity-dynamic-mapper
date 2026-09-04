@@ -61,6 +61,11 @@
     </div>
     <!-- Substitution Form -->
     <div [formGroup]="substitutionFormly">
+      <!-- @if (selectedSubstitution !== -1) {
+      <div class="d-flex j-c-center p-t-8" data-cy="dm-mapping-transform-editing-indicator">
+        <span class="label label-info">Editing substitution #{{ selectedSubstitution + 1 }}</span>
+      </div>
+      } -->
       <!-- Action Buttons -->
       <div class="d-flex j-c-center p-t-8">
         <button type="button" class="btn btn-default btn-sm" data-cy="dm-mapping-transform-add-substitution" (click)="onAddSubstitution()"
@@ -106,7 +111,8 @@
               color: COLOR_HIGHLIGHTED,
               selectedSubstitutionIndex: selectedSubstitution,
               editorMode: stepperConfiguration.editorMode
-            }" (selectSub)="onSelectSubstitution($event)" (deleteSub)="onDeleteSubstitution($event)">
+            }" (selectSub)="onSelectSubstitution($event)" (deleteSub)="onDeleteSubstitution($event)"
+          (substitutionChange)="onGridSubstitutionChange()" (cancelEdit)="cancelEditSubstitution()">
         </d11r-mapping-substitution-grid>
       </div>
       @if (!(isSubstitutionValid$ | async)) {

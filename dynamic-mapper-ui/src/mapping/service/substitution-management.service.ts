@@ -115,6 +115,13 @@ export class SubstitutionManagementService {
       });
   }
 
+  /**
+   * expandArray/repairStrategy are now edited directly in the substitution grid, so the modal
+   * this used to always show is only needed when re-pointing pathSource/pathTarget would create
+   * a pathTarget collision with a *different* substitution - the same case addSubstitution()
+   * already gates on. Otherwise the update is applied immediately, matching addSubstitution()'s
+   * fast path for the non-conflicting case.
+   */
   updateSubstitution(
     selectedSubstitution: number,
     substitutionModel: SubstitutionModel,
@@ -124,21 +131,32 @@ export class SubstitutionManagementService {
   ): void {
     if (selectedSubstitution === -1) return;
 
+    const existing = mapping.substitutions[selectedSubstitution];
+    const { sourceExpression, targetExpression, pathSource, pathTarget } = substitutionModel;
+    const updatedSubstitution: Substitution = (sourceExpression.valid && targetExpression.valid)
+      ? { ...existing, pathSource, pathTarget }
+      : { ...existing };
+
+    const duplicateIndex = mapping.substitutions.findIndex(
+      (sub, index) => index !== selectedSubstitution && sub.pathTarget === updatedSubstitution.pathTarget
+    );
+    const isDuplicate = duplicateIndex !== -1;
+
+    if (!isDuplicate) {
+      mapping.substitutions[selectedSubstitution] = updatedSubstitution;
+      onSuccess();
+      return;
+    }
+
     const initialState = {
-      substitution: { ...mapping.substitutions[selectedSubstitution] },
+      substitution: updatedSubstitution,
+      isDuplicate: true,
+      duplicate: mapping.substitutions[duplicateIndex],
+      duplicateSubstitutionIndex: duplicateIndex,
       mapping,
       stepperConfiguration,
       isUpdate: true
     };
-
-    const { sourceExpression, targetExpression, pathSource, pathTarget } = substitutionModel;
-    if (sourceExpression.valid && targetExpression.valid) {
-      initialState.substitution = {
-        ...initialState.substitution,
-        pathSource,
-        pathTarget
-      };
-    }
 
     const modalRef = this.bsModalService.show(EditSubstitutionComponent, { initialState });
 
@@ -150,7 +168,12 @@ export class SubstitutionManagementService {
       .subscribe({
         next: (editedSubstitution: Substitution) => {
           try {
-            mapping.substitutions[selectedSubstitution] = editedSubstitution;
+            // The edited row now targets the same path as duplicateIndex - collapse the two into
+            // one entry there (mirroring addSubstitution()'s duplicate resolution) rather than
+            // leaving two substitutions pointing at the same pathTarget. Assign before splicing
+            // so the edited value survives the index shift regardless of which index is larger.
+            mapping.substitutions[duplicateIndex] = editedSubstitution;
+            mapping.substitutions.splice(selectedSubstitution, 1);
             onSuccess();
           } catch (error) {
             console.log('Failed to update substitution', error);

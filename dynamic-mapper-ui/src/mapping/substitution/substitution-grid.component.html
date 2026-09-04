@@ -20,33 +20,74 @@
 -->
 
 <div class="p-t-16">
-  <table class="table table-condensed m-b-0">
-    <thead class="substitution-grid-thead">
-      <tr>
-        <th class="bg-level-1" style="width: 2%"></th>
-        <th class="bg-level-1" style="width: 2%">#</th>
-        <th class="bg-level-1" style="width: 67%">
-          <div class="d-flex">
-            Substitutions [ pathSource &#8212;> pathTarget ]
-            <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
-      substitutionTemplateHelp
-    }}" placement="top" triggers="focus" type="button"></button>
-            <span>&nbsp; selected # {{settings?.selectedSubstitutionIndex < 0? 0 : (settings?.selectedSubstitutionIndex)
-            + 1 }} of # {{mapping.substitutions?.length}} </span>
-          </div>
-        </th>
-        <th class="bg-level-1" style="width: 12.5%">Expand as array</th>
-        <th class="bg-level-1" style="width: 12.5%">Repair strategy</th>
-        <th class="bg-level-1"></th>
-      </tr>
-    </thead>
-  </table>
+  <!-- Reserves the same scrollbar-width gutter as .substitution-grid-body below, so this table's
+       columns (which never scroll) line up with the scrollable body table's columns regardless
+       of the browser/OS scrollbar width. -->
+  <div class="substitution-grid-head-scroll-spacer">
+    <table class="table table-condensed m-b-0">
+      <colgroup>
+        <col style="width: 2%">
+        <col style="width: 2%">
+        <col style="width: 31%">
+        <col style="width: 31%">
+        <col style="width: 12%">
+        <col style="width: 13%">
+        <col style="width: 9%">
+      </colgroup>
+      <thead class="substitution-grid-thead">
+        <tr>
+          <th class="bg-level-1"></th>
+          <th class="bg-level-1">#</th>
+          <th class="bg-level-1">
+            <div class="d-flex a-i-center">
+              Source
+              <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
+        substitutionTemplateHelp
+      }}" placement="top" triggers="focus" type="button"></button>
+            </div>
+          </th>
+          <th class="bg-level-1">
+            <div class="d-flex">
+              Target
+              <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{ targetHelp }}"
+                placement="top" triggers="focus" type="button"></button>
+            </div>
+          </th>
+          <th class="bg-level-1">
+            <div class="d-flex">
+              Expand as array
+              <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{ expandArrayHelp }}"
+                placement="top" triggers="focus" type="button"></button>
+            </div>
+          </th>
+          <th class="bg-level-1">
+            <div class="d-flex">
+              Repair strategy
+              <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{ repairStrategyHelp }}"
+                placement="top" triggers="focus" type="button"></button>
+            </div>
+          </th>
+          <th class="bg-level-1"></th>
+        </tr>
+      </thead>
+    </table>
+  </div>
 
   <div class="substitution-grid-body">
     <table class="table table-condensed m-b-0">
+      <colgroup>
+        <col style="width: 2%">
+        <col style="width: 2%">
+        <col style="width: 31%">
+        <col style="width: 31%">
+        <col style="width: 12%">
+        <col style="width: 13%">
+        <col style="width: 9%">
+      </colgroup>
       <tbody>
         @for (sub of mapping.substitutions; track sub; let i = $index) {
-          <tr id="{{ 'sub-' + id + '-' + i }}" [attr.data-cy]="'dm-substitution-row-' + i">
+          <tr id="{{ 'sub-' + id + '-' + i }}" [attr.data-cy]="'dm-substitution-row-' + i"
+            [class.substitution-row-selected]="settings.selectedSubstitutionIndex === i">
             <td>
               <label class="c8y-radio" title="Checkbox">
                 <input type="radio" (click)="onSubstitutionSelect(i)"
@@ -58,28 +99,45 @@
             <td>
               {{ i + 1 }}
             </td>
+            @if (!sub['registeredType']) {
+            <td class="text-12 substitution-path-cell" [title]="sub.pathSource">
+              {{ (definesDeviceIdentifier(mapping, sub) ? '* ' : '') + sub.pathSource }}
+            </td>
+            <td class="text-12 substitution-path-cell" [title]="sub.pathTarget">
+              {{ sub.pathTarget }}
+            </td>
+            } @else {
+            <td></td>
+            <td></td>
+            }
             <td>
-              @if (!sub['registeredType']) {
-                <span class="text-12">{{
-                  '[ ' +
-                  (definesDeviceIdentifier(mapping, sub)
-                  ? '* '
-                  : '') +
-                  sub.pathSource +
-                  ' &#8212;> ' +
-                  sub.pathTarget +
-                  ' ]'
-                  }}
-                </span>
+              <label class="c8y-checkbox" title="{{ 'Expand as array' | translate }}">
+                <input type="checkbox" [attr.data-cy]="'dm-substitution-expand-array-' + i"
+                  [ngModel]="sub.expandArray" [disabled]="isExpandArrayDisabled()"
+                  (ngModelChange)="onExpandArrayChange(sub, $event)" />
+                <span></span>
+              </label>
+            </td>
+            <td>
+              <div class="c8y-select-wrapper substitution-repair-strategy-select">
+                <select class="form-control" [attr.data-cy]="'dm-substitution-repair-strategy-' + i"
+                  [title]="sub.repairStrategy | formatStringAsWords"
+                  [disabled]="isRepairStrategyDisabled()" [ngModel]="sub.repairStrategy"
+                  (ngModelChange)="onRepairStrategyChange(sub, $event)">
+                  @for (opt of repairStrategyOptionsFor(sub); track opt.value) {
+                  <option [value]="opt.value" [disabled]="opt.disabled">{{ opt.label | formatStringAsWords }}</option>
+                  }
+                </select>
+              </div>
+            </td>
+            <td class="d-flex">
+              @if (settings.selectedSubstitutionIndex === i) {
+              <button title="{{ 'Cancel editing / new substitution' | translate }}" class="btn btn-icon btn-clean"
+                [attr.data-cy]="'dm-substitution-cancel-edit-' + i" (click)="cancelEdit.emit()">
+                <i c8yIcon="close"></i>
+                <span class="sr-only" translate>Cancel editing / new substitution</span>
+              </button>
               }
-            </td>
-            <td>
-              {{ sub.expandArray ? 'on' : 'off' }}
-            </td>
-            <td>
-              {{ sub.repairStrategy | formatStringAsWords }}
-            </td>
-            <td>
               <button title="{{ 'Remove' | translate }}" class="btn btn-icon btn-clean showOnHover substitution-grid-delete-btn"
                 [attr.data-cy]="'dm-substitution-delete-' + i"
                 (click)="onSubstitutionDelete(i)" [disabled]="settings.editorMode === EditorMode.READ_ONLY">

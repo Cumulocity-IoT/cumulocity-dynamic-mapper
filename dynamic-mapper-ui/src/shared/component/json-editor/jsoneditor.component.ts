@@ -279,6 +279,14 @@ export class JsonEditorComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  clearSelection(): void {
+    try {
+      this.editor?.select(undefined);
+    } catch (error) {
+      console.warn('Clear selection not possible:', error);
+    }
+  }
+
   get(): JSON {
     const content: Content = this.editor.get();
     if (isJSONContent(content)) {

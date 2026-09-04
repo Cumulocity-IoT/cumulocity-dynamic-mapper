@@ -103,8 +103,10 @@
                 @for (line of testingModel.logs; track $index) {
                 <div [class]="'log-line log-' + getLogLevel(line)">{{ line }}</div>
                 }
+                } @else if (testingModel.results?.length) {
+                <span class="log-empty" translate>No console output for this test run</span>
                 } @else {
-                <span class="log-empty">No output yet</span>
+                <span class="log-empty" translate>No output yet</span>
                 }
               </div>
             </div>

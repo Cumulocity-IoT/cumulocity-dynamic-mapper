@@ -258,7 +258,12 @@ export class MappingSubstitutionStepComponent implements OnInit {
         this.alertService.add({ text: 'Current expression extracts an array. Consider using "Expand as array"...', type: 'info', timeout: ALERT_INFO_TIMEOUT });
       }
     } catch (error) {
-      this.substitutionModel.sourceExpression.valid = false;
+      // sourceExpression can still be unset here (e.g. right after selecting an existing
+      // substitution, whose persisted form never carries it) - default it rather than assume it.
+      this.substitutionModel.sourceExpression = {
+        ...(this.substitutionModel.sourceExpression ?? { result: '', resultType: 'empty' }),
+        valid: false
+      };
       this.substitutionFormly.get('pathSource').setErrors({
         validationError: { message: error.message }
       });
@@ -282,7 +287,10 @@ export class MappingSubstitutionStepComponent implements OnInit {
         );
       }
     } catch (error) {
-      this.substitutionModel.targetExpression.valid = false;
+      this.substitutionModel.targetExpression = {
+        ...(this.substitutionModel.targetExpression ?? { result: '', resultType: 'empty' }),
+        valid: false
+      };
       this.substitutionFormly.get('pathTarget').setErrors({
         validationError: { message: error.message }
       });
@@ -328,8 +336,30 @@ export class MappingSubstitutionStepComponent implements OnInit {
       this.substitutionModel,
       this.mapping,
       this.stepperConfiguration,
-      this.refreshSubstitutionValidity
+      () => {
+        this.refreshSubstitutionValidity();
+        // A completed update is a natural end to the editing session - return to "add" state
+        // rather than leaving the just-saved row selected and both buttons still enabled.
+        this.cancelEditSubstitution();
+      }
     );
+  }
+
+  /** Leaves edit mode: clears the selected row, resets the form back to its "add" state, and
+   *  clears the stale node highlight left in both editors from the substitution being edited. */
+  cancelEditSubstitution(): void {
+    this.selectedSubstitution = -1;
+    this.initializeSubstitutionModel();
+    this.substitutionFormly.get('pathSource')?.setValue('', { emitEvent: false });
+    this.substitutionFormly.get('pathTarget')?.setValue('', { emitEvent: false });
+    this.editorSourceStepSubstitution?.clearSelection();
+    this.editorTargetStepSubstitution?.clearSelection();
+  }
+
+  /** Inline expandArray/repairStrategy edits in the grid mutate the substitution in place -
+   *  no selection/model change is needed, just re-run validity. */
+  onGridSubstitutionChange(): void {
+    this.refreshSubstitutionValidity();
   }
 
   onDeleteSubstitution(selected: number): void {
@@ -370,6 +400,20 @@ export class MappingSubstitutionStepComponent implements OnInit {
       this.editorSourceStepSubstitution.setSelectionToPath(this.substitutionModel.pathSource),
       this.editorTargetStepSubstitution.setSelectionToPath(this.substitutionModel.pathTarget)
     ]);
+
+    // Explicitly (re-)evaluate both expressions rather than relying on side effects to trigger
+    // it: JsonEditorComponent.setSelectionToPath() above is a no-op for any expression containing
+    // special characters (a very common case in Expert Mode), and ngx-formly only patches (and
+    // fires valueChanges for) the pathSource/pathTarget controls when their current text differs
+    // from the model - so revisiting a row whose text is already showing silently skips
+    // evaluation. Either way, the persisted Substitution never carries sourceExpression/
+    // targetExpression, so without this the Result [type] label is left reading stale/empty
+    // metadata while the result text itself still shows the last thing that WAS evaluated.
+    // Sequential, not Promise.all: both methods finish by doing
+    // `this.substitutionModel = {...this.substitutionModel}`, so running them concurrently risks
+    // one overwriting the other's in-progress mutation.
+    await this.updateSourceExpressionResult(this.substitutionModel.pathSource);
+    await this.updateTargetExpressionResult(this.substitutionModel.pathTarget);
   }
 
   toggleExpertMode(): void {
@@ -420,8 +464,12 @@ export class MappingSubstitutionStepComponent implements OnInit {
   }
 
   addSubstitutionDisabled(): boolean {
+    // Mutually exclusive with "Update substitution": while a row is selected for editing, Add
+    // would otherwise stay clickable too and push a near-duplicate of the row being edited.
+    // Cancel/New substitution (selectedSubstitution = -1) is the explicit way back to add-mode.
     return !this.stepperConfiguration.showEditorSource ||
       this.stepperConfiguration.editorMode === EditorMode.READ_ONLY ||
+      this.selectedSubstitution !== -1 ||
       !this.isSubstitutionValid();
   }
 
