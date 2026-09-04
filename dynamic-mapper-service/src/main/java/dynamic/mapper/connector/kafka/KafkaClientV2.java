@@ -239,7 +239,26 @@ public class KafkaClientV2 extends AConnectorClient {
         } catch (Exception e) {
             log.error("{} - Error initializing Kafka connector: {}", tenant, e.getMessage(), e);
             connectionStateManager.updateStatusWithError(e);
+            closeAdminClientQuietly();
             return false;
+        }
+    }
+
+    /**
+     * Closes and clears {@link #adminClient} after a failed initialize()/connect() attempt.
+     * An AdminClient whose listTopics() call failed/timed out is otherwise never closed - its
+     * background thread keeps retrying (logging "Rebootstrapping..." indefinitely) even after
+     * the connector is disabled, since the next attempt overwrites the field and the leaked
+     * instance becomes unreachable, with no way left to stop it.
+     */
+    private void closeAdminClientQuietly() {
+        if (adminClient != null) {
+            try {
+                adminClient.close(Duration.ofSeconds(5));
+            } catch (Exception e) {
+                log.debug("{} - Error closing Kafka admin client: {}", tenant, e.getMessage());
+            }
+            adminClient = null;
         }
     }
 
@@ -430,6 +449,7 @@ public class KafkaClientV2 extends AConnectorClient {
             // immediately supersede the FAILED event carrying the actual error message.
             connectionStateManager.setConnected(false);
             connectionStateManager.updateStatusWithError(e);
+            closeAdminClientQuietly();
         } finally {
             endConnection();
         }
@@ -918,13 +938,7 @@ public class KafkaClientV2 extends AConnectorClient {
             }
 
             // Close admin client
-            if (adminClient != null) {
-                try {
-                    adminClient.close(Duration.ofSeconds(10));
-                } catch (Exception e) {
-                    log.warn("{} - Error closing Kafka admin client: {}", tenant, e.getMessage());
-                }
-            }
+            closeAdminClientQuietly();
 
             connectionStateManager.setConnected(false);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
