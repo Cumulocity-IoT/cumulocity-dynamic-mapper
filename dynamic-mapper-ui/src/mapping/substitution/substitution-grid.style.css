@@ -55,9 +55,11 @@ tbody tr td button i {
   top: 0;
 }
 
-.substitution-row-selected {
-  background-color: var(--palette-status-info-light, var(--c8y-palette-status-info-light));
-}
+/* Selected-row highlight is the plain Bootstrap/c8y ".active" row (same class
+   c8y-data-grid's own activeClassName defaults to), styled globally via
+   table-row-variant('active', $component-background-active) in @c8y/style's _tables.scss
+   for any .table > tbody > tr.active - no custom CSS needed here, and it stays visually
+   consistent with every other c8y grid in the app instead of using a different color. */
 
 /* Reserves a permanent scrollbar-width gutter (like .substitution-grid-body's overflow-y: scroll
    below) so the header table - which never scrolls - renders at the same effective width as the

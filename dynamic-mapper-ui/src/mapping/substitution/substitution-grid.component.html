@@ -69,7 +69,7 @@
       <tbody>
         @for (sub of mapping.substitutions; track sub; let i = $index) {
           <tr id="{{ 'sub-' + id + '-' + i }}" [attr.data-cy]="'dm-substitution-row-' + i"
-            [class.substitution-row-selected]="settings.selectedSubstitutionIndex === i">
+            [class.active]="settings.selectedSubstitutionIndex === i">
             <td>
               <label class="c8y-radio" title="Checkbox">
                 <input type="radio" (click)="onSubstitutionSelect(i)"
@@ -112,7 +112,7 @@
                 </select>
               </div>
             </td>
-            <td class="d-flex">
+            <td class="d-flex a-i-center j-c-end">
               @if (settings.selectedSubstitutionIndex === i) {
               <button title="{{ 'Cancel editing / new substitution' | translate }}" class="btn btn-icon btn-clean"
                 [attr.data-cy]="'dm-substitution-cancel-edit-' + i" (click)="cancelEdit.emit()">

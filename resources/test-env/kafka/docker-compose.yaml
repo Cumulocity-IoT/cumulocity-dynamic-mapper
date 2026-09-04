@@ -26,6 +26,12 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_NUM_PARTITIONS: 3
       KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      # Separate from KAFKA_DEFAULT_REPLICATION_FACTOR (which only covers regular
+      # auto-created topics): the internal __consumer_offsets topic defaults to
+      # replication factor 3, which a single-node broker can never satisfy. Without
+      # this override, __consumer_offsets creation fails forever and NO consumer
+      # group (mapping or explorer session) can ever complete group coordination.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       
       # JVM settings
       KAFKA_HEAP_OPTS: "-Xmx512M -Xms512M"

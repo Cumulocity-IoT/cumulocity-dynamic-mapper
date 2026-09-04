@@ -318,12 +318,30 @@ public class ExplorerService {
             client.addExplorerListener(listener);
             // Subscribe to the topic on the broker so messages actually arrive
             // (no-op for connectors that don't require explicit subscriptions, e.g. HTTP)
-            client.subscribeExplorerTopic(topic);
-            log.info("{} - Inbound explorer session started: sessionId={}, connector={}, topic={}",
-                    tenant, sessionId, connectorIdentifier, topic);
+            String subscriptionWarning = client.subscribeExplorerTopic(topic);
+            session.setSubscriptionWarning(subscriptionWarning);
+            if (subscriptionWarning != null) {
+                log.warn("{} - Inbound explorer session started with a subscription warning: sessionId={}, connector={}, topic={}, warning={}",
+                        tenant, sessionId, connectorIdentifier, topic, subscriptionWarning);
+            } else {
+                log.info("{} - Inbound explorer session started: sessionId={}, connector={}, topic={}",
+                        tenant, sessionId, connectorIdentifier, topic);
+            }
         }
 
         return sessionId;
+    }
+
+    /**
+     * @return the subscription warning recorded for an inbound session's broker subscribe
+     *         attempt (see {@link ExplorerSession#getSubscriptionWarning()}), or {@code null} if
+     *         the session doesn't exist or the subscribe succeeded.
+     */
+    public String getSubscriptionWarning(String tenant, String sessionId) {
+        Map<String, ExplorerSession> tenantSessions = sessions.get(tenant);
+        if (tenantSessions == null) return null;
+        ExplorerSession session = tenantSessions.get(sessionId);
+        return session != null ? session.getSubscriptionWarning() : null;
     }
 
     /**

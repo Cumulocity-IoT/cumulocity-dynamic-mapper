@@ -103,9 +103,19 @@ public class KafkaClientV2 extends AConnectorClient {
     // Consumer management
     private final Map<String, KafkaConsumerWrapper> topicConsumers = new ConcurrentHashMap<>();
     private final Map<String, Future<?>> consumerTasks = new ConcurrentHashMap<>();
+    // Explorer sessions get their own consumers, tracked separately from topicConsumers/
+    // consumerTasks, so an ad-hoc explorer subscription never shares a KafkaConsumerWrapper (or a
+    // map slot) with a mapping's long-running one on the same topic — see subscribeExplorer().
+    private final Map<String, KafkaConsumerWrapper> explorerConsumers = new ConcurrentHashMap<>();
+    private final Map<String, Future<?>> explorerConsumerTasks = new ConcurrentHashMap<>();
     // Poll-loop failure counts, keyed by plain topic name — read by monitorSubscriptions() to
     // decide which topics are worth retrying.
     private final Map<String, MutableInt> pollFailureCounts = new ConcurrentHashMap<>();
+    // Explorer consumers get their own failure-count bookkeeping, kept out of pollFailureCounts —
+    // monitorSubscriptions() treats any entry there as a mapping-style consumer to restart via
+    // subscribe() (the shared, persistent-group path), which would be wrong for an ephemeral
+    // explorer consumer.
+    private final Map<String, MutableInt> explorerPollFailureCounts = new ConcurrentHashMap<>();
     // Per-partition processing-error counts, keyed by "topic-partition" — purely internal to
     // handleProcessingError()'s own restart threshold; never read by monitorSubscriptions() (which
     // treats every key in its map as a bare topic name, so mixing the two key formats in one map
@@ -386,7 +396,11 @@ public class KafkaClientV2 extends AConnectorClient {
 
         try {
             KafkaConsumer<String, String> consumer = new KafkaConsumer<>(kafkaConsumerProperties);
-            consumer.subscribe(Collections.singletonList(topic));
+            if (isMqttWildcardTopic(topic)) {
+                consumer.subscribe(mqttWildcardToPattern(topic));
+            } else {
+                consumer.subscribe(Collections.singletonList(topic));
+            }
 
             KafkaConsumerWrapper wrapper = new KafkaConsumerWrapper(consumer, topic);
             topicConsumers.put(topic, wrapper);
@@ -434,6 +448,109 @@ public class KafkaClientV2 extends AConnectorClient {
     }
 
     /**
+     * Explorer sessions must not share {@link #kafkaConsumerProperties}' static, connector-wide
+     * {@code group.id} — Kafka persists committed offsets per group, so a second explorer session
+     * (or a mapping) reusing that group would silently resume from wherever the previous
+     * subscriber left off instead of tailing from "now", and concurrent sessions on the same topic
+     * would split partitions between them via normal consumer-group rebalancing instead of each
+     * seeing every message. Use a fresh, never-reused group id per explorer subscription instead.
+     */
+    @Override
+    protected void subscribeExplorer(String topic, Qos qos) throws ConnectorException {
+        if (!isConnected()) {
+            throw new ConnectorException("Kafka connector is not connected");
+        }
+
+        log.debug("{} - Subscribing (explorer) to Kafka topic: [{}]", tenant, topic);
+
+        try {
+            Properties explorerProps = new Properties();
+            explorerProps.putAll(kafkaConsumerProperties);
+            String ephemeralGroupId = "dynamic-mapper-explorer-" + UUID.randomUUID();
+            explorerProps.put(ConsumerConfig.GROUP_ID_CONFIG, ephemeralGroupId);
+            explorerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+
+            KafkaConsumer<String, String> consumer = new KafkaConsumer<>(explorerProps);
+            if (isMqttWildcardTopic(topic)) {
+                consumer.subscribe(mqttWildcardToPattern(topic));
+            } else {
+                consumer.subscribe(Collections.singletonList(topic));
+            }
+
+            KafkaConsumerWrapper wrapper = new KafkaConsumerWrapper(consumer, topic);
+            explorerConsumers.put(topic, wrapper);
+
+            Future<?> consumerTask = virtualThreadPool.submit(
+                    () -> consumeMessages(wrapper, explorerConsumers, explorerConsumerTasks, explorerPollFailureCounts));
+            explorerConsumerTasks.put(topic, consumerTask);
+
+            log.info("{} - Successfully subscribed (explorer) to Kafka topic: [{}] with ephemeral group [{}]",
+                    tenant, topic, ephemeralGroupId);
+
+        } catch (Exception e) {
+            throw new ConnectorException("Failed to subscribe (explorer) to topic: " + topic, e);
+        }
+    }
+
+    @Override
+    protected void unsubscribeExplorer(String topic) throws ConnectorException {
+        log.debug("{} - Unsubscribing (explorer) from Kafka topic: [{}]", tenant, topic);
+
+        KafkaConsumerWrapper wrapper = explorerConsumers.remove(topic);
+        Future<?> task = explorerConsumerTasks.remove(topic);
+
+        if (wrapper != null) {
+            wrapper.requestClose();
+        }
+
+        if (task != null) {
+            try {
+                task.get(CONSUMER_SHUTDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            } catch (TimeoutException e) {
+                log.warn("{} - Timed out waiting for explorer consumer task to stop for topic: [{}]; " +
+                        "it will finish closing shortly on its own", tenant, topic);
+            } catch (Exception e) {
+                log.debug("{} - Explorer consumer task for topic [{}] ended while unsubscribing: {}",
+                        tenant, topic, e.getMessage());
+            }
+        }
+
+        log.info("{} - Successfully unsubscribed (explorer) from Kafka topic: [{}]", tenant, topic);
+    }
+
+    /** Returns {@code true} if the topic filter uses MQTT-style wildcards ({@code +}, {@code #}). */
+    static boolean isMqttWildcardTopic(String topic) {
+        return topic != null && (topic.contains("+") || topic.contains("#"));
+    }
+
+    /**
+     * Translates an MQTT-style topic filter ({@code +} matches a single {@code /}-delimited
+     * level, {@code #} matches the rest) into a Java regex {@link Pattern} suitable for
+     * {@link KafkaConsumer#subscribe(Pattern)}, so explorer sessions and mappings can subscribe
+     * to Kafka topics using the same wildcard syntax used for MQTT.
+     */
+    static Pattern mqttWildcardToPattern(String mqttFilter) {
+        String[] segments = mqttFilter.split("/", -1);
+        StringBuilder regex = new StringBuilder("^");
+        for (int i = 0; i < segments.length; i++) {
+            String segment = segments[i];
+            if (i > 0) {
+                regex.append('/');
+            }
+            if ("#".equals(segment)) {
+                regex.append(".*");
+                break;
+            } else if ("+".equals(segment)) {
+                regex.append("[^/]+");
+            } else {
+                regex.append(Pattern.quote(segment));
+            }
+        }
+        regex.append('$');
+        return Pattern.compile(regex.toString());
+    }
+
+    /**
      * Consume messages from Kafka topic.
      * <p>
      * This method's thread is the sole owner of {@code wrapper.getConsumer()} for its entire
@@ -443,6 +560,20 @@ public class KafkaClientV2 extends AConnectorClient {
      * which this loop drains/honours on its own thread.
      */
     private void consumeMessages(KafkaConsumerWrapper wrapper) {
+        consumeMessages(wrapper, topicConsumers, consumerTasks, pollFailureCounts);
+    }
+
+    /**
+     * @param consumersMap    map this consumer's wrapper was registered in by the caller (e.g.
+     *                        {@link #topicConsumers} or {@link #explorerConsumers}); cleared on exit.
+     * @param tasksMap        the matching task map (e.g. {@link #consumerTasks} or
+     *                        {@link #explorerConsumerTasks}); cleared on exit.
+     * @param failureCountsMap failure-count bookkeeping to use; kept separate for explorer
+     *                        consumers so {@link #monitorSubscriptions()} never mistakes an
+     *                        ephemeral explorer consumer for a mapping-style one to restart.
+     */
+    private void consumeMessages(KafkaConsumerWrapper wrapper, Map<String, KafkaConsumerWrapper> consumersMap,
+            Map<String, Future<?>> tasksMap, Map<String, MutableInt> failureCountsMap) {
         KafkaConsumer<String, String> consumer = wrapper.getConsumer();
         String topic = wrapper.getTopic();
 
@@ -461,7 +592,7 @@ public class KafkaClientV2 extends AConnectorClient {
                     }
 
                     // Reset failed count on successful poll
-                    pollFailureCounts.remove(topic);
+                    failureCountsMap.remove(topic);
 
                 } catch (WakeupException we) {
                     // Only triggered by our own requestClose(); the while condition will exit next.
@@ -470,7 +601,7 @@ public class KafkaClientV2 extends AConnectorClient {
                     log.error("{} - Error consuming messages from topic: [{}]", tenant, topic, e);
                     handleConsumerError(topic, e);
 
-                    MutableInt failCount = pollFailureCounts.computeIfAbsent(topic, k -> new MutableInt(0));
+                    MutableInt failCount = failureCountsMap.computeIfAbsent(topic, k -> new MutableInt(0));
                     failCount.increment();
 
                     if (failCount.intValue() > MAX_CONSECUTIVE_FAILURES) {
@@ -500,8 +631,8 @@ public class KafkaClientV2 extends AConnectorClient {
             }
             // Conditional remove: don't clobber a newer wrapper/task a concurrent subscribe()
             // may already have installed for this topic.
-            topicConsumers.remove(topic, wrapper);
-            consumerTasks.remove(topic);
+            consumersMap.remove(topic, wrapper);
+            tasksMap.remove(topic);
             log.debug("{} - Stopped message consumption for topic: [{}]", tenant, topic);
         }
     }

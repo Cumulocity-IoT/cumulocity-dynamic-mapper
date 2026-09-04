@@ -84,6 +84,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   sessionSourceId: string | null = null;
   sessionDeviceName: string | null = null;
   sessionDeviceTypeFilter: string | null = null;
+  sessionSubscriptionWarning: string | null = null;
   messages: IndexedMessage[] = [];
   paused: boolean = false;
   private nextSeqNo = 1;
@@ -353,7 +354,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     }
 
     try {
-      this.sessionId = await this.explorerService.startSession({
+      const started = await this.explorerService.startSession({
         connectorIdentifier: result.connectorIdentifier,
         topic: result.topic,
         maxMessages: result.maxMessages,
@@ -362,6 +363,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         sourceId: result.sourceId,
         deviceType: result.deviceTypeFilter
       });
+      this.sessionId = started.sessionId;
+      this.sessionSubscriptionWarning = started.subscriptionWarning ?? null;
       this.connectorName = result.connectorName;
       this.sessionConnectorIdentifier = result.connectorIdentifier;
       this.sessionTopic = result.topic;
@@ -376,6 +379,10 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.paused = false;
       this.messages = [];
       this.persistSession();
+
+      if (this.sessionSubscriptionWarning) {
+        this.alertService.warning(`Explorer session started, but subscribing to the topic failed: ${this.sessionSubscriptionWarning}`);
+      }
 
       this.nextTriggerCountdown$.next(this.currentPollingInterval);
       if (this.shouldRefreshAutomatic) {
@@ -410,7 +417,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     this.messages = [];
 
     try {
-      this.sessionId = await this.explorerService.startSession({
+      const started = await this.explorerService.startSession({
         connectorIdentifier: result.connectorIdentifier,
         topic: result.topic,
         maxMessages: result.maxMessages,
@@ -419,6 +426,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         sourceId: result.sourceId,
         deviceType: result.deviceTypeFilter
       });
+      this.sessionId = started.sessionId;
+      this.sessionSubscriptionWarning = started.subscriptionWarning ?? null;
       this.connectorName = result.connectorName;
       this.sessionConnectorIdentifier = result.connectorIdentifier;
       this.sessionTopic = result.topic;
@@ -433,11 +442,16 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.paused = false;
       this.persistSession();
 
+      if (this.sessionSubscriptionWarning) {
+        this.alertService.warning(`Explorer session updated, but subscribing to the topic failed: ${this.sessionSubscriptionWarning}`);
+      } else {
+        this.alertService.add({ text: 'Explorer session updated.', type: 'success', timeout: ALERT_INFO_TIMEOUT });
+      }
+
       this.nextTriggerCountdown$.next(this.currentPollingInterval);
       if (this.shouldRefreshAutomatic) {
         this.countdownIntervalComponent?.start();
       }
-      this.alertService.add({ text: 'Explorer session updated.', type: 'success', timeout: ALERT_INFO_TIMEOUT });
     } catch (e: any) {
       this.alertService.danger(`Failed to update explorer session: ${e.message}`);
     }

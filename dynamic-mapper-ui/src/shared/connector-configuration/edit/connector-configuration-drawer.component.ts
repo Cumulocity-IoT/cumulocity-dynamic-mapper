@@ -296,7 +296,6 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
           wrappers: ['c8y-form-field'],
           props: {
             label: 'Description',
-            readonly: true,
             placeholder: 'choose connector ...',
             disabled: this.readOnly,
           },

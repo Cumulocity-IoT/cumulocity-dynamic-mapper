@@ -51,12 +51,19 @@ export interface StartSessionRequest {
   deviceType?: string;  // C8Y device type filter (OUTBOUND only)
 }
 
+export interface StartSessionResult {
+  sessionId: string;
+  // Set when the broker subscribe attempt for the session's topic failed (e.g. connector not
+  // connected, invalid topic) — the session is still created but will never receive messages.
+  subscriptionWarning?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class MessageExplorerService {
 
   constructor(private readonly client: FetchClient) {}
 
-  async startSession(request: StartSessionRequest): Promise<string> {
+  async startSession(request: StartSessionRequest): Promise<StartSessionResult> {
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_EXPLORER_ENDPOINT}/session`,
       {
@@ -67,7 +74,10 @@ export class MessageExplorerService {
     );
     if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     const body = await response.json();
-    return body.sessionId as string;
+    return {
+      sessionId: body.sessionId as string,
+      subscriptionWarning: body.subscriptionWarning as string | undefined
+    };
   }
 
   async stopSession(sessionId: string): Promise<void> {

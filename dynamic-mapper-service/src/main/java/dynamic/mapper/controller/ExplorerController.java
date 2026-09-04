@@ -127,7 +127,13 @@ public class ExplorerController {
                     request.getDeviceType(),
                     request.getSessionTTLMinutes());
             log.info("{} - Explorer session created: {}", tenant, sessionId);
-            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("sessionId", sessionId));
+            String subscriptionWarning = explorerService.getSubscriptionWarning(tenant, sessionId);
+            Map<String, String> body = new java.util.HashMap<>();
+            body.put("sessionId", sessionId);
+            if (subscriptionWarning != null) {
+                body.put("subscriptionWarning", subscriptionWarning);
+            }
+            return ResponseEntity.status(HttpStatus.CREATED).body(body);
         } catch (ConnectorRegistryException e) {
             log.warn("{} - Connector not found: {}", tenant, request.getConnectorIdentifier());
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

@@ -184,21 +184,30 @@ public abstract class AConnectorClient {
     /**
      * Subscribe to a topic on the broker on behalf of an explorer session.
      * Only subscribes if no existing mapping or other explorer is already subscribed (best-effort).
-     * Swallows errors since not all connector types require explicit subscriptions.
+     *
+     * @return {@code null} on success (including the no-op case where the connector doesn't
+     *         support subscriptions at all, e.g. WebHook), or a human-readable warning message
+     *         if the subscribe attempt itself failed (e.g. connector not connected, invalid topic)
+     *         so callers can surface it instead of it being silently swallowed.
      */
-    public void subscribeExplorerTopic(String topic) {
+    public String subscribeExplorerTopic(String topic) {
         try {
             boolean alreadySubscribed = mappingSubscriptionManager != null
                     && mappingSubscriptionManager.isTopicSubscribed(topic);
             if (alreadySubscribed) {
                 log.debug("{} - Explorer topic [{}] already subscribed via mapping — skipping duplicate subscribe", tenant, topic);
-                return;
+                return null;
             }
-            subscribe(topic, Qos.AT_LEAST_ONCE);
+            subscribeExplorer(topic, Qos.AT_LEAST_ONCE);
             log.info("{} - Explorer subscribed to topic: [{}] on connector: {}", tenant, topic, connectorName);
-        } catch (Exception e) {
-            // Some connectors (HTTP, WebHook) don't support topic subscriptions — that's fine
+            return null;
+        } catch (jakarta.ws.rs.NotSupportedException e) {
+            // Some connectors (HTTP, WebHook) don't support topic subscriptions at all — that's fine
             log.debug("{} - Explorer topic subscription not applicable for connector {}: {}", tenant, connectorName, e.getMessage());
+            return null;
+        } catch (Exception e) {
+            log.warn("{} - Explorer topic subscription failed for connector {}: {}", tenant, connectorName, e.getMessage());
+            return e.getMessage();
         }
     }
 
@@ -212,7 +221,7 @@ public abstract class AConnectorClient {
             boolean mappingStillActive = mappingSubscriptionManager != null
                     && mappingSubscriptionManager.isTopicSubscribed(topic);
             if (!mappingStillActive) {
-                unsubscribe(topic);
+                unsubscribeExplorer(topic);
                 log.info("{} - Explorer unsubscribed from topic: [{}] on connector: {}", tenant, topic, connectorName);
             } else {
                 log.debug("{} - Kept broker subscription for topic [{}] — still used by a mapping", tenant, topic);
@@ -1126,6 +1135,26 @@ public abstract class AConnectorClient {
      * Abstract unsubscribe method to be implemented by subclasses
      */
     protected abstract void unsubscribe(String topic) throws ConnectorException;
+
+    /**
+     * Subscribe on behalf of an ad-hoc explorer session. Default implementation delegates to
+     * {@link #subscribe(String, Qos)}; connectors whose regular subscription shares state across
+     * unrelated callers (e.g. Kafka's persistent, connector-wide consumer group and its committed
+     * offsets) should override this to use an isolated subscription instead, so an explorer
+     * session reliably tails from "now" regardless of what mappings or other explorer sessions on
+     * the same connector have already consumed.
+     */
+    protected void subscribeExplorer(String topic, Qos qos) throws ConnectorException {
+        subscribe(topic, qos);
+    }
+
+    /**
+     * Unsubscribe the counterpart of {@link #subscribeExplorer(String, Qos)}. Default
+     * implementation delegates to {@link #unsubscribe(String)}.
+     */
+    protected void unsubscribeExplorer(String topic) throws ConnectorException {
+        unsubscribe(topic);
+    }
 
     /**
      * Check if connector is connected

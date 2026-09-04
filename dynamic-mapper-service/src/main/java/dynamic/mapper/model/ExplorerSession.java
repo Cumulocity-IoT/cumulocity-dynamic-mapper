@@ -77,6 +77,11 @@ public class ExplorerSession {
     /** Bounded message store; thread-safe. */
     private ConcurrentLinkedDeque<ExplorerMessage> messages;
 
+    /** Set when the broker subscribe attempt for this session's topic failed (INBOUND only);
+     *  {@code null} on success. Surfaced to the UI so a failed subscribe isn't silently reported
+     *  as an "active" session that will never receive messages. */
+    private String subscriptionWarning;
+
     public List<String> getSubscribedDeviceIds() {
         return Collections.unmodifiableList(new ArrayList<>(subscribedDeviceIds));
     }
