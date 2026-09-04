@@ -1,33 +1,43 @@
 <div class="inner-scroll fit-h">
   <div class="card-block p-b-0">
     <div [formGroup]="templateForm">
-      <div class="text-center m-b-4">
-        <button type="button" name="toggleMetadata" class="btn btn-default btn-sm"
-          data-cy="dm-mapping-template-toggle-metadata" (click)="toggleMetadataVisibility()">
-          <i [class]="'m-r-4 dlt-c8y-icon-' + (showMetadata ? 'eye-slash' : 'eye')"></i>
-          {{ (showMetadata ? 'Hide metadata' : 'Show metadata') | translate }}
-        </button>
-        <ng-template #popupMetadataTemplateHelp>
-          <div [innerHtml]="metadataHelpText"></div>
-        </ng-template>
-        <button type="button" placement="right" [popover]="popupMetadataTemplateHelp" triggers="click" class="btn-help"
-          aria-label="Help content">
-        </button>
-      </div>
+      <ng-template #popupMetadataTemplateHelp>
+        <div [innerHtml]="metadataHelpText"></div>
+      </ng-template>
       <!-- Label row: both cells are in the same CSS grid row, so they are always the same height -->
       <div class="d-grid grid__col--6-6 gap-4 m-b-4">
-        <div class="p-r-2">
+        <div class="p-r-2 d-flex j-c-between a-i-center">
           <label translate class="m-b-0">Source Template - {{ sourceSystem }}</label>
+          <div>
+            <button type="button" name="toggleSourceMetadata" class="btn btn-default btn-xs"
+              data-cy="dm-mapping-template-toggle-source-metadata" (click)="toggleSourceMetadataVisibility()">
+              <i [class]="'m-r-4 dlt-c8y-icon-' + (showSourceMetadata ? 'eye-slash' : 'eye')"></i>
+              {{ (showSourceMetadata ? 'Hide metadata' : 'Show metadata') | translate }}
+            </button>
+            <button type="button" placement="right" [popover]="popupMetadataTemplateHelp" triggers="click"
+              class="btn-help" aria-label="Help content">
+            </button>
+          </div>
         </div>
         <div class="p-l-2 d-flex j-c-between a-i-center">
           <label translate class="m-b-0">Target Template - {{ targetSystem }}</label>
-          @if (stepperViewModel.showTargetContent) {
-          <button type="button" name="sample" class="btn btn-default btn-xs" data-cy="dm-mapping-template-reset-target"
-            (click)="onSampleTargetTemplatesButton()" translate title="{{ 'Use Sample Target Templates' | translate }}"
-            [disabled]="templateForm.get('sampleTargetTemplatesButton')?.value || (!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)">
-            <i c8yIcon="enter-right"></i>Reset to default
-          </button>
-          }
+          <div>
+            <button type="button" name="toggleTargetMetadata" class="btn btn-default btn-xs"
+              data-cy="dm-mapping-template-toggle-target-metadata" (click)="toggleTargetMetadataVisibility()">
+              <i [class]="'m-r-4 dlt-c8y-icon-' + (showTargetMetadata ? 'eye-slash' : 'eye')"></i>
+              {{ (showTargetMetadata ? 'Hide metadata' : 'Show metadata') | translate }}
+            </button>
+            <button type="button" placement="right" [popover]="popupMetadataTemplateHelp" triggers="click"
+              class="btn-help" aria-label="Help content">
+            </button>
+            @if (stepperViewModel.showTargetContent) {
+            <button type="button" name="sample" class="btn btn-default btn-xs" data-cy="dm-mapping-template-reset-target"
+              (click)="onSampleTargetTemplatesButton()" translate title="{{ 'Use Sample Target Templates' | translate }}"
+              [disabled]="templateForm.get('sampleTargetTemplatesButton')?.value || (!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)">
+              <i c8yIcon="enter-right"></i>Reset to default
+            </button>
+            }
+          </div>
         </div>
       </div>
       <!-- Editor row -->
@@ -35,7 +45,7 @@
         <div class="column-right-border p-r-2">
           @if (stepperViewModel.showSourceEditor) {
           <d11r-mapping-json-editor [schema]="schemaSource" [options]="editorOptionsSourceTemplate"
-            [class]="'jse-main-small'" (contentChanged)="onSourceTemplateChanged($event)"
+            [class]="'jse-main-medium'" (contentChanged)="onSourceTemplateChanged($event)"
             [data]="displayedSourceTemplate" (pathChanged)="onSelectedPathFilterMappingChanged($event)"
             #editorSourceStepTemplate></d11r-mapping-json-editor>
           }
@@ -43,7 +53,7 @@
           <ng-content select="[extensionSource]"></ng-content>
           }
           @if (!stepperViewModel.showSourceEditor && !stepperViewModel.showExtensionSelectorsSource) {
-          <div class="jse-main-small d-flex a-i-center j-c-center">
+          <div class="jse-main-medium d-flex a-i-center j-c-center">
             <small class="text-muted text-center">
               <i c8yIcon="info-circle" class="m-r-4"></i>
               {{ 'Template is described internally by the chosen mapping type.' | translate }}
@@ -54,7 +64,7 @@
         <div class="column-left-border p-l-2">
           @if (stepperViewModel.showTargetEditor) {
           <d11r-mapping-json-editor [schema]="schemaTarget" [options]="editorOptionsTargetTemplate"
-            [class]="'jse-main-small'" (contentChanged)="onTargetTemplateChanged($event)"
+            [class]="'jse-main-medium'" (contentChanged)="onTargetTemplateChanged($event)"
             [data]="displayedTargetTemplate" #editorTargetStepTemplate>
           </d11r-mapping-json-editor>
           }
@@ -62,7 +72,7 @@
           <ng-content select="[extensionTarget]"></ng-content>
           }
           @if (!stepperViewModel.showTargetContent) {
-          <div class="jse-main-small d-flex a-i-center j-c-center">
+          <div class="jse-main-medium d-flex a-i-center j-c-center">
             <small class="text-muted text-center">
               <i c8yIcon="info-circle" class="m-r-4"></i>
               {{ 'Template is described internally by the chosen mapping type.' | translate }}
@@ -89,6 +99,8 @@
       @if (stepperViewModel.showFilterControls) {
       <div class="row">
         <div class="col-lg-6 d-col g-8">
+          <div class="legend form-block">
+            Filter execution mapping</div>
           <div>
             <button type="button" name="updateFilterExecutionMapping" class="btn btn-default btn-sm m-b-4 m-t-8"
               data-cy="dm-mapping-template-update-filter" (click)="onOverwriteFilterMapping()" translate

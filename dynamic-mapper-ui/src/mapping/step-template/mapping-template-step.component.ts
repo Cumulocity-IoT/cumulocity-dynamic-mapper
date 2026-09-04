@@ -95,7 +95,8 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   targetTemplateUpdated: any;
   selectedPathFilterFilterMapping: string;
   /** _IDENTITY_/_TOPIC_LEVEL_/_CONTEXT_DATA_ are only relevant for the Transformation step; hide them here by default. */
-  showMetadata = false;
+  showSourceMetadata = false;
+  showTargetMetadata = false;
   readonly metadataHelpText = `Metadata fields (<code>_IDENTITY_</code>, <code>_TOPIC_LEVEL_</code>,
     <code>_CONTEXT_DATA_</code>) identify the target device and carry topic/context information.
     They are not needed to author the templates here - use the Transformation step to build substitutions
@@ -158,10 +159,10 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
     }
 
     if (changes['sourceTemplate']) {
-      this.displayedSourceTemplate = this.computeDisplayedTemplate(this.sourceTemplate);
+      this.displayedSourceTemplate = this.computeDisplayedTemplate(this.sourceTemplate, this.showSourceMetadata);
     }
     if (changes['targetTemplate']) {
-      this.displayedTargetTemplate = this.computeDisplayedTemplate(this.targetTemplate);
+      this.displayedTargetTemplate = this.computeDisplayedTemplate(this.targetTemplate, this.showTargetMetadata);
     }
   }
 
@@ -172,14 +173,18 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
 
   // ─── Metadata visibility ────────────────────────────────────────────────────
 
-  toggleMetadataVisibility(): void {
-    this.showMetadata = !this.showMetadata;
-    this.displayedSourceTemplate = this.computeDisplayedTemplate(this.sourceTemplate);
-    this.displayedTargetTemplate = this.computeDisplayedTemplate(this.targetTemplate);
+  toggleSourceMetadataVisibility(): void {
+    this.showSourceMetadata = !this.showSourceMetadata;
+    this.displayedSourceTemplate = this.computeDisplayedTemplate(this.sourceTemplate, this.showSourceMetadata);
   }
 
-  private computeDisplayedTemplate(template: any): any {
-    return this.showMetadata ? template : this.stripMetadataKeys(template);
+  toggleTargetMetadataVisibility(): void {
+    this.showTargetMetadata = !this.showTargetMetadata;
+    this.displayedTargetTemplate = this.computeDisplayedTemplate(this.targetTemplate, this.showTargetMetadata);
+  }
+
+  private computeDisplayedTemplate(template: any, showMetadata: boolean): any {
+    return showMetadata ? template : this.stripMetadataKeys(template);
   }
 
   private stripMetadataKeys(template: any): any {
@@ -228,7 +233,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
       // to the @Input sourceTemplate as a last resort.
       const editorTemplate = this.editorSourceStepTemplate?.get() ?? this.sourceTemplate;
       const template = templateOverride
-        ?? (this.showMetadata ? editorTemplate : this.restoreMetadataKeys(editorTemplate, this.sourceTemplate));
+        ?? (this.showSourceMetadata ? editorTemplate : this.restoreMetadataKeys(editorTemplate, this.sourceTemplate));
       const result = await this.stepperService.evaluateFilterExpression(
         template,
         path
@@ -265,7 +270,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   onSourceTemplateChanged(contentChanges: ContentChanges): void {
     // sourceTemplateChange has no @Output emitter; the parent reads sourceTemplateUpdated
     // via templateStepRef when leaving the step.
-    this.onTemplateChanged(contentChanges, this.sourceTemplate, json => { this.sourceTemplateUpdated = json; });
+    this.onTemplateChanged(contentChanges, this.sourceTemplate, this.showSourceMetadata, json => { this.sourceTemplateUpdated = json; });
   }
 
   onTargetTemplateChanged(contentChanges: ContentChanges): void {
@@ -276,12 +281,13 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
     // editor.set() and resets the editor's content/cursor, visibly interrupting typing. The
     // parent instead reads targetTemplateUpdated via templateStepRef when it actually needs the
     // value (leaving the step, triggering AI generation, etc.).
-    this.onTemplateChanged(contentChanges, this.targetTemplate, json => { this.targetTemplateUpdated = json; });
+    this.onTemplateChanged(contentChanges, this.targetTemplate, this.showTargetMetadata, json => { this.targetTemplateUpdated = json; });
   }
 
   private onTemplateChanged(
     contentChanges: ContentChanges,
     baseline: any,
+    showMetadata: boolean,
     onUpdated?: (json: any) => void
   ): void {
     const { previousContent, updatedContent } = contentChanges;
@@ -301,7 +307,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
     // Metadata keys (_IDENTITY_, _TOPIC_LEVEL_, _CONTEXT_DATA_) are hidden from the editor
     // when showMetadata is false, so they are absent from updatedJson. Restore them from the
     // original (full) template so they are never dropped on save.
-    if (!this.showMetadata) {
+    if (!showMetadata) {
       updatedJson = this.restoreMetadataKeys(updatedJson, baseline);
     }
 
@@ -317,7 +323,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
 
     // Metadata keys can't be edited via the UI while hidden, so there is nothing to protect
     // against — skip the check to avoid false positives from their absence in the editor content.
-    const hasProtectedChanges = this.showMetadata
+    const hasProtectedChanges = showMetadata
       && this.stepperConfiguration.allowTemplateExpansion
       && !validateProtectedFields(baseline, updatedJson);
     const isTransformationTypeValid = checkTransformationType(this.mapping.transformationType, updatedJson);
@@ -349,7 +355,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
         ? expandExternalTemplate(template, this.mapping, levels)
         : template;
     }
-    this.editorTargetStepTemplate?.set(this.computeDisplayedTemplate(newTarget));
+    this.editorTargetStepTemplate?.set(this.computeDisplayedTemplate(newTarget, this.showTargetMetadata));
     this.targetTemplateChange.emit(newTarget);
   }
 
