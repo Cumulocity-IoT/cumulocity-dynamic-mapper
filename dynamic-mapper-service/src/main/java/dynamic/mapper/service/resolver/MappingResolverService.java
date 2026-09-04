@@ -21,7 +21,6 @@
 
 package dynamic.mapper.service.resolver;
 
-import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.ResolveException;
@@ -47,7 +46,7 @@ import static com.dashjoin.jsonata.Jsonata.jsonata;
 public class MappingResolverService {
 
     private final MappingCacheManager cacheManager;
-    private final ConfigurationRegistry configurationRegistry;
+    private final InventoryFilterEvaluator inventoryFilterEvaluator;
 
     /**
      * Resolves inbound mappings by topic
@@ -139,39 +138,22 @@ public class MappingResolverService {
 
     public boolean evaluateInventoryFilter(String tenant, Mapping mapping, C8YMessage message) {
         String sourceId = message.getSourceId();
-        
+
         if (sourceId == null) {
             logMappingSkipped(tenant, mapping, "inventory filter failed", "sourceId is null");
             return false;
         }
 
-        try {
-            Map<String, Object> inventoryData = configurationRegistry.getC8yAgent()
-                .getMOFromInventoryCache(tenant, sourceId, false);
+        boolean matches = inventoryFilterEvaluator.evaluate(tenant, mapping.getFilterInventory(), sourceId, false);
 
-            log.debug("{} - Evaluating inventory filter for source {} with fragments: {}", 
-                tenant, sourceId, inventoryData.keySet());
-
-            var expression = jsonata(mapping.getFilterInventory());
-            Object result = expression.evaluate(inventoryData);
-
-            boolean matches = result != null && Utils.isNodeTrue(result);
-
-            if (matches) {
-                log.debug("{} - Inventory filter matched for mapping: {}", tenant, mapping.getIdentifier());
-            } else {
-                logMappingSkipped(tenant, mapping, "inventory filter failed",
-                    String.format("filter=%s, sourceId=%s, result=%s", 
-                        mapping.getFilterInventory(), sourceId, result));
-            }
-
-            return matches;
-
-        } catch (Exception e) {
-            log.debug("{} - Inventory filter evaluation error for mapping {}: {}", 
-                tenant, mapping.getIdentifier(), e.getMessage());
-            return false;
+        if (matches) {
+            log.debug("{} - Inventory filter matched for mapping: {}", tenant, mapping.getIdentifier());
+        } else {
+            logMappingSkipped(tenant, mapping, "inventory filter failed",
+                String.format("filter=%s, sourceId=%s", mapping.getFilterInventory(), sourceId));
         }
+
+        return matches;
     }
 
     private void logMappingSkipped(String tenant, Mapping mapping, String reason, String details) {
