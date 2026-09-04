@@ -154,8 +154,13 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     return (model) => {
       if (property?.condition?.anyOf) {
         const convertedAnyOf = this.convertBooleanStrings(property.condition.anyOf);
-        //console.log("Evaluating:", property, convertedAnyOf, property.condition.key, model.properties[property.condition.key], !convertedAnyOf.includes(model.properties[property.condition.key]));
-        return !convertedAnyOf.includes(model.properties[property.condition.key]);
+        const currentValue = model.properties[property.condition.key];
+        // "*" is a wildcard meaning "any non-empty value" (e.g. Kafka's password field,
+        // shown once a username is entered, whatever it is) - not a literal value to match.
+        if (convertedAnyOf.includes('*')) {
+          return currentValue === null || currentValue === undefined || currentValue === '';
+        }
+        return !convertedAnyOf.includes(currentValue);
       }
       return false;
     };
