@@ -10,7 +10,9 @@
           <label translate class="m-b-0">Source Template - {{ sourceSystem }}</label>
           <div>
             <button type="button" name="toggleSourceMetadata" class="btn btn-default btn-xs"
-              data-cy="dm-mapping-template-toggle-source-metadata" (click)="toggleSourceMetadataVisibility()">
+              data-cy="dm-mapping-template-toggle-source-metadata" (click)="toggleSourceMetadataVisibility()"
+              [disabled]="!hasSourceMetadata"
+              title="{{ (hasSourceMetadata ? 'Show or hide the metadata fields in this template' : 'This template has no metadata fields to show') | translate }}">
               <i [class]="'m-r-4 dlt-c8y-icon-' + (showSourceMetadata ? 'eye-slash' : 'eye')"></i>
               {{ (showSourceMetadata ? 'Hide metadata' : 'Show metadata') | translate }}
             </button>
@@ -23,7 +25,9 @@
           <label translate class="m-b-0">Target Template - {{ targetSystem }}</label>
           <div>
             <button type="button" name="toggleTargetMetadata" class="btn btn-default btn-xs"
-              data-cy="dm-mapping-template-toggle-target-metadata" (click)="toggleTargetMetadataVisibility()">
+              data-cy="dm-mapping-template-toggle-target-metadata" (click)="toggleTargetMetadataVisibility()"
+              [disabled]="!hasTargetMetadata"
+              title="{{ (hasTargetMetadata ? 'Show or hide the metadata fields in this template' : 'This template has no metadata fields to show') | translate }}">
               <i [class]="'m-r-4 dlt-c8y-icon-' + (showTargetMetadata ? 'eye-slash' : 'eye')"></i>
               {{ (showTargetMetadata ? 'Hide metadata' : 'Show metadata') | translate }}
             </button>

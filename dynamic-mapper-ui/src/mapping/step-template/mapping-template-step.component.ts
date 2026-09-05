@@ -97,6 +97,14 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   /** _IDENTITY_/_TOPIC_LEVEL_/_CONTEXT_DATA_ are only relevant for the Transformation step; hide them here by default. */
   showSourceMetadata = false;
   showTargetMetadata = false;
+  /**
+   * Whether the respective template actually carries metadata to toggle. Code- and
+   * extension-based transformations never get metadata injected (see expandExternalTemplate /
+   * expandC8YTemplate), so the toggle would be a no-op there and is disabled instead of silently
+   * doing nothing when clicked.
+   */
+  hasSourceMetadata = false;
+  hasTargetMetadata = false;
   readonly metadataHelpText = `Metadata fields (<code>_IDENTITY_</code>, <code>_TOPIC_LEVEL_</code>,
     <code>_CONTEXT_DATA_</code>) identify the target device and carry topic/context information.
     They are not needed to author the templates here - use the Transformation step to build substitutions
@@ -182,10 +190,20 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
 
     if (changes['sourceTemplate']) {
       this.displayedSourceTemplate = this.computeDisplayedTemplate(this.sourceTemplate, this.showSourceMetadata);
+      this.hasSourceMetadata = this.containsMetadata(this.sourceTemplate);
     }
     if (changes['targetTemplate']) {
       this.displayedTargetTemplate = this.computeDisplayedTemplate(this.targetTemplate, this.showTargetMetadata);
+      this.hasTargetMetadata = this.containsMetadata(this.targetTemplate);
     }
+  }
+
+  /** True when the template carries at least one metadata token that the toggle could hide. */
+  private containsMetadata(template: any): boolean {
+    if (!template || typeof template !== 'object' || Array.isArray(template)) {
+      return false;
+    }
+    return PROTECTED_TOKENS.some(token => token in template);
   }
 
   ngOnDestroy(): void {
