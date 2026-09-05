@@ -21,6 +21,7 @@
 
 package dynamic.mapper.processor.model;
 
+import dynamic.mapper.model.Mapping;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -79,11 +80,17 @@ public class Message<O> {
      * @return A new Message instance
      */
     public static <O> Message<O> from(ProcessingContext<O> context) {
+        // Mirrors what Smart Functions receive as InputMessage.transportFields, so an extension
+        // reading message.getTransportFields().get("key") sees the same broker message key
+        // (e.g. the Kafka record key) that a Smart Function does.
+        Map<String, String> transportFields = context.getKey() != null
+                ? Map.of(Mapping.CONTEXT_DATA_KEY_NAME, context.getKey())
+                : Collections.emptyMap();
         return new Message<>(
             context.getPayload(),
             context.getTopic(),
             context.getClientId(),
-            Collections.emptyMap() // TODO: Extract transport fields if available
+            transportFields
         );
     }
 

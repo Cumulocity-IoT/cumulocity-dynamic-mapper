@@ -333,9 +333,13 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             }
             // If publishTopic is null or empty, keep the resolved topic from mapping (set at line 121)
 
-            // set key for Kafka messages
+            // set key for Kafka messages; only when actually present, so transport fields that
+            // carry other entries do not overwrite an already-resolved key with null
             if (deviceMessage.getTransportFields() != null) {
-                context.setKey(deviceMessage.getTransportFields().get(Mapping.CONTEXT_DATA_KEY_NAME));
+                String transportKey = deviceMessage.getTransportFields().get(Mapping.CONTEXT_DATA_KEY_NAME);
+                if (transportKey != null && !Mapping.CONTEXT_DATA_KEY_PLACEHOLDER.equals(transportKey)) {
+                    context.setKey(transportKey);
+                }
             }
 
             // Derive API: prioritize cumulocityType from DeviceMessage, fallback to deriving from topic
@@ -586,7 +590,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
         if (contextData != null) {
             // Extract key for message context
             String key = contextData.get(Mapping.CONTEXT_DATA_KEY_NAME);
-            if (key != null && !key.equals("dummy")) {
+            if (key != null && !Mapping.CONTEXT_DATA_KEY_PLACEHOLDER.equals(key)) {
                 context.setKey(key);
             }
 

@@ -23,6 +23,8 @@ function onMessage(msg, context) {
 ```
 Your input is a JSON of a mapping where `sourceTemplate` is the JSON input document.
 
+The mapping JSON may also include `sampleTransportFields`: the transport fields actually observed on a real message this mapping was created from (e.g. `{ "key": "863859042393327" }` for a Kafka record key). These are delivered out-of-band as `msg.transportFields`, NOT inside `msg.payload`, which is why they do not appear in `sourceTemplate`. When present, treat them as evidence that the stream really carries those fields, and read them via `msg.transportFields["key"]` — a Kafka record key is frequently the device identifier and is often the best source for the external ID. Never read them from `msg.payload`.
+
 # Payload access rules
 - `msg.payload` is the **canonical form** — returns the pre-deserialized JSON payload as a plain JavaScript object.
 - `msg.getPayload()` is a **deprecated alias** kept for backward compatibility. Do NOT generate it in new code.
@@ -42,7 +44,7 @@ Your input is a JSON of a mapping where `sourceTemplate` is the JSON input docum
 - `msg.cumulocityType` — lowercase C8y event type (e.g. `"measurement"`). Set for outbound messages; null for inbound.
 - `msg.time` — ISO-8601 receive timestamp set by the connector. Use as a fallback when the payload has no time field.
 - `msg.transportId` — identifier of the connector that delivered the message (e.g. `"my-mqtt-connector"`). Inbound only.
-- `msg.transportFields` — transport-specific key/value pairs (e.g. Kafka record headers `{ "key": "..." }`). Inbound only.
+- `msg.transportFields` — transport-specific key/value pairs. For Kafka this carries the record key as `{ "key": "..." }` (the key of the consumed record inbound; the key to publish with outbound). Available in both directions — see `transportFields` on the returned DeviceMessage for outbound.
 
 # ESM export rule
 The mapping JSON includes a `supportESM` flag.
@@ -126,6 +128,11 @@ export interface Mapping {
 
   /** Whether ESM (ES Module) mode is enabled */
   supportESM?: boolean;
+
+  /** Transport fields seen on a real message this mapping was created from, e.g. a Kafka
+   *  record key: { "key": "..." }. Delivered at runtime as msg.transportFields, not in the
+   *  payload — so they are absent from sourceTemplate by design. */
+  sampleTransportFields?: Record<string, string>;
 
   /** Timestamp of last update */
   lastUpdate: number;

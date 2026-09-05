@@ -95,8 +95,8 @@ class KafkaTestClientTest {
         assertTrue(value.startsWith("{") && value.endsWith("}"),
                 "Payload must be a JSON object, was: " + value);
         assertTrue(value.contains("\"deviceId\""),    "Payload must contain deviceId field");
-        assertTrue(value.contains("\"temperature\""), "Payload must contain temperature field");
-        assertTrue(value.contains("90"),              "temperature value must be 90");
+        assertTrue(value.matches("(?s).*\"temperature\":\\s*-?\\d+\\.\\d.*"),
+                "temperature must be a randomized decimal value, was: " + value);
     }
 
     // ── Record key ────────────────────────────────────────────────────────

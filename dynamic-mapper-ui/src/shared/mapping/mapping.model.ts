@@ -305,6 +305,11 @@ export interface StepperConfiguration {
   /** One-shot flag: auto-launch AI generation (Smart Function code or JSONata substitutions)
    *  once the transformation step is first reached. */
   triggerAIGenerationOnStart?: boolean;
+  /** Transport fields observed on the message this mapping was created from (e.g. a Kafka record
+   *  key). Smart Functions and Java extensions receive these out-of-band via `msg.transportFields`
+   *  rather than in the payload, so they cannot be conveyed through the source template — this
+   *  carries them to AI generation as an example of what the mapping will see at runtime. */
+  sampleTransportFields?: Record<string, string>;
 }
 
 export enum TransformationType {

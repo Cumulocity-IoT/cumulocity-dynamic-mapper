@@ -103,6 +103,14 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
     from them. Edits made while they are hidden are preserved.`;
   displayedSourceTemplate: any;
   displayedTargetTemplate: any;
+  /**
+   * Transport fields observed on the message this mapping was created from (e.g. a Kafka record
+   * key), shown read-only below the source editor. Only populated for code/extension
+   * transformations: those receive the fields via `msg.transportFields` instead of inside the
+   * payload, so — unlike `_CONTEXT_DATA_` for JSONata — they never appear in the source template
+   * and would otherwise be invisible to the author.
+   */
+  sampleTransportFields: { name: string; value: string }[] = [];
   private readonly destroy$ = new Subject<void>();
 
   // ─── ViewChild refs (public so tests can reach them if needed) ─────────────
@@ -127,9 +135,23 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   readonly checkTransformationType = checkTransformationType;
   readonly validateProtectedFields = validateProtectedFields;
 
+  private computeSampleTransportFields(): { name: string; value: string }[] {
+    const fields = this.stepperConfiguration?.sampleTransportFields;
+    if (!fields || !isCodeOrExtensionTransformation(this.mapping?.transformationType)) {
+      return [];
+    }
+    return Object.entries(fields)
+      .filter(([, value]) => value !== null && value !== undefined && value !== '')
+      .map(([name, value]) => ({ name, value }));
+  }
+
   // ─── Lifecycle ─────────────────────────────────────────────────────────────
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['stepperConfiguration'] || changes['mapping']) {
+      this.sampleTransportFields = this.computeSampleTransportFields();
+    }
+
     // Subscribe to filterFormly once when it is first provided by the parent.
     if (changes['filterFormly'] && this.filterFormly && !changes['filterFormly'].previousValue) {
       // Pre-populate filterModel so Formly shows the existing expression on first render.

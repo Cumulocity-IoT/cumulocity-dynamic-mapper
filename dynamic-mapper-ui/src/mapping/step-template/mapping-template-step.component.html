@@ -81,6 +81,21 @@
           }
         </div>
       </div>
+      <!-- Sits outside the two-column editor grid: placing it inside the source column would make
+           that column taller than the target column and break their alignment. -->
+      @if (sampleTransportFields.length) {
+      <div class="p-t-8" data-cy="dm-mapping-template-transport-fields">
+        <small class="text-muted">
+          <i c8yIcon="info-circle" class="m-r-4"></i>
+          <span translate>Transport fields</span>
+          @for (field of sampleTransportFields; track field.name) {
+            &mdash; <code>{{ field.name }}: {{ field.value }}</code>
+            &middot; <span translate>available in code as</span>
+            <code>msg.transportFields.{{ field.name }}</code>
+          }
+        </small>
+      </div>
+      }
     </div>
     <div>
       @if (!(isContentChangeValid$ | async)) {

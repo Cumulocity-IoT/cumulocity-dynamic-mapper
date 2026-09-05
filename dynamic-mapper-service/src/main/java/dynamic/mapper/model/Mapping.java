@@ -77,6 +77,12 @@ public class Mapping implements Serializable {
             .compile("(?<![\\w])" + Pattern.quote(TOKEN_IDENTITY + ".c8ySourceId") + "(?![\\w])");
     public static final String TOKEN_CONTEXT_DATA = "_CONTEXT_DATA_";
     public static final String CONTEXT_DATA_KEY_NAME = "key";
+    /**
+     * Placeholder seeded into the outbound target template's {@code _CONTEXT_DATA_.key} so the
+     * field is visible/mappable in the template editor. It must never reach the broker as a real
+     * message key — every outbound processor that reads the key filters it out.
+     */
+    public static final String CONTEXT_DATA_KEY_PLACEHOLDER = "dummy";
     public static final String CONTEXT_DATA_METHOD_NAME = "method";
     public static final String KEY_TIME = "time";
 

@@ -1178,8 +1178,8 @@ public class KafkaClientV2 extends AConnectorClient {
         ConnectorSpecificationBuilder builder = ConnectorSpecificationBuilder
                 .create("Kafka", ConnectorType.KAFKA)
                 .description("Connector to receive and send messages to an external Kafka broker. " +
-                        "Inbound mappings allow to extract values from the payload and the key and map these to the Cumulocity payload. " +
-                        "The relevant setting in a mapping is 'supportsMessageContext'.\n" +
+                        "Inbound mappings allow to extract values from the payload and the record key and map these to the Cumulocity payload: " +
+                        "JSONata mappings read the key from '_CONTEXT_DATA_.key', Smart Functions and Java extensions from the message's transport fields ('key').\n" +
                         "In outbound mappings any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record key.\n" +
                         "Security protocol is derived automatically: SASL_SSL when a username/password is set, " +
                         "SSL when only a custom/self-signed CA is trusted, otherwise PLAINTEXT.")

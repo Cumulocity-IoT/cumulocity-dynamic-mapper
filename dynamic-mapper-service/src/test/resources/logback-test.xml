@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Applies only to plain `main()` classes run directly (e.g. via `mvn exec:java`), which never
+  trigger Spring Boot's logging bootstrap and so never see logback-spring.xml. Without this,
+  plain Logback auto-discovery falls back to its BasicConfigurator default (root level DEBUG),
+  flooding the console with Kafka client internals.
+-->
+<configuration>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
+</configuration>

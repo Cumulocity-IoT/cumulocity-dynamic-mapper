@@ -513,11 +513,14 @@ export function expandExternalTemplate(
   if (Array.isArray(template) || isCodeOrExtensionTransformation(mapping.transformationType)) {
     return template;
   } else {
-    // Define the context data with specific values
+    // Define the context data with specific values. A key already present in the template (e.g.
+    // seeded from a real message captured in the Message Explorer) is preferred over the generic
+    // placeholder, so the sample mirrors what the mapping actually receives at runtime.
+    const existingKey = template?.[MappingTokens.CONTEXT_DATA]?.[CONTEXT_DATA_KEY_NAME];
     let contextData;
     if (mapping.direction == Direction.INBOUND) {
       contextData = {
-        [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
+        [CONTEXT_DATA_KEY_NAME]: existingKey ?? `${CONTEXT_DATA_KEY_NAME}-sample`,
         // [CONTEXT_DATA_METHOD_NAME]: "POST"
         // [CONTEXT_DATA_RETAIN]: false,
       };

@@ -568,6 +568,7 @@ public class ExplorerService {
                     .connectorIdentifier(session.getConnectorIdentifier())
                     .connectorName(session.getConnectorName())
                     .clientId(message.getClientId())
+                    .key(message.getKey())
                     .direction(session.getDirection())
                     .receivedAt(System.currentTimeMillis())
                     .payload(payload)

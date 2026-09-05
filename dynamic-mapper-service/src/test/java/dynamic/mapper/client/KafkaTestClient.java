@@ -22,6 +22,7 @@
 package dynamic.mapper.client;
 
 import java.util.Properties;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -114,17 +115,19 @@ public class KafkaTestClient {
         return props;
     }
 
+    static final String serialNumber = "863859042393327";
+
     public void testSendMeasurement() {
         log.info("Connecting to Kafka broker: {}", brokerHost);
         log.info("Publishing message on topic: {}", testTopic);
 
+        double temperature = ThreadLocalRandom.current().nextDouble(15.0, 35.0);
         String payload = String.format(
-                "{ \"deviceId\": \"863859042393327\", \"version\": \"1\", \"deviceType\": \"20\","
-                + " \"deviceTimestamp\": \"%d\", \"deviceStatus\": \"BTR\", \"temperature\": 90 }",
-                System.currentTimeMillis());
-        String key = "863859042393327";
+                "{ \"deviceId\": \"%s\", \"version\": \"1\", \"deviceType\": \"20\","
+                + " \"deviceTimestamp\": \"%d\", \"deviceStatus\": \"BTR\", \"temperature\": %.1f }",
+                serialNumber, System.currentTimeMillis(), temperature);
 
-        testClient.send(new ProducerRecord<>(testTopic, key, payload));
+        testClient.send(new ProducerRecord<>(testTopic, serialNumber, payload));
         testClient.close();
 
         log.info("Message published");

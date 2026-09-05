@@ -90,7 +90,8 @@ import {
   PayloadWrapper
 } from '../shared/mapping.model';
 import { EditorMode } from '../shared/stepper.model';
-import { isCodeOrExtensionTransformation } from '../shared/util';
+import { CONTEXT_DATA_KEY_NAME, isCodeOrExtensionTransformation } from '../shared/util';
+import { MappingTokens } from '../core/processor/processor.constants';
 import { CommonModule } from '@angular/common';
 import { MappingStepperComponent } from '../stepper-mapping/mapping-stepper.component';
 import { DeprecationNoticeModalComponent } from '../deprecation-notice/deprecation-notice-modal.component';
@@ -134,7 +135,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   mappingType!: MappingType;
   transformationType!: TransformationType;
   private readonly destroy$ = new Subject<void>();
-  private explorerPreFill: { sessionTopic?: string; topic: string; payload: string; targetAPI?: string; publishTopic?: string; publishTopicSample?: string } | null = null;
+  private explorerPreFill: { sessionTopic?: string; topic: string; payload: string; key?: string; targetAPI?: string; publishTopic?: string; publishTopicSample?: string } | null = null;
 
   pagination: Pagination = {
     pageSize: 30,
@@ -225,6 +226,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           sessionTopic: navState.sessionTopic,
           topic: navState.topic ?? '',
           payload: navState.payload ?? '{}',
+          key: navState.key,
           targetAPI: navState.targetAPI,
           publishTopic: navState.publishTopic,
           publishTopicSample: navState.publishTopicSample
@@ -571,6 +573,10 @@ export class MappingComponent implements OnInit, OnDestroy {
         lastUpdate: Date.now()
       };
     }
+    // Bump optimistically so a second "Add mapping" click before this one's save + list
+    // refresh round-trips still gets a distinct name, instead of reading the same
+    // not-yet-updated mappingsCount and generating a duplicate "Mapping - NN" name.
+    this.mappingsCount++;
     if (this.mappingType == MappingType.FLAT_FILE) {
       const sampleSource = JSON.stringify({
         payload: '10,temp,1666963367'
@@ -596,6 +602,33 @@ export class MappingComponent implements OnInit, OnDestroy {
       // sessions (sourceSystem/targetSystem swap the same way in mapping-stepper.component.ts).
       // So the captured payload always belongs on sourceTemplate, regardless of direction.
       mapping.sourceTemplate = this.explorerPreFill.payload;
+      // Seed the captured broker message key (e.g. a Kafka record key) so the sample mirrors what
+      // the mapping actually sees at runtime. Only for JSONata-style transformations, where the
+      // backend injects the key into the payload as _CONTEXT_DATA_.key: Smart Functions and Java
+      // extensions instead receive it out-of-band via the message's transport fields, so putting
+      // it in the payload sample there would misrepresent the input (and mislead AI generation).
+      if (this.explorerPreFill.key) {
+        if (isCodeOrExtensionTransformation(mapping.transformationType)) {
+          // Code/extension transformations read the key from msg.transportFields, which is not part
+          // of the payload — carry it as stepper state so AI generation still sees a real example.
+          this.stepperConfiguration.sampleTransportFields = {
+            [CONTEXT_DATA_KEY_NAME]: this.explorerPreFill.key
+          };
+        } else {
+          try {
+            const parsed = JSON.parse(mapping.sourceTemplate);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+              parsed[MappingTokens.CONTEXT_DATA] = {
+                ...(parsed[MappingTokens.CONTEXT_DATA] ?? {}),
+                [CONTEXT_DATA_KEY_NAME]: this.explorerPreFill.key
+              };
+              mapping.sourceTemplate = JSON.stringify(parsed);
+            }
+          } catch {
+            // sample is not a JSON object — nothing to attach the key to, leave it untouched
+          }
+        }
+      }
       if (this.explorerPreFill.targetAPI) {
         mapping.targetAPI = this.explorerPreFill.targetAPI;
         // Only INBOUND's target side (Cumulocity) has a generic schema sample to seed with.

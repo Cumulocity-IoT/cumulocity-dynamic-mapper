@@ -27,6 +27,7 @@ export interface ExplorerMessage {
   connectorIdentifier: string;
   connectorName: string;
   clientId?: string;    // broker client identifier that sent the message
+  key?: string;         // message key, if the broker protocol has one (e.g. Kafka record key)
   receivedAt: number;   // epoch millis
   payload: string;
   binary: boolean;

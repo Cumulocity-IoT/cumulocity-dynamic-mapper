@@ -421,9 +421,15 @@ export class MappingSubstitutionStepComponent implements OnInit {
   }
 
   async openGenerateSubstitutionDrawer(): Promise<void> {
-    const testMapping = { ...this.mapping };
+    const testMapping: any = { ...this.mapping };
     testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
     testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
+    // Out-of-band transport fields (e.g. the Kafka record key of the message this mapping was
+    // created from) are not part of the payload, so they can only reach AI generation this way.
+    // Attached to the drawer's copy only — never persisted on the mapping itself.
+    if (this.stepperConfiguration.sampleTransportFields) {
+      testMapping.sampleTransportFields = this.stepperConfiguration.sampleTransportFields;
+    }
 
     const drawer = this.bottomDrawerService.openDrawer(AIPromptComponent, {
       initialState: { mapping: testMapping, aiAgent: this.aiAgent, editorMode: this.stepperConfiguration.editorMode }
