@@ -187,7 +187,7 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
         { name: 'cumulocityType', type: 'string | undefined', documentation: 'Lowercase C8y object type string (e.g. "measurement", "alarm"). Set by the outbound processor; undefined for inbound messages.' },
         { name: 'time', type: 'string | undefined', documentation: 'ISO-8601 timestamp captured when the message was received by the connector. Use as a reliable receive-time fallback: `var time = payload["time"] ?? msg.time;`' },
         { name: 'transportId', type: 'string | undefined', documentation: 'Identifier of the connector that delivered this message (e.g. "my-mqtt-connector"). Set for inbound messages; undefined for outbound.' },
-        { name: 'transportFields', type: 'Record<string, string>', documentation: 'Transport-specific key/value pairs (e.g. Kafka record headers, MQTT 5 user properties). Empty map when no transport fields are available.' }
+        { name: 'transportFields', type: 'Record<string, string>', documentation: 'Transport-specific key/value pairs (e.g. MQTT 5 user properties). For Kafka this carries the consumed record\'s key under "key" — the record key, not headers — delivered here rather than inside the payload: msg.transportFields["key"]. Empty map when no transport fields are available.' }
       ],
       methods: [],
       documentation: 'Inbound device message passed to the Smart Function as the first argument (`msg`). Payloads are pre-deserialized from JSON for convenience — use bracket notation: msg.payload["key"].'
@@ -705,7 +705,7 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
             `  - \`msg.clientId\` — Transport/MQTT client ID of the sender (inbound only)\n` +
             `  - \`msg.time\` — ISO-8601 receive timestamp set by the connector\n` +
             `  - \`msg.transportId\` — Connector identifier (e.g. \`"my-mqtt-connector"\`, \`"kafka-prod"\`)\n` +
-            `  - \`msg.transportFields\` — Transport-specific key/value pairs (e.g. Kafka headers)\n` +
+            `  - \`msg.transportFields\` — Transport-specific key/value pairs; for Kafka the record key as \`msg.transportFields["key"]\`\n` +
             `- \`context: SmartFunctionContext\` — Runtime context with state, config, and device lookups\n\n` +
             `**Returns** \`CumulocityObject | CumulocityObject[]\` with these fields:\n` +
             `- \`cumulocityType\` — Target C8Y API: \`"measurement"\`, \`"event"\`, \`"alarm"\`, \`"operation"\`, \`"managedObject"\`, \`"custom"\`\n` +

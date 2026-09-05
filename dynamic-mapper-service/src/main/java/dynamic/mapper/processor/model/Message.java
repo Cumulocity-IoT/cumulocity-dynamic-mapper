@@ -67,8 +67,13 @@ public class Message<O> {
     private final String clientId;
 
     /**
-     * Transport-specific fields (e.g., Kafka headers, MQTT properties).
-     * Immutable map.
+     * Transport-specific fields (e.g. MQTT properties).
+     * <p>
+     * For Kafka this carries the consumed record's <b>key</b> under {@code "key"} — the record
+     * key, not headers — mirroring what Smart Functions receive as
+     * {@code msg.transportFields}: {@code message.getTransportFields().get("key")}.
+     * <p>
+     * Immutable map; empty when the message carries no transport fields.
      */
     private final Map<String, String> transportFields;
 

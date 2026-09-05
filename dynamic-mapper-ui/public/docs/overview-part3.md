@@ -35,7 +35,7 @@ The following table lists all metadata nodes for inbound mappings:
 | Defined in template | Node | Role | Description |
 |---|---|:---:|---|
 | Source template (external broker) | `_TOPIC_LEVEL_[.]` | map-from | Topic of the inbound MQTT message. Can be used to identify a device if the topic contains external identifiers, e.g. serial number |
-| Source template (external broker) | `_CONTEXT_DATA_.key` | map-from | Key from Kafka message header |
+| Source template (external broker) | `_CONTEXT_DATA_.key` | map-from | Broker message key, e.g. the Kafka record key (the key, not a header). Only injected when the payload deserializes to a JSON **object** — for a top-level JSON array, a scalar, or binary payloads (`PROTOBUF_INTERNAL` / `ANY_PAYLOAD`) neither `_CONTEXT_DATA_` nor `_TOPIC_LEVEL_` can be added, so the key is unavailable to JSONata there; use a Smart Function (`msg.transportFields["key"]`) or a Java Extension in those cases |
 | Source template (MQTT 5 only) | `_CONTEXT_DATA_.clientId` | map-from | Client ID from MQTT 5 user properties. The publisher must include `clientId` as a user property when publishing the message. Not available for MQTT 3.1.1 connections. |
 | Target template (Cumulocity) | `_IDENTITY_.externalId` | map-to | Map node from external template that identifies the device to this node |
 | Target template (Cumulocity) | `_CONTEXT_DATA_.api` | map-to | Overwrite target API to send payload to, e.g. `ALARM` |
@@ -80,7 +80,7 @@ The following table lists all metadata nodes for outbound mappings:
 | Source template (Cumulocity) | `_IDENTITY_.externalId` | map-from | External Id to identify the external device |
 | Source template (Cumulocity) | `_IDENTITY_.c8ySourceId` | map-from | Cumulocity source id of the device |
 | Target template (external broker) | `_TOPIC_LEVEL_[.]` | map-to | Topic to be used when sending messages. For a Webhook this defines the context path. The context path is then appended to the URL that is defined in the Webhook connector properties. This property has to be used for all transformation types other than Smart Functions, i.e. Substitution as JSONata Expression. |
-| Target template (external broker) | `_CONTEXT_DATA_.key` | map-to | Key to be set in Kafka message header |
+| Target template (external broker) | `_CONTEXT_DATA_.key` | map-to | Key to be set on the outgoing broker message, e.g. the Kafka record key. The `dummy` placeholder pre-seeded in the target template is filtered out and never published — map a real value to this node to set a key |
 | Target template (external broker) | `_CONTEXT_DATA_.method` | map-to | REST methods to be set when using a Webhook connector |
 | Target template (external broker) | `_CONTEXT_DATA_.retain` | map-to | Defines to send MQTT message as retained |
 | Target template (external broker) | `_CONTEXT_DATA_.publishTopic` | map-to | Topic to be used when sending messages. For a Webhook this defines the context path. The context path is then appended to the URL that is defined in the Webhook connector properties. Supported for all transformation types. |
@@ -349,9 +349,11 @@ Each captured message appears as a row in the message list with the following co
 | 1 | **Direction** | INBOUND or OUTBOUND badge. |
 | 2 | **Received at** | Timestamp when the backend captured the message. |
 | 3 | **Connector** | Name of the connector that delivered the message. |
-| 4 | **Topic** | The exact broker topic the message arrived on (wildcards resolved). |
-| 5 | **Payload** | Truncated payload preview. Click **show more** to expand the row and view the full payload in a formatted JSON editor. Binary payloads are flagged with a "binary (base64)" badge. |
-| 6 | **Create mapping** | The button opens the **Add Mapping** wizard pre-filled with the captured payload as the source template. This is the fastest way to build a mapping from real device data. |
+| 4 | **Client ID** | The publishing client's ID, read from the MQTT 5 user property `clientId`. Shown only when a captured message carries one, so the column is hidden for transports without a per-message publisher identity (Kafka, MQTT 3.1.1, HTTP, AMQP). |
+| 5 | **Key** | The broker message key — for Kafka, the record key. Shown only when a captured message carries one, so the column is hidden for transports that have no key concept. |
+| 6 | **Topic** | The exact broker topic the message arrived on (wildcards resolved). |
+| 7 | **Payload** | Truncated payload preview. Click **show more** to expand the row and view the full payload in a formatted JSON editor. Binary payloads are flagged with a "binary (base64)" badge. |
+| 8 | **Create mapping** | The button opens the **Add Mapping** wizard pre-filled with the captured payload as the source template. This is the fastest way to build a mapping from real device data. |
 
 #### Session controls
 
@@ -375,7 +377,10 @@ The most powerful feature of the Message Explorer is the ability to instantly bu
 2. Wait for at least one message to appear in the list.
 3. Click the "add" button on the message row you want to use as a template.
 4. The **Add Mapping** dialog opens with the captured payload pre-loaded as the source template, and the topic
-   pre-filled from the captured message.
+   pre-filled from the captured message. If the message carried a **key**, it is carried over too — for JSONata
+   mappings as `_CONTEXT_DATA_.key` in the source template (toggle **Show metadata** to see it), and for Smart
+   Function and Java Extension mappings as a read-only **Transport fields** line below the source editor, since
+   those receive the key via `msg.transportFields` rather than inside the payload.
 5. Complete the mapping wizard as usual — the source template is already populated, so you can skip straight to
    defining substitutions.
 

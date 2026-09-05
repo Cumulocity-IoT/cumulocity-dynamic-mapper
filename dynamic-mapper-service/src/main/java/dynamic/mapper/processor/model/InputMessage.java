@@ -45,7 +45,7 @@ import java.util.Map;
  *       var c8yType        = msg.cumulocityType;   // outbound: e.g. "measurement"; inbound: null
  *       var time           = msg.time;             // ISO-8601 receive timestamp (both directions)
  *       var transport      = msg.transportId;      // connector identifier, e.g. "my-mqtt-connector"
- *       var headers        = msg.transportFields;  // transport-specific key/value pairs (e.g. Kafka headers)
+ *       var transportKey   = msg.transportFields["key"]; // e.g. the Kafka record key
  *   }
  * </pre>
  *
@@ -77,7 +77,12 @@ public class InputMessage {
     public final String transportId;
 
     /**
-     * Transport-specific key/value pairs (e.g. Kafka record headers, MQTT 5 user properties).
+     * Transport-specific key/value pairs (e.g. MQTT 5 user properties).
+     * <p>
+     * For Kafka this carries the consumed record's <b>key</b> under {@code "key"} — the record
+     * key, not headers. It is delivered here rather than inside the payload, so it never appears
+     * in the mapping's source template.
+     * <p>
      * Never {@code null} — an empty map is returned when no transport fields are available.
      */
     public final Map<String, String> transportFields;

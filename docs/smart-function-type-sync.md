@@ -66,7 +66,7 @@ history. The resources listed below are now in sync.
 | `msg.cumulocityType` | `InputMessage.cumulocityType` | Outbound processor; `null` for inbound |
 | `msg.time` | `InputMessage.time` | Both processors (`Instant.now().toString()`) |
 | `msg.transportId` | `InputMessage.transportId` | Inbound processor (`context.getConnectorIdentifier()`); `null` for outbound |
-| `msg.transportFields` | `InputMessage.transportFields` | Inbound processor (empty map for now; reserved for Kafka headers) |
+| `msg.transportFields` | `InputMessage.transportFields` | Inbound processor; carries the Kafka record **key** as `{"key": ...}`, empty map when the transport has none |
 
 **Templates**
 
