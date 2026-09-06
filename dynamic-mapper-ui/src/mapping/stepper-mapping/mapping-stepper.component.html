@@ -132,6 +132,8 @@
     <c8y-stepper-buttons data-cy="dm-mapping-stepper-buttons-test" class="d-block card-footer p-24 separator fit-w sticky-bottom bg-level-0"
       (onCustom)="onCommitButton()" (onCancel)="cancel.emit()" (onBack)="onBackStep($event)"
       [disabled]="( !feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)"
+      [attr.title]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)
+        ? ('Requires the Mapping Admin or Mapping Create role.' | translate) : null"
       [labels]="{ custom: 'Confirm' }">
     </c8y-stepper-buttons>
   </cdk-step>
@@ -172,8 +174,7 @@
   }
   @if (stepperViewModel.showInternalExtensionNote) {
   <div class="p-t-48">
-    <small class="text-muted">Template is described internally by the chosen
-      mapping type</small>
+    <small class="text-muted">{{ 'No template to edit — the payload structure comes from the Protobuf schema in the selected extension.' | translate }}</small>
   </div>
   }
 </ng-template>
@@ -231,8 +232,7 @@
   </div>
   @if (stepperViewModel.showInternalExtensionNote) {
   <div class="p-t-48">
-    <small class="text-muted">Template is described internally by the chosen
-      mapping type</small>
+    <small class="text-muted">{{ 'No template to edit — the payload structure comes from the Protobuf schema in the selected extension.' | translate }}</small>
   </div>
   }
 </ng-template>
@@ -271,8 +271,7 @@
   }
   @if (stepperViewModel.showInternalExtensionNote) {
   <div class="p-t-48">
-    <small class="text-muted">Template is described internally by the chosen
-      mapping type</small>
+    <small class="text-muted">{{ 'No template to edit — the payload structure comes from the Protobuf schema in the selected extension.' | translate }}</small>
   </div>
   }
 </ng-template>

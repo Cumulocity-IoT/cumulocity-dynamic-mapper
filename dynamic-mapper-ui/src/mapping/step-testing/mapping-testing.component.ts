@@ -170,6 +170,17 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     this.syncPayload(contentAsJson, this.extractTopicSample(contentAsJson));
   }
 
+  /**
+   * True when neither testing action is permitted for this mapping — currently the
+   * ANY_PAYLOAD + SMART_FUNCTION combination, which turns off both flags. Every button in the
+   * action bar is then permanently dead (no user action can enable them), so the bar is replaced
+   * by an explanation rather than showing inert controls.
+   */
+  get testingUnavailable(): boolean {
+    return !this.stepperConfiguration?.allowTestTransformation
+      && !this.stepperConfiguration?.allowTestSending;
+  }
+
   disableTestSending(): boolean {
     return !this.stepperConfiguration.allowTestSending ||
       this.testingModel.results.length === 0 ||

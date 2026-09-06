@@ -81,6 +81,11 @@
               !aiAgentDeployed">
           <span>{{ stepperConfiguration.editorMode === EditorMode.UPDATE ? 'Review / Refine with AI' : 'Generate substitutions' }}</span>
         </button>
+        @if (!aiAgentDeployed) {
+        <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+          popover="{{'AI Assistant is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+          placement="right" container="body" triggers="focus" type="button"></button>
+        }
       </div>
       <!-- Expert Mode collapsible header -->
       <div class="d-flex a-i-center p-t-4 p-b-4" data-cy="dm-mapping-transform-expert-toggle" (click)="toggleExpertMode()" style="cursor:pointer">

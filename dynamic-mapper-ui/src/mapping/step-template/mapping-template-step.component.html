@@ -9,13 +9,14 @@
         <div class="p-r-2 d-flex j-c-between a-i-center">
           <label translate class="m-b-0">Source Template - {{ sourceSystem }}</label>
           <div>
+            @if (hasSourceMetadata) {
             <button type="button" name="toggleSourceMetadata" class="btn btn-default btn-xs"
               data-cy="dm-mapping-template-toggle-source-metadata" (click)="toggleSourceMetadataVisibility()"
-              [disabled]="!hasSourceMetadata"
-              title="{{ (hasSourceMetadata ? 'Show or hide the metadata fields in this template' : 'This template has no metadata fields to show') | translate }}">
+              title="{{ 'Show or hide the metadata fields in this template' | translate }}">
               <i [class]="'m-r-4 dlt-c8y-icon-' + (showSourceMetadata ? 'eye-slash' : 'eye')"></i>
               {{ (showSourceMetadata ? 'Hide metadata' : 'Show metadata') | translate }}
             </button>
+            }
             <button type="button" placement="right" [popover]="popupMetadataTemplateHelp" triggers="click" container="body"
               class="btn-help" aria-label="Help content">
             </button>
@@ -24,19 +25,20 @@
         <div class="p-l-2 d-flex j-c-between a-i-center">
           <label translate class="m-b-0">Target Template - {{ targetSystem }}</label>
           <div>
+            @if (hasTargetMetadata) {
             <button type="button" name="toggleTargetMetadata" class="btn btn-default btn-xs"
               data-cy="dm-mapping-template-toggle-target-metadata" (click)="toggleTargetMetadataVisibility()"
-              [disabled]="!hasTargetMetadata"
-              title="{{ (hasTargetMetadata ? 'Show or hide the metadata fields in this template' : 'This template has no metadata fields to show') | translate }}">
+              title="{{ 'Show or hide the metadata fields in this template' | translate }}">
               <i [class]="'m-r-4 dlt-c8y-icon-' + (showTargetMetadata ? 'eye-slash' : 'eye')"></i>
               {{ (showTargetMetadata ? 'Hide metadata' : 'Show metadata') | translate }}
             </button>
+            }
             <button type="button" placement="right" [popover]="popupMetadataTemplateHelp" triggers="click" container="body"
               class="btn-help" aria-label="Help content">
             </button>
             @if (stepperViewModel.showTargetContent) {
             <button type="button" name="sample" class="btn btn-default btn-xs" data-cy="dm-mapping-template-reset-target"
-              (click)="onSampleTargetTemplatesButton()" translate title="{{ 'Use Sample Target Templates' | translate }}"
+              (click)="onSampleTargetTemplatesButton()" translate title="{{ ((!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) ? 'Requires the Mapping Admin or Mapping Create role.' : 'Use Sample Target Templates') | translate }}"
               [disabled]="templateForm.get('sampleTargetTemplatesButton')?.value || (!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole)">
               <i c8yIcon="enter-right"></i>Reset to default
             </button>
@@ -60,7 +62,7 @@
           <div class="jse-main-medium d-flex a-i-center j-c-center">
             <small class="text-muted text-center">
               <i c8yIcon="info-circle" class="m-r-4"></i>
-              {{ 'Template is described internally by the chosen mapping type.' | translate }}
+              {{ 'No source template — this payload type is not editable as JSON. The payload is decoded by the mapper or passed to your code as raw data.' | translate }}
             </small>
           </div>
           }
@@ -79,7 +81,7 @@
           <div class="jse-main-medium d-flex a-i-center j-c-center">
             <small class="text-muted text-center">
               <i c8yIcon="info-circle" class="m-r-4"></i>
-              {{ 'Template is described internally by the chosen mapping type.' | translate }}
+              {{ 'No target template — the target payload structure is produced by your code.' | translate }}
             </small>
           </div>
           }

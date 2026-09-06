@@ -100,8 +100,8 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   /**
    * Whether the respective template actually carries metadata to toggle. Code- and
    * extension-based transformations never get metadata injected (see expandExternalTemplate /
-   * expandC8YTemplate), so the toggle would be a no-op there and is disabled instead of silently
-   * doing nothing when clicked.
+   * expandC8YTemplate), so the toggle would be a no-op there and is hidden rather than shown
+   * doing nothing — matching how the neighbouring "Reset to default" button is handled.
    */
   hasSourceMetadata = false;
   hasTargetMetadata = false;
