@@ -292,7 +292,6 @@ describe('MappingUnifiedEditorComponent', () => {
     });
 
     it('hides the Testing tab for deprecated SUBSTITUTION_AS_CODE mappings', () => {
-      // eslint-disable-next-line deprecation/deprecation
       component.mapping = buildMapping({ transformationType: TransformationType.SUBSTITUTION_AS_CODE });
       component.stepperConfiguration = buildConfig();
       expect(component.isTabVisible(TAB_TEST_MAPPING)).toBe(false);

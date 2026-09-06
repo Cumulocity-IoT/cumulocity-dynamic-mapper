@@ -325,6 +325,7 @@ export class MappingStepperService {
         const requiredAgentName = (() => {
             switch (mapping.transformationType) {
                 case TransformationType.JSONATA:
+                // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy engine still resolves to the JSONata agent
                 case TransformationType.DEFAULT:
                     return serviceConfiguration?.jsonataAgent;
                 case TransformationType.SMART_FUNCTION:

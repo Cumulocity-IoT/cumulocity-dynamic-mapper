@@ -101,7 +101,7 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     }
   },
   {
-    // eslint-disable-next-line deprecation/deprecation
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     condition: (ctx) => ctx.transformationType === TransformationType.DEFAULT,
     properties: {
       allowTemplateExpansion: false

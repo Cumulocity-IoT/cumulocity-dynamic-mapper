@@ -92,8 +92,11 @@ export const isNumeric = (num: any) => (typeof num === 'number' || (typeof num =
 
 // Re-export constants for backward compatibility
 export {
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- deliberate back-compat alias, see block comment above
   KEY_TIME,
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- deliberate back-compat alias, see block comment above
   TOPIC_WILDCARD_MULTI,
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- deliberate back-compat alias, see block comment above
   TOPIC_WILDCARD_SINGLE,
   MappingTokens,
   IdentityPaths,

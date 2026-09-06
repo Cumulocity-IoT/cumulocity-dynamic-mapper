@@ -257,6 +257,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   private isDeprecatedMapping(item: any): boolean {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- detecting the legacy type is the whole point of this check
     return item['mapping']['transformationType'] === TransformationType.SUBSTITUTION_AS_CODE;
   }
 

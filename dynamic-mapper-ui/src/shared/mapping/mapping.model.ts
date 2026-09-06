@@ -339,14 +339,14 @@ export enum MappingType {
 
 export const TransformationTypeLabels = {
   [Direction.INBOUND]: {
-    // eslint-disable-next-line deprecation/deprecation
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     [TransformationType.DEFAULT]: 'Default Transformation (deprecated — use JSONata)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Cumulocity API calls',
     [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
     [TransformationType.EXTENSION_JAVA]: 'Java Extension (Smart Java Function)'
   },
   [Direction.OUTBOUND]: {
-    // eslint-disable-next-line deprecation/deprecation
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     [TransformationType.DEFAULT]: 'Default Transformation (deprecated — use JSONata)',
     [TransformationType.SMART_FUNCTION]: 'Smart Function (JavaScript) to create Broker Payload',
     [TransformationType.JSONATA]: 'Substitution as JSONata Expression',
@@ -355,7 +355,7 @@ export const TransformationTypeLabels = {
 } as const;
 
 export const TransformationTypeDescriptions = {
-  // eslint-disable-next-line deprecation/deprecation
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   [TransformationType.DEFAULT]: 'Deprecated — uses the legacy substitution logic without custom processing. Use JSONata instead for new mappings.',
   [TransformationType.SMART_FUNCTION]: 'Executes a predefined Smart Function for data transformation and create payload for Cumulocity API calls. Supports setting sourceId to route data to different devices',
   [TransformationType.JSONATA]: 'Uses JSONata query and transformation language for data mapping',
@@ -367,7 +367,7 @@ export const MappingTypeLabels = {
   [MappingType.FLAT_FILE]: 'Flat File Payload',
   [MappingType.HEX]: 'Hexadecimal Payload',
   [MappingType.PROTOBUF_INTERNAL]: 'PROTOBUF Payload',
-  // eslint-disable-next-line deprecation/deprecation
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   [MappingType.EXTENSION_JAVA]: 'Payload parsed in Java Extension (deprecated — use Any Payload)',
   [MappingType.ANY_PAYLOAD]: 'Any Payload (e.g. SparkPlugB, Protobuf, XML)',
   [MappingType.SPARKPLUGB]: 'SparkPlug B Payload',
@@ -378,7 +378,7 @@ export const MappingTypeDescriptions = {
   [MappingType.FLAT_FILE]: 'Fixed-width or delimited flat file processing',
   [MappingType.HEX]: 'Hexadecimal data processing and conversion',
   [MappingType.PROTOBUF_INTERNAL]: 'Payload is in PROTOBUF format and is parsed by an internal extension',
-  // eslint-disable-next-line deprecation/deprecation
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   [MappingType.EXTENSION_JAVA]: 'Deprecated — use Any Payload with Java Extension transformation type instead',
   [MappingType.ANY_PAYLOAD]: 'Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). Processed by a Smart Function (JavaScript) or a Java Extension.',
   [MappingType.SPARKPLUGB]: 'SparkPlug B binary payload. Inbound: decoded automatically via Eclipse Tahu; outbound NCMD/DCMD: metric object serialized to protobuf binary. Only Smart Function transformations are supported.',
@@ -526,7 +526,7 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
         directionSupported: true,
         substitutionsAsCodeSupported: false,
         // Only the deprecated DEFAULT transformation is currently supported for Protobuf (internal) payloads.
-        // eslint-disable-next-line deprecation/deprecation
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
         supportedTransformationTypes: [TransformationType.DEFAULT]
       },
       [Direction.OUTBOUND]: {
@@ -547,9 +547,9 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
       advanceFromStepToEndStep: 2
     })
   },
-  // eslint-disable-next-line deprecation/deprecation
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   [MappingType.EXTENSION_JAVA]: {
-    // eslint-disable-next-line deprecation/deprecation
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     key: MappingType.EXTENSION_JAVA,
     // Hidden from the creation UI — existing mappings are migrated to ANY_PAYLOAD on load.
     enabled: false,
@@ -817,7 +817,7 @@ export function getGenericDeviceIdentifier(mapping: Mapping): string {
 }
 
 export function isSubstitutionsAsCode(mapping: Mapping): boolean {
-  // eslint-disable-next-line deprecation/deprecation
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   return mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ||
     mapping.transformationType === TransformationType.SMART_FUNCTION;
 }
