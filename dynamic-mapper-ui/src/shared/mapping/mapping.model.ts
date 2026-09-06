@@ -322,13 +322,16 @@ export enum TransformationType {
   SMART_FUNCTION = 'SMART_FUNCTION',
   JSONATA = 'JSONATA',
   EXTENSION_JAVA = 'EXTENSION_JAVA',
-  CODE_BASED = 'CODE_BASED',
 }
 
 export enum MappingType {
   JSON = 'JSON',
   FLAT_FILE = 'FLAT_FILE',
   HEX = 'HEX',
+  /** @deprecated Use ANY_PAYLOAD with TransformationType.SMART_FUNCTION or EXTENSION_JAVA
+   *  instead, which decode Protobuf against your own schema rather than the hardcoded internal
+   *  parser. Retained for display of not-yet-migrated mappings only: its sole supported
+   *  transformation is the deprecated TransformationType.DEFAULT. */
   PROTOBUF_INTERNAL = 'PROTOBUF_INTERNAL',
   /** @deprecated Use ANY_PAYLOAD with TransformationType.EXTENSION_JAVA instead.
    *  Retained for display of not-yet-migrated mappings only. */
@@ -366,7 +369,8 @@ export const MappingTypeLabels = {
   [MappingType.JSON]: 'JSON Payload',
   [MappingType.FLAT_FILE]: 'Flat File Payload',
   [MappingType.HEX]: 'Hexadecimal Payload',
-  [MappingType.PROTOBUF_INTERNAL]: 'PROTOBUF Payload',
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
+  [MappingType.PROTOBUF_INTERNAL]: 'PROTOBUF Payload (deprecated — use Any Payload)',
   // eslint-disable-next-line @typescript-eslint/no-deprecated
   [MappingType.EXTENSION_JAVA]: 'Payload parsed in Java Extension (deprecated — use Any Payload)',
   [MappingType.ANY_PAYLOAD]: 'Any Payload (e.g. SparkPlugB, Protobuf, XML)',
@@ -377,7 +381,8 @@ export const MappingTypeDescriptions = {
   [MappingType.JSON]: 'Standard JSON payload transformation and mapping',
   [MappingType.FLAT_FILE]: 'Fixed-width or delimited flat file processing',
   [MappingType.HEX]: 'Hexadecimal data processing and conversion',
-  [MappingType.PROTOBUF_INTERNAL]: 'Payload is in PROTOBUF format and is parsed by an internal extension',
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
+  [MappingType.PROTOBUF_INTERNAL]: 'Deprecated — use Any Payload with a Smart Function or Java Extension, which decode Protobuf against your own schema',
   // eslint-disable-next-line @typescript-eslint/no-deprecated
   [MappingType.EXTENSION_JAVA]: 'Deprecated — use Any Payload with Java Extension transformation type instead',
   [MappingType.ANY_PAYLOAD]: 'Payload format is unknown or binary (e.g. SparkPlugB, Protobuf, XML). Processed by a Smart Function (JavaScript) or a Java Extension.',
@@ -517,9 +522,12 @@ Use the JSONata function "$number() to parse an hexadecimal string as a number, 
     // HEX uses same config as JSON (no overrides needed)
     stepperConfiguration: createStepperConfig({})
   },
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
   [MappingType.PROTOBUF_INTERNAL]: {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
     key: MappingType.PROTOBUF_INTERNAL,
-    enabled: true,
+    // Deprecated: not offered when creating a mapping, but still rendered for existing ones.
+    enabled: false,
     description: 'Mapping parses payloads in PROTOBUF format by an internal extension.',
     properties: {
       [Direction.INBOUND]: {

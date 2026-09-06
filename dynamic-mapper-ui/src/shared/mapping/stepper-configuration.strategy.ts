@@ -126,12 +126,6 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     }
   },
   {
-    condition: (ctx) => ctx.transformationType === TransformationType.CODE_BASED,
-    properties: {
-      allowTemplateExpansion: false
-    }
-  },
-  {
     // ANY_PAYLOAD + SMART_FUNCTION: binary payload cannot be test-sent as JSON,
     // and the source editor is meaningless. Re-disable what the SMART_FUNCTION
     // override above re-enabled.

@@ -96,6 +96,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   private readonly EXPERT_MODE_EXCLUDED_TYPES: MappingType[] = [
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still shown for not-yet-migrated mappings
     MappingType.EXTENSION_JAVA,
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
     MappingType.PROTOBUF_INTERNAL,
   ];
 

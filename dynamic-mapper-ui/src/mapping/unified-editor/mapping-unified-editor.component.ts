@@ -266,6 +266,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.isButtonDisabled$.next(this.isConnectorSelectionEmpty());
 
     // For EXTENSION_JAVA the transformation is configured in the templates tab
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
     this.activeTabIndex = this.mapping.mappingType === MappingType.PROTOBUF_INTERNAL || this.mapping.transformationType === TransformationType.EXTENSION_JAVA
       ? TAB_GENERAL_SETTINGS
       : TAB_DEFINE_TRANSFORMATION;
