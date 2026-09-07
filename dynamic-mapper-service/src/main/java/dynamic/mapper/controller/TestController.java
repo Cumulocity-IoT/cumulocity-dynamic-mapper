@@ -158,6 +158,7 @@ public class TestController {
                     result.setRequests(firstResult.getRequests());
                     result.setWarnings(firstResult.getWarnings());
                     result.setLogs(firstResult.getLogs());
+                    result.setKey(firstResult.getKey());
                     result.setSuccess(firstResult.getErrors().isEmpty());
                     if (firstResult.getErrors() != null && !firstResult.getErrors().isEmpty()) {
                         firstResult.getErrors().forEach(e -> {

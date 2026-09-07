@@ -47,6 +47,11 @@
                   @if (currentPublishTopic) {
                   <span class="tag tag--info m-b-4">{{ currentPublishTopic }}</span>
                   }
+                  @if (generatedKey) {
+                  <span class="tag tag--default m-b-4" data-cy="dm-mapping-test-key"
+                    title="{{ 'Broker message key produced by this mapping, e.g. the Kafka record key' | translate }}">key:
+                    {{ generatedKey }}</span>
+                  }
                 </div>
                 <div>
                   <span class="badge badge-success" data-cy="dm-mapping-test-result-index">{{

@@ -121,6 +121,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   showConsole = true; // Controls collapsible console section (expanded by default)
   currentApi: string | undefined;
   currentPublishTopic: string | undefined;
+  /** Context-level, so it comes from TestResult itself rather than the selected request. */
+  generatedKey: string | undefined;
 
   async ngOnInit(): Promise<void> {
     this.initializeMapping();
@@ -238,6 +240,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     this.selectedResult$.next(-1);
     this.currentApi = undefined;
     this.currentPublishTopic = undefined;
+    this.generatedKey = undefined;
   }
 
   private updateEditors(): void {
@@ -349,6 +352,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
     // Convert request and response from JSON string to object for all items
     this.testingModel.results = result.requests.map(req => this.parseRequestResponse(req));
+    this.generatedKey = result.key;
     const staticLogs = this.testingModel.logs?.filter(l => l.startsWith('INFO')) ?? [];
     const warningLogs = (result.warnings ?? []).map(w => `WARNING: ${w}`);
     this.testingModel.logs = [...staticLogs, ...(result.logs ?? []), ...warningLogs];

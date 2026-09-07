@@ -1219,16 +1219,19 @@ public class KafkaClientV2 extends AConnectorClient {
 
                 // SASL authentication (optional)
                 .property("username", ConnectorPropertyBuilder.optionalString()
-                        .order(6))
+                        .order(6)
+                        .description("API Key, e.g. for Confluent Cloud. Reveals Password below."))
 
                 .property("password", ConnectorPropertyBuilder.optionalSensitive()
                         .order(7)
+                        .description("API Secret, e.g. for Confluent Cloud/Aiven.")
                         .condition("username", "*"))
 
                 .property("saslMechanism", ConnectorPropertyBuilder.optionalOption()
                         .order(8)
                         .defaultValue("SCRAM-SHA-256")
                         .options("SCRAM-SHA-256", "SCRAM-SHA-512", "PLAIN")
+                        .description("SASL mechanism used together with Username/Password. Managed Kafka services typically use PLAIN with the API Key/Secret as username/password.")
                         .condition("username", "*"))
 
                 // Consumer group

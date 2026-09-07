@@ -54,6 +54,12 @@ export interface TestResult {
   warnings?: string[];
   logs?: string[];
   testDeviceId?: string;
+  /**
+   * Broker message key produced by the transformation (e.g. the Kafka record key). Context-level
+   * rather than per-request, since one publish call reads a single key for the whole message —
+   * which is why it lives here and not on DynamicMapperRequest alongside publishTopic.
+   */
+  key?: string;
 }
 
 export enum ProcessingType {
