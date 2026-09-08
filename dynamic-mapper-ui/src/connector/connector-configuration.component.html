@@ -45,6 +45,20 @@
     {{ 'Refresh' | translate }}
   </button>
 </c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" data-cy="dm-connector-export" title="{{ 'Export all connectors' | translate }}"
+    (click)="onExportAll()">
+    <i c8yIcon="download"></i>
+    {{ 'Export all connectors' | translate }}
+  </button>
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" data-cy="dm-connector-import" title="{{ 'Import connectors' | translate }}"
+    (click)="onImport()" [disabled]="!feature?.userHasMappingAdminRole">
+    <i c8yIcon="upload"></i>
+    {{ 'Import connectors' | translate }}
+  </button>
+</c8y-action-bar-item>
 
 <c8y-help src="/help/#connector"></c8y-help>
 

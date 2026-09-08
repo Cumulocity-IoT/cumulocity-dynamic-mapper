@@ -61,10 +61,11 @@
 </div>
 }
 
-<c8y-data-grid [ngClass]="customClasses" #connectorGrid [title]="'Connectors'" [selectable]="selectable && !readOnly"
+<c8y-data-grid [ngClass]="customClasses" #connectorGrid [title]="'Connectors'"
+  [selectable]="(selectable || bulkActionControls.length > 0) && !readOnly"
   [columns]="columns" [selectionPrimaryKey]="'identifier'" [configureColumnsEnabled]="false"
   [rows]="configurations$ | async" [pagination]="pagination" [actionControls]="actionControls"
-  [headerActionControls]="headerActionControls"
+  [bulkActionControls]="bulkActionControls" [headerActionControls]="headerActionControls"
   (itemsSelect)="onSelectionChanged($event)">
   <c8y-ui-empty-state [icon]="'c8y-icon dlt-c8y-icon-connected'" [title]="'No connectors exist.' | translate"
     [subtitle]="

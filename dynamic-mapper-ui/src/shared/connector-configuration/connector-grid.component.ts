@@ -18,11 +18,12 @@
  * @authors Christof Strack
  */
 import { ChangeDetectorRef, Component, EventEmitter, Input, OnInit, OnChanges, Output, SimpleChanges, ViewChild, AfterViewInit, ViewEncapsulation, OnDestroy, inject, ElementRef, TemplateRef } from '@angular/core';
-import { ActionControl, AlertService, BottomDrawerService, Column, CoreModule, CountdownIntervalComponent, DataGridComponent, HeaderActionControl, Pagination } from '@c8y/ngx-components';
+import { ActionControl, AlertService, BottomDrawerService, BulkActionControl, Column, CoreModule, CountdownIntervalComponent, DataGridComponent, HeaderActionControl, Pagination } from '@c8y/ngx-components';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, combineLatest, Observable, Subject } from 'rxjs';
 import { filter, map, switchMap, take, takeUntil } from 'rxjs/operators';
 import { cloneDeep } from 'lodash';
+import { saveAs } from 'file-saver';
 
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
@@ -35,6 +36,7 @@ import { ActionVisibilityRule } from './types';
 import { SharedService } from '..';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { ConnectorConfigurationDrawerComponent } from './edit/connector-configuration-drawer.component';
+import { ImportConnectorsComponent } from './import/import-connectors-modal.component';
 import { gettext } from '@c8y/ngx-components/gettext';
 
 @Component({
@@ -89,6 +91,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
 
   columns: Column[];
   actionControls: ActionControl[];
+  bulkActionControls: BulkActionControl[] = [];
   feature: Feature;
   intervals: PollingInterval[];
   currentPollingInterval: number;
@@ -119,6 +122,7 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   async ngOnInit(): Promise<void> {
     this.initializeColumns();
     this.initializeActionControls();
+    this.initializeBulkActionControls();
     this.initializeSelection();
     this.initializeConfigurations();
     this.initializeSpecifications();
@@ -229,6 +233,21 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
         showIf: (item: ConnectorConfiguration) =>
           this.selectable && control.type === 'VIEW' ? true : this.checkActionVisibility(item, control.visibilityRules)
       }));
+  }
+
+  private initializeBulkActionControls(): void {
+    // Bulk selection is only offered on the main connector list; the deployment-map
+    // picker (selectable=true) keeps its own single-purpose selection behavior.
+    if (this.selectable) return;
+
+    this.bulkActionControls = [
+      {
+        type: 'EXPORT',
+        text: 'Export connector(s)',
+        icon: 'export',
+        callback: this.exportConnectorBulk.bind(this)
+      }
+    ];
   }
 
   private initializeColumns(): void {
@@ -412,6 +431,42 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
       );
     }
     // For 'view' action, no API call is made
+  }
+
+  async onExportAll(): Promise<void> {
+    const configurations2Export = this.configurations
+      .filter(config => config.connectorType !== ConnectorType.HTTP)
+      .map(config => this.prepareConfiguration(config));
+    this.exportConfigurations(configurations2Export);
+  }
+
+  async exportSingle(config: ConnectorConfiguration): Promise<void> {
+    const configurations2Export = [this.prepareConfiguration(config)];
+    this.exportConfigurations(configurations2Export);
+  }
+
+  exportConnectorBulk(ids: string[]): void {
+    const configurations2Export = this.configurations
+      .filter(config => ids.includes(config.identifier) && config.connectorType !== ConnectorType.HTTP)
+      .map(config => this.prepareConfiguration(config));
+    this.exportConfigurations(configurations2Export);
+    this.connectorGrid.setAllItemsSelected(false);
+  }
+
+  async onImport(): Promise<void> {
+    const modalRef = this.bsModalService.show(ImportConnectorsComponent, { initialState: {} });
+    modalRef.content.closeSubject
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.refresh();
+        modalRef.hide();
+      });
+  }
+
+  private exportConfigurations(configurations2Export: Partial<ConnectorConfiguration>[]): void {
+    const json = JSON.stringify(configurations2Export, undefined, 2);
+    const blob = new Blob([json]);
+    saveAs(blob, 'connectors.json');
   }
 
   findNameByIdent(identifier: string): string {
