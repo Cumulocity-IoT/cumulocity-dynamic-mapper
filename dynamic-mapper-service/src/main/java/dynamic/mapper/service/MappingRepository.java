@@ -220,6 +220,19 @@ public class MappingRepository {
                     moId), MigrationNotice.LOADING_ERROR);
         }
 
+        // Deactivate mappings using the removed SUBSTITUTION_AS_CODE transformation type.
+        // These are read-only (export/delete only) in the UI and can no longer be processed,
+        // so an active flag on one is stale/unsafe and must be cleared on load.
+        if (TransformationType.SUBSTITUTION_AS_CODE.equals(mapping.getTransformationType())
+                && Boolean.TRUE.equals(mapping.getActive())) {
+            log.info("{} - Deactivating mapping {} ({}): uses removed SUBSTITUTION_AS_CODE transformation type",
+                    tenant, moId, mapping.getName());
+            mapping.setActive(false);
+            return new Migration(String.format(
+                    "Mapping %s [%s] was automatically deactivated: transformationType SUBSTITUTION_AS_CODE is no longer supported",
+                    mapping.getName(), moId), MigrationNotice.OPERATION_EVENT);
+        }
+
         // Migrate legacy mappings without transformationType, or using the deprecated DEFAULT
         // transformation, to JSONATA. DEFAULT and JSONATA are processed by the identical
         // extraction path (see DynamicMapperBaseRoutes#isJSONataExtraction), so this is a
