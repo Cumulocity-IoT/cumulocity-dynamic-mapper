@@ -152,7 +152,12 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   async onResetTransformation(): Promise<void> {
     try {
-      patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
+      // Patch a copy rather than mutating this.sourceTemplate in place: the payload editor's
+      // [data] input is only re-applied on reference change, and testMapping/mapping.sourceTemplate
+      // (the strings actually sent to the backend) must be resynced with the freshly patched id too.
+      const patchedTemplate = { ...this.sourceTemplate };
+      patchC8YTemplateForTesting(patchedTemplate, this.testMapping);
+      this.syncPayload(patchedTemplate);
       this.resetTestingModel();
       this.updateEditors();
 

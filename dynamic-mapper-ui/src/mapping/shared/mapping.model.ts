@@ -59,7 +59,7 @@ export const ValidationFormlyError = {
     message: 'Only one substitution defining the DeviceIdentifier can be used.'
   },
   One_Substitution_Defining_Device_Identifier_Must_Be_Used: {
-    message: 'Only one MultiLevel wildcard "#" is allowed.'
+    message: 'A substitution defining the DeviceIdentifier must be used.'
   },
   MappingTopic_Not_Unique: {
     message: 'This MappingTopic must be unique across other MappingTopics.'

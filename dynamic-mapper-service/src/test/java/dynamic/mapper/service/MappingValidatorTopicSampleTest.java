@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class MappingValidatorTopicSampleTest {
 
-    private final MappingValidator validator = new MappingValidator(null, null);
+    private final MappingValidator validator = new MappingValidator(null, null, null);
 
     @Test
     void exactMatchIsValid() {
