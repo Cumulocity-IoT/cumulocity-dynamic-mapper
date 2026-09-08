@@ -25,32 +25,18 @@ export interface PayloadWrapper {
   payload: string;
 }
 
-export enum ValidationError {
-  Only_One_Multi_Level_Wildcard,
-  Only_One_Single_Level_Wildcard,
-  Multi_Level_Wildcard_Only_At_End,
-  Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used,
-  One_Substitution_Defining_Device_Identifier_Must_Be_Used,
-  MappingTopic_Not_Unique,
-  MappingTopic_Must_Not_Be_Substring_Of_Other_MappingTopic,
-  Target_Template_Must_Be_Valid_JSON,
-  Source_Template_Must_Be_Valid_JSON,
-  No_Multi_Level_Wildcard_Allowed_In_MappingTopic,
-  Device_Identifier_Must_Be_Selected,
-  MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
-  MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
-  PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
-  PublishTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
-  FilterOutbound_Must_Be_Unique,
-  Wrong_Transformation_Type_Array_In_Source_Template_Or_Target_Template_Requires_Transformation_Type_Smart_Function
-}
-
+/**
+ * Human-readable messages for every `ValidationError` code the backend's
+ * `MappingValidator` can actually produce — kept 1:1 in sync with
+ * `dynamic-mapper-service/.../model/ValidationError.java`.
+ *
+ * Used both to translate a raw backend error code (see `translateValidationErrorCode`
+ * in util.ts) and to build the client-side topic-form validators' error objects
+ * (`checkTopicsInboundAreValid`/`checkTopicsOutboundAreValid`).
+ */
 export const ValidationFormlyError = {
   Only_One_Multi_Level_Wildcard: {
     message: 'Only one MultiLevel wildcard "#" is allowed.'
-  },
-  Only_One_Single_Level_Wildcard: {
-    message: 'Only one SingleLevel wildcard "+" is allowed.'
   },
   Multi_Level_Wildcard_Only_At_End: {
     message: 'MultiLevel wildcard "#" can only appear at the end.'
@@ -61,24 +47,11 @@ export const ValidationFormlyError = {
   One_Substitution_Defining_Device_Identifier_Must_Be_Used: {
     message: 'A substitution defining the DeviceIdentifier must be used.'
   },
-  MappingTopic_Not_Unique: {
-    message: 'This MappingTopic must be unique across other MappingTopics.'
-  },
-  MappingTopic_Must_Not_Be_Substring_Of_Other_MappingTopic: {
-    message:
-      "This MappingTopic can't be the starting part of another  MappingTopic or vice."
-  },
   Target_Template_Must_Be_Valid_JSON: {
     message: 'TargetTemplate must be valid JSON.'
   },
   Source_Template_Must_Be_Valid_JSON: {
-    message: 'SourceTemplate must be valid JSON..'
-  },
-  No_Multi_Level_Wildcard_Allowed_In_MappingTopic: {
-    message: 'No MultiLevel wildcard is allowed in MappingTopic.'
-  },
-  Device_Identifier_Must_Be_Selected: {
-    message: 'DeviceIdentifier must be selected.'
+    message: 'SourceTemplate must be valid JSON.'
   },
   MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
     {
@@ -102,6 +75,17 @@ export const ValidationFormlyError = {
     },
   FilterOutbound_Must_Be_Unique: {
     message: 'filterMapping must be unique within all outbound mappings.'
+  },
+  Wrong_Transformation_Type_Array_In_Source_Template_Or_Target_Template_Requires_Transformation_Type_Smart_Function:
+    {
+      message:
+        'When the SourceTemplate or TargetTemplate is a JSON array, the TransformationType must be Smart Function.'
+    },
+  Extension_Must_Be_Defined_For_Extension_Java_Mapping: {
+    message: 'An extension must be selected for an Extension (Java) mapping.'
+  },
+  Unparsed_MappingType_Requires_Smart_Function_Transformation_Type: {
+    message: 'This payload format requires the Smart Function transformation type.'
   }
 };
 

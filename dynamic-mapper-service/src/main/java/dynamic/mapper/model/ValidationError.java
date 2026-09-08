@@ -21,18 +21,24 @@
 
 package dynamic.mapper.model;
 
+/**
+ * Every value here must correspond to an error actually produced by
+ * {@link dynamic.mapper.service.MappingValidator}. Codes that no check produces (dead
+ * enum values) have been removed rather than kept "for documentation" — an unused
+ * error code is a naming trap, not documentation. See the class-level checks:
+ * {@code validateMappingTopic}, {@code validateMappingTopicAndSampleConsistency},
+ * {@code validatePublishTopicAndSampleConsistency}, {@code validateSubstitutions},
+ * {@code validateJSONTemplates}, {@code validateFilterOutboundUniqueness},
+ * {@code validateTransformationType}, {@code validateExtension},
+ * {@code validateMappingTypeConstraints}.
+ */
 public enum ValidationError {
   Only_One_Multi_Level_Wildcard,
-  Only_One_Single_Level_Wildcard,
   Multi_Level_Wildcard_Only_At_End,
   Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used,
   One_Substitution_Defining_Device_Identifier_Must_Be_Used,
-  MappingTopic_Not_Unique,
-  MappingTopic_Must_Not_Be_Substring_Of_Other_MappingTopic, 
-  Target_Template_Must_Be_Valid_JSON, 
-  Source_Template_Must_Be_Valid_JSON, 
-  No_Multi_Level_Wildcard_Allowed_In_MappingTopic,
-  Device_Identifier_Must_Be_Selected, 
+  Target_Template_Must_Be_Valid_JSON,
+  Source_Template_Must_Be_Valid_JSON,
   MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
   MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
   PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,

@@ -56,6 +56,7 @@ import {
   EventRealtimeService,
   RealtimeSubjectService
 } from '@c8y/ngx-components';
+import { buildBackendErrorMessage } from '../shared/util';
 
 @Injectable({
   providedIn: 'root'
@@ -187,8 +188,8 @@ export class MappingService {
       }
     );
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message)!;
+      const error = await response.json().catch(() => ({}));
+      throw new Error(buildBackendErrorMessage(error, response.statusText));
     }
     const m = await response.json();
     this.reloadInbound$.next();
@@ -205,8 +206,8 @@ export class MappingService {
       method: 'POST'
     });
     if (!response.ok) {
-      const errorTxt = await response.json();
-      throw new Error(errorTxt.message ?? 'Could not be imported');
+      const error = await response.json().catch(() => ({}));
+      throw new Error(buildBackendErrorMessage(error, 'Could not create mapping'));
     }
     const m = await response.json();
     this.reloadInbound$.next();
@@ -248,7 +249,7 @@ export class MappingService {
     }
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.message ?? response.statusText);
+      throw new Error(buildBackendErrorMessage(error, response.statusText));
     }
     return response.json();
   }
@@ -278,7 +279,7 @@ export class MappingService {
     );
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.message ?? response.statusText);
+      throw new Error(buildBackendErrorMessage(error, response.statusText));
     }
     const mv = await response.json();
     this.clearVersionsCache(id);

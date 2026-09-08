@@ -100,7 +100,6 @@ public class MappingValidator {
 
             // Duplicate checks against mappings already persisted for this tenant/direction
             List<Mapping> existingMappings = findExistingMappings(tenant, mapping.getDirection(), excludeMappingId);
-            errors.addAll(validateMappingTopicUniqueness(existingMappings, mapping));
             errors.addAll(validateFilterOutboundUniqueness(existingMappings, mapping));
 
             if (!errors.isEmpty()) {
@@ -123,33 +122,6 @@ public class MappingValidator {
         return mappingRepository.findAll(tenant, direction, moc).stream()
                 .filter(m -> excludeMappingId == null || !m.getId().equals(excludeMappingId))
                 .collect(Collectors.toList());
-    }
-
-    /**
-     * Validates that an inbound mapping's mappingTopic neither overlaps with, nor is
-     * overlapped by, any other inbound mapping's mappingTopic — mirrors the MQTT subscription
-     * semantics where a prefix relationship between two topics means one would shadow the
-     * other. Mirrors the frontend's {@code isMappingTopicUnique} (util.ts).
-     */
-    public List<ValidationError> validateMappingTopicUniqueness(List<Mapping> existingMappings, Mapping mapping) {
-        List<ValidationError> errors = new ArrayList<>();
-
-        if (mapping.getDirection() != Direction.INBOUND
-                || mapping.getMappingTopic() == null || mapping.getMappingTopic().isEmpty()) {
-            return errors;
-        }
-
-        String topic = mapping.getMappingTopic();
-        boolean overlaps = existingMappings.stream()
-                .filter(m -> m.getDirection() == Direction.INBOUND)
-                .filter(m -> m.getMappingTopic() != null)
-                .anyMatch(m -> topic.startsWith(m.getMappingTopic()) || m.getMappingTopic().startsWith(topic));
-
-        if (overlaps) {
-            errors.add(ValidationError.MappingTopic_Not_Unique);
-        }
-
-        return errors;
     }
 
     private Collection<? extends ValidationError> validateTransformationType(Mapping mapping) {
