@@ -95,13 +95,24 @@ public abstract class AbstractExtensibleProcessor extends CommonProcessor {
      * @param extension The extension entry configuration
      * @return The extension inbound implementation
      */
-    protected ProcessorExtensionInbound<?> getProcessorExtensionInbound(String tenant, ExtensionEntry extension) {
+    protected ProcessorExtensionInbound<?> getProcessorExtensionInbound(String tenant, ExtensionEntry extension)
+            throws ProcessingException {
         String extensionName = extension.getExtensionName();
         String eventName = extension.getEventName();
-        return extensionInboundRegistry.getExtension(tenant, extensionName)
-                .getExtensionEntries()
-                .get(eventName)
-                .getExtensionImplInbound();
+
+        Extension registeredExtension = extensionInboundRegistry.getExtension(tenant, extensionName);
+        if (registeredExtension == null) {
+            throwExtensionNotFoundException(tenant, extension);
+            return null; // unreachable, throwExtensionNotFoundException always throws
+        }
+
+        ExtensionEntry registeredEntry = registeredExtension.getExtensionEntries().get(eventName);
+        if (registeredEntry == null) {
+            throwExtensionEventNotFoundException(tenant, extension);
+            return null; // unreachable, throwExtensionEventNotFoundException always throws
+        }
+
+        return registeredEntry.getExtensionImplInbound();
     }
 
     /**
@@ -111,13 +122,24 @@ public abstract class AbstractExtensibleProcessor extends CommonProcessor {
      * @param extension The extension entry configuration
      * @return The extension outbound implementation
      */
-    protected dynamic.mapper.processor.extension.ProcessorExtensionOutbound<?> getProcessorExtensionOutbound(String tenant, ExtensionEntry extension) {
+    protected dynamic.mapper.processor.extension.ProcessorExtensionOutbound<?> getProcessorExtensionOutbound(String tenant, ExtensionEntry extension)
+            throws ProcessingException {
         String extensionName = extension.getExtensionName();
         String eventName = extension.getEventName();
-        return extensionInboundRegistry.getExtension(tenant, extensionName)
-                .getExtensionEntries()
-                .get(eventName)
-                .getExtensionImplOutbound();
+
+        Extension registeredExtension = extensionInboundRegistry.getExtension(tenant, extensionName);
+        if (registeredExtension == null) {
+            throwExtensionNotFoundException(tenant, extension);
+            return null; // unreachable, throwExtensionNotFoundException always throws
+        }
+
+        ExtensionEntry registeredEntry = registeredExtension.getExtensionEntries().get(eventName);
+        if (registeredEntry == null) {
+            throwExtensionEventNotFoundException(tenant, extension);
+            return null; // unreachable, throwExtensionEventNotFoundException always throws
+        }
+
+        return registeredEntry.getExtensionImplOutbound();
     }
 
     /**
@@ -129,7 +151,24 @@ public abstract class AbstractExtensibleProcessor extends CommonProcessor {
      */
     protected void throwExtensionNotFoundException(String tenant, ExtensionEntry extension)
             throws ProcessingException {
-        String message = String.format("Tenant %s - Extension %s:%s could not be found!", tenant,
+        String message = String.format("Tenant %s - Extension %s could not be found!", tenant,
+                extension.getExtensionName());
+        log.warn(message);
+        throw new ProcessingException(message);
+    }
+
+    /**
+     * Throw extension event not found exception with formatted message.
+     * Used when the extension itself is registered but does not have an entry
+     * for the requested event name.
+     *
+     * @param tenant The tenant identifier
+     * @param extension The extension entry whose event could not be found
+     * @throws ProcessingException always
+     */
+    protected void throwExtensionEventNotFoundException(String tenant, ExtensionEntry extension)
+            throws ProcessingException {
+        String message = String.format("Tenant %s - Extension %s does not have an entry for event %s!", tenant,
                 extension.getExtensionName(),
                 extension.getEventName());
         log.warn(message);

@@ -23,6 +23,7 @@ import { AlertService, CoreModule, DropAreaComponent, ModalLabels } from '@c8y/n
 import { gettext } from '@c8y/ngx-components/gettext';
 import { Subject, Subscription } from 'rxjs';
 import { ERROR_MESSAGES } from '../share/extension.constants';
+import { ERROR_TYPE } from '../share/extension.model';
 import { ExtensionService } from '../extension.service';
 
 @Component({
@@ -35,6 +36,9 @@ import { ExtensionService } from '../extension.service';
 })
 export class AddExtensionComponent implements OnDestroy {
   @ViewChild(DropAreaComponent) dropAreaComponent;
+
+  /** No existing upload-size convention elsewhere in the codebase — 50 MB is a generous default for a processor-extension *.jar. */
+  readonly maxFileSizeInMegaBytes = 50;
 
   isLoading = false;
   isAppCreated = false;
@@ -115,10 +119,24 @@ export class AddExtensionComponent implements OnDestroy {
     this.app = null;
     this.dropAreaComponent?.onDelete();
 
-    this.errorMessage = ERROR_MESSAGES[error.message];
+    this.errorMessage = this.extractErrorMessage(error);
     if (!this.errorMessage && !this.uploadCanceled) {
       this.alertService.addServerFailure(error);
     }
+  }
+
+  /**
+   * `uploadProcessorExtensionWithProgress$` rejects either with a plain string — a
+   * transport/network failure with no response body — or with `{ data: <backend error body> }`
+   * for a server-side rejection that does carry a response body. Surface a friendly message for
+   * the former (a known, reachable case) and the backend's own message for the latter; anything
+   * else is truly unrecognized and falls back to the generic server-failure alert.
+   */
+  private extractErrorMessage(error: any): string | undefined {
+    if (typeof error === 'string') {
+      return ERROR_MESSAGES[ERROR_TYPE.UPLOAD_FAILED];
+    }
+    return error?.data?.message || error?.data?.error || undefined;
   }
 
   private handleUploadComplete(): void {

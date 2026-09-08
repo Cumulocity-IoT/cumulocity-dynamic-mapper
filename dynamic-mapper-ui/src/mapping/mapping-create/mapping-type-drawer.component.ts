@@ -19,7 +19,7 @@
  */
 
 import { ChangeDetectorRef, Component, inject, Input, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
-import { AbstractControl, FormBuilder, FormGroup, ValidationErrors } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { BottomDrawerRef, BottomDrawerService, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Observable, Subject, map, shareReplay, takeUntil } from 'rxjs';
 import * as jsYaml from 'js-yaml';
@@ -127,6 +127,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   
   isLoading = true;
   isLoadingCodeTemplates = false;
+  isLoadingExtensions = false;
   showTransformationType = false;
   private serviceConfiguration: ServiceConfiguration;
   private deployedAgentNames = new Set<string>();
@@ -492,10 +493,12 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       await this.loadExtensions();
     }
 
+    this.updateExtensionValidators();
     this.isLoadingCodeTemplates = false;
   }
 
   private async loadExtensions(): Promise<void> {
+    this.isLoadingExtensions = true;
     try {
       this.extensions = await this.extensionService.getProcessorExtensions() as Map<string, Extension>;
       this.extensionItems = Array.from(this.extensions.keys());
@@ -503,7 +506,27 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       console.error('Failed to load extensions:', error);
       this.extensions = new Map();
       this.extensionItems = [];
+    } finally {
+      this.isLoadingExtensions = false;
     }
+  }
+
+  /** Mirrors updateTransformationTypeValidators(): extensionName/eventName are required only while
+   *  the extension selectors are actually shown (transformationType === EXTENSION_JAVA). */
+  private updateExtensionValidators(): void {
+    const extensionNameControl = this.formGroup.get('extensionName');
+    const eventNameControl = this.formGroup.get('eventName');
+    if (!extensionNameControl || !eventNameControl) return;
+
+    if (this.shouldShowExtensionSelectors()) {
+      extensionNameControl.setValidators([Validators.required]);
+      eventNameControl.setValidators([Validators.required]);
+    } else {
+      extensionNameControl.clearValidators();
+      eventNameControl.clearValidators();
+    }
+    extensionNameControl.updateValueAndValidity({ emitEvent: false });
+    eventNameControl.updateValueAndValidity({ emitEvent: false });
   }
 
   private onExtensionNameChange(selected: any): void {
@@ -654,6 +677,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       this.formGroup.patchValue({ transformationType: null }, { emitEvent: false });
       this.codeTemplateOptions = [];
     }
+    this.updateExtensionValidators();
   }
 
   private readonly transformationTypeValidator = (control: AbstractControl): ValidationErrors | null => {

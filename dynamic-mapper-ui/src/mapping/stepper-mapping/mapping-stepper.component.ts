@@ -54,8 +54,7 @@ import {
   StepperConfiguration,
   Feature,
   isSubstitutionsAsCode,
-  TransformationType,
-  MappingTypeLabels
+  TransformationType
 } from '../../shared';
 import { createCompletionProviderFlowFunction, EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
 import {
@@ -132,7 +131,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
 
   readonly checkTransformationType = checkTransformationType;
   readonly validateProtectedFields = validateProtectedFields;
-  readonly MappingTypeLabels = MappingTypeLabels;
   readonly Direction = Direction;
   readonly TransformationType = TransformationType;
   readonly EditorMode = EditorMode;
@@ -175,6 +173,8 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   extensionEventItems$: Observable<{ label: string; value: string }[]>;
   /** True when the selected extension event has a parameter block defined */
   hasExtensionParameter = false;
+  /** True while extensions are being (re-)loaded from the backend, e.g. on entering the General Settings step */
+  isLoadingExtensions = false;
   codeTemplateItems: Array<{label: string, value: string}> = [];
 
   private updateExtensionItems(): void {
@@ -606,33 +606,38 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
 
   private async handleGeneralSettingsStep(): Promise<void> {
     this.templatesInitialized = false;
-    this.extensions = await this.stepperService.loadExtensions(this.mapping);
-    this.updateExtensionItems(); // Update cached extension items
+    this.isLoadingExtensions = true;
+    try {
+      this.extensions = await this.stepperService.loadExtensions(this.mapping);
+      this.updateExtensionItems(); // Update cached extension items
 
-    // Re-patch form values after items are loaded so c8y-select can match them
-    if (this.mapping?.extension?.extensionName) {
-      // Guard: the extension may no longer be loaded on the tenant (removed/renamed).
-      if (!this.extensions.get(this.mapping.extension.extensionName)) {
-        const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded...`;
-        this.raiseAlert({ type: 'warning', text: msg });
-        return;
+      // Re-patch form values after items are loaded so c8y-select can match them
+      if (this.mapping?.extension?.extensionName) {
+        // Guard: the extension may no longer be loaded on the tenant (removed/renamed).
+        if (!this.extensions.get(this.mapping.extension.extensionName)) {
+          const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded...`;
+          this.raiseAlert({ type: 'warning', text: msg });
+          return;
+        }
+
+        // First, load the extension events for this extension
+        this.stepperService.selectExtensionName(
+          this.mapping.extension.extensionName,
+          this.extensions,
+          this.mapping
+        );
+
+        // Show parameter textarea if the mapping already has a parameter block
+        if (this.mapping.extension.parameter) {
+          this.hasExtensionParameter = true;
+        }
+
+        // Use queueMicrotask to ensure items are rendered before setting values
+        // This allows c8y-select to properly detect and display the selected values
+        this.patchExtensionFormValues();
       }
-
-      // First, load the extension events for this extension
-      this.stepperService.selectExtensionName(
-        this.mapping.extension.extensionName,
-        this.extensions,
-        this.mapping
-      );
-
-      // Show parameter textarea if the mapping already has a parameter block
-      if (this.mapping.extension.parameter) {
-        this.hasExtensionParameter = true;
-      }
-
-      // Use queueMicrotask to ensure items are rendered before setting values
-      // This allows c8y-select to properly detect and display the selected values
-      this.patchExtensionFormValues();
+    } finally {
+      this.isLoadingExtensions = false;
     }
   }
 

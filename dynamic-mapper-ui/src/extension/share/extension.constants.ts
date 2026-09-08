@@ -22,21 +22,8 @@ import { ERROR_TYPE } from './extension.model';
 import { PropertiesListItem } from '@c8y/ngx-components';
 
 export const ERROR_MESSAGES = {
-  [ERROR_TYPE.TYPE_VALIDATION]: gettext(
-    'Wrong file format. Expected a *.zip file with a valid manifest.'
-  ),
-  [ERROR_TYPE.ALREADY_SUBSCRIBED]: gettext(
-    'Could not subscribe to the microservice because another application with the same context path is already subscribed.'
-  ),
-  [ERROR_TYPE.NO_MANIFEST_FILE]: gettext('Could not find a manifest.'),
-  [ERROR_TYPE.INVALID_PACKAGE]: gettext(
-    'You have not uploaded a valid package.'
-  ),
-  [ERROR_TYPE.INVALID_APPLICATION]: gettext(
-    'You have not uploaded a valid application.'
-  ),
-  [ERROR_TYPE.INTERNAL_ERROR]: gettext(
-    'An internal error occurred, try to upload again.'
+  [ERROR_TYPE.UPLOAD_FAILED]: gettext(
+    'Could not upload the *.jar file. Please check your connection and try again.'
   )
 };
 

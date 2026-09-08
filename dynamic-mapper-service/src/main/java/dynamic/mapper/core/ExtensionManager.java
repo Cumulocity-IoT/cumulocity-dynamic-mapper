@@ -75,8 +75,23 @@ public class ExtensionManager {
         this.extensionConfiguration = extensionConfiguration;
     }
 
-    // Track classloaders for proper cleanup
-    private final Map<String, Map<String, URLClassLoader>> tenantExtensionClassLoaders = new java.util.concurrent.ConcurrentHashMap<>();
+    /**
+     * Holds a loaded external extension's classloader together with the temporary
+     * jar file backing it, so both can be released together when the extension is
+     * closed/replaced/deleted.
+     */
+    private static final class ExtensionClassLoaderHolder {
+        private final URLClassLoader classLoader;
+        private final File tempFile;
+
+        private ExtensionClassLoaderHolder(URLClassLoader classLoader, File tempFile) {
+            this.classLoader = classLoader;
+            this.tempFile = tempFile;
+        }
+    }
+
+    // Track classloaders (and their backing temp jar files) for proper cleanup
+    private final Map<String, Map<String, ExtensionClassLoaderHolder>> tenantExtensionClassLoaders = new java.util.concurrent.ConcurrentHashMap<>();
 
     public void loadProcessorExtensions(String tenant) {
         ClassLoader internalClassloader = ExtensionManager.class.getClassLoader();
@@ -87,16 +102,24 @@ public class ExtensionManager {
             boolean external = (Boolean) props.get("external");
             log.debug("{} - Trying to load extension id: {}, name: {}", tenant, extension.getId().getValue(),
                     extName);
+
+            if (external && !extensionConfiguration.isExternalExtensionsEnabled()) {
+                log.info("{} - Skipping loading of external extension: {} because external extensions are disabled via configuration (app.externalExtensionsEnabled=false)",
+                        tenant, extName);
+                continue;
+            }
+
             InputStream downloadInputStream = null;
             FileOutputStream outputStream = null;
             URLClassLoader externalClassLoader = null;
+            File tempFile = null;
             try {
                 if (external) {
                     // step 1 download extension for binary repository
                     downloadInputStream = binaryApi.downloadFile(extension.getId());
 
                     // step 2 create temporary file,because classloader needs a url resource
-                    File tempFile = File.createTempFile(extName, "jar");
+                    tempFile = File.createTempFile(extName, "jar");
                     tempFile.deleteOnExit();
                     String canonicalPath = tempFile.getCanonicalPath();
                     String path = tempFile.getPath();
@@ -116,18 +139,27 @@ public class ExtensionManager {
 
                     // Only track the classloader after successful registration so a failed
                     // registration does not leave a closed loader in the map.
-                    tenantExtensionClassLoaders.computeIfAbsent(tenant, k -> new java.util.concurrent.ConcurrentHashMap<>())
-                            .put(extName, externalClassLoader);
+                    // If an entry already exists for this tenant+extension name (re-registration),
+                    // close and clean it up first to avoid leaking classloaders/temp files.
+                    Map<String, ExtensionClassLoaderHolder> tenantClassLoaders = tenantExtensionClassLoaders
+                            .computeIfAbsent(tenant, k -> new java.util.concurrent.ConcurrentHashMap<>());
+                    ExtensionClassLoaderHolder previousHolder = tenantClassLoaders
+                            .put(extName, new ExtensionClassLoaderHolder(externalClassLoader, tempFile));
+                    if (previousHolder != null) {
+                        log.debug("{} - Extension {} was already loaded, closing previous classloader before replacing it",
+                                tenant, extName);
+                        closeClassLoader(previousHolder, tenant, extName);
+                    }
                 } else {
                     registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, internalClassloader,
                             external);
                 }
             } catch (IOException e) {
                 log.error("{} - IO Exception occurred when loading extension: ", tenant, e);
-                closeClassLoader(externalClassLoader, tenant, extName);
+                closeClassLoaderAndDeleteFile(externalClassLoader, tempFile, tenant, extName);
             } catch (RuntimeException e) {
                 log.error("{} - Unexpected error loading extension: ", tenant, e);
-                closeClassLoader(externalClassLoader, tenant, extName);
+                closeClassLoaderAndDeleteFile(externalClassLoader, tempFile, tenant, extName);
             } finally {
                 if (downloadInputStream != null) {
                     try {
@@ -147,13 +179,37 @@ public class ExtensionManager {
         }
     }
 
-    private void closeClassLoader(URLClassLoader classLoader, String tenant, String extName) {
+    private void closeClassLoader(ExtensionClassLoaderHolder holder, String tenant, String extName) {
+        if (holder == null) {
+            return;
+        }
+        closeClassLoaderAndDeleteFile(holder.classLoader, holder.tempFile, tenant, extName);
+    }
+
+    /**
+     * Close the classloader (if any) and delete its backing temporary jar file (if any).
+     * {@code deleteOnExit()} is still set on the temp file as a safety net, but we no longer
+     * rely on it exclusively since it only fires at JVM shutdown and would otherwise let
+     * temp files accumulate for the life of the process.
+     */
+    private void closeClassLoaderAndDeleteFile(URLClassLoader classLoader, File tempFile, String tenant, String extName) {
         if (classLoader != null) {
             try {
                 classLoader.close();
                 log.debug("{} - Closed classloader for extension: {}", tenant, extName);
             } catch (IOException e) {
                 log.warn("{} - Failed to close classloader for extension: {}", tenant, extName, e);
+            }
+        }
+        if (tempFile != null && tempFile.exists()) {
+            try {
+                if (!tempFile.delete()) {
+                    log.warn("{} - Failed to delete temp jar file for extension: {}: {}", tenant, extName, tempFile);
+                } else {
+                    log.debug("{} - Deleted temp jar file for extension: {}: {}", tenant, extName, tempFile);
+                }
+            } catch (SecurityException e) {
+                log.warn("{} - Failed to delete temp jar file for extension: {}: {}", tenant, extName, tempFile, e);
             }
         }
     }
@@ -319,17 +375,22 @@ public class ExtensionManager {
 
     public Extension deleteProcessorExtension(String tenant, String extensionName) {
         for (ManagedObjectRepresentation extensionRepresentation : extensionsComponent.get()) {
-            if (extensionName.equals(extensionRepresentation.getName())) {
+            // Match against the same "d11r_processorExtension.name" fragment property used
+            // during loading/registration, not the top-level managed object name, since these
+            // can differ.
+            Map<?, ?> props = (Map<?, ?>) extensionRepresentation.get(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE);
+            String extNameFromFragment = props != null && props.get("name") != null ? props.get("name").toString() : null;
+            if (extensionName.equals(extNameFromFragment)) {
                 binaryApi.deleteFile(extensionRepresentation.getId());
                 log.info("{} - Deleted extension: {} permanently!", tenant, extensionName);
             }
         }
 
-        // Close and remove classloader for this extension
-        Map<String, URLClassLoader> tenantClassLoaders = tenantExtensionClassLoaders.get(tenant);
+        // Close and remove classloader (and backing temp file) for this extension
+        Map<String, ExtensionClassLoaderHolder> tenantClassLoaders = tenantExtensionClassLoaders.get(tenant);
         if (tenantClassLoaders != null) {
-            URLClassLoader classLoader = tenantClassLoaders.remove(extensionName);
-            closeClassLoader(classLoader, tenant, extensionName);
+            ExtensionClassLoaderHolder holder = tenantClassLoaders.remove(extensionName);
+            closeClassLoader(holder, tenant, extensionName);
         }
 
         // manage extensions for Camel routes
@@ -337,10 +398,10 @@ public class ExtensionManager {
     }
 
     public void reloadExtensions(String tenant) {
-        // Close all classloaders for this tenant before reloading
-        Map<String, URLClassLoader> tenantClassLoaders = tenantExtensionClassLoaders.remove(tenant);
+        // Close all classloaders (and backing temp files) for this tenant before reloading
+        Map<String, ExtensionClassLoaderHolder> tenantClassLoaders = tenantExtensionClassLoaders.remove(tenant);
         if (tenantClassLoaders != null) {
-            for (Map.Entry<String, URLClassLoader> entry : tenantClassLoaders.entrySet()) {
+            for (Map.Entry<String, ExtensionClassLoaderHolder> entry : tenantClassLoaders.entrySet()) {
                 closeClassLoader(entry.getValue(), tenant, entry.getKey());
             }
         }
@@ -376,9 +437,9 @@ public class ExtensionManager {
      * Clean up all classloaders for a tenant. Should be called during tenant offboarding.
      */
     public void cleanupTenantExtensions(String tenant) {
-        Map<String, URLClassLoader> tenantClassLoaders = tenantExtensionClassLoaders.remove(tenant);
+        Map<String, ExtensionClassLoaderHolder> tenantClassLoaders = tenantExtensionClassLoaders.remove(tenant);
         if (tenantClassLoaders != null) {
-            for (Map.Entry<String, URLClassLoader> entry : tenantClassLoaders.entrySet()) {
+            for (Map.Entry<String, ExtensionClassLoaderHolder> entry : tenantClassLoaders.entrySet()) {
                 closeClassLoader(entry.getValue(), tenant, entry.getKey());
             }
             log.info("{} - Cleaned up {} extension classloaders", tenant, tenantClassLoaders.size());
