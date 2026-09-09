@@ -6,7 +6,6 @@ services:
     ports:
       - "5672:5672"      # AMQP port
       - "15672:15672"    # Management UI
-      - "5671:5671"      # AMQPS port (SSL/TLS)
     environment:
       # Default credentials
       RABBITMQ_DEFAULT_USER: guest

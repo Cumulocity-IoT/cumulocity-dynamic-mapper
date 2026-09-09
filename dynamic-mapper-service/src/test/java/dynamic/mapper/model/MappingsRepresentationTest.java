@@ -70,7 +70,7 @@ public class MappingsRepresentationTest {
                 .thenReturn(new ArrayList<>());
 
         // Create the validator with mocked dependencies
-        mappingValidator = new MappingValidator(subscriptionsService, mappingRepository);
+        mappingValidator = new MappingValidator(subscriptionsService, mappingRepository, null);
     }
 
     @Test

@@ -26,7 +26,7 @@ import {
   TransformationType
 } from '../../shared';
 import { ValidationFormlyError } from './mapping.model';
-import { MappingTokens } from '../core/processor/processor.model';
+import { MappingTokens, PROTECTED_TOKENS } from '../core/processor/processor.model';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -160,7 +160,56 @@ export function isFilterOutboundUnique(
   return result;
 }
 
+// ─── Backend error-code translation ────────────────────────────────────────────
+
+/**
+ * Translates a single backend `ValidationError` code (e.g. `"MappingTopic_And_..."`)
+ * into the human-readable message from `ValidationFormlyError`. Falls back to a
+ * de-slugified version of the code itself (underscores → spaces) for any code the
+ * catalogue doesn't (yet) know about, rather than showing the raw enum token verbatim.
+ */
+export function translateValidationErrorCode(code: string): string {
+  return ValidationFormlyError[code]?.message ?? code.replace(/_/g, ' ');
+}
+
+/**
+ * Builds a single human-readable message from a backend error response body.
+ *
+ * The mapping create/update/publish endpoints return a structured 422 body
+ * (`{ message, errors: string[] }`, see `ValidationErrorResponse` on the backend) on a
+ * validation failure — `errors` are translated individually and joined. Any other
+ * error shape (e.g. a plain `{ message }` from a different failure) falls back to that
+ * message, or to `fallback` if the body has neither.
+ */
+export function buildBackendErrorMessage(body: any, fallback: string): string {
+  if (Array.isArray(body?.errors) && body.errors.length > 0) {
+    return body.errors.map((code: string) => translateValidationErrorCode(code)).join('; ');
+  }
+  return body?.message ?? fallback;
+}
+
 // ─── Form validators ──────────────────────────────────────────────────────────
+
+/**
+ * Propagates each group-level validation error onto the specific sub-control named by
+ * its `errorPath` (set alongside every entry added in `checkTopicsInboundAreValid` /
+ * checkTopicsOutboundAreValid`), in addition to the group-level result those functions
+ * return. Without this, only the group as a whole is marked invalid — Formly's
+ * per-field `c8y-form-field` error rendering (which reads `control.errors`, not the
+ * parent group's) never shows *why*, so the save button is disabled with no visible
+ * reason on the wildcard/topic-sample-mismatch checks (previously only the two
+ * `required` checks propagated to a control, via their own early-return `setErrors`
+ * calls above).
+ */
+function propagateErrorsToControls(control: AbstractControl, errors: Record<string, { errorPath: string }>): void {
+  const byControlPath: Record<string, Record<string, unknown>> = {};
+  Object.entries(errors).forEach(([key, err]) => {
+    byControlPath[err.errorPath] = { ...byControlPath[err.errorPath], [key]: err };
+  });
+  Object.entries(byControlPath).forEach(([path, controlErrors]) => {
+    control['controls'][path]?.setErrors(controlErrors);
+  });
+}
 
 export function checkTopicsInboundAreValid(control: AbstractControl) {
   let errors = {};
@@ -207,21 +256,6 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
       ...errors,
       Multi_Level_Wildcard_Only_At_End: {
         ...ValidationFormlyError['Multi_Level_Wildcard_Only_At_End'],
-        errorPath: 'mappingTopic'
-      }
-    };
-  }
-
-  // count number of "#" in mappingTopic
-  count_multi = (mappingTopic.value.match(/#/g) || []).length;
-  // if (count_multi >= 1) {
-  if (count_multi > 1) {
-    errors = {
-      ...errors,
-      No_Multi_Level_Wildcard_Allowed_In_MappingTopic: {
-        ...ValidationFormlyError[
-        'No_Multi_Level_Wildcard_Allowed_In_MappingTopic'
-        ],
         errorPath: 'mappingTopic'
       }
     };
@@ -303,6 +337,7 @@ export function checkTopicsInboundAreValid(control: AbstractControl) {
       }
     }
   }
+  propagateErrorsToControls(control, errors);
   return Object.keys(errors).length > 0 ? errors : null;
 }
 
@@ -329,19 +364,6 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
         }
       };
     }
-
-    // count number of "+" in publishTopic
-    /*const count_single = (publishTopic.value?.match(/\+/g) || []).length;
-    if (count_single > 1) {
-      errors = {
-        ...errors,
-        Only_One_Single_Level_Wildcard: {
-          ...ValidationFormlyError['Only_One_Single_Level_Wildcard'],
-          errorPath: 'publishTopic'
-        }
-      };
-    }
-      */
 
     // wildcard "#" can only appear at the end in mappingTopic
     if (
@@ -424,13 +446,12 @@ export function checkTopicsOutboundAreValid(control: AbstractControl) {
     }
   }
 
+  propagateErrorsToControls(control, errors);
   return Object.keys(errors).length > 0 ? errors : null;
 }
 
 export function validateProtectedFields(original: any, updated: any): boolean {
-  const protectedFields = ['_IDENTITY_', '_TOPIC_LEVEL_', '_CONTEXT_DATA_'];
-
-  for (const field of protectedFields) {
+  for (const field of PROTECTED_TOKENS) {
     const originalValue = findFieldInObject(original, field);
     const updatedValue = findFieldInObject(updated, field);
 
@@ -515,11 +536,14 @@ export function expandExternalTemplate(
   if (Array.isArray(template) || isCodeOrExtensionTransformation(mapping.transformationType)) {
     return template;
   } else {
-    // Define the context data with specific values
+    // Define the context data with specific values. A key already present in the template (e.g.
+    // seeded from a real message captured in the Message Explorer) is preferred over the generic
+    // placeholder, so the sample mirrors what the mapping actually receives at runtime.
+    const existingKey = template?.[MappingTokens.CONTEXT_DATA]?.[CONTEXT_DATA_KEY_NAME];
     let contextData;
     if (mapping.direction == Direction.INBOUND) {
       contextData = {
-        [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
+        [CONTEXT_DATA_KEY_NAME]: existingKey ?? `${CONTEXT_DATA_KEY_NAME}-sample`,
         // [CONTEXT_DATA_METHOD_NAME]: "POST"
         // [CONTEXT_DATA_RETAIN]: false,
       };

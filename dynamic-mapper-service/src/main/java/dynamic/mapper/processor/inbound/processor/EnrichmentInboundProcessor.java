@@ -135,6 +135,19 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
             log.info(
                     "{} - This message is not parsed by Base Inbound Processor, will be potentially parsed by extension due to custom format.",
                     tenant);
+            // _TOPIC_LEVEL_/_CONTEXT_DATA_ are injected into the payload itself, which is only
+            // possible for a JSON object. A top-level JSON array/scalar, or a byte[] payload
+            // (PROTOBUF_INTERNAL/ANY_PAYLOAD), has nowhere to carry them — so a broker message key
+            // is silently unavailable to the expression. Surface it, but only when a key actually
+            // exists, to avoid warning on every message of an unkeyed stream.
+            if (context.getKey() != null) {
+                log.warn(
+                        "{} - Message key is not available to mapping '{}': the payload is a {}, not a JSON object, "
+                                + "so {} cannot be added to it. Wrap the payload in a JSON object to map the key.",
+                        tenant, mapping.getName(),
+                        payloadObject == null ? "null value" : payloadObject.getClass().getSimpleName(),
+                        Mapping.TOKEN_CONTEXT_DATA);
+            }
         }
 
         if (flowContext != null) {

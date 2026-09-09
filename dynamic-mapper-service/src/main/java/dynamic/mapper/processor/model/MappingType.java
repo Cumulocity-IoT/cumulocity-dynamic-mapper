@@ -25,11 +25,19 @@ public enum MappingType {
     JSON("JSON"),
     FLAT_FILE("FLAT_FILE"),
     HEX("HEX"),
+    /** @deprecated Use {@link #ANY_PAYLOAD} with {@link TransformationType#SMART_FUNCTION} or
+     *  {@link TransformationType#EXTENSION_JAVA} instead, which decode Protobuf against your own
+     *  schema rather than the hardcoded internal parser. Retained for existing mappings only:
+     *  its sole supported transformation is the deprecated {@link TransformationType#DEFAULT}. */
+    @Deprecated
     PROTOBUF_INTERNAL("PROTOBUF_INTERNAL"),
     /** @deprecated Use {@link #ANY_PAYLOAD} with {@link TransformationType#EXTENSION_JAVA} instead.
      *  Retained for on-the-fly data migration only; will be removed in a future release. */
     @Deprecated
     EXTENSION_JAVA("EXTENSION_JAVA"),
+    /** @deprecated Superseded by {@link #JSON} with {@link TransformationType#SMART_FUNCTION}.
+     *  Retained only so {@code MappingRepository} can migrate existing mappings on load. */
+    @Deprecated
     CODE_BASED("CODE_BASED"),
     ANY_PAYLOAD("ANY_PAYLOAD"),
     SPARKPLUGB("SPARKPLUGB"),

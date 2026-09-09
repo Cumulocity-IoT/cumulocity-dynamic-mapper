@@ -75,4 +75,12 @@ export class ConnectorConfigurationComponent {
   async onConfigurationAddOrUpdate(config: ConnectorConfiguration) {
     this.connectorGridComponent.onConfigurationAddOrUpdate(config);
   }
+
+  async onExportAll() {
+    this.connectorGridComponent.onExportAll();
+  }
+
+  async onImport() {
+    this.connectorGridComponent.onImport();
+  }
 }

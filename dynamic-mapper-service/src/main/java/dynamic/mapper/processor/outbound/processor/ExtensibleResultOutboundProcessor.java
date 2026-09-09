@@ -175,7 +175,7 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
             if (deviceMsg.getTransportFields() != null && !deviceMsg.getTransportFields().isEmpty()) {
                 // Extract key for Kafka messages
                 String key = deviceMsg.getTransportFields().get(Mapping.CONTEXT_DATA_KEY_NAME);
-                if (key != null) {
+                if (key != null && !Mapping.CONTEXT_DATA_KEY_PLACEHOLDER.equals(key)) {
                     context.setKey(key);
                 }
                 log.debug("{} - DeviceMessage has {} transport field(s)",

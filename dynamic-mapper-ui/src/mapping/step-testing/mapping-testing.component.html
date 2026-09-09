@@ -47,6 +47,11 @@
                   @if (currentPublishTopic) {
                   <span class="tag tag--info m-b-4">{{ currentPublishTopic }}</span>
                   }
+                  @if (generatedKey) {
+                  <span class="tag tag--default m-b-4" data-cy="dm-mapping-test-key"
+                    title="{{ 'Broker message key produced by this mapping, e.g. the Kafka record key' | translate }}">key:
+                    {{ generatedKey }}</span>
+                  }
                 </div>
                 <div>
                   <span class="badge badge-success" data-cy="dm-mapping-test-result-index">{{
@@ -103,8 +108,10 @@
                 @for (line of testingModel.logs; track $index) {
                 <div [class]="'log-line log-' + getLogLevel(line)">{{ line }}</div>
                 }
+                } @else if (testingModel.results?.length) {
+                <span class="log-empty" translate>No console output for this test run</span>
                 } @else {
-                <span class="log-empty">No output yet</span>
+                <span class="log-empty" translate>No output yet</span>
                 }
               </div>
             </div>
@@ -116,6 +123,14 @@
 
   <!-- Pinned button bar — sits below the scroll area, always visible -->
   <div class="d-flex separator p-t-8 p-b-8 flex-no-shrink" style="justify-content: center;">
+    @if (testingUnavailable) {
+    <!-- Neither testing action is permitted for this payload/transformation combination, so every
+         button in the bar would be permanently dead. Explain instead of showing inert controls. -->
+    <small class="text-muted text-center" data-cy="dm-mapping-test-unavailable">
+      <i c8yIcon="info-circle" class="m-r-4"></i>
+      {{ 'Testing is not available for this combination of payload type and transformation type.' | translate }}
+    </small>
+    } @else {
     <div class="btn-group">
       <button type="button" class="btn btn-default btn-sm m-r-8" data-cy="dm-mapping-test-transform" (click)="onTestTransformation()"
         [disabled]="!stepperConfiguration.allowTestTransformation || (testingModel.results.length > 0) || isLoading">
@@ -152,5 +167,6 @@
       </label>
       }
     </div>
+    }
   </div>
 </div>

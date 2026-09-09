@@ -136,7 +136,13 @@ export interface DynamicMapperDeviceMessage {
   transportId?: string;
 
   /**
-   * Transport-specific key/value pairs (e.g. Kafka record headers, MQTT 5 user properties).
+   * Transport-specific key/value pairs (e.g. MQTT 5 user properties).
+   *
+   * For Kafka this carries the consumed record's **key** under `"key"` — the record key, not
+   * headers. It is delivered here rather than inside {@link payload}, so it never appears in the
+   * mapping's source template:
+   * `var deviceId = msg.transportFields?.["key"];`
+   *
    * Empty map when no transport fields are available.
    */
   transportFields?: Record<string, string>;

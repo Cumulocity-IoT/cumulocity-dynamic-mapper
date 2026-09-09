@@ -55,6 +55,9 @@ import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import dynamic.mapper.service.MappingService;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Timer;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -69,6 +72,8 @@ public class CamelDispatcherOutbound implements NotificationCallback {
     private ConfigurationRegistry configurationRegistry;
     private ProducerTemplate producerTemplate;
     private CamelContext camelContext;
+    private final Timer outboundProcessingTimer;
+    private final Counter outboundProcessingCounter;
     /**
      * Constructor matching DispatcherInbound signature
      */
@@ -83,6 +88,13 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         // Initialize Camel components
         this.camelContext = configurationRegistry.getCamelContext();
         this.producerTemplate = camelContext.createProducerTemplate();
+        this.outboundProcessingTimer = Timer.builder("dynmapper_outbound_processing_time")
+                .tag("tenant", connectorClient.getTenant())
+                .tag("connector", connectorClient.getConnectorIdentifier())
+                .description("Processing time of outbound messages").register(Metrics.globalRegistry);
+        this.outboundProcessingCounter = Counter.builder("dynmapper_outbound_message_total")
+                .tag("tenant", connectorClient.getTenant()).description("Total number of outbound messages")
+                .tag("connector", connectorClient.getConnectorIdentifier()).register(Metrics.globalRegistry);
     }
 
     @Override
@@ -249,6 +261,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
      * Process C8Y message using Camel routes
      */
     private ProcessingResultWrapper<?> processMessage(C8YMessage c8yMessage, Mapping testMapping, boolean testing) {
+        Timer.Sample timer = Timer.start(Metrics.globalRegistry);
         String tenant = c8yMessage.getTenant();
         ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
 
@@ -261,6 +274,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
                     connectorClient.getConnectorName(),
                     c8yMessage.getMessageId());
         }
+        this.outboundProcessingCounter.increment();
 
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
         ProcessingResultWrapper<?> result = ProcessingResultWrapper.builder()
@@ -348,7 +362,6 @@ public class CamelDispatcherOutbound implements NotificationCallback {
                 @SuppressWarnings("unchecked")
                 List<ProcessingContext<Object>> contexts = resultExchange.getIn().getHeader(CamelHeaders.PROCESSED_CONTEXTS,
                         List.class);
-                
                 return contexts != null ? contexts : new ArrayList<>();
 
             } catch (Exception e) {
@@ -368,6 +381,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
                 log.error("{} - Error processing outbound message through Camel routes: {}", tenant, e.getMessage(), e);
                 throw new RuntimeException("Camel processing failed", e);
             } finally {
+                timer.stop(outboundProcessingTimer);
             }
         });
         result.setProcessingResult((Future) futureProcessingResult);

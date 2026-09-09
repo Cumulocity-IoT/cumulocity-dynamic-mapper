@@ -71,7 +71,7 @@ export const mappingEditResolver: ResolveFn<MappingEditData> = async (route) => 
   // Deprecated SUBSTITUTION_AS_CODE mappings are always read-only (export/delete only).
   // Active mappings are no longer read-only: editing them saves to a draft and never
   // changes the running configuration until the draft is published and activated.
-  // eslint-disable-next-line deprecation/deprecation
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
   const isDeprecated = mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE;
 
   const context: StepperConfigurationContext = {

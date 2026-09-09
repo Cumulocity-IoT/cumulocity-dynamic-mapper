@@ -134,6 +134,18 @@
     </div>
   }
 
+  @if (sessionId && sessionSubscriptionWarning) {
+    <div class="alert alert-danger d-flex a-i-center g-8 m-b-8" style="min-width: stretch;">
+      <i c8yIcon="exclamation-triangle"></i>
+      <span>
+        <strong translate>Subscription failed</strong>
+        &mdash;
+        <span translate>the session is active, but the broker rejected the subscribe request, so no messages will arrive:</span>
+        <code>{{ sessionSubscriptionWarning }}</code>
+      </span>
+    </div>
+  }
+
   <!-- ---- Empty state ------------------------------------------------------- -->
   @if (!sessionId && messages.length === 0) {
     <c8y-ui-empty-state

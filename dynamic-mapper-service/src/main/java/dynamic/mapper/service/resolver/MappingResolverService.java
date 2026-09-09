@@ -21,7 +21,6 @@
 
 package dynamic.mapper.service.resolver;
 
-import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.ResolveException;
@@ -47,7 +46,7 @@ import static com.dashjoin.jsonata.Jsonata.jsonata;
 public class MappingResolverService {
 
     private final MappingCacheManager cacheManager;
-    private final ConfigurationRegistry configurationRegistry;
+    private final InventoryFilterEvaluator inventoryFilterEvaluator;
 
     /**
      * Resolves inbound mappings by topic
@@ -85,16 +84,21 @@ public class MappingResolverService {
     // ========== Private Helper Methods ==========
 
     private Boolean shouldProcessMapping(String tenant, Mapping mapping, C8YMessage message, API api) {
-        // Check if mapping is active and API matches
-        if (!mapping.getActive() || !mapping.getTargetAPI().equals(api)) {
-            logMappingSkipped(tenant, mapping, "inactive or API mismatch", 
-                String.format("active=%s, expectedAPI=%s, actualAPI=%s", 
-                    mapping.getActive(), mapping.getTargetAPI(), api));
+        if (!mapping.getActive()) {
+            logMappingSkipped(tenant, mapping, "mapping is inactive", "active=false");
             return false;
         }
 
-        // Check message filter
-        if (!mapping.getFilterMapping().isBlank()) {
+        // Check source API filter: the mapping's targetAPI selects which notification API it applies to
+        if (!mapping.getTargetAPI().equals(api)) {
+            logMappingSkipped(tenant, mapping, "source API filter mismatch",
+                String.format("sourceAPI=%s, notificationAPI=%s", mapping.getTargetAPI(), api));
+            return false;
+        }
+
+        // Check message filter (skip evaluation for blank or the "true" no-op default)
+        if (mapping.getFilterMapping() != null && !mapping.getFilterMapping().isBlank()
+                && !"true".equals(mapping.getFilterMapping())) {
             if (!evaluateMessageFilter(tenant, mapping, message)) {
                 return false;
             }
@@ -135,44 +139,27 @@ public class MappingResolverService {
 
     public boolean evaluateInventoryFilter(String tenant, Mapping mapping, C8YMessage message) {
         String sourceId = message.getSourceId();
-        
+
         if (sourceId == null) {
             logMappingSkipped(tenant, mapping, "inventory filter failed", "sourceId is null");
             return false;
         }
 
-        try {
-            Map<String, Object> inventoryData = configurationRegistry.getC8yAgent()
-                .getMOFromInventoryCache(tenant, sourceId, false);
+        boolean matches = inventoryFilterEvaluator.evaluate(tenant, mapping.getFilterInventory(), sourceId, false);
 
-            log.debug("{} - Evaluating inventory filter for source {} with fragments: {}", 
-                tenant, sourceId, inventoryData.keySet());
-
-            var expression = jsonata(mapping.getFilterInventory());
-            Object result = expression.evaluate(inventoryData);
-
-            boolean matches = result != null && Utils.isNodeTrue(result);
-
-            if (matches) {
-                log.debug("{} - Inventory filter matched for mapping: {}", tenant, mapping.getIdentifier());
-            } else {
-                logMappingSkipped(tenant, mapping, "inventory filter failed",
-                    String.format("filter=%s, sourceId=%s, result=%s", 
-                        mapping.getFilterInventory(), sourceId, result));
-            }
-
-            return matches;
-
-        } catch (Exception e) {
-            log.debug("{} - Inventory filter evaluation error for mapping {}: {}", 
-                tenant, mapping.getIdentifier(), e.getMessage());
-            return false;
+        if (matches) {
+            log.debug("{} - Inventory filter matched for mapping: {}", tenant, mapping.getIdentifier());
+        } else {
+            logMappingSkipped(tenant, mapping, "inventory filter failed",
+                String.format("filter=%s, sourceId=%s", mapping.getFilterInventory(), sourceId));
         }
+
+        return matches;
     }
 
     private void logMappingSkipped(String tenant, Mapping mapping, String reason, String details) {
         if (mapping.getDebug()) {
-            log.debug("{} - Outbound mapping {}/{} not resolved - {}: {}",
+            log.info("{} - Outbound mapping {}/{} filtered out - {}: {}",
                 tenant, mapping.getName(), mapping.getIdentifier(), reason, details);
         }
     }

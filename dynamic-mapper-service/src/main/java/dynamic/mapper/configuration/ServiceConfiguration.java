@@ -74,6 +74,7 @@ public class ServiceConfiguration implements Cloneable {
         this.engineRotationThreshold = 100;
         this.engineMaxAgeMinutes = 0;
         this.explorerSessionTTLMinutes = 10;
+        this.contextPoolSize = 20;
     }
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of message payloads for debugging purposes. Caution: May expose sensitive data in logs.", example = "false")
@@ -230,6 +231,11 @@ public class ServiceConfiguration implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     private Integer engineMaxAgeMinutes;
+
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Maximum number of GraalVM contexts kept idle in the per-mapping context pool. Higher values reduce per-message context-creation overhead at high throughput; lower values reduce memory usage. Each pooled context holds a pre-loaded onMessage function and shared/system code.", example = "20", minimum = "1", maximum = "100")
+    @NotNull
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Integer contextPoolSize;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Default TTL in minutes for Message Explorer sessions: a session is automatically stopped if the UI has not polled it within this window. Can be overridden per session when starting it.", example = "10", minimum = "1")
     @NotNull

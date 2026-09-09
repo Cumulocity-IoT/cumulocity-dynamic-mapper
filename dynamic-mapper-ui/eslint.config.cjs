@@ -13,12 +13,27 @@ module.exports = [
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
+        // no-deprecated is type-aware. Use projectService rather than an explicit
+        // `project` path: the root tsconfig.json only holds project references
+        // ("files": []), which the explicit form cannot resolve.
+        projectService: true,
+        tsconfigRootDir: __dirname,
       },
     },
     plugins: {
       '@typescript-eslint': tsPlugin,
     },
-    rules: {},
+    rules: {
+      '@typescript-eslint/no-deprecated': 'error',
+    },
+  },
+  {
+    // Tests deliberately exercise deprecated transformation/mapping types to cover the
+    // legacy paths, so suppressing each usage individually would only add noise.
+    files: ['**/*.spec.ts'],
+    rules: {
+      '@typescript-eslint/no-deprecated': 'off',
+    },
   },
   {
     files: ['cypress/**/*.ts'],

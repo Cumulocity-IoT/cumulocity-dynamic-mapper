@@ -46,7 +46,6 @@ import {
 } from '../../shared';
 import { MappingService } from '../core/mapping.service';
 import { MappingStepperService } from '../service/mapping-stepper.service';
-import { ValidationError } from '../shared/mapping.model';
 import { EditorMode } from '../shared/stepper.model';
 import { deriveSampleTopicFromTopic, getTypeOf, topicsHaveSameStructure } from '../shared/util';
 
@@ -72,7 +71,6 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   @Input() propertyFormly: FormGroup;
   @Output() targetAPIChanged = new EventEmitter<string>();
 
-  readonly ValidationError = ValidationError;
   readonly MappingTypeLabels = MappingTypeLabels;
   readonly Direction = Direction;
   readonly EditorMode = EditorMode;
@@ -274,6 +272,10 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             templateOptions: {
               label: this.stepperConfiguration.direction === Direction.INBOUND ? 'Target API' : 'Source API',
+              description:
+                this.stepperConfiguration.direction === Direction.OUTBOUND
+                  ? 'Used as a filter to select which mappings apply when a notification arrives.'
+                  : undefined,
               options: Object.keys(API)
                 .filter((key) => key !== API.ALL.name)
                 .map((key) => {

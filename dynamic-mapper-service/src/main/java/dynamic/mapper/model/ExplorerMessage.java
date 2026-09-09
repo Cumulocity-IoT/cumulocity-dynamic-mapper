@@ -42,6 +42,9 @@ public class ExplorerMessage {
     @Schema(description = "Client identifier of the broker client that sent the message", example = "device-1234")
     private String clientId;
 
+    @Schema(description = "Message key, if the broker protocol has one (e.g. Kafka record key); null otherwise", example = "863859042393327")
+    private String key;
+
     @Schema(description = "Display name of the connector", example = "MQTT Broker")
     private String connectorName;
 

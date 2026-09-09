@@ -45,6 +45,7 @@ export {
   SmartFunctionIn,
   SmartFunctionOut,
   SmartFunction,
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- deliberate re-export kept for consumers still importing it
   SmartFunctionPayload
 } from '@c8y/dynamic-mapper-smart-function';
 

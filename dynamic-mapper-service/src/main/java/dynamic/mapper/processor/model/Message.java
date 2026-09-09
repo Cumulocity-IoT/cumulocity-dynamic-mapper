@@ -21,6 +21,7 @@
 
 package dynamic.mapper.processor.model;
 
+import dynamic.mapper.model.Mapping;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -66,8 +67,13 @@ public class Message<O> {
     private final String clientId;
 
     /**
-     * Transport-specific fields (e.g., Kafka headers, MQTT properties).
-     * Immutable map.
+     * Transport-specific fields (e.g. MQTT properties).
+     * <p>
+     * For Kafka this carries the consumed record's <b>key</b> under {@code "key"} — the record
+     * key, not headers — mirroring what Smart Functions receive as
+     * {@code msg.transportFields}: {@code message.getTransportFields().get("key")}.
+     * <p>
+     * Immutable map; empty when the message carries no transport fields.
      */
     private final Map<String, String> transportFields;
 
@@ -79,11 +85,17 @@ public class Message<O> {
      * @return A new Message instance
      */
     public static <O> Message<O> from(ProcessingContext<O> context) {
+        // Mirrors what Smart Functions receive as InputMessage.transportFields, so an extension
+        // reading message.getTransportFields().get("key") sees the same broker message key
+        // (e.g. the Kafka record key) that a Smart Function does.
+        Map<String, String> transportFields = context.getKey() != null
+                ? Map.of(Mapping.CONTEXT_DATA_KEY_NAME, context.getKey())
+                : Collections.emptyMap();
         return new Message<>(
             context.getPayload(),
             context.getTopic(),
             context.getClientId(),
-            Collections.emptyMap() // TODO: Extract transport fields if available
+            transportFields
         );
     }
 

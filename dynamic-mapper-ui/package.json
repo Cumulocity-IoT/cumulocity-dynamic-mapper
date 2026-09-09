@@ -1,6 +1,6 @@
 {
   "name": "dynamic-mapper",
-  "version": "6.5.0",
+  "version": "6.5.1",
   "author": "christof.strack@cumulocity.com, stefan.witschel@cumulocity.com",
   "description": "Cumulocity Dynamic Mapper UI to map data from any data source to Cumulocity and vice-versa in a zero-code/low-code way. When using an AI Provider code and mappings can be generated.",
   "scripts": {
@@ -13,7 +13,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "format": "prettier --write 'src/**/*.ts'",
-    "lint": "eslint \"cypress/**/*.ts\"",
+    "lint": "eslint \"src/**/*.ts\" \"cypress/**/*.ts\"",
     "e2e:open": "env -u ELECTRON_RUN_AS_NODE cypress open",
     "e2e:run": "env -u ELECTRON_RUN_AS_NODE cypress run"
   },

@@ -254,13 +254,31 @@ For **inbound** mappings, your Smart Function should return an array of objects 
 | `context.getManagedObject()` | Lookup device properties by Cumulocity internal source ID. Returns device object or `null`. Example: `var device = context.getManagedObject("12345");` |
 | `context.getManagedObjectByExternalId()` | Lookup device properties by external ID. Requires object with `externalId` and `type`. Example: `var device = context.getManagedObjectByExternalId({externalId: "sensor-01", type: "c8y_Serial"});` |
 
+**Reading the broker message key — `msg.transportFields`**
+
+| Property | Description |
+|---|---|
+| `msg.transportFields` | Transport-specific fields of the received broker message. For **Kafka**, `key` holds the record key (the key, *not* a header); absent when the record has no key. For **MQTT 5**, user properties. Empty object when the transport carries none. |
+
+The key is delivered **out-of-band — it is not part of `msg.payload`**, so it does not appear in the mapping's source template. A Kafka record key is frequently the device identifier, which makes it a good source for the external ID:
+
+```javascript
+function onMessage(msg, context) {
+    var payload = msg.payload;
+    var deviceId = msg.transportFields["key"];   // e.g. "863859042393327"
+    ...
+}
+```
+
+The same value is available to **Java Extensions** as `message.getTransportFields().get("key")`, and to **JSONata** mappings as `_CONTEXT_DATA_.key` (which, unlike the above, *is* injected into the payload).
+
 **Context Config Properties — available via `context.getConfig()`**
 
 | Property | Scope | Description |
 |---|:---:|---|
 | `tenant` | All | The Cumulocity tenant identifier. |
 | `topic` | All | The MQTT topic or URL path of the inbound message. |
-| `clientId` | Connector-dependent | The publisher or producer client identifier. Its value depends on the connector type: **MQTT 5** — the publisher's client ID read from the MQTT 5 user property named `clientId` (`null` if not included; same value as `context.getClientId()`); **MQTT 3** — always `null`, MQTT 3.1.1 does not carry a per-message publisher identity; **Kafka** — always `null`, Kafka identifies messages by topic/partition/offset, use `payload["_KEY_"]` for the record key instead; **HTTP / Webhook / AMQP 0-9-1 / AMQP 1.0** — always `null`; **Pulsar / MQTT-over-Pulsar** — the value of the Pulsar message property `clientID` (may be `null`). Example: `var id = context.getConfig().clientId \|\| context.getConfig().topic;` |
+| `clientId` | Connector-dependent | The publisher or producer client identifier. Its value depends on the connector type: **MQTT 5** — the publisher's client ID read from the MQTT 5 user property named `clientId` (`null` if not included; same value as `context.getClientId()`); **MQTT 3** — always `null`, MQTT 3.1.1 does not carry a per-message publisher identity; **Kafka** — always `null`, Kafka identifies messages by topic/partition/offset; read the record key via `msg.transportFields["key"]` instead (it is delivered out-of-band, not inside the payload); **HTTP / Webhook / AMQP 0-9-1 / AMQP 1.0** — always `null`; **Pulsar / MQTT-over-Pulsar** — the value of the Pulsar message property `clientID` (may be `null`). Example: `var id = context.getConfig().clientId \|\| context.getConfig().topic;` |
 | `mappingName` | All | The name of the mapping. |
 | `mappingId` | All | The internal ID of the mapping. |
 | `targetAPI` | All | The Cumulocity target API (e.g. `"MEASUREMENT"`, `"EVENT"`). |
@@ -467,7 +485,7 @@ properties:
 | `externalSource` | No | Array specifying the external ID type: `[{type: "c8y_Serial"}]`. Defines which external ID type should be used to resolve the device identity for `_externalId_` token replacement in the broker topic. Ignored when `sourceId` is set explicitly. |
 | `sourceId` | No | Explicitly sets the Cumulocity internal managed object ID for this message, overriding the device that triggered the mapping. **Default behavior (omitted):** The mapper uses the internal ID of the device that triggered the outbound mapping. For external broker connectors, it additionally resolves the external ID (e.g. LoRa EUI, serial) via `externalSource` for `_externalId_` token replacement in the broker topic. **When set:** The provided ID is used as the internal C8Y managed object ID for the Cumulocity REST API call (`source.id`) and also for broker topic routing. The `externalSource` lookup is skipped. **Use case:** Cross-device routing — when data from one device should be associated with a different device in Cumulocity. For example, a gateway device triggers the mapping but the resulting measurement should be stored under a child device: `sourceId: childDeviceInternalId`. **Note:** This must be a Cumulocity *internal* numeric managed object ID, not an external identifier like a serial number or LoRa EUI. |
 | `targetPath` | No* | Required when `cumulocityType: "custom"` is set. Relative REST path of the tenant-local microservice to call, e.g. `/service/my-processor/ingest`. Must start with `/service/`. The mapper validates this at runtime and rejects requests that do not match. Ignored for all other `cumulocityType` values. |
-| `transportFields` | No | Object with transport-specific fields: `key` (Kafka message key, for Kafka connectors only), `method` (HTTP method like `"POST"`, `"PUT"`, for Webhook connectors), `retain` (boolean to set MQTT retained message flag, for MQTT connectors). |
+| `transportFields` | No | Object with transport-specific fields: `key` (the Kafka record key — the key, not a header; for Kafka connectors), `method` (HTTP method like `"POST"`, `"PUT"`, for Webhook connectors), `retain` (boolean to set MQTT retained message flag, for MQTT connectors). The same field is also populated **inbound** on `msg.transportFields` — see *Metadata Properties for Inbound Smart Functions*. |
 
 **Context Properties — available via `context.getConfig()`**
 

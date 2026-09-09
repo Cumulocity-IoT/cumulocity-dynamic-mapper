@@ -128,20 +128,7 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
                                              ExtensionEntry extensionEntry)
             throws ProcessingException {
         // Get the extension from registry (same pattern as inbound)
-        ProcessorExtensionOutbound extension;
-        try {
-            extension = getProcessorExtensionOutbound(tenant, extensionEntry);
-        } catch (Exception ex) {
-            throwExtensionNotFoundException(tenant, extensionEntry);
-            return; // Unreachable, but makes null analysis happy
-        }
-
-        if (extension == null) {
-            log.info("{} - onMessage - extension not found", tenant);
-            logExtensions(tenant, extensionInboundRegistry.getExtensions(tenant));
-            throwExtensionNotFoundException(tenant, extensionEntry);
-            return; // Unreachable, but makes null analysis happy
-        }
+        ProcessorExtensionOutbound extension = getProcessorExtensionOutbound(tenant, extensionEntry);
 
         try {
             // Process using return-value based pattern
@@ -167,10 +154,16 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
                 log.debug("{} - Extension returned {} DeviceMessage(s)", tenant, results.length);
                 context.setExtensionResult(results);
             } else {
-                log.warn("{} - Extension onMessage() returned null or empty array - no data to publish", tenant);
+                String errorMsg = String.format(
+                    "%s - Extension '%s' (class: %s) onMessage() returned null or empty array - no data to publish",
+                    tenant, extensionEntry.getEventName(), extensionEntry.getFqnClassName());
+                log.warn(errorMsg);
                 context.setIgnoreFurtherProcessing(true);
+                throw new ProcessingException(errorMsg);
             }
 
+        } catch (ProcessingException e) {
+            throw e;
         } catch (AbstractMethodError e) {
             String message = String.format(
                 "%s - Extension '%s' (class: %s) is incompatible with the current interface. " +

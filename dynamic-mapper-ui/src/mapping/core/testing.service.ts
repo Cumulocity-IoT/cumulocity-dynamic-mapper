@@ -18,22 +18,15 @@
  * @authors Christof Strack
  */
 
-import { inject, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import {
   FetchClient,
 } from '@c8y/client';
-import {
-  Subject,
-} from 'rxjs';
 import {
   BASE_URL,
   SharedService,
   PATH_TESTING_ENDPOINT,
   Operation} from '../../shared';
-import {
-  EventRealtimeService,
-  RealtimeSubjectService
-} from '@c8y/ngx-components';
 import { TestContext, TestResult } from './processor/processor.model';
 import { HttpStatusCode } from '@angular/common/http';
 
@@ -41,33 +34,10 @@ import { HttpStatusCode } from '@angular/common/http';
   providedIn: 'root'
 })
 export class TestingService {
-  // Core dependencies
-  private readonly eventRealtimeService: EventRealtimeService;
-
-  // Observables and subjects
-  private readonly unsubscribe$ = new Subject<void>();
-
-
-  // Cache
-  private _agentId: string;
-  private readonly JSONATA = require('jsonata');
-
   constructor(
     private readonly sharedService: SharedService,
     private readonly client: FetchClient
-  ) {
-    this.eventRealtimeService = new EventRealtimeService(inject(RealtimeSubjectService));
-  }
-
-  // TODO ngOnDestroy is not called for services, find alternative how to stop the realtime service
-  ngOnDestroy(): void {
-    this.unsubscribe$.next();
-    this.unsubscribe$.complete();
-    if (this.eventRealtimeService) {
-      this.eventRealtimeService.stop();
-    }
-  }
-
+  ) {}
 
   // ===== TESTING OPERATIONS =====
 

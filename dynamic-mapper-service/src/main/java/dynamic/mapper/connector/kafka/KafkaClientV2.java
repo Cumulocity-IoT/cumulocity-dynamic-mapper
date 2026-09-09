@@ -103,9 +103,19 @@ public class KafkaClientV2 extends AConnectorClient {
     // Consumer management
     private final Map<String, KafkaConsumerWrapper> topicConsumers = new ConcurrentHashMap<>();
     private final Map<String, Future<?>> consumerTasks = new ConcurrentHashMap<>();
+    // Explorer sessions get their own consumers, tracked separately from topicConsumers/
+    // consumerTasks, so an ad-hoc explorer subscription never shares a KafkaConsumerWrapper (or a
+    // map slot) with a mapping's long-running one on the same topic — see subscribeExplorer().
+    private final Map<String, KafkaConsumerWrapper> explorerConsumers = new ConcurrentHashMap<>();
+    private final Map<String, Future<?>> explorerConsumerTasks = new ConcurrentHashMap<>();
     // Poll-loop failure counts, keyed by plain topic name — read by monitorSubscriptions() to
     // decide which topics are worth retrying.
     private final Map<String, MutableInt> pollFailureCounts = new ConcurrentHashMap<>();
+    // Explorer consumers get their own failure-count bookkeeping, kept out of pollFailureCounts —
+    // monitorSubscriptions() treats any entry there as a mapping-style consumer to restart via
+    // subscribe() (the shared, persistent-group path), which would be wrong for an ephemeral
+    // explorer consumer.
+    private final Map<String, MutableInt> explorerPollFailureCounts = new ConcurrentHashMap<>();
     // Per-partition processing-error counts, keyed by "topic-partition" — purely internal to
     // handleProcessingError()'s own restart threshold; never read by monitorSubscriptions() (which
     // treats every key in its map as a bare topic name, so mixing the two key formats in one map
@@ -229,8 +239,44 @@ public class KafkaClientV2 extends AConnectorClient {
         } catch (Exception e) {
             log.error("{} - Error initializing Kafka connector: {}", tenant, e.getMessage(), e);
             connectionStateManager.updateStatusWithError(e);
+            closeAdminClientQuietly();
             return false;
         }
+    }
+
+    /**
+     * Closes and clears {@link #adminClient} after a failed initialize()/connect() attempt.
+     * An AdminClient whose listTopics() call failed/timed out is otherwise never closed - its
+     * background thread keeps retrying (logging "Rebootstrapping..." indefinitely) even after
+     * the connector is disabled, since the next attempt overwrites the field and the leaked
+     * instance becomes unreachable, with no way left to stop it.
+     */
+    private void closeAdminClientQuietly() {
+        if (adminClient != null) {
+            try {
+                adminClient.close(Duration.ofSeconds(5));
+            } catch (Exception e) {
+                log.debug("{} - Error closing Kafka admin client: {}", tenant, e.getMessage());
+            }
+            adminClient = null;
+        }
+    }
+
+    /**
+     * Build the SASL JAAS config string for the given mechanism. Falls back to
+     * {@code ScramLoginModule} (with a warning) for an unrecognized mechanism, preserving
+     * behavior for any connector configuration saved before {@code PLAIN} support was added.
+     */
+    private String buildJaasConfig(String saslMechanism, String username, String password) {
+        String moduleClass = switch (saslMechanism) {
+            case "PLAIN" -> "org.apache.kafka.common.security.plain.PlainLoginModule";
+            case "SCRAM-SHA-256", "SCRAM-SHA-512" -> "org.apache.kafka.common.security.scram.ScramLoginModule";
+            default -> {
+                log.warn("{} - Unrecognized SASL mechanism '{}', falling back to ScramLoginModule", tenant, saslMechanism);
+                yield "org.apache.kafka.common.security.scram.ScramLoginModule";
+            }
+        };
+        return String.format("%s required username=\"%s\" password=\"%s\";", moduleClass, username, password);
     }
 
     /**
@@ -254,6 +300,10 @@ public class KafkaClientV2 extends AConnectorClient {
         String saslMechanism = (String) connectorConfiguration.getProperties()
                 .getOrDefault("saslMechanism", "SCRAM-SHA-256");
         String groupId = (String) connectorConfiguration.getProperties().get("groupId");
+        boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("useSelfSignedCertificate", false);
+        boolean disableHostnameValidation = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("disableHostnameValidation", false);
 
         // Generate default groupId if not provided
         if (groupId == null || groupId.trim().isEmpty()) {
@@ -274,14 +324,14 @@ public class KafkaClientV2 extends AConnectorClient {
         producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
 
-        // Configure security if credentials provided
-        if (username != null && !username.trim().isEmpty() &&
-                password != null && !password.trim().isEmpty()) {
+        boolean hasCredentials = username != null && !username.trim().isEmpty() &&
+                password != null && !password.trim().isEmpty();
 
+        // Configure security if credentials provided
+        if (hasCredentials) {
             log.info("{} - Configuring SASL authentication with mechanism: {}", tenant, saslMechanism);
 
-            String jaasTemplate = "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"%s\" password=\"%s\";";
-            String jaasCfg = String.format(jaasTemplate, username, password);
+            String jaasCfg = buildJaasConfig(saslMechanism, username, password);
 
             consumerProps.put("sasl.jaas.config", jaasCfg);
             consumerProps.put("sasl.mechanism", saslMechanism);
@@ -290,10 +340,38 @@ public class KafkaClientV2 extends AConnectorClient {
             producerProps.put("sasl.jaas.config", jaasCfg);
             producerProps.put("sasl.mechanism", saslMechanism);
             producerProps.put("security.protocol", "SASL_SSL");
+        } else if (useSelfSignedCertificate) {
+            log.info("{} - Using SSL security protocol (no authentication, custom CA trust)", tenant);
+            consumerProps.put("security.protocol", "SSL");
+            producerProps.put("security.protocol", "SSL");
         } else {
             log.info("{} - Using PLAINTEXT security protocol (no authentication)", tenant);
             consumerProps.put("security.protocol", "PLAINTEXT");
             producerProps.put("security.protocol", "PLAINTEXT");
+        }
+
+        // Custom/self-signed CA trust - Kafka's client supports inline PEM truststores natively
+        // (KIP-651), so no manual KeyStore/SSLContext plumbing is needed here, unlike MQTT/AMQP.
+        if (useSelfSignedCertificate) {
+            try {
+                dynamic.mapper.connector.core.client.Certificate cert = loadCertificateFromConfiguration();
+                String certPem = cert.getCertInPemFormat();
+
+                consumerProps.put("ssl.truststore.type", "PEM");
+                consumerProps.put("ssl.truststore.certificates", certPem);
+                producerProps.put("ssl.truststore.type", "PEM");
+                producerProps.put("ssl.truststore.certificates", certPem);
+
+                if (disableHostnameValidation) {
+                    log.warn("{} - ⚠️  HOSTNAME VALIDATION DISABLED for Kafka TLS - insecure, development/testing only!", tenant);
+                    consumerProps.put("ssl.endpoint.identification.algorithm", "");
+                    producerProps.put("ssl.endpoint.identification.algorithm", "");
+                }
+
+                log.info("{} - Configured custom CA trust for Kafka TLS connection", tenant);
+            } catch (Exception e) {
+                throw new IllegalStateException("Failed to load custom CA certificate for Kafka connector: " + e.getMessage(), e);
+            }
         }
 
         // Add serializers/deserializers
@@ -371,6 +449,7 @@ public class KafkaClientV2 extends AConnectorClient {
             // immediately supersede the FAILED event carrying the actual error message.
             connectionStateManager.setConnected(false);
             connectionStateManager.updateStatusWithError(e);
+            closeAdminClientQuietly();
         } finally {
             endConnection();
         }
@@ -386,7 +465,11 @@ public class KafkaClientV2 extends AConnectorClient {
 
         try {
             KafkaConsumer<String, String> consumer = new KafkaConsumer<>(kafkaConsumerProperties);
-            consumer.subscribe(Collections.singletonList(topic));
+            if (isMqttWildcardTopic(topic)) {
+                consumer.subscribe(mqttWildcardToPattern(topic));
+            } else {
+                consumer.subscribe(Collections.singletonList(topic));
+            }
 
             KafkaConsumerWrapper wrapper = new KafkaConsumerWrapper(consumer, topic);
             topicConsumers.put(topic, wrapper);
@@ -434,6 +517,109 @@ public class KafkaClientV2 extends AConnectorClient {
     }
 
     /**
+     * Explorer sessions must not share {@link #kafkaConsumerProperties}' static, connector-wide
+     * {@code group.id} — Kafka persists committed offsets per group, so a second explorer session
+     * (or a mapping) reusing that group would silently resume from wherever the previous
+     * subscriber left off instead of tailing from "now", and concurrent sessions on the same topic
+     * would split partitions between them via normal consumer-group rebalancing instead of each
+     * seeing every message. Use a fresh, never-reused group id per explorer subscription instead.
+     */
+    @Override
+    protected void subscribeExplorer(String topic, Qos qos) throws ConnectorException {
+        if (!isConnected()) {
+            throw new ConnectorException("Kafka connector is not connected");
+        }
+
+        log.debug("{} - Subscribing (explorer) to Kafka topic: [{}]", tenant, topic);
+
+        try {
+            Properties explorerProps = new Properties();
+            explorerProps.putAll(kafkaConsumerProperties);
+            String ephemeralGroupId = "dynamic-mapper-explorer-" + UUID.randomUUID();
+            explorerProps.put(ConsumerConfig.GROUP_ID_CONFIG, ephemeralGroupId);
+            explorerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+
+            KafkaConsumer<String, String> consumer = new KafkaConsumer<>(explorerProps);
+            if (isMqttWildcardTopic(topic)) {
+                consumer.subscribe(mqttWildcardToPattern(topic));
+            } else {
+                consumer.subscribe(Collections.singletonList(topic));
+            }
+
+            KafkaConsumerWrapper wrapper = new KafkaConsumerWrapper(consumer, topic);
+            explorerConsumers.put(topic, wrapper);
+
+            Future<?> consumerTask = virtualThreadPool.submit(
+                    () -> consumeMessages(wrapper, explorerConsumers, explorerConsumerTasks, explorerPollFailureCounts));
+            explorerConsumerTasks.put(topic, consumerTask);
+
+            log.info("{} - Successfully subscribed (explorer) to Kafka topic: [{}] with ephemeral group [{}]",
+                    tenant, topic, ephemeralGroupId);
+
+        } catch (Exception e) {
+            throw new ConnectorException("Failed to subscribe (explorer) to topic: " + topic, e);
+        }
+    }
+
+    @Override
+    protected void unsubscribeExplorer(String topic) throws ConnectorException {
+        log.debug("{} - Unsubscribing (explorer) from Kafka topic: [{}]", tenant, topic);
+
+        KafkaConsumerWrapper wrapper = explorerConsumers.remove(topic);
+        Future<?> task = explorerConsumerTasks.remove(topic);
+
+        if (wrapper != null) {
+            wrapper.requestClose();
+        }
+
+        if (task != null) {
+            try {
+                task.get(CONSUMER_SHUTDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            } catch (TimeoutException e) {
+                log.warn("{} - Timed out waiting for explorer consumer task to stop for topic: [{}]; " +
+                        "it will finish closing shortly on its own", tenant, topic);
+            } catch (Exception e) {
+                log.debug("{} - Explorer consumer task for topic [{}] ended while unsubscribing: {}",
+                        tenant, topic, e.getMessage());
+            }
+        }
+
+        log.info("{} - Successfully unsubscribed (explorer) from Kafka topic: [{}]", tenant, topic);
+    }
+
+    /** Returns {@code true} if the topic filter uses MQTT-style wildcards ({@code +}, {@code #}). */
+    static boolean isMqttWildcardTopic(String topic) {
+        return topic != null && (topic.contains("+") || topic.contains("#"));
+    }
+
+    /**
+     * Translates an MQTT-style topic filter ({@code +} matches a single {@code /}-delimited
+     * level, {@code #} matches the rest) into a Java regex {@link Pattern} suitable for
+     * {@link KafkaConsumer#subscribe(Pattern)}, so explorer sessions and mappings can subscribe
+     * to Kafka topics using the same wildcard syntax used for MQTT.
+     */
+    static Pattern mqttWildcardToPattern(String mqttFilter) {
+        String[] segments = mqttFilter.split("/", -1);
+        StringBuilder regex = new StringBuilder("^");
+        for (int i = 0; i < segments.length; i++) {
+            String segment = segments[i];
+            if (i > 0) {
+                regex.append('/');
+            }
+            if ("#".equals(segment)) {
+                regex.append(".*");
+                break;
+            } else if ("+".equals(segment)) {
+                regex.append("[^/]+");
+            } else {
+                regex.append(Pattern.quote(segment));
+            }
+        }
+        regex.append('$');
+        return Pattern.compile(regex.toString());
+    }
+
+    /**
      * Consume messages from Kafka topic.
      * <p>
      * This method's thread is the sole owner of {@code wrapper.getConsumer()} for its entire
@@ -443,6 +629,20 @@ public class KafkaClientV2 extends AConnectorClient {
      * which this loop drains/honours on its own thread.
      */
     private void consumeMessages(KafkaConsumerWrapper wrapper) {
+        consumeMessages(wrapper, topicConsumers, consumerTasks, pollFailureCounts);
+    }
+
+    /**
+     * @param consumersMap    map this consumer's wrapper was registered in by the caller (e.g.
+     *                        {@link #topicConsumers} or {@link #explorerConsumers}); cleared on exit.
+     * @param tasksMap        the matching task map (e.g. {@link #consumerTasks} or
+     *                        {@link #explorerConsumerTasks}); cleared on exit.
+     * @param failureCountsMap failure-count bookkeeping to use; kept separate for explorer
+     *                        consumers so {@link #monitorSubscriptions()} never mistakes an
+     *                        ephemeral explorer consumer for a mapping-style one to restart.
+     */
+    private void consumeMessages(KafkaConsumerWrapper wrapper, Map<String, KafkaConsumerWrapper> consumersMap,
+            Map<String, Future<?>> tasksMap, Map<String, MutableInt> failureCountsMap) {
         KafkaConsumer<String, String> consumer = wrapper.getConsumer();
         String topic = wrapper.getTopic();
 
@@ -461,7 +661,7 @@ public class KafkaClientV2 extends AConnectorClient {
                     }
 
                     // Reset failed count on successful poll
-                    pollFailureCounts.remove(topic);
+                    failureCountsMap.remove(topic);
 
                 } catch (WakeupException we) {
                     // Only triggered by our own requestClose(); the while condition will exit next.
@@ -470,7 +670,7 @@ public class KafkaClientV2 extends AConnectorClient {
                     log.error("{} - Error consuming messages from topic: [{}]", tenant, topic, e);
                     handleConsumerError(topic, e);
 
-                    MutableInt failCount = pollFailureCounts.computeIfAbsent(topic, k -> new MutableInt(0));
+                    MutableInt failCount = failureCountsMap.computeIfAbsent(topic, k -> new MutableInt(0));
                     failCount.increment();
 
                     if (failCount.intValue() > MAX_CONSECUTIVE_FAILURES) {
@@ -500,8 +700,8 @@ public class KafkaClientV2 extends AConnectorClient {
             }
             // Conditional remove: don't clobber a newer wrapper/task a concurrent subscribe()
             // may already have installed for this topic.
-            topicConsumers.remove(topic, wrapper);
-            consumerTasks.remove(topic);
+            consumersMap.remove(topic, wrapper);
+            tasksMap.remove(topic);
             log.debug("{} - Stopped message consumption for topic: [{}]", tenant, topic);
         }
     }
@@ -738,13 +938,7 @@ public class KafkaClientV2 extends AConnectorClient {
             }
 
             // Close admin client
-            if (adminClient != null) {
-                try {
-                    adminClient.close(Duration.ofSeconds(10));
-                } catch (Exception e) {
-                    log.warn("{} - Error closing Kafka admin client: {}", tenant, e.getMessage());
-                }
-            }
+            closeAdminClientQuietly();
 
             connectionStateManager.setConnected(false);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTED, true, true);
@@ -851,6 +1045,12 @@ public class KafkaClientV2 extends AConnectorClient {
             if (password == null || password.trim().isEmpty()) {
                 return false;
             }
+        }
+
+        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
+                .getOrDefault("useSelfSignedCertificate", false);
+        if (useSelfSignedCertificate && !validateCertificateConfig(configuration)) {
+            return false;
         }
 
         return true;
@@ -978,10 +1178,11 @@ public class KafkaClientV2 extends AConnectorClient {
         ConnectorSpecificationBuilder builder = ConnectorSpecificationBuilder
                 .create("Kafka", ConnectorType.KAFKA)
                 .description("Connector to receive and send messages to an external Kafka broker. " +
-                        "Inbound mappings allow to extract values from the payload and the key and map these to the Cumulocity payload. " +
-                        "The relevant setting in a mapping is 'supportsMessageContext'.\n" +
+                        "Inbound mappings allow to extract values from the payload and the record key and map these to the Cumulocity payload: " +
+                        "JSONata mappings read the key from '_CONTEXT_DATA_.key', Smart Functions and Java extensions from the message's transport fields ('key').\n" +
                         "In outbound mappings any string that is mapped to '_CONTEXT_DATA_.key' is used as the outbound Kafka record key.\n" +
-                        "The connector uses SASL_SSL as security protocol.")
+                        "Security protocol is derived automatically: SASL_SSL when a username/password is set, " +
+                        "SSL when only a custom/self-signed CA is trusted, otherwise PLAINTEXT.")
                 .supportsMessageContext(true)
                 .supportedDirections(supportedDirections())
 
@@ -989,33 +1190,63 @@ public class KafkaClientV2 extends AConnectorClient {
                 .property("bootstrapServers", ConnectorPropertyBuilder.requiredString()
                         .order(0))
 
+                // TLS / custom CA trust (optional) - same pattern as the MQTT/AMQP/Pulsar connectors
+                .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(1)
+                        .defaultValue(false)
+                        .description("Trust a self-signed/internal CA certificate for TLS connections"))
+
+                .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                        .order(2)
+                        .description("Name of the certificate in the Cumulocity certificate store")
+                        .condition("useSelfSignedCertificate", "true"))
+
+                .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.optionalString()
+                        .order(3)
+                        .description("Fingerprint of the certificate in the Cumulocity certificate store")
+                        .condition("useSelfSignedCertificate", "true"))
+
+                .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
+                        .order(4)
+                        .description("Certificate chain in PEM format (alternative to referencing the Cumulocity certificate store)")
+                        .condition("useSelfSignedCertificate", "true"))
+
+                .property("disableHostnameValidation", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(5)
+                        .defaultValue(false)
+                        .description("Disable TLS hostname verification (insecure, for development/testing only)")
+                        .condition("useSelfSignedCertificate", "true"))
+
                 // SASL authentication (optional)
                 .property("username", ConnectorPropertyBuilder.optionalString()
-                        .order(1))
+                        .order(6)
+                        .description("API Key, e.g. for Confluent Cloud. Reveals Password below."))
 
                 .property("password", ConnectorPropertyBuilder.optionalSensitive()
-                        .order(2)
+                        .order(7)
+                        .description("API Secret, e.g. for Confluent Cloud/Aiven.")
                         .condition("username", "*"))
 
                 .property("saslMechanism", ConnectorPropertyBuilder.optionalOption()
-                        .order(3)
+                        .order(8)
                         .defaultValue("SCRAM-SHA-256")
-                        .options("SCRAM-SHA-256", "SCRAM-SHA-512")
+                        .options("SCRAM-SHA-256", "SCRAM-SHA-512", "PLAIN")
+                        .description("SASL mechanism used together with Username/Password. Managed Kafka services typically use PLAIN with the API Key/Secret as username/password.")
                         .condition("username", "*"))
 
                 // Consumer group
                 .property("groupId", ConnectorPropertyBuilder.requiredString()
-                        .order(4))
+                        .order(9))
 
                 // Custom properties
                 .property("defaultPropertiesProducer", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
-                        .order(5)
+                        .order(10)
                         .description("Producer properties")
                         .required(false)
                         .defaultValue(new HashMap<String, String>()))
 
                 .property("defaultPropertiesConsumer", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
-                        .order(7)
+                        .order(12)
                         .description("Consumer properties")
                         .required(false)
                         .defaultValue(new HashMap<String, String>()));
@@ -1026,7 +1257,7 @@ public class KafkaClientV2 extends AConnectorClient {
             defaultPropertiesProducer.store(writerProducer,
                     "properties can only be edited in the property file: kafka-producer.properties");
             builder.property("propertiesProducer", ConnectorPropertyBuilder.largeText()
-                    .order(6)
+                    .order(11)
                     .description("Predefined producer properties")
                     .readonly(true)
                     .defaultValue(removeDateCommentLine(writerProducer.getBuffer().toString())));
@@ -1035,7 +1266,7 @@ public class KafkaClientV2 extends AConnectorClient {
             defaultPropertiesConsumer.store(writerConsumer,
                     "properties can only be edited in the property file: kafka-consumer.properties");
             builder.property("propertiesConsumer", ConnectorPropertyBuilder.largeText()
-                    .order(8)
+                    .order(13)
                     .description("Predefined consumer properties")
                     .readonly(true)
                     .defaultValue(removeDateCommentLine(writerConsumer.getBuffer().toString())));

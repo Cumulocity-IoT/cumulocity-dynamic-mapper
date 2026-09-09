@@ -22,13 +22,15 @@ import { ResolveFn } from "@angular/router";
 import { IManagedObject } from "@c8y/client";
 import { ExtensionService } from "../extension.service";
 
+/**
+ * Errors surfaced by the *.jar processor-extension upload flow (see AddExtensionComponent).
+ * `UPLOAD_FAILED` covers the only unstructured failure the upload can reject with — a
+ * transport/network failure with no response body (`InventoryBinaryService.getXMLHttpResponse`
+ * rejects with the plain string 'Could not upload file.' in that case). A server-side rejection
+ * that does carry a response body surfaces that body's own message instead of a static enum.
+ */
 export enum ERROR_TYPE {
-  TYPE_VALIDATION = 'TYPE_VALIDATION',
-  ALREADY_SUBSCRIBED = 'ALREADY_SUBSCRIBED',
-  INTERNAL_ERROR = 'INTERNAL_ERROR',
-  NO_MANIFEST_FILE = 'NO_MANIFEST_FILE',
-  INVALID_PACKAGE = 'INVALID_PACKAGE',
-  INVALID_APPLICATION = 'INVALID_APPLICATION'
+  UPLOAD_FAILED = 'UPLOAD_FAILED'
 }
 
 export const extensionResolver: ResolveFn<IManagedObject[]> = (route) => {

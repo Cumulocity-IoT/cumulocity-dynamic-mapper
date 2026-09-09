@@ -576,7 +576,7 @@ The result can then be `Saved` to the mapping. Note: AI generation of `Substitut
           <td>Source template <small class="text-muted">(external broker)</small></td>
           <td><code>_CONTEXT_DATA_.key</code></td>
           <td>map-from</td>
-          <td>Key from Kafka message header</td>
+          <td>Broker message key, e.g. the Kafka record key (the key, not a header). Only injected when the payload deserializes to a JSON object &mdash; for a top-level JSON array, a scalar, or binary payloads (<code>PROTOBUF_INTERNAL</code> / <code>ANY_PAYLOAD</code>) it is unavailable to JSONata; use a Smart Function (<code>msg.transportFields["key"]</code>) or a Java Extension instead</td>
         </tr>
         <tr>
           <td>Target template <small class="text-muted">(Cumulocity)</small></td>
@@ -663,7 +663,7 @@ The result can then be `Saved` to the mapping. Note: AI generation of `Substitut
           <td>Target template <small class="text-muted">(external broker)</small></td>
           <td><code>_CONTEXT_DATA_.key</code></td>
           <td>map-to</td>
-          <td>Key to be set in Kafka message header</td>
+          <td>Key to be set on the outgoing broker message, e.g. the Kafka record key. The <code>dummy</code> placeholder pre-seeded in the target template is filtered out and never published &mdash; map a real value to set a key</td>
         </tr>
         <tr>
           <td>Target template <small class="text-muted">(external broker)</small></td>

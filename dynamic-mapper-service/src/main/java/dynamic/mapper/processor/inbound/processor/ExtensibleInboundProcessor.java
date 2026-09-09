@@ -106,20 +106,7 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
                                             String tenant,
                                             ExtensionEntry extensionEntry)
             throws ProcessingException {
-        ProcessorExtensionInbound extension;
-        try {
-            extension = getProcessorExtensionInbound(tenant, extensionEntry);
-        } catch (Exception ex) {
-            throwExtensionNotFoundException(tenant, extensionEntry);
-            return; // Unreachable, but makes null analysis happy
-        }
-
-        if (extension == null) {
-            log.info("{} - onMessage - extension not found", tenant);
-            logExtensions(tenant, extensionInboundRegistry.getExtensions(tenant));
-            throwExtensionNotFoundException(tenant, extensionEntry);
-            return; // Unreachable, but makes null analysis happy
-        }
+        ProcessorExtensionInbound extension = getProcessorExtensionInbound(tenant, extensionEntry);
 
         // Process using return-value based pattern
         // 1. Create Message wrapper
@@ -161,8 +148,12 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
             log.debug("{} - Extension returned {} CumulocityObject(s)", tenant, results.length);
             context.setExtensionResult(results);
         } else {
-            log.warn("{} - Extension onMessage() returned null or empty array - no data to process", tenant);
+            String errorMsg = String.format(
+                "%s - Extension '%s' (class: %s) onMessage() returned null or empty array - no data to process",
+                tenant, extensionEntry.getEventName(), extensionEntry.getFqnClassName());
+            log.warn(errorMsg);
             context.setIgnoreFurtherProcessing(true);
+            throw new ProcessingException(errorMsg);
         }
     }
 

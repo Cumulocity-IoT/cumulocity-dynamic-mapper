@@ -234,9 +234,36 @@ describe('SubstitutionManagementService', () => {
       expect(mockModalService.show).not.toHaveBeenCalled();
     });
 
-    it('should open the modal for a valid index', () => {
+    it('should apply the update directly without a modal when there is no duplicate target path', () => {
       const mapping = makeMapping([makeSubstitution('$.src', '$.tgt')]);
       const model = makeSubstitutionModel(true, true, '$.src2', '$.tgt2');
+      const onSuccess = jasmine.createSpy('onSuccess');
+
+      service.updateSubstitution(0, model, mapping, makeStepperConfig(), onSuccess);
+
+      expect(mapping.substitutions.length).toBe(1);
+      expect(mapping.substitutions[0].pathSource).toBe('$.src2');
+      expect(mapping.substitutions[0].pathTarget).toBe('$.tgt2');
+      expect(onSuccess).toHaveBeenCalledTimes(1);
+      expect(mockModalService.show).not.toHaveBeenCalled();
+    });
+
+    it('should preserve the existing repairStrategy/expandArray (now edited inline in the grid) when applied directly', () => {
+      const existing = { ...makeSubstitution('$.src', '$.tgt'), repairStrategy: RepairStrategy.IGNORE, expandArray: true };
+      const mapping = makeMapping([existing]);
+      const model = makeSubstitutionModel(true, true, '$.src2', '$.tgt2');
+
+      service.updateSubstitution(0, model, mapping, makeStepperConfig(), () => {});
+
+      expect(mapping.substitutions[0].repairStrategy).toBe(RepairStrategy.IGNORE);
+      expect(mapping.substitutions[0].expandArray).toBe(true);
+    });
+
+    it('should open the modal when the update would create a duplicate target path', () => {
+      const other = makeSubstitution('$.other', '$.tgt2');
+      const editing = makeSubstitution('$.src', '$.tgt');
+      const mapping = makeMapping([editing, other]);
+      const model = makeSubstitutionModel(true, true, '$.src2', '$.tgt2'); // collides with `other`
 
       const mockModalContent = { closeSubject: { pipe: () => ({ subscribe: () => {} }) } };
       mockModalService.show.and.returnValue({ content: mockModalContent } as any);
@@ -246,6 +273,32 @@ describe('SubstitutionManagementService', () => {
       expect(mockModalService.show).toHaveBeenCalledTimes(1);
       const [, options] = mockModalService.show.calls.mostRecent().args as any[];
       expect(options.initialState.isUpdate).toBe(true);
+      expect(options.initialState.isDuplicate).toBe(true);
+      expect(options.initialState.duplicateSubstitutionIndex).toBe(1);
+      // Untouched until the modal resolves.
+      expect(mapping.substitutions.length).toBe(2);
+    });
+
+    it('should collapse the edited row into the duplicate slot once the modal resolves', () => {
+      const other = makeSubstitution('$.other', '$.tgt2');
+      const editing = makeSubstitution('$.src', '$.tgt');
+      const mapping = makeMapping([editing, other]);
+      const model = makeSubstitutionModel(true, true, '$.src2', '$.tgt2');
+      const onSuccess = jasmine.createSpy('onSuccess');
+      const resolved: Substitution = { pathSource: '$.src2', pathTarget: '$.tgt2', repairStrategy: RepairStrategy.DEFAULT, expandArray: false };
+
+      let capturedNext: (value: Substitution) => void;
+      const mockModalContent = {
+        closeSubject: { pipe: () => ({ subscribe: (observer: any) => { capturedNext = observer.next; } }) }
+      };
+      mockModalService.show.and.returnValue({ content: mockModalContent } as any);
+
+      service.updateSubstitution(0, model, mapping, makeStepperConfig(), onSuccess);
+      capturedNext(resolved);
+
+      expect(mapping.substitutions.length).toBe(1);
+      expect(mapping.substitutions[0]).toEqual(resolved);
+      expect(onSuccess).toHaveBeenCalledTimes(1);
     });
   });
 });

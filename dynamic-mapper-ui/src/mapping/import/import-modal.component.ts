@@ -63,7 +63,6 @@ export class ImportMappingsComponent implements OnDestroy {
   async onFileDroppedEvent(event) {
     try {
       if (event && event.length > 0) {
-        // eslint-disable-next-line prefer-destructuring
         const file = event[0].file;
         await this.onFile(file);
       }

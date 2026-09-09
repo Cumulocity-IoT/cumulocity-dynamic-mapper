@@ -54,7 +54,7 @@ import os
 from collections import defaultdict
 from datetime import datetime, timezone
 
-from flask import Flask, escape, jsonify, request
+from flask import Flask, jsonify, request
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -119,7 +119,7 @@ def ingest_create():
     """
     body, err = _parse_body(["deviceId", "reading"])
     if err:
-        logger.warning("POST /ingest – bad request: %s", err[0].get_json())
+        logger.warning("POST /ingest – bad request: %s", err[0])
         return err
 
     device_id = body["deviceId"]
@@ -140,7 +140,7 @@ def ingest_update():
     """
     body, err = _parse_body(["deviceId", "reading"])
     if err:
-        logger.warning("PUT /ingest – bad request: %s", err[0].get_json())
+        logger.warning("PUT /ingest – bad request: %s", err[0])
         return err
 
     device_id = body["deviceId"]
@@ -162,7 +162,7 @@ def ingest_patch():
     """
     body, err = _parse_body(["deviceId"])
     if err:
-        logger.warning("PATCH /ingest – bad request: %s", err[0].get_json())
+        logger.warning("PATCH /ingest – bad request: %s", err[0])
         return jsonify({"error": "Invalid request body"}), 400
 
     device_id = body["deviceId"]
@@ -188,7 +188,7 @@ def ingest_delete():
     """
     body, err = _parse_body(["deviceId"])
     if err:
-        logger.warning("DELETE /ingest – bad request: %s", err[0].get_json())
+        logger.warning("DELETE /ingest – bad request: %s", err[0])
         return jsonify({"error": "Invalid request"}), 400
 
     device_id = body["deviceId"]
@@ -245,7 +245,7 @@ def execute_create():
     """
     body, err = _parse_body(["deviceId", "command"])
     if err:
-        logger.warning("POST /execute – bad request: %s", err[0].get_json())
+        logger.warning("POST /execute – bad request: %s", err[0])
         return err
 
     device_id = body["deviceId"]
@@ -266,7 +266,7 @@ def execute_update():
     """
     body, err = _parse_body(["deviceId", "command"])
     if err:
-        logger.warning("PUT /execute – bad request: %s", err[0].get_json())
+        logger.warning("PUT /execute – bad request: %s", err[0])
         return jsonify({"error": "Invalid request"}), 400
 
     device_id = body["deviceId"]
@@ -284,7 +284,7 @@ def execute_patch():
     """
     body, err = _parse_body(["deviceId"])
     if err:
-        logger.warning("PATCH /execute – bad request: %s", err[0].get_json())
+        logger.warning("PATCH /execute – bad request: %s", err[0])
         return err
 
     device_id = body["deviceId"]
@@ -308,9 +308,8 @@ def execute_delete():
     """
     body, err = _parse_body(["deviceId"])
     if err:
-        err_payload, err_status = err
-        logger.warning("DELETE /execute – bad request: %s", err_payload)
-        return jsonify({"error": str(escape(err_payload.get("error", "Bad request")))}), err_status
+        logger.warning("DELETE /execute – bad request: %s", err[0])
+        return err
 
     device_id = body["deviceId"]
     removed = len(_commands.pop(device_id, []))

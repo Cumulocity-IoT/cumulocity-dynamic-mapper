@@ -69,6 +69,7 @@ export class MappingStatusActivationRendererComponent implements OnInit {
 
   get canEdit(): boolean {
     const mapping = this.context.item?.['mapping'];
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy mappings are read-only; this is the check that enforces it
     if (mapping?.transformationType === TransformationType.SUBSTITUTION_AS_CODE) {
       return false;
     }

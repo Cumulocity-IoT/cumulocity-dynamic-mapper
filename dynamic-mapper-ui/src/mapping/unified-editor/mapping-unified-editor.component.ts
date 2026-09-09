@@ -266,6 +266,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.isButtonDisabled$.next(this.isConnectorSelectionEmpty());
 
     // For EXTENSION_JAVA the transformation is configured in the templates tab
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy type still rendered for not-yet-migrated mappings
     this.activeTabIndex = this.mapping.mappingType === MappingType.PROTOBUF_INTERNAL || this.mapping.transformationType === TransformationType.EXTENSION_JAVA
       ? TAB_GENERAL_SETTINGS
       : TAB_DEFINE_TRANSFORMATION;
@@ -312,10 +313,12 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.initializeFormlyFields();
     await this.initializeCodeTemplates();
 
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy mappings are still opened read-only, so their labels must render
     this.codeEditorHelp = this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE
       ? 'JavaScript for creating substitutions...'
       : 'JavaScript for creating complete payloads as Smart Functions.';
 
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy mappings are still opened read-only, so their labels must render
     this.codeEditorLabel = this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE
       ? 'JavaScript callback for creating substitutions'
       : 'JavaScript callback for Smart functions';
@@ -532,7 +535,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
    */
   isTabVisible(tabIndex: number): boolean {
     // Deprecated SUBSTITUTION_AS_CODE mappings: hide Testing tab (can't be processed)
-    // eslint-disable-next-line deprecation/deprecation
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     if (this.mapping?.transformationType === TransformationType.SUBSTITUTION_AS_CODE && tabIndex === TAB_TEST_MAPPING) {
       return false;
     }

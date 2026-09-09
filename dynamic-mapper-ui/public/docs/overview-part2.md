@@ -144,6 +144,43 @@ The **Webhook** connector has a setting **Cumulocity Internal** which can be use
 processed and sent back to Cumulocity Core as transformed MEA, e.g. receive an `EVENT` of type `c8y_Uplink` and use
 a **SMART_FUNCTION** to decode the payload and transform it into a `MEASUREMENT`.
 
+#### Kafka connector security {#kafka-connector-security}
+
+The Kafka connector derives its `security.protocol` automatically — you do not set it directly:
+
+| Credentials set? | Custom CA trusted? | Resulting protocol |
+|:---:|:---:|---|
+| yes | either | `SASL_SSL` |
+| no | yes | `SSL` (TLS only, no authentication) |
+| no | no | `PLAINTEXT` |
+
+**Authentication.** Set **Username** and **Password**, then pick the **SASL mechanism** your broker offers:
+`SCRAM-SHA-256`, `SCRAM-SHA-512`, or `PLAIN`. Use `PLAIN` for brokers that authenticate with an API key/secret
+pair — Confluent Cloud, for example, supports only `PLAIN` and `OAUTHBEARER`, so a SCRAM mechanism there fails with
+`UnsupportedSaslMechanismException`.
+
+**Trusting a self-signed or internal CA.** Public-CA brokers (Confluent Cloud, most managed services) need no extra
+configuration — the JVM's default truststore already trusts them. For a broker presenting a certificate from an
+internal or self-signed CA, enable **Use Self Signed Certificate** and supply the CA one of two ways, exactly as for
+the MQTT, AMQP and Pulsar connectors:
+
+| Property | Description |
+|---|---|
+| `useSelfSignedCertificate` | Enables custom CA trust. The remaining properties below only appear once it is on. |
+| `nameCertificate` + `fingerprintSelfSignedCertificate` | Reference a certificate already uploaded to the Cumulocity trusted-certificate store (**Device Management → Management → Trusted certificates**). |
+| `certificateChainInPemFormat` | Paste the CA certificate chain inline in PEM format, as an alternative to the certificate store. |
+| `disableHostnameValidation` | Skips TLS hostname verification. **Insecure — development and testing only.** |
+
+:::caution
+Client-certificate authentication (mTLS) is not supported: the Cumulocity certificate store holds trust material
+only, not private keys. The same limitation applies to every other connector type.
+:::
+
+Mechanisms beyond the three listed above — `OAUTHBEARER`, `GSSAPI`/Kerberos, AWS MSK IAM — have no dedicated
+fields, but can still be configured by setting the raw Kafka client properties (`sasl.mechanism`,
+`sasl.jaas.config`, `security.protocol`, …) in **Default properties producer** and **Default properties consumer**.
+Those maps are applied last and therefore override anything derived above.
+
 ### Defining a mapping {#define-mapping}
 
 When you start with a new mapping, the first considerations are about the payload format and the transformation

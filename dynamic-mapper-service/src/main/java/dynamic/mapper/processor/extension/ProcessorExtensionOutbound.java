@@ -124,7 +124,8 @@ public interface ProcessorExtensionOutbound<O>  {
      *   <li>topic - The broker topic to publish to</li>
      *   <li>payload - The message payload (String, byte[], or Object)</li>
      *   <li>retain (optional) - Whether to retain the message</li>
-     *   <li>transportFields (optional) - Transport-specific fields (QoS, headers, etc.)</li>
+     *   <li>transportFields (optional) - Transport-specific fields, e.g. {@code "key"} to set the
+     *       Kafka record key (the key, not a header), or MQTT QoS/retain</li>
      *   <li>clientId (optional) - Target client ID</li>
      * </ul>
      *

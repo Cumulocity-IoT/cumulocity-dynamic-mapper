@@ -68,6 +68,16 @@ export const ACTION_CONTROLS: ActionControlConfig[] = [
       { type: 'connectorType' },
       { type: 'userRole', value: true } // Admin user
     ] as ActionVisibilityRule[]
+  },
+  {
+    type: 'EXPORT',
+    text: 'Export connector',
+    icon: 'export',
+    callbackName: 'exportSingle',
+    visibilityRules: [
+      { type: 'readOnly', value: false },
+      { type: 'connectorType' } // excludes the auto-created default HTTP connector
+    ] as ActionVisibilityRule[]
   }
 ];
 

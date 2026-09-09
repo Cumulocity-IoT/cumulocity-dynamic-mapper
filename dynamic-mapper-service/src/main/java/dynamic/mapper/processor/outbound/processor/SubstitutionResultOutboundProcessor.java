@@ -121,7 +121,7 @@ public class SubstitutionResultOutboundProcessor extends BaseProcessor {
         cod = new HashMap<String, String>() {
             {
                 put(ProcessingContext.RETAIN, "false");
-                put(Mapping.CONTEXT_DATA_KEY_NAME, "dummy");
+                put(Mapping.CONTEXT_DATA_KEY_NAME, Mapping.CONTEXT_DATA_KEY_PLACEHOLDER);
                 put(Mapping.CONTEXT_DATA_METHOD_NAME, "POST");
                 put("publishTopic", "");
             }
@@ -186,7 +186,11 @@ public class SubstitutionResultOutboundProcessor extends BaseProcessor {
             RequestMethod method = RequestMethod.POST;
             String key = payloadTarget
                     .read(String.format("$.%s.%s", Mapping.TOKEN_CONTEXT_DATA, Mapping.CONTEXT_DATA_KEY_NAME));
-            context.setKey(key);
+            // Skip the unmapped placeholder seeded above, otherwise it is published as the actual
+            // broker message key (e.g. a Kafka record key literally reading "dummy").
+            if (key != null && !Mapping.CONTEXT_DATA_KEY_PLACEHOLDER.equals(key)) {
+                context.setKey(key);
+            }
 
             // extract method
             try {

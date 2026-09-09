@@ -124,28 +124,37 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
         }
 
         org.graalvm.polyglot.Context graalCtx = context.getGraalContext();
+        dynamic.mapper.processor.model.PooledGraalContext pooledGraalCtx = context.getPooledGraalContext();
         Runnable cancelAction = null;
-        if (wrapper != null && graalCtx != null) {
+        if (wrapper != null && (graalCtx != null || pooledGraalCtx != null)) {
             // Capture context identity for diagnostics
-            String contextId = Integer.toHexString(System.identityHashCode(graalCtx));
-            log.debug("{} - Registering GraalVM cancel action for context: {} ({})", tenant, contextId, graalCtx.getClass().getSimpleName());
+            String contextId = Integer.toHexString(System.identityHashCode(
+                    pooledGraalCtx != null ? pooledGraalCtx : graalCtx));
+            log.debug("{} - Registering GraalVM cancel action for context: {} ({})", tenant, contextId,
+                    pooledGraalCtx != null ? "pooled" : "direct");
 
+            final dynamic.mapper.processor.model.PooledGraalContext pooledRef = pooledGraalCtx;
+            final org.graalvm.polyglot.Context directRef = graalCtx;
             cancelAction = () -> {
-                log.debug("{} - GraalVM cancel action INVOKED on thread {}, closing context {}",
+                log.debug("{} - GraalVM cancel action INVOKED on thread {}, killing context {}",
                         tenant, Thread.currentThread().getName(), contextId);
-                try {
-                    log.debug("{} - Calling graalCtx.close(true) to forcibly interrupt running JS", tenant);
-                    graalCtx.close(true); // forcibly interrupt running JS
-                    log.debug("{} - graalCtx.close(true) completed successfully", tenant);
-                } catch (Exception e2) {
-                    log.warn("{} - GraalVM context close(true) threw an exception: {} ({})",
-                            tenant, e2.getClass().getSimpleName(), e2.getMessage(), e2);
+                if (pooledRef != null) {
+                    pooledRef.kill();
+                } else {
+                    try {
+                        log.debug("{} - Calling graalCtx.close(true) to forcibly interrupt running JS", tenant);
+                        directRef.close(true);
+                        log.debug("{} - graalCtx.close(true) completed successfully", tenant);
+                    } catch (Exception e2) {
+                        log.warn("{} - GraalVM context close(true) threw an exception: {} ({})",
+                                tenant, e2.getClass().getSimpleName(), e2.getMessage(), e2);
+                    }
                 }
             };
             wrapper.addCancelAction(cancelAction);
         } else {
-            log.warn("{} - Cannot register cancel action: wrapper={}, graalCtx={}",
-                    tenant, wrapper != null, graalCtx != null);
+            log.warn("{} - Cannot register cancel action: wrapper={}, graalCtx={}, pooledGraalCtx={}",
+                    tenant, wrapper != null, graalCtx != null, pooledGraalCtx != null);
         }
 
         try {
@@ -263,60 +272,68 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                       log.debug("{} - No ProcessingResultWrapper available, cancellation helper not injected", tenant);
                   }
 
-                 // Load shared/system code first — populates globalThis with helpers/libraries
-                 loadSharedCode(graalContext, context);
+                 dynamic.mapper.processor.model.PooledGraalContext pooledCtx = context.getPooledGraalContext();
+                 if (pooledCtx != null) {
+                     // Fast path: shared/system code and mapping function are pre-loaded in the
+                     // pooled context — no eval() calls needed per message.
+                     onMessageFunction = pooledCtx.getOnMessageFunction();
+                     log.debug("{} - Using pre-loaded onMessage function from pooled context for mapping [{}]",
+                             tenant, mapping.getIdentifier());
+                 } else {
+                     // Fallback path: freshly-created context (non-pool, e.g. testing).
+                     // Load shared/system code and evaluate mapping source.
+                     loadSharedCode(graalContext, context);
 
-                byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
-                String decodedCode = new String(decodedBytes);
+                      byte[] decodedBytes = Base64.getDecoder().decode(mapping.getCode());
+                      String decodedCode = new String(decodedBytes, java.nio.charset.StandardCharsets.UTF_8);
 
-                boolean supportESM = Boolean.TRUE.equals(serviceConfiguration.getSupportESM());
-                Source source;
-                if (supportESM) {
-                    // ESM mode: keep export keywords, evaluate as ES module.
-                    // The function is retrieved from the module namespace via
-                    // js.esm-eval-returns-exports (enabled in createGraalContext).
-                    source = Source.newBuilder("js", decodedCode, identifier + ".mjs")
-                            .cached(true)
-                            .buildLiteral();
-                } else {
-                    // Flat-script mode: strip ES module export/import statements so the code
-                    // runs without SyntaxErrors, then wrap in an IIFE to scope any top-level
-                    // declarations (e.g. `const globalConfig` from bundled libraries).
-                    // No rename needed: each message gets a fresh GraalVM context, so there
-                    // is no risk of onMessage() colliding with another mapping's function.
-                    decodedCode = JavaScriptModuleStripper.toPlainScript(decodedCode);
-                    String wrappedCode = "(function() {\n"
-                            + decodedCode + "\n"
-                            + "globalThis['" + Mapping.SMART_FUNCTION_NAME + "'] = " + Mapping.SMART_FUNCTION_NAME + ";\n"
-                            + "})();";
-                    source = Source.newBuilder("js", wrappedCode, identifier + ".js")
-                            .cached(true)
-                            .buildLiteral();
-                }
-
-                graalVMContextService.recordCompilation(tenant, source.getName(),
-                        source.getCharacters().toString());
-
-                if (supportESM) {
-                    Value exports = graalContext.eval(source);
-                    onMessageFunction = exports.getMember(Mapping.SMART_FUNCTION_NAME);
-                } else {
-                    graalContext.eval(source);
-                    onMessageFunction = bindings.getMember(Mapping.SMART_FUNCTION_NAME);
-                }
-
-                 if (onMessageFunction == null || onMessageFunction.isNull()) {
+                     boolean supportESM = Boolean.TRUE.equals(serviceConfiguration.getSupportESM());
+                     Source source;
                      if (supportESM) {
-                     throw new ProcessingException(String.format(
-                         "Function '%s' not found in mapping code. " +
-                             "Ensure the script defines and exports a function named '%s' (for example: export { %s };).",
-                         Mapping.SMART_FUNCTION_NAME, Mapping.SMART_FUNCTION_NAME, Mapping.SMART_FUNCTION_NAME));
+                         // ESM mode: keep export keywords, evaluate as ES module.
+                         // The function is retrieved from the module namespace via
+                         // js.esm-eval-returns-exports (enabled in createGraalContext).
+                         source = Source.newBuilder("js", decodedCode, identifier + ".mjs")
+                                 .cached(true)
+                                 .buildLiteral();
+                     } else {
+                         // Flat-script mode: strip ES module export/import statements so the code
+                         // runs without SyntaxErrors, then wrap in an IIFE to scope any top-level
+                         // declarations (e.g. `const globalConfig` from bundled libraries).
+                         decodedCode = JavaScriptModuleStripper.toPlainScript(decodedCode);
+                         String wrappedCode = "(function() {\n"
+                                 + decodedCode + "\n"
+                                 + "globalThis['" + Mapping.SMART_FUNCTION_NAME + "'] = " + Mapping.SMART_FUNCTION_NAME + ";\n"
+                                 + "})();";
+                         source = Source.newBuilder("js", wrappedCode, identifier + ".js")
+                                 .cached(true)
+                                 .buildLiteral();
                      }
-                     throw new ProcessingException(String.format(
-                         "Function '%s' not found in mapping code. " +
-                             "Ensure the script defines a function named '%s'. " +
-                             "Export is not required when supportESM is disabled.",
-                         Mapping.SMART_FUNCTION_NAME, Mapping.SMART_FUNCTION_NAME));
+
+                     graalVMContextService.recordCompilation(tenant, source.getName(),
+                             source.getCharacters().toString());
+
+                     if (supportESM) {
+                         Value exports = graalContext.eval(source);
+                         onMessageFunction = exports.getMember(Mapping.SMART_FUNCTION_NAME);
+                     } else {
+                         graalContext.eval(source);
+                         onMessageFunction = bindings.getMember(Mapping.SMART_FUNCTION_NAME);
+                     }
+
+                     if (onMessageFunction == null || onMessageFunction.isNull()) {
+                         if (supportESM) {
+                         throw new ProcessingException(String.format(
+                             "Function '%s' not found in mapping code. " +
+                                 "Ensure the script defines and exports a function named '%s' (for example: export { %s };).",
+                             Mapping.SMART_FUNCTION_NAME, Mapping.SMART_FUNCTION_NAME, Mapping.SMART_FUNCTION_NAME));
+                         }
+                         throw new ProcessingException(String.format(
+                             "Function '%s' not found in mapping code. " +
+                                 "Ensure the script defines a function named '%s'. " +
+                                 "Export is not required when supportESM is disabled.",
+                             Mapping.SMART_FUNCTION_NAME, Mapping.SMART_FUNCTION_NAME));
+                     }
                  }
 
                  inputMessage = createInputMessage(graalContext, context);
@@ -332,10 +349,8 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                      return;
                  }
 
-                 // Enforce maxCPUTimeMS: schedule a hard kill via Context.close(true) so an
-                 // infinite loop or runaway script cannot exceed the configured budget.
-                 // Context.close(true) is the only reliable interrupt for CPU-bound GraalVM JS;
-                 // plain thread interruption is ignored by the Truffle engine.
+                 // Enforce maxCPUTimeMS: schedule a hard kill via Context.close(true) or
+                 // PooledGraalContext.kill() so an infinite loop cannot exceed the configured budget.
                  int maxCPUTimeMS = serviceConfiguration.getMaxCPUTimeMS() != null
                          ? serviceConfiguration.getMaxCPUTimeMS() : 0;
                  ScheduledFuture<?> cpuTimeoutFuture = null;
@@ -347,6 +362,8 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                  final java.util.concurrent.atomic.AtomicBoolean executionWindowClosed =
                          new java.util.concurrent.atomic.AtomicBoolean(false);
                  if (maxCPUTimeMS > 0) {
+                     final dynamic.mapper.processor.model.PooledGraalContext pooledCtxRef =
+                             context.getPooledGraalContext();
                      final Context graalCtxRef = graalContext;
                      final dynamic.mapper.processor.model.ProcessingResultWrapper<?> wrapperRef =
                              context.getProcessingResultWrapper();
@@ -359,10 +376,14 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                          if (wrapperRef != null) {
                              wrapperRef.getCancellationRequested().set(true);
                          }
-                         try {
-                             graalCtxRef.close(true);
-                         } catch (Exception ex) {
-                             log.debug("{} - GraalVM close(true) on CPU timeout threw: {}", tenant, ex.getMessage());
+                         if (pooledCtxRef != null) {
+                             pooledCtxRef.kill();
+                         } else {
+                             try {
+                                 graalCtxRef.close(true);
+                             } catch (Exception ex) {
+                                 log.debug("{} - GraalVM close(true) on CPU timeout threw: {}", tenant, ex.getMessage());
+                             }
                          }
                      }, maxCPUTimeMS, TimeUnit.MILLISECONDS);
                  }
@@ -389,9 +410,16 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
     }
 
     /**
-     * Load shared and system code into GraalVM context using cached Sources - OPTIMIZED!
+     * Load shared and system code into GraalVM context using cached Sources.
+     * For pooled contexts this is a no-op because these sources were evaluated
+     * once at context-creation time inside {@code GraalVMContextService.borrowOrCreateContext}.
      */
     protected void loadSharedCode(Context graalContext, ProcessingContext<?> context) {
+        if (context.getPooledGraalContext() != null) {
+            // Fast path: polyfill + shared/system code are pre-loaded in the pooled context
+            return;
+        }
+
         // Inject atob()/btoa() — GraalVM is ECMAScript-only; these are Web APIs not in the spec.
         graalContext.eval(BASE64_POLYFILL_SOURCE);
 

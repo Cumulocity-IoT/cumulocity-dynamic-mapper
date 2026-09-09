@@ -64,7 +64,12 @@ public class ExtensionInboundRegistry {
         if (!extensions.containsKey(extensionName)) {
             log.warn("{} - Cannot add Java Extension entry. Create first an extension!", tenant);
         } else {
-            extensions.get(extensionName).getExtensionEntries().put(entry.getEventName(), entry);
+            Map<String, ExtensionEntry> entries = extensions.get(extensionName).getExtensionEntries();
+            if (entries.containsKey(entry.getEventName())) {
+                log.warn("{} - Extension entry with this eventName {} already exists for extension {}, override existing entry!",
+                        tenant, entry.getEventName(), extensionName);
+            }
+            entries.put(entry.getEventName(), entry);
         }
     }
 

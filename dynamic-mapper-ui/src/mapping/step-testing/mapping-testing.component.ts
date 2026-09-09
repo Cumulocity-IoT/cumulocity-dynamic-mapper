@@ -121,6 +121,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   showConsole = true; // Controls collapsible console section (expanded by default)
   currentApi: string | undefined;
   currentPublishTopic: string | undefined;
+  /** Context-level, so it comes from TestResult itself rather than the selected request. */
+  generatedKey: string | undefined;
 
   async ngOnInit(): Promise<void> {
     this.initializeMapping();
@@ -150,7 +152,12 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   async onResetTransformation(): Promise<void> {
     try {
-      patchC8YTemplateForTesting(this.sourceTemplate, this.testMapping);
+      // Patch a copy rather than mutating this.sourceTemplate in place: the payload editor's
+      // [data] input is only re-applied on reference change, and testMapping/mapping.sourceTemplate
+      // (the strings actually sent to the backend) must be resynced with the freshly patched id too.
+      const patchedTemplate = { ...this.sourceTemplate };
+      patchC8YTemplateForTesting(patchedTemplate, this.testMapping);
+      this.syncPayload(patchedTemplate);
       this.resetTestingModel();
       this.updateEditors();
 
@@ -168,6 +175,17 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   onSourceTemplateChanged(content: ContentChanges): void {
     const contentAsJson = this.parseJsonContent(content.updatedContent);
     this.syncPayload(contentAsJson, this.extractTopicSample(contentAsJson));
+  }
+
+  /**
+   * True when neither testing action is permitted for this mapping — currently the
+   * ANY_PAYLOAD + SMART_FUNCTION combination, which turns off both flags. Every button in the
+   * action bar is then permanently dead (no user action can enable them), so the bar is replaced
+   * by an explanation rather than showing inert controls.
+   */
+  get testingUnavailable(): boolean {
+    return !this.stepperConfiguration?.allowTestTransformation
+      && !this.stepperConfiguration?.allowTestSending;
   }
 
   disableTestSending(): boolean {
@@ -227,6 +245,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     this.selectedResult$.next(-1);
     this.currentApi = undefined;
     this.currentPublishTopic = undefined;
+    this.generatedKey = undefined;
   }
 
   private updateEditors(): void {
@@ -338,6 +357,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
     // Convert request and response from JSON string to object for all items
     this.testingModel.results = result.requests.map(req => this.parseRequestResponse(req));
+    this.generatedKey = result.key;
     const staticLogs = this.testingModel.logs?.filter(l => l.startsWith('INFO')) ?? [];
     const warningLogs = (result.warnings ?? []).map(w => `WARNING: ${w}`);
     this.testingModel.logs = [...staticLogs, ...(result.logs ?? []), ...warningLogs];

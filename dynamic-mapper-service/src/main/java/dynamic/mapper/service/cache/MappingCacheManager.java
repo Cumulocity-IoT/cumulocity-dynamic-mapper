@@ -31,7 +31,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -46,9 +45,6 @@ public class MappingCacheManager {
     private final Map<String, Map<String, Mapping>> cacheMappingInbound = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Mapping>> cacheMappingOutbound = new ConcurrentHashMap<>();
 
-    // Structure: <Tenant, <FilterMapping, List<Mapping>>>
-    private final Map<String, Map<String, List<Mapping>>> resolverMappingOutbound = new ConcurrentHashMap<>();
-
     // Structure: <Tenant, MappingTreeNode>
     private final Map<String, MappingTreeNode> resolverMappingInbound = new ConcurrentHashMap<>();
 
@@ -58,7 +54,6 @@ public class MappingCacheManager {
     public void createTenantCache(String tenant) {
         cacheMappingInbound.put(tenant, new ConcurrentHashMap<>());
         cacheMappingOutbound.put(tenant, new ConcurrentHashMap<>());
-        resolverMappingOutbound.put(tenant, new ConcurrentHashMap<>());
         resolverMappingInbound.put(tenant, MappingTreeNode.createRootNode(tenant));
         
         log.debug("{} - Cache structures created", tenant);
@@ -71,8 +66,7 @@ public class MappingCacheManager {
         cacheMappingInbound.remove(tenant);
         cacheMappingOutbound.remove(tenant);
         resolverMappingInbound.remove(tenant);
-        resolverMappingOutbound.remove(tenant);
-        
+
         log.debug("{} - Cache structures removed", tenant);
     }
 
@@ -82,7 +76,6 @@ public class MappingCacheManager {
     public void clearTenantCache(String tenant) {
         getCacheInbound(tenant).clear();
         getCacheOutbound(tenant).clear();
-        getResolverOutbound(tenant).clear();
         resolverMappingInbound.put(tenant, MappingTreeNode.createRootNode(tenant));
         
         log.debug("{} - Cache cleared", tenant);
@@ -203,15 +196,6 @@ public class MappingCacheManager {
         
         cacheMappingOutbound.put(tenant, new ConcurrentHashMap<>(newCache));
 
-        // Rebuild resolver map. Inner lists must be thread-safe because they are
-        // mutated concurrently by addOutboundMapping/removeOutboundMapping.
-        Map<String, List<Mapping>> newResolver = mappings.stream()
-            .filter(m -> m.getFilterMapping() != null)
-            .collect(Collectors.groupingBy(Mapping::getFilterMapping,
-                Collectors.toCollection(CopyOnWriteArrayList::new)));
-
-        resolverMappingOutbound.put(tenant, new ConcurrentHashMap<>(newResolver));
-
         return mappings;
     }
 
@@ -221,12 +205,6 @@ public class MappingCacheManager {
     public void addOutboundMapping(String tenant, Mapping mapping) {
         getCacheOutbound(tenant).put(mapping.getId(), mapping);
 
-        if (mapping.getFilterMapping() != null) {
-            getResolverOutbound(tenant)
-                .computeIfAbsent(mapping.getFilterMapping(), k -> new CopyOnWriteArrayList<>())
-                .add(mapping);
-        }
-        
         log.debug("{} - Added outbound mapping to cache: {}", tenant, mapping.getId());
     }
 
@@ -235,17 +213,11 @@ public class MappingCacheManager {
      */
     public Optional<Mapping> removeOutboundMapping(String tenant, String mappingId) {
         Mapping removed = getCacheOutbound(tenant).remove(mappingId);
-        
-        if (removed != null && removed.getFilterMapping() != null) {
-            List<Mapping> mappingsForFilter = getResolverOutbound(tenant)
-                .get(removed.getFilterMapping());
-            
-            if (mappingsForFilter != null) {
-                mappingsForFilter.removeIf(m -> m.getId().equals(mappingId));
-                log.debug("{} - Removed outbound mapping from cache: {}", tenant, mappingId);
-            }
+
+        if (removed != null) {
+            log.debug("{} - Removed outbound mapping from cache: {}", tenant, mappingId);
         }
-        
+
         return Optional.ofNullable(removed);
     }
 
@@ -290,14 +262,6 @@ public class MappingCacheManager {
         return new HashMap<>(getCacheOutbound(tenant));
     }
 
-    /**
-     * Gets all outbound mappings matching a filter
-     */
-    public List<Mapping> getOutboundMappingsByFilter(String tenant, String filter) {
-        List<Mapping> mappings = getResolverOutbound(tenant).get(filter);
-        return mappings != null ? new ArrayList<>(mappings) : Collections.emptyList();
-    }
-
     // ========== Generic Operations ==========
 
     /**
@@ -338,10 +302,6 @@ public class MappingCacheManager {
 
     private Map<String, Mapping> getCacheOutbound(String tenant) {
         return cacheMappingOutbound.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
-    }
-
-    private Map<String, List<Mapping>> getResolverOutbound(String tenant) {
-        return resolverMappingOutbound.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
     }
 
     private MappingTreeNode getResolverTreeInbound(String tenant) {

@@ -155,6 +155,14 @@ public class ProcessingContext<O> implements AutoCloseable {
     private Context graalContext;
 
     /**
+     * Pooled GraalVM context borrowed from {@code GraalVMContextService}'s per-mapping pool.
+     * When non-null, {@link #close()} skips {@code graalContext.close()} and instead
+     * lets {@link #engineReleaseAction} (which calls {@code GraalVMContextService.returnContext})
+     * handle both the pool return and the engine's in-flight counter decrement.
+     */
+    private PooledGraalContext pooledGraalContext;
+
+    /**
      * Callback invoked after the GraalVM {@link Context} is closed to notify
      * {@code GraalVMContextService} that this in-flight context slot has been released.
      * Set by {@code AbstractEnrichmentProcessor} so the service can close a retired
@@ -511,19 +519,29 @@ public class ProcessingContext<O> implements AutoCloseable {
                 flowContext = null;
             }
 
-            // Close GraalVM Context
-            if (graalContext != null) {
-                try {
-                    graalContext.close();
-                    log.debug("{} - Closed GraalVM Context in tenant {}", getTenant(), getTenant());
-                } catch (Exception e) {
-                    log.warn("{} - Error closing GraalVM Context: {}", getTenant(), e.getMessage());
-                }
+            if (pooledGraalContext != null) {
+                // Pooled path: do NOT close the GraalVM Context here.
+                // engineReleaseAction (set by AbstractEnrichmentProcessor to call
+                // GraalVMContextService.returnContext) will return the context to the
+                // pool (or close it if it was killed).
+                pooledGraalContext = null;
                 graalContext = null;
+            } else {
+                // Non-pooled path: close the GraalVM Context directly
+                if (graalContext != null) {
+                    try {
+                        graalContext.close();
+                        log.debug("{} - Closed GraalVM Context in tenant {}", getTenant(), getTenant());
+                    } catch (Exception e) {
+                        log.warn("{} - Error closing GraalVM Context: {}", getTenant(), e.getMessage());
+                    }
+                    graalContext = null;
+                }
             }
 
             // Notify GraalVMContextService that this context slot is freed so it can
             // close a retired Engine once all its in-flight contexts have drained.
+            // For the pooled path this also returns the context to the pool.
             if (engineReleaseAction != null) {
                 try {
                     engineReleaseAction.run();

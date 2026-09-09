@@ -239,9 +239,6 @@ public class TestClient extends AConnectorClient {
             log.info("{} - Test Connector simulating publish ({}/{}): topic=[{}], QoS: {}, payload: {}",
                     tenant, i + 1, requests.size(), topic, qos, payload);
         }
-
-        // In a real test scenario, you might want to collect these messages
-        // for verification in tests
     }
 
     @Override
@@ -337,21 +334,5 @@ public class TestClient extends AConnectorClient {
         config.getProperties().put("enabled", true);
         config.getProperties().put("description", "Test Connector for mapping validation");
         return config;
-    }
-
-    /**
-     * Simulate receiving a message (for testing inbound mappings)
-     */
-    public void simulateInboundMessage(String topic, String payload, Qos qos) {
-        if (!isConnected()) {
-            log.warn("{} - Test Connector not connected, cannot simulate message", tenant);
-            return;
-        }
-
-        log.info("{} - Test Connector simulating inbound message on topic: [{}], QoS: {}",
-                tenant, topic, qos);
-
-        // This would trigger the dispatcher to process the message
-        // Implementation depends on your message processing architecture
     }
 }

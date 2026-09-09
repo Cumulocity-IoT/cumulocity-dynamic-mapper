@@ -54,6 +54,12 @@ export interface TestResult {
   warnings?: string[];
   logs?: string[];
   testDeviceId?: string;
+  /**
+   * Broker message key produced by the transformation (e.g. the Kafka record key). Context-level
+   * rather than per-request, since one publish call reads a single key for the whole message —
+   * which is why it lives here and not on DynamicMapperRequest alongside publishTopic.
+   */
+  key?: string;
 }
 
 export enum ProcessingType {
@@ -92,8 +98,11 @@ export const isNumeric = (num: any) => (typeof num === 'number' || (typeof num =
 
 // Re-export constants for backward compatibility
 export {
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- deliberate back-compat alias, see block comment above
   KEY_TIME,
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- deliberate back-compat alias, see block comment above
   TOPIC_WILDCARD_MULTI,
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- deliberate back-compat alias, see block comment above
   TOPIC_WILDCARD_SINGLE,
   MappingTokens,
   IdentityPaths,

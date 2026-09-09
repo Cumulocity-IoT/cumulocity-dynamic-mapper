@@ -75,6 +75,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     pipelineTimeoutMS: 8000,  // 8 seconds
     engineRotationThreshold: 100,
     engineMaxAgeMinutes: 0,
+    contextPoolSize: 20,
     explorerSessionTTLMinutes: 10,
     jsonataAgent: undefined,
     javaScriptAgent: undefined,
@@ -150,6 +151,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       pipelineTimeoutMS: [''],
       engineRotationThreshold: [''],
       engineMaxAgeMinutes: [''],
+      contextPoolSize: [''],
       explorerSessionTTLMinutes: [''],
       supportESM: [''],
       jsonataAgent: [{ value: '', disabled: true }],

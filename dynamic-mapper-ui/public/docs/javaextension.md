@@ -183,6 +183,37 @@ In addition to `parameter`, the map returned by `getConfigAsMap()` also contains
 - **mappingId**, **mappingName**, **targetAPI**, **debug** — mapping metadata
 :::
 
+##### Accessing the broker message key
+
+`message.getTransportFields()` returns the transport-specific fields of the received broker message. For Kafka,
+`key` holds the record key — the key, not a header:
+
+```java
+@Override
+public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContext context) {
+    String deviceId = message.getTransportFields().get("key");   // e.g. "863859042393327"
+    // falls back to null when the message carries no key
+    ...
+}
+```
+
+The key is delivered **out-of-band — it is not part of the payload**, so it never appears in the mapping's source
+template. A Kafka record key is frequently the device identifier, which makes it a useful source for the external
+ID. The map is never `null`; it is empty when the transport carries no such fields.
+
+This mirrors `msg.transportFields["key"]` in Smart Functions and `_CONTEXT_DATA_.key` in JSONata mappings.
+
+For **outbound** mappings, set the field on the returned `DeviceMessage` to define the key to publish with:
+
+```java
+return new DeviceMessage[] {
+    DeviceMessage.forTopic(context.getMapping().getPublishTopic())
+        .payload(customJson)
+        .transportField("key", externalId)   // sets the Kafka record key
+        .build()
+};
+```
+
 ##### Key Benefits of Java Extensions
 
 - **Type Safety:** Compile-time type checking prevents runtime errors and improves code reliability. Your IDE will

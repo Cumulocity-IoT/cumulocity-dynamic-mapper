@@ -718,8 +718,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         }
 
         if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
-            log.info("{} - Published to MQTT Service: QoS={}, topic=[{}], pulsarTopic=[{}], mapping={}",
-                    tenant, qos, mqttTopic, towardsDeviceTopic, context.getMapping().getName());
+            log.info("{} - OUTBOUND SEND: connector={}, topic={}, qos={}, payload={}",
+                    tenant, getConnectorName(), mqttTopic, qos, new String(payloadBytes, StandardCharsets.UTF_8));
         }
     }
 

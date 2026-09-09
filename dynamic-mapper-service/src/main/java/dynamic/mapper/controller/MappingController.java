@@ -29,6 +29,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -50,6 +51,7 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingVersion;
 import dynamic.mapper.model.MappingVersionCount;
+import dynamic.mapper.model.ValidationErrorResponse;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.MappingValidationException;
 import jakarta.validation.Valid;
@@ -75,6 +77,22 @@ public class MappingController {
     private final ConnectorRegistry connectorRegistry;
     private final MappingService mappingService;
     private final ContextService<UserCredentials> contextService;
+
+    /**
+     * Single source of truth for the 422 body of a mapping-validation failure, for every
+     * endpoint in this controller (create/update/publishDraft). Returns the individual
+     * {@link dynamic.mapper.model.ValidationError} codes rather than a flattened string so the
+     * frontend can translate and list each failing rule individually, instead of a single toast
+     * built from raw enum names.
+     */
+    @ExceptionHandler(MappingValidationException.class)
+    public ResponseEntity<ValidationErrorResponse> handleMappingValidationException(MappingValidationException e) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ValidationErrorResponse.builder()
+                        .message("Mapping validation failed")
+                        .errors(e.getErrors())
+                        .build());
+    }
 
     // ========== GET Endpoints ==========
 
@@ -237,7 +255,7 @@ public class MappingController {
         ),
         @ApiResponse(responseCode = "400", description = "Invalid mapping configuration", content = @Content),
         @ApiResponse(responseCode = "403", description = "Insufficient permissions to create mapping", content = @Content),
-        @ApiResponse(responseCode = "422", description = "Mapping validation failed (duplicate topic, conflicting configuration)", content = @Content),
+        @ApiResponse(responseCode = "422", description = "Mapping validation failed (invalid topic structure, conflicting configuration)", content = @Content(mediaType = "application/json", schema = @Schema(implementation = dynamic.mapper.model.ValidationErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
@@ -271,11 +289,8 @@ public class MappingController {
             return ResponseEntity.status(HttpStatus.CREATED).body(createdMapping);
             
         } catch (MappingValidationException e) {
-            log.warn("{} - Mapping validation failed: {}", tenant, e.getMessage());
-            throw new ResponseStatusException(
-                HttpStatus.UNPROCESSABLE_ENTITY,
-                "Mapping validation failed: " + e.getMessage()
-            );
+            log.warn("{} - Mapping validation failed: {}", tenant, e.getErrors());
+            throw e; // handled by handleMappingValidationException() below
 
         } catch (IllegalArgumentException e) {
             log.warn("{} - Invalid mapping data: {}", tenant, e.getMessage());
@@ -325,7 +340,7 @@ public class MappingController {
         @ApiResponse(responseCode = "403", description = "Insufficient permissions to update mapping", content = @Content),
         @ApiResponse(responseCode = "404", description = "Mapping not found", content = @Content),
         @ApiResponse(responseCode = "406", description = "Active mappings cannot be updated", content = @Content),
-        @ApiResponse(responseCode = "422", description = "Mapping validation failed (duplicate topic, conflicting configuration)", content = @Content),
+        @ApiResponse(responseCode = "422", description = "Mapping validation failed (invalid topic structure, conflicting configuration)", content = @Content(mediaType = "application/json", schema = @Schema(implementation = dynamic.mapper.model.ValidationErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
@@ -360,11 +375,8 @@ public class MappingController {
             return ResponseEntity.ok(updatedMapping);
             
         } catch (MappingValidationException e) {
-            log.warn("{} - Mapping validation failed: {}", tenant, e.getMessage());
-            throw new ResponseStatusException(
-                HttpStatus.UNPROCESSABLE_ENTITY,
-                "Mapping validation failed: " + e.getMessage()
-            );
+            log.warn("{} - Mapping validation failed: {}", tenant, e.getErrors());
+            throw e; // handled by handleMappingValidationException() below
 
         } catch (IllegalStateException e) {
             log.warn("{} - Cannot update mapping: {}", tenant, e.getMessage());
@@ -508,7 +520,7 @@ public class MappingController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = MappingVersion.class))),
         @ApiResponse(responseCode = "404", description = "Mapping not found", content = @Content),
         @ApiResponse(responseCode = "409", description = "No draft to publish", content = @Content),
-        @ApiResponse(responseCode = "422", description = "Draft failed validation", content = @Content)
+        @ApiResponse(responseCode = "422", description = "Draft failed validation", content = @Content(mediaType = "application/json", schema = @Schema(implementation = dynamic.mapper.model.ValidationErrorResponse.class)))
     })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PostMapping(value = "/{id}/publish", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -520,8 +532,8 @@ public class MappingController {
             MappingVersion mv = mappingService.publishDraft(tenant, id, version, note);
             return ResponseEntity.status(HttpStatus.CREATED).body(mv);
         } catch (MappingValidationException e) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                "Draft validation failed: " + e.getMessage());
+            log.warn("{} - Draft validation failed for mapping {}: {}", tenant, id, e.getErrors());
+            throw e; // handled by handleMappingValidationException() below
         } catch (IllegalStateException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
         } catch (IllegalArgumentException e) {

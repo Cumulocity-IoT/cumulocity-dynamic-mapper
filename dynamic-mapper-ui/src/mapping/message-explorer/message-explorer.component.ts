@@ -84,13 +84,21 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   sessionSourceId: string | null = null;
   sessionDeviceName: string | null = null;
   sessionDeviceTypeFilter: string | null = null;
+  sessionSubscriptionWarning: string | null = null;
   messages: IndexedMessage[] = [];
   paused: boolean = false;
   private nextSeqNo = 1;
 
   private static readonly SESSION_STORAGE_KEY = 'd11r-explorer-session';
 
-  columns: Column[] = [
+  // Columns only present for some broker protocols: clientId is set by the MQTT connectors,
+  // key by Kafka (inbound only - the outbound record key is applied further downstream, after
+  // the explorer has already captured the message). Rather than hardcoding a connector-type
+  // list, they are shown only once a captured message actually carries a value - see
+  // refreshColumns().
+  private static readonly OPTIONAL_COLUMNS: readonly string[] = ['clientId', 'key'];
+
+  private readonly allColumns: Column[] = [
     {
       name: 'seqNo',
       header: '#',
@@ -120,6 +128,15 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       gridTrackSize: '140px'
     },
     {
+      name: 'key',
+      header: 'Key',
+      path: 'key',
+      dataType: ColumnDataType.TextShort,
+      sortable: false,
+      filterable: false,
+      gridTrackSize: '140px'
+    },
+    {
       name: 'topic',
       header: 'Topic',
       path: 'topic',
@@ -138,6 +155,10 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       cellRendererComponent: MessageExplorerPayloadRendererComponent
     }
   ];
+
+  columns: Column[] = this.allColumns.filter(
+    c => !MessageExplorerComponent.OPTIONAL_COLUMNS.includes(c.name)
+  );
 
   actionControls: ActionControl[] = [
     {
@@ -257,7 +278,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         const seqNo = this.nextSeqNo++;
         return { ...m, id: seqNo, seqNo };
       });
-      this.messages = indexed.slice().reverse();
+      this.setMessages(indexed.slice().reverse());
       // Defer countdown start — @ViewChild is not available until ngAfterViewInit
       setTimeout(() => {
         this.nextTriggerCountdown$.next(this.currentPollingInterval);
@@ -272,6 +293,29 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         console.warn('Explorer session resume failed:', e);
       }
     }
+  }
+
+  /** Assigns the message buffer and re-evaluates which optional columns to show. */
+  private setMessages(messages: IndexedMessage[]): void {
+    this.messages = messages;
+    this.refreshColumns();
+  }
+
+  /**
+   * Hides the protocol-specific columns (see OPTIONAL_COLUMNS) while no captured message
+   * carries a value for them, so e.g. an outbound session - or any connector that has no
+   * such concept - does not show a permanently empty column.
+   */
+  private refreshColumns(): void {
+    this.columns = this.allColumns.filter(column => {
+      if (!MessageExplorerComponent.OPTIONAL_COLUMNS.includes(column.name)) {
+        return true;
+      }
+      return this.messages.some(message => {
+        const value = message[column.name as keyof IndexedMessage];
+        return value !== null && value !== undefined && value !== '';
+      });
+    });
   }
 
   ngOnDestroy(): void {
@@ -308,14 +352,14 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         const seqNo = this.nextSeqNo++;
         return { ...m, id: seqNo, seqNo };
       });
-      this.messages = indexed.slice().reverse();
+      this.setMessages(indexed.slice().reverse());
     } catch (e) {
       if (e instanceof SessionExpiredError) {
         // Session expired or was evicted on the backend — reset UI cleanly
         this.sessionId = null;
         this.connectorName = '';
         this.sessionTopic = '';
-        this.messages = [];
+        this.setMessages([]);
         this.paused = false;
         this.countdownIntervalComponent?.stop();
         this.clearPersistedSession();
@@ -349,11 +393,11 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     if (this.sessionId) {
       await this.explorerService.stopSession(this.sessionId).catch(() => {});
       this.sessionId = null;
-      this.messages = [];
+      this.setMessages([]);
     }
 
     try {
-      this.sessionId = await this.explorerService.startSession({
+      const started = await this.explorerService.startSession({
         connectorIdentifier: result.connectorIdentifier,
         topic: result.topic,
         maxMessages: result.maxMessages,
@@ -362,6 +406,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         sourceId: result.sourceId,
         deviceType: result.deviceTypeFilter
       });
+      this.sessionId = started.sessionId;
+      this.sessionSubscriptionWarning = started.subscriptionWarning ?? null;
       this.connectorName = result.connectorName;
       this.sessionConnectorIdentifier = result.connectorIdentifier;
       this.sessionTopic = result.topic;
@@ -374,8 +420,12 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.sessionDeviceTypeFilter = result.deviceTypeFilter ?? null;
       this.nextSeqNo = 1;
       this.paused = false;
-      this.messages = [];
+      this.setMessages([]);
       this.persistSession();
+
+      if (this.sessionSubscriptionWarning) {
+        this.alertService.warning(`Explorer session started, but subscribing to the topic failed: ${this.sessionSubscriptionWarning}`);
+      }
 
       this.nextTriggerCountdown$.next(this.currentPollingInterval);
       if (this.shouldRefreshAutomatic) {
@@ -407,10 +457,10 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     // Stop the current session before starting the updated one
     await this.explorerService.stopSession(this.sessionId).catch(() => {});
     this.sessionId = null;
-    this.messages = [];
+    this.setMessages([]);
 
     try {
-      this.sessionId = await this.explorerService.startSession({
+      const started = await this.explorerService.startSession({
         connectorIdentifier: result.connectorIdentifier,
         topic: result.topic,
         maxMessages: result.maxMessages,
@@ -419,6 +469,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         sourceId: result.sourceId,
         deviceType: result.deviceTypeFilter
       });
+      this.sessionId = started.sessionId;
+      this.sessionSubscriptionWarning = started.subscriptionWarning ?? null;
       this.connectorName = result.connectorName;
       this.sessionConnectorIdentifier = result.connectorIdentifier;
       this.sessionTopic = result.topic;
@@ -433,11 +485,16 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       this.paused = false;
       this.persistSession();
 
+      if (this.sessionSubscriptionWarning) {
+        this.alertService.warning(`Explorer session updated, but subscribing to the topic failed: ${this.sessionSubscriptionWarning}`);
+      } else {
+        this.alertService.add({ text: 'Explorer session updated.', type: 'success', timeout: ALERT_INFO_TIMEOUT });
+      }
+
       this.nextTriggerCountdown$.next(this.currentPollingInterval);
       if (this.shouldRefreshAutomatic) {
         this.countdownIntervalComponent?.start();
       }
-      this.alertService.add({ text: 'Explorer session updated.', type: 'success', timeout: ALERT_INFO_TIMEOUT });
     } catch (e: any) {
       this.alertService.danger(`Failed to update explorer session: ${e.message}`);
     }
@@ -457,7 +514,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     if (!this.sessionId) return;
     await this.explorerService.stopSession(this.sessionId).catch(() => {});
     this.sessionId = null;
-    this.messages = [];
+    this.setMessages([]);
     this.connectorName = '';
     this.sessionConnectorIdentifier = '';
     this.sessionTopic = '';
@@ -478,7 +535,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
     if (this.sessionId) {
       await this.explorerService.clearMessages(this.sessionId).catch(() => {});
     }
-    this.messages = [];
+    this.setMessages([]);
   }
 
   // ---- create mapping from captured message ---------------------------------
@@ -578,6 +635,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         sessionTopic: this.sessionTopic,
         topic: msg.topic,
         payload: msg.payload,
+        key: msg.key,
         mappingType: mappingResult.mappingType,
         transformationType: mappingResult.transformationType,
         codeTemplate: mappingResult.codeTemplate,

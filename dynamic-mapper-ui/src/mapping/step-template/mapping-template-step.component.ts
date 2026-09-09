@@ -56,13 +56,15 @@ import {
 import { StepperViewModel } from '../stepper-mapping/stepper-view.model';
 import { CommonModule } from '@angular/common';
 import { MappingStepperService } from '../service/mapping-stepper.service';
+import { PROTECTED_TOKENS } from '../core/processor/processor.model';
+import { PopoverModule } from 'ngx-bootstrap/popover';
 
 @Component({
   selector: 'd11r-mapping-template-step',
   templateUrl: './mapping-template-step.component.html',
   styleUrls: ['../shared/mapping.style.css'],
   standalone: true,
-  imports: [CoreModule, CommonModule, JsonEditorComponent]
+  imports: [CoreModule, CommonModule, PopoverModule,JsonEditorComponent]
 })
 export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   // ─── Inputs ───────────────────────────────────────────────────────────────
@@ -92,6 +94,31 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   sourceTemplateUpdated: any;
   targetTemplateUpdated: any;
   selectedPathFilterFilterMapping: string;
+  /** _IDENTITY_/_TOPIC_LEVEL_/_CONTEXT_DATA_ are only relevant for the Transformation step; hide them here by default. */
+  showSourceMetadata = false;
+  showTargetMetadata = false;
+  /**
+   * Whether the respective template actually carries metadata to toggle. Code- and
+   * extension-based transformations never get metadata injected (see expandExternalTemplate /
+   * expandC8YTemplate), so the toggle would be a no-op there and is hidden rather than shown
+   * doing nothing — matching how the neighbouring "Reset to default" button is handled.
+   */
+  hasSourceMetadata = false;
+  hasTargetMetadata = false;
+  readonly metadataHelpText = `Metadata fields (<code>_IDENTITY_</code>, <code>_TOPIC_LEVEL_</code>,
+    <code>_CONTEXT_DATA_</code>) identify the target device and carry topic/context information.
+    They are not needed to author the templates here - use the Transformation step to build substitutions
+    from them. Edits made while they are hidden are preserved.`;
+  displayedSourceTemplate: any;
+  displayedTargetTemplate: any;
+  /**
+   * Transport fields observed on the message this mapping was created from (e.g. a Kafka record
+   * key), shown read-only below the source editor. Only populated for code/extension
+   * transformations: those receive the fields via `msg.transportFields` instead of inside the
+   * payload, so — unlike `_CONTEXT_DATA_` for JSONata — they never appear in the source template
+   * and would otherwise be invisible to the author.
+   */
+  sampleTransportFields: { name: string; value: string }[] = [];
   private readonly destroy$ = new Subject<void>();
 
   // ─── ViewChild refs (public so tests can reach them if needed) ─────────────
@@ -116,9 +143,23 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   readonly checkTransformationType = checkTransformationType;
   readonly validateProtectedFields = validateProtectedFields;
 
+  private computeSampleTransportFields(): { name: string; value: string }[] {
+    const fields = this.stepperConfiguration?.sampleTransportFields;
+    if (!fields || !isCodeOrExtensionTransformation(this.mapping?.transformationType)) {
+      return [];
+    }
+    return Object.entries(fields)
+      .filter(([, value]) => value !== null && value !== undefined && value !== '')
+      .map(([name, value]) => ({ name, value }));
+  }
+
   // ─── Lifecycle ─────────────────────────────────────────────────────────────
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['stepperConfiguration'] || changes['mapping']) {
+      this.sampleTransportFields = this.computeSampleTransportFields();
+    }
+
     // Subscribe to filterFormly once when it is first provided by the parent.
     if (changes['filterFormly'] && this.filterFormly && !changes['filterFormly'].previousValue) {
       // Pre-populate filterModel so Formly shows the existing expression on first render.
@@ -146,11 +187,70 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
     if (changes['sourceTemplate'] && this.sourceTemplate && this.mapping?.filterMapping) {
       this.updateFilterExpressionResult(this.mapping.filterMapping);
     }
+
+    if (changes['sourceTemplate']) {
+      this.displayedSourceTemplate = this.computeDisplayedTemplate(this.sourceTemplate, this.showSourceMetadata);
+      this.hasSourceMetadata = this.containsMetadata(this.sourceTemplate);
+    }
+    if (changes['targetTemplate']) {
+      this.displayedTargetTemplate = this.computeDisplayedTemplate(this.targetTemplate, this.showTargetMetadata);
+      this.hasTargetMetadata = this.containsMetadata(this.targetTemplate);
+    }
+  }
+
+  /** True when the template carries at least one metadata token that the toggle could hide. */
+  private containsMetadata(template: any): boolean {
+    if (!template || typeof template !== 'object' || Array.isArray(template)) {
+      return false;
+    }
+    return PROTECTED_TOKENS.some(token => token in template);
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  // ─── Metadata visibility ────────────────────────────────────────────────────
+
+  toggleSourceMetadataVisibility(): void {
+    this.showSourceMetadata = !this.showSourceMetadata;
+    this.displayedSourceTemplate = this.computeDisplayedTemplate(this.sourceTemplate, this.showSourceMetadata);
+  }
+
+  toggleTargetMetadataVisibility(): void {
+    this.showTargetMetadata = !this.showTargetMetadata;
+    this.displayedTargetTemplate = this.computeDisplayedTemplate(this.targetTemplate, this.showTargetMetadata);
+  }
+
+  private computeDisplayedTemplate(template: any, showMetadata: boolean): any {
+    return showMetadata ? template : this.stripMetadataKeys(template);
+  }
+
+  private stripMetadataKeys(template: any): any {
+    if (!template || typeof template !== 'object' || Array.isArray(template)) {
+      return template;
+    }
+    const result: any = { ...template };
+    PROTECTED_TOKENS.forEach(token => delete result[token]);
+    return result;
+  }
+
+  /** Restores top-level metadata keys stripped for display so they are never lost on save. */
+  private restoreMetadataKeys(updated: any, full: any): any {
+    if (!updated || typeof updated !== 'object' || Array.isArray(updated)) {
+      return updated;
+    }
+    if (!full || typeof full !== 'object') {
+      return updated;
+    }
+    const merged = { ...updated };
+    PROTECTED_TOKENS.forEach(token => {
+      if (token in full && !(token in merged)) {
+        merged[token] = full[token];
+      }
+    });
+    return merged;
   }
 
   // ─── Filter expression ─────────────────────────────────────────────────────
@@ -171,7 +271,9 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
       // has already expanded the templates but Angular hasn't yet propagated the
       // @Input change to this child). Fall back to the live editor content, then
       // to the @Input sourceTemplate as a last resort.
-      const template = templateOverride ?? this.editorSourceStepTemplate?.get() ?? this.sourceTemplate;
+      const editorTemplate = this.editorSourceStepTemplate?.get() ?? this.sourceTemplate;
+      const template = templateOverride
+        ?? (this.showSourceMetadata ? editorTemplate : this.restoreMetadataKeys(editorTemplate, this.sourceTemplate));
       const result = await this.stepperService.evaluateFilterExpression(
         template,
         path
@@ -208,7 +310,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   onSourceTemplateChanged(contentChanges: ContentChanges): void {
     // sourceTemplateChange has no @Output emitter; the parent reads sourceTemplateUpdated
     // via templateStepRef when leaving the step.
-    this.onTemplateChanged(contentChanges, this.sourceTemplate, json => { this.sourceTemplateUpdated = json; });
+    this.onTemplateChanged(contentChanges, this.sourceTemplate, this.showSourceMetadata, json => { this.sourceTemplateUpdated = json; });
   }
 
   onTargetTemplateChanged(contentChanges: ContentChanges): void {
@@ -219,12 +321,13 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
     // editor.set() and resets the editor's content/cursor, visibly interrupting typing. The
     // parent instead reads targetTemplateUpdated via templateStepRef when it actually needs the
     // value (leaving the step, triggering AI generation, etc.).
-    this.onTemplateChanged(contentChanges, this.targetTemplate, json => { this.targetTemplateUpdated = json; });
+    this.onTemplateChanged(contentChanges, this.targetTemplate, this.showTargetMetadata, json => { this.targetTemplateUpdated = json; });
   }
 
   private onTemplateChanged(
     contentChanges: ContentChanges,
     baseline: any,
+    showMetadata: boolean,
     onUpdated?: (json: any) => void
   ): void {
     const { previousContent, updatedContent } = contentChanges;
@@ -241,6 +344,13 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
       updatedJson = updatedContent['json'];
     }
 
+    // Metadata keys (_IDENTITY_, _TOPIC_LEVEL_, _CONTEXT_DATA_) are hidden from the editor
+    // when showMetadata is false, so they are absent from updatedJson. Restore them from the
+    // original (full) template so they are never dropped on save.
+    if (!showMetadata) {
+      updatedJson = this.restoreMetadataKeys(updatedJson, baseline);
+    }
+
     onUpdated?.(updatedJson);
 
     if (previousContent) {
@@ -251,7 +361,10 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
       }
     }
 
-    const hasProtectedChanges = this.stepperConfiguration.allowTemplateExpansion
+    // Metadata keys can't be edited via the UI while hidden, so there is nothing to protect
+    // against — skip the check to avoid false positives from their absence in the editor content.
+    const hasProtectedChanges = showMetadata
+      && this.stepperConfiguration.allowTemplateExpansion
       && !validateProtectedFields(baseline, updatedJson);
     const isTransformationTypeValid = checkTransformationType(this.mapping.transformationType, updatedJson);
     const isValid = !hasProtectedChanges && isTransformationTypeValid;
@@ -282,7 +395,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
         ? expandExternalTemplate(template, this.mapping, levels)
         : template;
     }
-    this.editorTargetStepTemplate?.set(newTarget);
+    this.editorTargetStepTemplate?.set(this.computeDisplayedTemplate(newTarget, this.showTargetMetadata));
     this.targetTemplateChange.emit(newTarget);
   }
 

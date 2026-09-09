@@ -262,8 +262,10 @@ public class NotificationSubscriber {
     /**
      * Unsubscribe orphaned Notifications 2.0 subscribers at startup.
      * Queries existing subscribers from the Cumulocity messaging-management API for
-     * each of the four known subscriptions, then deletes any subscriber whose name
-     * does not match a current valid pattern (known connector ID + current suffix).
+     * each of the known subscriptions, then deletes any subscriber whose name does
+     * not match a current valid pattern (known connector ID + current suffix).
+     * Explorer subscribers are keyed by a per-session UUID that cannot survive a
+     * restart, so every explorer subscriber found is treated as orphaned.
      */
     public void cleanupOrphanedSubscribers(String tenant, List<ConnectorConfiguration> allConfigs,
             String currentSuffix) {
@@ -294,7 +296,30 @@ public class NotificationSubscriber {
         cleaned += cleanupDeviceSubscribers(tenant, Utils.DYNAMIC_DEVICE_SUBSCRIPTION,
                 Utils.DYNAMIC_DEVICE_SUBSCRIBER, currentConnectorIds, suffix);
 
+        // Explorer subscriptions: keyed by a fresh session id per UI session, which
+        // cannot survive a service restart, so any subscriber found at startup is orphaned.
+        cleaned += cleanupAllSubscribers(tenant, Utils.EXPLORER_DEVICE_SUBSCRIPTION,
+                Utils.EXPLORER_DEVICE_SUBSCRIBER);
+
         log.info("{} - Orphaned subscriber cleanup completed, {} subscriber(s) cleaned", tenant, cleaned);
+    }
+
+    private int cleanupAllSubscribers(String tenant, String subscriptionName, String subscriberBase) {
+        int cleaned = 0;
+        for (String subscriber : messagingManagementService.getSubscribers(tenant, subscriptionName)) {
+            if (!subscriber.startsWith(subscriberBase)) {
+                continue;
+            }
+            log.info("{} - Deleting orphaned Explorer subscriber '{}' from '{}'", tenant, subscriber, subscriptionName);
+            try {
+                messagingManagementService.deleteSubscriber(tenant, subscriptionName, subscriber);
+                cleaned++;
+            } catch (Exception e) {
+                log.warn("{} - Could not delete subscriber '{}' from subscription '{}': {}",
+                        tenant, subscriber, subscriptionName, e.getMessage());
+            }
+        }
+        return cleaned;
     }
 
     private int cleanupTenantSubscribers(String tenant, String subscriptionName,

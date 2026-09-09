@@ -94,9 +94,9 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                         || !filterInventory) {
                     if (mapping.getDebug()) {
                         log.info(
-                                "{} - Inbound mapping {}/{} not processed, failing Filter inventory execution: filterResult {}",
+                                "{} - Inbound mapping {}/{} filtered out - inventory filter mismatch: filter={}, sourceId={}, result={}",
                                 tenant, mapping.getName(), mapping.getIdentifier(),
-                                filterInventory);
+                                mapping.getFilterInventory(), context.getSourceId(), filterInventory);
                     }
                     context.setIgnoreFurtherProcessing(true);
                 }

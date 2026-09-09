@@ -28,7 +28,9 @@ import {
   splitTopicExcludingSeparator,
   splitTopicIncludingSeparator,
   checkTopicsInboundAreValid,
-  stripTemplateMetadataTags
+  stripTemplateMetadataTags,
+  translateValidationErrorCode,
+  buildBackendErrorMessage
 } from './util';
 import { Direction, Mapping, MappingType, RepairStrategy, TransformationType } from '../../shared';
 
@@ -345,6 +347,30 @@ describe('checkTopicsInboundAreValid', () => {
       result['MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name']
     ).toBeDefined();
   });
+
+  it('should also propagate the error onto the mappingTopic control so field-level rendering shows it', () => {
+    // Previously only the two `required` checks set errors on the individual control;
+    // every other violation (like this one) was returned at the group level only, so
+    // Formly's per-field error rendering (which reads the control's own .errors) never
+    // showed anything even though the form was correctly marked invalid.
+    const control = makeControl('a/b/c', 'a/b/d');
+    checkTopicsInboundAreValid(control);
+    expect(control.get('mappingTopic').errors).toEqual(
+      jasmine.objectContaining({
+        MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name: jasmine.anything()
+      })
+    );
+  });
+
+  it('should clear the mappingTopic control error once the topics become valid again', () => {
+    const control = makeControl('a/b/c', 'a/b/d');
+    checkTopicsInboundAreValid(control);
+    expect(control.get('mappingTopic').errors).not.toBeNull();
+
+    control.get('mappingTopicSample').setValue('a/b/c');
+    checkTopicsInboundAreValid(control);
+    expect(control.get('mappingTopic').errors).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -423,5 +449,51 @@ describe('stripTemplateMetadataTags', () => {
     expect(result).not.toContain('@description');
     expect(result).not.toContain('@templateType');
     expect(result).toContain('function onMessage(msg, context) { return []; }');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// translateValidationErrorCode / buildBackendErrorMessage
+// ---------------------------------------------------------------------------
+
+describe('translateValidationErrorCode', () => {
+  it('should translate a known backend error code to its friendly message', () => {
+    expect(translateValidationErrorCode('Only_One_Multi_Level_Wildcard')).toBe(
+      'Only one MultiLevel wildcard "#" is allowed.'
+    );
+  });
+
+  it('should fall back to a de-slugified version of an unknown code', () => {
+    expect(translateValidationErrorCode('Some_Future_Error_Code')).toBe('Some Future Error Code');
+  });
+});
+
+describe('buildBackendErrorMessage', () => {
+  it('should translate and join every code in a structured error response', () => {
+    const body = {
+      message: 'Mapping validation failed',
+      errors: ['Only_One_Multi_Level_Wildcard', 'Source_Template_Must_Be_Valid_JSON']
+    };
+
+    const result = buildBackendErrorMessage(body, 'fallback');
+
+    expect(result).toBe(
+      'Only one MultiLevel wildcard "#" is allowed.; SourceTemplate must be valid JSON.'
+    );
+  });
+
+  it('should fall back to body.message when there is no errors array', () => {
+    expect(buildBackendErrorMessage({ message: 'Something else failed' }, 'fallback')).toBe(
+      'Something else failed'
+    );
+  });
+
+  it('should fall back to the provided fallback when the body has neither', () => {
+    expect(buildBackendErrorMessage({}, 'fallback text')).toBe('fallback text');
+    expect(buildBackendErrorMessage(undefined, 'fallback text')).toBe('fallback text');
+  });
+
+  it('should ignore an empty errors array and fall back to message', () => {
+    expect(buildBackendErrorMessage({ message: 'msg', errors: [] }, 'fallback')).toBe('msg');
   });
 });

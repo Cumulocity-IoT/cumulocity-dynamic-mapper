@@ -1,10 +1,6 @@
 package dynamic.mapper.processor;
 
-import static com.dashjoin.jsonata.Jsonata.jsonata;
-
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.graalvm.polyglot.PolyglotException;
@@ -21,6 +17,7 @@ import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
+import dynamic.mapper.service.resolver.InventoryFilterEvaluator;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -33,6 +30,9 @@ public abstract class CommonProcessor implements Processor {
     @Autowired
     private C8YAgent c8yAgent;
 
+    @Autowired
+    private InventoryFilterEvaluator inventoryFilterEvaluator;
+
     public abstract void process(Exchange exchange) throws Exception;
 
     /**
@@ -40,31 +40,7 @@ public abstract class CommonProcessor implements Processor {
      */
     protected boolean evaluateInventoryFilter(String tenant, String filterExpression, String sourceId,
             Boolean testing) {
-        if (filterExpression == null || filterExpression.trim().isEmpty()) {
-            return true;
-        }
-        try {
-            Map<String, Object> cachedInventoryContent = configurationRegistry.getC8yAgent()
-                    .getMOFromInventoryCache(tenant, sourceId, testing);
-            List<String> keyList = new ArrayList<>(cachedInventoryContent.keySet());
-            log.info("{} - For object {} found following fragments in inventory cache {}",
-                    tenant, sourceId, keyList);
-            var expression = jsonata(filterExpression);
-            Object result = expression.evaluate(cachedInventoryContent);
-
-            if (result != null && Utils.isNodeTrue(result)) {
-                log.info("{} - Found valid inventory for filter {}",
-                        tenant, filterExpression);
-                return true;
-            } else {
-                log.debug("{} - Not matching inventory filter {} for source {}",
-                        tenant, filterExpression, sourceId);
-                return false;
-            }
-        } catch (Exception e) {
-            log.debug("Inventory filter evaluation error for {}: {}", filterExpression, e.getMessage());
-            return false;
-        }
+        return inventoryFilterEvaluator.evaluate(tenant, filterExpression, sourceId, Boolean.TRUE.equals(testing));
     }
 
     /**

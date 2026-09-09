@@ -86,18 +86,49 @@
           }
           <!-- Extension Selectors (EXTENSION_JAVA only) -->
           @if (shouldShowExtensionSelectors()) {
+          <!-- Extension Name - Loading State -->
+          @if (isLoadingExtensions) {
           <c8y-form-group class="p-l-16 p-r-16">
+            <label>{{ 'Extensions' | translate }}</label>
+            <div class="text-center p-24">
+              <c8y-loading></c8y-loading>
+              <p class="text-muted m-t-8">{{ 'Loading Java extensions...' | translate }}</p>
+            </div>
+          </c8y-form-group>
+          }
+          <!-- Extension Name - No Extensions Available -->
+          @if (!isLoadingExtensions && extensionItems.length === 0) {
+          <c8y-form-group class="p-l-16 p-r-16">
+            <label>{{ 'Extensions' | translate }}</label>
+            <div class="alert alert-info">
+              <i c8yIcon="info"></i>
+              {{ 'No Java extensions available — upload one first' | translate }}
+            </div>
+          </c8y-form-group>
+          }
+          <!-- Extension Name - With Extensions -->
+          @if (!isLoadingExtensions && extensionItems.length > 0) {
+          <c8y-form-group class="p-l-16 p-r-16"
+            [class.has-error]="formGroup.get('extensionName')?.invalid && formGroup.get('extensionName')?.touched">
             <label>{{ 'Extensions' | translate }}</label>
             <c8y-select data-cy="dm-mapping-type-extension-name-select" [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
               aria-label="Extension Name">
             </c8y-select>
+            @if (formGroup.get('extensionName')?.invalid && formGroup.get('extensionName')?.touched) {
+            <span class="help-block">{{ 'Extension is required' | translate }}</span>
+            }
           </c8y-form-group>
-          <c8y-form-group class="p-l-16 p-r-16">
+          <c8y-form-group class="p-l-16 p-r-16"
+            [class.has-error]="formGroup.get('eventName')?.invalid && formGroup.get('eventName')?.touched">
             <label>{{ ('Events for ' + getExtensionNameString()) | translate }}</label>
             <c8y-select data-cy="dm-mapping-type-extension-event-select" [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true"
               aria-label="Event Name">
             </c8y-select>
+            @if (formGroup.get('eventName')?.invalid && formGroup.get('eventName')?.touched) {
+            <span class="help-block">{{ 'Event is required' | translate }}</span>
+            }
           </c8y-form-group>
+          }
           @if (hasExtensionParameter) {
           <c8y-form-group class="p-l-16 p-r-16">
             <label>{{ 'Extension Parameter (YAML)' | translate }}</label>

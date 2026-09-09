@@ -72,6 +72,29 @@ body .jse-main {
   background-color: var(--palette-status-info-light, var(--c8y-palette-status-info-light)) !important;
 }
 
+/* _IDENTITY_/_TOPIC_LEVEL_/_CONTEXT_DATA_ root node only: visually set apart from
+   user-authored payload data. Every node's DOM is nested inside its parent's, so this
+   descendant selector also matches the root's own nested content - the
+   .jse-metadata-node-content rule below (declared after, so it wins the tie at equal
+   specificity) explicitly resets that back to the default styling. */
+.jse-metadata-node .jse-key {
+  color: var(--palette-status-warning-high, var(--c8y-palette-status-warning-high)) !important;
+  font-style: italic;
+}
+
+.jse-metadata-node .jse-value {
+  color: var(--palette-status-warning-high, var(--c8y-palette-status-warning-high)) !important;
+}
+
+.jse-metadata-node-content .jse-key {
+  color: inherit !important;
+  font-style: normal !important;
+}
+
+.jse-metadata-node-content .jse-value {
+  color: inherit !important;
+}
+
 /* remove the 'transform' option from the context menu */
 /* div.jse-absolute-popup div:nth-child(5) > div:nth-child(1) > button:nth-child(4) {
   display:none;
