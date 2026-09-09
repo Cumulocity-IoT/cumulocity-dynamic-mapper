@@ -17,6 +17,6 @@
  *
  * @authors Christof Strack
  */
-[class="modal-header"] {
+.modal-header {
   display: none;
 }

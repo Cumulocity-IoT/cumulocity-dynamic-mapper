@@ -96,8 +96,9 @@ public class MappingResolverService {
             return false;
         }
 
-        // Check message filter
-        if (mapping.getFilterMapping() != null && !mapping.getFilterMapping().isBlank()) {
+        // Check message filter (skip evaluation for blank or the "true" no-op default)
+        if (mapping.getFilterMapping() != null && !mapping.getFilterMapping().isBlank()
+                && !"true".equals(mapping.getFilterMapping())) {
             if (!evaluateMessageFilter(tenant, mapping, message)) {
                 return false;
             }
