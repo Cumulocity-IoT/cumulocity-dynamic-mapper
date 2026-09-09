@@ -66,7 +66,7 @@ public class ExtensionInboundRegistry {
         } else {
             Map<String, ExtensionEntry> entries = extensions.get(extensionName).getExtensionEntries();
             if (entries.containsKey(entry.getEventName())) {
-                log.warn("{} - Extension entry with this eventName {} already exits for extension {}, override existing entry!",
+                log.warn("{} - Extension entry with this eventName {} already exists for extension {}, override existing entry!",
                         tenant, entry.getEventName(), extensionName);
             }
             entries.put(entry.getEventName(), entry);
