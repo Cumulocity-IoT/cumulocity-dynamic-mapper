@@ -109,7 +109,7 @@ least once'."
 
 - Negative-ack / retransmission / processing-cancellation correctness for this
   connector specifically has been iterated on repeatedly (commits `57f23caa8` "Properly
-  cancel Processing for MQTT Service + Allow retransmitting of negativ acked messages",
+  cancel Processing for MQTT Service + Allow retransmitting of negative acked messages",
   `766b7d049` "Proper type for Negative Ack Delay") — read `MQTTServicePulsarCallback`
   directly rather than assuming older described behavior.
 - The three-tier subscription-strategy fallback exists purely to work around
