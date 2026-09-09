@@ -399,6 +399,59 @@ class MappingVersionServiceTest {
         assertEquals("7.0.0", runnable.getVersion(), "runnable (cache-resident) mapping must be untouched");
     }
 
+    // ========== publish: validation gaps ==========
+
+    @Test
+    void publishRejectsDuplicateVersionLabel() {
+        service.publish(TENANT, mapping(IDENTIFIER), "1.0.0", "first", null);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.publish(TENANT, mapping(IDENTIFIER), "1.0.0", "duplicate", "1.0.0"));
+
+        assertEquals(1, versionCount(), "the duplicate publish attempt must not persist a second version");
+        assertEquals(1, service.listVersions(TENANT, IDENTIFIER).size());
+    }
+
+    @Test
+    void publishRejectsInvalidSemver() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.publish(TENANT, mapping(IDENTIFIER), "not-a-version", "bad", null));
+        assertEquals(0, versionCount());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.publish(TENANT, mapping(IDENTIFIER), "1.0", "bad-too", null));
+        assertEquals(0, versionCount(), "a malformed semver must never be persisted");
+    }
+
+    // ========== suggestNextVersions ==========
+
+    @Test
+    void suggestNextVersionsWhenNoneExistSuggestsOneZeroZero() {
+        String[] suggestions = service.suggestNextVersions(TENANT, IDENTIFIER);
+        assertArrayEquals(new String[] { "1.0.0", "1.0.0", "1.0.0" }, suggestions);
+    }
+
+    @Test
+    void suggestNextVersionsBumpsOffHighestPublished() {
+        service.publish(TENANT, mapping(IDENTIFIER), "1.2.3", "v1", null);
+
+        String[] suggestions = service.suggestNextVersions(TENANT, IDENTIFIER);
+
+        assertArrayEquals(new String[] { "1.2.4", "1.3.0", "2.0.0" }, suggestions);
+    }
+
+    @Test
+    void suggestNextVersionsIgnoresDraftAndUsesHighestNotLatestPublished() {
+        // Publish out of numeric order to confirm "highest" (not "most recently published") wins.
+        service.publish(TENANT, mapping(IDENTIFIER), "2.0.0", "v2", null);
+        service.publish(TENANT, mapping(IDENTIFIER), "1.0.0", "v1", "2.0.0");
+        service.saveDraft(TENANT, IDENTIFIER, mapping(IDENTIFIER)); // a draft must not affect the suggestion
+
+        String[] suggestions = service.suggestNextVersions(TENANT, IDENTIFIER);
+
+        assertArrayEquals(new String[] { "2.0.1", "2.1.0", "3.0.0" }, suggestions);
+    }
+
     // ========== countVersionsForIdentifiers ==========
 
     @Test

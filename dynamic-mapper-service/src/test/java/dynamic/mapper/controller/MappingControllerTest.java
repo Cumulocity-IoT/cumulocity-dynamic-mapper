@@ -47,10 +47,16 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.model.MappingVersion;
+import dynamic.mapper.model.MappingVersionCount;
 import dynamic.mapper.model.ValidationError;
 import dynamic.mapper.model.ValidationErrorResponse;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.MappingValidationException;
+
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verify;
 
 /**
  * Covers the mapping-validation error path in {@link MappingController}: the endpoints must let
@@ -141,5 +147,70 @@ class MappingControllerTest {
                 () -> controller.publishDraft("m1", "1.0.0", null));
 
         assertEquals(List.of(ValidationError.FilterOutbound_Must_Be_Unique), thrown.getErrors());
+    }
+
+    // ========== GET /{id}/draft ==========
+
+    @Test
+    void getDraft_returns204WhenNoDraftExists() {
+        when(mappingService.getDraftMapping(TENANT, "m1")).thenReturn(null);
+
+        ResponseEntity<Mapping> response = controller.getDraft("m1");
+
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+        assertNull(response.getBody());
+    }
+
+    @Test
+    void getDraft_returnsDraftBodyWhenOneExists() {
+        Mapping draft = makeMapping();
+        draft.setName("draft-copy");
+        when(mappingService.getDraftMapping(TENANT, "m1")).thenReturn(draft);
+
+        ResponseEntity<Mapping> response = controller.getDraft("m1");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("draft-copy", response.getBody().getName());
+    }
+
+    // ========== PATCH /{id}/version/{version} ==========
+
+    @Test
+    void updateVersionNote_updatesTheNote() {
+        MappingVersion updated = MappingVersion.builder()
+                .identifier("m1").version("1.0.0").note("new note").build();
+        when(mappingService.updateVersionNote(TENANT, "m1", "1.0.0", "new note")).thenReturn(updated);
+
+        ResponseEntity<MappingVersion> response = controller.updateVersionNote("m1", "1.0.0", "new note");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("new note", response.getBody().getNote());
+        verify(mappingService).updateVersionNote(TENANT, "m1", "1.0.0", "new note");
+    }
+
+    // ========== DELETE /{id}/version/{version} ==========
+
+    @Test
+    void deleteVersion_deletesAnInactiveVersion() {
+        ResponseEntity<Void> response = controller.deleteVersion("m1", "1.0.0");
+
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+        verify(mappingService).deleteVersion(TENANT, "m1", "1.0.0");
+    }
+
+    // ========== GET /version-counts ==========
+
+    @Test
+    void getVersionCounts_returnsCountsFromService() {
+        List<MappingVersionCount> counts = List.of(
+                new MappingVersionCount("m1", 3L),
+                new MappingVersionCount("m2", 0L));
+        when(mappingService.getVersionCounts(TENANT, null)).thenReturn(counts);
+
+        ResponseEntity<List<MappingVersionCount>> response = controller.getVersionCounts(null);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(counts, response.getBody());
+        assertTrue(response.getBody().stream().anyMatch(c -> c.id().equals("m1") && c.versionCount() == 3L));
     }
 }
