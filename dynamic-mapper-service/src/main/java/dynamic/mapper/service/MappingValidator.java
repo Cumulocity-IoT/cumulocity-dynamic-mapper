@@ -99,8 +99,13 @@ public class MappingValidator {
             errors.addAll(validateMappingTypeConstraints(mapping));
 
             // Duplicate checks against mappings already persisted for this tenant/direction
-            List<Mapping> existingMappings = findExistingMappings(tenant, mapping.getDirection(), excludeMappingId);
-            errors.addAll(validateFilterOutboundUniqueness(existingMappings, mapping));
+            if (mapping.getDirection() == Direction.OUTBOUND) {
+                String filter = mapping.getFilterMapping();
+                if (filter != null && !filter.isBlank() && !"true".equals(filter)) {
+                    List<Mapping> existingMappings = findExistingMappings(tenant, mapping.getDirection(), excludeMappingId);
+                    errors.addAll(validateFilterOutboundUniqueness(existingMappings, mapping));
+                }
+            }
 
             if (!errors.isEmpty()) {
                 log.debug("{} - Validation failed for mapping {}: {}",

@@ -127,8 +127,10 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 context.setSharedCode(sharedTemplate.getCode());
                 context.setSystemCode(systemTemplate.getCode());
 
-                // Build the pool key: tenant:mappingId:codeHash
-                String codeHash = Integer.toHexString(mapping.getCode().hashCode());
+                // Build the pool key: tenant:mappingId:codeHash (use a stable hash to avoid collisions)
+                String codeHash = java.util.HexFormat.of().formatHex(
+                        java.security.MessageDigest.getInstance("SHA-256")
+                                .digest(mapping.getCode().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
                 String poolKey = tenant + ":" + mapping.getIdentifier() + ":" + codeHash;
 
                 // Borrow a pre-warmed context from the pool (or create one on first use)
