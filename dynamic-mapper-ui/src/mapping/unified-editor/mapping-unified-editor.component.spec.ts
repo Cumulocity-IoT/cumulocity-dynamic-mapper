@@ -28,7 +28,7 @@ import { GlobalContextService } from '@c8y/ngx-components/global-context';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { of, Subject } from 'rxjs';
 import { MappingUnifiedEditorComponent } from './mapping-unified-editor.component';
-import { MappingStepperService } from '../service/mapping-stepper.service';
+import { MappingStepperService, EditorSessionResult } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { MappingService } from '../core/mapping.service';
 import { SharedService } from '../../shared';
@@ -132,6 +132,38 @@ describe('MappingUnifiedEditorComponent', () => {
 
   const deploymentMapEntry: DeploymentMapEntry = { identifier: '42', connectors: ['c1'] };
 
+  // Default stand-in for MappingStepperService.initializeEditorSession()'s return value — the
+  // real logic behind it is unit tested directly on the service (mapping-stepper.service.spec.ts);
+  // these component tests only need a realistic-shaped result to apply onto their own fields.
+  const buildEditorSessionResult = (overrides: Partial<EditorSessionResult> = {}): EditorSessionResult => ({
+    stepperViewModel: {} as any,
+    extensionEventItems$: of([]),
+    targetSystem: 'Cumulocity',
+    sourceSystem: 'Broker',
+    editorOptions: {} as any,
+    templateForm: new FormGroup({
+      extensionName: new FormControl(''),
+      eventName: new FormControl(''),
+      extensionParameter: new FormControl(''),
+      sampleTargetTemplatesButton: new FormControl(false)
+    }),
+    editorTemplatesReadOnly: false,
+    feature: mockFeature,
+    serviceConfiguration: {} as any,
+    aiAgent: null,
+    aiAgentDeployed: false,
+    filterFormlyFields: [],
+    codeTemplates: {} as any,
+    codeTemplatesDecoded: new Map(),
+    codeTemplateEntries: [],
+    codeTemplateItems: [],
+    codeEditorHelp: 'help text',
+    codeEditorLabel: 'JavaScript callback for Smart functions',
+    schemaSource: { source: true },
+    schemaTarget: { target: true },
+    ...overrides
+  });
+
   beforeEach(async () => {
     isButtonDisabled$ = new Subject<boolean>();
     isSubstitutionValid$ = new Subject<boolean>();
@@ -159,7 +191,10 @@ describe('MappingUnifiedEditorComponent', () => {
         'computeCodeFromTemplate',
         'computeCodeTemplateEntries',
         'computeExtensionItems',
-        'createCodeTemplateAndRefresh'
+        'createCodeTemplateAndRefresh',
+        'initializeEditorSession',
+        'registerCompletionProvider',
+        'encodeMappingForCommit'
       ],
       {
         countDeviceIdentifiers$: of(0),
@@ -215,6 +250,8 @@ describe('MappingUnifiedEditorComponent', () => {
       Promise.resolve({ aiAgent: null, aiAgentDeployed: false })
     );
     mockStepperService.loadCodeTemplates.and.returnValue(Promise.resolve(new Map()));
+    mockStepperService.initializeEditorSession.and.returnValue(Promise.resolve(buildEditorSessionResult()));
+    mockStepperService.registerCompletionProvider.and.returnValue(Promise.resolve());
     mockSharedService.getFeatures.and.returnValue(Promise.resolve(mockFeature));
     mockSharedService.getServiceConfiguration.and.returnValue(Promise.resolve({} as any));
     mockSharedService.getCodeTemplates.and.returnValue(Promise.resolve({} as any));
@@ -282,6 +319,67 @@ describe('MappingUnifiedEditorComponent', () => {
       });
       await component.ngOnInit();
       expect(component.activeTabIndex).toBe(TAB_GENERAL_SETTINGS);
+    });
+
+    // The real bootstrap logic (view model, systems, schemas, read-only gating, code-editor help
+    // text, ...) moved into MappingStepperService.initializeEditorSession() (Phase 4) and is unit
+    // tested directly there (mapping-stepper.service.spec.ts). These tests only verify the
+    // component delegates to it and applies the result back onto its own fields.
+    it('delegates to initializeEditorSession with its own mapping/config/destroy$/callbacks', async () => {
+      await component.ngOnInit();
+
+      expect(mockStepperService.initializeEditorSession).toHaveBeenCalledWith(
+        component.mapping,
+        component.stepperConfiguration,
+        jasmine.any(Subject),
+        jasmine.objectContaining({
+          onSelectExtensionName: jasmine.any(Function),
+          onSelectExtensionEvent: jasmine.any(Function),
+          getSourceTemplate: jasmine.any(Function),
+          setSourceTemplate: jasmine.any(Function)
+        })
+        // No 5th argument — unlike the stepper, the unified editor uses the default
+        // (disableExtensionSelectorsWhenHidden = false).
+      );
+    });
+
+    it('applies the returned session fields onto its own state', async () => {
+      const session = buildEditorSessionResult({
+        targetSystem: 'X-target',
+        sourceSystem: 'Y-source',
+        schemaSource: { a: 1 },
+        schemaTarget: { b: 2 },
+        codeEditorHelp: 'H',
+        codeEditorLabel: 'L'
+      });
+      mockStepperService.initializeEditorSession.and.returnValue(Promise.resolve(session));
+
+      await component.ngOnInit();
+
+      expect(component.stepperViewModel).toBe(session.stepperViewModel);
+      expect(component.templateForm).toBe(session.templateForm);
+      expect(component.targetSystem).toBe('X-target');
+      expect(component.sourceSystem).toBe('Y-source');
+      expect(component.schemaSource).toEqual({ a: 1 });
+      expect(component.schemaTarget).toEqual({ b: 2 });
+      expect(component.codeEditorHelp).toBe('H');
+      expect(component.codeEditorLabel).toBe('L');
+      expect(component.feature).toBe(session.feature);
+      expect(component.serviceConfiguration).toBe(session.serviceConfiguration);
+      expect(component.filterFormlyFields).toBe(session.filterFormlyFields);
+      expect(component.codeTemplates).toBe(session.codeTemplates);
+      expect(component.codeTemplatesDecoded).toBe(session.codeTemplatesDecoded);
+      expect(component.codeTemplateEntries).toBe(session.codeTemplateEntries);
+      expect(component.codeTemplateItems).toBe(session.codeTemplateItems);
+    });
+
+    it('makes template editors read-only when the session reports editorTemplatesReadOnly', async () => {
+      mockStepperService.initializeEditorSession.and.returnValue(
+        Promise.resolve(buildEditorSessionResult({ editorTemplatesReadOnly: true }))
+      );
+      await component.ngOnInit();
+      expect(component.editorOptionsSourceTemplate.readOnly).toBe(true);
+      expect(component.editorOptionsTargetTemplate.readOnly).toBe(true);
     });
   });
 
@@ -377,6 +475,11 @@ describe('MappingUnifiedEditorComponent', () => {
     });
   });
 
+  // The real encoding logic (JSON-stringify/reduce, base64 code encoding, content-change
+  // detection, substitutions-as-code guard) moved to MappingStepperService.encodeMappingForCommit
+  // (Phase 5) and is unit tested directly there (mapping-stepper.service.spec.ts). The stub below
+  // mimics just enough of it (template stringification + always-changed) for these tests, which
+  // exercise the unified editor's OWN validation/persistence logic around that call.
   describe('onCommitButton', () => {
     beforeEach(() => {
       component.mapping = buildMapping();
@@ -389,6 +492,11 @@ describe('MappingUnifiedEditorComponent', () => {
         extensionName: new FormControl(''),
         eventName: new FormControl('')
       });
+      mockStepperService.encodeMappingForCommit.and.callFake((mapping: Mapping, sourceTemplate: any, targetTemplate: any) => {
+        mapping.sourceTemplate = JSON.stringify(sourceTemplate);
+        mapping.targetTemplate = JSON.stringify(targetTemplate);
+        return { mapping, contentChanged: true };
+      });
     });
 
     it('persists a draft and deployment, then navigates back to the grid', async () => {
@@ -400,10 +508,29 @@ describe('MappingUnifiedEditorComponent', () => {
       expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/mappings/inbound');
     });
 
-    it('serialises templates as JSON strings before saving (no expansion)', async () => {
+    it('delegates encoding to encodeMappingForCommit and persists its result', async () => {
       await component.onCommitButton();
+
+      expect(mockStepperService.encodeMappingForCommit).toHaveBeenCalledWith(
+        component.mapping,
+        { a: 1 },
+        { b: 2 },
+        component.mappingCode,
+        component['initialContentSnapshot'],
+        false,
+        component.stepperConfiguration.editorMode
+      );
       expect(component.mapping.sourceTemplate).toBe(JSON.stringify({ a: 1 }));
       expect(component.mapping.targetTemplate).toBe(JSON.stringify({ b: 2 }));
+    });
+
+    it('raises an alert and does not persist when encodeMappingForCommit reports an error', async () => {
+      mockStepperService.encodeMappingForCommit.and.returnValue({ error: 'Internal error in editor. Try again!' });
+
+      await component.onCommitButton();
+
+      expect(mockStepperService.raiseAlert).toHaveBeenCalledWith({ type: 'warning', text: 'Internal error in editor. Try again!' });
+      expect(mockMappingService.saveDraft).not.toHaveBeenCalled();
     });
 
     it('shows a danger alert and does not navigate when the save fails', async () => {

@@ -1,6 +1,8 @@
 # Implementation Plan: Stepper / Unified Editor Deduplication
 
-**Status:** Proposed
+**Status:** Phases 1–5 implemented (see each phase's implementation note in §3; not yet committed/
+merged as of this writing — verify current branch/PR state before assuming otherwise). Phase 6
+remains a separate, not-yet-started follow-up plan (see §3.6).
 **Scope of this plan:** Frontend only (`dynamic-mapper-ui`), specifically:
 `mapping/stepper-mapping/`, `mapping/unified-editor/`, `mapping/step-transformation/`,
 `mapping/service/mapping-stepper.service.ts`, `mapping/shared/util.ts`, `mapping/grid/mapping.component.ts`.
@@ -129,7 +131,7 @@ tests) green before moving to the next. Recommend **one PR per phase**, reviewed
 order — do not batch phases. The whole point of this plan is incremental de-risking of a file
 pair that has already produced production-visible bugs from being edited independently.
 
-### Phase 1 — Zero-risk pure-function consolidation
+### Phase 1 — Zero-risk pure-function consolidation ✅ Done
 
 No component state, no DI — pure functions or single-purpose predicates. Add to
 `mapping/shared/util.ts` (already the shared home for `hasEsmExport`/`hasMappingContentChanged`):
@@ -162,7 +164,13 @@ blocks + 1 method, call util).
 **Verification:** `ng build --configuration production`; both spec suites green; no behavior
 change intended except the `updateTemplatesInEditors` fix.
 
-### Phase 2 — Convenience wrapper for `updateSubstitutionValidity`
+**Implemented as planned.** All four functions landed in `mapping/shared/util.ts`
+(`configurationToYaml`/`yamlToConfiguration`/`buildTestMapping`/`isConnectorSelectionEmpty`), plus
+`updateTemplatesInEditors`/`tryGetLiveEditorContent` reconciled onto the stepper's more robust
+version as called out above. Added dedicated coverage in `mapping/shared/util.spec.ts` for all of
+these (they had none before, split across the two components' specs).
+
+### Phase 2 — Convenience wrapper for `updateSubstitutionValidity` ✅ Done
 
 9 call sites total (5 stepper, 4 unified) all pass the same 4 arguments, differing only in the
 boolean gate. Add to `MappingStepperService`:
@@ -175,7 +183,11 @@ refreshSubstitutionValidity(mapping: Mapping, stepperConfiguration: StepperConfi
 
 Replace all 9 call sites with the 3-argument wrapper call. Purely mechanical, low risk.
 
-### Phase 3 — Move stateless-but-mutating methods into `MappingStepperService`
+**Implemented as planned.** `refreshSubstitutionValidity` added verbatim; all 9 call sites
+(3 stepper, 4 unified editor, plus 1 in `MappingSubstitutionStepComponent` that the original
+inventory undercounted) converted to the 3-argument form.
+
+### Phase 3 — Move stateless-but-mutating methods into `MappingStepperService` ✅ Done
 
 Methods whose only component-specific dependency is the state passed to them (`templateForm`,
 `mapping`, `extensions`, etc. — reference types, so in-place mutation from inside the service
@@ -195,7 +207,24 @@ passes its own fields — **this preserves every existing template binding**
 flows in both editors (these are the two areas with the most Formly/Monaco interaction and the
 least unit-test coverage).
 
-### Phase 4 — Consolidate `ngOnInit` bootstrap + form/template initialization
+**Implemented with one deliberate deviation:** `onValueCodeChange` (`this.mappingCode = value;`) was
+**not** extracted — it's already the minimum possible duplication (one line assigning a primitive),
+so routing it through the service adds indirection without reducing any drift risk. All other
+listed methods moved as planned, including folding `updateCodeTemplateItems` into
+`computeCodeTemplateEntries` (it had no callers besides that one method, so a separate service
+method would have been pure ceremony). `raiseAlert` additionally required injecting `AlertService`
+into `MappingStepperService` (safe — same per-component-instance DI pattern already used for the
+other injected services).
+
+**Test fallout (not in the original plan, but necessary):** the business logic these methods used
+to contain was directly unit-tested in both component specs. Since the components' own
+`MappingStepperService` is a full jasmine mock in those specs, the logic moving into the service
+meant those tests would otherwise silently stop testing anything. Fixed by moving the real-logic
+tests to a new `mapping/service/mapping-stepper.service.spec.ts` (created this phase) and rewriting
+the component-spec tests to verify delegation (correct arguments in, correct field mutation out)
+instead. Repeated at every subsequent phase — see each phase's notes below.
+
+### Phase 4 — Consolidate `ngOnInit` bootstrap + form/template initialization ✅ Done
 
 The highest-value, highest-risk phase before §3.6. Add
 `MappingStepperService.initializeEditorSession(...)` covering: `setTemplateForm`,
@@ -226,7 +255,20 @@ today's `expandTemplates()`/`handleSelectTemplatesStep()`).
 **Verification:** full manual regression matrix (§4) run before and after, in addition to build +
 specs. Recommend its own PR, reviewed with extra scrutiny given the surface area.
 
-### Phase 5 — Consolidate the commit-encoding block
+**Implemented as planned**, including both flagged behavior fixes (`disableExtensionSelectorsWhenHidden`
+parameterized with the stepper passing `true`; `codeEditorHelp`/`codeEditorLabel` now branch on
+`SUBSTITUTION_AS_CODE` for both editors) and the completion-provider re-entrancy guard always
+applied. One addition beyond the plan's method list: the Monaco completion-provider disposable
+itself (`completionProviderDisposable`/`completionProviderRegistering`) moved into the service too
+(alongside `registerCompletionProvider`), since it's the same kind of per-component-instance state
+as everything else the service already owns — `cleanup()` now disposes it, so both components'
+`ngOnDestroy` simplified to just calling `cleanup()`. Also removed `SharedService` injection from
+both components entirely — after this phase nothing in either component called it directly anymore.
+Manual regression matrix (§4) was not re-run against a live browser this session (no interactive
+environment available); rely on the build + full spec suite passing, and treat the matrix as still
+outstanding before this ships to users.
+
+### Phase 5 — Consolidate the commit-encoding block ✅ Done
 
 Extract the shared portion of `onCommitButton` into:
 
@@ -258,6 +300,11 @@ signal that operation *order* matters for optimistic-concurrency correctness —
 sequence of operations in the extracted method against both current implementations line-by-line
 before merging, not just behaviorally. Full manual regression matrix (§4) required.
 
+**Implemented as planned**, exact signature. Verified the operation order against both prior
+implementations line-by-line (content-changed check before mutation → template encode → code
+encode → substitutions-as-code guard) — unchanged. As with Phase 4, the manual regression matrix
+was not re-run against a live browser this session; treat it as outstanding before shipping.
+
 ### Phase 6 (stretch — separate follow-up plan, not part of this one)
 
 Move the unified editor's inline `saveDraft`/`createMapping`/`updateDefinedDeploymentMapEntry`/
@@ -278,6 +325,14 @@ end-to-end.
 ---
 
 ## 4. Manual regression test matrix
+
+**Status: not yet executed.** Phases 1–5 were implemented and verified via `ng build
+--configuration production` and `tsc -p tsconfig.spec.json --noEmit` (full type-check of the specs
+too), plus new/updated specs written for every piece of logic that moved into
+`MappingStepperService` at each phase (see each phase's implementation note above). No headless
+Chrome was available in the environment this work was done in, so the Jasmine/Karma suite itself
+was not actually executed — only type-checked. Both **running `npm test`** and this manual matrix
+are outstanding before this work ships to users.
 
 Required before/after Phase 4 and Phase 5 at minimum (recommended for every phase if time
 allows). Run each scenario through **both** editors where applicable.

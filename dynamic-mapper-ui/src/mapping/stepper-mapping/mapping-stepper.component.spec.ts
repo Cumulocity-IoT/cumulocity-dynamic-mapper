@@ -20,9 +20,10 @@
 
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormControl, FormGroup } from '@angular/forms';
 import { of, Subject } from 'rxjs';
 import { MappingStepperComponent } from './mapping-stepper.component';
-import { MappingStepperService } from '../service/mapping-stepper.service';
+import { MappingStepperService, EditorSessionResult } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { SharedService } from '../../shared';
 import { AlertService, BottomDrawerService } from '@c8y/ngx-components';
@@ -126,6 +127,39 @@ describe('MappingStepperComponent', () => {
     acceptedDeprecationNotice: null
   };
 
+  // Default stand-in for MappingStepperService.initializeEditorSession()'s return value — the
+  // real logic behind it (direction-based systems, schema lookups, read-only gating, code-editor
+  // help text, ...) is unit tested directly on the service (mapping-stepper.service.spec.ts);
+  // these component tests only need a realistic-shaped result to apply onto their own fields.
+  const buildEditorSessionResult = (overrides: Partial<EditorSessionResult> = {}): EditorSessionResult => ({
+    stepperViewModel: {} as any,
+    extensionEventItems$: of([]),
+    targetSystem: 'Cumulocity',
+    sourceSystem: 'Broker',
+    editorOptions: {} as any,
+    templateForm: new FormGroup({
+      extensionName: new FormControl(''),
+      eventName: new FormControl(''),
+      extensionParameter: new FormControl(''),
+      sampleTargetTemplatesButton: new FormControl(false)
+    }),
+    editorTemplatesReadOnly: false,
+    feature: mockFeature,
+    serviceConfiguration: {} as any,
+    aiAgent: null,
+    aiAgentDeployed: false,
+    filterFormlyFields: [],
+    codeTemplates: {} as any,
+    codeTemplatesDecoded: new Map(),
+    codeTemplateEntries: [],
+    codeTemplateItems: [],
+    codeEditorHelp: 'help text',
+    codeEditorLabel: 'JavaScript callback for Smart functions',
+    schemaSource: { source: true },
+    schemaTarget: { target: true },
+    ...overrides
+  });
+
   beforeEach(async () => {
     mappingPropertyChanged$ = new Subject<Mapping>();
     isButtonDisabled$ = new Subject<boolean>();
@@ -154,7 +188,10 @@ describe('MappingStepperComponent', () => {
         'computeCodeFromTemplate',
         'computeCodeTemplateEntries',
         'computeExtensionItems',
-        'createCodeTemplateAndRefresh'
+        'createCodeTemplateAndRefresh',
+        'initializeEditorSession',
+        'registerCompletionProvider',
+        'encodeMappingForCommit'
       ],
       {
         countDeviceIdentifiers$: of(0),
@@ -196,6 +233,8 @@ describe('MappingStepperComponent', () => {
       Promise.resolve({ aiAgent: null, aiAgentDeployed: false })
     );
     mockStepperService.loadCodeTemplates.and.returnValue(Promise.resolve(new Map()));
+    mockStepperService.initializeEditorSession.and.returnValue(Promise.resolve(buildEditorSessionResult()));
+    mockStepperService.registerCompletionProvider.and.returnValue(Promise.resolve());
     mockSharedService.getFeatures.and.returnValue(Promise.resolve(mockFeature));
     mockSharedService.getServiceConfiguration.and.returnValue(Promise.resolve({} as any));
     mockSharedService.getCodeTemplates.and.returnValue(Promise.resolve({} as any));
@@ -229,59 +268,79 @@ describe('MappingStepperComponent', () => {
       expect(component).toBeTruthy();
     });
 
-    it('injects the mocked services (component-level providers are overridden)', () => {
+    it('injects the mocked stepper service (component-level providers are overridden)', () => {
       expect(component['stepperService']).toBe(mockStepperService);
-      expect(component['sharedService']).toBe(mockSharedService);
     });
+  });
 
-    it('builds the view model and template form on ngOnInit', async () => {
+  // The real bootstrap logic (view model, systems, schemas, read-only gating, code-editor help
+  // text, ...) moved into MappingStepperService.initializeEditorSession() (Phase 4) and is unit
+  // tested directly there (mapping-stepper.service.spec.ts). These tests only verify the
+  // component delegates to it with the right arguments and applies the result back onto its own
+  // fields — plus the one genuinely stepper-specific argument (disableExtensionSelectorsWhenHidden = true).
+  describe('ngOnInit — editor session bootstrap', () => {
+    it('delegates to initializeEditorSession with its own mapping/config/destroy$/callbacks, and the stepper-only selector-disable flag', async () => {
       await component.ngOnInit();
-      expect(component.stepperViewModel).toBeDefined();
-      expect(component.templateForm).toBeDefined();
-      expect(component.templateForm.get('extensionName')).toBeTruthy();
-      expect(component.templateForm.get('eventName')).toBeTruthy();
+
+      expect(mockStepperService.initializeEditorSession).toHaveBeenCalledWith(
+        component.mapping,
+        component.stepperConfiguration,
+        jasmine.any(Subject),
+        jasmine.objectContaining({
+          onSelectExtensionName: jasmine.any(Function),
+          onSelectExtensionEvent: jasmine.any(Function),
+          getSourceTemplate: jasmine.any(Function),
+          setSourceTemplate: jasmine.any(Function)
+        }),
+        true
+      );
     });
 
-    it('loads features, service configuration and AI-agent status on init', async () => {
+    it('applies the returned session fields onto its own state', async () => {
+      const session = buildEditorSessionResult({
+        targetSystem: 'X-target',
+        sourceSystem: 'Y-source',
+        schemaSource: { a: 1 },
+        schemaTarget: { b: 2 },
+        codeEditorHelp: 'H',
+        codeEditorLabel: 'L'
+      });
+      mockStepperService.initializeEditorSession.and.returnValue(Promise.resolve(session));
+
       await component.ngOnInit();
-      expect(mockSharedService.getFeatures).toHaveBeenCalled();
-      expect(mockSharedService.getServiceConfiguration).toHaveBeenCalled();
-      expect(mockStepperService.checkAIAgentDeployment).toHaveBeenCalled();
+
+      expect(component.stepperViewModel).toBe(session.stepperViewModel);
+      expect(component.templateForm).toBe(session.templateForm);
+      expect(component.targetSystem).toBe('X-target');
+      expect(component.sourceSystem).toBe('Y-source');
+      expect(component.schemaSource).toEqual({ a: 1 });
+      expect(component.schemaTarget).toEqual({ b: 2 });
+      expect(component.codeEditorHelp).toBe('H');
+      expect(component.codeEditorLabel).toBe('L');
+      expect(component.feature).toBe(session.feature);
+      expect(component.serviceConfiguration).toBe(session.serviceConfiguration);
+      expect(component.aiAgent).toBe(session.aiAgent);
+      expect(component.aiAgentDeployed).toBe(session.aiAgentDeployed);
+      expect(component.filterFormlyFields).toBe(session.filterFormlyFields);
+      expect(component.codeTemplates).toBe(session.codeTemplates);
+      expect(component.codeTemplatesDecoded).toBe(session.codeTemplatesDecoded);
+      expect(component.codeTemplateEntries).toBe(session.codeTemplateEntries);
+      expect(component.codeTemplateItems).toBe(session.codeTemplateItems);
     });
 
-    it('sets source/target systems from direction (INBOUND)', async () => {
-      component.mapping = buildMapping({ direction: Direction.INBOUND });
-      await component.ngOnInit();
-      expect(component.sourceSystem).toBe('Broker');
-      expect(component.targetSystem).toBe('Cumulocity');
-    });
-
-    it('sets source/target systems from direction (OUTBOUND)', async () => {
-      component.mapping = buildMapping({ direction: Direction.OUTBOUND });
-      await component.ngOnInit();
-      expect(component.sourceSystem).toBe('Cumulocity');
-      expect(component.targetSystem).toBe('Broker');
-    });
-
-    it('resolves source/target JSON schemas', async () => {
-      await component.ngOnInit();
-      expect(component.schemaSource).toBeDefined();
-      expect(component.schemaTarget).toBeDefined();
-    });
-
-    it('sets code-editor help/label text for Smart Function mappings', async () => {
-      component.mapping = buildMapping({ transformationType: TransformationType.SMART_FUNCTION });
-      await component.ngOnInit();
-      expect(component.codeEditorLabel).toContain('Smart functions');
-    });
-
-    it('makes editors read-only when the user lacks admin and create roles', async () => {
-      mockSharedService.getFeatures.and.returnValue(
-        Promise.resolve({ ...mockFeature, userHasMappingAdminRole: false, userHasMappingCreateRole: false })
+    it('makes template editors read-only when the session reports editorTemplatesReadOnly', async () => {
+      mockStepperService.initializeEditorSession.and.returnValue(
+        Promise.resolve(buildEditorSessionResult({ editorTemplatesReadOnly: true }))
       );
       await component.ngOnInit();
       expect(component.editorOptionsSourceTemplate.readOnly).toBe(true);
       expect(component.editorOptionsTargetTemplate.readOnly).toBe(true);
+    });
+
+    it('leaves template editors editable when editorTemplatesReadOnly is false', async () => {
+      await component.ngOnInit();
+      expect(component.editorOptionsSourceTemplate.readOnly).toBe(false);
+      expect(component.editorOptionsTargetTemplate.readOnly).toBe(false);
     });
   });
 
@@ -451,6 +510,10 @@ describe('MappingStepperComponent', () => {
     });
   });
 
+  // The real encoding logic (JSON-stringify/reduce, base64 code encoding, content-change
+  // detection, substitutions-as-code guard) moved to MappingStepperService.encodeMappingForCommit
+  // (Phase 5) and is unit tested directly there (mapping-stepper.service.spec.ts). These tests
+  // only verify the component delegates to it and reacts correctly to its result.
   describe('Commit & cancel', () => {
     beforeEach(async () => {
       await component.ngOnInit();
@@ -461,34 +524,39 @@ describe('MappingStepperComponent', () => {
       component.onCancelButton();
     });
 
-    it('serialises templates as JSON strings and emits the mapping on commit (no expansion)', (done) => {
-      component.stepperConfiguration.allowTemplateExpansion = false;
+    it('delegates to encodeMappingForCommit and emits its result on success', (done) => {
       component.sourceTemplate = { a: 1 };
       component.targetTemplate = { b: 2 };
+      component.mappingCode = 'code';
+      component['initialContentSnapshot'] = undefined;
+      mockStepperService.encodeMappingForCommit.and.returnValue({ mapping: component.mapping, contentChanged: true });
 
-      component.commit.subscribe((mapping: Mapping) => {
-        expect(mapping).toBe(component.mapping);
-        expect(mapping.sourceTemplate).toBe(JSON.stringify({ a: 1 }));
-        expect(mapping.targetTemplate).toBe(JSON.stringify({ b: 2 }));
+      component.commit.subscribe((result: { mapping: Mapping; contentChanged: boolean }) => {
+        expect(mockStepperService.encodeMappingForCommit).toHaveBeenCalledWith(
+          component.mapping,
+          { a: 1 },
+          { b: 2 },
+          'code',
+          undefined,
+          component.stepperConfiguration.allowTemplateExpansion,
+          component.stepperConfiguration.editorMode
+        );
+        expect(result).toEqual({ mapping: component.mapping, contentChanged: true });
         done();
       });
 
       component.onCommitButton();
     });
 
-    it('encodes mappingCode to base64 on commit', (done) => {
-      component.sourceTemplate = {};
-      component.targetTemplate = {};
-      component.mappingCode = 'function onMessage() {}';
-
-      component.commit.subscribe((mapping: Mapping) => {
-        expect(mapping.code).toBeTruthy();
-        // base64 round-trips back to the original code (sans metadata tags)
-        expect(atob(mapping.code!)).toContain('function onMessage');
-        done();
-      });
+    it('raises an alert and does not emit commit when encodeMappingForCommit reports an error', () => {
+      mockStepperService.encodeMappingForCommit.and.returnValue({ error: 'Internal error in editor. Try again!' });
+      const commitSpy = jasmine.createSpy('commit');
+      component.commit.subscribe(commitSpy);
 
       component.onCommitButton();
+
+      expect(mockStepperService.raiseAlert).toHaveBeenCalledWith({ type: 'warning', text: 'Internal error in editor. Try again!' });
+      expect(commitSpy).not.toHaveBeenCalled();
     });
   });
 

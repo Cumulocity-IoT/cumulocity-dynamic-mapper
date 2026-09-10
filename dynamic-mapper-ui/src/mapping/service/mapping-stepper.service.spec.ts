@@ -21,11 +21,13 @@
 import { ChangeDetectorRef } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { TestBed } from '@angular/core/testing';
+import { Subject } from 'rxjs';
 import { AlertService } from '@c8y/ngx-components';
 import { MappingStepperService } from './mapping-stepper.service';
 import { MappingService } from '../core/mapping.service';
 import { ExtensionService } from '../../extension';
 import { AIAgentService } from '../core/ai-agent.service';
+import { EditorMode } from '../shared/stepper.model';
 import {
   Direction,
   Extension,
@@ -37,6 +39,7 @@ import {
   TransformationType
 } from '../../shared';
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType } from '../../configuration/shared/configuration.model';
+import { captureMappingContentSnapshot } from '../shared/util';
 
 /**
  * Unit tests for the Phase 3 "stateless-but-mutating" editing operations moved from
@@ -51,6 +54,8 @@ describe('MappingStepperService', () => {
   let service: MappingStepperService;
   let mockSharedService: jasmine.SpyObj<SharedService>;
   let mockAlertService: jasmine.SpyObj<AlertService>;
+  let mockAIAgentService: jasmine.SpyObj<AIAgentService>;
+  let mockExtensionService: jasmine.SpyObj<ExtensionService>;
 
   function makeMapping(overrides: Partial<Mapping> = {}): Mapping {
     return {
@@ -79,10 +84,28 @@ describe('MappingStepperService', () => {
     } as Mapping;
   }
 
+  function makeStepperConfig(overrides: Partial<StepperConfiguration> = {}): StepperConfiguration {
+    return {
+      editorMode: EditorMode.UPDATE,
+      direction: Direction.INBOUND,
+      showEditorSource: true,
+      showEditorTarget: true,
+      allowDefiningSubstitutions: true,
+      allowTestSending: true,
+      allowTestTransformation: true,
+      allowTemplateExpansion: false,
+      allowNoDefinedIdentifier: false,
+      showCodeEditor: false,
+      ...overrides
+    } as StepperConfiguration;
+  }
+
   beforeEach(() => {
     mockSharedService = jasmine.createSpyObj<SharedService>('SharedService', [
       'getCodeTemplates',
-      'createCodeTemplate'
+      'createCodeTemplate',
+      'getFeatures',
+      'getServiceConfiguration'
     ]);
     mockAlertService = jasmine.createSpyObj<AlertService>('AlertService', [
       'add',
@@ -90,14 +113,21 @@ describe('MappingStepperService', () => {
       'success',
       'danger'
     ], { state: [] });
+    mockAIAgentService = jasmine.createSpyObj<AIAgentService>('AIAgentService', ['getAIAgents']);
+    mockExtensionService = jasmine.createSpyObj<ExtensionService>('ExtensionService', ['getProcessorExtensions']);
+
+    mockSharedService.getFeatures.and.resolveTo({ userHasMappingAdminRole: true, userHasMappingCreateRole: true } as any);
+    mockSharedService.getServiceConfiguration.and.resolveTo({} as any);
+    mockSharedService.getCodeTemplates.and.resolveTo({} as CodeTemplateMap);
+    mockAIAgentService.getAIAgents.and.resolveTo([]);
 
     TestBed.configureTestingModule({
       providers: [
         MappingStepperService,
         { provide: MappingService, useValue: jasmine.createSpyObj('MappingService', ['evaluateExpression']) },
         { provide: SharedService, useValue: mockSharedService },
-        { provide: ExtensionService, useValue: jasmine.createSpyObj('ExtensionService', ['getProcessorExtensions']) },
-        { provide: AIAgentService, useValue: jasmine.createSpyObj('AIAgentService', ['getAIAgents']) },
+        { provide: ExtensionService, useValue: mockExtensionService },
+        { provide: AIAgentService, useValue: mockAIAgentService },
         { provide: AlertService, useValue: mockAlertService }
       ]
     });
@@ -356,6 +386,289 @@ describe('MappingStepperService', () => {
 
       expect(mockAlertService.danger).toHaveBeenCalled();
       expect(mockAlertService.success).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // initializeEditorSession
+  // Phase 4 of docs/planning/IMPLEMENTATION-PLAN-STEPPER-UNIFIED-EDITOR-DEDUP.md — the
+  // consolidated ngOnInit bootstrap previously duplicated across
+  // MappingStepperComponent/MappingUnifiedEditorComponent.
+  // -------------------------------------------------------------------------
+
+  describe('initializeEditorSession', () => {
+    function callbacks(overrides: Partial<{
+      onSelectExtensionName: (n: string) => void;
+      onSelectExtensionEvent: (e: string) => void;
+      getSourceTemplate: () => any;
+      setSourceTemplate: (t: any) => void;
+    }> = {}) {
+      return {
+        onSelectExtensionName: jasmine.createSpy('onSelectExtensionName'),
+        onSelectExtensionEvent: jasmine.createSpy('onSelectExtensionEvent'),
+        getSourceTemplate: jasmine.createSpy('getSourceTemplate').and.returnValue(undefined),
+        setSourceTemplate: jasmine.createSpy('setSourceTemplate'),
+        ...overrides
+      };
+    }
+
+    it('sets source/target systems from direction (INBOUND)', async () => {
+      const mapping = makeMapping({ direction: Direction.INBOUND });
+      const result = await service.initializeEditorSession(mapping, makeStepperConfig(), new Subject(), callbacks());
+      expect(result.sourceSystem).toBe('Broker');
+      expect(result.targetSystem).toBe('Cumulocity');
+    });
+
+    it('sets source/target systems from direction (OUTBOUND)', async () => {
+      const mapping = makeMapping({ direction: Direction.OUTBOUND });
+      const result = await service.initializeEditorSession(mapping, makeStepperConfig({ direction: Direction.OUTBOUND }), new Subject(), callbacks());
+      expect(result.sourceSystem).toBe('Cumulocity');
+      expect(result.targetSystem).toBe('Broker');
+    });
+
+    it('resolves source/target JSON schemas', async () => {
+      const mapping = makeMapping();
+      const result = await service.initializeEditorSession(mapping, makeStepperConfig(), new Subject(), callbacks());
+      expect(result.schemaSource).toBeDefined();
+      expect(result.schemaTarget).toBeDefined();
+    });
+
+    it('sets code-editor help/label for Smart Function mappings', async () => {
+      const mapping = makeMapping({ transformationType: TransformationType.SMART_FUNCTION });
+      const result = await service.initializeEditorSession(mapping, makeStepperConfig(), new Subject(), callbacks());
+      expect(result.codeEditorLabel).toContain('Smart functions');
+    });
+
+    it('sets code-editor help/label for deprecated SUBSTITUTION_AS_CODE mappings', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
+      const mapping = makeMapping({ transformationType: TransformationType.SUBSTITUTION_AS_CODE });
+      const result = await service.initializeEditorSession(mapping, makeStepperConfig(), new Subject(), callbacks());
+      expect(result.codeEditorLabel).toContain('creating substitutions');
+      expect(result.codeEditorHelp).toContain('creating substitutions');
+    });
+
+    it('reports editorTemplatesReadOnly=false when the user has admin or create role', async () => {
+      mockSharedService.getFeatures.and.resolveTo({ userHasMappingAdminRole: true, userHasMappingCreateRole: false } as any);
+      const result = await service.initializeEditorSession(makeMapping(), makeStepperConfig(), new Subject(), callbacks());
+      expect(result.editorTemplatesReadOnly).toBe(false);
+    });
+
+    it('reports editorTemplatesReadOnly=true when the user lacks both roles', async () => {
+      mockSharedService.getFeatures.and.resolveTo({ userHasMappingAdminRole: false, userHasMappingCreateRole: false } as any);
+      const result = await service.initializeEditorSession(makeMapping(), makeStepperConfig(), new Subject(), callbacks());
+      expect(result.editorTemplatesReadOnly).toBe(true);
+      expect(result.editorOptions.readOnly).toBe(false); // editorOptions.readOnly tracks EditorMode.READ_ONLY, not roles
+    });
+
+    it('builds a templateForm with the expected controls', async () => {
+      const mapping = makeMapping({ extension: { extensionName: 'ext1', eventName: 'evt1', parameter: { a: 1 } } as any });
+      const result = await service.initializeEditorSession(mapping, makeStepperConfig(), new Subject(), callbacks());
+      expect(result.templateForm.get('extensionName')?.value).toBe('ext1');
+      expect(result.templateForm.get('eventName')?.value).toBe('evt1');
+      expect(result.templateForm.get('extensionParameter')?.value).toContain('a: 1');
+    });
+
+    it('disables extensionName/eventName in READ_ONLY mode', async () => {
+      const result = await service.initializeEditorSession(
+        makeMapping(), makeStepperConfig({ editorMode: EditorMode.READ_ONLY }), new Subject(), callbacks()
+      );
+      expect(result.templateForm.get('extensionName')?.disabled).toBe(true);
+      expect(result.templateForm.get('eventName')?.disabled).toBe(true);
+    });
+
+    it('does not disable extensionName/eventName just for a hidden selector by default (unified editor behavior)', async () => {
+      const result = await service.initializeEditorSession(makeMapping(), makeStepperConfig(), new Subject(), callbacks());
+      expect(result.templateForm.get('extensionName')?.disabled).toBe(false);
+    });
+
+    it('disables extensionName/eventName while no selector is shown when disableExtensionSelectorsWhenHidden is true (stepper behavior)', async () => {
+      const result = await service.initializeEditorSession(
+        makeMapping(), makeStepperConfig(), new Subject(), callbacks(), true
+      );
+      expect(result.templateForm.get('extensionName')?.disabled).toBe(true);
+      expect(result.templateForm.get('eventName')?.disabled).toBe(true);
+    });
+
+    it('extensionName control changes invoke the onSelectExtensionName callback', async () => {
+      const destroy$ = new Subject<void>();
+      const cbs = callbacks();
+      const result = await service.initializeEditorSession(makeMapping(), makeStepperConfig(), destroy$, cbs);
+
+      result.templateForm.get('extensionName')?.setValue('picked-extension');
+      await new Promise(resolve => setTimeout(resolve, 150)); // flush debounceTime(100)
+
+      expect(cbs.onSelectExtensionName).toHaveBeenCalledWith('picked-extension');
+    });
+
+    it('eventName control changes invoke the onSelectExtensionEvent callback', async () => {
+      const destroy$ = new Subject<void>();
+      const cbs = callbacks();
+      const result = await service.initializeEditorSession(makeMapping(), makeStepperConfig(), destroy$, cbs);
+
+      result.templateForm.get('eventName')?.setValue('picked-event');
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      expect(cbs.onSelectExtensionEvent).toHaveBeenCalledWith('picked-event');
+    });
+
+    it('stops invoking callbacks after destroy$ fires', async () => {
+      const destroy$ = new Subject<void>();
+      const cbs = callbacks();
+      const result = await service.initializeEditorSession(makeMapping(), makeStepperConfig(), destroy$, cbs);
+
+      destroy$.next();
+      destroy$.complete();
+      result.templateForm.get('extensionName')?.setValue('picked-extension');
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      expect(cbs.onSelectExtensionName).not.toHaveBeenCalled();
+    });
+
+    it('extensionParameter control changes update mapping.extension.parameter', async () => {
+      const destroy$ = new Subject<void>();
+      const mapping = makeMapping({ extension: { extensionName: 'ext1' } as any });
+      const result = await service.initializeEditorSession(mapping, makeStepperConfig(), destroy$, callbacks());
+
+      result.templateForm.get('extensionParameter')?.setValue('a: 2');
+      await new Promise(resolve => setTimeout(resolve, 350)); // flush debounceTime(300)
+
+      expect(mapping.extension.parameter).toEqual({ a: 2 });
+    });
+
+    it('re-expands the source template via the getter/setter callbacks when an OUTBOUND mapping property changes', async () => {
+      const destroy$ = new Subject<void>();
+      const cbs = callbacks({ getSourceTemplate: jasmine.createSpy().and.returnValue({ existing: true }) });
+      await service.initializeEditorSession(makeMapping({ direction: Direction.OUTBOUND }), makeStepperConfig(), destroy$, cbs);
+
+      service.notifyMappingPropertyChanged(makeMapping({ direction: Direction.OUTBOUND }));
+
+      expect(cbs.setSourceTemplate).toHaveBeenCalled();
+    });
+
+    it('does not touch the source template when the mapping property change is INBOUND', async () => {
+      const destroy$ = new Subject<void>();
+      const cbs = callbacks({ getSourceTemplate: jasmine.createSpy().and.returnValue({ existing: true }) });
+      await service.initializeEditorSession(makeMapping({ direction: Direction.INBOUND }), makeStepperConfig(), destroy$, cbs);
+
+      service.notifyMappingPropertyChanged(makeMapping({ direction: Direction.INBOUND }));
+
+      expect(cbs.setSourceTemplate).not.toHaveBeenCalled();
+    });
+
+    it('loads code templates and derives filtered entries/items', async () => {
+      mockSharedService.getCodeTemplates.and.resolveTo({
+        t1: { name: 'my template', templateType: 'INBOUND_DEFAULT' as unknown as TemplateType } as any
+      } as CodeTemplateMap);
+      const mapping = makeMapping({ direction: Direction.INBOUND, transformationType: TransformationType.DEFAULT });
+
+      const result = await service.initializeEditorSession(mapping, makeStepperConfig(), new Subject(), callbacks());
+
+      expect(result.codeTemplateEntries.length).toBe(1);
+      expect(result.codeTemplateItems).toEqual([{ label: 'My template (INBOUND_DEFAULT)', value: 't1' }]);
+    });
+
+    it('checks AI-agent deployment using the loaded service configuration', async () => {
+      mockSharedService.getServiceConfiguration.and.resolveTo({ jsonataAgent: 'agent-1' } as any);
+      mockAIAgentService.getAIAgents.and.resolveTo([{ name: 'agent-1' } as any]);
+      const mapping = makeMapping({ transformationType: TransformationType.JSONATA });
+
+      const result = await service.initializeEditorSession(mapping, makeStepperConfig(), new Subject(), callbacks());
+
+      expect(result.aiAgentDeployed).toBe(true);
+      expect(result.aiAgent).toEqual({ name: 'agent-1' } as any);
+    });
+
+    it('builds filterFormlyFields required for OUTBOUND direction', async () => {
+      const mapping = makeMapping({ direction: Direction.OUTBOUND });
+      const result = await service.initializeEditorSession(mapping, makeStepperConfig({ direction: Direction.OUTBOUND }), new Subject(), callbacks());
+      expect(result.filterFormlyFields[0].fieldGroup![0].templateOptions.required).toBe(true);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // encodeMappingForCommit
+  // Phase 5 of docs/planning/IMPLEMENTATION-PLAN-STEPPER-UNIFIED-EDITOR-DEDUP.md — the
+  // consolidated onCommitButton() encoding block previously duplicated across
+  // MappingStepperComponent/MappingUnifiedEditorComponent.
+  // -------------------------------------------------------------------------
+
+  describe('encodeMappingForCommit', () => {
+    it('JSON-stringifies source/target templates when template expansion is disabled', () => {
+      const mapping = makeMapping();
+      const result = service.encodeMappingForCommit(
+        mapping, { a: 1 }, { b: 2 }, undefined, undefined, false, EditorMode.CREATE
+      );
+      expect('error' in result).toBe(false);
+      expect(mapping.sourceTemplate).toBe(JSON.stringify({ a: 1 }));
+      expect(mapping.targetTemplate).toBe(JSON.stringify({ b: 2 }));
+    });
+
+    it('reduces (compacts) source/target templates when template expansion is allowed', () => {
+      const mapping = makeMapping();
+      service.encodeMappingForCommit(
+        mapping, { a: { _TOPIC_LEVEL_: '1' } }, { b: 2 }, undefined, undefined, true, EditorMode.CREATE
+      );
+      // reduceSourceTemplate strips expansion metadata — result differs from a plain JSON.stringify
+      expect(mapping.sourceTemplate).not.toBe(JSON.stringify({ a: { _TOPIC_LEVEL_: '1' } }));
+    });
+
+    it('encodes mappingCode to base64 (stripped of metadata tags) when provided', () => {
+      const mapping = makeMapping();
+      const result = service.encodeMappingForCommit(
+        mapping, {}, {}, 'function onMessage() {}', undefined, false, EditorMode.CREATE
+      );
+      expect('error' in result).toBe(false);
+      expect(mapping.code).toBeTruthy();
+      expect(atob(mapping.code!)).toContain('function onMessage');
+    });
+
+    it('leaves mapping.code untouched when no mappingCode is provided', () => {
+      const mapping = makeMapping({ code: undefined });
+      service.encodeMappingForCommit(mapping, {}, {}, undefined, undefined, false, EditorMode.CREATE);
+      expect(mapping.code).toBeUndefined();
+    });
+
+    it('always reports contentChanged=true for CREATE (no snapshot needed)', () => {
+      const mapping = makeMapping();
+      const result = service.encodeMappingForCommit(mapping, {}, {}, undefined, undefined, false, EditorMode.CREATE);
+      expect('error' in result).toBe(false);
+      expect((result as { contentChanged: boolean }).contentChanged).toBe(true);
+    });
+
+    it('detects no content change in UPDATE mode when nothing differs from the snapshot', () => {
+      const mapping = makeMapping();
+      const snapshot = captureMappingContentSnapshot(mapping, {}, {}, undefined);
+      const result = service.encodeMappingForCommit(mapping, {}, {}, undefined, snapshot, false, EditorMode.UPDATE);
+      expect('error' in result).toBe(false);
+      expect((result as { contentChanged: boolean }).contentChanged).toBe(false);
+    });
+
+    it('detects a content change in UPDATE mode when the source template differs from the snapshot', () => {
+      const mapping = makeMapping();
+      const snapshot = captureMappingContentSnapshot(mapping, { original: true }, {}, undefined);
+      const result = service.encodeMappingForCommit(mapping, { changed: true }, {}, undefined, snapshot, false, EditorMode.UPDATE);
+      expect('error' in result).toBe(false);
+      expect((result as { contentChanged: boolean }).contentChanged).toBe(true);
+    });
+
+    it('treats UPDATE mode with no snapshot as always changed (defensive fallback)', () => {
+      const mapping = makeMapping();
+      const result = service.encodeMappingForCommit(mapping, {}, {}, undefined, undefined, false, EditorMode.UPDATE);
+      expect('error' in result).toBe(false);
+      expect((result as { contentChanged: boolean }).contentChanged).toBe(true);
+    });
+
+    it('returns an error for a substitutions-as-code mapping with no code', () => {
+      const mapping = makeMapping({ transformationType: TransformationType.SMART_FUNCTION });
+      const result = service.encodeMappingForCommit(mapping, {}, {}, undefined, undefined, false, EditorMode.CREATE);
+      expect('error' in result).toBe(true);
+      expect((result as { error: string }).error).toContain('Internal error');
+    });
+
+    it('succeeds for a substitutions-as-code mapping that does have code', () => {
+      const mapping = makeMapping({ transformationType: TransformationType.SMART_FUNCTION });
+      const result = service.encodeMappingForCommit(mapping, {}, {}, 'function onMessage() {}', undefined, false, EditorMode.CREATE);
+      expect('error' in result).toBe(false);
     });
   });
 });

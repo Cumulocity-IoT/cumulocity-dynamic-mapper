@@ -28,24 +28,20 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { FormControl, FormGroup, Validators } from '@angular/forms';
+import { FormGroup } from '@angular/forms';
 import { EditorComponent } from '@c8y/ngx-components/editor';
 import { Alert, AlertService, BottomDrawerService, CoreModule, TabComponent, TabsOutletComponent } from '@c8y/ngx-components';
 import { GlobalContextService } from '@c8y/ngx-components/global-context';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { ActivatedRoute, Router } from '@angular/router';
-import { debounceTime, distinctUntilChanged, map, Observable, ReplaySubject, shareReplay, Subject, takeUntil } from 'rxjs';
+import { Observable, ReplaySubject, Subject, takeUntil } from 'rxjs';
 import { Mode } from 'vanilla-jsoneditor';
 import {
   DeploymentMapEntry,
   Direction,
   Extension,
-  ExtensionEntry,
-  getSchema,
-  JsonEditorComponent,
   Mapping,
-  SharedService,
   StepperConfiguration,
   Feature,
   isSubstitutionsAsCode,
@@ -53,7 +49,7 @@ import {
   MappingTypeLabels,
   MappingType
 } from '../../shared';
-import { createCompletionProviderFlowFunction, EditorMode } from '../shared/stepper.model';
+import { EditorMode } from '../shared/stepper.model';
 import { MappingService } from '../core/mapping.service';
 import { SubscriptionService } from '../core/subscription.service';
 import { MappingEditData } from '../core/mapping-edit.resolver';
@@ -63,17 +59,11 @@ import {
   buildTestMapping,
   captureMappingContentSnapshot,
   checkTransformationType,
-  configurationToYaml,
-  expandC8YTemplate,
-  hasMappingContentChanged,
   isConnectorSelectionEmpty,
   MappingContentSnapshot,
-  reduceSourceTemplate,
-  stringToBase64,
   stripTemplateMetadataTags,
   updateTemplatesInEditors,
-  validateProtectedFields,
-  yamlToConfiguration
+  validateProtectedFields
 } from '../shared/util';
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, toTemplateType } from '../../configuration/shared/configuration.model';
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
@@ -88,7 +78,7 @@ import { MappingConnectorComponent } from '../step-connector/mapping-connector.c
 import { MappingSubstitutionStepComponent } from '../step-transformation/mapping-transformation-step.component';
 import { MappingTemplateStepComponent } from '../step-template/mapping-template-step.component';
 import { PopoverModule } from 'ngx-bootstrap/popover';
-import { StepperViewModel, StepperViewModelFactory } from '../stepper-mapping/stepper-view.model';
+import { StepperViewModel } from '../stepper-mapping/stepper-view.model';
 
 // Tab index constants
 const TAB_CONNECTOR = 0;
@@ -136,7 +126,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
 
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly bsModalService = inject(BsModalService);
-  private readonly sharedService = inject(SharedService);
   private readonly alertService = inject(AlertService);
   private readonly bottomDrawerService = inject(BottomDrawerService);
   private readonly stepperService = inject(MappingStepperService);
@@ -234,8 +223,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   codeEditorHelp!: string;
   codeEditorLabel!: string;
 
-  private completionProviderDisposable: any;
-  private completionProviderRegistering = false;
   private readonly destroy$ = new Subject<void>();
 
   // Snapshots for change detection — set once at load time
@@ -266,62 +253,47 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       : TAB_DEFINE_TRANSFORMATION;
     this.currentStepIndex = this.activeTabIndex;
 
-    // Initialize view model from stepper configuration
-    this.stepperViewModel = StepperViewModelFactory.create(this.stepperConfiguration);
-
-    this.extensionEventItems$ = this.stepperService.extensionEvents$.pipe(
-      map((events: ExtensionEntry[]) =>
-        (events || []).map(e => ({
-          label: e.description ? `${e.eventName} — ${e.description}` : e.eventName,
-          value: e.eventName
-        }))
-      ),
-      shareReplay(1)
+    const init = await this.stepperService.initializeEditorSession(
+      this.mapping,
+      this.stepperConfiguration,
+      this.destroy$,
+      {
+        onSelectExtensionName: (name) => this.onSelectExtensionName(name),
+        onSelectExtensionEvent: (event) => this.onSelectExtensionEvent(event),
+        getSourceTemplate: () => this.sourceTemplate,
+        setSourceTemplate: (template) => { this.sourceTemplate = template; }
+      }
+      // disableExtensionSelectorsWhenHidden defaults to false — unified editor's current behavior
     );
 
-    this.targetSystem = this.mapping.direction === Direction.INBOUND ? 'Cumulocity' : 'Broker';
-    this.sourceSystem = this.mapping.direction === Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
-
-    this.editorOptions = {
-      minimap: { enabled: true },
-      language: 'javascript',
-      renderWhitespace: 'none',
-      tabSize: 4,
-      readOnly: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
-    };
-
-    this.setTemplateForm();
-
-    this.feature = await this.sharedService.getFeatures();
-    if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
+    this.stepperViewModel = init.stepperViewModel;
+    this.extensionEventItems$ = init.extensionEventItems$;
+    this.targetSystem = init.targetSystem;
+    this.sourceSystem = init.sourceSystem;
+    this.editorOptions = init.editorOptions;
+    this.templateForm = init.templateForm;
+    if (init.editorTemplatesReadOnly) {
       this.editorOptionsSourceTemplate.readOnly = true;
       this.editorOptionsTargetTemplate.readOnly = true;
     }
-
-    this.serviceConfiguration = await this.sharedService.getServiceConfiguration();
-
-    const aiResult = await this.stepperService.checkAIAgentDeployment(this.mapping, this.serviceConfiguration);
-    this.aiAgent = aiResult.aiAgent;
-    this.aiAgentDeployed = aiResult.aiAgentDeployed;
-
-    this.initializeFormlyFields();
-    await this.initializeCodeTemplates();
-
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy mappings are still opened read-only, so their labels must render
-    this.codeEditorHelp = this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE
-      ? 'JavaScript for creating substitutions...'
-      : 'JavaScript for creating complete payloads as Smart Functions.';
-
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy mappings are still opened read-only, so their labels must render
-    this.codeEditorLabel = this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE
-      ? 'JavaScript callback for creating substitutions'
-      : 'JavaScript callback for Smart functions';
+    this.feature = init.feature;
+    this.serviceConfiguration = init.serviceConfiguration;
+    this.aiAgent = init.aiAgent;
+    this.aiAgentDeployed = init.aiAgentDeployed;
+    this.filterFormlyFields = init.filterFormlyFields;
+    this.codeTemplates = init.codeTemplates;
+    this.codeTemplatesDecoded = init.codeTemplatesDecoded;
+    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.templateId);
+    this.codeTemplateEntries = init.codeTemplateEntries;
+    this.codeTemplateItems = init.codeTemplateItems;
+    this.codeEditorHelp = init.codeEditorHelp;
+    this.codeEditorLabel = init.codeEditorLabel;
 
     // For the unified editor, expand existing templates upfront since mapping is fully defined
     await this.initializeTemplates();
 
-    this.schemaSource = getSchema(this.mapping.targetAPI, this.mapping.direction, false, false);
-    this.schemaTarget = getSchema(this.mapping.targetAPI, this.mapping.direction, true, false);
+    this.schemaSource = init.schemaSource;
+    this.schemaTarget = init.schemaTarget;
   }
 
   private patchExtensionFormValues(): void {
@@ -380,139 +352,20 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     );
   }
 
-  private initializeFormlyFields(): void {
-    this.filterFormlyFields = [
-      {
-        fieldGroup: [
-          {
-            key: 'filterMapping',
-            type: 'd11r-input',
-            wrappers: ['c8y-form-field'],
-            templateOptions: {
-              label: 'Filter execution mapping',
-              class: 'input-sm',
-              disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY ||
-                !this.stepperConfiguration.allowDefiningSubstitutions ||
-                (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole),
-              placeholder: '$exists(c8y_TemperatureMeasurement)',
-              description: 'This expression is required...',
-              required: this.mapping.direction === Direction.OUTBOUND,
-              customMessage: this.sourceCustomMessage$
-            },
-            hooks: {
-              onInit: (_field: FormlyFieldConfig) => {
-                // valueChanges is subscribed inside MappingTemplateStepComponent via ngOnChanges
-              }
-            }
-          }
-        ]
-      }
-    ];
-  }
-
-  async initializeCodeTemplates(): Promise<void> {
-    this.codeTemplates = await this.sharedService.getCodeTemplates();
-    this.codeTemplatesDecoded = await this.stepperService.loadCodeTemplates();
-    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.templateId);
-    this.updateCodeTemplateEntries();
-  }
-
   ngAfterViewInit(): void {
     this.registerCompletionProvider();
   }
 
   ngOnDestroy(): void {
-    this.completionProviderDisposable?.dispose();
     this.globalContextService.unregister('mapping-unified-editor');
     this.stepperService.cleanup();
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  async registerCompletionProvider(): Promise<void> {
-    // Re-entrancy guard: the editor emits editorInit each time it's (re)mounted
-    // (e.g. fast tab toggling), and overlapping calls could race on
-    // completionProviderDisposable and leak an undisposed provider.
-    if (this.completionProviderRegistering) {
-      return;
-    }
-    this.completionProviderRegistering = true;
-    try {
-      if (this.completionProviderDisposable) {
-        this.completionProviderDisposable.dispose();
-        this.completionProviderDisposable = undefined;
-      }
-      const monacoModule = await import('monaco-editor');
-      const monaco = (monacoModule as any).default || monacoModule;
-      const d1 = createCompletionProviderFlowFunction(monaco, this.mapping.direction);
-      this.completionProviderDisposable = { dispose: () => { d1.dispose(); } };
-    } finally {
-      this.completionProviderRegistering = false;
-    }
-  }
-
-  private setTemplateForm(): void {
-    this.templateForm = new FormGroup({
-      extensionName: new FormControl({
-        value: this.mapping?.extension?.extensionName,
-        disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
-      }, Validators.required),
-      eventName: new FormControl({
-        value: this.mapping?.extension?.eventName,
-        disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
-      }, Validators.required),
-      extensionParameter: new FormControl({
-        value: configurationToYaml(this.mapping?.extension?.parameter),
-        disabled: this.stepperConfiguration.editorMode === EditorMode.READ_ONLY
-      }),
-      sampleTargetTemplatesButton: new FormControl({
-        value: !this.stepperConfiguration.showEditorSource ||
-          this.stepperConfiguration.editorMode === EditorMode.READ_ONLY,
-        disabled: undefined
-      })
-    });
-
-    // Subscribe to extension configuration changes
-    this.templateForm.get('extensionParameter')?.valueChanges
-      .pipe(debounceTime(300), takeUntil(this.destroy$))
-      .subscribe(yaml => {
-        if (!this.mapping.extension) {
-          this.mapping.extension = {} as any;
-        }
-        this.mapping.extension.parameter = yamlToConfiguration(yaml);
-      });
-
-    this.templateForm.get('extensionName')?.valueChanges
-      .pipe(distinctUntilChanged(), debounceTime(100), takeUntil(this.destroy$))
-      .subscribe(selected => {
-        const extensionName = typeof selected === 'string' ? selected : selected?.value ?? selected;
-        if (extensionName) {
-          this.onSelectExtensionName(extensionName);
-        }
-      });
-
-    this.templateForm.get('eventName')?.valueChanges
-      .pipe(distinctUntilChanged(), debounceTime(100), takeUntil(this.destroy$))
-      .subscribe(selected => {
-        const eventName = typeof selected === 'string' ? selected : selected?.value ?? selected;
-        if (eventName) {
-          this.onSelectExtensionEvent(eventName);
-        }
-      });
-
-    this.isSubstitutionValid$.pipe(takeUntil(this.destroy$)).subscribe(valid => {
-      if (valid) {
-        this.templateForm.setErrors(null);
-      } else {
-        this.templateForm.setErrors({ 'incorrect': true });
-      }
-    });
-
-    this.stepperService.mappingPropertyChanged$.pipe(takeUntil(this.destroy$)).subscribe(mapping => {
-      if (mapping.direction === Direction.OUTBOUND && this.sourceTemplate) {
-        this.sourceTemplate = expandC8YTemplate(this.sourceTemplate, mapping);
-      }
-    });
+  /** Also bound directly to the Monaco editor's `(editorInit)` in the template — see mapping-unified-editor.component.html. */
+  registerCompletionProvider(): Promise<void> {
+    return this.stepperService.registerCompletionProvider(this.mapping.direction);
   }
 
   /**
@@ -693,30 +546,26 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     // Sync any pending template edits before saving
     this.updateTemplatesInEditors();
 
-    // Determine what changed after template sync but before transforms mutate the mapping.
     // Connector-only changes must not create a draft — a draft only tracks content changes.
-    const mappingContentChanged = this.stepperConfiguration.editorMode === EditorMode.UPDATE
-      ? hasMappingContentChanged(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, this.initialContentSnapshot)
-      : true; // CREATE / COPY always persist
     const deploymentChanged =
       JSON.stringify(this.deploymentMapEntry?.connectors ?? []) !== this.initialDeploymentConnectors;
 
-    if (this.stepperConfiguration.allowTemplateExpansion) {
-      this.mapping.sourceTemplate = reduceSourceTemplate(this.sourceTemplate, false);
-      this.mapping.targetTemplate = reduceSourceTemplate(this.targetTemplate, false);
-    } else {
-      this.mapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
-      this.mapping.targetTemplate = JSON.stringify(this.targetTemplate);
-    }
+    const result = this.stepperService.encodeMappingForCommit(
+      this.mapping,
+      this.sourceTemplate,
+      this.targetTemplate,
+      this.mappingCode,
+      this.initialContentSnapshot,
+      this.stepperConfiguration.allowTemplateExpansion,
+      this.stepperConfiguration.editorMode
+    );
 
-    if (this.mappingCode) {
-      this.mapping.code = stringToBase64(stripTemplateMetadataTags(this.mappingCode));
-    }
-
-    if (isSubstitutionsAsCode(this.mapping) && (!this.mapping.code || this.mapping.code === null || this.mapping.code === '')) {
-      this.raiseAlert({ type: 'warning', text: "Internal error in editor. Try again!" });
+    if ('error' in result) {
+      this.raiseAlert({ type: 'warning', text: result.error });
       return;
     }
+
+    const mappingContentChanged = result.contentChanged;
 
     // Do NOT stamp lastUpdate here: for a draft save it is the optimistic-concurrency
     // token that must be echoed back unchanged (the server assigns a fresh one on save).

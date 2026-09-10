@@ -19,8 +19,10 @@
  */
 
 import { ChangeDetectorRef, Injectable, inject } from '@angular/core';
-import { FormGroup } from '@angular/forms';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { FormControl, FormGroup, Validators } from '@angular/forms';
+import { FormlyFieldConfig } from '@ngx-formly/core';
+import { EditorComponent } from '@c8y/ngx-components/editor';
+import { BehaviorSubject, debounceTime, distinctUntilChanged, map, Observable, shareReplay, Subject, takeUntil } from 'rxjs';
 import { Alert, AlertService } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
 import {
@@ -28,7 +30,9 @@ import {
     Extension,
     ExtensionEntry,
     ExtensionType,
+    Feature,
     getSchema,
+    isSubstitutionsAsCode,
     Mapping,
     SAMPLE_TEMPLATES_C8Y,
     StepperConfiguration,
@@ -42,7 +46,10 @@ import { SharedService } from '../../shared';
 import { ExtensionService } from '../../extension';
 import { AIAgentService } from '../core/ai-agent.service';
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, toTemplateType } from '../../configuration/shared/configuration.model';
-import { base64ToString, configurationToYaml, stringToBase64, expandC8YTemplate, expandExternalTemplate, hasEsmExport, isCodeOrExtensionTransformation, splitTopicExcludingSeparator, stripTemplateMetadataTags, getTypeOf } from '../shared/util';
+import { createCompletionProviderFlowFunction, EditorMode } from '../shared/stepper.model';
+import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
+import { StepperViewModel, StepperViewModelFactory } from '../stepper-mapping/stepper-view.model';
+import { base64ToString, configurationToYaml, stringToBase64, expandC8YTemplate, expandExternalTemplate, hasEsmExport, hasMappingContentChanged, isCodeOrExtensionTransformation, MappingContentSnapshot, reduceSourceTemplate, splitTopicExcludingSeparator, stripTemplateMetadataTags, getTypeOf, yamlToConfiguration } from '../shared/util';
 
 @Injectable()
 export class MappingStepperService {
@@ -553,6 +560,7 @@ export class MappingStepperService {
     }
 
     cleanup(): void {
+        this.completionProviderDisposable?.dispose();
         this.countDeviceIdentifiers$.complete();
         this.isSubstitutionValid$.complete();
         this.extensionEvents$.complete();
@@ -561,4 +569,359 @@ export class MappingStepperService {
         this.mappingPropertyChanged$.complete();
     }
 
+    // ─── Phase 4: consolidated ngOnInit bootstrap / form & template initialization ─────────
+    // Shared by MappingStepperComponent and MappingUnifiedEditorComponent — see
+    // docs/planning/IMPLEMENTATION-PLAN-STEPPER-UNIFIED-EDITOR-DEDUP.md, Phase 4.
+
+    // Monaco completion-provider state. Owned here (not per-component) because the service
+    // itself is component-scoped (`providers: [MappingStepperService, ...]` on both
+    // components), so this is exactly as "per editor instance" as it was as a component field.
+    private completionProviderDisposable: any;
+    private completionProviderRegistering = false;
+
+    /**
+     * Registers Monaco's Smart-Function completion provider for the given mapping direction.
+     * Guarded against re-entrancy: the unified editor's Monaco instance can be (re)mounted on
+     * every tab-switch, and overlapping calls could otherwise race on
+     * `completionProviderDisposable` and leak an undisposed provider. This guard is a no-op for
+     * the stepper, where the template/code step is never re-entered while a previous
+     * registration is still in flight — so it's always safe to apply to both.
+     */
+    async registerCompletionProvider(direction: Direction): Promise<void> {
+        if (this.completionProviderRegistering) {
+            return;
+        }
+        this.completionProviderRegistering = true;
+        try {
+            if (this.completionProviderDisposable) {
+                this.completionProviderDisposable.dispose();
+                this.completionProviderDisposable = undefined;
+            }
+            const monacoModule = await import('monaco-editor');
+            const monaco = (monacoModule as any).default || monacoModule;
+            const d1 = createCompletionProviderFlowFunction(monaco, direction);
+            this.completionProviderDisposable = { dispose: () => { d1.dispose(); } };
+        } finally {
+            this.completionProviderRegistering = false;
+        }
+    }
+
+    /**
+     * Builds the `filterMapping` Formly field group used by the Select Templates step/tab.
+     * Kept private: only consumed by {@link initializeEditorSession}.
+     */
+    private buildFilterFormlyFields(mapping: Mapping, stepperConfiguration: StepperConfiguration, feature: Feature): FormlyFieldConfig[] {
+        return [
+            {
+                fieldGroup: [
+                    {
+                        key: 'filterMapping',
+                        type: 'd11r-input',
+                        wrappers: ['c8y-form-field'],
+                        templateOptions: {
+                            label: 'Filter execution mapping',
+                            class: 'input-sm',
+                            disabled: stepperConfiguration.editorMode === EditorMode.READ_ONLY ||
+                                !stepperConfiguration.allowDefiningSubstitutions ||
+                                (!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole),
+                            placeholder: '$exists(c8y_TemperatureMeasurement)',
+                            description: 'This expression is required...',
+                            required: mapping.direction === Direction.OUTBOUND,
+                            customMessage: this.sourceCustomMessage$
+                        },
+                        hooks: {
+                            onInit: (_field: FormlyFieldConfig) => {
+                                // valueChanges is subscribed inside MappingTemplateStepComponent via ngOnChanges
+                            }
+                        }
+                    }
+                ]
+            }
+        ];
+    }
+
+    /**
+     * Builds the `templateForm` FormGroup (extensionName/eventName/extensionParameter/
+     * sampleTargetTemplatesButton) and wires all of its `valueChanges`/state subscriptions.
+     * Kept private: only consumed by {@link initializeEditorSession}.
+     *
+     * The `callbacks` indirection (rather than capturing `mapping`/`extensions`/`sourceTemplate`
+     * values directly) matters for two of these subscriptions specifically:
+     * - `extensionName`/`eventName` changes must resolve against the CALLER's *current*
+     *   `this.extensions` map at the time the user picks a value, not the map that happened to
+     *   be loaded when the form was built — the component reloads/reassigns `extensions` later
+     *   (e.g. on entering General Settings), so a captured reference would go stale.
+     * - `mappingPropertyChanged$` fires at an arbitrary future time and must read/write the
+     *   caller's *current* `sourceTemplate` field (reassigned repeatedly over the editor's
+     *   session), which a captured value can't do — hence the getter/setter pair.
+     */
+    private buildTemplateForm(
+        mapping: Mapping,
+        stepperConfiguration: StepperConfiguration,
+        stepperViewModel: StepperViewModel,
+        destroy$: Subject<void>,
+        callbacks: EditorSessionCallbacks,
+        disableExtensionSelectorsWhenHidden: boolean
+    ): FormGroup {
+        const extensionSelectorsHidden = disableExtensionSelectorsWhenHidden &&
+            !(stepperViewModel.showExtensionSelectorsSource || stepperViewModel.showExtensionSelectorsTarget);
+
+        const templateForm = new FormGroup({
+            extensionName: new FormControl({
+                value: mapping?.extension?.extensionName,
+                disabled: stepperConfiguration.editorMode === EditorMode.READ_ONLY || extensionSelectorsHidden
+            }, Validators.required),
+            eventName: new FormControl({
+                value: mapping?.extension?.eventName,
+                disabled: stepperConfiguration.editorMode === EditorMode.READ_ONLY || extensionSelectorsHidden
+            }, Validators.required),
+            extensionParameter: new FormControl({
+                value: configurationToYaml(mapping?.extension?.parameter),
+                disabled: stepperConfiguration.editorMode === EditorMode.READ_ONLY
+            }),
+            sampleTargetTemplatesButton: new FormControl({
+                value: !stepperConfiguration.showEditorSource || stepperConfiguration.editorMode === EditorMode.READ_ONLY,
+                disabled: undefined
+            })
+        });
+
+        templateForm.get('extensionParameter')?.valueChanges
+            .pipe(debounceTime(300), takeUntil(destroy$))
+            .subscribe(yaml => {
+                if (!mapping.extension) {
+                    mapping.extension = {} as any;
+                }
+                mapping.extension.parameter = yamlToConfiguration(yaml);
+            });
+
+        templateForm.get('extensionName')?.valueChanges
+            .pipe(distinctUntilChanged(), debounceTime(100), takeUntil(destroy$))
+            .subscribe((selected: any) => {
+                // When using simple string arrays, c8y-select binds the string directly
+                const extensionName = typeof selected === 'string' ? selected : selected?.value ?? selected;
+                if (extensionName) {
+                    callbacks.onSelectExtensionName(extensionName);
+                }
+            });
+
+        templateForm.get('eventName')?.valueChanges
+            .pipe(distinctUntilChanged(), debounceTime(100), takeUntil(destroy$))
+            .subscribe((selected: any) => {
+                const eventName = typeof selected === 'string' ? selected : selected?.value ?? selected;
+                if (eventName) {
+                    callbacks.onSelectExtensionEvent(eventName);
+                }
+            });
+
+        this.isSubstitutionValid$.pipe(takeUntil(destroy$)).subscribe(valid => {
+            if (valid) {
+                templateForm.setErrors(null);
+            } else {
+                templateForm.setErrors({ 'incorrect': true });
+            }
+        });
+
+        this.mappingPropertyChanged$.pipe(takeUntil(destroy$)).subscribe(changedMapping => {
+            if (changedMapping.direction === Direction.OUTBOUND) {
+                const currentSourceTemplate = callbacks.getSourceTemplate();
+                if (currentSourceTemplate) {
+                    callbacks.setSourceTemplate(expandC8YTemplate(currentSourceTemplate, changedMapping));
+                }
+            }
+        });
+
+        return templateForm;
+    }
+
+    /**
+     * Runs the full shared `ngOnInit` bootstrap sequence: view model, extension-event item
+     * mapping, target/source system labels, editor options, the template form (see
+     * {@link buildTemplateForm}), feature/role read-only gating, service configuration, AI-agent
+     * deployment check, Formly filter fields, code templates, code-editor help text, and both
+     * template schemas.
+     *
+     * Callers apply the returned fields onto their own state and layer their own
+     * boundary-specific setup around this call — see `ngOnInit` in
+     * `MappingStepperComponent`/`MappingUnifiedEditorComponent` for what stays outside it
+     * (route-data extraction, `initialContentSnapshot`, tab/step index bookkeeping, ...).
+     *
+     * @param disableExtensionSelectorsWhenHidden stepper-only divergence: when true, the
+     * extensionName/eventName controls are additionally disabled while neither source nor
+     * target extension selector is shown. Defaults to `false` (the unified editor's behavior).
+     */
+    async initializeEditorSession(
+        mapping: Mapping,
+        stepperConfiguration: StepperConfiguration,
+        destroy$: Subject<void>,
+        callbacks: EditorSessionCallbacks,
+        disableExtensionSelectorsWhenHidden = false
+    ): Promise<EditorSessionResult> {
+        const stepperViewModel = StepperViewModelFactory.create(stepperConfiguration);
+
+        const extensionEventItems$ = this.extensionEvents$.pipe(
+            map((events: ExtensionEntry[]) =>
+                (events || []).map(e => ({
+                    label: e.description ? `${e.eventName} — ${e.description}` : e.eventName,
+                    value: e.eventName
+                }))
+            ),
+            shareReplay(1)
+        );
+
+        const targetSystem = mapping.direction === Direction.INBOUND ? 'Cumulocity' : 'Broker';
+        const sourceSystem = mapping.direction === Direction.OUTBOUND ? 'Cumulocity' : 'Broker';
+
+        const editorOptions: EditorComponent['editorOptions'] = {
+            minimap: { enabled: true },
+            language: 'javascript',
+            renderWhitespace: 'none',
+            tabSize: 4,
+            readOnly: stepperConfiguration.editorMode === EditorMode.READ_ONLY
+        };
+
+        const templateForm = this.buildTemplateForm(
+            mapping, stepperConfiguration, stepperViewModel, destroy$, callbacks, disableExtensionSelectorsWhenHidden
+        );
+
+        const feature = await this.sharedService.getFeatures();
+        const editorTemplatesReadOnly = !(feature?.userHasMappingAdminRole || feature?.userHasMappingCreateRole);
+
+        const serviceConfiguration = await this.sharedService.getServiceConfiguration();
+
+        const aiResult = await this.checkAIAgentDeployment(mapping, serviceConfiguration);
+
+        const filterFormlyFields = this.buildFilterFormlyFields(mapping, stepperConfiguration, feature);
+
+        const codeTemplates = await this.sharedService.getCodeTemplates();
+        const codeTemplatesDecoded = await this.loadCodeTemplates();
+        const { entries: codeTemplateEntries, items: codeTemplateItems } = this.computeCodeTemplateEntries(
+            codeTemplates, stepperConfiguration.direction, mapping.transformationType
+        );
+
+        // Both help texts branch on SUBSTITUTION_AS_CODE vs. Smart Function for every caller —
+        // previously only the unified editor did this (the stepper hardcoded the Smart Function
+        // text), so a legacy SUBSTITUTION_AS_CODE mapping edited via the stepper showed the wrong
+        // help text. Fixed as part of this consolidation; see Phase 4 of the plan referenced above.
+        // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy mappings are still opened read-only, so their labels must render
+        const isDeprecatedSubstitutionAsCode = mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE;
+        const codeEditorHelp = isDeprecatedSubstitutionAsCode
+            ? 'JavaScript for creating substitutions...'
+            : 'JavaScript for creating complete payloads as Smart Functions.';
+        const codeEditorLabel = isDeprecatedSubstitutionAsCode
+            ? 'JavaScript callback for creating substitutions'
+            : 'JavaScript callback for Smart functions';
+
+        const schemaSource = getSchema(mapping.targetAPI, mapping.direction, false, false);
+        const schemaTarget = getSchema(mapping.targetAPI, mapping.direction, true, false);
+
+        return {
+            stepperViewModel,
+            extensionEventItems$,
+            targetSystem,
+            sourceSystem,
+            editorOptions,
+            templateForm,
+            editorTemplatesReadOnly,
+            feature,
+            serviceConfiguration,
+            aiAgent: aiResult.aiAgent,
+            aiAgentDeployed: aiResult.aiAgentDeployed,
+            filterFormlyFields,
+            codeTemplates,
+            codeTemplatesDecoded,
+            codeTemplateEntries,
+            codeTemplateItems,
+            codeEditorHelp,
+            codeEditorLabel,
+            schemaSource,
+            schemaTarget
+        };
+    }
+
+    // ─── Phase 5: consolidated commit-encoding block ───────────────────────────────────────
+    // Shared by MappingStepperComponent and MappingUnifiedEditorComponent's onCommitButton() —
+    // see docs/planning/IMPLEMENTATION-PLAN-STEPPER-UNIFIED-EDITOR-DEDUP.md, Phase 5.
+    //
+    // Callers apply the returned mapping/contentChanged and proceed with their own boundary-
+    // specific persistence (stepper: emit `commit` for the parent to handle; unified editor:
+    // call MappingService directly) — see each component's onCommitButton for what stays there.
+
+    /**
+     * Detects content changes, encodes the working source/target templates and code back onto
+     * `mapping`, and guards against a substitutions-as-code mapping with no code. Mutates
+     * `mapping` in place (matching both components' prior behavior) and returns either the
+     * mutated mapping plus whether its content actually changed, or an `{ error }` for the
+     * caller to surface via `raiseAlert` and abort the commit.
+     *
+     * @param initialContentSnapshot the mapping's snapshot captured at load time (UPDATE mode
+     * only) — see `captureMappingContentSnapshot`. `undefined` (CREATE/COPY) always persists.
+     */
+    encodeMappingForCommit(
+        mapping: Mapping,
+        sourceTemplate: any,
+        targetTemplate: any,
+        mappingCode: string | undefined,
+        initialContentSnapshot: MappingContentSnapshot | undefined,
+        allowTemplateExpansion: boolean,
+        editorMode: EditorMode
+    ): { mapping: Mapping; contentChanged: boolean } | { error: string } {
+        // Determine what changed before the template-expansion/code-encoding below mutates
+        // `mapping` in place.
+        const contentChanged = editorMode === EditorMode.UPDATE && initialContentSnapshot
+            ? hasMappingContentChanged(mapping, sourceTemplate, targetTemplate, mappingCode, initialContentSnapshot)
+            : true; // CREATE / COPY always persist
+
+        if (allowTemplateExpansion) {
+            mapping.sourceTemplate = reduceSourceTemplate(sourceTemplate, false);
+            mapping.targetTemplate = reduceSourceTemplate(targetTemplate, false);
+        } else {
+            mapping.sourceTemplate = JSON.stringify(sourceTemplate);
+            mapping.targetTemplate = JSON.stringify(targetTemplate);
+        }
+
+        if (mappingCode) {
+            mapping.code = stringToBase64(stripTemplateMetadataTags(mappingCode));
+        }
+
+        if (isSubstitutionsAsCode(mapping) && (!mapping.code || mapping.code === null || mapping.code === '')) {
+            return { error: 'Internal error in editor. Try again!' };
+        }
+
+        return { mapping, contentChanged };
+    }
+
+}
+
+/** Callbacks {@link MappingStepperService.initializeEditorSession} needs into the caller's live
+ * (mutable-over-time) state — see {@link MappingStepperService.buildTemplateForm}'s doc comment
+ * for why these can't just be captured values. */
+export interface EditorSessionCallbacks {
+    onSelectExtensionName: (extensionName: string) => void;
+    onSelectExtensionEvent: (extensionEvent: string) => void;
+    getSourceTemplate: () => any;
+    setSourceTemplate: (template: any) => void;
+}
+
+export interface EditorSessionResult {
+    stepperViewModel: StepperViewModel;
+    extensionEventItems$: Observable<{ label: string; value: string }[]>;
+    targetSystem: string;
+    sourceSystem: string;
+    editorOptions: EditorComponent['editorOptions'];
+    templateForm: FormGroup;
+    /** Apply by setting `editorOptionsSourceTemplate.readOnly`/`editorOptionsTargetTemplate.readOnly` when true. */
+    editorTemplatesReadOnly: boolean;
+    feature: Feature;
+    serviceConfiguration: ServiceConfiguration;
+    aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
+    aiAgentDeployed: boolean;
+    filterFormlyFields: FormlyFieldConfig[];
+    codeTemplates: CodeTemplateMap;
+    codeTemplatesDecoded: Map<string, CodeTemplate>;
+    codeTemplateEntries: { key: string; name: string; type: TemplateType }[];
+    codeTemplateItems: { label: string; value: string }[];
+    codeEditorHelp: string;
+    codeEditorLabel: string;
+    schemaSource: any;
+    schemaTarget: any;
 }
