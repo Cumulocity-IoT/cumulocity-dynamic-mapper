@@ -263,10 +263,10 @@ function connectors_delete() {
   local identifiers
   if [ -n "$type" ]; then
     identifiers=$(c8y api --method GET --url "/service/dynamic-mapper-service/configuration/connector/instance" 2>/dev/null \
-      | jq -rs --arg type "$type" '.[] | select(.connectorType == $type) | .identifier' || true)
+      | jq -r --arg type "$type" '.[] | select(.connectorType == $type) | .identifier' || true)
   else
     identifiers=$(c8y api --method GET --url "/service/dynamic-mapper-service/configuration/connector/instance" 2>/dev/null \
-      | jq -rs '.[].identifier' || true)
+      | jq -r '.[].identifier' || true)
   fi
 
   if [ -z "$identifiers" ]; then
