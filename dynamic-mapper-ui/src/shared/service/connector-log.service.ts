@@ -49,7 +49,13 @@ export class ConnectorLogService {
   private readonly realtimeSubjectService = inject(RealtimeSubjectService);
   private readonly eventRealtimeService: EventRealtimeService;
 
-  private readonly destroy$ = new Subject<void>();
+  // Not readonly: stopConnectorStatusLogs() completes this subject and must replace it with a
+  // fresh one afterward (mirrors MonitoringService.stopMonitoring()) — this service is
+  // `providedIn: 'root'`, so once completed, a Subject stays completed forever and any later
+  // `takeUntil(this.destroy$)` subscription (in getRealtimeEvents(), re-entered via filter$'s
+  // switchMap on every updateStatusLogs() call) would complete immediately on subscribe,
+  // silently killing realtime status logs for the rest of the session.
+  private destroy$ = new Subject<void>();
   private readonly filter$ = new BehaviorSubject<LogFilter>({
     connectorIdentifier: 'ALL',
     type: 'ALL'
@@ -85,6 +91,7 @@ export class ConnectorLogService {
     this.eventRealtimeService.stop();
     this.destroy$.next();
     this.destroy$.complete();
+    this.destroy$ = new Subject<void>();
   }
 
   updateStatusLogs(filter: { connectorIdentifier: string; type: LoggingEventType }): void {

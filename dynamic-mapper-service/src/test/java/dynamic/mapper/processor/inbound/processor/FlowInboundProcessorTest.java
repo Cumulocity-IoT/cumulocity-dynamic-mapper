@@ -59,6 +59,7 @@ import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
@@ -155,7 +156,7 @@ class FlowInboundProcessorTest {
 
                     console.log("Context" + context.getStateAll());
                     console.log("Payload Raw:" + msg.getPayload());
-                    console.log("Payload messageId" +  msg.getPayload().get('messageId'));
+                    console.log("Payload messageId" +  msg.getPayload()['messageId']);
 
                     return [{
                         cumulocityType: "measurement",
@@ -172,7 +173,7 @@ class FlowInboundProcessorTest {
                             }
                         },
 
-                        externalSource: [{"type":"c8y_Serial", "externalId": payload.get('clientId')}]
+                        externalSource: [{"type":"c8y_Serial", "externalId": payload['clientId']}]
                     }];
                 }
                 """;
@@ -700,10 +701,12 @@ class FlowInboundProcessorTest {
 
     }
 
-    @Test
-    void testCompleteFlowProcessingWithMultipleResults() throws Exception {
-        // Given - Modify the sample mapping to return multiple results
-        String multiResultCode = """
+    /**
+     * onMessage code returning two results, using bracket notation to access the
+     * ProxyObject-wrapped payload (property semantics only — no Map-like {@code .get(key)}).
+     */
+    private String multiResultOnMessageCode() {
+        return """
                 function onMessage(msg, context) {
                     var payload = msg.getPayload();
                     console.log("Processing message with payload:", JSON.stringify(payload));
@@ -722,7 +725,7 @@ class FlowInboundProcessorTest {
                                     }
                                 }
                             },
-                            externalSource: [{"type":"c8y_Serial", "externalId": payload.get('clientId')}]
+                            externalSource: [{"type":"c8y_Serial", "externalId": payload['clientId']}]
                         },
                         {
                             cumulocityType: "event",
@@ -733,11 +736,63 @@ class FlowInboundProcessorTest {
                                 "processed": true,
                                 "originalValue": payload["sensorData"]["temp_val"]
                             },
-                            externalSource: [{"type":"c8y_Serial", "externalId": payload.get('clientId')}]
+                            externalSource: [{"type":"c8y_Serial", "externalId": payload['clientId']}]
                         }
                     ];
                 }
                 """;
+    }
+
+    /**
+     * Regression test: {@code msg.getPayload()} and its inner payload are GraalVM
+     * {@code ProxyObject}s exposing JS property semantics only — {@code payload.get(key)}
+     * throws {@code TypeError: Unknown identifier: get} at runtime, even though every other
+     * test in this class mocks {@code onMessageFunction.execute(...)} and would silently pass
+     * even if the sample code used {@code .get(...)}. This test runs the real sample code
+     * through a real GraalVM {@link Context} so a regression back to {@code .get(...)} fails
+     * here instead of only in production.
+     */
+    @Test
+    void testMultiResultOnMessageCodeExecutesForRealAgainstProxyObjectPayload() {
+        // Mirrors the allowPublicAccess HostAccess config GraalVMContextService uses in
+        // production, so msg.getPayload() resolves the same way it does at runtime.
+        org.graalvm.polyglot.HostAccess hostAccess = org.graalvm.polyglot.HostAccess.newBuilder()
+                .allowPublicAccess(true)
+                .build();
+        try (Context realContext = Context.newBuilder("js").allowHostAccess(hostAccess).build()) {
+            realContext.eval("js", multiResultOnMessageCode());
+            Value onMessageFn = realContext.getBindings("js").getMember("onMessage");
+
+            Map<String, Object> sourcePayload = new HashMap<>();
+            sourcePayload.put("clientId", "test-client");
+            Map<String, Object> sensorData = new HashMap<>();
+            sensorData.put("temp_val", 100);
+            sourcePayload.put("sensorData", sensorData);
+
+            Object jsPayload = JavaScriptInteropHelper.toJsInterop(sourcePayload);
+            Value msgValue = realContext.asValue(
+                    new dynamic.mapper.processor.model.InputMessage(jsPayload, "flow/test", "test-client", null));
+            Value contextValue = realContext.asValue(new Object());
+
+            Value result = onMessageFn.execute(msgValue, contextValue);
+
+            assertTrue(result.hasArrayElements(), "onMessage should return an array of results");
+            assertEquals(2, result.getArraySize());
+
+            Value first = result.getArrayElement(0);
+            assertEquals("test-client",
+                    first.getMember("externalSource").getArrayElement(0).getMember("externalId").asString(),
+                    "Should resolve clientId via bracket notation, not payload.get(...)");
+            assertEquals(100,
+                    first.getMember("payload").getMember("c8y_Steam").getMember("Temperature").getMember("value")
+                            .asInt());
+        }
+    }
+
+    @Test
+    void testCompleteFlowProcessingWithMultipleResults() throws Exception {
+        // Given - Modify the sample mapping to return multiple results
+        String multiResultCode = multiResultOnMessageCode();
 
         String multiResultCodeEncoded = Base64.getEncoder().encodeToString(multiResultCode.getBytes());
         mapping.setCode(multiResultCodeEncoded);

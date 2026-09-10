@@ -23,10 +23,9 @@ import {
   CellRendererContext,
   CoreModule
 } from '@c8y/ngx-components';
-import { ALERT_INFO_TIMEOUT, Direction, Feature, Operation, SharedService } from '../..';
+import { Direction, Feature, SharedService } from '../..';
 import { ConnectorConfigurationService } from '../../service/connector-configuration.service';
-import { HttpStatusCode } from '@angular/common/http';
-import { gettext } from '@c8y/ngx-components/gettext';
+import { toggleConnectorConnection } from '../connector.model';
 import { TranslatePipe } from '@ngx-translate/core';
 
 /**
@@ -96,24 +95,7 @@ export class ConnectorStatusEnabledRendererComponent implements OnInit {
     this.isLoading = true;
     this.cdr.detectChanges();
     try {
-      const configuration = this.context.item;
-      const isConnecting = !configuration.enabled;
-      const response1 = await this.sharedService.runOperation(
-        configuration.enabled
-          ? { operation: Operation.DISCONNECT, parameter: { connectorIdentifier: configuration.identifier } }
-          : { operation: Operation.CONNECT, parameter: { connectorIdentifier: configuration.identifier } }
-      );
-      if (response1.status === HttpStatusCode.Created) {
-        this.alertService.add({
-          text: isConnecting
-            ? gettext('Connector is connecting, please wait...')
-            : gettext('Connector disconnected.'),
-          type: 'info',
-          timeout: ALERT_INFO_TIMEOUT
-        });
-      } else {
-        this.alertService.danger(gettext('Failed to establish connection!'));
-      }
+      await toggleConnectorConnection(this.sharedService, this.alertService, this.context.item);
     } finally {
       this.isLoading = false;
       this.cdr.detectChanges();

@@ -77,8 +77,11 @@ public class NotificationSubscriber {
         connectionManager.initializeManagementClient(tenant);
     }
 
-    public void notificationSubscriberReconnect(String tenant) {
-        connectionManager.reconnect(tenant);
+    /**
+     * @return true if reconnection completed successfully, false if it failed (already logged).
+     */
+    public boolean notificationSubscriberReconnect(String tenant) {
+        return connectionManager.reconnect(tenant);
     }
 
     public boolean isNotificationServiceAvailable(String tenant) {

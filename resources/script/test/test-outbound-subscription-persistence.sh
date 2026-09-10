@@ -56,6 +56,7 @@ dm_register_cleanup cleanup
 dm_banner "$TEST_TITLE"
 
 dm_step 0 "Validating environment"
+dm_validate_tools
 dm_wait_for_service
 dm_validate_only_exit
 

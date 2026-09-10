@@ -275,8 +275,10 @@ dm_assert_eq "Device B has exactly 2 measurements" "2" "${COUNT_B:-0}"
 
 # Verify the last measurement for device A carries the correct running statistics
 # (avg of 20, 22, 24 = 22.0; min=20, max=24, count=3)
-LAST_A=$(c8y measurements list --device "$DEVICE_ID_A" --type "c8y_TemperatureMeasurement" \
-    --pageSize 1 --output json 2>/dev/null | jq -s '.[0]')
+# Use dm_get_latest_measurement (revert=true) rather than a plain --pageSize 1
+# fetch: c8y measurements list sorts oldest-first for legacy measurements, so an
+# unreverted fetch can silently return the FIRST measurement instead of the last.
+LAST_A=$(dm_get_latest_measurement "$EXT_ID_A" "c8y_Serial" "c8y_TemperatureMeasurement")
 
 MSG_COUNT_A=$(printf '%s' "$LAST_A" | jq -r '.c8y_TemperatureStatistics.messageCount.value // empty')
 dm_assert_eq "Device A messageCount=3 in statistics" "3" "${MSG_COUNT_A:-0}"

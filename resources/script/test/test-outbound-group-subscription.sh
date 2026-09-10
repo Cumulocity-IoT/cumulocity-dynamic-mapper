@@ -18,7 +18,7 @@
 #   ./test-case-III.sh
 #   ./test-case-III.sh --cleanup    # Remove created resources afterwards
 #
-# Note: The group ID and device ID are written to /tmp/dm-test-III-state.env
+# Note: The group ID and device ID are written to <script-dir>/tmp/dm-test-III-state.env
 #       so test-case-IV.sh can pick them up for the removal test.
 
 set -e
@@ -32,7 +32,7 @@ TEST_TITLE="34. Dynamic group subscription"
 GROUP_NAME="auto-group"
 DEVICE_NAME="test-group-device-01"
 DEVICE_TYPE="test-group-type"
-STATE_FILE="/tmp/dm-test-III-state.env"
+STATE_FILE="${SCRIPT_DIR}/tmp/dm-test-III-state.env"
 DISCOVERY_WAIT=${DM_DEFAULT_DISCOVERY_WAIT}
 GROUP_ID=""
 DEVICE_ID=""
@@ -57,6 +57,9 @@ cleanup() {
 
 dm_parse_args "$@"
 dm_register_cleanup cleanup
+
+dm_validate_tools
+dm_wait_for_service
 dm_validate_only_exit
 
 dm_banner "$TEST_TITLE"
@@ -83,8 +86,10 @@ c8y inventory children assign \
 dm_info "Assigned device $DEVICE_ID to group $GROUP_ID"
 
 # Save state for test-case-IV
+mkdir -p "$(dirname "$STATE_FILE")"
 printf 'GROUP_ID=%s\nDEVICE_ID=%s\nGROUP_NAME=%s\n' \
     "$GROUP_ID" "$DEVICE_ID" "$GROUP_NAME" > "$STATE_FILE"
+chmod 600 "$STATE_FILE"
 dm_info "State saved to $STATE_FILE"
 
 # Step 4: Wait for dynamic discovery

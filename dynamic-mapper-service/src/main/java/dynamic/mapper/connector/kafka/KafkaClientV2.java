@@ -23,7 +23,6 @@ package dynamic.mapper.connector.kafka;
 
 import com.cumulocity.sdk.client.SDKException;
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
@@ -147,30 +146,8 @@ public class KafkaClientV2 extends AConnectorClient {
             String additionalSubscriptionIdTest,
             String tenant) {
         this();
-
-        this.configurationRegistry = configurationRegistry;
-        this.connectorRegistry = connectorRegistry;
-        this.connectorConfiguration = connectorConfiguration;
-        this.connectorName = connectorConfiguration.getName();
-        this.connectorIdentifier = connectorConfiguration.getIdentifier();
-        this.connectorId = new ConnectorId(
-                connectorConfiguration.getName(),
-                connectorConfiguration.getIdentifier(),
-                connectorType);
-        this.tenant = tenant;
-        this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-
-        // Initialize dependencies from registry
-        this.mappingService = configurationRegistry.getMappingService();
-        this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
-        this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
-        this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
-        this.objectMapper = configurationRegistry.getObjectMapper();
-        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        this.dispatcher = dispatcher;
-
-        // Initialize managers
+        wireFromRegistry(configurationRegistry, connectorRegistry, connectorConfiguration,
+                dispatcher, additionalSubscriptionIdTest, tenant);
         initializeManagers();
     }
 
@@ -831,8 +808,7 @@ public class KafkaClientV2 extends AConnectorClient {
      */
     private void handleSuccessfulProcessing(ConsumerRecord<String, String> record) {
         // Manual commit if auto-commit is disabled
-        Boolean autoCommit = (Boolean) kafkaConsumerProperties
-                .getOrDefault("enable.auto.commit", "true").equals("true");
+        boolean autoCommit = "true".equals(kafkaConsumerProperties.getOrDefault("enable.auto.commit", "true"));
 
         if (!autoCommit) {
             KafkaConsumerWrapper wrapper = topicConsumers.get(record.topic());

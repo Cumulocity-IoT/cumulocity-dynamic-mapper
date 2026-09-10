@@ -20,8 +20,14 @@
 
 import { inject } from "@angular/core";
 import { ResolveFn } from "@angular/router";
+import { AlertService } from "@c8y/ngx-components";
+import { gettext } from "@c8y/ngx-components/gettext";
+import { HttpStatusCode } from "@angular/common/http";
 import { ConnectorConfigurationService } from "../service/connector-configuration.service";
+import { SharedService } from "../service/shared.service";
+import { Operation } from "../service/shared.model";
 import { Direction } from "../mapping/mapping.model";
+import { ALERT_INFO_TIMEOUT } from "../mapping/util";
 
 export enum ConnectorPropertyType {
   ID_STRING_PROPERTY = 'ID_STRING_PROPERTY',
@@ -97,4 +103,74 @@ export interface PollingInterval {
   label: string;
   value: number;
   seconds: number;
+}
+
+/** The subset of {@link ConnectorConfiguration} the create/update API accepts — identifier is
+ * always populated (either from the resolved configuration being edited, or from
+ * createCustomUuid() for a new one), unlike the rest of the fields. */
+export type ConnectorConfigurationApiPayload =
+  Partial<ConnectorConfiguration> & Pick<ConnectorConfiguration, 'identifier'>;
+
+/** Strips a {@link ConnectorConfiguration} down to the fields the create/update API accepts. */
+export function prepareConnectorConfigurationForApi(config: ConnectorConfiguration): ConnectorConfigurationApiPayload {
+  return {
+    identifier: config.identifier,
+    connectorType: config.connectorType,
+    enabled: config.enabled,
+    name: config.name,
+    properties: config.properties
+  };
+}
+
+/**
+ * Sends the connect/disconnect operation for a connector and surfaces a success/error toast.
+ * Extracted here because the connector grid's cell renderer and the connector details page
+ * previously each carried their own copy of this logic, with drift between them (only the
+ * renderer disabled its toggle while the operation was in flight) — callers should still guard
+ * against concurrent re-invocation themselves (see {@link ConnectorStatusEnabledRendererComponent}
+ * for the `isLoading` pattern).
+ */
+export async function toggleConnectorConnection(
+  sharedService: SharedService,
+  alertService: AlertService,
+  configuration: ConnectorConfiguration
+): Promise<boolean> {
+  const isConnecting = !configuration.enabled;
+  const response = await sharedService.runOperation(
+    configuration.enabled
+      ? { operation: Operation.DISCONNECT, parameter: { connectorIdentifier: configuration.identifier } }
+      : { operation: Operation.CONNECT, parameter: { connectorIdentifier: configuration.identifier } }
+  );
+  const queued = response.status === HttpStatusCode.Created;
+  if (queued) {
+    alertService.add({
+      text: isConnecting
+        ? gettext('Connector is connecting, please wait...')
+        : gettext('Connector disconnected.'),
+      type: 'info',
+      timeout: ALERT_INFO_TIMEOUT
+    });
+  } else {
+    alertService.danger(gettext('Failed to establish connection!'));
+  }
+  return queued;
+}
+
+export async function applyConnectorConfigurationChange(
+  alertService: AlertService,
+  response: ConnectorConfiguration | undefined | null,
+  successMessage: string,
+  errorMessage: string,
+  action: (config: ConnectorConfigurationApiPayload) => Promise<{ status: number }>
+): Promise<void> {
+  if (!response) return;
+
+  const clonedConfiguration = prepareConnectorConfigurationForApi(response);
+  const apiResponse = await action(clonedConfiguration);
+
+  if (apiResponse.status < 300) {
+    alertService.success(gettext(successMessage));
+  } else {
+    alertService.danger(gettext(errorMessage));
+  }
 }

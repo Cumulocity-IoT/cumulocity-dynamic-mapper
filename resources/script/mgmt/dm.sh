@@ -62,17 +62,21 @@ function show_usage() {
 Usage: $0 <resource> <operation> [options]
 
 MAPPINGS
-  mappings list   [--direction INBOUND|OUTBOUND]
+  mappings list   [--direction INBOUND|OUTBOUND] [--raw]
   mappings export [--file <file>]                        Export to file as managed objects (default: $DEFAULT_MAPPINGS_FILE)
   mappings import  --format ui|mo [--file <file>]        Import from file (default: $DEFAULT_MAPPINGS_FILE)
   mappings delete [--direction INBOUND|OUTBOUND] [--force]
 
 CONNECTORS
-  connectors list
-  connectors delete [--force]
+  connectors list   [--type <TYPE>] [--raw]
+  connectors delete [--type <TYPE>] [--force]                Delete connectors, optionally filtered by connectorType
+                                                          (e.g. MQTT, CUMULOCITY_MQTT_SERVICE, KAFKA, HTTP, WEB_HOOK)
+  connectors reset-http [--force]                        Force-delete the default HTTP connector's tenant option
+                                                          directly (bypasses the app's delete protection). It is
+                                                          recreated fresh on next microservice restart.
 
 CONFIGURATIONS
-  configurations list
+  configurations list [--raw]
   configurations delete [--force]
 
 TEMPLATES
@@ -93,21 +97,26 @@ EOF
 function mappings_list() {
   check_prerequisites
   local direction=""
+  local raw=false
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --direction) direction="$2"; shift 2 ;;
+      --raw)       raw=true; shift ;;
       *) echo "Unknown option: $1" >&2; show_usage; exit 1 ;;
     esac
   done
 
   [ -n "$direction" ] && validate_direction "$direction"
 
+  local raw_flag=()
+  [ "$raw" = true ] && raw_flag=(--raw)
+
   if [ -n "$direction" ]; then
     c8y inventory find --type d11r_mapping \
       --query "d11r_mapping.direction eq '$direction'" \
-      --includeAll --select name,type,d11r_mapping
+      --includeAll --select name,type,d11r_mapping "${raw_flag[@]}"
   else
-    c8y inventory list --type d11r_mapping --includeAll --select name,type,d11r_mapping
+    c8y inventory list --type d11r_mapping --includeAll --select name,type,d11r_mapping "${raw_flag[@]}"
   fi
 }
 
@@ -209,11 +218,89 @@ function mappings_delete() {
 
 function connectors_list() {
   check_prerequisites
-  c8y tenantoptions getForCategory --category "$TENANT_OPTIONS_CATEGORY" --raw \
-    | jq 'with_entries(select(.key | startswith("credentials.connection.")))'
+  local type=""
+  local raw=false
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --type) type="$2"; shift 2 ;;
+      --raw)  raw=true; shift ;;
+      *) echo "Unknown option: $1" >&2; show_usage; exit 1 ;;
+    esac
+  done
+
+  local connectors
+  connectors=$(c8y api --method GET --url "/service/dynamic-mapper-service/configuration/connector/instance" \
+    | jq --arg type "$type" '
+        (if $type == "" then . else map(select(.connectorType == $type)) end)
+        | map({identifier, name, connectorType, enabled})')
+
+  if [ "$raw" = true ]; then
+    echo "$connectors"
+  else
+    echo "$connectors" | jq -r '
+        ("IDENTIFIER\tNAME\tCONNECTOR TYPE\tENABLED"),
+        (.[] | [.identifier, .name, .connectorType, (.enabled | tostring)] | @tsv)
+      ' | column -t -s $'\t'
+  fi
 }
 
 function connectors_delete() {
+  check_prerequisites
+  local type=""
+  local force=false
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --type)  type="$2"; shift 2 ;;
+      --force) force=true; shift ;;
+      *) echo "Unknown option: $1" >&2; show_usage; exit 1 ;;
+    esac
+  done
+
+  local scope="all connector configurations"
+  [ -n "$type" ] && scope="connector configurations of type '$type'"
+  [ "$force" = false ] && confirm_destructive "This will permanently delete $scope."
+
+  local identifiers
+  if [ -n "$type" ]; then
+    identifiers=$(c8y api --method GET --url "/service/dynamic-mapper-service/configuration/connector/instance" 2>/dev/null \
+      | jq -r --arg type "$type" '.[] | select(.connectorType == $type) | .identifier' || true)
+  else
+    identifiers=$(c8y api --method GET --url "/service/dynamic-mapper-service/configuration/connector/instance" 2>/dev/null \
+      | jq -r '.[].identifier' || true)
+  fi
+
+  if [ -z "$identifiers" ]; then
+    echo "No $scope found."
+  else
+    local id
+    local success_count=0
+    local fail_count=0
+    while IFS= read -r id; do
+      # The built-in HTTP connector is protected by the backend (400 Bad Request) and
+      # gets recreated on startup anyway, so skip it instead of reporting a false success.
+      if [ "$id" = "HTTP_CONNECTOR_IDENTIFIER" ]; then
+        echo "Skipped connector '$id': the default HTTP connector cannot be deleted." >&2
+        continue
+      fi
+      if c8y api --method DELETE --url "/service/dynamic-mapper-service/configuration/connector/instance/$id" >/dev/null 2>&1; then
+        echo "Deleted connector '$id'."
+        ((success_count++))
+      else
+        echo "Error: failed to delete connector '$id'." >&2
+        ((fail_count++))
+      fi
+    done <<< "$identifiers"
+
+    if [ "$fail_count" -gt 0 ]; then
+      echo "Deleted $success_count connector(s), $fail_count failed." >&2
+      exit 1
+    else
+      echo "Deleted $scope."
+    fi
+  fi
+}
+
+function connectors_reset_http() {
   check_prerequisites
   local force=false
   while [[ $# -gt 0 ]]; do
@@ -223,20 +310,13 @@ function connectors_delete() {
     esac
   done
 
-  [ "$force" = false ] && confirm_destructive "This will permanently delete all connector configurations."
+  [ "$force" = false ] && confirm_destructive "This will delete the default HTTP connector's tenant option directly. It is recreated fresh on the next microservice restart."
 
-  local keys
-  keys=$(c8y tenantoptions getForCategory --category "$TENANT_OPTIONS_CATEGORY" --raw 2>/dev/null \
-    | jq -r 'keys[] | select(startswith("credentials.connection."))' || true)
-
-  if [ -z "$keys" ]; then
-    echo "No connector configurations found."
-  else
-    echo "$keys" \
-      | jq -Rc '{key: .}' \
-      | c8y tenantoptions delete --category "$TENANT_OPTIONS_CATEGORY" --key -.key
-    echo "Connectors deleted."
-  fi
+  # Bypasses the app's delete protection (400 "Can't delete a HttpConnector!") by
+  # removing the underlying tenant option directly, e.g. to clear a stale/incorrect path.
+  c8y tenantoptions delete --category dynMappingService \
+    --key credentials.connection.configuration.HTTP_CONNECTOR_IDENTIFIER --force
+  echo "Deleted tenant option for the default HTTP connector. Restart the microservice to recreate it."
 }
 
 # ---------------------------------------------------------------------------
@@ -245,8 +325,26 @@ function connectors_delete() {
 
 function configurations_list() {
   check_prerequisites
-  c8y tenantoptions getForCategory --category "$TENANT_OPTIONS_CATEGORY" --raw \
-    | jq 'with_entries(select(.key | startswith("service.configuration")))'
+  local raw=false
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --raw) raw=true; shift ;;
+      *) echo "Unknown option: $1" >&2; show_usage; exit 1 ;;
+    esac
+  done
+
+  local configs
+  configs=$(c8y tenantoptions getForCategory --category "$TENANT_OPTIONS_CATEGORY" --raw \
+    | jq 'with_entries(select(.key | startswith("service.configuration")))')
+
+  if [ "$raw" = true ]; then
+    echo "$configs"
+  else
+    echo "$configs" | jq -r '
+        ("KEY\tVALUE"),
+        (to_entries[] | [.key, (.value | if length > 80 then .[0:80] + "..." else . end)] | @tsv)
+      ' | column -t -s $'\t'
+  fi
 }
 
 function configurations_delete() {

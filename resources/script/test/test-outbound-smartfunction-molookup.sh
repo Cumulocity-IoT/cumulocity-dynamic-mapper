@@ -154,12 +154,25 @@ dm_step 7 "Subscribing to MQTT output topic"
 MQTT_TOPIC="dmtest/out/molookup/$EXT_ID"
 dm_info "Subscribing to: $MQTT_TOPIC"
 
+# In C8Y MQTT Service mode the connector and mosquitto_sub share the same
+# certificate CN (one connection allowed). Starting mosquitto_sub would
+# disconnect the connector so the outbound publish would fail. Skip MQTT
+# reception checks and only verify messagesReceived in that mode.
+_SKIP_MQTT_CHECK=false
+if [ "${_DM_MQTT_SVC_MODE:-false}" = "true" ]; then
+    dm_info "MQTT Service mode: skipping mosquitto_sub (cert-CN conflict); will verify via messagesReceived only"
+    _SKIP_MQTT_CHECK=true
+fi
+
 TEMP_FILE=$(mktemp)
 TEMP_ERR_FILE=$(mktemp)
-dm_mqtt_probe_subscription "$MQTT_TOPIC" 10 || true
-( dm_mqtt_subscribe_one "$MQTT_TOPIC" 15 > "$TEMP_FILE" 2>"$TEMP_ERR_FILE" ) &
-MQTT_PID=$!
-sleep 1
+MQTT_PID=""
+if [ "$_SKIP_MQTT_CHECK" = "false" ]; then
+    dm_mqtt_probe_subscription "$MQTT_TOPIC" 10 || true
+    ( dm_mqtt_subscribe_one "$MQTT_TOPIC" 15 > "$TEMP_FILE" 2>"$TEMP_ERR_FILE" ) &
+    MQTT_PID=$!
+    sleep 1
+fi
 
 dm_step 8 "Creating C8Y measurement to trigger outbound mapping"
 c8y measurements create \
@@ -170,43 +183,49 @@ c8y measurements create \
 dm_success "Test measurement created"
 
 dm_step 9 "Waiting for MQTT message"
-set +e
-wait "$MQTT_PID"
-MQTT_SUB_RC=$?
-set -e
+if [ "$_SKIP_MQTT_CHECK" = "true" ]; then
+    dm_wait 8 "outbound notification processing"
+    dm_assert_mapping_received_gt "Outbound mapping processed measurement" "$MAPPING_ID" "$BASELINE"
+    dm_info "MQTT Service mode: MQTT message content check skipped (cert-CN conflict with connector)"
+else
+    set +e
+    wait "$MQTT_PID"
+    MQTT_SUB_RC=$?
+    set -e
 
-if [ "$MQTT_SUB_RC" -ne 0 ]; then
-    dm_warn "mosquitto_sub exited $MQTT_SUB_RC; stderr: $(tr '\n' ' ' < "$TEMP_ERR_FILE" 2>/dev/null | head -c 400)"
+    if [ "$MQTT_SUB_RC" -ne 0 ]; then
+        dm_warn "mosquitto_sub exited $MQTT_SUB_RC; stderr: $(tr '\n' ' ' < "$TEMP_ERR_FILE" 2>/dev/null | head -c 400)"
+    fi
+    dm_assert_eq "MQTT subscriber exit code" "0" "$MQTT_SUB_RC"
+
+    dm_assert_mapping_received_gt "Outbound mapping processed measurement" "$MAPPING_ID" "$BASELINE"
+
+    MQTT_MSG=""
+    if [ -f "$TEMP_FILE" ] && [ -s "$TEMP_FILE" ]; then
+        MQTT_MSG=$(head -1 "$TEMP_FILE")
+        dm_info "MQTT message received: $MQTT_MSG"
+    fi
+    _received=false
+    [ -n "$MQTT_MSG" ] && _received=true
+    dm_assert_eq "Outbound MQTT message received" "true" "$_received"
+
+    _json_ok=false
+    if printf '%s' "$MQTT_MSG" | jq -e . >/dev/null 2>&1; then
+        _json_ok=true
+    fi
+    dm_assert_eq "Outbound MQTT payload is valid JSON" "true" "$_json_ok"
+
+    TEMP_VALUE_NUM=$(printf '%s' "$MQTT_MSG" | jq -r '.temperature // empty | tonumber? // empty' 2>/dev/null || echo "")
+    dm_assert_num_eq "Transformed temperature value" "42.0" "$TEMP_VALUE_NUM" 1
+
+    RESOLVED_NAME=$(printf '%s' "$MQTT_MSG" | jq -r '.deviceName // empty' 2>/dev/null || echo "")
+    dm_assert_eq "MO-resolved device name in MQTT payload" "$DEVICE_NAME" "$RESOLVED_NAME"
+
+    RESOLVED_TYPE=$(printf '%s' "$MQTT_MSG" | jq -r '.deviceType // empty' 2>/dev/null || echo "")
+    dm_assert_eq "MO-resolved device type in MQTT payload" "c8y_TemperatureSensor" "$RESOLVED_TYPE"
 fi
-dm_assert_eq "MQTT subscriber exit code" "0" "$MQTT_SUB_RC"
 
-dm_assert_mapping_received_gt "Outbound mapping processed measurement" "$MAPPING_ID" "$BASELINE"
-
-MQTT_MSG=""
-if [ -f "$TEMP_FILE" ] && [ -s "$TEMP_FILE" ]; then
-    MQTT_MSG=$(head -1 "$TEMP_FILE")
-    dm_info "MQTT message received: $MQTT_MSG"
-fi
-_received=false
-[ -n "$MQTT_MSG" ] && _received=true
-dm_assert_eq "Outbound MQTT message received" "true" "$_received"
-
-_json_ok=false
-if printf '%s' "$MQTT_MSG" | jq -e . >/dev/null 2>&1; then
-    _json_ok=true
-fi
-dm_assert_eq "Outbound MQTT payload is valid JSON" "true" "$_json_ok"
-
-TEMP_VALUE_NUM=$(printf '%s' "$MQTT_MSG" | jq -r '.temperature // empty | tonumber? // empty' 2>/dev/null || echo "")
-dm_assert_num_eq "Transformed temperature value" "42.0" "$TEMP_VALUE_NUM" 1
-
-RESOLVED_NAME=$(printf '%s' "$MQTT_MSG" | jq -r '.deviceName // empty' 2>/dev/null || echo "")
-dm_assert_eq "MO-resolved device name in MQTT payload" "$DEVICE_NAME" "$RESOLVED_NAME"
-
-RESOLVED_TYPE=$(printf '%s' "$MQTT_MSG" | jq -r '.deviceType // empty' 2>/dev/null || echo "")
-dm_assert_eq "MO-resolved device type in MQTT payload" "c8y_TemperatureSensor" "$RESOLVED_TYPE"
-
-kill "$MQTT_PID" 2>/dev/null || true
+[ -n "$MQTT_PID" ] && kill "$MQTT_PID" 2>/dev/null || true
 rm -f "$TEMP_FILE" "$TEMP_ERR_FILE"
 
 dm_done "$TEST_TITLE"

@@ -27,10 +27,10 @@ import { saveAs } from 'file-saver';
 
 import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
-import { ConnectorStatus, LoggingEventType } from '../connector-details/connector-log.model';
+import { LoggingEventType } from '../connector-details/connector-log.model';
 import { DeploymentMapEntry, Direction, Feature } from '../mapping/mapping.model';
 import { createCustomUuid } from '../mapping/util';
-import { ConnectorConfiguration, ConnectorSpecification, ConnectorType, PollingInterval } from './connector.model';
+import { applyConnectorConfigurationChange, ConnectorConfiguration, ConnectorConfigurationApiPayload, ConnectorSpecification, ConnectorType, PollingInterval, prepareConnectorConfigurationForApi } from './connector.model';
 import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
 import { ActionVisibilityRule } from './types';
 import { SharedService } from '..';
@@ -70,7 +70,6 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
 
   selected: string[] = [];
   selected$ = new BehaviorSubject<string[]>([]);
-  monitoring$: Observable<ConnectorStatus>;
   specifications: ConnectorSpecification[] = [];
   configurations: ConnectorConfiguration[] = [];
   configurations$: Observable<(ConnectorConfiguration & { id: string })[]>;
@@ -317,32 +316,13 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   }
 
   private async handleModalResponse(
-    response: any,
+    response: ConnectorConfiguration | undefined,
     successMessage: string,
     errorMessage: string,
-    action: (config: any) => Promise<any>
+    action: (config: ConnectorConfigurationApiPayload) => Promise<any>
   ): Promise<void> {
-    if (!response) return;
-
-    const clonedConfiguration = this.prepareConfiguration(response);
-    const apiResponse = await action(clonedConfiguration);
-
-    if (apiResponse.status < 300) {
-      this.alertService.success(gettext(successMessage));
-    } else {
-      this.alertService.danger(gettext(errorMessage));
-    }
+    await applyConnectorConfigurationChange(this.alertService, response, successMessage, errorMessage, action);
     this.refresh();
-  }
-
-  private prepareConfiguration(config: ConnectorConfiguration): Partial<ConnectorConfiguration> {
-    return {
-      identifier: config.identifier,
-      connectorType: config.connectorType,
-      enabled: config.enabled,
-      name: config.name,
-      properties: config.properties
-    };
   }
 
   // Public methods
@@ -436,19 +416,19 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
   async onExportAll(): Promise<void> {
     const configurations2Export = this.configurations
       .filter(config => config.connectorType !== ConnectorType.HTTP)
-      .map(config => this.prepareConfiguration(config));
+      .map(config => prepareConnectorConfigurationForApi(config));
     this.exportConfigurations(configurations2Export);
   }
 
   async exportSingle(config: ConnectorConfiguration): Promise<void> {
-    const configurations2Export = [this.prepareConfiguration(config)];
+    const configurations2Export = [prepareConnectorConfigurationForApi(config)];
     this.exportConfigurations(configurations2Export);
   }
 
   exportConnectorBulk(ids: string[]): void {
     const configurations2Export = this.configurations
       .filter(config => ids.includes(config.identifier) && config.connectorType !== ConnectorType.HTTP)
-      .map(config => this.prepareConfiguration(config));
+      .map(config => prepareConnectorConfigurationForApi(config));
     this.exportConfigurations(configurations2Export);
     this.connectorGrid.setAllItemsSelected(false);
   }

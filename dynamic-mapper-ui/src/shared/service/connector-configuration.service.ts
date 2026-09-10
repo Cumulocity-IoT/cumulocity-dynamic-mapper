@@ -154,7 +154,13 @@ export class ConnectorConfigurationService {
   }
 
   // CRUD Operations
-  async createConfiguration(configuration: ConnectorConfiguration): Promise<IFetchResponse> {
+  /**
+   * @param skipRefresh when true, does not trigger a configurations refetch — for callers
+   * creating several connectors back-to-back (e.g. bulk import), which would otherwise redundantly
+   * refetch the whole configuration list after every single POST. Such callers must call
+   * {@link refreshConfigurations} themselves once, after the batch completes.
+   */
+  async createConfiguration(configuration: Partial<ConnectorConfiguration>, skipRefresh = false): Promise<IFetchResponse> {
     try {
       const response = await this.client.fetch(
         `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance`,
@@ -165,7 +171,9 @@ export class ConnectorConfigurationService {
         }
       );
 
-      this.refreshConfigurations();
+      if (!skipRefresh) {
+        this.refreshConfigurations();
+      }
       return response;
     } catch (error) {
       console.error('Failed to create connector configuration:', error);
@@ -173,7 +181,9 @@ export class ConnectorConfigurationService {
     }
   }
 
-  async updateConfiguration(configuration: ConnectorConfiguration): Promise<IFetchResponse> {
+  async updateConfiguration(
+    configuration: Partial<ConnectorConfiguration> & Pick<ConnectorConfiguration, 'identifier'>
+  ): Promise<IFetchResponse> {
     try {
       const response = await this.client.fetch(
         `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/instance/${configuration.identifier}`,

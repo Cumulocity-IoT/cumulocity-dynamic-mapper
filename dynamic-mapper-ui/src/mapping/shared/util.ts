@@ -19,9 +19,12 @@
  */
 import { AbstractControl } from '@angular/forms';
 import * as _ from 'lodash';
+import * as jsYaml from 'js-yaml';
 import {
   API,
+  DeploymentMapEntry,
   Direction,
+  JsonEditorComponent,
   Mapping,
   TransformationType
 } from '../../shared';
@@ -774,6 +777,169 @@ export function stripTemplateMetadataTags(code: string): string {
 
   // Legacy fallback: no marker present, strip the tags most likely to conflict.
   return code.replace(/^\s*\*\s*@(?:name|description|templateType|direction|defaultTemplate|internal|readonly)\b[^\n]*\n?/gm, '');
+}
+
+/**
+ * Snapshot of a mapping-editing session's initial state, taken once when the editor is opened,
+ * for comparison against the live editing state via {@link hasMappingContentChanged}.
+ */
+export interface MappingContentSnapshot {
+  mappingJson: string;
+  sourceTemplateJson: string;
+  targetTemplateJson: string;
+  mappingCode: string;
+}
+
+export function captureMappingContentSnapshot(
+  mapping: unknown,
+  sourceTemplate: unknown,
+  targetTemplate: unknown,
+  mappingCode: string | undefined
+): MappingContentSnapshot {
+  return {
+    mappingJson: JSON.stringify(mapping),
+    sourceTemplateJson: JSON.stringify(sourceTemplate),
+    targetTemplateJson: JSON.stringify(targetTemplate),
+    mappingCode: mappingCode ?? ''
+  };
+}
+
+/**
+ * Returns true when any mapping content field has changed since {@link captureMappingContentSnapshot}
+ * was taken. Shared by the stepper and the unified editor so an UPDATE-mode commit only creates a
+ * draft when the user actually changed the mapping's content — a connector-only reassignment (which
+ * doesn't touch any of these fields) must not create a no-op draft.
+ */
+export function hasMappingContentChanged(
+  mapping: unknown,
+  sourceTemplate: unknown,
+  targetTemplate: unknown,
+  mappingCode: string | undefined,
+  initial: MappingContentSnapshot
+): boolean {
+  return JSON.stringify(mapping) !== initial.mappingJson
+    || JSON.stringify(sourceTemplate) !== initial.sourceTemplateJson
+    || JSON.stringify(targetTemplate) !== initial.targetTemplateJson
+    || (mappingCode ?? '') !== initial.mappingCode;
+}
+
+/**
+ * Returns true when `code` already exports `exportName` as an ESM named or direct export (e.g.
+ * `export { onMessage };` or `export function onMessage(...)`), so callers don't append a
+ * duplicate export statement. Handles `export default` alongside the other direct-export forms.
+ * Shared by the stepper and the unified editor's code-template insertion — these previously
+ * carried two independently forked copies of this regex pair that had already drifted (the
+ * unified editor's matched `export default`, the stepper's didn't).
+ */
+export function hasEsmExport(code: string, exportName: string): boolean {
+  const escapedName = exportName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const namedExportPattern = new RegExp(`\\bexport\\s*\\{[^}]*\\b${escapedName}\\b(?:\\s+as\\s+\\w+)?[^}]*\\}`, 'm');
+  const directExportPattern = new RegExp(
+    `\\bexport\\s+(?:default\\s+)?(?:async\\s+function|function|const|let|var|class)\\s+${escapedName}\\b`,
+    'm'
+  );
+  return namedExportPattern.test(code) || directExportPattern.test(code);
+}
+
+// ─── Mapping editor session utilities ──────────────────────────────────────────
+// Shared by the stepper (mapping-stepper.component.ts) and the unified editor
+// (mapping-unified-editor.component.ts), which independently duplicated these until a review
+// found ~90% method-level duplication between the two components. See
+// docs/planning/IMPLEMENTATION-PLAN-STEPPER-UNIFIED-EDITOR-DEDUP.md.
+
+/** Serializes an extension parameter block to YAML for display in the parameter textarea. */
+export function configurationToYaml(configuration: Record<string, any> | undefined): string {
+  if (!configuration) {
+    return '';
+  }
+  try {
+    return jsYaml.dump(configuration, { indent: 2 });
+  } catch {
+    return '';
+  }
+}
+
+/** Parses the extension parameter textarea's YAML back into an object. */
+export function yamlToConfiguration(yaml: string): Record<string, any> | undefined {
+  if (!yaml?.trim()) {
+    return undefined;
+  }
+  try {
+    const parsed = jsYaml.load(yaml);
+    return (parsed && typeof parsed === 'object') ? parsed as Record<string, any> : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Builds the mapping snapshot sent to the Testing step / drawer, optionally including the encoded code. */
+export function buildTestMapping(
+  mapping: Mapping,
+  sourceTemplate: any,
+  targetTemplate: any,
+  mappingCode: string | undefined,
+  includeCode: boolean
+): Mapping {
+  const testMapping = structuredClone(mapping);
+  testMapping.sourceTemplate = JSON.stringify(sourceTemplate);
+  testMapping.targetTemplate = JSON.stringify(targetTemplate);
+  if (includeCode && mappingCode) {
+    testMapping.code = stringToBase64(stripTemplateMetadataTags(mappingCode));
+  }
+  return testMapping;
+}
+
+/** A mapping must be bound to at least one connector before it can be saved. */
+export function isConnectorSelectionEmpty(deploymentMapEntry: DeploymentMapEntry | undefined): boolean {
+  return !deploymentMapEntry?.connectors || deploymentMapEntry.connectors.length === 0;
+}
+
+/**
+ * Shape common to the template-step components (currently only `MappingTemplateStepComponent`)
+ * that {@link updateTemplatesInEditors} needs — narrowed to just the fields it reads so this
+ * shared util doesn't have to import the full step component type.
+ */
+export interface TemplateEditorRef {
+  editorSourceStepTemplate?: JsonEditorComponent;
+  editorTargetStepTemplate?: JsonEditorComponent;
+  sourceTemplateUpdated?: any;
+  targetTemplateUpdated?: any;
+}
+
+/**
+ * Reads content directly from the underlying vanilla-jsoneditor instance, bypassing the
+ * `(contentChanged)` mirror (`sourceTemplateUpdated`/`targetTemplateUpdated`). That mirror only
+ * updates when the library's `onChange` fires, which in practice doesn't fire for every edit
+ * path (e.g. some tree-mode interactions) — `.get()` is the library's own source of truth and
+ * is never stale.
+ */
+export function tryGetLiveEditorContent(editor: JsonEditorComponent | undefined): any {
+  if (!editor) return undefined;
+  try {
+    return editor.get();
+  } catch (error) {
+    console.warn('Failed to read live editor content, falling back', error);
+    return undefined;
+  }
+}
+
+/**
+ * Pulls the latest source/target template values out of the template step's editors before a
+ * save or a step/tab transition away from it. Tries the live editor content first, falling back
+ * to the step component's own change-mirror, falling back to the current value — see
+ * {@link tryGetLiveEditorContent} for why the live read is needed.
+ */
+export function updateTemplatesInEditors(
+  templateStepRef: TemplateEditorRef | undefined,
+  currentSourceTemplate: any,
+  currentTargetTemplate: any
+): { sourceTemplate: any; targetTemplate: any } {
+  const liveSource = tryGetLiveEditorContent(templateStepRef?.editorSourceStepTemplate);
+  const liveTarget = tryGetLiveEditorContent(templateStepRef?.editorTargetStepTemplate);
+  return {
+    sourceTemplate: liveSource ?? templateStepRef?.sourceTemplateUpdated ?? currentSourceTemplate,
+    targetTemplate: liveTarget ?? templateStepRef?.targetTemplateUpdated ?? currentTargetTemplate
+  };
 }
 
 // ─── Object utilities ─────────────────────────────────────────────────────────

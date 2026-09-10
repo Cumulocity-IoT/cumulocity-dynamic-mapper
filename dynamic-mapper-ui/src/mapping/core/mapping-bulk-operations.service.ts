@@ -288,7 +288,7 @@ export class MappingBulkOperationsService {
           const errors: string[] = [];
           for (const mapping of mappings2Delete) {
             try {
-              await this.mappingService.deleteMapping(mapping.id);
+              await this.mappingService.deleteMapping(mapping.id, direction);
               successCount++;
             } catch (error) {
               errors.push(mapping.name);
@@ -300,12 +300,14 @@ export class MappingBulkOperationsService {
           } else {
             this.alertService.warning(`Deleted ${successCount} mapping(s). Failed for: ${errors.join(', ')}.`);
           }
+          // No explicit refreshMappings() here: deleteMapping() above already refreshes the
+          // affected direction after each successful delete (the last one leaves the list
+          // current), so an extra call here would just be one more wasted refetch.
         } catch (error) {
           this.alertService.danger('Failed to delete mappings', error);
         }
       });
 
-    this.mappingService.refreshMappings(direction);
     mappingGrid.setAllItemsSelected(false);
   }
 

@@ -63,7 +63,12 @@ export class MonitoringService {
     error: null,
   });
   private mappingStatus$ = this.state$.pipe(map(state => state.status));
-  private isMonitoring = false;
+  // Ref-count, not a boolean: this service is `providedIn: 'root'` and multiple components
+  // (e.g. the inbound/outbound statistic tabs) independently call start/stopMonitoring from
+  // their own ngOnInit/ngOnDestroy. A single "isMonitoring" flag let one component's teardown
+  // kill the shared realtime stream out from under another still-mounted consumer; only tear
+  // down once the last consumer has stopped.
+  private activeConsumers = 0;
   private unsubscribe$ = new Subject<void>();
 
 
@@ -115,13 +120,13 @@ export class MonitoringService {
 
 
   async startMonitoring(): Promise<void> {
-    if (this.isMonitoring) {
-      console.warn('Monitoring is already active');
+    this.activeConsumers++;
+    if (this.activeConsumers > 1) {
+      // Another consumer already has the stream running; nothing more to do.
       return;
     }
 
     try {
-      this.isMonitoring = true;
       const agentId = await this.sharedService.getDynamicMappingServiceAgent();
 
       if (!agentId) {
@@ -154,14 +159,20 @@ export class MonitoringService {
         .subscribe((status) => this.state$.next({ status, error: null }));
     } catch (error) {
       console.error('Failed to start monitoring:', error);
-      this.isMonitoring = false;
+      this.activeConsumers = Math.max(0, this.activeConsumers - 1);
       throw error;
     }
   }
 
   stopMonitoring(): void {
+    if (this.activeConsumers > 0) {
+      this.activeConsumers--;
+    }
+    if (this.activeConsumers > 0) {
+      // Other consumers are still active; keep the shared stream running for them.
+      return;
+    }
     if (this.managedObjectRealtimeService) this.managedObjectRealtimeService.stop();
-    this.isMonitoring = false;
     this.unsubscribe$.next();
     this.unsubscribe$.complete();
     this.unsubscribe$ = new Subject<void>();

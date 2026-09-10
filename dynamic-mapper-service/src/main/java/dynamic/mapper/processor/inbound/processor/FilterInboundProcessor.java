@@ -39,6 +39,21 @@ public class FilterInboundProcessor extends BaseProcessor {
 
         if (mappingFilter != null && !mappingFilter.isBlank()) {
             Object payloadObjectNode = context.getPayload();
+
+            // Byte-payload mapping types (ANY_PAYLOAD, PROTOBUF_INTERNAL) intentionally leave the
+            // payload undeserialized here - parsing is done later by the extension/protobuf processor
+            // itself. JSONata cannot evaluate a raw byte[] (it only accepts JSON values/Map/List), so
+            // filtering against it would always throw and fail the message closed. Skip filtering in
+            // that case; extensions can still gate processing themselves via context.addWarning()/
+            // setIgnoreFurtherProcessing() inside onMessage().
+            if (payloadObjectNode instanceof byte[]) {
+                if (mapping.getDebug()) {
+                    log.info("{} - Inbound mapping {}/{} skipping filter evaluation - payload not yet deserialized (raw byte[])",
+                            tenant, mapping.getName(), mapping.getIdentifier());
+                }
+                return;
+            }
+
             String payload = toPrettyJsonString(payloadObjectNode);
             try {
                 var expr = jsonata(mappingFilter);

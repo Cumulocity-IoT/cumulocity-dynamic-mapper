@@ -49,6 +49,9 @@ cleanup() {
 
 dm_parse_args "$@"
 dm_register_cleanup cleanup
+
+dm_validate_tools
+dm_wait_for_service
 dm_validate_only_exit
 
 dm_banner "$TEST_TITLE"

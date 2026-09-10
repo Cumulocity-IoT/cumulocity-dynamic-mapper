@@ -5,13 +5,14 @@ import {
   Output,
   EventEmitter,
   ViewChild,
+  OnDestroy,
   OnInit,
   inject
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
-import { debounceTime, distinctUntilChanged, Observable } from 'rxjs';
+import { debounceTime, distinctUntilChanged, Observable, Subject, takeUntil } from 'rxjs';
 import {
   COLOR_HIGHLIGHTED,
   Direction,
@@ -41,7 +42,7 @@ import { CollapseModule } from 'ngx-bootstrap/collapse';
   standalone: true,
   imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, JsonEditorComponent, SubstitutionRendererComponent]
 })
-export class MappingSubstitutionStepComponent implements OnInit {
+export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() sourceTemplate: any;
@@ -56,7 +57,10 @@ export class MappingSubstitutionStepComponent implements OnInit {
   @Input() mappingCode: string;
   @Input() codeEditorLabel: string;
   @Input() codeEditorHelp: string;
-  @Input() currentStepIndex: number;
+  // A boolean, not the raw step/tab index: this component is shared by both the stepper and the
+  // unified editor, which number their steps/tabs independently — comparing a bare index here
+  // would silently break if either caller's ordering changes without both staying in sync.
+  @Input() isBeforeSubstitutionStep: boolean;
 
   @Output() mappingCodeChange = new EventEmitter<string>();
 
@@ -70,6 +74,8 @@ export class MappingSubstitutionStepComponent implements OnInit {
   private bottomDrawerService = inject(BottomDrawerService);
   private stepperService = inject(MappingStepperService);
   private substitutionService = inject(SubstitutionManagementService);
+
+  private readonly destroy$ = new Subject<void>();
 
   readonly COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
   readonly EditorMode = EditorMode;
@@ -123,6 +129,11 @@ export class MappingSubstitutionStepComponent implements OnInit {
     this.updateEditorPermissions();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   private initializeSubstitutionModel(): void {
     this.substitutionModel = {
       stepperConfiguration: this.stepperConfiguration,
@@ -173,7 +184,8 @@ export class MappingSubstitutionStepComponent implements OnInit {
           onInit: (field: FormlyFieldConfig) => {
             field.formControl.valueChanges.pipe(
               debounceTime(500),
-              distinctUntilChanged()
+              distinctUntilChanged(),
+              takeUntil(this.destroy$)
             ).subscribe(path => this.updateSourceExpressionResult(path));
           }
         }
@@ -213,7 +225,8 @@ export class MappingSubstitutionStepComponent implements OnInit {
           onInit: (field: FormlyFieldConfig) => {
             field.formControl.valueChanges.pipe(
               debounceTime(500),
-              distinctUntilChanged()
+              distinctUntilChanged(),
+              takeUntil(this.destroy$)
             ).subscribe(path => this.updateTargetExpressionResult(path));
           }
         }
@@ -378,11 +391,10 @@ export class MappingSubstitutionStepComponent implements OnInit {
   }
 
   private readonly refreshSubstitutionValidity = (): void => {
-    this.stepperService.updateSubstitutionValidity(
+    this.stepperService.refreshSubstitutionValidity(
       this.mapping,
-      this.stepperConfiguration.allowNoDefinedIdentifier,
-      this.currentStepIndex,
-      this.stepperConfiguration.showCodeEditor
+      this.stepperConfiguration,
+      this.isBeforeSubstitutionStep
     );
   };
 

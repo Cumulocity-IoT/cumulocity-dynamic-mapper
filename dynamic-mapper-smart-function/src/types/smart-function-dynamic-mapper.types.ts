@@ -43,15 +43,18 @@ export type { DataPrepContext, ExternalId };
 
 /**
  * Represents the payload of a Smart Function message.
- * Supports both object-style access (bracket notation) and Map-like API (.get()).
+ * Access properties using bracket or dot notation.
  *
  * In Dynamic Mapper, payloads are pre-deserialized from JSON for convenience.
  *
+ * At runtime, the payload is a GraalVM ProxyObject exposing JS property semantics
+ * only (getMember/hasMember) — it does NOT support a Map-like `.get(key)` method.
+ * Calling `.get(key)` throws `TypeError: Unknown identifier: get` at runtime.
+ *
  * @deprecated Use `Record<string, any>` directly. This interface was kept only for
- * backward compatibility. The `.get()` method is a legacy alias for bracket notation.
+ * backward compatibility.
  *
  * @example
- * // Object-style access (preferred)
  * const temp = payload["sensorData"]["temp_val"];
  * const messageId = payload["messageId"];
  */
@@ -61,18 +64,6 @@ export interface SmartFunctionPayload {
    * Allows accessing nested properties using bracket notation.
    */
   [key: string]: any;
-
-  /**
-   * Map-like API for accessing payload properties.
-   * @deprecated Prefer bracket notation: payload["key"] instead of payload.get("key")
-   * @param key - The property key to retrieve
-   * @returns The value associated with the key, or undefined if not found
-   *
-   * @example
-   * const messageId = payload["messageId"];
-   * const clientId = payload["clientId"];
-   */
-  get(key: string): any;
 }
 
 /**
@@ -1612,12 +1603,7 @@ export interface MappingError {
  * });
  */
 export function createMockPayload(data: Record<string, any>): Record<string, any> {
-  return {
-    ...data,
-    get(key: string) {
-      return data[key];
-    }
-  };
+  return { ...data };
 }
 
 /**
@@ -1674,7 +1660,8 @@ export function createMockInputMessage<
 /**
  * Mock outbound message for testing V1 outbound Smart Functions.
  * Creates an OutboundMessage with a pre-deserialized payload
- * that supports both bracket access and .get().
+ * accessed via bracket/dot notation (matches the real runtime's ProxyObject,
+ * which does not support `.get()`).
  *
  * @example
  * const mockMsg = createMockOutboundMessage({

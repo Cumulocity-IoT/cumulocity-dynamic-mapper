@@ -23,7 +23,6 @@ package dynamic.mapper.connector.amqp;
 
 import com.rabbitmq.client.*;
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorSpecification;
@@ -49,6 +48,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * AMQP 0-9-1 Connector Client using RabbitMQ client library.
@@ -63,6 +63,14 @@ public class AMQPClient extends AConnectorClient {
     private volatile Connection connection;
     private volatile Channel channel;
     private final Map<String, String> consumerTags = new ConcurrentHashMap<>();
+
+    // Reconnect backoff for monitorSubscriptions(), mirroring AMQTTClient's
+    // reconnectAttempt/nextReconnectTimeMs pattern: without this, a connector that's down for a
+    // long time would get a new reconnect attempt on every 30s housekeeping tick, forever.
+    private final AtomicInteger reconnectAttempt = new AtomicInteger(0);
+    private volatile long nextReconnectTimeMs = 0;
+    private static final int RECONNECT_DELAY_STEP_MS = 10000;
+    private static final int RECONNECT_DELAY_MAX_MS = 300000; // 5 minutes
 
     @Getter
     @Setter
@@ -89,30 +97,8 @@ public class AMQPClient extends AConnectorClient {
             String additionalSubscriptionIdTest,
             String tenant) {
         this();
-
-        this.configurationRegistry = configurationRegistry;
-        this.connectorRegistry = connectorRegistry;
-        this.connectorConfiguration = connectorConfiguration;
-        this.connectorName = connectorConfiguration.getName();
-        this.connectorIdentifier = connectorConfiguration.getIdentifier();
-        this.connectorId = new ConnectorId(
-                connectorConfiguration.getName(),
-                connectorConfiguration.getIdentifier(),
-                connectorType);
-        this.tenant = tenant;
-        this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-
-        // Initialize dependencies from registry
-        this.mappingService = configurationRegistry.getMappingService();
-        this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
-        this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
-        this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
-        this.objectMapper = configurationRegistry.getObjectMapper();
-        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        this.dispatcher = dispatcher;
-
-        // Initialize managers
+        wireFromRegistry(configurationRegistry, connectorRegistry, connectorConfiguration,
+                dispatcher, additionalSubscriptionIdTest, tenant);
         initializeManagers();
     }
 
@@ -179,6 +165,8 @@ public class AMQPClient extends AConnectorClient {
                 @Override
                 public void handleRecovery(Recoverable recoverable) {
                     log.info("{} - AMQP connection recovered", tenant);
+                    reconnectAttempt.set(0);
+                    nextReconnectTimeMs = Long.MAX_VALUE;
                     connectionStateManager.setConnected(true);
                     connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
                 }
@@ -202,6 +190,8 @@ public class AMQPClient extends AConnectorClient {
                 }
             });
 
+            reconnectAttempt.set(0);
+            nextReconnectTimeMs = Long.MAX_VALUE;
             connectionStateManager.setConnected(true);
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
 
@@ -379,34 +369,40 @@ public class AMQPClient extends AConnectorClient {
             log.info("{} - Disconnecting AMQP client", tenant);
             connectionStateManager.updateStatus(ConnectorStatus.DISCONNECTING, true, true);
 
-            // Cancel all consumers
-            if (channel != null && channel.isOpen()) {
-                for (String consumerTag : consumerTags.values()) {
+            // Guarded by the same lock publishMEAO() uses around its channel.basicPublish() call:
+            // without it, a publish in progress could have its channel closed out from under it
+            // mid-send (see AMQP10Client.disconnect(), which already applies this to its JMS
+            // session/producers for the same reason).
+            synchronized (this) {
+                // Cancel all consumers
+                if (channel != null && channel.isOpen()) {
+                    for (String consumerTag : consumerTags.values()) {
+                        try {
+                            channel.basicCancel(consumerTag);
+                        } catch (Exception e) {
+                            log.debug("{} - Error cancelling consumer: {}", tenant, e.getMessage());
+                        }
+                    }
+                    consumerTags.clear();
+                }
+
+                // Close channel
+                if (channel != null && channel.isOpen()) {
                     try {
-                        channel.basicCancel(consumerTag);
+                        channel.close();
                     } catch (Exception e) {
-                        log.debug("{} - Error cancelling consumer: {}", tenant, e.getMessage());
+                        log.debug("{} - Error closing channel: {}", tenant, e.getMessage());
                     }
                 }
-                consumerTags.clear();
-            }
 
-            // Close channel
-            if (channel != null && channel.isOpen()) {
-                try {
-                    channel.close();
-                } catch (Exception e) {
-                    log.debug("{} - Error closing channel: {}", tenant, e.getMessage());
-                }
-            }
-
-            // Close connection
-            if (connection != null && connection.isOpen()) {
-                try {
-                    connection.close();
-                    log.info("{} - AMQP connection closed successfully", tenant);
-                } catch (Exception e) {
-                    log.debug("{} - Error closing connection: {}", tenant, e.getMessage());
+                // Close connection
+                if (connection != null && connection.isOpen()) {
+                    try {
+                        connection.close();
+                        log.info("{} - AMQP connection closed successfully", tenant);
+                    } catch (Exception e) {
+                        log.debug("{} - Error closing connection: {}", tenant, e.getMessage());
+                    }
                 }
             }
 
@@ -450,23 +446,28 @@ public class AMQPClient extends AConnectorClient {
 
     @Override
     public void monitorSubscriptions() {
-        // Check connection health
-        if (connection != null && !connection.isOpen() && shouldConnect()) {
-            log.warn("{} - AMQP connection is closed, attempting reconnection", tenant);
-            virtualThreadPool.submit(() -> {
-                try {
-                    Thread.sleep(5000);
-                    // submitConnect() (not connect() directly): goes through AConnectorClient's
-                    // lifecycleLock/connectDisconnectExecutionLock, so this background reconnect
-                    // can't race a concurrent submitConnect()/submitDisconnect() triggered by a
-                    // user operation or another health check.
-                    submitConnect();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                } catch (Exception e) {
-                    log.error("{} - Error during reconnection", tenant, e);
-                }
-            });
+        // Check connection health. Backed off like AMQTTClient's connectorSpecificHousekeeping():
+        // without nextReconnectTimeMs gating this, a connector that's down for a long time would
+        // spawn a new reconnect attempt on every 30s housekeeping tick, forever, with no backoff.
+        if (connection != null && !connection.isOpen() && shouldConnect() && !isConnecting) {
+            long now = System.currentTimeMillis();
+            if (now >= nextReconnectTimeMs) {
+                int attempt = reconnectAttempt.incrementAndGet();
+                long delay = Math.min((long) attempt * RECONNECT_DELAY_STEP_MS, RECONNECT_DELAY_MAX_MS);
+                nextReconnectTimeMs = now + delay;
+                log.warn("{} - AMQP connection is closed, reconnect attempt {} (next in {} ms)", tenant, attempt, delay);
+                // submitConnect() (not connect() directly): goes through AConnectorClient's
+                // lifecycleLock/connectDisconnectExecutionLock, so this background reconnect
+                // can't race a concurrent submitConnect()/submitDisconnect() triggered by a
+                // user operation or another health check.
+                virtualThreadPool.submit(() -> {
+                    try {
+                        submitConnect();
+                    } catch (Exception e) {
+                        log.error("{} - Error during reconnection", tenant, e);
+                    }
+                });
+            }
         }
     }
 
@@ -514,8 +515,15 @@ public class AMQPClient extends AConnectorClient {
                         .contentType("application/json")
                         .build();
 
-                // Publish message
-                channel.basicPublish(exchangeName, routingKey, props, payload.getBytes(StandardCharsets.UTF_8));
+                // Publish message. Synchronized against disconnect()'s channel teardown so a
+                // disconnect racing in here can't hand basicPublish() a closed/nulled channel
+                // (TOCTOU: the isConnected() check above and this call are otherwise not atomic).
+                synchronized (this) {
+                    if (channel == null || !channel.isOpen()) {
+                        throw new IllegalStateException("Channel is not open");
+                    }
+                    channel.basicPublish(exchangeName, routingKey, props, payload.getBytes(StandardCharsets.UTF_8));
+                }
 
                 if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
                     log.info("{} - OUTBOUND SEND: connector={}, topic={}, qos={}, payload={}",
@@ -567,15 +575,7 @@ public class AMQPClient extends AConnectorClient {
 
     @Override
     public Boolean supportsWildcardInTopic(Direction direction) {
-        if (direction == Direction.INBOUND) {
-            return Boolean.parseBoolean(
-                    connectorConfiguration.getProperties()
-                            .getOrDefault("supportsWildcardInTopicInbound", "true").toString());
-        } else {
-            return Boolean.parseBoolean(
-                    connectorConfiguration.getProperties()
-                            .getOrDefault("supportsWildcardInTopicOutbound", "false").toString());
-        }
+        return readWildcardFlag(direction, true, false);
     }
 
     @Override

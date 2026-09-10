@@ -29,10 +29,10 @@ This document provides detailed explanations of each example Smart Function.
 
 **Key Features:**
 ```typescript
-// Get payload (supports both styles)
+// Get payload (bracket/dot notation only — payload.get("key") throws at runtime)
 const payload = msg.getPayload();
-const temp = payload["sensorData"]["temp_val"];  // Object-style
-const msgId = payload.get("messageId");           // Map-style
+const temp = payload["sensorData"]["temp_val"];
+const msgId = payload["messageId"];
 
 // Get client ID
 const clientId = context.getClientId();

@@ -32,8 +32,11 @@ import {
   switchMap,
   take,
   filter,
-  takeUntil
+  takeUntil,
+  catchError,
+  of
 } from 'rxjs';
+import { AlertService } from '@c8y/ngx-components';
 import {
   BASE_URL,
   Direction,
@@ -79,6 +82,8 @@ export class MappingService {
   private readonly JSONATA = require('jsonata');
   deprecationModalShown = false;
   private readonly versionsCache = new Map<string, MappingVersion[]>();
+
+  private readonly alertService = inject(AlertService);
 
   constructor(
     private readonly sharedService: SharedService,
@@ -160,7 +165,12 @@ export class MappingService {
     return result;
   }
 
-  async deleteMapping(id: string): Promise<string> {
+  /**
+   * @param direction when known, refreshes only that direction's mapping list instead of both —
+   * callers that only have the mapping `id` (not the full {@link Mapping}) can omit it, at the
+   * cost of an extra redundant refetch of the other, untouched direction.
+   */
+  async deleteMapping(id: string, direction?: Direction): Promise<string> {
     const response = await this.client.fetch(
       `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${id}`,
       {
@@ -171,8 +181,7 @@ export class MappingService {
       }
     );
     if (!response.ok) throw new Error(response.statusText);
-    this.reloadInbound$.next();
-    this.reloadOutbound$.next();
+    this.refreshAfterMutation(direction);
     return response.text();
   }
 
@@ -192,8 +201,7 @@ export class MappingService {
       throw new Error(buildBackendErrorMessage(error, response.statusText));
     }
     const m = await response.json();
-    this.reloadInbound$.next();
-    this.reloadOutbound$.next();
+    this.refreshAfterMutation(mapping.direction);
     return m;
   }
 
@@ -210,9 +218,24 @@ export class MappingService {
       throw new Error(buildBackendErrorMessage(error, 'Could not create mapping'));
     }
     const m = await response.json();
-    this.reloadInbound$.next();
-    this.reloadOutbound$.next();
+    this.refreshAfterMutation(mapping.direction);
     return m;
+  }
+
+  /**
+   * Refreshes just the given direction's mapping list, or both when the direction is unknown to
+   * the caller. Consolidated here so a create/update/delete doesn't unconditionally refetch the
+   * untouched direction too (doubling API calls) whenever the caller does know which one changed.
+   */
+  private refreshAfterMutation(direction?: Direction): void {
+    if (direction === Direction.INBOUND) {
+      this.reloadInbound$.next();
+    } else if (direction === Direction.OUTBOUND) {
+      this.reloadOutbound$.next();
+    } else {
+      this.reloadInbound$.next();
+      this.reloadOutbound$.next();
+    }
   }
 
   // ===== VERSION & DRAFT OPERATIONS =====
@@ -497,44 +520,44 @@ export class MappingService {
 
   private initializeMappingsEnriched(): void {
     this.mappingsInboundEnriched$ = this.reloadInbound$.pipe(
-      switchMap(() =>
-        combineLatest([
-          this.getMappings(Direction.INBOUND),
-          this.getEffectiveDeploymentMap()
-        ])
-      ),
-      map(([mappings, mappingsDeployed]) => {
-        return mappings.map(mapping => ({
-          id: mapping.id,
-          mapping,
-          connectors: mappingsDeployed[mapping.identifier]?.connectors
-        }));
-      }),
+      switchMap(() => this.loadMappingsEnriched(Direction.INBOUND)),
       shareReplay(1)
     );
 
     this.mappingsOutboundEnriched$ = this.reloadOutbound$.pipe(
-      switchMap(() =>
-        combineLatest([
-          this.getMappings(Direction.OUTBOUND),
-          this.getEffectiveDeploymentMap()
-        ])
-      ),
-      map(([mappings, mappingsDeployed]) => {
-        return mappings?.map(mapping => ({
-          id: mapping.id,
-          mapping,
-          connectors: mappingsDeployed[mapping.identifier]?.connectors
-        })) || [];
-      }),
+      switchMap(() => this.loadMappingsEnriched(Direction.OUTBOUND)),
       shareReplay(1)
     );
 
-    // Initialize subscriptions
+    // Initialize subscriptions. No error callback needed: loadMappingsEnriched() never lets an
+    // error reach this subscription (see its own catchError) — without that, a single transient
+    // fetch failure would permanently cache an error in the shareReplay(1) buffer above, and
+    // every later reloadInbound$/reloadOutbound$.next() (Refresh button, CRUD ops, bulk actions,
+    // a freshly (re)created MappingComponent) would silently become a no-op forever.
     this.mappingsInboundEnriched$.pipe(take(1)).subscribe();
     this.mappingsOutboundEnriched$.pipe(take(1)).subscribe();
     this.reloadInbound$.next();
     this.reloadOutbound$.next();
+  }
+
+  private loadMappingsEnriched(direction: Direction): Observable<MappingEnriched[]> {
+    return combineLatest([
+      this.getMappings(direction),
+      this.getEffectiveDeploymentMap()
+    ]).pipe(
+      map(([mappings, mappingsDeployed]) =>
+        (mappings ?? []).map(mapping => ({
+          id: mapping.id,
+          mapping,
+          connectors: mappingsDeployed[mapping.identifier]?.connectors
+        }))
+      ),
+      catchError(error => {
+        console.error(`Failed to load ${direction} mappings:`, error);
+        this.alertService.danger(`Failed to load ${direction.toLowerCase()} mappings.`);
+        return of([]);
+      })
+    );
   }
 
   async stopChangedMappingEvents() {

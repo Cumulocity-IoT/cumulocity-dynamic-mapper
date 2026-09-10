@@ -19,8 +19,10 @@ TEST_TITLE="13. Inbound: Pattern 02: Topic-based external ID + sensor filter"
 # can't shadow this run's device. The SF derives the external id from the last
 # topic level, so the publish topic must use the same value.
 EXT_ID="sensor-berlin-01-$(date +%s)"
+NON_VOLTAGE_EXT_ID="sensor-berlin-02-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
+NON_VOLTAGE_DEVICE_ID=""
 
 dm_parse_args "$@"
 
@@ -30,6 +32,10 @@ cleanup() {
     if [ -n "${DEVICE_ID:-}" ]; then
         c8y identity delete --name "$EXT_ID" --type "c8y_Serial" 2>/dev/null || true
         c8y inventory delete --id "$DEVICE_ID" 2>/dev/null || true
+    fi
+    if [ -n "${NON_VOLTAGE_DEVICE_ID:-}" ]; then
+        c8y identity delete --name "$NON_VOLTAGE_EXT_ID" --type "c8y_Serial" 2>/dev/null || true
+        c8y inventory delete --id "$NON_VOLTAGE_DEVICE_ID" 2>/dev/null || true
     fi
     dm_info "Cleanup complete"
 }
@@ -65,18 +71,44 @@ c8y identity create \
     --output json > /dev/null 2>&1 || dm_warn "External ID may already exist: $EXT_ID"
 dm_success "External ID bound: $EXT_ID"
 
+dm_step 3b "Creating a second sensor device WITHOUT the voltage flag (negative case)"
+NON_VOLTAGE_DEVICE=$(c8y inventory create \
+    --name "Non-Voltage Sensor Berlin 02" \
+    --type "c8y_Sensor" \
+    --data "c8y_IsDevice={}" \
+    --data "c8y_Sensor={\"type\":{\"voltage\":false}}" \
+    2>/dev/null || echo "{}")
+NON_VOLTAGE_DEVICE_ID=$(echo "$NON_VOLTAGE_DEVICE" | jq -r '.id // empty')
+if [ -z "$NON_VOLTAGE_DEVICE_ID" ]; then
+    dm_error "Failed to create non-voltage sensor device"
+fi
+c8y identity create \
+    --name "$NON_VOLTAGE_EXT_ID" \
+    --type "c8y_Serial" \
+    --device "$NON_VOLTAGE_DEVICE_ID" \
+    --output json > /dev/null 2>&1 || dm_warn "External ID may already exist: $NON_VOLTAGE_EXT_ID"
+dm_success "Non-voltage sensor device created: $NON_VOLTAGE_DEVICE_ID"
+
 dm_step 4 "Creating mapping with template pattern 02"
 SF_CODE=$(cat <<'JSCODE'
 function onMessage(msg, context) {
     var payload = msg.getPayload();
-    
-    // Extract externalId from topic - for topic 'testSmartInbound/sensor-berlin-01', 
+
+    // Extract externalId from topic - for topic 'testSmartInbound/sensor-berlin-01',
     // index 1 gives 'sensor-berlin-01'
     var config = context.getConfig();
     var topic = config.topic || "";
     var topicParts = topic.split("/");
     var externalId = topicParts.length > 1 ? topicParts[1] : payload.messageId;
-    
+
+    // Sensor filter: only devices flagged c8y_Sensor.type.voltage=true accept a
+    // voltage reading. Anything else is silently dropped (no measurement created).
+    var device = context.getManagedObjectByExternalId({ externalId: externalId, type: "c8y_Serial" });
+    var isVoltageSensor = device && device.c8y_Sensor && device.c8y_Sensor.type && device.c8y_Sensor.type.voltage === true;
+    if (!isVoltageSensor) {
+        return [];
+    }
+
     var measurement = {
         cumulocityType: "measurement",
         action: "create",
@@ -92,7 +124,7 @@ function onMessage(msg, context) {
         },
         externalSource: [{ type: "c8y_Serial", externalId: externalId }]
     };
-    
+
     return [measurement];
 }
 JSCODE
@@ -175,6 +207,21 @@ if [ -z "$VOLTAGE" ]; then
     fi
 fi
 dm_assert_eq "Voltage measurement value" "230.5" "$VOLTAGE"
+
+dm_step 8 "Publishing a reading for the non-voltage sensor (must be filtered out)"
+NEG_PAYLOAD=$(jq -cn '{
+  messageId: "msg-002",
+  deviceId: "67890",
+  sensorData: {
+    val: 111.1
+  }
+}')
+dm_mqtt_publish "testSmartInbound/$NON_VOLTAGE_EXT_ID" "$NEG_PAYLOAD" 1
+dm_wait 8 "for the filtered message to be (not) processed"
+
+NEG_MEASUREMENT=$(dm_get_latest_measurement "$NON_VOLTAGE_EXT_ID" "c8y_Serial" "c8y_VoltageMeasurement")
+NEG_VOLTAGE=$(echo "$NEG_MEASUREMENT" | jq -r '.c8y_VoltageMeasurement.U.value // empty')
+dm_assert_eq "Non-voltage sensor filtered (no measurement created)" "" "$NEG_VOLTAGE"
 
 dm_done "$TEST_TITLE"
 dm_print_summary

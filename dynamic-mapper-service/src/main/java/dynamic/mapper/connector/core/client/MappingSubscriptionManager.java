@@ -52,12 +52,23 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>For <strong>outbound mappings</strong> (platform → device), this class tracks which mappings
  * are applied, but no subscription management is needed.
  * 
- * <p><strong>Thread-safety:</strong> All operations are thread-safe using {@link ConcurrentHashMap}.
- * 
+ * <p><strong>Thread-safety:</strong> the underlying maps are {@link ConcurrentHashMap}, but several
+ * operations here are multi-step sequences over them (e.g. check-count-then-subscribe, or a full
+ * reconcile that clears and rebuilds {@code subscriptionCounts}) whose combined effect must be
+ * atomic — two such sequences interleaving could double-decrement a topic's reference count or
+ * leave a topic unsubscribed/subscribed inconsistently with the effective mapping set. All
+ * mutating operations are therefore additionally serialized on {@link #lock}.
+ *
  * @see dynamic.mapper.service.deployment.DeploymentMapService
  */
 @Slf4j
 public class MappingSubscriptionManager {
+
+    // Serializes all mutating operations below (add/remove/update/clear) so that composite
+    // check-then-act sequences over subscriptionCounts/effectiveMappingsInbound are atomic as a
+    // whole, not just their individual ConcurrentHashMap operations. Reentrant so that
+    // addSubscriptionInbound's internal call to removeSubscriptionInbound doesn't deadlock.
+    private final Object lock = new Object();
 
     private final String tenant;
     private final String connectorName;
@@ -142,41 +153,42 @@ public class MappingSubscriptionManager {
      * @throws ConnectorException if the subscription operation fails
      */
     public void addSubscriptionInbound(Mapping mapping, Qos qos) throws ConnectorException {
+        synchronized (lock) {
+            String topic = mapping.getMappingTopic();
 
-        String topic = mapping.getMappingTopic();
-
-        // Idempotency guard (symmetric to removeSubscriptionInbound): if this mapping is
-        // already effective, do not increment the topic reference count again. Re-activating
-        // or merely re-saving an active mapping would otherwise inflate the count and leave
-        // the topic subscribed after the mapping is removed.
-        Mapping existing = effectiveMappingsInbound.get(mapping.getIdentifier());
-        if (existing != null) {
-            if (Objects.equals(existing.getMappingTopic(), topic)) {
-                // Same mapping on the same topic: refresh the stored reference, nothing else to do.
-                effectiveMappingsInbound.put(mapping.getIdentifier(), mapping);
-                log.debug("{} - Inbound mapping {} already subscribed to topic: [{}], skipping",
-                        tenant, mapping.getIdentifier(), topic);
-                return;
+            // Idempotency guard (symmetric to removeSubscriptionInbound): if this mapping is
+            // already effective, do not increment the topic reference count again. Re-activating
+            // or merely re-saving an active mapping would otherwise inflate the count and leave
+            // the topic subscribed after the mapping is removed.
+            Mapping existing = effectiveMappingsInbound.get(mapping.getIdentifier());
+            if (existing != null) {
+                if (Objects.equals(existing.getMappingTopic(), topic)) {
+                    // Same mapping on the same topic: refresh the stored reference, nothing else to do.
+                    effectiveMappingsInbound.put(mapping.getIdentifier(), mapping);
+                    log.debug("{} - Inbound mapping {} already subscribed to topic: [{}], skipping",
+                            tenant, mapping.getIdentifier(), topic);
+                    return;
+                }
+                // The mapping's topic changed: release the old topic subscription before adding the
+                // new one, otherwise the old topic would stay subscribed forever.
+                removeSubscriptionInbound(existing);
             }
-            // The mapping's topic changed: release the old topic subscription before adding the
-            // new one, otherwise the old topic would stay subscribed forever.
-            removeSubscriptionInbound(existing);
-        }
 
-        MutableInt count = subscriptionCounts.computeIfAbsent(topic, k -> new MutableInt(0));
+            MutableInt count = subscriptionCounts.computeIfAbsent(topic, k -> new MutableInt(0));
 
-        boolean isNewSubscription = count.intValue() == 0;
-        count.increment();
+            boolean isNewSubscription = count.intValue() == 0;
+            count.increment();
 
-        effectiveMappingsInbound.put(mapping.getIdentifier(), mapping);
+            effectiveMappingsInbound.put(mapping.getIdentifier(), mapping);
 
-        if (isNewSubscription) {
-            subscriptionCallback.subscribe(topic, qos);
-            log.info("{} - Subscribed to topic: [{}] for connector: {}, QoS: {}",
-                    tenant, topic, connectorName, qos);
-        } else {
-            log.debug("{} - Incremented subscription count for topic: [{}] to {}",
-                    tenant, topic, count.intValue());
+            if (isNewSubscription) {
+                subscriptionCallback.subscribe(topic, qos);
+                log.info("{} - Subscribed to topic: [{}] for connector: {}, QoS: {}",
+                        tenant, topic, connectorName, qos);
+            } else {
+                log.debug("{} - Incremented subscription count for topic: [{}] to {}",
+                        tenant, topic, count.intValue());
+            }
         }
     }
 
@@ -190,33 +202,35 @@ public class MappingSubscriptionManager {
      * @throws ConnectorException if the unsubscription operation fails
      */
     public void removeSubscriptionInbound(Mapping mapping) throws ConnectorException {
-        String topic = mapping.getMappingTopic();
+        synchronized (lock) {
+            String topic = mapping.getMappingTopic();
 
-        // Idempotency guard: only decrement topic reference count if this mapping was
-        // actually effective before this call.
-        Mapping removed = effectiveMappingsInbound.remove(mapping.getIdentifier());
-        if (removed == null) {
-            log.debug("{} - Skip removing inbound subscription for non-effective mapping: {}, topic: [{}]",
-                    tenant, mapping.getIdentifier(), topic);
-            return;
-        }
+            // Idempotency guard: only decrement topic reference count if this mapping was
+            // actually effective before this call.
+            Mapping removed = effectiveMappingsInbound.remove(mapping.getIdentifier());
+            if (removed == null) {
+                log.debug("{} - Skip removing inbound subscription for non-effective mapping: {}, topic: [{}]",
+                        tenant, mapping.getIdentifier(), topic);
+                return;
+            }
 
-        MutableInt count = subscriptionCounts.get(topic);
-        if (count == null) {
-            log.debug("{} - Skip removing non-existent subscription for topic: [{}] (mapping: {})",
-                    tenant, topic, mapping.getIdentifier());
-            return;
-        }
+            MutableInt count = subscriptionCounts.get(topic);
+            if (count == null) {
+                log.debug("{} - Skip removing non-existent subscription for topic: [{}] (mapping: {})",
+                        tenant, topic, mapping.getIdentifier());
+                return;
+            }
 
-        count.decrement();
+            count.decrement();
 
-        if (count.intValue() <= 0) {
-            subscriptionCounts.remove(topic);
-            subscriptionCallback.unsubscribe(topic);
-            log.info("{} - Unsubscribed from topic: [{}] for connector: {}", tenant, topic, connectorName);
-        } else {
-            log.debug("{} - Decremented subscription count for topic: [{}] to {}",
-                    tenant, topic, count.intValue());
+            if (count.intValue() <= 0) {
+                subscriptionCounts.remove(topic);
+                subscriptionCallback.unsubscribe(topic);
+                log.info("{} - Unsubscribed from topic: [{}] for connector: {}", tenant, topic, connectorName);
+            } else {
+                log.debug("{} - Decremented subscription count for topic: [{}] to {}",
+                        tenant, topic, count.intValue());
+            }
         }
     }
 
@@ -246,51 +260,53 @@ public class MappingSubscriptionManager {
             return;
         }
 
-        if (reset) {
+        synchronized (lock) {
+            if (reset) {
+                subscriptionCounts.clear();
+                effectiveMappingsInbound.clear();
+            }
+
+            Map<String, MutableInt> newSubscriptions = new HashMap<>();
+            Map<String, Qos> topicQosMap = new HashMap<>();
+            Set<String> desiredMappingIds = new HashSet<>();
+
+            // Build new subscription state from active, valid, deployed mappings
+            updatedMappings.stream()
+                    .filter(Mapping::getActive)
+                    .filter(validator::isValid)
+                    .forEach(mapping -> {
+                        String topic = mapping.getMappingTopic();
+                        newSubscriptions.computeIfAbsent(topic, k -> new MutableInt(0)).increment();
+                        effectiveMappingsInbound.put(mapping.getIdentifier(), mapping);
+                        desiredMappingIds.add(mapping.getIdentifier());
+
+                        // Track max QoS per topic (use highest QoS among all mappings for that topic)
+                        Qos currentQos = topicQosMap.getOrDefault(topic, Qos.AT_MOST_ONCE);
+                        if (mapping.getQos().ordinal() > currentQos.ordinal()) {
+                            topicQosMap.put(topic, mapping.getQos());
+                        }
+                    });
+
+            // Drop mappings that are no longer effective on this connector (e.g. un-deployed
+            // or deactivated). Without this, a full reconcile would only ever add mappings and
+            // never remove them, leaving stale entries in the effective set.
+            effectiveMappingsInbound.keySet().retainAll(desiredMappingIds);
+
+            // Remove subscriptions for topics no longer needed (broker unsubscribe).
+            // Must run before subscriptionCounts is replaced so the diff sees the old topics.
+            unsubscribeUnusedTopics(newSubscriptions);
+
+            // Add subscriptions for new topics
+            subscribeToNewTopics(newSubscriptions, topicQosMap);
+
+            // Replace the reference counts wholesale with the freshly computed desired state.
+            // A putAll would leave stale keys for topics that are no longer subscribed.
             subscriptionCounts.clear();
-            effectiveMappingsInbound.clear();
+            subscriptionCounts.putAll(newSubscriptions);
+
+            log.info("{} - Updated subscriptions for connector: {}, active topics: {}",
+                    tenant, connectorName, subscriptionCounts.size());
         }
-
-        Map<String, MutableInt> newSubscriptions = new HashMap<>();
-        Map<String, Qos> topicQosMap = new HashMap<>();
-        Set<String> desiredMappingIds = new HashSet<>();
-
-        // Build new subscription state from active, valid, deployed mappings
-        updatedMappings.stream()
-                .filter(Mapping::getActive)
-                .filter(validator::isValid)
-                .forEach(mapping -> {
-                    String topic = mapping.getMappingTopic();
-                    newSubscriptions.computeIfAbsent(topic, k -> new MutableInt(0)).increment();
-                    effectiveMappingsInbound.put(mapping.getIdentifier(), mapping);
-                    desiredMappingIds.add(mapping.getIdentifier());
-
-                    // Track max QoS per topic (use highest QoS among all mappings for that topic)
-                    Qos currentQos = topicQosMap.getOrDefault(topic, Qos.AT_MOST_ONCE);
-                    if (mapping.getQos().ordinal() > currentQos.ordinal()) {
-                        topicQosMap.put(topic, mapping.getQos());
-                    }
-                });
-
-        // Drop mappings that are no longer effective on this connector (e.g. un-deployed
-        // or deactivated). Without this, a full reconcile would only ever add mappings and
-        // never remove them, leaving stale entries in the effective set.
-        effectiveMappingsInbound.keySet().retainAll(desiredMappingIds);
-
-        // Remove subscriptions for topics no longer needed (broker unsubscribe).
-        // Must run before subscriptionCounts is replaced so the diff sees the old topics.
-        unsubscribeUnusedTopics(newSubscriptions);
-
-        // Add subscriptions for new topics
-        subscribeToNewTopics(newSubscriptions, topicQosMap);
-
-        // Replace the reference counts wholesale with the freshly computed desired state.
-        // A putAll would leave stale keys for topics that are no longer subscribed.
-        subscriptionCounts.clear();
-        subscriptionCounts.putAll(newSubscriptions);
-
-        log.info("{} - Updated subscriptions for connector: {}, active topics: {}",
-                tenant, connectorName, subscriptionCounts.size());
     }
 
     /**
@@ -339,7 +355,9 @@ public class MappingSubscriptionManager {
      * @param mapping the mapping to apply
      */
     public void addSubscriptionOutbound(String identifier, Mapping mapping) {
-        effectiveMappingsOutbound.put(identifier, mapping);
+        synchronized (lock) {
+            effectiveMappingsOutbound.put(identifier, mapping);
+        }
         log.debug("{} - Added outbound mapping: {}", tenant, identifier);
     }
 
@@ -349,7 +367,11 @@ public class MappingSubscriptionManager {
      * @param identifier the unique mapping identifier
      */
     public void removeSubscriptionOutbound(String identifier) {
-        if (effectiveMappingsOutbound.remove(identifier) != null) {
+        boolean removed;
+        synchronized (lock) {
+            removed = effectiveMappingsOutbound.remove(identifier) != null;
+        }
+        if (removed) {
             log.debug("{} - Removed outbound mapping: {}", tenant, identifier);
         }
     }
@@ -367,18 +389,20 @@ public class MappingSubscriptionManager {
      * @param validator validates if a mapping should be applied (checks deployment + compatibility)
      */
     public void updateSubscriptionsOutbound(List<Mapping> updatedMappings, MappingValidator validator) {
-        effectiveMappingsOutbound.clear();
+        synchronized (lock) {
+            effectiveMappingsOutbound.clear();
 
-        updatedMappings.stream()
-                .filter(Mapping::getActive)
-                .filter(validator::isValid)
-                .forEach(mapping -> {
-                    effectiveMappingsOutbound.put(mapping.getIdentifier(), mapping);
-                    log.debug("{} - Deployed outbound mapping: {}", tenant, mapping.getIdentifier());
-                });
+            updatedMappings.stream()
+                    .filter(Mapping::getActive)
+                    .filter(validator::isValid)
+                    .forEach(mapping -> {
+                        effectiveMappingsOutbound.put(mapping.getIdentifier(), mapping);
+                        log.debug("{} - Deployed outbound mapping: {}", tenant, mapping.getIdentifier());
+                    });
 
-        log.info("{} - Updated outbound mappings for connector: {}, active mappings: {}",
-                tenant, connectorName, effectiveMappingsOutbound.size());
+            log.info("{} - Updated outbound mappings for connector: {}, active mappings: {}",
+                    tenant, connectorName, effectiveMappingsOutbound.size());
+        }
     }
 
     // ===== Read-only Access Methods =====
@@ -471,9 +495,11 @@ public class MappingSubscriptionManager {
      * It only clears the internal state. Typically called during connector shutdown.
      */
     public void clear() {
-        subscriptionCounts.clear();
-        effectiveMappingsInbound.clear();
-        effectiveMappingsOutbound.clear();
+        synchronized (lock) {
+            subscriptionCounts.clear();
+            effectiveMappingsInbound.clear();
+            effectiveMappingsOutbound.clear();
+        }
         log.debug("{} - Cleared all subscriptions and mappings for connector: {}", tenant, connectorName);
     }
 

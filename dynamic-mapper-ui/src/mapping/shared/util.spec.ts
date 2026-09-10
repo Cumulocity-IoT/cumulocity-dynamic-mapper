@@ -30,7 +30,14 @@ import {
   checkTopicsInboundAreValid,
   stripTemplateMetadataTags,
   translateValidationErrorCode,
-  buildBackendErrorMessage
+  buildBackendErrorMessage,
+  configurationToYaml,
+  yamlToConfiguration,
+  buildTestMapping,
+  isConnectorSelectionEmpty,
+  tryGetLiveEditorContent,
+  updateTemplatesInEditors,
+  TemplateEditorRef
 } from './util';
 import { Direction, Mapping, MappingType, RepairStrategy, TransformationType } from '../../shared';
 
@@ -495,5 +502,128 @@ describe('buildBackendErrorMessage', () => {
 
   it('should ignore an empty errors array and fall back to message', () => {
     expect(buildBackendErrorMessage({ message: 'msg', errors: [] }, 'fallback')).toBe('msg');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// configurationToYaml / yamlToConfiguration
+// Shared by MappingStepperComponent and MappingUnifiedEditorComponent, previously duplicated in
+// each (see docs/planning/IMPLEMENTATION-PLAN-STEPPER-UNIFIED-EDITOR-DEDUP.md, Phase 1).
+// ---------------------------------------------------------------------------
+
+describe('configurationToYaml / yamlToConfiguration', () => {
+  it('round-trips a configuration object through YAML', () => {
+    const yaml = configurationToYaml({ host: 'localhost', port: 1883 });
+    expect(yaml).toContain('host: localhost');
+    expect(yaml).toContain('port: 1883');
+    expect(yamlToConfiguration(yaml)).toEqual({ host: 'localhost', port: 1883 });
+  });
+
+  it('returns an empty string for an undefined configuration', () => {
+    expect(configurationToYaml(undefined)).toBe('');
+  });
+
+  it('returns undefined for blank YAML', () => {
+    expect(yamlToConfiguration('   ')).toBeUndefined();
+    expect(yamlToConfiguration('')).toBeUndefined();
+  });
+
+  it('returns undefined for YAML that is not an object (scalar)', () => {
+    expect(yamlToConfiguration('just-a-scalar')).toBeUndefined();
+  });
+
+  it('returns undefined for invalid YAML instead of throwing', () => {
+    expect(yamlToConfiguration('key: : : bad')).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildTestMapping
+// ---------------------------------------------------------------------------
+
+describe('buildTestMapping', () => {
+  it('stringifies the source/target templates onto a clone, leaving the original untouched', () => {
+    const mapping = makeMapping({ sourceTemplate: '{}', targetTemplate: '{}' });
+    const result = buildTestMapping(mapping, { a: 1 }, { b: 2 }, undefined, false);
+
+    expect(result).not.toBe(mapping);
+    expect(result.sourceTemplate).toBe(JSON.stringify({ a: 1 }));
+    expect(result.targetTemplate).toBe(JSON.stringify({ b: 2 }));
+    expect(mapping.sourceTemplate).toBe('{}');
+  });
+
+  it('encodes mappingCode as base64 only when includeCode is true and code is present', () => {
+    const mapping = makeMapping();
+    const withCode = buildTestMapping(mapping, {}, {}, 'export const x = 1;', true);
+    expect(withCode.code).toBeDefined();
+
+    const withoutInclude = buildTestMapping(mapping, {}, {}, 'export const x = 1;', false);
+    expect(withoutInclude.code).toBeUndefined();
+
+    const noCode = buildTestMapping(mapping, {}, {}, undefined, true);
+    expect(noCode.code).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isConnectorSelectionEmpty
+// ---------------------------------------------------------------------------
+
+describe('isConnectorSelectionEmpty', () => {
+  it('is true for undefined, missing connectors, or an empty array', () => {
+    expect(isConnectorSelectionEmpty(undefined)).toBe(true);
+    expect(isConnectorSelectionEmpty({ identifier: 'x', connectors: undefined as any })).toBe(true);
+    expect(isConnectorSelectionEmpty({ identifier: 'x', connectors: [] })).toBe(true);
+  });
+
+  it('is false when at least one connector is selected', () => {
+    expect(isConnectorSelectionEmpty({ identifier: 'x', connectors: ['c1'] })).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// tryGetLiveEditorContent / updateTemplatesInEditors
+// ---------------------------------------------------------------------------
+
+describe('tryGetLiveEditorContent', () => {
+  it('returns undefined for a missing editor', () => {
+    expect(tryGetLiveEditorContent(undefined)).toBeUndefined();
+  });
+
+  it('returns the editor\'s live content', () => {
+    const editor = { get: () => ({ a: 1 }) } as any;
+    expect(tryGetLiveEditorContent(editor)).toEqual({ a: 1 });
+  });
+
+  it('falls back to undefined instead of throwing when .get() errors', () => {
+    const editor = { get: () => { throw new Error('boom'); } } as any;
+    expect(tryGetLiveEditorContent(editor)).toBeUndefined();
+  });
+});
+
+describe('updateTemplatesInEditors', () => {
+  it('prefers live editor content over the change-mirror and the current value', () => {
+    const templateStepRef: TemplateEditorRef = {
+      editorSourceStepTemplate: { get: () => ({ live: 'source' }) } as any,
+      editorTargetStepTemplate: { get: () => ({ live: 'target' }) } as any,
+      sourceTemplateUpdated: { mirror: 'source' },
+      targetTemplateUpdated: { mirror: 'target' }
+    };
+    const result = updateTemplatesInEditors(templateStepRef, { current: 'source' }, { current: 'target' });
+    expect(result).toEqual({ sourceTemplate: { live: 'source' }, targetTemplate: { live: 'target' } });
+  });
+
+  it('falls back to the change-mirror when live content is unavailable', () => {
+    const templateStepRef: TemplateEditorRef = {
+      sourceTemplateUpdated: { mirror: 'source' },
+      targetTemplateUpdated: { mirror: 'target' }
+    };
+    const result = updateTemplatesInEditors(templateStepRef, { current: 'source' }, { current: 'target' });
+    expect(result).toEqual({ sourceTemplate: { mirror: 'source' }, targetTemplate: { mirror: 'target' } });
+  });
+
+  it('falls back to the current value when neither live content nor a mirror is available', () => {
+    const result = updateTemplatesInEditors(undefined, { current: 'source' }, { current: 'target' });
+    expect(result).toEqual({ sourceTemplate: { current: 'source' }, targetTemplate: { current: 'target' } });
   });
 });

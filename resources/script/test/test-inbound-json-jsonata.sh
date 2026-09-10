@@ -54,7 +54,7 @@ MAPPING_JSON=$(cat <<EOF
   "targetAPI": "EVENT",
   "direction": "INBOUND",
   "mappingType": "JSON",
-  "transformationType": "DEFAULT",
+  "transformationType": "JSONATA",
   "sourceTemplate": "{\"msg_type\":\"c8y_TestEvent\",\"txt\":\"hello world\",\"td\":\"2022-09-08T16:21:53.389+02:00\"}",
   "targetTemplate": "{\"text\":\"event text\",\"time\":\"2022-08-05T00:14:49.389+02:00\",\"type\":\"c8y_TestEvent\"}",
   "substitutions": [

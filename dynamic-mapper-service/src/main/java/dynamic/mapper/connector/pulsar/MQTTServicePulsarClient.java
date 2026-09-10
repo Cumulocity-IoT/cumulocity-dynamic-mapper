@@ -24,7 +24,6 @@ package dynamic.mapper.connector.pulsar;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.*;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
@@ -114,28 +113,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             String additionalSubscriptionIdTest,
             String tenant) {
         this();
-
-        this.configurationRegistry = configurationRegistry;
-        this.connectorRegistry = connectorRegistry;
-        this.connectorConfiguration = connectorConfiguration;
-        this.connectorName = connectorConfiguration.getName();
-        this.connectorIdentifier = connectorConfiguration.getIdentifier();
-        this.connectorId = new ConnectorId(
-                connectorConfiguration.getName(),
-                connectorConfiguration.getIdentifier(),
-                connectorType);
-        this.tenant = tenant;
-        this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-
-        // Initialize dependencies from registry
-        this.mappingService = configurationRegistry.getMappingService();
-        this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
-        this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
-        this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
-        this.objectMapper = configurationRegistry.getObjectMapper();
-        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        this.dispatcher = dispatcher;
+        wireFromRegistry(configurationRegistry, connectorRegistry, connectorConfiguration,
+                dispatcher, additionalSubscriptionIdTest, tenant);
 
         // Configure for Cumulocity internal
         configureCumulocityMqttService();
