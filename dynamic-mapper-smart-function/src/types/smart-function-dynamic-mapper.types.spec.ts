@@ -46,7 +46,7 @@ describe('Smart Function Runtime Types', () => {
       expect(mockPayload['sensorData']['temp_val']).toBe(30.0);
     });
 
-    it('should create mock payload with Map-like get() method', () => {
+    it('should create mock payload without a Map-like get() method (matches runtime ProxyObject)', () => {
       const mockPayload = createMockPayload({
         messageId: 'msg-123',
         temperature: 25.5
