@@ -230,9 +230,9 @@ function connectors_list() {
 
   local connectors
   connectors=$(c8y api --method GET --url "/service/dynamic-mapper-service/configuration/connector/instance" \
-    | jq -s --arg type "$type" '
-        (if $type == "" then . else [.[] | select(.connectorType == $type)] end)
-        | [.[] | {identifier, name, connectorType, enabled}]')
+    | jq --arg type "$type" '
+        (if $type == "" then . else map(select(.connectorType == $type)) end)
+        | map({identifier, name, connectorType, enabled})')
 
   if [ "$raw" = true ]; then
     echo "$connectors"
