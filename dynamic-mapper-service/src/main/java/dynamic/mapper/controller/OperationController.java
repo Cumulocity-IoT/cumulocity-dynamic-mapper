@@ -550,7 +550,15 @@ public class OperationController {
         connectorConfigurationService.saveConnectorConfiguration(configuration);
         bootstrapService.disableConnector(tenant, client.getConnectorIdentifier());
         // Reconnect other notification clients for remaining connectors
-        configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+        boolean reconnected = configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+        if (!reconnected) {
+            // Connector is disconnected and marked disabled locally, but reconnecting the
+            // remaining notification subscriptions against Cumulocity failed (e.g. backend
+            // temporarily unavailable) - surface this instead of silently reporting success.
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Connector " + connectorIdentifier
+                            + " was disconnected, but reconnecting remaining notification subscriptions failed");
+        }
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }

@@ -47,6 +47,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Manages WebSocket connections for device and management subscriptions.
@@ -365,13 +366,19 @@ public class NotificationConnectionManager {
         }
     }
 
-    public void reconnect(String tenant) {
+    /**
+     * @return true if reconnection completed successfully, false if it failed
+     *         (the failure is logged here; callers that need to surface the
+     *         failure to a caller/operation-status should check the result).
+     */
+    public boolean reconnect(String tenant) {
         if (tenant == null) {
             log.warn("Cannot reconnect: tenant is null");
-            return;
+            return false;
         }
 
         log.info("{} - Reconnecting notification subscriber", tenant);
+        AtomicBoolean success = new AtomicBoolean(false);
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 disconnect(tenant);
@@ -379,10 +386,12 @@ public class NotificationConnectionManager {
                 initializeDynamicDeviceClient(tenant);
                 initializeManagementClient(tenant);
                 log.info("{} - Successfully reconnected", tenant);
+                success.set(true);
             } catch (Exception e) {
                 log.error("{} - Error during reconnection: {}", tenant, e.getMessage(), e);
             }
         });
+        return success.get();
     }
 
     public void disconnect(String tenant) {
