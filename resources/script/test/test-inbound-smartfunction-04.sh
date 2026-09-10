@@ -127,7 +127,7 @@ MAPPING_JSON=$(jq -cn \
       createNonExistingDevice: true,
       useExternalId: true,
       externalIdType: "c8y_Serial",
-      genericDeviceIdentifier: "externalId",
+      genericDeviceIdentifier: "_IDENTITY_.externalId",
       qos: "AT_LEAST_ONCE"
     }')
 
@@ -169,9 +169,12 @@ ERROR1=$(jq -cn \
 dm_mqtt_publish "flowState/$EXT_ID" "$ERROR1" 1
 dm_success "First error published"
 
-# Wait for first measurement to be created, ensuring the mapping is processing
-# messages. This also gives the dedup state time to persist before the duplicate arrives.
-dm_wait_for_measurement_count "$EXT_ID" "c8y_Serial" 1 10 1 >/dev/null || true
+# Wait for the first error's alarm to actually be created before publishing the
+# duplicate. Waiting on the (unrelated) telemetry measurement instead only proves
+# the mapping is processing messages in general — it gives no guarantee that
+# error #1's onMessage invocation (and its dedup-cache write) has completed, so
+# the duplicate could race ahead of the cache write and fail to be suppressed.
+dm_wait_for_alarm_count "$EXT_ID" "c8y_Serial" 1 15 1 >/dev/null || true
 
 dm_step 6 "Publishing duplicate error (should be suppressed)"
 ERROR2=$(jq -cn \

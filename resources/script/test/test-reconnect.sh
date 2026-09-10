@@ -66,7 +66,7 @@ dm_disconnect_connector "$CONNECTOR_ID"
 dm_wait 5
 
 dm_step "Asserting connector is NOT CONNECTED after disconnect ..."
-STATUS_AFTER_DISCONNECT=$(dm_get_connector_status "$CONNECTOR_ID")
+STATUS_AFTER_DISCONNECT=$(dm_get_connector_status "$CONNECTOR_ID" | jq -r '.status // "UNKNOWN"' 2>/dev/null)
 dm_info "Status after disconnect: $STATUS_AFTER_DISCONNECT"
 if [ "$STATUS_AFTER_DISCONNECT" = "CONNECTED" ]; then
     dm_fail "Expected connector to be disconnected, but status is still CONNECTED"

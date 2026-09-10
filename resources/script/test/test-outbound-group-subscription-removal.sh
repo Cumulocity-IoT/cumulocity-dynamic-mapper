@@ -26,7 +26,7 @@ source "${SCRIPT_DIR}/test-harness.sh"
 
 TEST_TITLE="35. Group subscription removal"
 
-STATE_FILE="/tmp/dm-test-III-state.env"
+STATE_FILE="${SCRIPT_DIR}/tmp/dm-test-III-state.env"
 REMOVAL_WAIT=10
 GROUP_ID=""
 DEVICE_ID=""
@@ -47,6 +47,9 @@ cleanup() {
 
 dm_parse_args "$@"
 dm_register_cleanup cleanup
+
+dm_validate_tools
+dm_wait_for_service
 dm_validate_only_exit
 
 dm_banner "$TEST_TITLE"
