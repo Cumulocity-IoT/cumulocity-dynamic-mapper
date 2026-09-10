@@ -101,13 +101,19 @@ export class ImportConnectorsComponent implements OnDestroy {
         // properties are exported as "****"), so keep them disabled until
         // the user reviews and re-enters the real values.
         config.enabled = false;
-        await this.connectorConfigurationService.createConfiguration(config);
+        // skipRefresh: avoid one redundant configurations refetch per imported connector —
+        // refresh once after the whole batch completes instead.
+        await this.connectorConfigurationService.createConfiguration(config, true);
         successCount++;
         this.progress$.next((100 * (i + 1)) / countConfigurations);
       } catch (ex) {
         const errorMsg = `Failed to import connector ${config.name}`;
         errors.push(errorMsg);
       }
+    }
+
+    if (successCount > 0) {
+      this.connectorConfigurationService.refreshConfigurations();
     }
 
     if (errors.length === 0) {
@@ -156,5 +162,10 @@ export class ImportConnectorsComponent implements OnDestroy {
 
   ngOnDestroy() {
     this.progress$.complete();
+    // Fallback for a dismiss via the modal backdrop/ESC, which bypasses onDismiss()/onDone():
+    // completing here (idempotent if one of those already ran) ensures the grid's
+    // `closeSubject.subscribe(...)` finalizes instead of staying subscribed for the component's
+    // lifetime.
+    this.closeSubject.complete();
   }
 }

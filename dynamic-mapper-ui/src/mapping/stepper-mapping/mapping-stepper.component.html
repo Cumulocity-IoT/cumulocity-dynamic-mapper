@@ -103,7 +103,7 @@
         [sourceTemplate]="sourceTemplate" [targetTemplate]="targetTemplate" [sourceSystem]="sourceSystem"
         [targetSystem]="targetSystem" [feature]="feature" [aiAgentDeployed]="aiAgentDeployed" [aiAgent]="aiAgent"
         [schemaSource]="schemaSource" [schemaTarget]="schemaTarget" [mappingCode]="mappingCode"
-        [codeEditorLabel]="codeEditorLabel" [codeEditorHelp]="codeEditorHelp" [currentStepIndex]="currentStepIndex"
+        [codeEditorLabel]="codeEditorLabel" [codeEditorHelp]="codeEditorHelp" [isBeforeSubstitutionStep]="currentStepIndex < STEP_DEFINE_SUBSTITUTIONS"
         (mappingCodeChange)="mappingCode = $event">
 
         <!-- Project code editor content if needed -->

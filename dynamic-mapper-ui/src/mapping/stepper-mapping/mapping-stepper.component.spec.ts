@@ -45,6 +45,7 @@ import {
   STEP_DEFINE_SUBSTITUTIONS,
   STEP_TEST_MAPPING
 } from '../shared/stepper.model';
+import { configurationToYaml, yamlToConfiguration } from '../shared/util';
 
 /**
  * Unit tests for {@link MappingStepperComponent}.
@@ -136,13 +137,24 @@ describe('MappingStepperComponent', () => {
         'loadExtensions',
         'selectExtensionName',
         'updateSubstitutionValidity',
+        'refreshSubstitutionValidity',
         'expandTemplates',
         'expandExistingTemplates',
         'evaluateFilterExpression',
         'checkAIAgentDeployment',
         'loadCodeTemplates',
         'createCodeTemplate',
-        'cleanup'
+        'cleanup',
+        'raiseAlert',
+        'patchExtensionFormValues',
+        'applyExtensionNameSelection',
+        'applyExtensionEventSelection',
+        'applyTargetAPIChange',
+        'computeSampleTargetTemplate',
+        'computeCodeFromTemplate',
+        'computeCodeTemplateEntries',
+        'computeExtensionItems',
+        'createCodeTemplateAndRefresh'
       ],
       {
         countDeviceIdentifiers$: of(0),
@@ -273,88 +285,60 @@ describe('MappingStepperComponent', () => {
     });
   });
 
+  // configurationToYaml/yamlToConfiguration moved to mapping/shared/util.ts (shared with
+  // MappingUnifiedEditorComponent) — see util.spec.ts for their unit tests. Kept a thin
+  // smoke-test here since the stepper still relies on them being wired in correctly.
   describe('YAML <-> configuration helpers', () => {
-    it('serialises a configuration object to YAML', () => {
-      const yaml = component.configurationToYaml({ host: 'localhost', port: 1883 });
+    it('round-trips a configuration object through the shared util functions', () => {
+      const yaml = configurationToYaml({ host: 'localhost', port: 1883 });
       expect(yaml).toContain('host: localhost');
-      expect(yaml).toContain('port: 1883');
-    });
-
-    it('returns an empty string for an undefined configuration', () => {
-      expect(component.configurationToYaml(undefined)).toBe('');
-    });
-
-    it('parses YAML back to a configuration object', () => {
-      expect(component.yamlToConfiguration('host: localhost\nport: 1883')).toEqual({
-        host: 'localhost',
-        port: 1883
-      });
-    });
-
-    it('returns undefined for blank YAML', () => {
-      expect(component.yamlToConfiguration('   ')).toBeUndefined();
-      expect(component.yamlToConfiguration('')).toBeUndefined();
-    });
-
-    it('returns undefined for YAML that is not an object (scalar)', () => {
-      expect(component.yamlToConfiguration('just-a-scalar')).toBeUndefined();
-    });
-
-    it('returns undefined for invalid YAML instead of throwing', () => {
-      expect(component.yamlToConfiguration('key: : : bad')).toBeUndefined();
+      expect(yamlToConfiguration(yaml)).toEqual({ host: 'localhost', port: 1883 });
     });
   });
+
+  // The actual business logic behind these wrapper methods (mutating `mapping.extension`,
+  // computing schemas, ESM-export detection, ...) moved to MappingStepperService as part of
+  // Phase 3 of docs/planning/IMPLEMENTATION-PLAN-STEPPER-UNIFIED-EDITOR-DEDUP.md, and is unit
+  // tested directly there (mapping-stepper.service.spec.ts). These tests only verify the
+  // component delegates to the (mocked) service with the right arguments and applies its
+  // result back onto its own fields.
 
   describe('Extension selection', () => {
     beforeEach(async () => {
       await component.ngOnInit();
     });
 
-    it('creates the extension object and stores the name', () => {
+    it('delegates extension name selection to the service', () => {
       component.mapping = buildMapping();
-      delete component.mapping.extension;
+      component.extensions = new Map();
+
       component.onSelectExtensionName('my-extension');
 
-      expect(component.mapping.extension?.extensionName).toBe('my-extension');
-      expect(mockStepperService.selectExtensionName).toHaveBeenCalledWith(
+      expect(mockStepperService.applyExtensionNameSelection).toHaveBeenCalledWith(
         'my-extension',
-        component.extensions,
-        component.mapping
+        component.mapping,
+        component.extensions
       );
     });
 
-    it('copies the matching event entry and flags the parameter block on event selection', () => {
-      const eventEntry = {
-        eventName: 'evt',
-        extensionType: 'SOURCE',
-        direction: Direction.INBOUND,
-        fqnClassName: 'com.acme.Ext',
-        loaded: true,
-        message: 'ok',
-        parameter: { foo: 'bar' }
-      };
-      const extension = { extensionEntries: { evt: eventEntry } } as unknown as Extension;
-      component.extensions = new Map([['my-extension', extension]]);
-      component.mapping.extension = { extensionName: 'my-extension' } as any;
+    it('applies the returned hasExtensionParameter flag when defined', () => {
+      mockStepperService.applyExtensionEventSelection.and.returnValue(true);
 
       component.onSelectExtensionEvent('evt');
 
-      expect(component.mapping.extension.eventName).toBe('evt');
-      expect(component.mapping.extension.fqnClassName).toBe('com.acme.Ext');
+      expect(mockStepperService.applyExtensionEventSelection).toHaveBeenCalledWith(
+        'evt', component.mapping, component.extensions, component.templateForm
+      );
       expect(component.hasExtensionParameter).toBe(true);
-      // Pre-fills the parameter when none was set yet
-      expect(component.mapping.extension.parameter).toEqual({ foo: 'bar' });
     });
 
-    it('marks no parameter block when the matched event has none', () => {
-      const eventEntry = { eventName: 'evt', extensionType: 'SOURCE' };
-      const extension = { extensionEntries: { evt: eventEntry } } as unknown as Extension;
-      component.extensions = new Map([['my-extension', extension]]);
-      component.mapping.extension = { extensionName: 'my-extension' } as any;
+    it('leaves hasExtensionParameter unchanged when the service returns undefined (no matching event)', () => {
+      component.hasExtensionParameter = true;
+      mockStepperService.applyExtensionEventSelection.and.returnValue(undefined);
 
-      component.onSelectExtensionEvent('evt');
+      component.onSelectExtensionEvent('missing-evt');
 
-      expect(component.hasExtensionParameter).toBe(false);
+      expect(component.hasExtensionParameter).toBe(true);
     });
   });
 
@@ -368,45 +352,24 @@ describe('MappingStepperComponent', () => {
       expect(component.mappingCode).toBe('const x = 1;');
     });
 
-    it('does nothing when the selected code template is unknown', () => {
-      component.templateId = 'missing' as any;
+    it('leaves mappingCode untouched when the service reports no template selected', () => {
       component.mappingCode = 'untouched';
+      mockStepperService.computeCodeFromTemplate.and.returnValue(undefined);
+
       component.onSelectCodeTemplate();
+
       expect(component.mappingCode).toBe('untouched');
     });
 
-    it('loads the selected code template into mappingCode', () => {
-      component.codeTemplatesDecoded.set('t1', { code: 'function onMessage() {}' } as any);
-      component.templateId = 't1' as any;
-      component.serviceConfiguration = { supportESM: false } as any;
+    it('applies the code computed by the service', () => {
+      mockStepperService.computeCodeFromTemplate.and.returnValue('function onMessage() {}');
 
       component.onSelectCodeTemplate();
 
-      expect(component.mappingCode).toContain('function onMessage() {}');
-    });
-
-    it('appends an ESM export for Smart Functions when Support ESM is enabled', () => {
-      component.mapping = buildMapping({ transformationType: TransformationType.SMART_FUNCTION });
-      component.codeTemplatesDecoded.set('t1', { code: 'function onMessage() {}' } as any);
-      component.templateId = 't1' as any;
-      component.serviceConfiguration = { supportESM: true } as any;
-
-      component.onSelectCodeTemplate();
-
-      expect(component.mappingCode).toContain('export { onMessage };');
-    });
-
-    it('does not duplicate an ESM export that is already present', () => {
-      component.mapping = buildMapping({ transformationType: TransformationType.SMART_FUNCTION });
-      component.codeTemplatesDecoded.set('t1', {
-        code: 'function onMessage() {}\nexport { onMessage };'
-      } as any);
-      component.templateId = 't1' as any;
-      component.serviceConfiguration = { supportESM: true } as any;
-
-      component.onSelectCodeTemplate();
-
-      expect(component.mappingCode!.match(/export \{ onMessage \}/g)?.length).toBe(1);
+      expect(mockStepperService.computeCodeFromTemplate).toHaveBeenCalledWith(
+        component.codeTemplatesDecoded, component.templateId, component.serviceConfiguration, component.mapping.transformationType
+      );
+      expect(component.mappingCode).toBe('function onMessage() {}');
     });
   });
 
@@ -415,20 +378,23 @@ describe('MappingStepperComponent', () => {
       await component.ngOnInit();
     });
 
-    it('refreshes templates and the target schema for INBOUND', async () => {
-      component.stepperConfiguration.direction = Direction.INBOUND;
+    it('applies the target schema returned by the service for INBOUND', async () => {
+      mockStepperService.applyTargetAPIChange.and.returnValue({ schemaTarget: { fromService: true } });
+
       await component.onTargetAPIChanged('EVENT');
-      expect(component.mapping.targetTemplate).toBeDefined();
-      expect(component.mapping.sourceTemplate).toBeDefined();
-      expect(component.schemaTarget).toBeDefined();
+
+      expect(mockStepperService.applyTargetAPIChange).toHaveBeenCalledWith(
+        component.mapping, component.stepperConfiguration.direction, 'EVENT'
+      );
+      expect(component.schemaTarget).toEqual({ fromService: true });
     });
 
-    it('refreshes templates and the source schema for OUTBOUND', async () => {
-      component.mapping = buildMapping({ direction: Direction.OUTBOUND });
-      component.stepperConfiguration.direction = Direction.OUTBOUND;
+    it('applies the source schema returned by the service for OUTBOUND', async () => {
+      mockStepperService.applyTargetAPIChange.and.returnValue({ schemaSource: { fromService: true } });
+
       await component.onTargetAPIChanged('EVENT');
-      expect(component.mapping.sourceTemplate).toBeDefined();
-      expect(component.schemaSource).toBeDefined();
+
+      expect(component.schemaSource).toEqual({ fromService: true });
     });
   });
 
@@ -440,11 +406,10 @@ describe('MappingStepperComponent', () => {
     it('updates the current index and revalidates substitutions on every step change', async () => {
       await component.onStepChange({ selectedIndex: STEP_SELECT_TEMPLATES });
       expect(component.currentStepIndex).toBe(STEP_SELECT_TEMPLATES);
-      expect(mockStepperService.updateSubstitutionValidity).toHaveBeenCalledWith(
+      expect(mockStepperService.refreshSubstitutionValidity).toHaveBeenCalledWith(
         component.mapping,
-        component.stepperConfiguration.allowNoDefinedIdentifier,
-        STEP_SELECT_TEMPLATES,
-        component.stepperConfiguration.showCodeEditor
+        component.stepperConfiguration,
+        true // STEP_SELECT_TEMPLATES < STEP_DEFINE_SUBSTITUTIONS
       );
     });
 
@@ -527,29 +492,17 @@ describe('MappingStepperComponent', () => {
     });
   });
 
+  // Alert filtering/adding itself moved to MappingStepperService.raiseAlert (Phase 3) and is
+  // unit tested there; this only verifies the component delegates to it.
   describe('Alert management', () => {
     beforeEach(async () => {
       await component.ngOnInit();
     });
 
-    it('adds an alert via the alert service', () => {
+    it('delegates to the stepper service', () => {
       const alert = { type: 'danger', text: 'boom' } as any;
       component.raiseAlert(alert);
-      expect(mockAlertService.add).toHaveBeenCalledWith(alert);
-    });
-
-    it('removes pre-existing info/warning alerts before adding a new one', () => {
-      const infoAlert = { type: 'info', text: 'info' } as any;
-      const warnAlert = { type: 'warning', text: 'warn' } as any;
-      Object.defineProperty(mockAlertService, 'state', {
-        get: () => [infoAlert, warnAlert],
-        configurable: true
-      });
-
-      component.raiseAlert({ type: 'danger', text: 'new' } as any);
-
-      expect(mockAlertService.remove).toHaveBeenCalledWith(infoAlert);
-      expect(mockAlertService.remove).toHaveBeenCalledWith(warnAlert);
+      expect(mockStepperService.raiseAlert).toHaveBeenCalledWith(alert);
     });
   });
 

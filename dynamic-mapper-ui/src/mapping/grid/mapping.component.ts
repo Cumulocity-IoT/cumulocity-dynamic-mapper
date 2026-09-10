@@ -60,8 +60,7 @@ import {
   SharedService,
   StepperConfiguration,
   Substitution,
-  TransformationType,
-  ALERT_INFO_TIMEOUT
+  TransformationType
 } from '../../shared';
 import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
 import {
@@ -108,7 +107,6 @@ export class MappingComponent implements OnInit, OnDestroy {
   @ViewChild('mappingGrid') mappingGrid!: DataGridComponent;
 
   showConfigMapping = false;
-  isConnectionToMQTTEstablished = false;
   isLoading = false;
 
   readonly mappingsEnriched$ = new BehaviorSubject<MappingEnriched[]>([]);
@@ -188,7 +186,10 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.mappingService
         .getMappingsObservable(this.stepperConfiguration.direction)
         .pipe(takeUntil(this.destroy$))
-        .subscribe(mappings => this.mappingsEnriched$.next(mappings));
+        .subscribe({
+          next: mappings => this.mappingsEnriched$.next(mappings),
+          error: error => console.error('Unexpected error in mappings stream:', error)
+        });
 
       // Track mappings count
       this.mappingsEnriched$
@@ -237,23 +238,17 @@ export class MappingComponent implements OnInit, OnDestroy {
         this.codeTemplate = navState.codeTemplate;
         this.generateSmartFunctionWithAI = !!navState.generateSmartFunctionWithAI;
         this.addMapping();
+
+        // Consume once: history.state isn't cleared by Angular's router after being read, so
+        // without this, navigating away (e.g. into the stepper) and back here without a fresh
+        // router.navigate(..., { state }) call would replay fromExplorer and re-open the "add
+        // mapping" drawer unexpectedly.
+        history.replaceState({ ...history.state, fromExplorer: false }, '');
       }
     } finally {
       this.isLoading = false;
     }
 
-  }
-
-  private async validateSubscriptionOutbound(): Promise<boolean> {
-    let valid = true;
-    if (this.stepperConfiguration.direction === Direction.OUTBOUND) {
-      const result = await Promise.all([this.subscriptionService.getSubscriptionDevice(this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION), this.subscriptionService.getSubscriptionDevice(this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION)]);
-      if (result[0].devices?.length === 0 && result[1].devices?.length === 0) {
-        this.alertService.add({ text: "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'.", type: 'info', timeout: ALERT_INFO_TIMEOUT });
-        valid = false;
-      }
-    }
-    return valid;
   }
 
   private isDeprecatedMapping(item: any): boolean {
@@ -378,7 +373,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   getColumnsMappings(): Column[] {
-    const cols: Column[] = [
+    const cols: (Column | undefined)[] = [
       {
         name: 'name',
         header: 'Name',
@@ -457,7 +452,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         gridTrackSize: '9%'
       }
     ];
-    return cols;
+    return cols.filter((c): c is Column => !!c);
   }
 
   async onAddMapping() {
@@ -772,9 +767,8 @@ export class MappingComponent implements OnInit, OnDestroy {
   async deleteMapping(m: MappingEnriched): Promise<boolean> {
     const { mapping } = m;
     try {
-      await this.mappingService.deleteMapping(mapping.id);
-      this.alertService.success(gettext(`Mapping ${mapping.name} deleted successfully'`));
-      this.isConnectionToMQTTEstablished = true;
+      await this.mappingService.deleteMapping(mapping.id, mapping.direction);
+      this.alertService.success(gettext(`Mapping ${mapping.name} deleted successfully`));
       return true;
     } catch (error) {
       this.alertService.danger(gettext(`Failed to delete mapping ${mapping.name}:`) + error);
@@ -782,23 +776,32 @@ export class MappingComponent implements OnInit, OnDestroy {
     }
   }
 
-  async onCommitMapping(mapping: Mapping) {
+  async onCommitMapping({ mapping, contentChanged }: { mapping: Mapping; contentChanged: boolean }) {
     // Do NOT stamp lastUpdate here: for a draft save it is the optimistic-concurrency
     // token that must be echoed back unchanged (the server assigns a fresh one on save).
-    let mappingSaved = false;
+    // mappingPersisted tracks whether the mapping row is in a state a deployment can be attached
+    // to — true for UPDATE (the row already exists) unless a draft save is attempted and fails,
+    // and true for CREATE/COPY only once the create call itself succeeds.
+    let mappingPersisted = false;
     if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
-      // Edits are saved to the line's draft (D-8); the running configuration is unchanged
-      // until the draft is published as a version and that version is activated.
-      try {
-        await this.mappingService.saveDraft(mapping.id, mapping);
-        mappingSaved = true;
-        this.alertService.success(
-          gettext(`Saved draft for ${mapping.name}. Publish and activate it (Versions) to apply the changes.`)
-        );
-      } catch (error) {
-        this.alertService.danger(
-          gettext(`Failed to save draft for ${mapping.name}: `) + error.message
-        );
+      mappingPersisted = true;
+      // Connector-only changes (contentChanged === false) must not create a draft — a draft
+      // only tracks content changes — but the deployment (connector assignment) below still
+      // needs to be persisted either way.
+      if (contentChanged) {
+        // Edits are saved to the line's draft (D-8); the running configuration is unchanged
+        // until the draft is published as a version and that version is activated.
+        try {
+          await this.mappingService.saveDraft(mapping.id, mapping);
+          this.alertService.success(
+            gettext(`Saved draft for ${mapping.name}. Publish and activate it (Versions) to apply the changes.`)
+          );
+        } catch (error) {
+          this.alertService.danger(
+            gettext(`Failed to save draft for ${mapping.name}: `) + error.message
+          );
+          mappingPersisted = false;
+        }
       }
     } else if (
       this.stepperConfiguration.editorMode == EditorMode.CREATE ||
@@ -808,7 +811,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       // console.log('Push new mapping:', mapping);
       try {
         await this.mappingService.createMapping(mapping);
-        mappingSaved = true;
+        mappingPersisted = true;
         this.alertService.success(gettext(`Mapping ${mapping.name} created successfully`));
       } catch (error) {
         this.alertService.danger(
@@ -816,13 +819,12 @@ export class MappingComponent implements OnInit, OnDestroy {
         );
       }
     }
-    this.isConnectionToMQTTEstablished = true;
 
     // Only persist the deployment once the mapping itself exists; updating the deployment for a
     // mapping that failed to save would target a non-existent mapping. The backend validates the
     // connector identifiers and reconciles subscriptions live, so a failure here means the
     // deployment was not applied and must be surfaced rather than silently swallowed.
-    if (mappingSaved) {
+    if (mappingPersisted) {
       try {
         await this.mappingService.updateDefinedDeploymentMapEntry(
           this.deploymentMapEntry
@@ -837,9 +839,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     this.showConfigMapping = false;
 
-    if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
-      this.validateSubscriptionOutbound();
-    }
+    this.subscriptionService.validateSubscriptionOutbound(this.stepperConfiguration.direction);
   }
 
   async onReload() {
@@ -878,9 +878,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       (loading) => this.isLoading = loading
     );
 
-    if (this.stepperConfiguration.direction == Direction.OUTBOUND) {
-      this.validateSubscriptionOutbound();
-    }
+    this.subscriptionService.validateSubscriptionOutbound(this.stepperConfiguration.direction);
   }
 
   private deactivateMappingBulk(ids: string[]) {
@@ -927,7 +925,6 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.destroy$,
       (loading) => this.isLoading = loading
     );
-    this.isConnectionToMQTTEstablished = true;
   }
 
   async onAddSampleMappings() {
@@ -991,7 +988,6 @@ export class MappingComponent implements OnInit, OnDestroy {
     // console.log('Activate mapping response:', response2);
     if (response2.status < 300) {
       this.alertService.success(gettext('Mappings reloaded'));
-      this.isConnectionToMQTTEstablished = true;
     } else {
       this.alertService.danger(gettext('Failed to activate mappings'));
     }

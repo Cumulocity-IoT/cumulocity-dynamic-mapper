@@ -163,32 +163,31 @@ proxy transparently carries the WebSocket traffic too (reverse-proxy mode handle
              -s fault_inject.py
    ```
 4. Point the microservice at the proxy **without editing the gitignored
-   `application-dev.properties`** — pass it as a system property on the same local launch command
-   already used to run/debug the service. If you don't need to attach a debugger for this test,
-   drop `-agentlib:jdwp=...` entirely:
+   `application-dev.properties`** — use [`debug_local_service.sh`](debug_local_service.sh), which
+   is already set up for exactly this: it builds the classpath into an argfile, launches
+   `dynamic.mapper.App` with `-Dspring.profiles.active=dev`, and takes the Cumulocity base URL as
+   the `C8Y_BASE_URL` env var (defaulting to `http://localhost:8888`, i.e. this proxy's default
+   listen port, so no override is needed if you kept step 3's `--listen-port 8888`):
    ```bash
-   /usr/bin/env /path/to/java \
-     -DC8Y.baseURL=http://localhost:8888 \
-     @/path/to/classpath.argfile \
-     dynamic.mapper.App
+   cd "$REPO_ROOT" # or wherever the repo root is
+   ./resources/script/backend/debug_local_service.sh
    ```
-   If you do want the debugger available, use **listen mode** (`server=y`) rather than attach
-   mode (`server=n`) so the JVM opens its own socket instead of dialing out to one that may not
-   exist yet:
+   It always opens a debug socket in **listen mode** (`server=y`, `suspend=n` by default) on port
+   `54346`, so the JVM starts immediately whether or not a debugger ever attaches — no separate
+   "skip the debugger" variant is needed. Override via env vars if required:
    ```bash
-   /usr/bin/env /path/to/java \
-     -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=localhost:54346 \
-     -DC8Y.baseURL=http://localhost:8888 \
-     @/path/to/classpath.argfile \
-     dynamic.mapper.App
+   C8Y_BASE_URL=http://localhost:8888 DEBUG_PORT=54346 DEBUG_SUSPEND=n \
+     ./resources/script/backend/debug_local_service.sh
    ```
+   Set `DEBUG_SUSPEND=y` if you need the JVM to block at startup until a debugger attaches (e.g.
+   to catch early bootstrap code).
    **Troubleshooting `ERROR: transport error 202: connect failed: Connection refused` /
-   `JDWP Transport dt_socket failed to initialize`:** this means `server=n` (attach mode) was used
-   but nothing is listening on the given port yet. In `server=n` mode the JVM must connect *out* to
-   an already-listening debugger before it will even start `main()` — and unlike a plain socket
+   `JDWP Transport dt_socket failed to initialize`:** this only happens if you bypass the script
+   and hand-construct a `server=n` (attach mode) command — in that mode the JVM must connect *out*
+   to an already-listening debugger before it will even start `main()`, and unlike a plain socket
    timeout, a refused connection is fatal immediately, **regardless of `suspend=y`/`suspend=n`**.
-   Either start your IDE's "attach to remote JVM" listener on that port first, or switch to
-   `server=y` as above, or drop the flag if debugging isn't needed for this run.
+   The script avoids this entirely by always using `server=y` (listen mode), so the JVM opens its
+   own socket and starts normally whether or not an IDE ever attaches to it.
 5. Confirm the redirect worked: mitmproxy's flow list should show the microservice's bootstrap and
    OAuth calls flowing through `localhost:8888`, and the app should start up and connect normally
    with the fault still off (default state).

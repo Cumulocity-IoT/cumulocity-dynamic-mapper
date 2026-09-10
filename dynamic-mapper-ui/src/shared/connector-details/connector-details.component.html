@@ -30,7 +30,7 @@
 <c8y-action-bar-item [placement]="'right'">
   <label class="c8y-switch c8y-switch--inline" title="{{ 'Enabled / Disabled' | translate }}">
     <input type="checkbox" [ngModel]="configuration?.enabled" (ngModelChange)="onConfigurationToggle()"
-      [disabled]="!feature?.userHasMappingAdminRole" />
+      [disabled]="!feature?.userHasMappingAdminRole || isTogglingConnection" />
     <span></span>
     {{ 'Enabled' | translate }}
   </label>

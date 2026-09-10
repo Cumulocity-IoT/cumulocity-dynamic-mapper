@@ -50,6 +50,13 @@ public class ConnectionStateManager {
     @Getter
     private final AtomicReference<ConnectorStatusEvent> connectorStatus;
     
+    /** Guards {@link #previousStatus} and the session bundling in {@link #updateSession}, which
+     * must be evaluated together atomically: both are mutated from independent caller threads
+     * (broker client callback threads, the housekeeping thread, and the virtual threads driving
+     * connect/disconnect/reconnect), and an unsynchronized check-then-set on either can drop or
+     * duplicate a status transition. */
+    private final Object statusLock = new Object();
+
     private ConnectorStatus previousStatus = ConnectorStatus.UNKNOWN;
 
     /** Statuses that start a new connection-lifecycle session (new Event) rather than
@@ -172,10 +179,7 @@ public class ConnectionStateManager {
                     tenant, connectorIdentifier);
         }
 
-        if (sendEvent && !status.equals(previousStatus)) {
-            previousStatus = status;
-            notifyStatusChange(newStatus);
-        }
+        maybeNotify(status, newStatus, sendEvent);
     }
 
     public void updateStatusWithError(Exception e) {
@@ -191,10 +195,7 @@ public class ConnectionStateManager {
             statusMap.put(connectorIdentifier, newStatus);
         }
 
-        if (!ConnectorStatus.FAILED.equals(previousStatus)) {
-            previousStatus = ConnectorStatus.FAILED;
-            notifyStatusChange(newStatus);
-        }
+        maybeNotify(ConnectorStatus.FAILED, newStatus, true);
     }
     
     /**
@@ -215,10 +216,7 @@ public class ConnectionStateManager {
             statusMap.put(connectorIdentifier, newStatus);
         }
 
-        if (!ConnectorStatus.RETRYING.equals(previousStatus)) {
-            previousStatus = ConnectorStatus.RETRYING;
-            notifyStatusChange(newStatus);
-        }
+        maybeNotify(ConnectorStatus.RETRYING, newStatus, true);
     }
 
     private String buildErrorMessage(Throwable e) {
@@ -237,11 +235,33 @@ public class ConnectionStateManager {
         return messageBuilder.toString();
     }
     
-    private void notifyStatusChange(ConnectorStatusEvent status) {
+    /**
+     * Dedupes against {@link #previousStatus} and folds the transition into the active session,
+     * as one atomic step under {@link #statusLock} — both must be evaluated together, since
+     * callers reach this from independent threads (broker client callbacks, housekeeping, and the
+     * virtual threads driving connect/disconnect/reconnect) and an unsynchronized check-then-set
+     * on either can drop or duplicate a transition. The callback itself runs outside the lock so
+     * arbitrary callback code can never block or re-enter status updates while holding it.
+     */
+    private void maybeNotify(ConnectorStatus status, ConnectorStatusEvent newStatus, boolean sendEvent) {
+        if (!sendEvent) {
+            return;
+        }
+
+        ConnectorStatusHistory session;
+        boolean isNewSession;
+        synchronized (statusLock) {
+            if (status.equals(previousStatus)) {
+                return;
+            }
+            previousStatus = status;
+            isNewSession = updateSession(newStatus);
+            session = activeSession.get();
+        }
+
         if (statusChangeCallback != null) {
             try {
-                boolean isNewSession = updateSession(status);
-                statusChangeCallback.accept(activeSession.get(), isNewSession);
+                statusChangeCallback.accept(session, isNewSession);
             } catch (Exception e) {
                 log.error("{} - Error in status change callback: {}", tenant, e.getMessage(), e);
             }
@@ -258,6 +278,8 @@ public class ConnectionStateManager {
      * one session — but DISCONNECTED/FAILED are a hard stop: nothing appends after those,
      * regardless of what status comes next (e.g. routine housekeeping setting CONFIGURED after a
      * dropped connection starts a new session rather than reviving the old one).
+     *
+     * Must be called with {@link #statusLock} held — see {@link #maybeNotify}.
      *
      * @return {@code true} if this transition just opened a new session
      */

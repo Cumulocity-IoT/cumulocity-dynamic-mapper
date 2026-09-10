@@ -25,24 +25,20 @@ import packageJson from '../../../package.json';
 import {
   ConnectorConfiguration,
   ConnectorSpecification,
-  ConnectorStatus,
   Direction,
   Feature,
   getSeverityBadgeClass,
   LoggingEventType,
   LoggingEventTypeMap,
-  Operation,
   SharedService,
-  ConnectorType,
-  ALERT_INFO_TIMEOUT
+  ConnectorType
 } from '..';
 import { ServiceConfiguration } from '../../configuration';
 import { ConnectorLogService } from '../service/connector-log.service';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { ActivatedRoute } from '@angular/router';
-import { HttpStatusCode } from '@angular/common/http';
 import { ConnectorConfigurationDrawerComponent } from '../connector-configuration/edit/connector-configuration-drawer.component';
-import { gettext } from '@c8y/ngx-components/gettext';
+import { applyConnectorConfigurationChange, ConnectorConfigurationApiPayload, toggleConnectorConnection } from '../connector-configuration/connector.model';
 // Imported directly (not via the shared barrel): these are referenced inside the @Component
 // decorator's `imports` array, evaluated synchronously at module-load time. The barrel
 // (shared/index.ts) exports this very component before it exports shared.module /
@@ -65,7 +61,6 @@ import { ConnectorStatusHistoryComponent } from './connector-status-history.comp
 })
 export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   version: string = packageJson.version;
-  monitoring$: Observable<ConnectorStatus>;
   specifications$: Observable<ConnectorSpecification[]>;
   statusLogs$: Observable<any[]>;
   configuration: ConnectorConfiguration;
@@ -80,6 +75,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   ConnectorType = ConnectorType;
   contextSubscription: Subscription;
   initialStateDrawer: any;
+  isTogglingConnection = false;
 
   private readonly destroy$ = new Subject<void>();
 
@@ -114,6 +110,21 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
       error: (error) => console.error('Error receiving logs:', error)
     });
     this.updateStatusLogs();
+
+    // Keep `configuration` (enabled/status) live via the same polling stream the grid uses,
+    // instead of only the one-shot route-resolver snapshot: onConfigurationToggle()'s optimistic
+    // flip of `enabled` is otherwise never corrected if the connect/reconnect attempt it
+    // triggered ultimately fails or is still backing off.
+    const identifier = this.route.snapshot.paramMap.get('identifier');
+    this.connectorConfigurationService.getConfigurationsWithStatus().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(configurations => {
+      const match = configurations.find(config => config.identifier === identifier);
+      if (match) {
+        this.configuration = match;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   ngOnDestroy() {
@@ -164,25 +175,21 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   }
 
   async onConfigurationToggle() {
-    const configuration = this.configuration;
-    const response1 = await this.sharedService.runOperation(
-      configuration.enabled ? { operation: Operation.DISCONNECT, parameter: { connectorIdentifier: configuration.identifier } } : {
-        operation: Operation.CONNECT,
-        parameter: { connectorIdentifier: configuration.identifier }
+    // Guards against a double-click firing two connect/disconnect operations back-to-back —
+    // the actual `enabled` state is then corrected by the live getConfigurationsWithStatus()
+    // subscription in ngOnInit() once the operation completes, rather than an optimistic flip.
+    if (this.isTogglingConnection) return;
+    this.isTogglingConnection = true;
+    try {
+      const queued = await toggleConnectorConnection(this.sharedService, this.alertService, this.configuration);
+      if (queued) {
+        // Optimistic, for instant feedback — the live getConfigurationsWithStatus() subscription
+        // in ngOnInit() will correct this afterward if the connect/reconnect attempt it queued
+        // ultimately fails or is still backing off.
+        this.configuration.enabled = !this.configuration.enabled;
       }
-    );
-    if (response1.status === HttpStatusCode.Created) {
-      const wasConnecting = !this.configuration.enabled;
-      this.configuration.enabled = !this.configuration.enabled;
-      this.alertService.add({
-        text: wasConnecting
-          ? gettext('Connector is connecting, please wait...')
-          : gettext('Connector disconnected.'),
-        type: 'info',
-        timeout: ALERT_INFO_TIMEOUT
-      });
-    } else {
-      this.alertService.danger(gettext('Failed to establish connection!'));
+    } finally {
+      this.isTogglingConnection = false;
     }
     this.reloadData();
     this.sharedService.refreshMappings(Direction.INBOUND);
@@ -190,35 +197,16 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   }
 
   private async handleModalResponse(
-    response: any,
+    response: ConnectorConfiguration | undefined,
     successMessage: string,
     errorMessage: string,
-    action: (config: any) => Promise<any>
+    action: (config: ConnectorConfigurationApiPayload) => Promise<any>
   ): Promise<void> {
-    if (!response) return;
-
-    const clonedConfiguration = this.prepareConfiguration(response);
-    const apiResponse = await action(clonedConfiguration);
-
-    if (apiResponse.status < 300) {
-      this.alertService.success(gettext(successMessage));
-    } else {
-      this.alertService.danger(gettext(errorMessage));
-    }
+    await applyConnectorConfigurationChange(this.alertService, response, successMessage, errorMessage, action);
     this.reloadData();
   }
 
   reloadData(): void {
     this.connectorConfigurationService.refreshConfigurations();
-  }
-
-  private prepareConfiguration(config: ConnectorConfiguration): Partial<ConnectorConfiguration> {
-    return {
-      identifier: config.identifier,
-      connectorType: config.connectorType,
-      enabled: config.enabled,
-      name: config.name,
-      properties: config.properties
-    };
   }
 }

@@ -310,6 +310,22 @@ public abstract class AConnectorClient {
 
     public abstract Boolean supportsWildcardInTopic(Direction direction);
 
+    /**
+     * Reads the {@code supportsWildcardInTopicInbound}/{@code supportsWildcardInTopicOutbound}
+     * connector property for the given direction, falling back to the given per-direction
+     * default. Extracted here because every connector's {@link #supportsWildcardInTopic}
+     * implementation repeated this same read/parse pair.
+     */
+    protected boolean readWildcardFlag(Direction direction, boolean defaultInbound, boolean defaultOutbound) {
+        String key = direction == Direction.INBOUND
+                ? "supportsWildcardInTopicInbound"
+                : "supportsWildcardInTopicOutbound";
+        boolean defaultValue = direction == Direction.INBOUND ? defaultInbound : defaultOutbound;
+        return Boolean.parseBoolean(
+                connectorConfiguration.getProperties()
+                        .getOrDefault(key, String.valueOf(defaultValue)).toString());
+    }
+
     public abstract List<Direction> supportedDirections();
 
     /**
@@ -488,6 +504,43 @@ public abstract class AConnectorClient {
                    url.startsWith("amqps://");
         }
         return false;
+    }
+
+    /**
+     * Wires the common runtime dependencies every connector's "full constructor" needs from the
+     * registry, plus the connector's own identity fields. Extracted here because all seven
+     * connector implementations previously repeated this ~25-line block verbatim; a new
+     * dependency added to one now only needs to be added here.
+     * <p>
+     * Callers must invoke this after {@code this.connectorType} is set (i.e. after the no-arg
+     * constructor delegate) and before {@link #initializeManagers()}.
+     */
+    protected void wireFromRegistry(ConfigurationRegistry configurationRegistry,
+            ConnectorRegistry connectorRegistry,
+            ConnectorConfiguration connectorConfiguration,
+            GenericMessageCallback dispatcher,
+            String additionalSubscriptionIdTest,
+            String tenant) {
+        this.configurationRegistry = configurationRegistry;
+        this.connectorRegistry = connectorRegistry;
+        this.connectorConfiguration = connectorConfiguration;
+        this.connectorName = connectorConfiguration.getName();
+        this.connectorIdentifier = connectorConfiguration.getIdentifier();
+        this.connectorId = new ConnectorId(
+                connectorConfiguration.getName(),
+                connectorConfiguration.getIdentifier(),
+                connectorType);
+        this.tenant = tenant;
+        this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
+
+        this.mappingService = configurationRegistry.getMappingService();
+        this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
+        this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
+        this.c8yAgent = configurationRegistry.getC8yAgent();
+        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
+        this.objectMapper = configurationRegistry.getObjectMapper();
+        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        this.dispatcher = dispatcher;
     }
 
     /**

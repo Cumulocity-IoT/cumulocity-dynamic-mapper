@@ -18,11 +18,14 @@
  * @authors Christof Strack
  */
 
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { FetchClient, IIdentified } from '@c8y/client';
 import { Observable, BehaviorSubject } from 'rxjs';
+import { AlertService } from '@c8y/ngx-components';
 import {
+  ALERT_INFO_TIMEOUT,
   BASE_URL,
+  Direction,
   PATH_SUBSCRIPTION_ENDPOINT,
   SharedService
 } from '../../shared';
@@ -63,10 +66,38 @@ export class SubscriptionService {
   public readonly STATIC_DEVICE_SUBSCRIPTION = "DynamicMapperStaticDeviceSubscription";
   public readonly DYNAMIC_DEVICE_SUBSCRIPTION = "DynamicMapperDynamicDeviceSubscription";
 
+  private readonly alertService = inject(AlertService);
+
   constructor(
     private readonly client: FetchClient,
     private readonly sharedService: SharedService
   ) { }
+
+  /**
+   * Warns the user when an OUTBOUND mapping has no device subscribed to receive it (a no-op for
+   * INBOUND). Shared here — rather than duplicated per editor component — so every mapping
+   * editor (stepper, unified editor, ...) applies the same post-commit check; previously only
+   * the stepper's commit path called this, and the unified editor's parallel save flow silently
+   * skipped it.
+   */
+  async validateSubscriptionOutbound(direction: Direction): Promise<boolean> {
+    if (direction !== Direction.OUTBOUND) return true;
+
+    const [staticSubscription, dynamicSubscription] = await Promise.all([
+      this.getSubscriptionDevice(this.STATIC_DEVICE_SUBSCRIPTION),
+      this.getSubscriptionDevice(this.DYNAMIC_DEVICE_SUBSCRIPTION)
+    ]);
+
+    if (staticSubscription?.devices?.length === 0 && dynamicSubscription?.devices?.length === 0) {
+      this.alertService.add({
+        text: "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'.",
+        type: 'info',
+        timeout: ALERT_INFO_TIMEOUT
+      });
+      return false;
+    }
+    return true;
+  }
 
   // ===== SUBSCRIPTION CRUD OPERATIONS =====
 

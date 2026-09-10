@@ -87,28 +87,17 @@ public class TestClient extends AConnectorClient {
             String additionalSubscriptionIdTest,
             String tenant) {
         this();
+        wireFromRegistry(configurationRegistry, connectorRegistry, connectorConfiguration,
+                dispatcher, additionalSubscriptionIdTest, tenant);
 
-        this.configurationRegistry = configurationRegistry;
-        this.connectorRegistry = connectorRegistry;
-        this.connectorConfiguration = connectorConfiguration;
+        // Test connector uses fixed identity fields rather than the connector configuration's
+        // own name/identifier — override what wireFromRegistry derived from it.
         this.connectorName = TEST_CONNECTOR_NAME;
         this.connectorIdentifier = TEST_CONNECTOR_IDENTIFIER;
         this.connectorId = new ConnectorId(
                 TEST_CONNECTOR_NAME,
                 TEST_CONNECTOR_IDENTIFIER,
                 connectorType);
-        this.tenant = tenant;
-        this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-
-        // Initialize dependencies from registry
-        this.mappingService = configurationRegistry.getMappingService();
-        this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
-        this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
-        this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
-        this.objectMapper = configurationRegistry.getObjectMapper();
-        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        this.dispatcher = dispatcher;
 
         // Initialize managers
         initializeManagers();

@@ -44,6 +44,7 @@ import {
   Qos
 } from '../../shared';
 import { EditorMode } from '../shared/stepper.model';
+import { configurationToYaml, yamlToConfiguration } from '../shared/util';
 
 // Tab indices (mirrors the private constants in the component under test)
 const TAB_GENERAL_SETTINGS = 1;
@@ -142,12 +143,23 @@ describe('MappingUnifiedEditorComponent', () => {
         'loadExtensions',
         'selectExtensionName',
         'updateSubstitutionValidity',
+        'refreshSubstitutionValidity',
         'expandExistingTemplates',
         'evaluateFilterExpression',
         'checkAIAgentDeployment',
         'loadCodeTemplates',
         'createCodeTemplate',
-        'cleanup'
+        'cleanup',
+        'raiseAlert',
+        'patchExtensionFormValues',
+        'applyExtensionNameSelection',
+        'applyExtensionEventSelection',
+        'applyTargetAPIChange',
+        'computeSampleTargetTemplate',
+        'computeCodeFromTemplate',
+        'computeCodeTemplateEntries',
+        'computeExtensionItems',
+        'createCodeTemplateAndRefresh'
       ],
       {
         countDeviceIdentifiers$: of(0),
@@ -298,28 +310,37 @@ describe('MappingUnifiedEditorComponent', () => {
     });
   });
 
+  // configurationToYaml/yamlToConfiguration moved to mapping/shared/util.ts (shared with
+  // MappingStepperComponent) — see util.spec.ts for their unit tests.
   describe('YAML <-> configuration helpers', () => {
-    it('serialises and parses round-trip', () => {
-      const yaml = component.configurationToYaml({ a: 1 });
-      expect(component.yamlToConfiguration(yaml)).toEqual({ a: 1 });
-    });
-
-    it('returns empty/undefined for empty inputs', () => {
-      expect(component.configurationToYaml(undefined)).toBe('');
-      expect(component.yamlToConfiguration('')).toBeUndefined();
+    it('round-trips a configuration object through the shared util functions', () => {
+      const yaml = configurationToYaml({ a: 1 });
+      expect(yamlToConfiguration(yaml)).toEqual({ a: 1 });
     });
   });
 
+  // ESM-export detection itself moved to MappingStepperService.computeCodeFromTemplate
+  // (Phase 3) and is unit tested there; this only verifies the component applies the service's
+  // result.
   describe('Code template selection', () => {
-    it('appends an ESM export for Smart Functions when Support ESM is enabled', () => {
-      component.mapping = buildMapping({ transformationType: TransformationType.SMART_FUNCTION });
-      component.codeTemplatesDecoded.set('t1', { code: 'function onMessage() {}' } as any);
-      component.templateId = 't1' as any;
-      component.serviceConfiguration = { supportESM: true } as any;
+    it('applies the code computed by the service', () => {
+      mockStepperService.computeCodeFromTemplate.and.returnValue('function onMessage() { /* with export */ }');
 
       component.onSelectCodeTemplate();
 
-      expect(component.mappingCode).toContain('export { onMessage };');
+      expect(mockStepperService.computeCodeFromTemplate).toHaveBeenCalledWith(
+        component.codeTemplatesDecoded, component.templateId, component.serviceConfiguration, component.mapping.transformationType
+      );
+      expect(component.mappingCode).toBe('function onMessage() { /* with export */ }');
+    });
+
+    it('leaves mappingCode untouched when the service reports no template selected', () => {
+      component.mappingCode = 'untouched';
+      mockStepperService.computeCodeFromTemplate.and.returnValue(undefined);
+
+      component.onSelectCodeTemplate();
+
+      expect(component.mappingCode).toBe('untouched');
     });
 
     it('updates mappingCode on value change', () => {
@@ -340,7 +361,7 @@ describe('MappingUnifiedEditorComponent', () => {
       await component.onTabSelected(TAB_DEFINE_TRANSFORMATION);
       expect(component.activeTabIndex).toBe(TAB_DEFINE_TRANSFORMATION);
       expect(component.currentStepIndex).toBe(TAB_DEFINE_TRANSFORMATION);
-      expect(mockStepperService.updateSubstitutionValidity).toHaveBeenCalled();
+      expect(mockStepperService.refreshSubstitutionValidity).toHaveBeenCalled();
     });
 
     it('emits a testing template when the Testing tab is opened', async () => {

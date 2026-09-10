@@ -25,7 +25,6 @@ import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
@@ -60,6 +59,7 @@ import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.*;
 
 /**
@@ -72,6 +72,11 @@ import java.util.*;
  */
 @Slf4j
 public class WebHook extends AConnectorClient {
+
+    // Bounds every reactive call before .block(), independent of TCP-level connect/socket
+    // timeouts — otherwise a slow downstream endpoint (e.g. the GET half of PATCH's
+    // GET+merge+PUT chain) can stall the calling virtual thread indefinitely.
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
 
     private static final String[] READ_ONLY_FIELDS = {
         "self", "id", "lastUpdated", "creationTime", "owner",
@@ -106,28 +111,8 @@ public class WebHook extends AConnectorClient {
             String additionalSubscriptionIdTest,
             String tenant) {
         this();
-
-        this.configurationRegistry = configurationRegistry;
-        this.connectorRegistry = connectorRegistry;
-        this.connectorConfiguration = connectorConfiguration;
-        this.connectorName = connectorConfiguration.getName();
-        this.connectorIdentifier = connectorConfiguration.getIdentifier();
-        this.connectorId = new ConnectorId(
-                connectorConfiguration.getName(),
-                connectorConfiguration.getIdentifier(),
-                connectorType);
-        this.tenant = tenant;
-        this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
-
-        // Initialize dependencies from registry
-        this.mappingService = configurationRegistry.getMappingService();
-        this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
-        this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
-        this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
-        this.objectMapper = configurationRegistry.getObjectMapper();
-        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        this.dispatcher = dispatcher;
+        wireFromRegistry(configurationRegistry, connectorRegistry, connectorConfiguration,
+                dispatcher, additionalSubscriptionIdTest, tenant);
 
         // Configure for Cumulocity internal if needed
         configureCumulocityInternal();
@@ -234,7 +219,7 @@ public class WebHook extends AConnectorClient {
 
             if (!StringUtils.isEmpty(healthEndpoint)) {
                 log.info("{} - Testing health endpoint: {}", tenant, healthEndpoint);
-                checkHealth().block();
+                checkHealth().timeout(REQUEST_TIMEOUT).block();
                 log.info("{} - Health check passed", tenant);
             } else {
                 log.warn(
@@ -441,7 +426,7 @@ public class WebHook extends AConnectorClient {
             try {
                 Mono<ResponseEntity<String>> responseEntity = executeHttpRequest(method, fullPath, payload, context);
 
-                ResponseEntity<String> response = responseEntity.block();
+                ResponseEntity<String> response = responseEntity.timeout(REQUEST_TIMEOUT).block();
 
                 if (response != null && response.getStatusCode().is2xxSuccessful()) {
                     // Always log success with method info to verify correct build is deployed
@@ -814,15 +799,7 @@ public class WebHook extends AConnectorClient {
 
     @Override
     public Boolean supportsWildcardInTopic(Direction direction) {
-        if (direction == Direction.INBOUND) {
-            return Boolean.parseBoolean(
-                    connectorConfiguration.getProperties()
-                            .getOrDefault("supportsWildcardInTopicInbound", "false").toString());
-        } else {
-            return Boolean.parseBoolean(
-                    connectorConfiguration.getProperties()
-                            .getOrDefault("supportsWildcardInTopicOutbound", "true").toString());
-        }
+        return readWildcardFlag(direction, false, true);
     }
 
     @Override
