@@ -56,10 +56,11 @@ import java.util.stream.Collectors;
  * <p>The deployment map maintains a many-to-many relationship between mappings and connectors,
  * stored per tenant and persisted in the Cumulocity inventory.
  * 
- * <p><strong>Note:</strong> The {@code MappingSubscriptionService} evaluates all three conditions
- * to determine if a mapping is actually applied/effective on a connector.
- * 
- * @see dynamic.mapper.service.MappingSubscriptionService
+ * <p><strong>Note:</strong> {@code AConnectorClient#isDeployedInConnector} (together with the
+ * mapping's {@code active} flag) evaluates all three conditions to determine if a mapping is
+ * actually applied/effective on a connector.
+ *
+ * @see dynamic.mapper.connector.core.client.AConnectorClient
  */
 @Slf4j
 @Service

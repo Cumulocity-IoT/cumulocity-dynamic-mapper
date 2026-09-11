@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -43,29 +44,36 @@ import dynamic.mapper.model.Qos;
  */
 class MappingSubscriptionManagerTest {
 
-    /** Records the topics currently subscribed at the (fake) broker. */
+    /** Records the topics currently subscribed at the (fake) broker, and their QoS. */
     private static class RecordingCallback implements SubscriptionCallback {
         final Set<String> subscribedTopics = ConcurrentHashMap.newKeySet();
+        final Map<String, Qos> subscribedQos = new ConcurrentHashMap<>();
 
         @Override
         public void subscribe(String topic, Qos qos) {
             subscribedTopics.add(topic);
+            subscribedQos.put(topic, qos);
         }
 
         @Override
         public void unsubscribe(String topic) {
             subscribedTopics.remove(topic);
+            subscribedQos.remove(topic);
         }
     }
 
     private static Mapping inbound(String identifier, String topic) {
+        return inbound(identifier, topic, Qos.AT_LEAST_ONCE);
+    }
+
+    private static Mapping inbound(String identifier, String topic, Qos qos) {
         return Mapping.builder()
                 .id(identifier)
                 .identifier(identifier)
                 .mappingTopic(topic)
                 .direction(Direction.INBOUND)
                 .active(true)
-                .qos(Qos.AT_LEAST_ONCE)
+                .qos(qos)
                 .build();
     }
 
@@ -152,6 +160,47 @@ class MappingSubscriptionManagerTest {
                 "the old topic must be unsubscribed when a mapping's topic changes");
         assertFalse(manager.getSubscriptionCountsView().containsKey("topic/old"));
         assertEquals(1, manager.getSubscriptionCountsView().get("topic/new").intValue());
+    }
+
+    @Test
+    void addSubscriptionInbound_upgradesQosWhenHigherQosMappingJoinsSharedTopic() throws Exception {
+        RecordingCallback callback = new RecordingCallback();
+        MappingSubscriptionManager manager = new MappingSubscriptionManager("t1", "connector-1", callback);
+
+        // m1 subscribes the topic first, at the lower QoS.
+        manager.addSubscriptionInbound(inbound("m1", "shared/topic", Qos.AT_MOST_ONCE), Qos.AT_MOST_ONCE);
+        assertEquals(Qos.AT_MOST_ONCE, callback.subscribedQos.get("shared/topic"));
+
+        // m2 joins the same topic requiring a higher QoS: the broker subscription must be
+        // upgraded, not silently left at the QoS of whichever mapping subscribed first.
+        manager.addSubscriptionInbound(inbound("m2", "shared/topic", Qos.EXACTLY_ONCE), Qos.EXACTLY_ONCE);
+
+        assertEquals(Qos.EXACTLY_ONCE, callback.subscribedQos.get("shared/topic"),
+                "topic QoS must be upgraded when a higher-QoS mapping joins it");
+        assertEquals(2, manager.getSubscriptionCountsView().get("shared/topic").intValue());
+
+        // A lower-QoS mapping joining afterwards must not downgrade the already-upgraded topic.
+        manager.addSubscriptionInbound(inbound("m3", "shared/topic", Qos.AT_MOST_ONCE), Qos.AT_MOST_ONCE);
+        assertEquals(Qos.EXACTLY_ONCE, callback.subscribedQos.get("shared/topic"));
+    }
+
+    @Test
+    void reconcile_upgradesQosForTopicThatStaysSubscribed() {
+        RecordingCallback callback = new RecordingCallback();
+        MappingSubscriptionManager manager = new MappingSubscriptionManager("t1", "connector-1", callback);
+
+        Mapping m1 = inbound("m1", "shared/topic", Qos.AT_MOST_ONCE);
+        manager.updateSubscriptionsInbound(new ArrayList<>(List.of(m1)), false, true, mapping -> true);
+        assertEquals(Qos.AT_MOST_ONCE, callback.subscribedQos.get("shared/topic"));
+
+        // A second mapping is deployed onto the same topic at a higher QoS; the topic stays
+        // subscribed across the reconcile (not a fresh "new topic"), so the upgrade must be
+        // detected explicitly rather than relying on the new-topic subscribe path.
+        Mapping m2 = inbound("m2", "shared/topic", Qos.EXACTLY_ONCE);
+        manager.updateSubscriptionsInbound(new ArrayList<>(List.of(m1, m2)), false, true, mapping -> true);
+
+        assertEquals(Qos.EXACTLY_ONCE, callback.subscribedQos.get("shared/topic"),
+                "reconcile must upgrade QoS for a topic that remains subscribed");
     }
 
     @Test

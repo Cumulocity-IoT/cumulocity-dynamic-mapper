@@ -76,6 +76,12 @@ public class MappingSubscriptionManager {
     // Track reference count per subscribed topic (for shared subscriptions)
     private final Map<String, MutableInt> subscriptionCounts = new ConcurrentHashMap<>();
 
+    // Track the QoS a topic is currently subscribed at, so that adding a mapping with a
+    // higher QoS to an already-subscribed topic (incremental path) can detect the need to
+    // re-subscribe at the higher level, instead of silently staying at the QoS the topic
+    // happened to be subscribed at first (see addSubscriptionInbound).
+    private final Map<String, Qos> subscribedQos = new ConcurrentHashMap<>();
+
     // Track mappings that are currently applied on this connector
     // Structure: <mapping identifier, mapping>
     private final Map<String, Mapping> effectiveMappingsInbound = new ConcurrentHashMap<>();
@@ -183,11 +189,24 @@ public class MappingSubscriptionManager {
 
             if (isNewSubscription) {
                 subscriptionCallback.subscribe(topic, qos);
+                subscribedQos.put(topic, qos);
                 log.info("{} - Subscribed to topic: [{}] for connector: {}, QoS: {}",
                         tenant, topic, connectorName, qos);
             } else {
                 log.debug("{} - Incremented subscription count for topic: [{}] to {}",
                         tenant, topic, count.intValue());
+
+                // A topic already subscribed by another mapping must be upgraded if this
+                // mapping requires a higher QoS - otherwise the broker keeps delivering at
+                // the (lower) QoS of whichever mapping happened to subscribe first, silently
+                // under-serving this mapping's QoS requirement.
+                Qos currentQos = subscribedQos.getOrDefault(topic, Qos.AT_MOST_ONCE);
+                if (qos.ordinal() > currentQos.ordinal()) {
+                    subscriptionCallback.subscribe(topic, qos);
+                    subscribedQos.put(topic, qos);
+                    log.info("{} - Upgraded subscription QoS for topic: [{}] from {} to {} for connector: {}",
+                            tenant, topic, currentQos, qos, connectorName);
+                }
             }
         }
     }
@@ -225,6 +244,7 @@ public class MappingSubscriptionManager {
 
             if (count.intValue() <= 0) {
                 subscriptionCounts.remove(topic);
+                subscribedQos.remove(topic);
                 subscriptionCallback.unsubscribe(topic);
                 log.info("{} - Unsubscribed from topic: [{}] for connector: {}", tenant, topic, connectorName);
             } else {
@@ -263,6 +283,7 @@ public class MappingSubscriptionManager {
         synchronized (lock) {
             if (reset) {
                 subscriptionCounts.clear();
+                subscribedQos.clear();
                 effectiveMappingsInbound.clear();
             }
 
@@ -296,8 +317,11 @@ public class MappingSubscriptionManager {
             // Must run before subscriptionCounts is replaced so the diff sees the old topics.
             unsubscribeUnusedTopics(newSubscriptions);
 
-            // Add subscriptions for new topics
+            // Add subscriptions for new topics, and re-subscribe topics that stay subscribed
+            // but whose desired QoS increased (e.g. a mapping requiring a higher QoS was added
+            // to a topic another mapping already subscribed at a lower one).
             subscribeToNewTopics(newSubscriptions, topicQosMap);
+            upgradeQosForRetainedTopics(newSubscriptions, topicQosMap);
 
             // Replace the reference counts wholesale with the freshly computed desired state.
             // A putAll would leave stale keys for topics that are no longer subscribed.
@@ -318,9 +342,35 @@ public class MappingSubscriptionManager {
                 .forEach(topic -> {
                     try {
                         subscriptionCallback.unsubscribe(topic);
+                        subscribedQos.remove(topic);
                         log.info("{} - Unsubscribed from unused topic: [{}]", tenant, topic);
                     } catch (Exception e) {
                         log.error("{} - Error unsubscribing from topic: [{}]", tenant, topic, e);
+                    }
+                });
+    }
+
+    /**
+     * Re-subscribes topics that remain subscribed across this reconcile but whose newly
+     * computed desired QoS (max across their now-effective mappings) is higher than what
+     * the topic is currently subscribed at.
+     */
+    private void upgradeQosForRetainedTopics(Map<String, MutableInt> newSubscriptions,
+            Map<String, Qos> topicQosMap) {
+        newSubscriptions.keySet().stream()
+                .filter(subscriptionCounts::containsKey)
+                .forEach(topic -> {
+                    Qos desiredQos = topicQosMap.getOrDefault(topic, Qos.AT_MOST_ONCE);
+                    Qos currentQos = subscribedQos.getOrDefault(topic, Qos.AT_MOST_ONCE);
+                    if (desiredQos.ordinal() > currentQos.ordinal()) {
+                        try {
+                            subscriptionCallback.subscribe(topic, desiredQos);
+                            subscribedQos.put(topic, desiredQos);
+                            log.info("{} - Upgraded subscription QoS for topic: [{}] from {} to {}",
+                                    tenant, topic, currentQos, desiredQos);
+                        } catch (Exception e) {
+                            log.error("{} - Error upgrading QoS for topic: [{}]", tenant, topic, e);
+                        }
                     }
                 });
     }
@@ -336,8 +386,14 @@ public class MappingSubscriptionManager {
                     try {
                         Qos qos = topicQosMap.getOrDefault(topic, Qos.AT_MOST_ONCE);
                         subscriptionCallback.subscribe(topic, qos);
+                        subscribedQos.put(topic, qos);
                         log.info("{} - Subscribed to new topic: [{}], QoS: {}", tenant, topic, qos);
-                    } catch (ConnectorException e) {
+                    } catch (Exception e) {
+                        // Broad catch, matching unsubscribeUnusedTopics: a single failing topic
+                        // must not abort the reconcile before subscriptionCounts is replaced
+                        // below, which would otherwise leave effectiveMappingsInbound (already
+                        // updated to the new desired set) inconsistent with a stale/partial
+                        // subscriptionCounts.
                         log.error("{} - Error subscribing to topic: [{}]", tenant, topic, e);
                     }
                 });
@@ -497,6 +553,7 @@ public class MappingSubscriptionManager {
     public void clear() {
         synchronized (lock) {
             subscriptionCounts.clear();
+            subscribedQos.clear();
             effectiveMappingsInbound.clear();
             effectiveMappingsOutbound.clear();
         }

@@ -132,10 +132,6 @@ public class MappingService {
             throw new MappingValidationException(errors);
         }
 
-        // Capture activation intent; always persist inactive first so that
-        // setActivationMapping can register subscriptions through the normal channel.
-        boolean activateAfterCreate = Boolean.TRUE.equals(mapping.getActive());
-
         // Capture version hints before prepareForCreate resets them to 0.
         // This allows imports to restore the original version number (e.g. v4) rather
         // than always starting at v1.
@@ -187,15 +183,10 @@ public class MappingService {
             updateMapping(tenant, created, false, true);
         }
 
-        // Activate through the proper channel so subscriptions are registered.
-        if (activateAfterCreate) {
-            try {
-                created = setActivationMapping(tenant, created.getId(), true, null);
-            } catch (Exception e) {
-                log.warn("{} - Mapping {} created but activation failed: {}", tenant, created.getId(), e.getMessage());
-            }
-        }
-
+        // Every caller of this method forces mapping.setActive(false) before creation
+        // (new mappings are always created disabled, per the public API contract), so
+        // there is never activation to perform here. Activate separately via
+        // setActivationMapping()/the ACTIVATE_MAPPING operation once the mapping exists.
         return created;
     }
 

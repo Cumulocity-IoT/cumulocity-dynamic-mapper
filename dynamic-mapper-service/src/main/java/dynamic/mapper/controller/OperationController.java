@@ -397,17 +397,30 @@ public class OperationController {
 
     private ResponseEntity<?> handleActivateMapping(String tenant, Map<String, String> parameters) throws Exception {
         String id = parameters.get("id");
-        Boolean activation = Boolean.parseBoolean(parameters.get("active"));
+        if (id == null || id.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'id' is required");
+        }
+        String activeParam = parameters.get("active");
+        if (activeParam == null || activeParam.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'active' is required");
+        }
+        Boolean activation = Boolean.parseBoolean(activeParam);
         String versionParam = parameters.getOrDefault("version",
                 parameters.get("versionNumber")); // backward-compat alias
         String version = (versionParam != null && !versionParam.isBlank()) ? versionParam.trim() : null;
         Mapping updatedMapping = mappingService.setActivationMapping(tenant, id, activation, version);
-        Map<String, AConnectorClient> connectorMap = connectorRegistry
-                .getClientsForTenant(tenant);
-        // subscribe/unsubscribe respective mappingTopic of mapping only for
-        // outbound mapping
+
+        // Only the connectors this mapping is deployed to can have a subscription to
+        // (un)register; other connectors were never subscribed and reconcile independently
+        // when the deployment map itself changes (see DeploymentController). Mirrors
+        // MappingController's notifyDeployedConnectorsInbound for create/update.
+        List<String> deployedConnectorIds = mappingService.getDeploymentMapEntry(tenant, updatedMapping.getIdentifier());
+        Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
         Map<String, String> failed = new HashMap<>();
         for (AConnectorClient client : connectorMap.values()) {
+            if (!deployedConnectorIds.contains(client.getConnectorIdentifier())) {
+                continue;
+            }
             if (updatedMapping.getDirection() == Direction.INBOUND) {
                 if (!client.updateSubscriptionForInbound(updatedMapping, false, true)) {
                     ConnectorConfiguration conf = client.getConnectorConfiguration();
@@ -426,6 +439,9 @@ public class OperationController {
 
     private ResponseEntity<?> handleApplyMappingFilter(String tenant, Map<String, String> parameters) throws Exception {
         String id = parameters.get("id");
+        if (id == null || id.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'id' is required");
+        }
         String filterMapping = parameters.get("filterMapping");
         mappingService.setFilterMapping(tenant, id, filterMapping);
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -433,6 +449,9 @@ public class OperationController {
 
     private ResponseEntity<?> handleApplyUpdateCode(String tenant, Map<String, String> parameters) throws Exception {
         String id = parameters.get("id");
+        if (id == null || id.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'id' is required");
+        }
         String code = parameters.get("code");
         mappingService.setCodeMapping(tenant, id, code);
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -440,7 +459,14 @@ public class OperationController {
 
     private ResponseEntity<?> handleDebugMapping(String tenant, Map<String, String> parameters) throws Exception {
         String id = parameters.get("id");
-        Boolean debugBoolean = Boolean.parseBoolean(parameters.get("debug"));
+        if (id == null || id.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'id' is required");
+        }
+        String debugParam = parameters.get("debug");
+        if (debugParam == null || debugParam.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'debug' is required");
+        }
+        Boolean debugBoolean = Boolean.parseBoolean(debugParam);
         mappingService.setDebugMapping(tenant, id, debugBoolean);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
