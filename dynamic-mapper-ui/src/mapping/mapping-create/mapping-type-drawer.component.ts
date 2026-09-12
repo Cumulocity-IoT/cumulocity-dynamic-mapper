@@ -237,6 +237,15 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     return this.isAIAgentDeployedFor(option.value);
   }
 
+  /** Gates the "could not verify AI availability" warning to transformation types AI would
+   *  otherwise have been offered for — showing it for e.g. EXTENSION_JAVA (which never offers
+   *  AI generation) would be noise, since manual entry is the only option there regardless. */
+  shouldShowAIAvailabilityWarning(): boolean {
+    if (!this.aiAvailabilityCheckFailed) return false;
+    const option = this.formGroup?.get('transformationType')?.value as TransformationTypeOption;
+    return !!option?.value && this.AI_GENERATION_TYPES.includes(option.value);
+  }
+
   /** Whether the code-template dropdown should be shown — hidden once the user picks "Generate with AI".
    *  Only relevant for Smart Function; JSONata has no code-template concept. */
   shouldShowCodeTemplateDropdown(): boolean {

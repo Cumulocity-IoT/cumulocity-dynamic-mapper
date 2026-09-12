@@ -186,4 +186,76 @@ describe('MappingTypeDrawerComponent', () => {
       expect(mockDrawerRef.close).not.toHaveBeenCalled();
     });
   });
+
+  describe('AI generation choice', () => {
+    it('defaults to "Generate with AI" and offers the choice when an agent is deployed for the default transformation type (SMART_FUNCTION)', async () => {
+      mockSharedService.getServiceConfiguration.and.resolveTo({
+        ...makeServiceConfiguration(),
+        smartFunctionAgent: 'agent-1'
+      });
+      mockAIAgentService.getAIAgents.and.resolveTo([{ name: 'agent-1' } as any]);
+
+      const component = await createComponent(Direction.INBOUND);
+
+      expect(component.shouldShowAIGenerationChoice()).toBeTrue();
+      expect(component.formGroup.get('codeTemplateSource')?.value).toBe('ai');
+      expect(component.isAIGenerationSelected()).toBeTrue();
+    });
+
+    it('does not offer the AI choice, and resolves with a code template instead, when no agent is deployed', async () => {
+      mockAIAgentService.getAIAgents.and.resolveTo([]);
+
+      const component = await createComponent(Direction.INBOUND);
+
+      expect(component.shouldShowAIGenerationChoice()).toBeFalse();
+      expect(component.formGroup.get('codeTemplateSource')?.value).toBe('template');
+
+      component.onContinue();
+      const result = await component.result;
+      expect(result.generateSmartFunctionWithAI).toBeFalse();
+    });
+
+    it('does not offer the AI choice for a transformation type outside AI_GENERATION_TYPES even if a fallback (javaScriptAgent) is deployed', async () => {
+      // EXTENSION_JAVA falls into resolveRequiredAgentName's default branch (javaScriptAgent) —
+      // this must stay gated off regardless, since extensions never support AI generation.
+      mockSharedService.getServiceConfiguration.and.resolveTo({
+        ...makeServiceConfiguration(),
+        javaScriptAgent: 'agent-js'
+      });
+      mockAIAgentService.getAIAgents.and.resolveTo([{ name: 'agent-js' } as any]);
+
+      const component = await createComponent(Direction.OUTBOUND);
+      component.formGroup.get('expertMode')?.setValue(true);
+      component.formGroup.get('transformationType')?.setValue({ value: TransformationType.EXTENSION_JAVA });
+      await flushPromises();
+
+      expect(component.shouldShowAIGenerationChoice()).toBeFalse();
+    });
+
+    it('sets aiAvailabilityCheckFailed and shows a distinct warning (rather than silently treating AI as unconfigured) when the agents check itself errors', async () => {
+      mockSharedService.getServiceConfiguration.and.resolveTo({
+        ...makeServiceConfiguration(),
+        smartFunctionAgent: 'agent-1'
+      });
+      mockAIAgentService.getAIAgents.and.rejectWith(new Error('network down'));
+
+      const component = await createComponent(Direction.INBOUND);
+
+      expect(component.aiAvailabilityCheckFailed).toBeTrue();
+      expect(component.shouldShowAIAvailabilityWarning()).toBeTrue();
+      expect(component.shouldShowAIGenerationChoice()).toBeFalse();
+    });
+
+    it('does not show the AI-availability warning for a transformation type that never offers AI (EXTENSION_JAVA)', async () => {
+      mockAIAgentService.getAIAgents.and.rejectWith(new Error('network down'));
+
+      const component = await createComponent(Direction.OUTBOUND);
+      component.formGroup.get('expertMode')?.setValue(true);
+      component.formGroup.get('transformationType')?.setValue({ value: TransformationType.EXTENSION_JAVA });
+      await flushPromises();
+
+      expect(component.aiAvailabilityCheckFailed).toBeTrue();
+      expect(component.shouldShowAIAvailabilityWarning()).toBeFalse();
+    });
+  });
 });

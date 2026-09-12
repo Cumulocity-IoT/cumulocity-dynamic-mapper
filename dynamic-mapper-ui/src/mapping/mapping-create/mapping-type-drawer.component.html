@@ -139,7 +139,7 @@
           }
           }
           <!-- AI availability check itself failed (network/parse error) - distinct from "no agent configured" -->
-          @if (aiAvailabilityCheckFailed) {
+          @if (shouldShowAIAvailabilityWarning()) {
           <c8y-form-group class="p-l-16 p-r-16">
             <div class="alert alert-warning" style="max-width: none;">
               <i c8yIcon="exclamation-triangle"></i>
