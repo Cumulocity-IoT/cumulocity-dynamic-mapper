@@ -109,7 +109,10 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     this.initializeBrokerFormFields();
     this.readOnly = this.configuration.enabled || this.action === 'view';
 
-    if (this.action !== 'create') {
+    // 'update'/'view' always have a connectorType; 'create' only does when duplicating an
+    // existing connector (see ConnectorGridComponent.onConfigurationCopy) — a brand-new "Add"
+    // has none yet and waits for the user to pick one via the select's own change handler.
+    if (this.action !== 'create' || this.configuration.connectorType) {
       this.createDynamicForm(this.configuration.connectorType);
     }
   }
@@ -310,10 +313,14 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   }
 
   private setDefaultConfiguration(connectorType: ConnectorType): void {
-    const formattedName = connectorType === ConnectorType.WEB_HOOK_INTERNAL
-      ? 'Cumulocity API'
-      : this.formatStringPipe.transform(connectorType);
-    this.configuration.name = `${formattedName} - ${nextIdAndPad(this.configurationsCount, 2)}`;
+    // A duplicated connector (see ConnectorGridComponent.onConfigurationCopy) already has a
+    // name ("<original>_copy") by the time this runs — don't clobber it with a generated one.
+    if (!this.configuration.name) {
+      const formattedName = connectorType === ConnectorType.WEB_HOOK_INTERNAL
+        ? 'Cumulocity API'
+        : this.formatStringPipe.transform(connectorType);
+      this.configuration.name = `${formattedName} - ${nextIdAndPad(this.configurationsCount, 2)}`;
+    }
     this.configuration.enabled = false;
   }
 
@@ -336,8 +343,10 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     const entries: PropertyEntry[] = [];
 
     Object.entries(dynamicFields.properties).forEach(([key, property]) => {
-      // Set default values for create action
-      if ('defaultValue' in property && this.action === 'create') {
+      // Set default values for a genuinely blank create — but not when duplicating an existing
+      // connector (see ConnectorGridComponent.onConfigurationCopy), whose cloned `properties`
+      // already carry the real values that must be preserved, not overwritten with defaults.
+      if ('defaultValue' in property && this.action === 'create' && this.configuration.properties[key] === undefined) {
         this.configuration.properties[key] = property.defaultValue;
       }
 

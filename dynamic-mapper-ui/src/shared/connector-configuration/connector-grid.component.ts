@@ -30,7 +30,7 @@ import { ConnectorConfigurationService } from '../service/connector-configuratio
 import { LoggingEventType } from '../connector-details/connector-log.model';
 import { DeploymentMapEntry, Direction, Feature } from '../mapping/mapping.model';
 import { createCustomUuid } from '../mapping/util';
-import { applyConnectorConfigurationChange, ConnectorConfiguration, ConnectorConfigurationApiPayload, ConnectorSpecification, ConnectorType, PollingInterval, prepareConnectorConfigurationForApi } from './connector.model';
+import { applyConnectorConfigurationChange, awaitDrawerResult, ConnectorConfiguration, ConnectorConfigurationApiPayload, ConnectorSpecification, ConnectorType, PollingInterval, prepareConnectorConfigurationForApi } from './connector.model';
 import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
 import { ActionVisibilityRule } from './types';
 import { SharedService } from '..';
@@ -229,8 +229,16 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
       .map(control => ({
         ...control,
         callback: this[control.callbackName].bind(this),
-        showIf: (item: ConnectorConfiguration) =>
-          this.selectable && control.type === 'VIEW' ? true : this.checkActionVisibility(item, control.visibilityRules)
+        // In selectable (deployment-map picker) mode, VIEW should be available regardless of
+        // role/enabled state — but must still respect the other rules, in particular the
+        // 'connectorType' rule that excludes the auto-created default HTTP connector everywhere
+        // else. Only the role-gating rule is meant to be bypassed here.
+        showIf: (item: ConnectorConfiguration) => {
+          const rules = this.selectable && control.type === 'VIEW'
+            ? control.visibilityRules.filter(rule => rule.type !== 'userRole')
+            : control.visibilityRules;
+          return this.checkActionVisibility(item, rules);
+        }
       }));
   }
 
@@ -315,14 +323,27 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
     });
   }
 
+  /** Connector types the "Connector type" select may offer: excludes singleton types that
+   *  already have a configured instance (unless Pulsar support is gated off entirely).
+   *  Shared by both the "Add" and "Duplicate" drawer flows so they can't drift apart. */
+  private computeAllowedConnectors(): ConnectorType[] {
+    const configuredConnectorType = this.configurations.reduce((types, config) => {
+      types.add(config.connectorType);
+      return types;
+    }, new Set());
+    return this.specifications
+      .filter(sp => (!sp.singleton || !configuredConnectorType.has(sp.connectorType)) &&
+        (sp.connectorType !== ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR || this.feature.pulsarAvailable))
+      .map(sp => sp.connectorType);
+  }
+
   private async handleModalResponse(
     response: ConnectorConfiguration | undefined,
     successMessage: string,
     errorMessage: string,
     action: (config: ConnectorConfigurationApiPayload) => Promise<any>
   ): Promise<void> {
-    await applyConnectorConfigurationChange(this.alertService, response, successMessage, errorMessage, action);
-    this.refresh();
+    await applyConnectorConfigurationChange(this.alertService, this.connectorConfigurationService, response, successMessage, errorMessage, action);
   }
 
   // Public methods
@@ -342,9 +363,10 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
       configuration: copiedConfig,
       specifications: this.specifications,
       configurationsCount: this.configurations?.length,
+      allowedConnectors: this.computeAllowedConnectors()
     }
     const drawer = this.bottomDrawerService.openDrawer(ConnectorConfigurationDrawerComponent, { initialState: this.initialStateDrawer });
-    const resultOf = await drawer.instance.result;
+    const resultOf = await awaitDrawerResult(drawer.instance.result);
     await this.handleModalResponse(
       resultOf,
       'Added successfully.',
@@ -380,21 +402,15 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
       configuration = cloneDeep(config);
     }
 
-    const configuredConnectorType = this.configurations.reduce((types, config) => {
-      types.add(config.connectorType);
-      return types;
-    }, new Set());
-    const allowedConnectors = this.specifications.filter(sp => (!sp.singleton || (!configuredConnectorType.has(sp.connectorType))) && (sp.connectorType !== ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR || this.feature.pulsarAvailable)).map(sp => sp.connectorType);
-
     this.initialStateDrawer = {
       action,
       configuration,
       specifications: this.specifications,
       configurationsCount: this.configurations?.length,
-      allowedConnectors: allowedConnectors
+      allowedConnectors: this.computeAllowedConnectors()
     }
     const drawer = this.bottomDrawerService.openDrawer(ConnectorConfigurationDrawerComponent, { initialState: this.initialStateDrawer });
-    const resultOf = await drawer.instance.result;
+    const resultOf = await awaitDrawerResult(drawer.instance.result);
     if (this.initialStateDrawer.action === 'create') {
       await this.handleModalResponse(
         resultOf,
@@ -437,8 +453,10 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
     const modalRef = this.bsModalService.show(ImportConnectorsComponent, { initialState: {} });
     modalRef.content.closeSubject
       .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        this.refresh();
+      .subscribe((didImport: boolean) => {
+        if (didImport) {
+          this.refresh();
+        }
         modalRef.hide();
       });
   }

@@ -156,21 +156,49 @@ export async function toggleConnectorConnection(
   return queued;
 }
 
+/**
+ * Awaits a drawer's `result` promise, treating a rejection (the drawer rejects with a reason
+ * string on Cancel — see e.g. ConnectorConfigurationDrawerComponent.onCancel) as "nothing to
+ * apply" instead of letting it surface as an unhandled promise rejection. Every drawer-opening
+ * call site in this feature awaited `drawer.instance.result` directly with no try/catch, so
+ * clicking Cancel on any connector create/edit/copy/view drawer threw an unhandled rejection
+ * every time — harmless in practice (there was nothing to do with a cancel anyway) but a real,
+ * constantly-reproducible error logged on every single cancel.
+ */
+export async function awaitDrawerResult<T>(result: Promise<T>): Promise<T | undefined> {
+  try {
+    return await result;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Applies a connector-configuration drawer's result (create/update/delete) and refreshes the
+ * shared configurations list — the common tail both ConnectorGridComponent and
+ * ConnectorDetailsComponent used to duplicate as their own private `handleModalResponse`
+ * (identical apart from which locally-named method they called to trigger the refresh, both of
+ * which just called `connectorConfigurationService.refreshConfigurations()` anyway).
+ * The refresh always runs, even for a no-op (`response` falsy, e.g. the user cancelled the
+ * drawer) — matching those methods' prior behavior of unconditionally refreshing afterward.
+ */
 export async function applyConnectorConfigurationChange(
   alertService: AlertService,
+  connectorConfigurationService: ConnectorConfigurationService,
   response: ConnectorConfiguration | undefined | null,
   successMessage: string,
   errorMessage: string,
   action: (config: ConnectorConfigurationApiPayload) => Promise<{ status: number }>
 ): Promise<void> {
-  if (!response) return;
+  if (response) {
+    const clonedConfiguration = prepareConnectorConfigurationForApi(response);
+    const apiResponse = await action(clonedConfiguration);
 
-  const clonedConfiguration = prepareConnectorConfigurationForApi(response);
-  const apiResponse = await action(clonedConfiguration);
-
-  if (apiResponse.status < 300) {
-    alertService.success(gettext(successMessage));
-  } else {
-    alertService.danger(gettext(errorMessage));
+    if (apiResponse.status < 300) {
+      alertService.success(gettext(successMessage));
+    } else {
+      alertService.danger(gettext(errorMessage));
+    }
   }
+  connectorConfigurationService.refreshConfigurations();
 }

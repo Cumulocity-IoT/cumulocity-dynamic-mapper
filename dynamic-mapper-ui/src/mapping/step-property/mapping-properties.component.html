@@ -47,5 +47,17 @@
       <div class="legend form-block">Topics</div>
       <formly-form [form]="propertyFormly" [fields]="propertyFormlyFields" [model]="mapping"></formly-form>
     </div>
+    @if (filterInventoryModel.filterExpression.resultType !== 'empty') {
+    <div class="row">
+      <div class="col-lg-6 d-col g-8">
+        <div class="form-group m-l-0 m-b-4">
+          <label translate class="p-l-8">Filter Inventory Result [{{ filterInventoryModel.filterExpression.resultType }}]</label>
+          <textarea class="form-control font-smaller" c8y-textarea-autoresize
+            data-cy="dm-mapping-properties-filter-inventory-result"
+            [readonly]="true">{{ filterInventoryModel.filterExpression.result }}</textarea>
+        </div>
+      </div>
+    </div>
+    }
   </div>
 </div>

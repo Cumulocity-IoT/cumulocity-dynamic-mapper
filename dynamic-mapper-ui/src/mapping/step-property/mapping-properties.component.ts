@@ -29,7 +29,7 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { FormGroup } from '@angular/forms';
-import { Alert, AlertService, CoreModule } from '@c8y/ngx-components';
+import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { debounceTime, distinctUntilChanged, Subject, takeUntil } from 'rxjs';
@@ -466,7 +466,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
 
   async updateFilterInventoryExpressionResult(path: string) {
     this.clearAlerts();
-    this.raiseAlert({ type: 'info', text: 'NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache.' });
+    this.stepperService.raiseAlert({ type: 'info', text: 'NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache.' });
     try {
       const resultExpression: JSON = await this.mappingService.evaluateExpression(
         JSON.parse('{}'),
@@ -496,15 +496,6 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
 
   clearAlerts(): void {
     this.alertService.clearAll();
-  }
-
-  raiseAlert(alert: Alert): void {
-    this.alertService.state.forEach(a => {
-      if (a.type === 'info') {
-        this.alertService.remove(a);
-      }
-    });
-    this.alertService.add(alert);
   }
 
   private initializeDirection(): void {

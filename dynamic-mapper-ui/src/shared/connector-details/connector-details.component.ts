@@ -20,7 +20,7 @@
 import * as _ from 'lodash';
 import { ChangeDetectorRef, Component, inject, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
-import { firstValueFrom, Observable, Subject, Subscription, takeUntil, tap } from 'rxjs';
+import { firstValueFrom, Observable, Subject, takeUntil, tap } from 'rxjs';
 import packageJson from '../../../package.json';
 import {
   ConnectorConfiguration,
@@ -38,7 +38,7 @@ import { ConnectorLogService } from '../service/connector-log.service';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { ActivatedRoute } from '@angular/router';
 import { ConnectorConfigurationDrawerComponent } from '../connector-configuration/edit/connector-configuration-drawer.component';
-import { applyConnectorConfigurationChange, ConnectorConfigurationApiPayload, toggleConnectorConnection } from '../connector-configuration/connector.model';
+import { applyConnectorConfigurationChange, awaitDrawerResult, ConnectorConfigurationApiPayload, toggleConnectorConnection } from '../connector-configuration/connector.model';
 // Imported directly (not via the shared barrel): these are referenced inside the @Component
 // decorator's `imports` array, evaluated synchronously at module-load time. The barrel
 // (shared/index.ts) exports this very component before it exports shared.module /
@@ -73,7 +73,6 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   LoggingEventTypeMap = LoggingEventTypeMap;
   LoggingEventType = LoggingEventType;
   ConnectorType = ConnectorType;
-  contextSubscription: Subscription;
   initialStateDrawer: any;
   isTogglingConnection = false;
 
@@ -91,7 +90,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
     this.specifications$ = this.connectorConfigurationService.getSpecifications();
     this.feature = await this.sharedService.getFeatures();
     this.serviceConfiguration = await this.sharedService.getServiceConfiguration();
-    this.contextSubscription = this.route.data.pipe(
+    this.route.data.pipe(
       takeUntil(this.destroy$),
       tap(({ connector }) => {
         this.configuration = connector;
@@ -145,14 +144,22 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
     const configuration = _.clone(this.configuration);
 
     const specifications = await firstValueFrom(this.specifications$);
+    // Mirrors the html's own gating for which of the two buttons ("Update configuration" /
+    // "View configuration") is shown — both call this same method, so it must independently
+    // work out which of the two the user actually clicked. Without this, `action` stayed
+    // undefined, which the drawer's `mode`/`readOnly` derivation silently treats as 'view' for
+    // the header/title but NOT for the actual editable-vs-read-only state (that's driven only
+    // by `configuration.enabled`) — so a non-admin viewing a disabled connector saw an
+    // editable form under a title that still claimed "View connector".
+    const action = !configuration.enabled && this.feature?.userHasMappingAdminRole ? 'update' : 'view';
     this.initialStateDrawer = {
       add: false,
+      action,
       configuration: configuration,
-      specifications: specifications,
-      readOnly: configuration.enabled
+      specifications: specifications
     };
     const drawer = this.bottomDrawerService.openDrawer(ConnectorConfigurationDrawerComponent, { initialState: this.initialStateDrawer });
-    const resultOf = await drawer.instance.result;
+    const resultOf = await awaitDrawerResult(drawer.instance.result);
     if (typeof resultOf === 'object' && resultOf !== null) {
       this.configuration = resultOf as ConnectorConfiguration;
     }
@@ -202,8 +209,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
     errorMessage: string,
     action: (config: ConnectorConfigurationApiPayload) => Promise<any>
   ): Promise<void> {
-    await applyConnectorConfigurationChange(this.alertService, response, successMessage, errorMessage, action);
-    this.reloadData();
+    await applyConnectorConfigurationChange(this.alertService, this.connectorConfigurationService, response, successMessage, errorMessage, action);
   }
 
   reloadData(): void {

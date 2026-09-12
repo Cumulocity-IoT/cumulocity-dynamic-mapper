@@ -596,6 +596,20 @@ describe('MappingStepperComponent', () => {
       });
       component.deploymentMapEntryChange({ identifier: 'x', connectors: ['c1'] });
     });
+
+    it('stores the new selection on the component (not just the button state), regardless of what the previous selection was', (done) => {
+      // Regression test: deploymentMapEntryChange must reassign this.deploymentMapEntry to the
+      // new value before computing isDisabled — previously it only used the stale prior value,
+      // so the field bound back down into <d11r-mapping-connector> never updated and the button
+      // state was always one selection behind.
+      component.deploymentMapEntry = { identifier: 'x', connectors: [] };
+      isButtonDisabled$.subscribe((disabled) => {
+        expect(component.deploymentMapEntry).toEqual({ identifier: 'x', connectors: ['c1'] });
+        expect(disabled).toBe(false);
+        done();
+      });
+      component.deploymentMapEntryChange({ identifier: 'x', connectors: ['c1'] });
+    });
   });
 
   describe('Substitution validity subscription', () => {

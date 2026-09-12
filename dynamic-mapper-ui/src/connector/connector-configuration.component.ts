@@ -20,7 +20,6 @@
 import { HttpStatusCode } from '@angular/common/http';
 import { Component, ViewChild } from '@angular/core';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
-import packageJson from '../../package.json';
 import {
   ConnectorConfiguration,
   Feature,
@@ -42,7 +41,6 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
 })
 export class ConnectorConfigurationComponent {
   @ViewChild(ConnectorGridComponent) connectorGridComponent!: ConnectorGridComponent;
-  version: string = packageJson.version;
   feature: Feature;
 
   constructor(
@@ -61,13 +59,19 @@ export class ConnectorConfigurationComponent {
   }
 
   async clickedReconnect2NotificationEndpoint() {
-    const response1 = await this.sharedService.runOperation(
-      { operation: Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS }
-    );
-    // console.log('Details reconnect2NotificationEndpoint', response1);
-    if (response1.status === HttpStatusCode.Created) {
-      this.alertService.success(gettext('Reconnected successfully.'));
-    } else {
+    try {
+      const response1 = await this.sharedService.runOperation(
+        { operation: Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS }
+      );
+      if (response1.status === HttpStatusCode.Created) {
+        this.alertService.success(gettext('Reconnected successfully.'));
+      } else {
+        this.alertService.danger(gettext('Failed to reconnect!'));
+      }
+    } catch (error) {
+      // runOperation rejects (network error, non-2xx) rather than resolving with a bad status
+      // in some failure modes — without this, the user got no feedback at all on those.
+      console.error('Failed to reconnect to notification endpoint:', error);
       this.alertService.danger(gettext('Failed to reconnect!'));
     }
   }

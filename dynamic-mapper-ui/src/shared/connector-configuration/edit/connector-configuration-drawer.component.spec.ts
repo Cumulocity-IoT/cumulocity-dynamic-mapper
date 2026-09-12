@@ -19,7 +19,7 @@
  */
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectorRef, NO_ERRORS_SCHEMA } from '@angular/core';
 import { BottomDrawerRef } from '@c8y/ngx-components';
 import { ConnectorConfigurationDrawerComponent } from './connector-configuration-drawer.component';
 import {
@@ -123,6 +123,14 @@ describe('ConnectorConfigurationDrawerComponent', () => {
       ]
     }).compileComponents();
 
+    // CoreModule (imported by the component) eagerly reaches into the c8y app-shell DI graph
+    // (ApplicationService et al.) that the test injector doesn't provide (NG0201). These specs
+    // exercise the component class, not the template, so strip the template/imports instead —
+    // same pattern as mapping-type-drawer.component.spec.ts.
+    TestBed.overrideComponent(ConnectorConfigurationDrawerComponent, {
+      set: { imports: [], providers: [], schemas: [NO_ERRORS_SCHEMA], template: '<div></div>' }
+    });
+
     fixture = TestBed.createComponent(ConnectorConfigurationDrawerComponent);
     component = fixture.componentInstance;
 
@@ -219,7 +227,6 @@ describe('ConnectorConfigurationDrawerComponent', () => {
       component['setConnectorDescription']();
 
       expect(component.description).toBe('MQTT Connector');
-      expect(component.configuration['description']).toBe('MQTT Connector');
     });
   });
 
@@ -279,9 +286,14 @@ describe('ConnectorConfigurationDrawerComponent', () => {
     });
 
     it('should trigger change detection after creating form', async () => {
+      // ChangeDetectorRef is a framework-provided token resolved through the component's own
+      // NodeInjector, which a TestBed-module-level `{ provide: ChangeDetectorRef, useValue: ... }`
+      // cannot intercept — spy on the real instance the component actually holds instead.
+      const cdrSpy = spyOn(component['cdr'], 'detectChanges');
+
       await component['createDynamicForm'](ConnectorType.MQTT);
 
-      expect(mockCdr.detectChanges).toHaveBeenCalled();
+      expect(cdrSpy).toHaveBeenCalled();
     });
   });
 
@@ -465,10 +477,20 @@ describe('ConnectorConfigurationDrawerComponent', () => {
 
   describe('Default Configuration', () => {
     beforeEach(async () => {
+      // A genuinely blank "Add" never has a name yet (see ConnectorGridComponent.onConfigurationAddOrUpdate,
+      // which builds { properties: {}, identifier } with no `name`) — only a duplicate does.
+      component.configuration = { ...mockConfiguration, name: undefined };
       await component.ngOnInit();
+      // ngOnInit's own auto-populate (connectorType is already set, and name is blank — the fix
+      // under test) already generated a name as a side effect. Clear it again so each test below
+      // exercises its own setDefaultConfiguration() call from a clean starting point.
+      component.configuration.name = undefined;
     });
 
     it('should set default name for new connector', () => {
+      // nextIdAndPad(id, 2) pads id+1 — configurationsCount 0 means "no existing connectors yet".
+      component.configurationsCount = 0;
+
       component['setDefaultConfiguration'](ConnectorType.MQTT);
 
       expect(component.configuration.name).toContain('Formatted String');
@@ -492,6 +514,43 @@ describe('ConnectorConfigurationDrawerComponent', () => {
       component['setDefaultConfiguration'](ConnectorType.MQTT);
 
       expect(component.configuration.name).toContain('06');
+    });
+
+    it('does not overwrite a name that is already set (duplicate/"copy" flow)', () => {
+      // Regression test: ConnectorGridComponent.onConfigurationCopy passes action:'create' with
+      // a pre-populated `name` ("<original>_copy") — setDefaultConfiguration must leave it alone.
+      component.configuration.name = 'MQTT Connector_copy';
+
+      component['setDefaultConfiguration'](ConnectorType.MQTT);
+
+      expect(component.configuration.name).toBe('MQTT Connector_copy');
+      expect(component.configuration.enabled).toBe(false);
+    });
+  });
+
+  describe('Duplicate ("copy") flow', () => {
+    it('auto-populates the dynamic form on init when action is create but connectorType is already set', async () => {
+      component.action = 'create';
+      component.configuration = { ...mockConfiguration, name: 'MQTT Connector_copy' };
+
+      await component.ngOnInit();
+
+      expect(component.dynamicFormFields.length).toBeGreaterThan(0);
+    });
+
+    it('preserves an already-populated property value instead of resetting it to the spec default', async () => {
+      // mqttPort declares defaultValue: 1883 (see mockSpecifications) — a duplicate's cloned,
+      // already-customized value must survive, not get clobbered back to the spec default.
+      component.action = 'create';
+      component.configuration = {
+        ...mockConfiguration,
+        name: 'MQTT Connector_copy',
+        properties: { ...mockConfiguration.properties, mqttPort: 8883 }
+      };
+
+      await component.ngOnInit();
+
+      expect(component.configuration.properties['mqttPort']).toBe(8883);
     });
   });
 

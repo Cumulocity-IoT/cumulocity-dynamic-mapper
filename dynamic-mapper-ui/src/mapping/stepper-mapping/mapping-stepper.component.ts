@@ -57,6 +57,7 @@ import {
   captureMappingContentSnapshot,
   checkTransformationType,
   isCodeOrExtensionTransformation,
+  isConnectorSelectionEmpty,
   MappingContentSnapshot,
   stripTemplateMetadataTags,
   tryGetLiveEditorContent,
@@ -300,10 +301,10 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   deploymentMapEntryChange(deploymentMapEntry: DeploymentMapEntry): void {
-    const isDisabled = !this.deploymentMapEntry?.connectors || this.deploymentMapEntry?.connectors?.length === 0;
+    this.deploymentMapEntry = deploymentMapEntry;
     // Use queueMicrotask for change detection cycle completion
     queueMicrotask(() => {
-      this.isButtonDisabled$.next(isDisabled);
+      this.isButtonDisabled$.next(isConnectorSelectionEmpty(this.deploymentMapEntry));
       this.cdr.markForCheck();
     });
   }

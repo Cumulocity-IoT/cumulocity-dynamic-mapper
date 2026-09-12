@@ -24,11 +24,9 @@ import {
   Input,
   OnInit,
   Output,
-  ViewChild,
   ViewEncapsulation
 } from '@angular/core';
 import {
-  ConnectorConfiguration,
   ConnectorGridComponent,
   DeploymentMapEntry,
   Direction,
@@ -45,15 +43,11 @@ import { EditorMode } from '../shared/stepper.model';
   imports: [ConnectorGridComponent]
 })
 export class MappingConnectorComponent implements OnInit {
-  @ViewChild(ConnectorGridComponent) connectorGrid!: ConnectorGridComponent;
   @Input() showHeader: boolean = false;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() directions: Direction[] = [Direction.INBOUND, Direction.OUTBOUND];
   @Input() deploymentMapEntry: DeploymentMapEntry;
   @Output() deploymentMapEntryChange = new EventEmitter<DeploymentMapEntry>();
-
-  readonly Direction = Direction;
-  readonly EditorMode = EditorMode;
 
   readOnly: boolean;
 
@@ -64,13 +58,5 @@ export class MappingConnectorComponent implements OnInit {
   onDeploymentMapEntryChanged(value: DeploymentMapEntry): void {
     this.deploymentMapEntry = value;
     this.deploymentMapEntryChange.emit(value);
-  }
-
-  onConfigurationAddOrUpdate(config: ConnectorConfiguration): void {
-    this.connectorGrid.onConfigurationAddOrUpdate(config);
-  }
-
-  refresh(): void {
-    this.connectorGrid.refresh();
   }
 }
