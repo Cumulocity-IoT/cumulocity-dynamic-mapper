@@ -77,6 +77,7 @@ import { BehaviorSubject, finalize, Subject, take, takeUntil } from 'rxjs';
 import { CodeTemplate } from '../../configuration/shared/configuration.model';
 import { MappingService } from '../core/mapping.service';
 import { MappingBulkOperationsService } from '../core/mapping-bulk-operations.service';
+import { ExplorerMappingHandoffService } from '../core/explorer-mapping-handoff.service';
 import { SubscriptionService } from '../core/subscription.service';
 import { ImportMappingsComponent } from '../import/import-modal.component';
 import { MappingVersionDrawerComponent } from '../versions/mapping-version-drawer.component';
@@ -161,6 +162,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   private readonly confirmationService = inject(ConfirmationModalService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly explorerMappingHandoff = inject(ExplorerMappingHandoffService);
 
   constructor() {}
 
@@ -220,30 +222,26 @@ export class MappingComponent implements OnInit, OnDestroy {
           this.updateMapping(m);
         });
 
-      // If navigated from Message Explorer, auto-open the stepper with pre-filled data
-      const navState = history.state;
-      if (navState?.fromExplorer) {
+      // If navigated from Message Explorer, auto-open the stepper with pre-filled data.
+      // consume() is single-shot, so navigating away (e.g. into the stepper) and back here
+      // later never replays a stale hand-off.
+      const explorerHandoff = this.explorerMappingHandoff.consume();
+      if (explorerHandoff) {
         this.explorerPreFill = {
-          sessionTopic: navState.sessionTopic,
-          topic: navState.topic ?? '',
-          payload: navState.payload ?? '{}',
-          key: navState.key,
-          targetAPI: navState.targetAPI,
-          publishTopic: navState.publishTopic,
-          publishTopicSample: navState.publishTopicSample
+          sessionTopic: explorerHandoff.sessionTopic,
+          topic: explorerHandoff.topic ?? '',
+          payload: explorerHandoff.payload ?? '{}',
+          key: explorerHandoff.key,
+          targetAPI: explorerHandoff.targetAPI,
+          publishTopic: explorerHandoff.publishTopic,
+          publishTopicSample: explorerHandoff.publishTopicSample
         };
-        this.mappingType = navState.mappingType;
-        this.transformationType = navState.transformationType;
+        this.mappingType = explorerHandoff.mappingType;
+        this.transformationType = explorerHandoff.transformationType;
         this.substitutionsAsCode = this.transformationType === TransformationType.SMART_FUNCTION;
-        this.codeTemplate = navState.codeTemplate;
-        this.generateSmartFunctionWithAI = !!navState.generateSmartFunctionWithAI;
+        this.codeTemplate = explorerHandoff.codeTemplate;
+        this.generateSmartFunctionWithAI = !!explorerHandoff.generateSmartFunctionWithAI;
         this.addMapping();
-
-        // Consume once: history.state isn't cleared by Angular's router after being read, so
-        // without this, navigating away (e.g. into the stepper) and back here without a fresh
-        // router.navigate(..., { state }) call would replay fromExplorer and re-open the "add
-        // mapping" drawer unexpectedly.
-        history.replaceState({ ...history.state, fromExplorer: false }, '');
       }
     } finally {
       this.isLoading = false;

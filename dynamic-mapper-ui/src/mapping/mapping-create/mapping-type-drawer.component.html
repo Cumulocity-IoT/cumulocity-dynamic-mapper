@@ -138,6 +138,15 @@
           </c8y-form-group>
           }
           }
+          <!-- AI availability check itself failed (network/parse error) - distinct from "no agent configured" -->
+          @if (aiAvailabilityCheckFailed) {
+          <c8y-form-group class="p-l-16 p-r-16">
+            <div class="alert alert-warning" style="max-width: none;">
+              <i c8yIcon="exclamation-triangle"></i>
+              {{ 'Could not verify AI agent availability — proceeding with manual entry only.' | translate }}
+            </div>
+          </c8y-form-group>
+          }
           <!-- Manual vs. Generate with AI - Choice (only offered when an AI agent is deployed for this transformation type) -->
           @if (shouldShowAIGenerationChoice()) {
           <c8y-form-group class="p-l-16 p-r-16">

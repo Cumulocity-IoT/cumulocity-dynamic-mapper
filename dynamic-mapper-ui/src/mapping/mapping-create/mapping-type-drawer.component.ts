@@ -41,7 +41,7 @@ import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/
 import { CodeTemplate, ServiceConfiguration } from '../../configuration';
 import { base64ToString, stringToBase64, stripTemplateMetadataTags } from '../shared/util';
 import { ExtensionService } from '../../extension';
-import { AIAgentService } from '../core/ai-agent.service';
+import { AIAgentService, resolveRequiredAgentName } from '../core/ai-agent.service';
 
 // Types
 interface SelectOption<T> {
@@ -129,6 +129,10 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   isLoadingCodeTemplates = false;
   isLoadingExtensions = false;
   showTransformationType = false;
+  /** True if the deployed-agents check itself failed (network/parse error) rather than the
+   *  service genuinely reporting no agents — shown to the user so they don't mistake a
+   *  transient failure for "AI is not configured for this transformation type". */
+  aiAvailabilityCheckFailed = false;
   private serviceConfiguration: ServiceConfiguration;
   private deployedAgentNames = new Set<string>();
 
@@ -272,28 +276,20 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
   /** Whether an AI agent is deployed that can generate content for the given transformation type. */
   private isAIAgentDeployedFor(transformationType: TransformationType | undefined): boolean {
-    const agentName = this.getRequiredAgentName(transformationType);
+    if (!this.AI_GENERATION_TYPES.includes(transformationType)) return false;
+    const agentName = resolveRequiredAgentName(transformationType, this.serviceConfiguration);
     return !!agentName && this.deployedAgentNames.has(agentName);
-  }
-
-  private getRequiredAgentName(transformationType: TransformationType | undefined): string | undefined {
-    switch (transformationType) {
-      case TransformationType.JSONATA:
-        return this.serviceConfiguration?.jsonataAgent;
-      case TransformationType.SMART_FUNCTION:
-        return this.serviceConfiguration?.smartFunctionAgent;
-      default:
-        return undefined;
-    }
   }
 
   private async checkAIAgentAvailability(): Promise<void> {
     try {
       const agents = await this.aiAgentService.getAIAgents();
       this.deployedAgentNames = new Set(agents.map(agent => agent.name));
+      this.aiAvailabilityCheckFailed = false;
     } catch (error) {
       console.error('Failed to check AI agent availability:', error);
       this.deployedAgentNames = new Set();
+      this.aiAvailabilityCheckFailed = true;
     }
   }
 

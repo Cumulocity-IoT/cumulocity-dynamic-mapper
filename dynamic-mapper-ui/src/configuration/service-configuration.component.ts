@@ -169,10 +169,18 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
         map(agents => agents.map(agent => agent.name)),
         takeUntil(this.destroy$)
       )
-      .subscribe(agentNames => {
-        this.agents$.next(agentNames);
-        this.aiAgentDeployed = agentNames.length > 0;
-        this.updateAgentControlsState();
+      .subscribe({
+        next: agentNames => {
+          this.agents$.next(agentNames);
+          this.aiAgentDeployed = agentNames.length > 0;
+          this.updateAgentControlsState();
+        },
+        error: error => {
+          console.error('Failed to check AI agent availability:', error);
+          this.agents$.next([]);
+          this.aiAgentDeployed = false;
+          this.updateAgentControlsState();
+        }
       });
   }
 

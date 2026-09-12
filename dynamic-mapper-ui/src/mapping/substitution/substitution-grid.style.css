@@ -30,7 +30,7 @@
 }
 
 .substitution-grid-body {
-  max-height: 160px;
+  max-height: 200px;
   overflow-y: scroll;
   border-bottom: 1px solid var(--c8y-root-component-separator-color, #ddd);
 }

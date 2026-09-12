@@ -56,6 +56,7 @@ import {
 } from './message-explorer-drawer.component';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
 import { SubscriptionChoiceDrawerComponent } from './subscription-choice-drawer.component';
+import { ExplorerMappingHandoffService } from '../core/explorer-mapping-handoff.service';
 import { ALERT_INFO_TIMEOUT, Direction } from '../../shared';
 import {
   MessageExplorerDateRendererComponent,
@@ -196,6 +197,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
   private readonly route = inject(ActivatedRoute);
   private readonly inventoryService = inject(InventoryService);
   private readonly identityService = inject(IdentityService);
+  private readonly explorerMappingHandoff = inject(ExplorerMappingHandoffService);
 
   constructor() {
     this.toggleIntervalForm = this.fb.group({
@@ -626,25 +628,23 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
         publishTopicSample = apiPath + '/' + externalIdLabel;
       }
     }
-    // Navigate to the appropriate mapping grid; mapping.component.ts reads the state and opens the stepper
-    const targetRoute = direction === Direction.INBOUND ? ['../inbound'] : ['../outbound'];
-    this.router.navigate(targetRoute, {
-      relativeTo: this.route,
-      state: {
-        fromExplorer: true,
-        sessionTopic: this.sessionTopic,
-        topic: msg.topic,
-        payload: msg.payload,
-        key: msg.key,
-        mappingType: mappingResult.mappingType,
-        transformationType: mappingResult.transformationType,
-        codeTemplate: mappingResult.codeTemplate,
-        generateSmartFunctionWithAI: mappingResult.generateSmartFunctionWithAI,
-        targetAPI,
-        publishTopic,
-        publishTopicSample
-      }
+    // Hand the captured message + chosen mapping/transformation type off to the mapping grid,
+    // which applies it once it loads (see ExplorerMappingHandoffService).
+    this.explorerMappingHandoff.set({
+      sessionTopic: this.sessionTopic,
+      topic: msg.topic,
+      payload: msg.payload,
+      key: msg.key,
+      mappingType: mappingResult.mappingType,
+      transformationType: mappingResult.transformationType,
+      codeTemplate: mappingResult.codeTemplate,
+      generateSmartFunctionWithAI: mappingResult.generateSmartFunctionWithAI,
+      targetAPI,
+      publishTopic,
+      publishTopicSample
     });
+    const targetRoute = direction === Direction.INBOUND ? ['../inbound'] : ['../outbound'];
+    this.router.navigate(targetRoute, { relativeTo: this.route });
   }
 
   /**

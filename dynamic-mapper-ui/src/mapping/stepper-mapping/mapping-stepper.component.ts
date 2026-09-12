@@ -730,7 +730,7 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
           }
 
         } else {
-          // this.raiseAlert({ type: 'warning', text: 'No valid JavaScript code was generated.' });
+          this.alertService.warning('No valid JavaScript code was generated.');
         }
       } else {
         if (Array.isArray(result) && result.length > 0) {
@@ -752,11 +752,16 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
             );
           });
         } else {
-          // this.raiseAlert({ type: 'warning', text: 'No substitutions were generated.' });
+          this.alertService.warning('No substitutions were generated.');
         }
       }
     } catch (error) {
-      console.error('AI generation error:', error);
+      // The drawer rejects with this exact string when the user clicks "Cancel" — not a
+      // failure, so it shouldn't surface as an error to the user.
+      if (error !== 'User canceled') {
+        console.error('AI generation error:', error);
+        this.alertService.danger('AI generation failed. Please try again.');
+      }
     }
 
     this.isGenerateSubstitutionOpen = false;

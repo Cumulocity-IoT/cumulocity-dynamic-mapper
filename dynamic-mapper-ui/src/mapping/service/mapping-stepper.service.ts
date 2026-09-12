@@ -44,7 +44,7 @@ import {
 import { MappingService } from '../core/mapping.service';
 import { SharedService } from '../../shared';
 import { ExtensionService } from '../../extension';
-import { AIAgentService } from '../core/ai-agent.service';
+import { AIAgentService, resolveRequiredAgentName } from '../core/ai-agent.service';
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, toTemplateType } from '../../configuration/shared/configuration.model';
 import { createCompletionProviderFlowFunction, EditorMode } from '../shared/stepper.model';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
@@ -349,20 +349,18 @@ export class MappingStepperService {
         aiAgentDeployed: boolean;
         aiAgent: any;
     }> {
-        const agents = await this.aiAgentService.getAIAgents();
+        let agents: AgentTextDefinition[];
+        try {
+            agents = await this.aiAgentService.getAIAgents();
+        } catch (error) {
+            // A failed availability check must not block the rest of the editor bootstrap —
+            // fall back to "no agent deployed" and let the transformation step's own
+            // "Generate with AI" affordance simply stay hidden.
+            console.error('Failed to check AI agent deployment:', error);
+            return { aiAgentDeployed: false, aiAgent: null };
+        }
         const agentNames = agents.map(agent => agent.name);
-        const requiredAgentName = (() => {
-            switch (mapping.transformationType) {
-                case TransformationType.JSONATA:
-                // eslint-disable-next-line @typescript-eslint/no-deprecated -- legacy engine still resolves to the JSONata agent
-                case TransformationType.DEFAULT:
-                    return serviceConfiguration?.jsonataAgent;
-                case TransformationType.SMART_FUNCTION:
-                    return serviceConfiguration?.smartFunctionAgent;
-                default:
-                    return serviceConfiguration?.javaScriptAgent;
-            }
-        })();
+        const requiredAgentName = resolveRequiredAgentName(mapping.transformationType, serviceConfiguration);
 
         const hasRequiredAgent = requiredAgentName && agentNames.includes(requiredAgentName);
         const selectedAgent = hasRequiredAgent
