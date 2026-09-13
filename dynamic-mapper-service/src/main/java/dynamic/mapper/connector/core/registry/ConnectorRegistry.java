@@ -198,9 +198,16 @@ public class ConnectorRegistry {
         dispatcherOutboundMaps.put(tenant, new ConcurrentHashMap<>());
     }
 
+    /**
+     * Drops every per-tenant structure held here. Called from the unsubscribe cleanup, after
+     * {@link #unregisterAllClientsForTenant(String)} has closed the clients — that method empties
+     * the tenant's client map but leaves the (now empty) tenant entry behind, so remove it here
+     * too and keep the cleanup contract uniform: no key of an unsubscribed tenant survives.
+     */
     public void removeResources(String tenant) {
         connectorStatusMaps.remove(tenant);
         dispatcherOutboundMaps.remove(tenant);
+        connectorTenantMap.remove(tenant);
     }
 
     public void registerConnectors() throws ConnectorRegistryException, ConnectorException {

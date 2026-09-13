@@ -58,6 +58,19 @@ expected case, since it is internal status bookkeeping — are unaffected.
 `MappingStatus.equals`/`hashCode` now compare the mapping `identifier` rather than `id`, and
 `reset()` additionally clears `currentFailureCount`.
 
+### Multi-tenancy fixes
+
+- The catch-all mapping status was a single mutable `static` shared by every subscribed tenant,
+  so each tenant reported the sum of all tenants' unmatched-message counters (see the API note
+  above).
+- The external-ID resolution cache, its reverse index and its per-ID locks were **never** cleared
+  on unsubscribe. They grew for the lifetime of the process, and a tenant that unsubscribed and
+  re-subscribed resolved external IDs to managed objects that may have been deleted meanwhile.
+- The cached `RestConnector` holding a tenant's service-user credentials was never dropped on
+  unsubscribe, and `executeWithProcessingMode(mode, tenant, …)` could cache a connector built
+  from one tenant's context under another tenant's key. It now refuses to cache a mismatch.
+- `ConnectorRegistry` left an empty entry per unsubscribed tenant.
+
 ### Mapping status reporting
 
 - Messages arriving on a topic that no mapping covers are now counted on the catch-all status

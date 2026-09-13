@@ -121,6 +121,7 @@ public class MappingService {
         mappingRepository.clearReportedWarnings(tenant);
         dirtyMappings.remove(tenant);
         activationLocks.keySet().removeIf(key -> key.startsWith(tenant + ":"));
+        deactivationsInFlight.removeIf(key -> key.startsWith(tenant + ":"));
 
         log.info("{} - Resources removed", tenant);
     }

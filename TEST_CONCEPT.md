@@ -241,6 +241,9 @@ The behaviour described in [`docs/feature/reliability.md`](docs/feature/reliabil
 | `ServiceConfigurationServiceTest`, `ConnectorConfigurationServiceTest` (`configuration/`) | Configuration CRUD and defaults |
 | `MappingControllerTest`, `OperationControllerTest`, `TestControllerTest` (`controller/`) | REST surface: mapping CRUD, service operations, the testing endpoint |
 | `TenantRegistryTest`, `InventoryCacheEnrichmentServiceTest`, `MetricLRUCacheEvictionTest`, `GroupCacheManagerTest` | Per-tenant registries and cache eviction |
+| `TenantRegistryIsolationTest` (`core/`) | Tenant isolation and cleanup of the external-ID cache, its reverse index and per-ID locks; same external/internal id in two tenants stays separate |
+| `ProcessingModeServiceTenantTest` (`core/`) | Per-tenant `RestConnector` cache: bound to the right credentials, cleared per tenant, and not poisoned by an explicit tenant that disagrees with the ambient context |
+| `MultiTenancyIsolationTest` (`integration/`) | External-ID cache isolation and eviction across tenants |
 | `ExtensionManagerClassLoadingTest` (`core/`) | Processor-extension JAR class loading |
 | `MappingJackson3CompatibilityTest`, `LoggingEventTypeFrontendSyncTest` (`model/`) | Serialization compatibility; event-type constants kept in sync with the frontend |
 | `CumulocityErrorsTest` (`util/`) | Classification of transient platform errors |

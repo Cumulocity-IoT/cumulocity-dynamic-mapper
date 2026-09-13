@@ -1232,6 +1232,17 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return cacheManager.getOutboundExternalIdCacheSize(tenant);
     }
 
+    /**
+     * Drops the cached {@code RestConnector} for a tenant.
+     *
+     * <p>That connector holds the tenant's service-user credentials, so it must not outlive the
+     * subscription: without this, an unsubscribed tenant's credentials stay resident for the
+     * lifetime of the process, and a credential rotation is never picked up.
+     */
+    public void clearProcessingModeConnectorCache(String tenant) {
+        processingModeService.clearConnectorCache(tenant);
+    }
+
     public InventoryCache removeInventoryCache(String tenant) {
         return cacheManager.removeInventoryCache(tenant);
     }
