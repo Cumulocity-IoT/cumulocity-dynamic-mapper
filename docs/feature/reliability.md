@@ -477,6 +477,18 @@ write into the objects the processing path owns.
 Sending can be turned off entirely with `sendMappingStatus` in the service configuration; the
 counters are still maintained in memory, they just are not published.
 
+### Upgrading
+
+Statuses persisted by an earlier release keep loading and keep being reported: the JSON shape is
+unchanged, unknown properties from removed features (e.g. the 6.4.0 `snoopedTemplates*` fields)
+are ignored, and `ensureUnspecifiedStatus()` uses `computeIfAbsent`, so a persisted catch-all
+entry is reused rather than replaced with a zeroed one. Covered by
+[`MappingStatusPersistenceCompatibilityTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/service/status/MappingStatusPersistenceCompatibilityTest.java).
+
+A status whose mapping is no longer in the cache is omitted from the push (not from memory), so
+counters can briefly disappear from the fragment if a push happens before the mappings are
+loaded; the next housekeeping cycle restores them.
+
 ### Counter gotchas
 
 - **Counters are in-memory and survive only as long as the microservice instance**, except
@@ -506,3 +518,4 @@ counters are still maintained in memory, they just are not published.
 | [`ProcessingCancellationTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/processor/model/ProcessingCancellationTest.java) | That a misbehaving mapping is really stopped: cancel actions run (including when one throws), a runaway `while(true){}` GraalVM context is killed and its thread terminates, and a worker that ignores interruption is reported as **not** drained instead of silently leaking. |
 | [`ServiceConfigurationTimeoutTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/configuration/ServiceConfigurationTimeoutTest.java) | Budget defaults, null fallbacks, and the `pipelineTimeoutMS > maxCPUTimeMS` invariant. |
 | [`MappingStatusTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/model/MappingStatusTest.java) | Counter semantics: per-tenant catch-all status, `reset()` clearing the streak, lifetime errors surviving a recovery, snapshot isolation, and no lost updates under 8 concurrent writers. |
+| [`MappingStatusPersistenceCompatibilityTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/service/status/MappingStatusPersistenceCompatibilityTest.java) | A status fragment written by an older release still loads with its counters and is still pushed back to the inventory. |
