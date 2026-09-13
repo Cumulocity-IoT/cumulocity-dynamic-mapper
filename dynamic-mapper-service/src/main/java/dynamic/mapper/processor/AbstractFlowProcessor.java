@@ -28,6 +28,7 @@ import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -85,12 +86,27 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
             .cached(true)
             .buildLiteral();
 
+    /**
+     * Fires the CPU-budget deadlines. Only ever *schedules* — the kill itself is handed to
+     * {@link #JS_KILL_EXECUTOR}, because {@code Context.close(cancelIfExecuting=true)} blocks
+     * until the JavaScript has actually been aborted. Running the kill here would let a handful
+     * of simultaneously misbehaving mappings occupy every scheduler thread, and the CPU budget
+     * of every other mapping would then silently overrun while its deadline waited to be served.
+     */
     private static final ScheduledExecutorService JS_TIMEOUT_SCHEDULER =
             Executors.newScheduledThreadPool(2, r -> {
                 Thread t = new Thread(r, "js-cpu-timeout");
                 t.setDaemon(true);
                 return t;
             });
+
+    /**
+     * Runs the blocking {@code Context.close(true)}/{@code PooledGraalContext.kill()} calls. One
+     * (virtual) thread per runaway execution, so the number of mappings that can be killed
+     * concurrently is not capped by a fixed pool.
+     */
+    private static final ExecutorService JS_KILL_EXECUTOR =
+            Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("js-cpu-kill-", 0).factory());
 
     protected final MappingService mappingService;
     protected final GraalVMContextService graalVMContextService;
@@ -351,8 +367,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
 
                  // Enforce maxCPUTimeMS: schedule a hard kill via Context.close(true) or
                  // PooledGraalContext.kill() so an infinite loop cannot exceed the configured budget.
-                 int maxCPUTimeMS = serviceConfiguration.getMaxCPUTimeMS() != null
-                         ? serviceConfiguration.getMaxCPUTimeMS() : 0;
+                 int maxCPUTimeMS = serviceConfiguration.getEffectiveMaxCPUTimeMS();
                  ScheduledFuture<?> cpuTimeoutFuture = null;
                  // Mutual exclusion between the timer and the finally-block: exactly one of
                  // the two will win the compareAndSet(false→true). Only the timer calls
@@ -372,19 +387,24 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                          log.warn("{} - JS CPU time limit exceeded ({}ms), closing GraalVM context for mapping: {}",
                                  tenant, maxCPUTimeMS, mapping.getName());
                          // Signal cancellation so post-JS C8Y calls in SendInboundProcessor
-                         // and C8YAgent.createMEAO() skip their requests.
+                         // and C8YAgent.createMEAO() skip their requests. Done on the scheduler
+                         // thread (cheap, and the sooner it is visible the better); the blocking
+                         // close is handed off so this thread stays free for other deadlines.
                          if (wrapperRef != null) {
                              wrapperRef.getCancellationRequested().set(true);
                          }
-                         if (pooledCtxRef != null) {
-                             pooledCtxRef.kill();
-                         } else {
-                             try {
-                                 graalCtxRef.close(true);
-                             } catch (Exception ex) {
-                                 log.debug("{} - GraalVM close(true) on CPU timeout threw: {}", tenant, ex.getMessage());
+                         JS_KILL_EXECUTOR.execute(() -> {
+                             if (pooledCtxRef != null) {
+                                 pooledCtxRef.kill();
+                             } else {
+                                 try {
+                                     graalCtxRef.close(true);
+                                 } catch (Exception ex) {
+                                     log.debug("{} - GraalVM close(true) on CPU timeout threw: {}", tenant,
+                                             ex.getMessage());
+                                 }
                              }
-                         }
+                         });
                      }, maxCPUTimeMS, TimeUnit.MILLISECONDS);
                  }
                  try {

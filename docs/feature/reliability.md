@@ -1,17 +1,19 @@
-# Reliability: delivery guarantees and failure handling
+# Reliability: delivery guarantees, timeouts and failure handling
 
 What happens to a message when something goes wrong. Two independent mechanisms, both
 configured per mapping, plus the transport-level retry that sits underneath them:
 
-| Mechanism | Mapping field | Question it answers | Section |
+| Mechanism | Configured by | Question it answers | Section |
 |---|---|---|---|
-| Delivery guarantee | `qos` | When may the broker message be acknowledged — before processing, or only after it succeeded? | [Quality of Service](#quality-of-service) |
-| Failure threshold | `maxFailureCount` | When should a mapping that keeps failing be taken out of service? | [Failure handling](#failure-handling) |
+| Delivery guarantee | `Mapping.qos` | When may the broker message be acknowledged — before processing, or only after it succeeded? | [Quality of Service](#quality-of-service) |
+| Failure threshold | `Mapping.maxFailureCount` | When should a mapping that keeps failing be taken out of service? | [Failure handling](#failure-handling) |
 | Poison-pill guard | — (fixed at 5) | How often may one message be redelivered before it is dropped? | [The poison-pill guard](#the-poison-pill-guard) |
+| Processing budgets | `maxCPUTimeMS`, `pipelineTimeoutMS` (service configuration) | How long may one message occupy CPU and a worker thread before it is killed? | [Processing timeouts](#processing-timeouts) |
 
 They compose: `qos > 0` is what causes a failed message to be redelivered at all;
 `maxFailureCount` is what stops a mapping that fails every time; the poison-pill guard is
-what stops a single bad message from being redelivered forever.
+what stops a single bad message from being redelivered forever; and the processing budgets
+are what stop a single message from consuming the service.
 
 ---
 
@@ -215,6 +217,93 @@ transport limitation.
 
 ---
 
+## Processing timeouts
+
+Two **nested** budgets, both tenant-wide in *Configuration → Service Configuration*:
+
+| Setting | Default | Bounds | Enforced by |
+|---|---|---|---|
+| `maxCPUTimeMS` | 5 000 ms | JavaScript execution inside GraalVM | [`AbstractFlowProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractFlowProcessor.java) |
+| `pipelineTimeoutMS` | 8 000 ms | The **whole** pipeline: JS *plus* the Cumulocity REST calls that follow it | the broker callback that is waiting for the result |
+
+`pipelineTimeoutMS` must be strictly greater than `maxCPUTimeMS`. Otherwise the callback
+cancels the pipeline before the JavaScript can ever reach its own limit, and the CPU budget
+becomes unreachable. The rule is enforced in two places: the service-configuration form
+refuses to save a violating pair, and
+[`ServiceConfiguration.getEffectivePipelineTimeoutMS()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/configuration/ServiceConfiguration.java)
+raises the value at runtime for configurations that predate that check.
+
+**Always read these through `getEffectiveMaxCPUTimeMS()` / `getEffectivePipelineTimeoutMS()`.**
+The raw getters are nullable, and call sites that inlined their own fallback used to disagree
+— 5 000 ms in the inbound dispatcher, 8 000 ms in the defaults and 30 000 ms in three
+callbacks, for the same setting.
+
+### Which mappings get a budget
+
+The dispatchers set a per-message `pipelineTimeoutMS` **only for Smart Function mappings**
+(`mapping.isTransformationAsCode()`); everything else gets 0. A JSONata or extension mapping
+has no JavaScript to bound, so the CPU budget is meaningless for it.
+
+0 does **not** mean "wait forever", though. Every callback falls back to
+`ServiceConfiguration.PROCESSING_HARD_CEILING_MS` (120 s) — an unbounded `Future.get()` would
+park the worker thread, and with it the un-acknowledged message, for as long as the pipeline
+stays blocked in I/O.
+
+### How a runaway mapping is stopped
+
+```
+maxCPUTimeMS elapses
+   │  JS_TIMEOUT_SCHEDULER fires
+   ├─ set cancellationRequested            → post-JS C8Y calls skip themselves
+   └─ JS_KILL_EXECUTOR: Context.close(true) → aborts the JavaScript
+
+pipelineTimeoutMS elapses (callback side)
+   └─ ProcessingResultWrapper.cancelAndDrain(2 s)
+        ├─ cancellationRequested = true
+        ├─ Future.cancel(true)             → unblocks interruptible I/O
+        ├─ every registered cancel action  → Context.close(true) for live GraalVM contexts
+        └─ wait for the worker to really leave, and report whether it did
+```
+
+Two details matter and are easy to get wrong:
+
+- **`Future.cancel(true)` alone is not enough.** CPU-bound JavaScript ignores Java thread
+  interruption; only `Context.close(cancelIfExecuting=true)` — registered as a *cancel
+  action* — stops it. A callback that calls `Future.cancel(true)` directly leaves the
+  GraalVM context running. Every callback must use `cancelAndDrain`.
+- **`Future.isDone()` cannot tell you the worker has left.** It flips to `true` the instant
+  `cancel(true)` is called, while the thread may still be spinning in JS or blocked in an
+  uninterruptible HTTP call. The drain therefore waits on a latch the pipeline itself counts
+  down in a `finally` block (`markWorkerStarted()` / `markWorkerCompleted()`), not on the
+  future. A drain loop polling `isDone()` returns "drained" on its first iteration every
+  time — it cannot detect a leaked thread, which is precisely what it exists for.
+
+The blocking kill runs on its own executor (`JS_KILL_EXECUTOR`), not on the scheduler:
+`Context.close(true)` blocks until the JavaScript has actually been aborted, so doing it on
+the two-thread scheduler would let a few simultaneously misbehaving mappings delay the CPU
+deadline of every other mapping.
+
+When the drain window expires with the worker still running, that is logged at `ERROR`
+("the thread is still running") — the only case where a thread really does linger, and it
+means the worker is stuck in something neither interruptible nor cancellable.
+
+### Timeout gotchas
+
+- **A timeout is not a failure of the message, it is a failure of the mapping.** The
+  callback does not acknowledge; the broker redelivers, bounded by the
+  [poison-pill guard](#the-poison-pill-guard).
+- **Retransmissions get more time**, up to `MAX_TIMEOUT_ESCALATION_FACTOR` (3×) the base
+  budget, since a timeout can be caused by a transiently slow platform. The previous cap was
+  the configured pipeline timeout — which *equals* the base budget — so the escalation could
+  never actually increase anything.
+- **The CPU budget is per `execute()` call, not per message.** A mapping that emits many
+  requests spends its JS budget once and then does an unbounded number of C8Y calls, which
+  is what `pipelineTimeoutMS` is there to cover.
+- **Raising `maxCPUTimeMS` without raising `pipelineTimeoutMS` does nothing** — see the
+  invariant above.
+
+---
+
 ## Failure handling
 
 QoS decides whether a *failed message* is redelivered. `maxFailureCount` decides when a
@@ -332,3 +421,5 @@ Note the two counters are per different things: the poison-pill counter is **per
 | [`GooglePubSubClientTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/connector/googlepubsub/GooglePubSubClientTest.java) | Ack-before-processing vs. ack-after-success / nack-on-error. |
 | [`MappingStatusServiceFailureCountTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/service/status/MappingStatusServiceFailureCountTest.java) | The streak semantics: threshold reported only on the failure that reaches it, `maxFailureCount == 0` never trips, success clears the streak. |
 | [`MappingServiceFailureThresholdTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/service/MappingServiceFailureThresholdTest.java) | The mapping is really deactivated at the threshold, and a burst of failures deactivates only once. |
+| [`ProcessingCancellationTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/processor/model/ProcessingCancellationTest.java) | That a misbehaving mapping is really stopped: cancel actions run (including when one throws), a runaway `while(true){}` GraalVM context is killed and its thread terminates, and a worker that ignores interruption is reported as **not** drained instead of silently leaking. |
+| [`ServiceConfigurationTimeoutTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/configuration/ServiceConfigurationTimeoutTest.java) | Budget defaults, null fallbacks, and the `pipelineTimeoutMS > maxCPUTimeMS` invariant. |

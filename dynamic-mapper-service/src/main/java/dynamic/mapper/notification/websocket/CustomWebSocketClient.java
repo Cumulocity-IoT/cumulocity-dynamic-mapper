@@ -56,6 +56,9 @@ public class CustomWebSocketClient extends WebSocketClient {
      */
     private static final int MAX_CONSECUTIVE_FAILURES = 5;
 
+    /** Upper bound on the per-retransmission timeout escalation, as a multiple of the base budget. */
+    private static final int MAX_TIMEOUT_ESCALATION_FACTOR = 3;
+
 
     private final NotificationCallback callback;
     private ScheduledExecutorService executorService = null;
@@ -137,16 +140,19 @@ public class CustomWebSocketClient extends WebSocketClient {
                         int attempt = failureCountPerMessage.getOrDefault(messageId, new AtomicInteger(0)).get();
                         effectiveTimeout = Math.min(
                                 (long) timeout * (attempt + 1),
-                                serviceConfiguration.getPipelineTimeoutMS() != null
-                                        ? serviceConfiguration.getPipelineTimeoutMS() : 30_000);
+                                (long) timeout * MAX_TIMEOUT_ESCALATION_FACTOR);
                         if (attempt > 0) {
                             log.info("{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
                                     tenant, attempt + 1, effectiveTimeout, timeout, connectorId.getIdentifier());
                         }
                         results = processedResults.getProcessingResult().get(effectiveTimeout,
                                 TimeUnit.MILLISECONDS);
-                    } else if(processedResults.getProcessingResult() != null) {
-                        results = processedResults.getProcessingResult().get();
+                    } else if (processedResults.getProcessingResult() != null) {
+                        // No per-message budget: still bounded, so a pipeline blocked in I/O
+                        // cannot park this worker forever.
+                        effectiveTimeout = ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
+                        results = processedResults.getProcessingResult().get(effectiveTimeout,
+                                TimeUnit.MILLISECONDS);
                     }
 
                     // JS CPU timeout may have fired and closed the GraalVM context before the

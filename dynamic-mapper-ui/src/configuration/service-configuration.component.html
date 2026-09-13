@@ -371,6 +371,11 @@
                     formControlName="pipelineTimeoutMS" />
                   <span></span>
                 </label>
+                @if (pipelineTimeoutInvalid) {
+                <div class="text-danger small m-t-4" data-cy="dm-pipeline-timeout-error">
+                  {{ 'Must be greater than the CPU time limit — otherwise the CPU limit is never reached.' | translate }}
+                </div>
+                }
               </div>
             </div>
           </c8y-li>

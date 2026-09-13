@@ -23,6 +23,7 @@ package dynamic.mapper.processor.model;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -111,6 +112,79 @@ public class ProcessingResultWrapper<O> {
      * @return {@code true} if the future cancellation succeeded (same semantics as
      *         {@link Future#cancel(boolean)})
      */
+    /**
+     * Cancels the in-flight processing and waits for the worker to actually finish.
+     *
+     * <p>{@link #cancelProcessing()} only <em>requests</em> the stop; this additionally verifies
+     * that the worker thread left, so a caller can tell a stuck pipeline (blocked in an
+     * uninterruptible HTTP call) from a cleanly cancelled one. Every broker callback must use
+     * this on a timeout — a callback that only calls {@code Future.cancel(true)} interrupts the
+     * thread but never runs the registered cancel actions, and CPU-bound GraalVM JavaScript
+     * ignores Java thread interruption entirely.
+     *
+     * <p>The active-cancellation checks in {@code C8YAgent.createMEAO()} stop new HTTP calls from
+     * starting, so workers normally exit well within the window.
+     *
+     * @param drainMillis how long to wait for the worker to finish after cancelling
+     * @return {@code true} if the processing future completed within {@code drainMillis}
+     */
+    public boolean cancelAndDrain(long drainMillis) {
+        boolean cancelled = cancelProcessing();
+        log.debug("Cancellation requested, future was cancelled={}", cancelled);
+
+        if (!workerTracked.get()) {
+            // Nothing to observe (early-exit path, or an already-completed future): treat the
+            // pipeline as drained. Note that Future.isDone() deliberately is NOT consulted here
+            // — see workerCompleted.
+            return true;
+        }
+        try {
+            boolean drained = workerCompleted.await(drainMillis, java.util.concurrent.TimeUnit.MILLISECONDS);
+            if (!drained) {
+                log.error("Processing worker did NOT finish within {}ms after cancellation — the thread "
+                        + "is still running. Check for long-running HTTP calls or other blocking I/O.",
+                        drainMillis);
+            }
+            return drained;
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    /**
+     * Registers that a worker thread is running this pipeline, so {@link #cancelAndDrain(long)}
+     * can tell whether it actually left. Call from the task itself, before any work.
+     */
+    public void markWorkerStarted() {
+        workerTracked.set(true);
+    }
+
+    /**
+     * Signals that the worker thread has left the pipeline. Must be called from a {@code finally}
+     * block so it runs on the exception and cancellation paths too.
+     */
+    public void markWorkerCompleted() {
+        workerCompleted.countDown();
+    }
+
+    /** Default window a broker callback waits for a cancelled pipeline to drain. */
+    public static final long DEFAULT_DRAIN_MILLIS = 2_000;
+
+    /**
+     * Counts down when the worker thread actually leaves the pipeline.
+     *
+     * <p>This exists because {@link Future#isDone()} is <strong>not</strong> a usable signal here:
+     * it flips to {@code true} the instant {@code cancel(true)} is called, while the worker may
+     * still be spinning in CPU-bound JavaScript or blocked in an uninterruptible HTTP call. A
+     * drain loop polling {@code isDone()} therefore always reported "drained" on its first
+     * iteration and could never detect a leaked thread.
+     */
+    private final CountDownLatch workerCompleted = new CountDownLatch(1);
+
+    /** Whether a worker ever registered itself; without one there is nothing to wait for. */
+    private final AtomicBoolean workerTracked = new AtomicBoolean(false);
+
     public boolean cancelProcessing() {
         log.debug("Cancelling processing on thread: {}", Thread.currentThread().getName());
 

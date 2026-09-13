@@ -75,6 +75,9 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
      */
     private static final int MAX_CONSECUTIVE_RECONNECTS = 5;
 
+    /** Upper bound on the per-retransmission timeout escalation, as a multiple of the base budget. */
+    private static final int MAX_TIMEOUT_ESCALATION_FACTOR = 3;
+
     protected final GenericMessageCallback genericMessageCallback;
     protected final String tenant;
     protected final String connectorIdentifier;
@@ -200,12 +203,16 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
                 try {
                     List<? extends ProcessingContext<?>> results;
                     if (timeout > 0) {
+                        // Give a retransmission more time than the first attempt: a timeout can
+                        // be caused by a transiently slow platform, not by a broken mapping.
+                        // Capped at MAX_TIMEOUT_ESCALATION_FACTOR x the base budget — the previous
+                        // cap (the configured pipeline timeout) equalled the base budget itself,
+                        // so the escalation could never actually increase anything.
                         int attempt = failureCountPerMessage
                                 .getOrDefault(messageId, new AtomicInteger(0)).get();
                         effectiveTimeout = Math.min(
                                 (long) timeout * (attempt + 1),
-                                serviceConfiguration.getPipelineTimeoutMS() != null
-                                        ? serviceConfiguration.getPipelineTimeoutMS() : 30_000);
+                                (long) timeout * MAX_TIMEOUT_ESCALATION_FACTOR);
                         if (attempt > 0) {
                             log.info(
                                     "{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
@@ -214,7 +221,12 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
                         results = processedResults.getProcessingResult().get(effectiveTimeout,
                                 TimeUnit.MILLISECONDS);
                     } else {
-                        results = processedResults.getProcessingResult().get();
+                        // No per-message budget (non-Smart-Function mapping). Still bounded: an
+                        // unbounded get() parks this worker — and leaves the message unacknowledged
+                        // — forever if the pipeline blocks in I/O.
+                        effectiveTimeout = ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
+                        results = processedResults.getProcessingResult().get(effectiveTimeout,
+                                TimeUnit.MILLISECONDS);
                     }
 
                     // JS CPU timeout may have fired and closed the GraalVM context before the
@@ -260,15 +272,12 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
                     // CPU-bound JS that ignores Java thread interruption.
                     log.warn("{} - Timeout occurred, initiating cancellation of processing task, connector: {}",
                             tenant, connectorIdentifier);
-                    var cancelResult = processedResults.cancelProcessing();
-                    log.info("{} - Cancellation result: future was cancelled={}, connector: {}",
-                            tenant, cancelResult, connectorIdentifier);
-
-                    boolean futureCompleted = drainFuture(processedResults);
+                    boolean futureCompleted = processedResults
+                            .cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
 
                     log.warn(
-                            "{} - END: Processing timed out after {}ms, not sending ACK. Triggering reconnect for retransmission. connector: {}, cancel result: {}, future completed: {}",
-                            tenant, effectiveTimeout, connectorIdentifier, cancelResult, futureCompleted);
+                            "{} - END: Processing timed out after {}ms, not sending ACK. Triggering reconnect for retransmission. connector: {}, future completed: {}",
+                            tenant, effectiveTimeout, connectorIdentifier, futureCompleted);
                     triggerReconnectOrAck(mqttMessage, topic, messageId);
                 } finally {
                     activeProcessingMessages.decrementAndGet();
@@ -283,35 +292,6 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
             }
             acknowledgeMessage(mqttMessage);
         }
-    }
-
-    /**
-     * Waits up to 2 seconds for the processing future to drain after cancellation.
-     * The active-cancellation checks in {@code C8YAgent.createMEAO()} prevent new HTTP calls,
-     * so threads typically exit quickly. The 2-second cap is a fail-safe for mid-flight HTTP calls.
-     *
-     * @return true if the future completed within the wait window, false otherwise
-     */
-    private boolean drainFuture(ProcessingResultWrapper<?> processedResults) {
-        for (int i = 0; i < 20; i++) {
-            if (processedResults.getProcessingResult().isDone()) {
-                log.info("{} - Future completed after {}ms wait, connector: {}",
-                        tenant, (i + 1) * 100, connectorIdentifier);
-                return true;
-            }
-            try {
-                Thread.sleep(100); //NOSONAR intentional wait for future completion
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                log.warn("{} - Interrupted while waiting for future completion, connector: {}",
-                        tenant, connectorIdentifier);
-                return false;
-            }
-        }
-        log.error("{} - Future did NOT complete within 2 seconds after cancellation! "
-                + "Check for long-running HTTP calls or other blocking I/O. connector: {}",
-                tenant, connectorIdentifier);
-        return false;
     }
 
     /**

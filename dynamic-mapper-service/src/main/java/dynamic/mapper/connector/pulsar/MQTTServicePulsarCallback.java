@@ -64,8 +64,7 @@ public class MQTTServicePulsarCallback extends AbstractPulsarCallback {
 
         ProcessingResultWrapper<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
         int timeout = processedResults.getPipelineTimeoutMS();
-        int pipelineTimeoutMS = serviceConfiguration.getPipelineTimeoutMS() != null
-                ? serviceConfiguration.getPipelineTimeoutMS() : 30_000;
+        int pipelineTimeoutMS = serviceConfiguration.getEffectivePipelineTimeoutMS();
 
         virtualThreadPool.submit(() -> {
             long effectiveTimeout = timeout;
@@ -74,9 +73,14 @@ public class MQTTServicePulsarCallback extends AbstractPulsarCallback {
                 if (timeout > 0) {
                     int attempt = failureCountPerMessage
                             .getOrDefault(messageId, new AtomicInteger(0)).get();
+                        // Give a retransmission more time than the first attempt: a timeout can
+                        // be caused by a transiently slow platform, not by a broken mapping.
+                        // Capped at MAX_TIMEOUT_ESCALATION_FACTOR x the base budget — the previous
+                        // cap (the configured pipeline timeout) equalled the base budget itself,
+                        // so the escalation could never actually increase anything.
                     effectiveTimeout = Math.min(
                             (long) timeout * (attempt + 1),
-                            pipelineTimeoutMS);
+                            (long) timeout * MAX_TIMEOUT_ESCALATION_FACTOR);
                     if (attempt > 0) {
                         log.info(
                                 "{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",

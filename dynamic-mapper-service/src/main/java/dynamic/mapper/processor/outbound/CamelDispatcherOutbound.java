@@ -311,8 +311,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
             int tempMaxCPUTime = 0;
             for (Mapping mapping : resolvedMappings) {
                 if (mapping.isTransformationAsCode()) {
-                    tempMaxCPUTime = serviceConfiguration.getPipelineTimeoutMS() != null
-                            ? serviceConfiguration.getPipelineTimeoutMS() : 30_000;
+                    tempMaxCPUTime = serviceConfiguration.getEffectivePipelineTimeoutMS();
                     break;
                 }
             }
@@ -346,9 +345,13 @@ public class CamelDispatcherOutbound implements NotificationCallback {
             // ── Early-exit path ──────────────────────────────────────────────────────────
             // If cancelProcessing() was already called (e.g. the timeout fired before this
             // thread was scheduled), skip Camel processing entirely.
+            // Lets a timed-out callback verify that this thread really left — Future.isDone()
+            // cannot tell it that, see ProcessingResultWrapper.workerCompleted.
+            result.markWorkerStarted();
             if (result.getCancellationRequested().get() || Thread.currentThread().isInterrupted()) {
                 log.info("{} - Outbound processing thread cancelled before Camel route started, skipping. connector: {}",
                         tenant, connectorIdentifier);
+                result.markWorkerCompleted();
                 return new ArrayList<>();
             }
             try {
@@ -382,6 +385,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
                 throw new RuntimeException("Camel processing failed", e);
             } finally {
                 timer.stop(outboundProcessingTimer);
+                result.markWorkerCompleted();
             }
         });
         result.setProcessingResult((Future) futureProcessingResult);

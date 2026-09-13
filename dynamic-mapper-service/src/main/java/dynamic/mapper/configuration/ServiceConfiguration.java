@@ -61,8 +61,8 @@ public class ServiceConfiguration implements Cloneable {
         this.inventoryCacheRetention = 1;
         // Default fragments to cache: type, name, id
         this.inventoryFragmentsToCache = new ArrayList<>(Arrays.asList("type", "name", "id"));
-        this.maxCPUTimeMS = 5000; // 5 seconds
-        this.pipelineTimeoutMS = 8000; // 8 seconds
+        this.maxCPUTimeMS = DEFAULT_MAX_CPU_TIME_MS;
+        this.pipelineTimeoutMS = DEFAULT_PIPELINE_TIMEOUT_MS;
         this.jsonataAgent = null;
         this.javaScriptAgent = null;
         this.smartFunctionAgent = null;
@@ -174,6 +174,63 @@ public class ServiceConfiguration implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     private Integer pipelineTimeoutMS;
+
+    // ---------------------------------------------------------------------------------------
+    // Processing timeouts — see docs/feature/reliability.md
+    //
+    // Two nested budgets:
+    //   maxCPUTimeMS     how long JavaScript may run inside GraalVM before the context is
+    //                    killed. Enforced by AbstractFlowProcessor.
+    //   pipelineTimeoutMS how long a broker callback waits for the *whole* pipeline (JS plus the
+    //                    Cumulocity REST calls that follow it) before it cancels and drains it.
+    //
+    // pipelineTimeoutMS must be strictly larger than maxCPUTimeMS, otherwise the wall-clock
+    // timeout always fires first and the CPU budget can never be reached. Callers must read
+    // these through getEffective*() rather than the raw getters, so the defaults and that
+    // invariant are applied in exactly one place.
+    // ---------------------------------------------------------------------------------------
+
+    /** Default JavaScript CPU budget: 5 s. */
+    public static final int DEFAULT_MAX_CPU_TIME_MS = 5_000;
+
+    /** Default end-to-end pipeline budget: 8 s (the CPU budget plus headroom for C8Y calls). */
+    public static final int DEFAULT_PIPELINE_TIMEOUT_MS = 8_000;
+
+    /** Headroom added on top of maxCPUTimeMS when a configuration violates the invariant. */
+    private static final int PIPELINE_HEADROOM_MS = 3_000;
+
+    /**
+     * Absolute upper bound on how long a single message may occupy a processing thread, used
+     * when a mapping has no pipeline timeout of its own (non-Smart-Function mappings, whose
+     * per-message timeout is 0). Without it, a pipeline blocked in I/O would park its worker
+     * thread — and, for QoS &gt; 0, the un-acknowledged message — forever.
+     */
+    public static final int PROCESSING_HARD_CEILING_MS = 120_000;
+
+    /**
+     * The JavaScript CPU budget actually applied, with the default substituted for a missing
+     * value. 0 or negative disables the CPU limit (the GraalVM context is then only bounded by
+     * the pipeline timeout).
+     */
+    public int getEffectiveMaxCPUTimeMS() {
+        return maxCPUTimeMS == null ? DEFAULT_MAX_CPU_TIME_MS : maxCPUTimeMS;
+    }
+
+    /**
+     * The end-to-end pipeline budget actually applied: the configured value, the default when
+     * unset, and never less than the CPU budget — a configuration where the pipeline timeout is
+     * not strictly larger than {@code maxCPUTimeMS} would make the CPU budget unreachable, so it
+     * is raised to {@code maxCPUTimeMS + }{@value #PIPELINE_HEADROOM_MS} ms instead of being
+     * honoured as written.
+     */
+    public int getEffectivePipelineTimeoutMS() {
+        int cpuBudget = getEffectiveMaxCPUTimeMS();
+        int configured = pipelineTimeoutMS == null ? DEFAULT_PIPELINE_TIMEOUT_MS : pipelineTimeoutMS;
+        if (cpuBudget > 0 && configured <= cpuBudget) {
+            return cpuBudget + PIPELINE_HEADROOM_MS;
+        }
+        return configured;
+    }
 
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Name of jsonata agent to be used when generating substitutions. The needs to be defined in the AI Agent Manager.", example = "jsonataAgent")
     @JsonSetter(nulls = Nulls.SKIP)

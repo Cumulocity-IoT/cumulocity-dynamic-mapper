@@ -146,8 +146,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
             if (resolvedMappings != null) {
                 for (Mapping mapping : resolvedMappings) {
                     if (mapping.isTransformationAsCode()) {
-                        tempPipelineTimeout = serviceConfiguration.getPipelineTimeoutMS() != null
-                                ? serviceConfiguration.getPipelineTimeoutMS() : 5_000;
+                        tempPipelineTimeout = serviceConfiguration.getEffectivePipelineTimeoutMS();
                         break;
                     }
                 }
@@ -164,6 +163,9 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
 
         // Process using Camel routes asynchronously
         Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(() -> {
+            // Lets a timed-out callback verify that this thread really left — Future.isDone()
+            // cannot tell it that, see ProcessingResultWrapper.workerCompleted.
+            result.markWorkerStarted();
             try {
                 Exchange exchange = createExchange(connectorMessage, resolvedMappings, testing); // Now can use final variable
                 // Pass the result wrapper so in-flight processors can register cancel actions
@@ -244,6 +246,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                 log.error("{} - Error processing inbound message through Camel routes: {}", tenant, e.getMessage(), e);
                 throw new RuntimeException("Camel processing failed", e);
             } finally {
+                result.markWorkerCompleted();
             }
         });
 

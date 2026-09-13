@@ -35,6 +35,7 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.ConnectorStatus;
 import dynamic.mapper.model.Direction;
+import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
@@ -750,7 +751,10 @@ public class KafkaClientV2 extends AConnectorClient {
             if (timeout > 0) {
                 results = processedResults.getProcessingResult().get(timeout, TimeUnit.MILLISECONDS);
             } else {
-                results = processedResults.getProcessingResult().get();
+                // Always bounded — an unbounded get() parks this worker, and blocks the offset
+                // commit, forever if the pipeline hangs in I/O.
+                results = processedResults.getProcessingResult()
+                        .get(ServiceConfiguration.PROCESSING_HARD_CEILING_MS, TimeUnit.MILLISECONDS);
             }
 
             boolean hasErrors = false;
@@ -787,9 +791,12 @@ public class KafkaClientV2 extends AConnectorClient {
                     tenant, topic, record.offset(), e);
             handleProcessingError(record, 0);
         } catch (TimeoutException e) {
-            processedResults.getProcessingResult().cancel(true);
-            log.warn("{} - Processing timed out for topic: [{}], offset: {}",
-                    tenant, topic, record.offset());
+            // cancelAndDrain, not Future.cancel(true): the bare cancel only interrupts the worker
+            // thread, which CPU-bound GraalVM JavaScript ignores — the registered cancel actions
+            // (Context.close(cancelIfExecuting=true)) are what actually stop it.
+            boolean drained = processedResults.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
+            log.warn("{} - Processing timed out for topic: [{}], offset: {}, worker drained: {}",
+                    tenant, topic, record.offset(), drained);
             handleProcessingTimeout(record);
         }
 

@@ -20,7 +20,7 @@
 import { HttpStatusCode } from '@angular/common/http';
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
@@ -128,6 +128,21 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * The JavaScript CPU budget is nested inside the end-to-end pipeline budget: if the pipeline
+   * timeout is not strictly larger, the callback cancels the pipeline before the JavaScript can
+   * ever reach its own limit, making `maxCPUTimeMS` unreachable. The backend defends itself by
+   * raising the value at runtime; catching it here means the user sees what they actually get.
+   */
+  static pipelineTimeoutExceedsCpuBudget(group: AbstractControl): ValidationErrors | null {
+    const cpu = Number(group.get('maxCPUTimeMS')?.value);
+    const pipeline = Number(group.get('pipelineTimeoutMS')?.value);
+    if (!Number.isFinite(cpu) || !Number.isFinite(pipeline) || cpu <= 0) {
+      return null;
+    }
+    return pipeline > cpu ? null : { pipelineTimeoutTooSmall: { cpu, pipeline } };
+  }
+
   private initializeForm(): void {
     this.serviceForm = this.fb.group({
       logPayload: [''],
@@ -160,7 +175,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       suppressDeprecationWarning: [''],
       cacheAliasMaps: [''],
       externalIdBinding: [''],
-    });
+    }, { validators: ServiceConfigurationComponent.pipelineTimeoutExceedsCpuBudget });
   }
 
   private subscribeToAIAgents(): void {
@@ -250,7 +265,17 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     }
   }
 
+  get pipelineTimeoutInvalid(): boolean {
+    return !!this.serviceForm?.errors?.['pipelineTimeoutTooSmall'];
+  }
+
   async clickedSaveServiceConfiguration() {
+    if (this.pipelineTimeoutInvalid) {
+      this.alertService.danger(
+        gettext('The processing timeout must be greater than the CPU time limit.')
+      );
+      return;
+    }
     const conf = this.serviceForm.value;
 
     conf.inventoryFragmentsToCache = this.inventoryFragmentsList
