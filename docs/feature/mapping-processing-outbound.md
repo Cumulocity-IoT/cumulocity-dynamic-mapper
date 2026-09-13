@@ -209,6 +209,33 @@ As with inbound, the individual transformation mechanisms are documented separat
 - [`transformation-smart-functions.md`](transformation-smart-functions.md) — `SmartFunctionContext` carries `aliasMap`/`isActive`/`deviceActiveMap` for SparkPlug B on the outbound side.
 - [`transformation-java-extensions.md`](transformation-java-extensions.md) — `ProcessorExtensionOutbound<O>`.
 
+### Worked example
+
+A concrete run through the diagram above, for an outbound mapping "Mapping 51" with
+`targetAPI: EVENT`, `filterMapping: "bus_event" in $keys($)`, and `publishTopic: "out/event/+"`
+(the `+` resolved from the device's external ID):
+
+```mermaid
+sequenceDiagram
+    participant C8Y as Cumulocity
+    participant Notif as Notification 2.0
+    participant Dispatch as CamelDispatcherOutbound
+    participant Resolve as MappingResolverService
+    participant Subst as SubstitutionResultOutboundProcessor
+    participant Broker as MQTT broker
+
+    Note over C8Y,Broker: Mapping 51: targetAPI EVENT, filterMapping "bus_event" in $keys($), publishTopic "out/event/+"
+    C8Y->>Notif: new EVENT c8y_BusEvent<br/>source.id 50720432, bus_event stop_event
+    Notif->>Dispatch: onNotification()<br/>WebSocket delivery
+    Dispatch->>Dispatch: convertNotificationToC8YMessage()<br/>parse payload, extract source.id
+    Dispatch->>Resolve: resolveMappingOutbound(tenant, EVENT)
+    Resolve->>Resolve: filterMapping matches ("bus_event" present)<br/>-> Mapping 51 selected
+    Resolve->>Dispatch: enrich with _IDENTITY_<br/>(externalId "berlin_01" for source.id 50720432)
+    Dispatch->>Subst: dispatch by TransformationType,<br/>apply substitutions to targetTemplate
+    Subst->>Subst: resolve publishTopic "out/event/+"<br/>-> "out/event/berlin_01"
+    Subst->>Broker: PUBLISH out/event/berlin_01<br/>{device: berlin_01, text: "Bus was stopped", bus_event: stop_event}
+```
+
 ### Testing
 
 Outbound tests reuse the same dispatcher: `onTestNotification()` builds a synthetic
