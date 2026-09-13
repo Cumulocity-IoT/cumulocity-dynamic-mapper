@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 
@@ -209,9 +210,14 @@ public class ServiceConfiguration implements Cloneable {
 
     /**
      * The JavaScript CPU budget actually applied, with the default substituted for a missing
-     * value. 0 or negative disables the CPU limit (the GraalVM context is then only bounded by
+     * value.
+     *
+     * <p>{@code @JsonIgnore}: derived, not stored. Without it Jackson emits it as an
+     * {@code effectiveMaxCPUTimeMS} property, adding a field to the persisted service
+     * configuration that nothing reads back. 0 or negative disables the CPU limit (the GraalVM context is then only bounded by
      * the pipeline timeout).
      */
+    @JsonIgnore
     public int getEffectiveMaxCPUTimeMS() {
         return maxCPUTimeMS == null ? DEFAULT_MAX_CPU_TIME_MS : maxCPUTimeMS;
     }
@@ -223,6 +229,7 @@ public class ServiceConfiguration implements Cloneable {
      * is raised to {@code maxCPUTimeMS + }{@value #PIPELINE_HEADROOM_MS} ms instead of being
      * honoured as written.
      */
+    @JsonIgnore
     public int getEffectivePipelineTimeoutMS() {
         int cpuBudget = getEffectiveMaxCPUTimeMS();
         int configured = pipelineTimeoutMS == null ? DEFAULT_PIPELINE_TIMEOUT_MS : pipelineTimeoutMS;

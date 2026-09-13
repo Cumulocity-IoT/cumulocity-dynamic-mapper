@@ -25,6 +25,7 @@ import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
@@ -132,6 +133,14 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                 resolvedMappings = mappingService.resolveMappingInbound(tenant, topic);
             }
             if (resolvedMappings == null || resolvedMappings.isEmpty()) {
+                // Count it on the catch-all status: a message arriving on a topic no mapping
+                // covers is the single most common "my device publishes but nothing happens"
+                // situation, and it was previously only visible in the log — no counter moved
+                // anywhere, so the monitoring screen showed a perfectly idle system.
+                if (!testing) {
+                    mappingService.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING)
+                            .incrementMessagesReceived();
+                }
                 log.info("{} - No mapping found for topic {}. Processing stopped.", tenant, topic);
             } else {
                 log.info("{} - Resolved {} mapping(s) for topic {}", tenant, resolvedMappings.size(), topic);
@@ -158,6 +167,13 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
             log.warn("{} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!",
                     tenant, topic);
             log.debug(e.getMessage(), e);
+            // Mirrors CamelDispatcherOutbound: a resolution failure belongs to no single
+            // mapping, so it is reported on the catch-all status instead of being dropped.
+            MappingStatus mappingStatusUnspecified = mappingService.getMappingStatus(tenant,
+                    Mapping.UNSPECIFIED_MAPPING);
+            if (mappingStatusUnspecified != null) {
+                mappingStatusUnspecified.incrementErrors();
+            }
             return result;
         }
 

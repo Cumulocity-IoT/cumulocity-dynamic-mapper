@@ -22,6 +22,7 @@
 package dynamic.mapper.configuration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.DisplayName;
@@ -112,5 +113,20 @@ class ServiceConfigurationTimeoutTest {
         assertTrue(ServiceConfiguration.PROCESSING_HARD_CEILING_MS
                 > ServiceConfiguration.DEFAULT_PIPELINE_TIMEOUT_MS,
                 "the ceiling must never cut a normally configured pipeline short");
+    }
+
+    @Test
+    @DisplayName("the derived budget accessors are not persisted into the service configuration")
+    void derivedAccessorsAreNotSerialized() throws Exception {
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+        String json = mapper.writeValueAsString(config());
+
+        // They are getters, so without @JsonIgnore Jackson would add effectiveMaxCPUTimeMS /
+        // effectivePipelineTimeoutMS to the stored configuration, where nothing reads them back.
+        assertFalse(json.contains("effectiveMaxCPUTimeMS"), "unexpected field in: " + json);
+        assertFalse(json.contains("effectivePipelineTimeoutMS"), "unexpected field in: " + json);
+        assertTrue(json.contains("maxCPUTimeMS"), "the real settings must still be persisted");
+        assertTrue(json.contains("pipelineTimeoutMS"));
     }
 }

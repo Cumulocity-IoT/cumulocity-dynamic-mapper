@@ -747,11 +747,38 @@ export interface MappingStatus {
   id: string;
   name: string;
   identifier: string;
-  direction: Direction;
+  /**
+   * `null`/`undefined` for the catch-all "Unmapped messages" status, which spans both
+   * directions — it counts messages that matched no mapping at all.
+   */
+  direction?: Direction;
   mappingTopic: string;
+  publishTopic: string;
   errors: number;
   messagesReceived: number;
+  /** Consecutive failures; reset by the first successful message. See `Mapping.maxFailureCount`. */
+  currentFailureCount: number;
+  /** Set only when the mapping could not be loaded; not a processing error. */
+  loadingError?: string;
 }
+
+/**
+ * Identifier of the catch-all status — mirrors `MappingStatus.IDENT_UNSPECIFIED_MAPPING`.
+ * This is the stable wire value; the row's label is display-only, see
+ * {@link MAPPING_STATUS_UNSPECIFIED_LABEL}.
+ */
+export const MAPPING_STATUS_UNSPECIFIED = 'UNSPECIFIED';
+
+/**
+ * Label shown for the catch-all status row.
+ *
+ * <p>Rendered by the frontend rather than taken from the `name` the backend sends, because that
+ * name reaches the UI from two places that can both be stale: an older microservice still sends
+ * "Unspecified", and a status restored from the persisted `d11r_mapping` fragment carries
+ * whatever name was written when it was last pushed. Deriving the label from the identifier
+ * makes the row read correctly regardless of backend version, and keeps it translatable here.
+ */
+export const MAPPING_STATUS_UNSPECIFIED_LABEL = 'Unmapped messages';
 
 export const API = {
   ALARM: {

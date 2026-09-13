@@ -1,5 +1,70 @@
 # Dynamic Mapper Service for Cumulocity
 
+## Release 6.5.2
+
+### Persisted data and REST payloads are unchanged
+
+Mappings, connector configurations, the service configuration and the mapping-status fragment
+(`d11r_mapping`) all keep their existing field names and types. Everything below is either
+additive on the wire or a behaviour change in the service.
+
+### `maxFailureCount` now actually deactivates a mapping (behaviour change)
+
+`maxFailureCount` has always been documented — and described in the mapping editor — as "the
+mapping is automatically deactivated when this is exceeded", but no code ever set the mapping
+inactive; only a `MAPPING_FAILURE_EVENT` was raised. It now performs the deactivation.
+
+**If you already have mappings with `maxFailureCount > 0`, they can now be deactivated where
+previously nothing happened.** The counter is a *consecutive* failure streak — it is reset by the
+first message that processes without an error — so a mapping with an occasional transient failure
+is not affected. `maxFailureCount = 0` (the default) disables the check entirely.
+
+### Mapping QoS is now enforced per connector (behaviour change)
+
+Each connector declares the QoS levels it can honour, and a mapping asking for more is clamped to
+the strongest level the connector actually implements (logged once per level). Previously the
+declaration existed but was never applied outside of MQTT subscriptions. Notable effects:
+
+- AMQP 0.9.1 / AMQP 1.0: a mapping set to `EXACTLY_ONCE` used to be published **non**-persistently
+  (a stronger request produced a weaker guarantee); it is now clamped to `AT_LEAST_ONCE` and
+  published persistently.
+- Cumulocity MQTT Service: outbound publishing honours the mapping's QoS instead of always using
+  `AT_LEAST_ONCE`. A mapping set to `AT_MOST_ONCE` is now sent fire-and-forget.
+- `ConnectorSpecification` gained an optional `supportedQos` field (additive).
+
+### Processing timeouts are bounded and consistent (behaviour change)
+
+- A pipeline with no per-message budget (any non-Smart-Function mapping) previously waited
+  **indefinitely** for its result; it is now bounded by a 120 s ceiling, after which the message
+  is cancelled and — for QoS > 0 — redelivered.
+- `pipelineTimeoutMS` must be greater than `maxCPUTimeMS`; a configuration that violates this is
+  now raised at runtime instead of making the CPU budget unreachable. The service-configuration
+  form rejects such a pair.
+- Per-call-site fallbacks for these settings (5 000 / 8 000 / 30 000 ms for the same value) were
+  unified on the configured value.
+
+### Breaking API change for Java processor extensions
+
+`MappingStatus.UNSPECIFIED_MAPPING_STATUS` has been **removed** from the
+`dynamic-mapper-interface` artifact. It was a single mutable `static` shared by every subscribed
+tenant, so each tenant reported the sum of all tenants' unmatched-message counters. Use
+`MappingStatus.createUnspecified()` (a per-tenant instance) or `MappingStatus.isUnspecified()`
+instead.
+
+An extension compiled against an earlier interface jar that referenced this field fails with
+`NoSuchFieldError` and must be recompiled. Extensions that do not reference it — which is the
+expected case, since it is internal status bookkeeping — are unaffected.
+
+`MappingStatus.equals`/`hashCode` now compare the mapping `identifier` rather than `id`, and
+`reset()` additionally clears `currentFailureCount`.
+
+### Mapping status reporting
+
+- Messages arriving on a topic that no mapping covers are now counted on the catch-all status
+  instead of only being logged.
+- That row is labelled **"Unmapped messages"** (previously "Unspecified") and is sorted to the end
+  of the statistics list. Its identifier on the wire is unchanged (`UNSPECIFIED`).
+
 ## Release 6.4.0
 
 ### Removal of the Snooping feature (breaking change)

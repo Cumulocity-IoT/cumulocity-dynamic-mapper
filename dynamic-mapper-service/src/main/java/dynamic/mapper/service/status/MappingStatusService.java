@@ -406,13 +406,16 @@ public class MappingStatusService {
         return mappingStatuses.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
     }
 
+    /**
+     * Makes sure the tenant has its own catch-all status for messages that matched no mapping.
+     *
+     * <p>{@code computeIfAbsent} with a fresh instance per tenant: sharing one static instance
+     * across tenants made every subscribed tenant report the sum of all tenants' unmatched
+     * messages, and made a reset of one tenant's statistics visible in all the others.
+     */
     private void ensureUnspecifiedStatus(String tenant) {
-        Map<String, MappingStatus> statusMap = getStatusMap(tenant);
-        if (!statusMap.containsKey(MappingStatus.IDENT_UNSPECIFIED_MAPPING)) {
-            statusMap.put(
-                    MappingStatus.UNSPECIFIED_MAPPING_STATUS.identifier,
-                    MappingStatus.UNSPECIFIED_MAPPING_STATUS);
-        }
+        getStatusMap(tenant).computeIfAbsent(MappingStatus.IDENT_UNSPECIFIED_MAPPING,
+                k -> MappingStatus.createUnspecified());
     }
 
     private Boolean shouldSendStatus(String tenant) {
@@ -441,9 +444,18 @@ public class MappingStatusService {
                         "failureCount", String.valueOf(status.getCurrentFailureCount())));
     }
 
+    /**
+     * Builds the array pushed to the inventory: a consistent point-in-time copy per status.
+     *
+     * <p>Snapshots rather than the live instances, for two reasons: the processing threads keep
+     * mutating the originals while Jackson serializes them, and the name/topic enrichment below
+     * writes into whatever it is handed — so enriching the live objects let display values from
+     * the reporting path leak into the objects the processing path owns.
+     */
     private MappingStatus[] buildStatusArray(String tenant, Map<String, MappingStatus> statusMap) {
         return statusMap.values().stream()
                 .filter(status -> shouldIncludeStatus(tenant, status))
+                .map(MappingStatus::snapshot)
                 .peek(status -> enrichStatusWithName(tenant, status))
                 .toArray(MappingStatus[]::new);
     }
@@ -454,7 +466,7 @@ public class MappingStatusService {
             return false;
         }
 
-        return MappingStatus.IDENT_UNSPECIFIED_MAPPING.equals(status.identifier) ||
+        return status.isUnspecified() ||
                 cacheManager.containsInboundMappingByIdentifier(tenant, status.identifier) ||
                 cacheManager.containsOutboundMappingByIdentifier(tenant, status.identifier);
     }
@@ -466,8 +478,10 @@ public class MappingStatusService {
         }
 
         try {
-            if (MappingStatus.IDENT_UNSPECIFIED_MAPPING.equals(status.identifier)) {
-                status.name = "Unspecified";
+            if (status.isUnspecified()) {
+                // Display label only — the identifier stays IDENT_UNSPECIFIED_MAPPING, which is
+                // what persisted status fragments and every consumer key off.
+                status.name = MappingStatus.UNSPECIFIED_DISPLAY_NAME;
             } else {
                 cacheManager.getInboundMappingByIdentifier(tenant, status.identifier)
                         .or(() -> cacheManager.getOutboundMappingByIdentifier(tenant, status.identifier))

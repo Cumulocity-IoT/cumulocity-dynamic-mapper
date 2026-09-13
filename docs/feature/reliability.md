@@ -9,6 +9,7 @@ configured per mapping, plus the transport-level retry that sits underneath them
 | Failure threshold | `Mapping.maxFailureCount` | When should a mapping that keeps failing be taken out of service? | [Failure handling](#failure-handling) |
 | Poison-pill guard | — (fixed at 5) | How often may one message be redelivered before it is dropped? | [The poison-pill guard](#the-poison-pill-guard) |
 | Processing budgets | `maxCPUTimeMS`, `pipelineTimeoutMS` (service configuration) | How long may one message occupy CPU and a worker thread before it is killed? | [Processing timeouts](#processing-timeouts) |
+| Runtime counters | — (reported, not configured) | What is actually happening per mapping, and to messages that match none? | [Status and counters](#status-and-counters) |
 
 They compose: `qos > 0` is what causes a failed message to be redelivered at all;
 `maxFailureCount` is what stops a mapping that fails every time; the poison-pill guard is
@@ -314,7 +315,7 @@ would otherwise keep failing (and, at QoS > 0, keep forcing redeliveries) indefi
 | Field | Where | Meaning |
 |---|---|---|
 | [`Mapping.maxFailureCount`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/Mapping.java) | per mapping, set in the editor | Number of **consecutive** failures after which the mapping is deactivated. **0 (the default) disables the check.** |
-| [`MappingStatus.currentFailureCount`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/MappingStatus.java) | runtime status, shown in *Monitoring* | The current streak. |
+| [`MappingStatus.currentFailureCount`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/MappingStatus.java) | runtime status, shown in *Monitoring* | The current streak — see [Status and counters](#status-and-counters). |
 | `MappingStatus.errors` | runtime status | Lifetime error count — never reset by processing, purely informational. |
 
 ### The counter is a streak, not a total
@@ -410,6 +411,87 @@ Note the two counters are per different things: the poison-pill counter is **per
 
 ---
 
+## Status and counters
+
+Every mapping has a [`MappingStatus`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/MappingStatus.java)
+holding its runtime counters. They are the only per-mapping runtime signal the product
+exposes, so what each one counts — and when it resets — matters.
+
+| Counter | Counts | Reset by |
+|---|---|---|
+| `messagesReceived` | Messages that reached this mapping's processing. Counted **per mapping**: one broker message matching three mappings increments three counters, so the sum across mappings is not the number of messages the broker delivered. | `reset()` only |
+| `errors` | Failed messages, for the lifetime of the mapping. Deliberately **not** reset by a successful message, so it stays usable as an error-rate indicator. | `reset()` only |
+| `currentFailureCount` | The **consecutive** failure streak driving `maxFailureCount`. | the first message that processes without an error, and (re)activation |
+| `loadingError` | Set when the mapping could not be loaded from the inventory at all. Not a processing error — such a mapping never runs. | `reset()` |
+
+Counters are incremented under the instance monitor (so concurrent Camel threads cannot lose
+an update) and declared `volatile` (so the reporting thread, which reads them without taking
+that monitor, sees current, non-torn values).
+
+### The "Unmapped messages" status
+
+One extra status per tenant counts what belongs to **no** mapping:
+
+- a message arriving on a topic that no mapping covers (`messagesReceived`), and
+- errors raised before any mapping could be resolved — an unparseable payload, a failed
+  mapping resolution (`errors`).
+
+It is labelled **"Unmapped messages"** in *Monitoring → Statistic processed* and pinned to the
+end of the list — it is not a mapping, it is the bucket for everything no mapping claimed. Its
+identifier on the wire is still `UNSPECIFIED` (`MappingStatus.IDENT_UNSPECIFIED_MAPPING`), so
+persisted status fragments and any consumer keying off it are unaffected by the label; code
+must match on the identifier, never on the display name.
+
+The label itself is rendered by the **frontend**
+(`MAPPING_STATUS_UNSPECIFIED_LABEL`), not taken from the `name` the backend sends. That name
+reaches the UI from two places that can both be stale — an older microservice, and a status
+restored from the persisted `d11r_mapping` fragment — so deriving it from the identifier is
+what makes the row read correctly without a redeploy. The backend still sets
+`MappingStatus.UNSPECIFIED_DISPLAY_NAME` for other API consumers.
+
+This is the first thing to look at for "my device publishes but nothing happens": a rising
+`messagesReceived` on that row means the messages arrive and no mapping claims them (topic
+mismatch, mapping inactive, or not deployed to that connector).
+
+Two things about it are easy to get wrong, and both used to be wrong:
+
+- **It is per tenant.** It used to be a single mutable `static` handed to every tenant's
+  status map, so each subscribed tenant reported the sum of all tenants' unmatched messages.
+  It is now created per tenant by `MappingStatus.createUnspecified()`.
+- **Its `direction` is `null`**, because it spans both directions. A consumer that filters
+  strictly by direction drops it — which is what hid it from both Monitoring tabs while the
+  chart, filtering differently, folded it into *inbound*.
+
+### How the status reaches the UI
+
+`MappingStatusService.sendStatusToInventory(tenant)` runs on the housekeeping cycle and
+writes the whole array into the `d11r_mapping` fragment of the mapper
+service managed object; the UI subscribes to that managed object in realtime.
+
+Only statuses whose mapping is still in the cache — plus `UNSPECIFIED` — are included, so a
+deleted mapping's counters stop being reported. What is written is a **snapshot** of each
+status, not the live object: the processing threads keep mutating the originals while Jackson
+serializes them, and the name/topic enrichment that fills in display values would otherwise
+write into the objects the processing path owns.
+
+Sending can be turned off entirely with `sendMappingStatus` in the service configuration; the
+counters are still maintained in memory, they just are not published.
+
+### Counter gotchas
+
+- **Counters are in-memory and survive only as long as the microservice instance**, except
+  for whatever the last inventory push persisted — they are reloaded from that fragment on
+  startup unless the tenant is initialised with `reset=true`.
+- **`messagesReceived` counts per mapping, not per message.** Do not sum it across mappings
+  to get broker throughput.
+- **A filtered-out message is not an error and not a failure**, but it *is* counted in
+  `messagesReceived` — it reached the mapping, `filterMapping` just rejected it.
+- **`errors` and `currentFailureCount` move together on a failure**, but only the streak
+  moves back on success. If `currentFailureCount` is 0 while `errors` is large, the mapping
+  is working now but has a history worth investigating.
+
+---
+
 ## Tests
 
 | Test | Covers |
@@ -423,3 +505,4 @@ Note the two counters are per different things: the poison-pill counter is **per
 | [`MappingServiceFailureThresholdTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/service/MappingServiceFailureThresholdTest.java) | The mapping is really deactivated at the threshold, and a burst of failures deactivates only once. |
 | [`ProcessingCancellationTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/processor/model/ProcessingCancellationTest.java) | That a misbehaving mapping is really stopped: cancel actions run (including when one throws), a runaway `while(true){}` GraalVM context is killed and its thread terminates, and a worker that ignores interruption is reported as **not** drained instead of silently leaking. |
 | [`ServiceConfigurationTimeoutTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/configuration/ServiceConfigurationTimeoutTest.java) | Budget defaults, null fallbacks, and the `pipelineTimeoutMS > maxCPUTimeMS` invariant. |
+| [`MappingStatusTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/model/MappingStatusTest.java) | Counter semantics: per-tenant catch-all status, `reset()` clearing the streak, lifetime errors surviving a recovery, snapshot isolation, and no lost updates under 8 concurrent writers. |

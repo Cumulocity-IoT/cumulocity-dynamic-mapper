@@ -44,7 +44,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 
 /**
  * The consecutive-failure counter behind {@code Mapping.maxFailureCount}.
@@ -67,6 +69,8 @@ class MappingStatusServiceFailureCountTest {
     void setUp() {
         service = new MappingStatusService(inventoryApi, configurationRegistry, cacheManager, subscriptionsService);
         lenient().when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        lenient().when(configurationRegistry.getMapperServiceRepresentation(anyString()))
+                .thenReturn(mock(dynamic.mapper.model.MapperServiceRepresentation.class));
     }
 
     private Mapping mapping(long maxFailureCount) {
@@ -146,5 +150,24 @@ class MappingStatusServiceFailureCountTest {
         service.resetFailureCountOnSuccess(TENANT, mapping(3));
         service.resetFailureCountOnSuccess(TENANT, null);
         service.resetFailureCountOnSuccess(null, mapping(3));
+    }
+
+    @Test
+    @DisplayName("each tenant gets its own catch-all status")
+    void unspecifiedStatusIsNotSharedBetweenTenants() {
+        service.initializeTenantStatus("tenant-a", true);
+        service.initializeTenantStatus("tenant-b", true);
+
+        MappingStatus a = service.getAllStatuses("tenant-a").stream()
+                .filter(MappingStatus::isUnspecified).findFirst().orElseThrow();
+        MappingStatus b = service.getAllStatuses("tenant-b").stream()
+                .filter(MappingStatus::isUnspecified).findFirst().orElseThrow();
+
+        a.incrementErrors();
+        a.incrementMessagesReceived();
+
+        assertEquals(1, a.getErrors());
+        assertEquals(0, b.getErrors(), "tenant-b must not see tenant-a's unmatched-message errors");
+        assertEquals(0, b.getMessagesReceived());
     }
 }
