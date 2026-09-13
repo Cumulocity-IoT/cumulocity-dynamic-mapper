@@ -12,6 +12,6 @@ Read the sub-document that matches your task:
 
 Related:
 - [smart-functions.md](smart-functions.md) — Smart Function (JavaScript) development for the mapping editor
-- [ARCHITECTURE.md](../ARCHITECTURE.md) — system-level component overview
+- [architecture.md](architecture.md) — system-level component overview
 
 See [feature/README.md](feature/README.md) for the per-feature requirements and implementation notes.

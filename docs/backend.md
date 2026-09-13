@@ -12,6 +12,6 @@ Read the sub-document that matches your task:
 
 Related:
 - [feature/README.md](feature/README.md) — what each feature must do (requirements) and how it is built (implementation), one page per feature
-- [EXTENSIONS.md](../EXTENSIONS.md) — full guide for custom connectors and Java processor extensions
+- [extensions.md](extensions.md) — full guide for custom connectors and Java processor extensions
 - [smart-functions.md](smart-functions.md) — Smart Function (GraalVM JavaScript) development
-- [ARCHITECTURE.md](../ARCHITECTURE.md) — system-level component overview
+- [architecture.md](architecture.md) — system-level component overview

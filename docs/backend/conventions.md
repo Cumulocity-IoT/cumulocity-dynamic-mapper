@@ -11,9 +11,11 @@
 | `DeviceContext` | sourceId, externalId, device info | Copy-on-write |
 | `ProcessingState` | flags, cache | `ConcurrentHashMap` / `AtomicBoolean` |
 | `OutputCollector` | collected C8Y requests, errors, logs | `CopyOnWriteArrayList` |
-| `ExecutionContext` | GraalVM context | Per-thread — **must use `try-with-resources`** |
 
-> **Always** wrap `ExecutionContext` in `try-with-resources` to prevent GraalVM memory leaks.
+`ProcessingContext` itself implements `AutoCloseable` and owns the GraalVM polyglot context
+lifecycle for Smart Function execution directly — there is no separate `ExecutionContext` class.
+
+> **Always** use `try-with-resources` on `ProcessingContext` (or ensure `close()` is called) to prevent GraalVM memory leaks.
 
 **Rules:**
 - For parallel processing, **always** use focused contexts; never mutate `ProcessingContext` directly.
@@ -33,11 +35,11 @@ processMessage(routing, output);
 3. Register via `ConnectorRegistry`.
 4. Implement a callback that forwards broker messages to `GenericMessageCallback`.
 
-See [EXTENSIONS.md](../../EXTENSIONS.md) for the full guide and `AConnectorClient` helper methods.
+See [extensions.md](../extensions.md) for the full guide and `AConnectorClient` helper methods.
 
 ## Adding a Java Extension
 
-Implement `ProcessorExtensionInbound<O>` or `ProcessorExtensionOutbound<O>` from `dynamic-mapper-interface`. These receive `DataPrepContext` (**not** `ProcessingContext`) as the method parameter. See `dynamic-mapper-extension/` for reference implementations and [EXTENSIONS.md](../../EXTENSIONS.md) for the full guide.
+Implement `ProcessorExtensionInbound<O>` or `ProcessorExtensionOutbound<O>` from `dynamic-mapper-interface`. These receive `DataPrepContext` (**not** `ProcessingContext`) as the method parameter. See `dynamic-mapper-extension/` for reference implementations and [extensions.md](../extensions.md) for the full guide.
 
 ## Multi-tenancy
 

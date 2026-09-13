@@ -62,7 +62,7 @@ import com.google.cloud.pubsub.v1.AckReplyConsumer;
 /**
  * Tests for GooglePubSubClient's connector-declaration and pure-logic pieces (topic resolution,
  * config validation, inbound ack/nack behaviour). Publishing itself requires a live Pub/Sub
- * client/emulator and is verified manually/via integration testing instead (see EXTENSIONS.md
+ * client/emulator and is verified manually/via integration testing instead (see docs/extensions.md
  * conventions).
  */
 public class GooglePubSubClientTest {

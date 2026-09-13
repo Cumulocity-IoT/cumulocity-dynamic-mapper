@@ -60,6 +60,10 @@ export class DocPageComponent implements OnInit {
       const rendered = await this.markdownService.loadAndRender(docPath);
       this.title = rendered.title;
       this.html = this.sanitizer.bypassSecurityTrustHtml(rendered.html);
+      // setTimeout (a macrotask) runs after Angular's zone-triggered change detection has
+      // committed the new [innerHTML] to the DOM, so docBodyRef.nativeElement actually
+      // contains the <pre class="mermaid"> nodes mermaid.run() needs to find.
+      setTimeout(() => this.markdownService.renderMermaidDiagrams(this.docBodyRef.nativeElement));
     } catch (error) {
       console.error(error);
       this.title = 'Documentation unavailable';

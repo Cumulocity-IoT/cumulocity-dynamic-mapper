@@ -11,9 +11,9 @@ This document describes the two extension points available in the Dynamic Mapper
 ## Custom message broker connector
 
 Additional connectors supporting different message brokers can be added to the dynamic mapper.
-For that, the abstract class [AConnectorClient](dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/client/AConnectorClient.java) must be extended, implementing the basic methods of a message broker like `initialize()`, `connect()`, `subscribe()`, `disconnect()`, and `publishMEAO()`.
+For that, the abstract class [AConnectorClient](../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/client/AConnectorClient.java) must be extended, implementing the basic methods of a message broker like `initialize()`, `connect()`, `subscribe()`, `disconnect()`, and `publishMEAO()`.
 
-In addition, a Callback must be implemented handling the message broker-specific messages and forwarding them to a [GenericMessageCallback](dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/callback/GenericMessageCallback.java).
+In addition, a Callback must be implemented handling the message broker-specific messages and forwarding them to a [GenericMessageCallback](../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/callback/GenericMessageCallback.java).
 
 ### Base Class Helper Methods
 
@@ -394,11 +394,11 @@ public class CustomBrokerClient extends AConnectorClient {
 
 Check out these implementations for complete examples:
 
-- **MQTT 3.1.1**: [MQTT3Client.java](dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/MQTT3Client.java) - Shows MQTT-specific implementation
-- **MQTT 5.0**: [MQTT5Client.java](dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/MQTT5Client.java) - Shows MQTT5-specific features
-- **AMQP/RabbitMQ**: [AMQPClient.java](dynamic-mapper-service/src/main/java/dynamic/mapper/connector/amqp/AMQPClient.java) - Shows channel-based connectivity
-- **Kafka**: [KafkaClientV2.java](dynamic-mapper-service/src/main/java/dynamic/mapper/connector/kafka/KafkaClientV2.java) - Shows consumer-per-topic pattern
-- **Apache Pulsar**: [PulsarConnectorClient.java](dynamic-mapper-service/src/main/java/dynamic/mapper/connector/pulsar/PulsarConnectorClient.java) - Shows producer management with retry
+- **MQTT 3.1.1**: [MQTT3Client.java](../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/MQTT3Client.java) - Shows MQTT-specific implementation
+- **MQTT 5.0**: [MQTT5Client.java](../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/MQTT5Client.java) - Shows MQTT5-specific features
+- **AMQP/RabbitMQ**: [AMQPClient.java](../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/amqp/AMQPClient.java) - Shows channel-based connectivity
+- **Kafka**: [KafkaClientV2.java](../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/kafka/KafkaClientV2.java) - Shows consumer-per-topic pattern
+- **Apache Pulsar**: [PulsarConnectorClient.java](../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/pulsar/PulsarConnectorClient.java) - Shows producer management with retry
 
 ### Best Practices
 
@@ -451,7 +451,7 @@ public class CustomCallback implements Consumer<CustomMessage> {
 }
 ```
 
-Check out [MQTT3Callback.java](dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/MQTT3Callback.java) as a complete reference implementation.
+Check out [MQTT3Callback.java](../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/MQTT3Callback.java) as a complete reference implementation.
 
 ### Migration Guide for Existing Custom Connectors
 
@@ -842,23 +842,32 @@ Build steps:
 2. Register the class in `extension-external.properties`
 3. Build the JAR: `cd dynamic-mapper-extension && mvn package`
 4. Upload the JAR via **Configuration → Processor Extension → Add Extension** in the UI
-5. Create a mapping of type **Extension Source** (inbound) or **Extension Sink** (outbound) and select the uploaded extension in the Transformation section
+5. Create a mapping with `transformationType: EXTENSION_JAVA` and select the uploaded extension and its registered event name in the Transformation section
 
 > **Note:** The `RepairStrategy.CREATE_IF_MISSING` strategy is available in inbound extensions. It creates a target node if it does not exist, which is useful for mappings that must adapt to payloads with dynamic or optional fields.
 
-The following diagram shows how the dispatcher handles messages across all transformation types:
-
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Diagram_Dispatcher.png"  style="width: 70%;" />
-</p>
-<br/>
-
 The following diagram gives an overview of the steps to build and use your own extension:
 
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Diagram_ProcessorExtension_Guide.png"  style="width: 70%;" />
-</p>
-<br/>
+```mermaid
+flowchart TD
+    s1["1. Implement ProcessorExtensionInbound&lt;byte[]&gt;<br/>(or ProcessorExtensionOutbound&lt;O&gt; for C8Y to broker)<br/>in module dynamic-mapper-extension"]
+    s2["2. Register the class in<br/>extension-external.yaml<br/>eventName, className, description, version,<br/>optional default parameter map"]
+    s3["3. Package extension-external.yaml + compiled classes<br/>into a zip archive"]
+    s4["4. Upload the zip:<br/>Configuration &rarr; Processor Extension &rarr; Add Extension<br/>(the microservice loads it dynamically, per tenant)"]
+    s5["5. Create a mapping with transformation type Extension Java,<br/>select the extension and its eventName (e.g. CustomEvent);<br/>optionally override the parameter map for this mapping"]
+    s6["Mapping is active:<br/>onMessage(...) runs on every matching broker message,<br/>context.getConfigAsMap() exposes tenant/topic/parameter,<br/>and its CumulocityObject results are sent to Cumulocity"]
+
+    s1 --> s2 --> s3 --> s4 --> s5 --> s6
+```
+
+> **Note:** This section and the `.proto`/`extension-external.properties` examples elsewhere in
+> this document describe an older registration mechanism. The current mechanism uses
+> `extension-external.yaml` (with `eventName`/`className`/`description`/`version` and an optional
+> `parameter` map) packaged as a zip — see
+> [`dynamic-mapper-extension/src/main/resources/extension-external.yaml`](../dynamic-mapper-extension/src/main/resources/extension-external.yaml)
+> and `dynamic-mapper-ui/public/docs/javaextension.md` for the up-to-date walkthrough, including
+> per-mapping parameter overrides via `context.getConfigAsMap()`. This document needs a full pass
+> to catch up — flagged here rather than fixed everywhere in this session.
 
 ### Reference implementations
 

@@ -20,10 +20,33 @@
 
 import { Injectable } from '@angular/core';
 import { Marked, RendererObject, Tokens } from 'marked';
+import mermaid from 'mermaid';
 
 export interface RenderedDoc {
   title: string;
   html: string;
+}
+
+// mermaid.run() scans for elements matching this selector and replaces their text content with
+// an inline SVG. It is initialized once, lazily, the first time a doc page needs it.
+let mermaidInitialized = false;
+function ensureMermaidInitialized(): void {
+  if (mermaidInitialized) return;
+  mermaidInitialized = true;
+  // flowchart.htmlLabels: false renders node labels as plain SVG <text>/<tspan> instead of
+  // HTML wrapped in a <foreignObject>. This is required, not cosmetic: foreignObject content is
+  // real DOM in this same document, so it inherits doc-shared.css's broad, !important-heavy
+  // element-selector rules (font-family/line-height/etc. meant for prose and code blocks) —
+  // that silently shrank the text-measurement width mermaid uses to size nodes, producing
+  // absurdly narrow, over-wrapped boxes. Plain SVG text is immune to page CSS. <br/> line
+  // breaks inside labels still work in this mode; arbitrary HTML tags like <b>/<i> do not, so
+  // diagram sources use plain text instead.
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'neutral',
+    securityLevel: 'loose',
+    flowchart: { htmlLabels: false, wrappingWidth: 360 }
+  });
 }
 
 // Admonition container syntax: ":::kind [Title]\n...markdown...\n:::"
@@ -69,9 +92,25 @@ function applyHeadingIds(html: string): string {
   return html.replace(HEADING_ID_RENDERED, '<$1 id="$3">$2</$1>');
 }
 
+// A ```mermaid fenced code block is rendered as a bare <pre class="mermaid"> holding the
+// escaped source text. mermaid.run() (invoked by DocMarkdownService.renderMermaidDiagrams(),
+// called by DocPageComponent/DocOverviewComponent once the HTML is in the DOM) finds elements
+// matching that class and replaces their content with an inline SVG. HTML-escaping here is
+// still required despite the <pre>: without it, a literal "<br/>" inside a node label (used
+// throughout our diagrams for multi-line labels) would be parsed as a real <br> element,
+// splitting the text node — element.textContent would then silently drop the tag instead of
+// preserving it, corrupting the diagram source mermaid receives.
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 // Images carry a visible caption in the title attribute (alt stays the short a11y label),
 // matching the "<img> + .image-description <p>" pairing every doc page used previously.
 const docRenderer: Partial<RendererObject> = {
+  code({ text, lang }) {
+    if (lang !== 'mermaid') return false; // false = fall back to marked's default <pre><code> rendering
+    return `<pre class="mermaid">${escapeHtml(text)}</pre>\n`;
+  },
   link({ href, title, tokens }) {
     const text = this.parser.parseInline(tokens);
     const titleAttr = title ? ` title="${title}"` : '';
@@ -133,6 +172,25 @@ export class DocMarkdownService {
     const rawHtml = this.marked.parse(withMarkers, { async: false }) as string;
     const html = styleTables(unwrapImageCaptions(applyHeadingIds(rawHtml)));
     return { title: frontMatter['title'] || '', html };
+  }
+
+  /**
+   * Renders every not-yet-processed `<pre class="mermaid">` element under `container` into an
+   * inline SVG diagram. Call this once the rendered HTML from {@link render}/{@link loadAndRender}
+   * has actually been committed to the DOM (e.g. after Angular's next change-detection pass) —
+   * mermaid.run() operates on real DOM elements, not on an HTML string.
+   */
+  async renderMermaidDiagrams(container: HTMLElement): Promise<void> {
+    const nodes = container.querySelectorAll<HTMLElement>('pre.mermaid:not([data-processed])');
+    if (nodes.length === 0) return;
+    ensureMermaidInitialized();
+    try {
+      await mermaid.run({ nodes: Array.from(nodes) });
+    } catch (error) {
+      // A malformed diagram must not take down the rest of the page; mermaid.run() already
+      // renders an inline error SVG into the offending node, so just log for diagnostics.
+      console.error('Failed to render one or more mermaid diagrams', error);
+    }
   }
 
   private extractFrontMatter(raw: string): { frontMatter: Record<string, string>; body: string } {

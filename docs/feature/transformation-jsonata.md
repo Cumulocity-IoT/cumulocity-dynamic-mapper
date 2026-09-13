@@ -100,7 +100,7 @@ JSONata mapping:
 | `pathSource` | A JSONata expression evaluated against the deserialized source payload. |
 | `pathTarget` | The dot/bracket path in the target document the extracted value is written to. |
 | `expandArray` | When true and the extracted value is an array, iterate its elements as separate substitutions instead of writing the array as one value. |
-| `repairStrategy` | How to reconcile array results that aren't expanded (`USE_FIRST_VALUE_OF_ARRAY`, `USE_LAST_VALUE_OF_ARRAY`, or leave as-is). |
+| `repairStrategy` | How to handle the two edge cases: an array result that isn't expanded (`USE_FIRST_VALUE_OF_ARRAY` / `USE_LAST_VALUE_OF_ARRAY`, or leave as-is), and a missing/null value when writing into the target template (`IGNORE`, `REMOVE_IF_MISSING_OR_NULL`, `CREATE_IF_MISSING`). See [`jsonata.md`](../../dynamic-mapper-ui/public/docs/jsonata.md#jsonata-repair-strategy). |
 
 Both `pathSource` and `pathTarget` are plain strings; there is no compiled/typed schema —
 correctness (e.g. whether a path actually resolves) is left to the JSONata evaluator and,

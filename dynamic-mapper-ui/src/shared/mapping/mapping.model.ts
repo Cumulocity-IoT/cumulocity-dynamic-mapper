@@ -237,22 +237,22 @@ export interface DeploymentMapEntryDetailed {
  * missing data, arrays, or other special conditions during data transformation.
  */
 export enum RepairStrategy {
-  /** Process substitution as defined without any special handling */
+  /** Write the extracted value to the target path as-is. The path must already exist in the target template. */
   DEFAULT = 'DEFAULT',
 
-  /** If extracted content from source is an array, use only the first element */
+  /** If the extracted value is an array and expandArray is not set, use only its first element. JSONATA substitutions only. */
   USE_FIRST_VALUE_OF_ARRAY = 'USE_FIRST_VALUE_OF_ARRAY',
 
-  /** If extracted content from source is an array, use only the last element */
+  /** If the extracted value is an array and expandArray is not set, use only its last element. JSONATA substitutions only. */
   USE_LAST_VALUE_OF_ARRAY = 'USE_LAST_VALUE_OF_ARRAY',
 
-  /** Skip this substitution if source path evaluation fails */
+  /** If the extracted value is missing or null, skip the substitution and leave the target node as defined in the target template. */
   IGNORE = 'IGNORE',
 
-  /** Remove the target node if source evaluation returns undefined, null, or empty. Enables dynamic content handling */
+  /** If the extracted value is missing or null, delete the target node from the target template. */
   REMOVE_IF_MISSING_OR_NULL = 'REMOVE_IF_MISSING_OR_NULL',
 
-  /** Create the target node if it doesn't exist. Enables dynamic content creation */
+  /** Create the target node, including missing parent nodes, if it does not exist in the target template. */
   CREATE_IF_MISSING = 'CREATE_IF_MISSING'
 }
 

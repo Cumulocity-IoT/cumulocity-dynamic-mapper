@@ -31,24 +31,9 @@ transformations:
 #### Step 1: Add a Connector
 
 First, create a connector to establish communication with your message broker or data source. The Dynamic Mapper
-supports various connector types:
-
-- **AMQP 0-9-1** - Connect to AMQP 0-9-1 brokers like RabbitMQ for reliable message queuing
-- **AMQP 1.0** - Connect to AMQP 1.0 brokers (Azure Service Bus, ActiveMQ Artemis, Solace, etc.) using the Apache
-  Qpid JMS client
-- **Apache Kafka** - Integrate with Kafka topics for high-throughput messaging
-- **Apache Pulsar** - Connect to Pulsar topics for cloud-native messaging
-- **Cumulocity API** - Use the internal Cumulocity REST API for creating, updating, and deleting managed objects,
-  events, alarms, and measurements
-- **Cumulocity MQTT Service** - Use the built-in Cumulocity IoT MQTT broker for device communication with device
-  isolation
-- **External MQTT Broker** - Connect to third-party MQTT brokers such as HiveMQ, Mosquitto, Eclipse Mosquitto, or
-  any MQTT-compliant broker
-- **Google Cloud Pub/Sub** - Bidirectional connector: publishes Cumulocity data to a Pub/Sub topic (e.g. for
-  ingestion into Google's Manufacturing Data Engine, MDE) and consumes inbound messages from a pre-existing
-  Pub/Sub subscription
-- **HTTP Connector** - Receive data via REST endpoints
-- **Webhook** - Send data to external REST APIs
+supports MQTT, Kafka, AMQP 0-9-1/1.0, Apache Pulsar, Google Cloud Pub/Sub, HTTP, Webhook, and the internal
+Cumulocity API — see the connector table in [Managing Connectors](#managing-connectors) for the full list with
+supported directions and payload formats.
 
 Use the [wizard](/c8y-pkg-dynamic-mapper/node3/connectorConfiguration) and **Add Connector** to create your
 connector. Refer to the [Managing Connectors](#managing-connectors) section for detailed guidance.
@@ -139,51 +124,21 @@ mappings can share the same connector instance. Configure the connector properti
 associated mappings.
 :::
 
-Add a new connector using the following wizard
-[**Configuration → Connectors → Add connector**](/c8y-pkg-dynamic-mapper/node3/connectorConfiguration).
-
-![Payload type](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_New.png "Creating a new connector.")
-
-The **Webhook** connector has a setting **Cumulocity Internal** which can be used when Cumulocity MEA should be
-processed and sent back to Cumulocity Core as transformed MEA, e.g. receive an `EVENT` of type `c8y_Uplink` and use
-a **SMART_FUNCTION** to decode the payload and transform it into a `MEASUREMENT`.
-
-#### Kafka connector security {#kafka-connector-security}
-
-The Kafka connector derives its `security.protocol` automatically — you do not set it directly:
-
-| Credentials set? | Custom CA trusted? | Resulting protocol |
-|:---:|:---:|---|
-| yes | either | `SASL_SSL` |
-| no | yes | `SSL` (TLS only, no authentication) |
-| no | no | `PLAINTEXT` |
-
-**Authentication.** Set **Username** and **Password**, then pick the **SASL mechanism** your broker offers:
-`SCRAM-SHA-256`, `SCRAM-SHA-512`, or `PLAIN`. Use `PLAIN` for brokers that authenticate with an API key/secret
-pair — Confluent Cloud, for example, supports only `PLAIN` and `OAUTHBEARER`, so a SCRAM mechanism there fails with
-`UnsupportedSaslMechanismException`.
-
-**Trusting a self-signed or internal CA.** Public-CA brokers (Confluent Cloud, most managed services) need no extra
-configuration — the JVM's default truststore already trusts them. For a broker presenting a certificate from an
-internal or self-signed CA, enable **Use Self Signed Certificate** and supply the CA one of two ways, exactly as for
-the MQTT, AMQP and Pulsar connectors:
-
-| Property | Description |
-|---|---|
-| `useSelfSignedCertificate` | Enables custom CA trust. The remaining properties below only appear once it is on. |
-| `nameCertificate` + `fingerprintSelfSignedCertificate` | Reference a certificate already uploaded to the Cumulocity trusted-certificate store (**Device Management → Management → Trusted certificates**). |
-| `certificateChainInPemFormat` | Paste the CA certificate chain inline in PEM format, as an alternative to the certificate store. |
-| `disableHostnameValidation` | Skips TLS hostname verification. **Insecure — development and testing only.** |
-
-:::caution
-Client-certificate authentication (mTLS) is not supported: the Cumulocity certificate store holds trust material
-only, not private keys. The same limitation applies to every other connector type.
+:::info Default HTTP Connector
+The **Default HTTP Connector** does not need to be created manually — it is created automatically for every
+tenant at microservice startup. It is reachable at
+`https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapper-service/httpConnector/<MAPPING_TOPIC>`: the path segment
+after `.../httpConnector/` is used directly as the mapping topic. For example, a JSON payload POSTed to
+`.../httpConnector/temp/berlin_01` is resolved against a mapping with mapping topic `temp/berlin_01`.
 :::
 
-Mechanisms beyond the three listed above — `OAUTHBEARER`, `GSSAPI`/Kerberos, AWS MSK IAM — have no dedicated
-fields, but can still be configured by setting the raw Kafka client properties (`sasl.mechanism`,
-`sasl.jaas.config`, `security.protocol`, …) in **Default properties producer** and **Default properties consumer**.
-Those maps are applied last and therefore override anything derived above.
+Add a new connector using the following wizard
+[**Configuration → Connectors → Add connector**](/c8y-pkg-dynamic-mapper/node3/connectorConfiguration). The
+configuration properties shown are dynamically adapted to the selected connector type.
+
+For screenshots of the connector wizard, the connector and connection-log tables, Webhook's **Cumulocity Internal**
+setting, and Kafka's security/TLS configuration, see the
+[**Connector Reference**](/c8y-pkg-dynamic-mapper/introduction/connectors) page.
 
 ### Defining a mapping {#define-mapping}
 
@@ -263,12 +218,15 @@ options upfront.
 
 The stepper guides you through these steps to define a mapping using JSONata for substitutions:
 
-1. Add or select an existing connector for your mapping (where payloads come from).
+1. Add or select an existing connector for your mapping (where payloads come from). You can select more than one
+   connector to deploy the same mapping to all of them at once.
 2. Define general settings, such as the topic name for this mapping.
 3. Select or enter the template for the expected source payload. This is used as the source path for
    substitutions.
 4. Transformation for copying content from the source to the target payload. These will be applied at runtime.
 5. Test the mapping by applying the substitutions and save the mapping.
+
+![Connector selection](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_Select.png "Selecting the connector(s) a mapping is deployed to.")
 
 In the second step of the wizard you define the most important properties for the mapping, e.g. Mapping Name,
 Target API, Mapping Topic (topic to which this mapping should listen for, this supports wildcards: `#`, `+`). The
@@ -276,6 +234,17 @@ Mapping Topic Sample is a sample topic replacing all wildcards from the Mapping 
 `datalogger/logger_13579`, this helps in the later steps to use concrete values instead of the abstract wildcards.
 
 ![Mapping stepper properties](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png "Screenshot of second wizard step to define general properties.")
+
+Mappings are organized in a tree, one node per topic segment (`+`/`#` wildcards are ordinary segment values in
+that tree). When a message arrives, the tree is walked one segment at a time; exact-match and wildcard branches
+are followed in parallel, so a single message can match more than one mapping (e.g. both `device/+/data` and
+`device/#`). For the detailed matching algorithm, see
+[Mapping processing (inbound)](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/blob/main/docs/feature/mapping-processing-inbound.md)
+in the developer documentation.
+
+The levels of the Mapping Topic are split and added to the source payload as `_TOPIC_LEVEL_`, e.g.
+`["device", "express", "berlin_01"]` for topic `device/express/berlin_01` — see
+[Using metadata in source templates](#metadata).
 
 :::info
 **Best Practice:** Always test your mapping with sample payloads before activating it. Use the test feature in
@@ -297,6 +266,8 @@ You define it in the third step of the wizard, **Select templates**, in the **Fi
 Select a node in the source template and press **Update Filter Execution Mapping** to seed the expression, then
 refine it. The **Filter Result** field below shows the value the expression currently evaluates to against the
 source template.
+
+![Execution filter](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Filter_Outbound.png "The Templates step showing Filter execution mapping and Filter Result.")
 
 The expression is a JSONata expression that **must evaluate to a boolean**. The editor rejects anything else — an
 expression returning a number or a string leaves the step invalid and you cannot continue. When the expression
@@ -328,6 +299,45 @@ Cumulocity source object (measurement, event, alarm, or managed object) that tri
 mappings. To filter on **device inventory** properties instead, use the [Inventory
 Filter](#inventory-filter) — that one is available for outbound mappings only.
 :::
+
+### Managing mappings {#managing-mappings}
+
+The **Inbound Mappings** / **Outbound Mappings** table is the entry point for working with existing mappings:
+
+![Mapping table](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Table.png "The Inbound Mappings table listing all configured mappings.")
+
+- **Add Mapping** — starts the wizard described above.
+- The pencil icon on a row opens that mapping for editing. Editing does not need the mapping to be deactivated
+  first — your changes are saved as a **draft** alongside the running, active configuration and only take effect
+  once you publish and activate that draft. See [Versioning mappings](/c8y-pkg-dynamic-mapper/introduction/versioning)
+  for the full draft → publish → activate flow, including rollback to a previous version.
+- The "-" icon deletes a mapping.
+- **Import** and **Export** move mappings in and out of the table as JSON, individually or all at once. Sample
+  files to try this with:
+  [inbound](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/blob/main/resources/samples/mappings-INBOUND.json),
+  [outbound](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/blob/main/resources/samples/mappings-OUTBOUND.json).
+
+![Import mappings](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Table_Import.png "The import dialog for adding mappings from a JSON file.")
+
+#### Testing a mapping {#testing-a-mapping}
+
+Before activating a mapping, use the **Testing** step of the wizard (or reopen an existing mapping) to verify the
+transformation without waiting for a real device message:
+
+- **Transform Test Message** — applies the mapping's substitutions (or Smart Function / Java Extension code) to
+  the sample source payload and shows the resulting Cumulocity request. A single test payload can produce more
+  than one request — e.g. a measurement for a device that does not exist yet and is implicitly created also
+  produces an inventory request. Use **Show Next Test Result** to step through all of them.
+
+![Transform test message](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_TestTransformation.png "The Testing step showing the result of Transform Test Message.")
+- **Reset Transform** — clears the test results and lets you run the transformation again, e.g. after editing the
+  source payload or a substitution.
+- **Send Test Message** — sends the transformed result(s) to Cumulocity for real. This requires the mapping to
+  use an external ID (it is disabled otherwise). Enable **Create test device** to have the mapper create a real
+  device in inventory first, tagged with the fragment `d11r_testDevice` so it can be identified and cleaned up
+  afterwards.
+
+![Send test message](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_SendTestMessage.png "Sending a transformed test message to a test device in Cumulocity.")
 
 ### SparkPlug B {#sparkplugb}
 
@@ -598,6 +608,8 @@ The following screen offers two ways to define subscriptions:
 - **Subscriptions static**: Select specific individual devices using a tree or table view. Subscriptions are
   created explicitly for the chosen devices and are not updated automatically when devices are added or removed
   from a group.
+
+  ![Static subscription device picker](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Outbound_subscription.png "Selecting individual devices for a static outbound subscription.")
 - **Subscriptions dynamic (by group)**: Specify device groups. When a group is added, subscriptions for all
   assigned devices are created. When a device is added to or removed from a chosen group, the subscription is
   automatically created or deleted. The filter applies to child assets and child devices.
@@ -643,6 +655,8 @@ JSONata expression evaluated against the device's inventory data.
 
 This filter is defined on the **General settings** step of the wizard and is available for **outbound mappings
 only**.
+
+![Inventory filter](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Topic_Outbound.png "The General Settings step of an outbound mapping, including the Filter Inventory field.")
 
 ```javascript
 // Only process pressure sensors
@@ -864,3 +878,6 @@ a mapping has been created does *not* affect existing mappings.
 | `OUTBOUND_SMART_FUNCTION` | Outbound | Starting template for outbound Smart Function mappings | Yes (duplicate system template to customise) |
 | `SHARED` | Both | Evaluated before every Smart Function execution — define helper functions and constants here that are available as globals in all Smart Functions without any import statement | Yes |
 | `SYSTEM` | — | Read-only canonical defaults maintained by the mapper. Use **Duplicate** to create a customisable copy. The *Init system code templates* action restores all system templates to factory defaults (your custom templates are not affected). | No (read-only) |
+
+The full, per-mapping-type gallery of code templates currently available in your tenant is listed in the
+[Appendix: Code Template Gallery](#code-template-gallery) at the end of this page.

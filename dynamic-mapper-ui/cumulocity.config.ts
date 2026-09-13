@@ -114,6 +114,66 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Versions_Retention_Config.png'
       },
       {
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Table.png',
+        to: 'image/Dynamic_Mapper_Mapping_Table.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Table_Import.png',
+        to: 'image/Dynamic_Mapper_Mapping_Table_Import.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_TestTransformation.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_TestTransformation.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_SendTestMessage.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_SendTestMessage.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Connector_Overview.png',
+        to: 'image/Dynamic_Mapper_Connector_Overview.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Connector_Details.png',
+        to: 'image/Dynamic_Mapper_Connector_Details.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Connector_WebHook.png',
+        to: 'image/Dynamic_Mapper_Connector_WebHook.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Connector_Kafka.png',
+        to: 'image/Dynamic_Mapper_Connector_Kafka.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Connector_Http.png',
+        to: 'image/Dynamic_Mapper_Connector_Http.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Connector_Select.png',
+        to: 'image/Dynamic_Mapper_Connector_Select.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Filter_Outbound.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Filter_Outbound.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Topic_Outbound.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Topic_Outbound.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Outbound_subscription.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Outbound_subscription.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Monitoring.png',
+        to: 'image/Dynamic_Mapper_Monitoring.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Monitoring_Tree.png',
+        to: 'image/Dynamic_Mapper_Monitoring_Tree.png'
+      },
+      {
         from: '../LICENSE',
         to: 'LICENSE.txt'
       },

@@ -44,6 +44,7 @@ import { Subject, takeUntil } from 'rxjs';
 interface RepairStrategyOption {
   label: string;
   value: string;
+  description: string;
   disabled: boolean;
 }
 
@@ -102,6 +103,22 @@ export class SubstitutionRendererComponent implements OnDestroy {
     RepairStrategy.USE_LAST_VALUE_OF_ARRAY
   ];
 
+  /** Kept in sync with the backend enum `dynamic.mapper.processor.model.RepairStrategy`. */
+  private static readonly REPAIR_STRATEGY_DESCRIPTIONS: Record<string, string> = {
+    [RepairStrategy.DEFAULT]:
+      'Write the extracted value to the target path as-is. The path must already exist in the target template.',
+    [RepairStrategy.USE_FIRST_VALUE_OF_ARRAY]:
+      'If the extracted value is an array, use only its first element. Not applicable when "Expand as array" is set.',
+    [RepairStrategy.USE_LAST_VALUE_OF_ARRAY]:
+      'If the extracted value is an array, use only its last element. Not applicable when "Expand as array" is set.',
+    [RepairStrategy.IGNORE]:
+      'If the extracted value is missing or null, skip the substitution and keep whatever the target template defines.',
+    [RepairStrategy.REMOVE_IF_MISSING_OR_NULL]:
+      'If the extracted value is missing or null, delete the target node from the target template.',
+    [RepairStrategy.CREATE_IF_MISSING]:
+      'Create the target node, including missing parent nodes, if it does not exist in the target template.'
+  };
+
   private destroy$ = new Subject<void>();
 
   ngOnDestroy(): void {
@@ -133,11 +150,17 @@ export class SubstitutionRendererComponent implements OnDestroy {
     return Object.keys(RepairStrategy).map(key => ({
       label: key,
       value: key,
+      description: SubstitutionRendererComponent.REPAIR_STRATEGY_DESCRIPTIONS[key] ?? '',
       // USE_FIRST/LAST_VALUE_OF_ARRAY collapse an extracted array to a single element - meaningless
       // once "Expand as array" already splits the array into N substitutions.
       disabled: this.isRepairStrategyDisabled() ||
         (SubstitutionRendererComponent.ARRAY_ONLY_STRATEGIES.includes(key) && sub.expandArray)
     }));
+  }
+
+  /** Tooltip on the select itself: what the currently chosen strategy does. */
+  repairStrategyDescriptionFor(sub: Substitution): string {
+    return SubstitutionRendererComponent.REPAIR_STRATEGY_DESCRIPTIONS[sub.repairStrategy] ?? '';
   }
 
   onExpandArrayChange(sub: Substitution, expandArray: boolean): void {

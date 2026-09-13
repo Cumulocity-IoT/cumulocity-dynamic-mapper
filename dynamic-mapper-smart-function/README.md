@@ -454,5 +454,5 @@ Contributions are welcome! Please:
 
 For questions or issues:
 
-- Check the [User Guide](../USERGUIDE.md)
+- Check the in-app documentation ([Smart Functions](../dynamic-mapper-ui/public/docs/smartfunction.md))
 - Open an issue in the GitHub repository

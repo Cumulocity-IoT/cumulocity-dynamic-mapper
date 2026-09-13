@@ -62,3 +62,65 @@ already exist in the target template, or the `pathSource` expression evaluates t
 Because expanding into multiple documents already uses every array element, the editor disables
 `USE_FIRST_VALUE_OF_ARRAY` / `USE_LAST_VALUE_OF_ARRAY` whenever **Expand as array** is switched on for a substitution.
 :::
+
+### How many Cumulocity requests one message produces {#substitution-cardinality}
+
+Whether a source payload maps to one Cumulocity request or several depends on two independent things: how many
+**devices** a substitution identifies, and how many **values** it extracts.
+
+1. If the device-identifying substitution extracts a single value, e.g. `"device_101023"`, and every other
+   substitution also extracts a single value, exactly **one** request is generated
+   (**single-device-single-value**).
+2. If the device-identifying substitution extracts an array with **Expand as array** switched on, e.g.
+   `["device_101023", "device_101024"]`, one request is generated per device
+   (**multi-device-single-value** — useful mainly for creating multiple devices from one payload).
+3. If a *value* substitution (not the device identifier) extracts an array with **Expand as array** on, e.g.
+   `[10.4, 20.9]`, one request is generated per array element, all for the same device
+   (**single-device-multi-value**).
+4. If both the device identifier and a value substitution extract arrays with **Expand as array** on, the two
+   arrays are paired up element-by-element — element *i* of the device array with element *i* of the value array
+   (**multi-device-multi-value**).
+
+An object result (as opposed to a scalar or array) is not supported for a substitution.
+
+```mermaid
+flowchart TD
+    root(["Substitution results<br/>extracted from one source message"])
+
+    root --> one["One device identified<br/>device: 'device_101023'"]
+    root --> many["Multiple devices identified<br/>devices: 'device_101023', 'device_101024'"]
+
+    one --> oneScalar["one value<br/>value: 10.4"]
+    one --> oneArray["multiple values<br/>values: 10.4, 20.9<br/>expandArray"]
+    many --> manyScalar["one value<br/>value: 10.4<br/>broadcast to every device"]
+    many --> manyArray["multiple values<br/>values: 10.4, 20.9<br/>expandArray"]
+
+    oneScalar --> r1["single-device-single-value<br/>cardinality 1<br/>device_101023 &rarr; 10.4"]
+    oneArray --> r2["single-device-multi-value<br/>cardinality 2<br/>device_101023 &rarr; 10.4<br/>device_101023 &rarr; 20.9"]
+    manyScalar --> r3["multi-device-single-value<br/>cardinality 2<br/>device_101023 &rarr; 10.4<br/>device_101024 &rarr; 10.4"]
+    manyArray --> r4["multi-device-multi-value<br/>cardinality 2<br/>device_101023 &rarr; 10.4<br/>device_101024 &rarr; 20.9"]
+
+    classDef result fill:#e8f0fa,stroke:#316ca8,stroke-width:2px;
+    class r1,r2,r3,r4 result;
+```
+
+The number of requests generated from one message is its **cardinality**. It is driven by whichever substitution
+extracted the most values; a substitution that produced only a single value is reused ("broadcast") for every
+request, which is what makes single-device-multi-value and multi-device-single-value work without every
+substitution needing to produce the same number of values.
+
+:::info
+If extracted arrays are of different lengths — for example one substitution returns 2 values and another returns
+3 — the arrays with fewer items are padded by repeating their first value, so every request still gets a value
+for every substitution.
+:::
+
+### JSONata expression tips {#jsonata-tips}
+
+- Escape a property name containing special characters with a backtick: the property `customer-1` becomes
+  `` `customer-1` ``.
+- Function chaining with `~>` is not supported by the JSONata evaluator used here — use function notation instead.
+  The expression `Account.Product.(Price * Quantity) ~> $sum()` becomes
+  `$sum(Account.Product.(Price * Quantity))`.
+- To convert a UNIX timestamp to ISO date format: `$fromMillis($number(deviceTimestamp))`.
+- To join a substring with a device identifier: `$join([$substring(txt, 5), "-", id])`.

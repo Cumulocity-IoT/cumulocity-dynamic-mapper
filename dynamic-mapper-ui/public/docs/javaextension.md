@@ -22,6 +22,20 @@ installed, they appear in the Processor Extension configuration and become avail
 stepper.
 :::
 
+##### End-to-end overview
+
+```mermaid
+flowchart TD
+    s1["1. Implement ProcessorExtensionInbound&lt;byte[]&gt;<br/>(or ProcessorExtensionOutbound&lt;O&gt; for C8Y to broker)"]
+    s2["2. Register the class in<br/>extension-external.yaml<br/>eventName, className, description, version,<br/>optional default parameter map"]
+    s3["3. Package extension-external.yaml + compiled classes<br/>into a zip archive"]
+    s4["4. Upload the zip:<br/>Configuration &rarr; Processor Extension &rarr; Add Extension<br/>(the microservice loads it dynamically, per tenant)"]
+    s5["5. Create a mapping with transformation type Extension Java,<br/>select the extension and its eventName;<br/>optionally override the parameter map for this mapping"]
+    s6["Mapping is active:<br/>onMessage(...) runs on every matching broker message,<br/>context.getConfigAsMap() exposes tenant/topic/parameter,<br/>and its CumulocityObject results are sent to Cumulocity"]
+
+    s1 --> s2 --> s3 --> s4 --> s5 --> s6
+```
+
 ##### Selecting Java Extensions in the Mapping Stepper
 
 When creating a mapping, you can select from installed Java Extensions that define the transformation logic. The

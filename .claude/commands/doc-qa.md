@@ -6,7 +6,8 @@ Audit all project documentation for broken image references, stale cross-links, 
 
 Markdown files to audit (search recursively from repo root, skip `node_modules`, `.git`, `target`):
 - `docs/**/*.md`
-- `*.md` at repo root (README.md, ARCHITECTURE.md, EXTENSIONS.md, CHANGELOG.md, etc.)
+- `*.md` at repo root (README.md, CHANGES.md, FAQ.md, CLAUDE.md, AGENTS.md, CONTRIBUTING.md)
+- `dynamic-mapper-ui/public/docs/*.md` — in-app documentation, fetched and rendered live by the deployed plugin
 
 Image registries:
 - **Filesystem:** `resources/image/` — source-of-truth for image files
@@ -16,19 +17,20 @@ Image registries:
 1. `dynamic-mapper-ui/src/introduction/**/*.html` — Angular in-app documentation components
 2. `dynamic-mapper-ui/README.md` — the README bundled with the UI plugin
 
-Images referenced only in other docs (USERGUIDE.md, ARCHITECTURE.md, EXTENSIONS.md, docs/**/*.md, etc.) are served from GitHub/external and do NOT need a config entry.
+Images referenced only in other docs (docs/**/*.md, etc.) are served from GitHub/external and do NOT need a config entry. Images referenced from `dynamic-mapper-ui/public/docs/*.md` use the `/apps/c8y-pkg-dynamic-mapper/image/...` path and are bundled the same way as the `src/introduction/**/*.html` references — treat them as app-facing (rule 1a below), not as external/GitHub-served.
 
 ---
 
 ## Step 1 — Collect all image references
 
 **1a. App-facing references (must be in config)**
-Scan `dynamic-mapper-ui/src/introduction/**/*.html` and `dynamic-mapper-ui/README.md`.
+Scan `dynamic-mapper-ui/src/introduction/**/*.html`, `dynamic-mapper-ui/public/docs/*.md`, and
+`dynamic-mapper-ui/README.md`.
 Extract every `<img src="...">` and `![alt](...)`.
 For each: record source file, line number, image filename (basename only).
 
 **1b. Other doc references (config not required)**
-Scan all other markdown files in scope (including `USERGUIDE.md`, `ARCHITECTURE.md`, `EXTENSIONS.md`, `docs/**/*.md`).
+Scan all other markdown files in scope (including `docs/**/*.md`).
 Extract image references the same way — these are tracked for file-existence only, not config registration.
 
 ## Step 2 — Collect all known images
@@ -87,7 +89,7 @@ Docs to read for this pass:
 - `docs/ui/architecture.md`
 - `docs/smart-functions.md`
 - `README.md`
-- `ARCHITECTURE.md`
+- `docs/architecture.md`
 
 For each finding: file + line, issue description, suggested fix. Skip minor style/grammar — focus on factual correctness.
 

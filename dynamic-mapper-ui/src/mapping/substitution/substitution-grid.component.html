@@ -103,11 +103,12 @@
             <td>
               <div class="c8y-select-wrapper substitution-repair-strategy-select">
                 <select class="form-control" [attr.data-cy]="'dm-substitution-repair-strategy-' + i"
-                  [title]="sub.repairStrategy | formatStringAsWords"
+                  [title]="repairStrategyDescriptionFor(sub)"
                   [disabled]="isRepairStrategyDisabled()" [ngModel]="sub.repairStrategy"
                   (ngModelChange)="onRepairStrategyChange(sub, $event)">
                   @for (opt of repairStrategyOptionsFor(sub); track opt.value) {
-                  <option [value]="opt.value" [disabled]="opt.disabled">{{ opt.label | formatStringAsWords }}</option>
+                  <option [value]="opt.value" [disabled]="opt.disabled" [title]="opt.description">{{ opt.label |
+                    formatStringAsWords }}</option>
                   }
                 </select>
               </div>

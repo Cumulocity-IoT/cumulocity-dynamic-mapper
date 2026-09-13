@@ -83,6 +83,83 @@ sequenceDiagram
     Dispatcher-->>Connector: ProcessingResultWrapper (Future, consolidated QoS)
 ```
 
+### Worked example
+
+A concrete run through the diagram above, for a mapping with `mappingTopic: "event/+/train"`
+and a substitution `_TOPIC_LEVEL_[1]` → `_IDENTITY_.externalId`:
+
+```mermaid
+sequenceDiagram
+    participant Broker as MQTT broker
+    participant Dispatch as CamelDispatcherInbound
+    participant Extract as JSONata extraction processor
+    participant Subst as Substitution result processor
+    participant Identity as IdentityResolutionService
+    participant C8Y as Cumulocity
+
+    Note over Broker,C8Y: mappingTopic "event/+/train", substitution pathTarget _IDENTITY_.externalId from pathSource _TOPIC_LEVEL_[1]
+    Broker->>Dispatch: topic "event/102030/train"<br/>payload: ts, msg
+    Dispatch->>Dispatch: split topic into _TOPIC_LEVEL_ array,<br/>merge into deserialized payload
+    Dispatch->>Extract: resolved mapping + enriched payload
+    Extract->>Extract: evaluate every substitution's pathSource
+    Extract->>Subst: processingCache[pathTarget] = SubstituteValue(s)
+    Subst->>Identity: resolve externalId "102030"
+    Identity-->>Subst: c8y internal id "47002030"
+    Subst->>Subst: write every cached pathTarget<br/>into a copy of targetTemplate
+    Subst->>C8Y: POST /event/events<br/>source.id = "47002030"
+```
+
+How the mapping in that example was found in the first place — the topic-matching tree
+(`MappingTreeNode`) that resolves `event/102030/train` to `event/+/train` — one node per topic
+segment, `+`/`#` wildcards are ordinary segment values in that tree, walked one level at a time
+with exact-match and wildcard branches followed in parallel so a single message can match more
+than one mapping:
+
+```mermaid
+flowchart TD
+    classDef build fill:#eef6ff,stroke:#2f6fb3,color:#1a3f66,text-align:left;
+    classDef decision fill:#fff7e6,stroke:#b8860b,color:#5c4400,text-align:left;
+    classDef leaf fill:#e9f7ef,stroke:#2e8b57,color:#1b5e3a,text-align:left;
+    classDef msg fill:#f3f0fa,stroke:#6a4c93,color:#3d2b5c,text-align:left;
+    classDef result fill:#fdecea,stroke:#c0392b,color:#7b241c,text-align:left;
+
+    subgraph reg["Building the tree (once per mapping, on save)"]
+        direction LR
+        m1["mappingTopic: device/+/data<br/>mappingTopic: device/#<br/>mappingTopic: device/berlin/data"]:::build
+        m1 --> tree["One child node per topic segment.<br/>'+' and '#' are ordinary segment values,<br/>tried like any other literal segment."]:::build
+    end
+
+    subgraph match["Resolving an incoming message (per level)"]
+        direction TB
+        msg["Message on topic device/berlin/data,<br/>split into levels: [device, berlin, data]"]:::msg --> level0
+
+        level0["At node 'device', level index 0"]:::msg --> exact0{"child 'berlin'?"}:::decision
+        level0 --> plus0{"child '+' ?"}:::decision
+        level0 --> hash0{"child '#' ?"}:::decision
+
+        exact0 -- yes --> level1a["recurse into 'berlin' at index 1"]:::msg
+        plus0 -- yes --> level1b["recurse into '+' at index 1<br/>(matches any single segment)"]:::msg
+        hash0 -- yes --> leafHash["'#' is itself a leaf result —<br/>consumes all remaining levels,<br/>no further recursion"]:::leaf
+
+        level1a --> exact1{"child 'data'?"}:::decision
+        exact1 -- yes, index==levels.size --> leafExact["mapping leaf: device/berlin/data"]:::leaf
+        level1b --> exact1b{"child 'data'?"}:::decision
+        exact1b -- yes --> leafPlus["mapping leaf: device/+/data"]:::leaf
+    end
+
+    result["All leaves reached this way are collected.<br/>Exact and wildcard branches are walked in parallel,<br/>so one message can match several distinct mappings<br/>(e.g. device/+/data and device/#) —<br/>not several mappings on one node: each node holds at most one."]:::result
+    leafExact --> result
+    leafPlus --> result
+    leafHash --> result
+
+    reg -.-> match
+```
+
+The levels of the Mapping Topic are split and added to the source payload as `_TOPIC_LEVEL_`, e.g.
+`["device", "express", "berlin_01"]` for topic `device/express/berlin_01` — see
+[`MappingTreeNode.resolveTopicPath`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/MappingTreeNode.java)
+and [mapping-validation.md](mapping-validation.md).
+
 ### Dispatch and resolution (`CamelDispatcherInbound`)
 
 `onMessage()`/`onTestMessage()` both funnel into `processMessage()`
@@ -205,8 +282,12 @@ three pluggable transformation types above.
 
 `SubstitutionResultInboundProcessor` walks every `pathTarget` in
 `context.getProcessingCache()` and writes the corresponding value into a copy of
-`targetTemplate` for each device (cardinality is driven by the maximum `expandArray` fan-out
-across all cached substitutions — see `BaseProcessor.validateProcessingCache()`). Two
+`targetTemplate` for each device. The cardinality is the number of cached values for the
+device-identifier `pathTarget`, after `BaseProcessor.validateProcessingCache()` has padded
+that list up to the largest fan-out across all cached substitutions by repeating its first
+entry. A `pathTarget` holding exactly one value is broadcast to every request; one holding
+fewer values than the cardinality without being broadcastable falls back to its declared
+`repairStrategy` (and to the `NOT_DEFINED` marker for `DEFAULT`/`CREATE_IF_MISSING`). Two
 `pathTarget` values are handled specially before the generic JSONPath write, because they
 drive Cumulocity identity:
 

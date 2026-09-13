@@ -218,7 +218,7 @@ All under `connector/`.
 
 ### 1.5a Reliability — QoS, Timeouts, Failure Handling, Status
 
-The behaviour described in [`docs/feature/reliability.md`](docs/feature/reliability.md).
+The behaviour described in [`feature/reliability.md`](feature/reliability.md).
 
 | Test Class | Coverage |
 |------------|----------|
@@ -236,7 +236,7 @@ The behaviour described in [`docs/feature/reliability.md`](docs/feature/reliabil
 |------------|----------|
 | `MappingServiceActivationTest` (`service/`) | Version-aware activation: lock, version swap, validate-before-persist |
 | `MappingServiceVersionTest`, `MappingVersionServiceTest`, `MappingVersioningTest`, `MappingVersioningIntegrationTest` | Draft/publish/rollback, retention, backfill of legacy versions |
-| `MappingValidatorTopicSampleTest`, `MappingValidatorFilterUniquenessTest` (`service/`) | Topic/sample consistency and outbound filter uniqueness — see [`mapping-validation.md`](docs/feature/mapping-validation.md) |
+| `MappingValidatorTopicSampleTest`, `MappingValidatorFilterUniquenessTest` (`service/`) | Topic/sample consistency and outbound filter uniqueness — see [`mapping-validation.md`](feature/mapping-validation.md) |
 | `DeploymentMapServiceTest` (`service/deployment/`) | Which mappings are deployed to which connector; reconcile on change |
 | `ServiceConfigurationServiceTest`, `ConnectorConfigurationServiceTest` (`configuration/`) | Configuration CRUD and defaults |
 | `MappingControllerTest`, `OperationControllerTest`, `TestControllerTest` (`controller/`) | REST surface: mapping CRUD, service operations, the testing endpoint |
@@ -280,7 +280,7 @@ multi-tenancy isolation, connector retry, Kafka producer configuration — are a
 | SPARKPLUGB inbound via SMART_FUNCTION | Outbound is covered (`SmartFunctionOutboundTest`), inbound is not |
 | Connector unit tests for Kafka, Pulsar, AMQP 1.0, HTTP | Only MQTT 3, MQTT Service, AMQP 0.9.1, Pub/Sub and WebHook have a client-level test |
 | `CamelDispatcherInbound` / `CamelDispatcherOutbound` error paths | Resolution failure and the 422-resend path are only reached indirectly |
-| Outbound Smart Function + `filterInventory` | The partial-notification pitfall documented in `USERGUIDE.md` has no regression test |
+| Outbound Smart Function + `filterInventory` | The partial-notification pitfall documented in `docs/feature/mapping-processing-outbound.md` has no regression test |
 
 ---
 

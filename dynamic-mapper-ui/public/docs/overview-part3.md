@@ -2,14 +2,6 @@
 title: Metadata, monitoring and troubleshooting
 ---
 
-Each template includes sample code demonstrating best practices for:
-
-- Accessing and transforming payload data
-- Working with device identifiers and external IDs
-- Enriching data with device inventory information
-- Handling different Cumulocity API types (measurements, events, alarms, inventory)
-- Error handling and logging
-
 ### Using metadata in source templates and target templates {#metadata}
 
 The mapper adds metadata in source and target templates to control the processing of the mapping. All JSON nodes
@@ -223,9 +215,9 @@ permissions and assign them to global roles or specific user groups based on you
 
 ### Monitoring {#monitoring}
 
-The **Monitoring** section in the left navigation contains four views: **Statistic processed**, **Chart
-processed**, **Cache statistic**, and **Service events**. Each gives a different operational perspective on what
-the mapper is doing at runtime.
+The **Monitoring** section in the left navigation contains views for **Statistic processed**, **Chart
+processed**, **Cache statistic**, **Service events**, and **Hierarchy mapping**. Each gives a different
+operational perspective on what the mapper is doing at runtime.
 
 #### Statistic processed (Inbound / Outbound)
 
@@ -244,6 +236,8 @@ Counters accumulate since the last reset (or since microservice startup). Use th
 the action bar to zero all counters — useful for measuring throughput during a specific time window. Counters are
 lost on microservice restart.
 :::
+
+![Statistic processed](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Monitoring.png "The Statistic processed (Inbound) view listing received/error counts per mapping.")
 
 #### Chart processed
 
@@ -312,6 +306,16 @@ Service events are stored in an in-memory ring buffer and are lost on microservi
 trails, configure the Cumulocity platform's built-in audit log or forward events to an external monitoring
 system.
 :::
+
+#### Hierarchy mapping
+
+This view exposes the topic-matching tree described under [Mapping Topic](#define-mapping) as a JSON document: an
+array of nodes, each keyed by a topic segment, nested the same way the tree is walked at runtime, down to the
+mapping registered at each leaf (its full definition, including its substitutions). It is the most direct way to
+trace why a message did — or did not — match a particular mapping, especially once several mappings share
+overlapping topic prefixes.
+
+![Hierarchy mapping](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Monitoring_Tree.png "The Hierarchy mapping view showing the topic-matching tree as JSON, down to one mapping's substitutions.")
 
 ### Message Explorer {#message-explorer}
 

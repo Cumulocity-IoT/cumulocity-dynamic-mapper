@@ -119,7 +119,7 @@ selected only if, in order:
    whatever fields happen to be present in the notification delta.
 
 **This confirms the behavior recorded in project memory
-(documented in [`USERGUIDE.md`](../../USERGUIDE.md)):**
+(also documented in [`overview-part2.md`](../../dynamic-mapper-ui/public/docs/overview-part2.md#outbound-filters)):**
 `filterMapping` runs against the partial Notification 2.0 payload, so a condition that
 depends on a fragment not included in a given `UPDATE` delta will not see that fragment and
 will evaluate as if it were absent — even if the fragment does exist on the object in

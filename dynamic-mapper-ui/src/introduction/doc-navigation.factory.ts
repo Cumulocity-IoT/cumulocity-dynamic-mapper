@@ -77,6 +77,14 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 611,
       preventDuplicates: true
     }),
+    connectorReferenceNode: new NavigatorNode({
+      parent: gettext('Managing connectors'),
+      icon: 'image',
+      label: gettext('Connector Reference'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connectors',
+      priority: 610.9,
+      preventDuplicates: true
+    }),
     monitoringNode: new NavigatorNode({
       parent: gettext('Home'),
       icon: 'line-chart',

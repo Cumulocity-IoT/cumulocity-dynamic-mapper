@@ -52,6 +52,7 @@
     "highlight.js": "^11.11.1",
     "jsonata": "^2.1.0",
     "marked": "^18.0.9",
+    "mermaid": "^12.0.0",
     "monaco-editor": "^0.53.0",
     "ngx-bootstrap": "21.0.1",
     "ngx-echarts": "^18.0.0",

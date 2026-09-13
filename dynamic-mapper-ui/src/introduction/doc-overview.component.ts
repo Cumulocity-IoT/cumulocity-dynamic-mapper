@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { Component, HostListener, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { MappingService } from '../mapping/core/mapping.service';
 import { Direction, Feature, NODE1, NODE3 } from '../shared';
 import { BehaviorSubject, from, Subject } from 'rxjs';
@@ -44,6 +44,8 @@ import { DocMarkdownService } from './doc-markdown.service';
   encapsulation: ViewEncapsulation.None
 })
 export class DocOverviewComponent implements OnInit {
+  @ViewChild('docBody', { static: false }) docBodyRef: ElementRef<HTMLElement>;
+
   codeTemplates: CodeTemplate[] = [];
   countMappingInbound$: Subject<any> = new BehaviorSubject<any>(0);
   countMappingOutbound$: Subject<any> = new BehaviorSubject<any>(0);
@@ -86,6 +88,10 @@ export class DocOverviewComponent implements OnInit {
     this.htmlPart1 = this.sanitizer.bypassSecurityTrustHtml(part1.html);
     this.htmlPart2 = this.sanitizer.bypassSecurityTrustHtml(part2.html);
     this.htmlPart3 = this.sanitizer.bypassSecurityTrustHtml(part3.html);
+    // setTimeout (a macrotask) runs after Angular's zone-triggered change detection has
+    // committed the three [innerHTML] bindings above to the DOM, so docBodyRef.nativeElement
+    // actually contains the <pre class="mermaid"> nodes mermaid.run() needs to find.
+    setTimeout(() => this.markdownService.renderMermaidDiagrams(this.docBodyRef.nativeElement));
 
     // When navigating to a section anchor within the overview page, scroll to it.
     // Use offsetTop (layout-based, scroll-independent) rather than
