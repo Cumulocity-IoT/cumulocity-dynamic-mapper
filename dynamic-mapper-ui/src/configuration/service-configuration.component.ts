@@ -25,11 +25,14 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { PopoverModule } from 'ngx-bootstrap/popover';
+import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { saveAs } from 'file-saver';
 import { BehaviorSubject, from, map, Subject, takeUntil } from 'rxjs';
 import packageJson from '../../package.json';
 import { AIAgentService } from '../mapping/core/ai-agent.service';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
+import { ImportServiceConfigurationComponent } from './import/import-service-configuration-modal.component';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',
@@ -46,6 +49,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private aiAgentService = inject(AIAgentService);
   private readonly router = inject(Router);
+  private readonly bsModalService = inject(BsModalService);
 
   version: string = packageJson.version;
   serviceForm: FormGroup;
@@ -312,6 +316,44 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     } else {
       this.alertService.danger(gettext('Failed to clear cache!'));
     }
+  }
+
+  /**
+   * Writes the tenant's current service configuration to a JSON file.
+   *
+   * <p>A snapshot for restoring after a reset, so it deliberately contains the whole document —
+   * including `codeTemplates`, which `ServiceConfigurationService.initialize()` wipes along with
+   * everything else and which may hold Smart Function templates written by the customer.
+   * There are no credentials in this document, unlike a connector export.
+   */
+  async clickedExportServiceConfiguration(): Promise<void> {
+    try {
+      // Read through the service rather than the form: the form only binds the settings the UI
+      // renders, and a snapshot has to cover the whole document.
+      const configuration = await this.sharedService.getServiceConfiguration();
+      const blob = new Blob([JSON.stringify(configuration, undefined, 2)], {
+        type: 'application/json'
+      });
+      saveAs(blob, 'service-configuration.json');
+    } catch (error) {
+      this.alertService.danger(gettext('Failed to export the service configuration'));
+    }
+  }
+
+  clickedImportServiceConfiguration(): void {
+    const modalRef: BsModalRef = this.bsModalService.show(ImportServiceConfigurationComponent, {
+      initialState: {}
+    });
+    modalRef.content.closeSubject
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(async (didImport: boolean) => {
+        if (didImport) {
+          // The restored document is what the service now holds — reload so the form shows it
+          // instead of the values the user was looking at before the import.
+          await this.loadData();
+        }
+        modalRef.hide();
+      });
   }
 
   get pipelineTimeoutInvalid(): boolean {

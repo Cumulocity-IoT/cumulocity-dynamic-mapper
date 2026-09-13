@@ -58,6 +58,21 @@ expected case, since it is internal status bookkeeping — are unaffected.
 `MappingStatus.equals`/`hashCode` now compare the mapping `identifier` rather than `id`, and
 `reset()` additionally clears `currentFailureCount`.
 
+### Export/import for the service configuration
+
+Adds the counterpart of the connector export/import from 6.4.x, as a **snapshot restore**: the
+whole service configuration can be written to a JSON file and put back later — the case being the
+reset that replaces the document with a fresh default and loses the settings, the AI agent names
+and any custom Smart Function `codeTemplates` along with them.
+
+- *Export* writes `GET /configuration/service` to `service-configuration.json`, code templates
+  included, since a snapshot that omitted them would not restore the tenant.
+- *Import* replaces the current settings after an explicit confirmation showing what the file
+  holds. There is no merge or per-field selection — this is a restore, not a promotion tool.
+- Unlike the connector import, no credentials are involved, so a restored configuration is
+  immediately complete. The settings take effect at once: enabling outbound mappings reconnects
+  the connectors, which the confirmation states.
+
 ### Service configuration reorganised
 
 The settings were split across General / AI Agent / Caching / Logging, which put unrelated things

@@ -32,6 +32,21 @@
     }
   </button>
 </c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" title="{{ 'Export service configuration' | translate }}"
+    (click)="clickedExportServiceConfiguration()" data-cy="dm-service-config-export">
+    <i c8yIcon="download"></i>
+    {{ 'Export' | translate }}
+  </button>
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" title="{{ 'Import service configuration' | translate }}"
+    (click)="clickedImportServiceConfiguration()" [disabled]="!feature?.userHasMappingAdminRole"
+    data-cy="dm-service-config-import">
+    <i c8yIcon="upload"></i>
+    {{ 'Import' | translate }}
+  </button>
+</c8y-action-bar-item>
 @if (section == 'processing'){
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Rotate GraalVM Engine' | translate }}"
