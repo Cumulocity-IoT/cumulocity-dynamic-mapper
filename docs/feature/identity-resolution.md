@@ -11,7 +11,34 @@ substitutions plug into the processing pipeline is covered in
 [`mapping-processing-inbound.md`](mapping-processing-inbound.md) and
 [`mapping-processing-outbound.md`](mapping-processing-outbound.md).
 
-## Core classes
+---
+
+## Requirements
+
+**What it is for.** A message names a device the way the device's own world names it — a serial
+number, an IMEI, a topic segment. Cumulocity names it with an internal managed-object id.
+Identity resolution is the translation between the two, in both directions.
+
+- **A mapping states where the device identifier comes from**: a field in the payload, a segment
+  of the topic, or a fixed value.
+- **An external ID must be resolvable to a managed object** using an external-ID type, and the
+  same device must resolve consistently for every subsequent message.
+- **A device that does not exist yet may be created automatically**, if the mapping opts in.
+  Concurrent messages for the same new device must produce one device, not several.
+- **A mapping may address a device by its internal id instead**, skipping resolution.
+- **Resolution must be fast enough for message rates**, so results are cached; the cache must
+  never outlive the truth — a device deleted in the platform must stop resolving rather than
+  resolving to a dead id indefinitely.
+- **Cached identities are per tenant.** The same serial number in two tenants is two different
+  devices.
+- Outbound, the reverse: a Cumulocity object's source id must be translatable back to the external
+  ID the receiving system expects, and into the publish topic.
+
+---
+
+## Implementation
+
+### Core classes
 
 | Class | Role |
 |---|---|
@@ -22,7 +49,7 @@ substitutions plug into the processing pipeline is covered in
 | [`DeviceBootstrapService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/DeviceBootstrapService.java) | **Not** part of per-message identity resolution — see note below. |
 | [`TenantRegistry`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/TenantRegistry.java) | Holds the external-ID cache and per-external-ID creation locks used by `IdentityResolutionService`. |
 
-## Two independent caches
+### Two independent caches
 
 There are two separate caches involved in resolving an external ID, serving different call
 paths — this is a real structural detail, not an implementation accident:
@@ -48,7 +75,7 @@ before resending
 a comment there points to `attic/fix/inconsistant-cache/ISSUE.md` documenting the bug that
 motivated evicting both.
 
-## Inbound resolution path
+### Inbound resolution path
 
 Triggered from `SubstitutionResultInboundProcessor.prepareAndSubstituteInPayload()`
 ([`SubstitutionResultInboundProcessor.java:182-247`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/SubstitutionResultInboundProcessor.java#L182-L247))
@@ -85,7 +112,7 @@ flowchart TD
   continue without aborting the whole batch). If `createNonExistingDevice` is on,
   `IdentityResolutionService.getOrCreateDeviceThreadSafe()` is called.
 
-### `getOrCreateDeviceThreadSafe()` — double-checked locking
+#### `getOrCreateDeviceThreadSafe()` — double-checked locking
 
 ([`IdentityResolutionService.java:64-123`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/IdentityResolutionService.java#L64-L123))
 
@@ -105,7 +132,7 @@ flowchart TD
    `resolveExternalId2GlobalId` returns a synthetic mock ID (e.g. `"10000"`) that must never
    leak into the production create-or-lookup cache.
 
-### Implicit device creation
+#### Implicit device creation
 
 `ProcessingResultHelper.createImplicitDevice()`
 ([`ProcessingResultHelper.java:168-`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/util/ProcessingResultHelper.java#L168))
@@ -122,7 +149,7 @@ builds a minimal managed object:
   external ID (`createWithExternalIdBinding`) unless `testing=true`, in which case a
   predefined mock source ID is assigned instead of a server-generated one.
 
-## Outbound resolution path
+### Outbound resolution path
 
 Outbound goes the other direction: given a Cumulocity source device ID (extracted from the
 notification payload by `EnrichmentOutboundProcessor` — see
@@ -137,7 +164,7 @@ of that type exists, the mapping is skipped for that device
 (`context.setIgnoreFurtherProcessing(true)`) rather than erroring, since a missing enrollment
 is a device-configuration gap rather than a mapping bug.
 
-## Testing: mocked identity resolution
+### Testing: mocked identity resolution
 
 When `testing=true` (see [`mapping-testing.md`](mapping-testing.md) for exactly when this is
 set for each direction), every identity call in this document routes through
@@ -149,7 +176,7 @@ lookup shape as the real API, including pagination support for
 plus a parallel mock inventory cache) between test runs via the `CLEAR_CACHE` operation with
 `cacheId: MOCK_IDENTITY_CACHE` / `MOCK_INVENTORY_CACHE`, handled in `OperationController`.
 
-## `DeviceBootstrapService` is not per-message auto-registration
+### `DeviceBootstrapService` is not per-message auto-registration
 
 Despite the name, `DeviceBootstrapService` is **not** involved in resolving or
 auto-registering devices for incoming messages. Grepping its only caller confirms it is used

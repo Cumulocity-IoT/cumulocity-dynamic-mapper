@@ -10,7 +10,25 @@ on this Pulsar base class but with a very different topic model, see
 [connector-mqtt-service.md](connector-mqtt-service.md) — this document covers the
 generic/user-configured Pulsar connector only.
 
-## Configuration (`ConnectorSpecification`)
+---
+
+## Requirements
+
+**What it is for.** Connecting to an Apache Pulsar cluster in both directions.
+
+- **Both directions.**
+- **MQTT-style wildcards are translated to a Pulsar topic-pattern subscription.**
+- **All three QoS levels are honoured**: at-most-once sends asynchronously and acknowledges
+  immediately; higher levels acknowledge only after successful processing, and exactly-once
+  additionally uses an exclusive subscription. See [reliability.md](reliability.md).
+- **A failed message must be redeliverable**, bounded by the poison-pill guard so one
+  undigestible payload cannot block a subscription.
+
+---
+
+## Implementation
+
+### Configuration (`ConnectorSpecification`)
 
 Built via `ConnectorSpecificationBuilder.create("Apache Pulsar", ConnectorType.PULSAR)`:
 
@@ -29,7 +47,7 @@ Built via `ConnectorSpecificationBuilder.create("Apache Pulsar", ConnectorType.P
 | `pulsarTenant` / `pulsarNamespace` | string | no | `public` / `default` | |
 | `isSparkplugHost` / `sparkplugHostId` | boolean / string | no | `false` | see Sparkplug note below |
 
-## Topic model
+### Topic model
 
 A mapping topic maps to `persistent://<tenant>/<namespace>/<topicName>` unless already
 prefixed with `persistent://`/`non-persistent://`. MQTT-style topic segments are
@@ -39,21 +57,21 @@ Subscription type per topic is taken from the `subscriptionType` config unless t
 mapping's QoS is `EXACTLY_ONCE`, in which case it's forced to `Exclusive`; otherwise
 `Shared`.
 
-## Subscribe / unsubscribe
+### Subscribe / unsubscribe
 
 If a topic contains MQTT-style wildcards (`+`/`#`), `subscribe()` translates them into
 a Pulsar regex and uses `.topicsPattern(...)`; otherwise a plain `.topic(...)`.
 `acknowledgmentGroupTime` is set to 100ms when acking is required, `0` otherwise.
 `unsubscribe()` closes and removes the consumer.
 
-## Publish (`publishMEAO`)
+### Publish (`publishMEAO`)
 
 Gets or creates a cached `Producer<byte[]>` per topic, with up to 3 creation retries;
 handles a Pulsar PIP-344 `FeatureNotSupportedException` by falling back to
 `createAsync()`. `AT_MOST_ONCE` uses `producer.sendAsync()` fire-and-forget (swallowing
 failures); other QoS levels use blocking `producer.send()`.
 
-## Ack / QoS
+### Ack / QoS
 
 `supportedQOS = [AT_MOST_ONCE, AT_LEAST_ONCE, EXACTLY_ONCE]`. `QoSAwarePulsarCallback`
 immediately acks `AT_MOST_ONCE` messages regardless of processing outcome. For
@@ -61,7 +79,7 @@ immediately acks `AT_MOST_ONCE` messages regardless of processing outcome. For
 HTTP-style result code below 500, `negativeAcknowledge()` at or above 500, with a
 poison-pill discard after `MAX_CONSECUTIVE_FAILURES=5` consecutive failures.
 
-## Housekeeping
+### Housekeeping
 
 `connectorSpecificHousekeeping()` prunes disconnected producers from the map so they're
 lazily recreated on the next publish. A separate `monitorSubscriptions()` does the
@@ -71,7 +89,7 @@ full reconnect cycle via `initializeSubscriptionsAfterConnect()`) re-subscribes 
 This asymmetry (producers self-heal lazily, consumers don't) is worth knowing if
 inbound messages silently stop arriving after a connection blip.
 
-## TLS / auth
+### TLS / auth
 
 TLS via the `pulsar+ssl://` scheme, auto-adjusted from `pulsar://` when `enableTls=true`;
 a self-signed cert is written to a temp PEM file and passed as
@@ -79,7 +97,7 @@ a self-signed cert is written to a temp PEM file and passed as
 `oauth2` → `AuthenticationOAuth2` (constructed reflectively); `tls` → `AuthenticationTls`;
 `basic` → `AuthenticationBasic`.
 
-## Sparkplug B Host support — not actually implemented in this base class
+### Sparkplug B Host support — not actually implemented in this base class
 
 The spec exposes `isSparkplugHost`/`sparkplugHostId`, and a `SparkplugCertificateManager`
 is wired in, but the base class's default `createSparkplugPublisher()` just logs a
@@ -89,12 +107,12 @@ Service subclass) overrides this to make Sparkplug Host mode functionally work. 
 enable Sparkplug Host mode on a plain, user-configured Pulsar connector, expect it to
 be a no-op.
 
-## Supported directions
+### Supported directions
 
 `INBOUND` and `OUTBOUND` (inherited by the `MQTTServicePulsarClient` subclass too,
 which does not override `supportedDirections()`).
 
-## Gotchas
+### Gotchas
 
 - Sparkplug Host mode on the base class is effectively decorative — see above.
 - A dropped consumer is not automatically resubscribed by

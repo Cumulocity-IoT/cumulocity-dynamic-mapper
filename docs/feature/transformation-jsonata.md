@@ -6,7 +6,29 @@ JSONata expression (the `pathSource`) against the deserialized source payload an
 the result to a target path (`pathTarget`). It requires no code — mappings are configured
 declaratively as a list of substitutions in the mapping editor.
 
-## Where it runs
+---
+
+## Requirements
+
+**What it is for.** Extracting and reshaping values declaratively, without writing code — the
+default for simple field-to-field mappings.
+
+- **A substitution pairs a source expression with a target path.** The expression is evaluated
+  against the incoming payload; the result is written into the target template.
+- **Expressions may compute**, not just select: arithmetic, string handling, conditionals, dates.
+- **One substitution must define the device identifier**, so the message can be attributed.
+- **A substitution may expand an array** into several Cumulocity objects.
+- **Missing or null values have a defined outcome** the mapping chooses — leave the field, remove
+  it, or fail the message — rather than an implicit one.
+- **The result is type-checked against what the target expects**, so a mapping fails with a clear
+  message rather than producing an object Cumulocity rejects.
+- **Expressions are testable in the editor** against a sample payload, showing the extracted value.
+
+---
+
+## Implementation
+
+### Where it runs
 
 Extraction logic lives in
 [`AbstractJSONataExtractionProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractJSONataExtractionProcessor.java),
@@ -35,7 +57,7 @@ flowchart LR
     keep --> cache
 ```
 
-## Evaluation
+### Evaluation
 
 `AbstractJSONataExtractionProcessor.extractFromSource()`
 ([`AbstractJSONataExtractionProcessor.java:91-132`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractJSONataExtractionProcessor.java#L91-L132))
@@ -68,7 +90,7 @@ The extracted value is then handled by `processSubstitution()`
   target the same JSON path across a message and later be merged into the final target
   document (elsewhere in the pipeline, outside this processor).
 
-## Substitution model: `pathSource` / `pathTarget`
+### Substitution model: `pathSource` / `pathTarget`
 
 A `Substitution` (`dynamic.mapper.model.Substitution`) is the unit of configuration for a
 JSONata mapping:
@@ -85,7 +107,7 @@ correctness (e.g. whether a path actually resolves) is left to the JSONata evalu
 before persistence, to [mapping-validation.md](mapping-validation.md)'s JSON/identifier
 checks.
 
-## Identity substitution: `_IDENTITY_.externalId` / `_IDENTITY_.c8ySourceId`
+### Identity substitution: `_IDENTITY_.externalId` / `_IDENTITY_.c8ySourceId`
 
 Every mapping needs exactly one (inbound) or at least one (outbound) substitution that
 tells the pipeline which device the message is about — see rule 5 in
@@ -118,7 +140,7 @@ method rewrites it in-place into the real API-specific identifier field the enri
 processor expects (`source.id` for EVENT/ALARM/MEASUREMENT, `id` for INVENTORY, `deviceId`
 for OPERATION) before the mapping's normal substitution/extraction logic runs.
 
-## How this differs from Smart Functions and Java Extensions
+### How this differs from Smart Functions and Java Extensions
 
 | | JSONata | Smart Functions | Java Extensions |
 |---|---|---|---|

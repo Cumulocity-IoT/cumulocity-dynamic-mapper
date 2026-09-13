@@ -27,7 +27,7 @@ stepper.
 When creating a mapping, you can select from installed Java Extensions that define the transformation logic. The
 mapping stepper displays all available extensions along with their associated templates:
 
-![Java Extension in Mapping Stepper](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ProcessorExtension.png "Screenshot showing the mapping stepper with Java Extension templates. The dropdown displays available extensions for payload parsing, including various custom extensions like CustomEvent, CustomMeasurement, and MeasurementWithImplicitDevice. Each extension provides pre-configured templates for both source and target payloads.")
+![Java Extension in Mapping Stepper](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ProcessorExtension.png "Screenshot showing step 4 / tab Transformation of the mapping stepper with Java Extension templates. The dropdown displays available extensions for payload parsing, including various custom extensions like CustomEvent, CustomMeasurement, and MeasurementWithImplicitDevice. Each extension provides pre-configured templates for both source and target payloads.")
 
 ##### Managing Installed Java Extensions
 

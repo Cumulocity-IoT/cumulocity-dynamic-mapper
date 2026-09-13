@@ -284,6 +284,11 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
       // Patch the FormControl so the input field shows the value.
       // emitEvent: false prevents triggering the valueChanges subscription again.
       this.filterFormly.get('filterMapping')?.setValue(path, { emitEvent: false });
+      // Clear any error left by an earlier failed evaluation: setValue({emitEvent: false})
+      // does not re-run validation, so without this the control stays invalid forever once
+      // a single evaluation has failed (e.g. the first one, fired before the source template
+      // was expanded), even though the current expression evaluates fine.
+      this.filterFormly.get('filterMapping')?.setErrors(null);
     } catch (error) {
       this.filterModel.filterExpression ??= { result: '', resultType: '', valid: false };
       this.filterModel.filterExpression.valid = false;

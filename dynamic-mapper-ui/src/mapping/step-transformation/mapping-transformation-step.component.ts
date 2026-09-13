@@ -335,8 +335,6 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     this.substitutionService.addSubstitution(
       this.substitutionModel,
       this.mapping,
-      this.stepperConfiguration,
-      this.expertMode,
       this.refreshSubstitutionValidity
     );
 
@@ -348,7 +346,6 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
       this.selectedSubstitution,
       this.substitutionModel,
       this.mapping,
-      this.stepperConfiguration,
       () => {
         this.refreshSubstitutionValidity();
         // A completed update is a natural end to the editing session - return to "add" state

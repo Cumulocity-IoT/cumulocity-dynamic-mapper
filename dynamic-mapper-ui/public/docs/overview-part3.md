@@ -1,3 +1,7 @@
+---
+title: Metadata, monitoring and troubleshooting
+---
+
 Each template includes sample code demonstrating best practices for:
 
 - Accessing and transforming payload data
@@ -401,6 +405,8 @@ The following lists common problems and how to resolve them.
   semantics.
 - Open [**Monitoring → Statistics**](/c8y-pkg-dynamic-mapper/node2/monitoring/statistic/inbound) and check
   whether the message counter for the mapping increases. If it does not, the topic pattern is not matching.
+- Check the **Execution Filter** (**Filter execution mapping** on the *Select templates* step) — if set, it must
+  evaluate to `true` for the incoming payload, otherwise the message is skipped without an error.
 - If the counter increases but objects are not created, check the **Event Log** for transformation errors.
 
 #### Transformation errors in the Event Log

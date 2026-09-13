@@ -8,7 +8,33 @@ notification payload into the broker-side shape, and publishes it through the ow
 connector. This page describes the pipeline shape; transformation internals are documented
 separately (see the links below).
 
-## Where it runs
+---
+
+## Requirements
+
+**What it is for.** Turning a change in Cumulocity — a measurement, event, alarm, operation or
+inventory update — into a message published to a broker.
+
+- **The tenant subscribes to what it wants forwarded.** Outbound processing only sees objects for
+  devices that are subscribed; how a device becomes subscribed is a separate concern.
+- **Outbound mapping can be switched off tenant-wide**, and then nothing is subscribed or
+  published at all.
+- **Every outbound mapping has a filter expression** deciding whether a given object is forwarded.
+  It defaults to "forward everything" so the field is never implicitly empty.
+- **The publish topic may be derived from the device**, so one mapping can serve many devices by
+  resolving the device's external ID into the topic.
+- **Internal metadata never reaches the broker.** Fields the mapper adds for its own use are
+  stripped from the published payload.
+- **The QoS a mapping asks for governs the publish**, clamped to what the connector supports —
+  see [reliability.md](reliability.md).
+- **Operations are forwarded on creation only.** Updates and deletions of an operation are
+  deliberately ignored, since the device acts on the original.
+
+---
+
+## Implementation
+
+### Where it runs
 
 | Stage | Class | Role |
 |---|---|---|
@@ -22,7 +48,7 @@ separately (see the links below).
 | Send | [`SendOutboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/processor/SendOutboundProcessor.java) | Auto-acknowledges OPERATION status (EXECUTING/SUCCESSFUL/FAILED), routes `API.CUSTOM` requests to `C8YAgent` directly, publishes the rest via the connector's `publishMEAO()`. |
 | Cleanup | [`ConsolidationProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/util/ConsolidationProcessor.java) | Same role as on inbound: moves context to exchange body, closes GraalVM resources. |
 
-## End-to-end flow
+### End-to-end flow
 
 ```mermaid
 flowchart TD
@@ -51,7 +77,7 @@ flowchart TD
     SEND_ACK --> CONS
 ```
 
-## Notification arrival and message conversion
+### Notification arrival and message conversion
 
 `CamelDispatcherOutbound.onNotification()`
 ([`CamelDispatcherOutbound.java:110-159`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/CamelDispatcherOutbound.java#L110-L159))
@@ -71,7 +97,7 @@ it is not necessarily the full managed object/measurement/event/alarm representa
 an `UPDATE` notification, Cumulocity sends only the changed fragments (a partial delta), not
 a full re-fetch of the object.
 
-## Filtering happens before the Camel route, not inside it
+### Filtering happens before the Camel route, not inside it
 
 Unlike inbound (where `FilterInboundProcessor` is a pipeline stage), outbound filtering is
 resolved entirely in
@@ -93,7 +119,7 @@ selected only if, in order:
    whatever fields happen to be present in the notification delta.
 
 **This confirms the behavior recorded in project memory
-([`outbound-mapping-partial-notification-filter.md`](outbound-mapping-partial-notification-filter.md)):**
+(documented in [`USERGUIDE.md`](../../USERGUIDE.md)):**
 `filterMapping` runs against the partial Notification 2.0 payload, so a condition that
 depends on a fragment not included in a given `UPDATE` delta will not see that fragment and
 will evaluate as if it were absent — even if the fragment does exist on the object in
@@ -106,7 +132,7 @@ Also note (`DynamicMapperOutboundRoutes.java:165-167`): there is deliberately **
 outbound equivalent of `FilterInboundProcessor` in the Camel route itself — mapping/inventory
 filtering for outbound is a resolution-time concern, not a post-enrichment pipeline stage.
 
-## Camel route structure (`DynamicMapperOutboundRoutes`)
+### Camel route structure (`DynamicMapperOutboundRoutes`)
 
 - `direct:processOutboundMessage` — no-op short-circuit when no mappings were resolved.
 - `direct:processWithMappingsOutbound` — re-filters candidate mappings by connector
@@ -130,7 +156,7 @@ filtering for outbound is a resolution-time concern, not a post-enrichment pipel
   `direct:outboundErrorHandling` (no `PROCESSED_CONTEXTS` reconciliation step here, unlike
   the inbound error route).
 
-## Identity enrichment (`EnrichmentOutboundProcessor`)
+### Identity enrichment (`EnrichmentOutboundProcessor`)
 
 For non-code mappings, `enrichPayload()`
 ([`EnrichmentOutboundProcessor.java:83-224`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/processor/EnrichmentOutboundProcessor.java#L83-L224))
@@ -147,7 +173,7 @@ bug. For SparkPlug B mappings, the alias map and per-device active flags are loa
 managed object here (`loadSparkPlugBContext()`) so NCMD/DCMD Smart Functions can address
 metrics by the original device-side alias.
 
-## Substitution and topic resolution (`SubstitutionResultOutboundProcessor`)
+### Substitution and topic resolution (`SubstitutionResultOutboundProcessor`)
 
 Applies cached substitutions to `targetTemplate` the same way as inbound, but the target
 here is a broker message rather than a Cumulocity object, so this processor additionally:
@@ -160,7 +186,7 @@ here is a broker message rather than a Cumulocity object, so this processor addi
 - Builds one `DynamicMapperRequest` (unlike inbound's per-device fan-out, outbound has
   exactly one target message per notification).
 
-## Sending (`SendOutboundProcessor`)
+### Sending (`SendOutboundProcessor`)
 
 - `autoAckOperation()` updates the source `OperationRepresentation`'s status
   (EXECUTING → SUCCESSFUL/FAILED) when `API.OPERATION` and
@@ -175,7 +201,7 @@ here is a broker message rather than a Cumulocity object, so this processor addi
   (`publishToRealConnectors()`), since a test invocation has no single "originating"
   connector the way a live notification does.
 
-## Transformation dispatch
+### Transformation dispatch
 
 As with inbound, the individual transformation mechanisms are documented separately:
 
@@ -183,7 +209,7 @@ As with inbound, the individual transformation mechanisms are documented separat
 - [`transformation-smart-functions.md`](transformation-smart-functions.md) — `SmartFunctionContext` carries `aliasMap`/`isActive`/`deviceActiveMap` for SparkPlug B on the outbound side.
 - [`transformation-java-extensions.md`](transformation-java-extensions.md) — `ProcessorExtensionOutbound<O>`.
 
-## Testing
+### Testing
 
 Outbound tests reuse the same dispatcher: `onTestNotification()` builds a synthetic
 `Notification` from a user-provided payload (see `TestController.createTestNotification()`)

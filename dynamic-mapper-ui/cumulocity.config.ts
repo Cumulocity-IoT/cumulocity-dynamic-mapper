@@ -50,10 +50,6 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_JavaScript.png'
-      },
-      {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png'
       },

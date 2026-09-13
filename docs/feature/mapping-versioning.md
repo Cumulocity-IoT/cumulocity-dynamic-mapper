@@ -8,7 +8,31 @@ limit) so a mapping can be **rolled back** to any prior published version.
 
 This page describes the feature as it is implemented today.
 
-## Core concepts
+---
+
+## Requirements
+
+**What it is for.** Changing a running mapping without losing the version that works, and getting
+back to it if the change is wrong.
+
+- **A mapping has one runnable state and a history of published versions.** Exactly one version
+  is active at a time.
+- **Edits go to a draft** and do not affect the running mapping until published.
+- **Publishing creates an immutable snapshot** with a version number and an optional note.
+- **Any published version can be made active again** — rollback is activating an older snapshot,
+  not undoing an edit.
+- **Activating a version validates it**; an invalid snapshot must not be able to replace a
+  working one, and a failed activation leaves the running version untouched.
+- **History is bounded** by a configurable retention, so a frequently edited mapping does not grow
+  without limit.
+- **Mappings created before versioning existed must keep working**, and gain a first version
+  without the user doing anything.
+
+---
+
+## Implementation
+
+### Core concepts
 
 | Term | Meaning |
 |---|---|
@@ -25,7 +49,7 @@ a managed object of type `d11r_mapping_version`, distinguished by the `isDraft` 
 This uniform storage (documented in the requirements doc as decision D-1) is implemented
 as designed.
 
-## Storage
+### Storage
 
 `MappingVersion` records are looked up by **type + `identifier` filter**, not via a
 parent/child inventory relationship:
@@ -48,7 +72,7 @@ relationship is navigable in the inventory UI), but nothing in the read path dep
 it — see [`persistNewVersion`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/MappingVersionService.java#L503-L527), which logs a warning and continues if the
 child-addition call fails.
 
-## Lifecycle
+### Lifecycle
 
 ```mermaid
 flowchart LR
@@ -59,7 +83,7 @@ flowchart LR
     A2 -- "ACTIVATE_MAPPING operation\nversion=N (rollback)" --> A3["Active version N"]
 ```
 
-### 1. Draft editing
+#### 1. Draft editing
 
 `MappingService.saveDraftMapping(tenant, id, edits)` writes into the line's single draft,
 creating it if absent, without touching the runnable record's `sourceTemplate`,
@@ -72,7 +96,7 @@ non-zero and does not match the stored draft's `lastUpdate`, the save is rejecte
 `IllegalStateException` ("modified concurrently; reload before saving") — see
 [`MappingVersionService.saveDraft`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/MappingVersionService.java#L208-L247).
 
-### 2. Publish
+#### 2. Publish
 
 `POST /mapping/{id}/publish?version=<semver>&note=<text>` (see
 [`MappingController.java:526-551`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/MappingController.java#L526-L551))
@@ -93,7 +117,7 @@ If the line has never been published before, `ensureBackfilled()` first captures
 currently-running configuration as a version (see Backfill, below) so history is never
 empty once versioning is touched.
 
-### 3. Activate / roll back
+#### 3. Activate / roll back
 
 There is no dedicated "rollback" endpoint. Both activation and rollback go through the
 same **`ACTIVATE_MAPPING` operation** (`OperationController.handleActivateMapping`,
@@ -128,7 +152,7 @@ Because the mapping line is one managed object, activating a version implicitly
 deactivates whatever was running before — there is no separate "atomic swap" step to
 reason about beyond the lock.
 
-### 4. Listing, retrieval, notes, deletion
+#### 4. Listing, retrieval, notes, deletion
 
 | Operation | Method | Notes |
 |---|---|---|
@@ -139,7 +163,7 @@ reason about beyond the lock.
 | Delete a version | `MappingVersionService.deleteVersion` | Rejects deleting the active version (`IllegalStateException` → HTTP 406). |
 | Delete a line | `MappingVersionService.deleteAllVersions` | Removes every version record (published + draft) so nothing leaks when the mapping line itself is deleted. |
 
-### 5. Retention
+#### 5. Retention
 
 `MappingVersionService.prune()` ([`MappingVersionService.java:385-407`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/MappingVersionService.java#L385-L407))
 keeps the newest *N* published versions (sorted by `createdAt`) and deletes older ones,
@@ -149,7 +173,7 @@ defaulting to `MappingVersionService.DEFAULT_RETENTION = 10` when unset or inval
 Pruning runs automatically after every publish, and can be re-run standalone via
 `pruneVersions()`.
 
-### 6. Backfill (legacy mappings)
+#### 6. Backfill (legacy mappings)
 
 `ensureBackfilled(tenant, mapping)` is called defensively before publish, activate, and
 list-versions, so mappings created before this feature existed (or imported without
@@ -163,7 +187,7 @@ version history) always end up with at least one published version:
 
 See [`MappingVersionService.java:421-474`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/MappingVersionService.java#L421-L474).
 
-## REST endpoints
+### REST endpoints
 
 All under `/mapping`, defined in
 [`MappingController.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/MappingController.java).
@@ -187,10 +211,10 @@ Activation/rollback is **not** a `/mapping/*` REST endpoint — it goes through 
 `Operation` mechanism (`ACTIVATE_MAPPING`, handled in `OperationController`, see
 [Activate / roll back](#3-activate--roll-back) above).
 
-## Where the implementation diverges from the plan
+### Where the implementation diverges from the plan
 
-The [requirements](REQUIREMENTS-VERSION-MAPPING.md) and
-[implementation plan](IMPLEMENTATION-PLAN-VERSION-MAPPING.md) documents describe the
+The [requirements](../planning/REQUIREMENTS-VERSION-MAPPING.md) and
+[implementation plan](../planning/IMPLEMENTATION-PLAN-VERSION-MAPPING.md) documents describe the
 feature at the design stage. Comparing them against the shipped code:
 
 - **Path parameter is the mapping's managed-object `id`, not the functional

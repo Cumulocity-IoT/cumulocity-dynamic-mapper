@@ -19,15 +19,13 @@
  */
 
 import { Injectable, inject } from '@angular/core';
-import { BsModalService } from 'ngx-bootstrap/modal';
-import { filter, take } from 'rxjs/operators';
-import { Substitution, Mapping, StepperConfiguration } from '../../shared';
+import { AlertService } from '@c8y/ngx-components';
+import { Substitution, Mapping } from '../../shared';
 import { SubstitutionModel } from '../shared/stepper.model';
-import { EditSubstitutionComponent } from '../substitution/edit/edit-substitution-modal.component';
 
 @Injectable()
 export class SubstitutionManagementService {
-  private bsModalService = inject(BsModalService);
+  private alertService = inject(AlertService);
 
   isSubstitutionValid(substitutionModel: SubstitutionModel): boolean {
     const { sourceExpression, targetExpression, pathSource, pathTarget } = substitutionModel;
@@ -38,13 +36,10 @@ export class SubstitutionManagementService {
   }
 
   /**
-   * Bulk-replaces all substitutions in one shot, without the per-item duplicate/expert-mode
-   * confirmation modal `addSubstitution()` shows below — appropriate for programmatic
-   * replacement (e.g. applying a freshly AI-generated set) where the caller already means to
-   * replace the full set atomically. Looping `addSubstitution()` instead is unsafe here: it's
-   * fire-and-forget (no return value to await), so if the generated set contains two entries
-   * sharing a `pathTarget` — plausible for JSONata expressions — or expert mode is on, each
-   * hit opens its own confirmation modal while the loop keeps running, stacking dialogs.
+   * Bulk-replaces all substitutions in one shot — appropriate for programmatic replacement
+   * (e.g. applying a freshly AI-generated set) where the caller means to replace the full set
+   * atomically, without the per-item duplicate handling (and its alert) that
+   * `addSubstitution()` applies.
    */
   replaceAllSubstitutions(
     substitutionModels: SubstitutionModel[],
@@ -68,11 +63,16 @@ export class SubstitutionManagementService {
     };
   }
 
+  /**
+   * A substitution whose `pathTarget` already exists replaces that entry in place: two
+   * substitutions writing the same target path are never both meaningful, and the last one
+   * defined is what the user just asked for. This used to open a confirmation modal; the
+   * substitution grid now shows the full set inline (including expandArray/repairStrategy),
+   * so the replaced row is visible right there and an alert is enough to flag what happened.
+   */
   addSubstitution(
     substitutionModel: SubstitutionModel,
     mapping: Mapping,
-    stepperConfiguration: StepperConfiguration,
-    expertMode: boolean,
     onSuccess: () => void
   ): void {
     const substitution: Substitution = this.toSubstitution(substitutionModel);
@@ -80,53 +80,27 @@ export class SubstitutionManagementService {
       sub => sub.pathTarget === substitution.pathTarget
     );
 
-    const isDuplicate = duplicateIndex !== -1;
-    const duplicate = isDuplicate ? mapping.substitutions[duplicateIndex] : undefined;
-
-    if (!expertMode && !isDuplicate) {
+    if (duplicateIndex === -1) {
       mapping.substitutions.push(substitution);
-      onSuccess();
-      return;
+    } else {
+      mapping.substitutions[duplicateIndex] = substitution;
+      this.alertService.info(
+        `Replaced substitution # ${duplicateIndex + 1}: it already targeted [${substitution.pathTarget}].`
+      );
     }
 
-    const initialState = {
-      isDuplicate,
-      duplicate,
-      duplicateSubstitutionIndex: duplicateIndex,
-      substitution,
-      mapping,
-      stepperConfiguration
-    };
-
-    const modalRef = this.bsModalService.show(EditSubstitutionComponent, { initialState });
-
-    modalRef.content.closeSubject
-      .pipe(take(1))
-      .subscribe((updatedSubstitution: Substitution) => {
-        if (!updatedSubstitution) return;
-
-        if (isDuplicate) {
-          mapping.substitutions[duplicateIndex] = updatedSubstitution;
-        } else {
-          mapping.substitutions.push(updatedSubstitution);
-        }
-
-        onSuccess();
-      });
+    onSuccess();
   }
 
   /**
-   * expandArray/repairStrategy are now edited directly in the substitution grid, so the modal
-   * this used to always show is only needed when re-pointing pathSource/pathTarget would create
-   * a pathTarget collision with a *different* substitution - the same case addSubstitution()
-   * already gates on. Otherwise the update is applied immediately, matching addSubstitution()'s
-   * fast path for the non-conflicting case.
+   * Re-pointing pathSource/pathTarget can collide with a *different* substitution's pathTarget.
+   * As in addSubstitution(), the two collapse into a single entry at the colliding index rather
+   * than leaving two substitutions writing the same target, and an alert reports it.
    */
   updateSubstitution(
     selectedSubstitution: number,
     substitutionModel: SubstitutionModel,
     mapping: Mapping,
-    stepperConfiguration: StepperConfiguration,
     onSuccess: () => void
   ): void {
     if (selectedSubstitution === -1) return;
@@ -140,47 +114,21 @@ export class SubstitutionManagementService {
     const duplicateIndex = mapping.substitutions.findIndex(
       (sub, index) => index !== selectedSubstitution && sub.pathTarget === updatedSubstitution.pathTarget
     );
-    const isDuplicate = duplicateIndex !== -1;
 
-    if (!isDuplicate) {
+    if (duplicateIndex === -1) {
       mapping.substitutions[selectedSubstitution] = updatedSubstitution;
       onSuccess();
       return;
     }
 
-    const initialState = {
-      substitution: updatedSubstitution,
-      isDuplicate: true,
-      duplicate: mapping.substitutions[duplicateIndex],
-      duplicateSubstitutionIndex: duplicateIndex,
-      mapping,
-      stepperConfiguration,
-      isUpdate: true
-    };
-
-    const modalRef = this.bsModalService.show(EditSubstitutionComponent, { initialState });
-
-    modalRef.content.closeSubject
-      .pipe(
-        take(1),
-        filter(Boolean)
-      )
-      .subscribe({
-        next: (editedSubstitution: Substitution) => {
-          try {
-            // The edited row now targets the same path as duplicateIndex - collapse the two into
-            // one entry there (mirroring addSubstitution()'s duplicate resolution) rather than
-            // leaving two substitutions pointing at the same pathTarget. Assign before splicing
-            // so the edited value survives the index shift regardless of which index is larger.
-            mapping.substitutions[duplicateIndex] = editedSubstitution;
-            mapping.substitutions.splice(selectedSubstitution, 1);
-            onSuccess();
-          } catch (error) {
-            console.log('Failed to update substitution', error);
-          }
-        },
-        error: (error) => console.log('Error in modal operation', error)
-      });
+    // Assign before splicing so the edited value survives the index shift regardless of which
+    // of the two indices is larger.
+    mapping.substitutions[duplicateIndex] = updatedSubstitution;
+    mapping.substitutions.splice(selectedSubstitution, 1);
+    this.alertService.info(
+      `Merged into substitution # ${duplicateIndex + 1}: it already targeted [${updatedSubstitution.pathTarget}].`
+    );
+    onSuccess();
   }
 
   deleteSubstitution(selected: number, mapping: Mapping, onSuccess: () => void): void {

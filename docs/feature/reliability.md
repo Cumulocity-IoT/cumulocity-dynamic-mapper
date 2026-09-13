@@ -18,7 +18,36 @@ are what stop a single message from consuming the service.
 
 ---
 
-## Quality of Service
+---
+
+## Requirements
+
+**What it is for.** Deciding what happens to a message when something goes wrong, and making that
+decision configurable per mapping rather than fixed by the product.
+
+- **A mapping states the delivery guarantee it needs** — at-most-once, at-least-once, or
+  exactly-once — and the transport honours it as closely as it can. A connector that cannot
+  provide a level must run at the nearest level it does provide, never silently pretend.
+- **A failed message at a guarantee above at-most-once must be redeliverable**, not dropped.
+- **A single undigestible message must not block a subscription.** After a bounded number of
+  redeliveries it is discarded, with a record.
+- **A mapping that fails persistently can take itself out of service.** The tenant sets the number
+  of consecutive failures after which the mapping is deactivated; zero disables the check. Recovery
+  resets the count — the threshold is for a broken mapping, not for a healthy one with occasional
+  errors.
+- **No message may occupy a worker indefinitely**, and a runaway transformation must be stoppable
+  even when it ignores interruption.
+- **What happened must be visible per mapping**: how many messages it processed, how many failed,
+  and whether it is currently failing — plus a bucket for messages that matched no mapping at all,
+  which is the first thing to look at when nothing appears to happen.
+- **All of this is per tenant.** One tenant's counters, failures and deactivations are invisible to
+  every other.
+
+---
+
+## Implementation
+
+### Quality of Service
 
 Every mapping carries a `qos` field — the **delivery guarantee it asks for**. This section
 describes where that value comes from, how it is consolidated when several mappings match
@@ -41,12 +70,12 @@ themselves. The JSON wire format is unchanged — the enum **name** (`"AT_LEAST_
 
 ---
 
-### Where QoS is set
+#### Where QoS is set
 
 | Layer | Field | Notes |
 |---|---|---|
 | Mapping | [`Mapping.qos`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/Mapping.java) | `@Builder.Default` + `@JsonSetter(nulls = SKIP)` → a mapping created through the builder or through the API with `"qos": null` gets `AT_LEAST_ONCE` instead of `null`. |
-| UI | QoS picker in the mapping *Properties* step | See [UI](#ui) below. |
+| UI | QoS picker in the mapping *Properties* step | See [QoS in the UI](#qos-in-the-ui) below. |
 | Message | the QoS the publisher used | Inbound only, and only for MQTT — see [the two-sided bound](#the-two-sided-bound-inbound). |
 
 `qos` is `@NotNull` and part of the structural Bean Validation contract described in
@@ -56,7 +85,7 @@ clamped at runtime instead (and the UI warns about it up front).
 
 ---
 
-### How QoS flows through a message
+#### How QoS flows through a message
 
 ```
 Mapping.qos (per mapping)
@@ -72,7 +101,7 @@ ProcessingResultWrapper.consolidatedQos
    └── outbound → AConnectorClient.effectivePublishQos(context) → connector publish
 ```
 
-#### Consolidation
+##### Consolidation
 
 One inbound message can match several mappings, each with its own `qos`. The transport
 can only make **one** ack decision for that message, so
@@ -85,7 +114,7 @@ The result lands in
 whose getter is null-safe: early-exit paths (no mapping resolved, unparseable payload)
 never set it, and every caller would otherwise have to guard before reading the level.
 
-#### The two-sided bound (inbound)
+##### The two-sided bound (inbound)
 
 For MQTT, the guarantee actually achievable is bounded on *both* ends — see
 [`AbstractMqttCallback`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/AbstractMqttCallback.java):
@@ -103,7 +132,7 @@ If `effectiveQos > 0` the callback defers the ACK until the pipeline reports suc
 reconnects/re-delivers on error, bounded by the poison-pill counter); otherwise it acks
 straight away.
 
-#### Subscriptions
+##### Subscriptions
 
 Inbound QoS is also a **subscription** parameter, managed by
 [`MappingSubscriptionManager`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/client/MappingSubscriptionManager.java):
@@ -120,7 +149,7 @@ Inbound QoS is also a **subscription** parameter, managed by
 
 ---
 
-### Connector capabilities and clamping
+#### Connector capabilities and clamping
 
 Not every broker can implement every level. Each connector declares what it supports in
 `AConnectorClient.supportedQos`, and **every** QoS that reaches the broker passes through
@@ -158,7 +187,7 @@ stamps `supportedQos` onto the
 returned by the connector-specification endpoint, so the capability is declared exactly
 once — on the client — and never repeated in each `createConnectorSpecification()`.
 
-#### Adding a connector
+##### Adding a connector
 
 Set `this.supportedQos` in the constructor (before `createConnectorSpecification()`), and
 use `effectivePublishQos(context)` in `publishMEAO`. Nothing else is required — subscribe
@@ -168,7 +197,7 @@ the UI offers.
 
 ---
 
-### QoS in the UI
+#### QoS in the UI
 
 | Place | File |
 |---|---|
@@ -196,7 +225,7 @@ The picker:
 MQTT and Pulsar can publish at level 2. This is a deliberate UI restriction, not a
 transport limitation.
 
-### QoS gotchas
+#### QoS gotchas
 
 - **A stronger request never means a weaker guarantee.** AMQP used to test
   `qos == AT_LEAST_ONCE` for persistence, which made `EXACTLY_ONCE` fall into the
@@ -218,7 +247,7 @@ transport limitation.
 
 ---
 
-## Processing timeouts
+### Processing timeouts
 
 Two **nested** budgets, both tenant-wide in *Configuration → Service Configuration*:
 
@@ -239,7 +268,7 @@ The raw getters are nullable, and call sites that inlined their own fallback use
 — 5 000 ms in the inbound dispatcher, 8 000 ms in the defaults and 30 000 ms in three
 callbacks, for the same setting.
 
-### Which mappings get a budget
+#### Which mappings get a budget
 
 The dispatchers set a per-message `pipelineTimeoutMS` **only for Smart Function mappings**
 (`mapping.isTransformationAsCode()`); everything else gets 0. A JSONata or extension mapping
@@ -250,7 +279,7 @@ has no JavaScript to bound, so the CPU budget is meaningless for it.
 park the worker thread, and with it the un-acknowledged message, for as long as the pipeline
 stays blocked in I/O.
 
-### How a runaway mapping is stopped
+#### How a runaway mapping is stopped
 
 ```
 maxCPUTimeMS elapses
@@ -288,7 +317,7 @@ When the drain window expires with the worker still running, that is logged at `
 ("the thread is still running") — the only case where a thread really does linger, and it
 means the worker is stuck in something neither interruptible nor cancellable.
 
-### Timeout gotchas
+#### Timeout gotchas
 
 - **A timeout is not a failure of the message, it is a failure of the mapping.** The
   callback does not acknowledge; the broker redelivers, bounded by the
@@ -305,7 +334,7 @@ means the worker is stuck in something neither interruptible nor cancellable.
 
 ---
 
-## Failure handling
+### Failure handling
 
 QoS decides whether a *failed message* is redelivered. `maxFailureCount` decides when a
 *failing mapping* is taken out of service — a mapping whose template no longer matches the
@@ -318,7 +347,7 @@ would otherwise keep failing (and, at QoS > 0, keep forcing redeliveries) indefi
 | [`MappingStatus.currentFailureCount`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/MappingStatus.java) | runtime status, shown in *Monitoring* | The current streak — see [Status and counters](#status-and-counters). |
 | `MappingStatus.errors` | runtime status | Lifetime error count — never reset by processing, purely informational. |
 
-### The counter is a streak, not a total
+#### The counter is a streak, not a total
 
 `currentFailureCount` is incremented by every failed message and reset to 0 by:
 
@@ -337,7 +366,7 @@ The reset is deliberately cheap on the hot path — a mapping that did not opt i
 read, and never takes the status monitor. Test runs (`context.isTesting()`) never touch the
 counter.
 
-### What happens at the threshold
+#### What happens at the threshold
 
 The failure that makes `currentFailureCount >= maxFailureCount` triggers, via
 [`MappingService.increaseAndHandleFailureCount()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/MappingService.java):
@@ -367,14 +396,14 @@ starts with a clean slate.
 > editor promising "if this is exceeded the mapping is automatically deactivated". If you
 > are looking at an older release, `maxFailureCount` is inert there.
 
-### What counts as a failure
+#### What counts as a failure
 
 Any processor calling `mappingService.increaseAndHandleFailureCount(...)` — deserialization
 errors, enrichment/identity-resolution errors, JSONata and Smart Function evaluation errors,
 extension errors, and failures sending to Cumulocity. A message **filtered out** by
 `filterMapping`/`filterInventory` is not a failure; nor is a test run.
 
-### The poison-pill guard
+#### The poison-pill guard
 
 Independently of the mapping-level threshold, every callback that can request redelivery
 caps how often it will do so for the *same message*: `MAX_CONSECUTIVE_FAILURES` /
@@ -394,7 +423,7 @@ simply leaves the message unacknowledged and waits for the broker to retransmit 
 Note the two counters are per different things: the poison-pill counter is **per message**
 (and cleared as soon as that message succeeds), `currentFailureCount` is **per mapping**.
 
-### Failure-handling gotchas
+#### Failure-handling gotchas
 
 - **The two counters are driven from different places.** `currentFailureCount` is
   incremented by the *processor* that failed, for every failure. Whether the *message* is
@@ -411,7 +440,7 @@ Note the two counters are per different things: the poison-pill counter is **per
 
 ---
 
-## Status and counters
+### Status and counters
 
 Every mapping has a [`MappingStatus`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/MappingStatus.java)
 holding its runtime counters. They are the only per-mapping runtime signal the product
@@ -428,7 +457,7 @@ Counters are incremented under the instance monitor (so concurrent Camel threads
 an update) and declared `volatile` (so the reporting thread, which reads them without taking
 that monitor, sees current, non-torn values).
 
-### The "Unmapped messages" status
+#### The "Unmapped messages" status
 
 One extra status per tenant counts what belongs to **no** mapping:
 
@@ -462,7 +491,7 @@ Two things about it are easy to get wrong, and both used to be wrong:
   strictly by direction drops it — which is what hid it from both Monitoring tabs while the
   chart, filtering differently, folded it into *inbound*.
 
-### How the status reaches the UI
+#### How the status reaches the UI
 
 `MappingStatusService.sendStatusToInventory(tenant)` runs on the housekeeping cycle and
 writes the whole array into the `d11r_mapping` fragment of the mapper
@@ -477,7 +506,7 @@ write into the objects the processing path owns.
 Sending can be turned off entirely with `sendMappingStatus` in the service configuration; the
 counters are still maintained in memory, they just are not published.
 
-### Upgrading
+#### Upgrading
 
 Statuses persisted by an earlier release keep loading and keep being reported: the JSON shape is
 unchanged, unknown properties from removed features (e.g. the 6.4.0 `snoopedTemplates*` fields)
@@ -489,7 +518,7 @@ A status whose mapping is no longer in the cache is omitted from the push (not f
 counters can briefly disappear from the fragment if a push happens before the mappings are
 loaded; the next housekeeping cycle restores them.
 
-### Counter gotchas
+#### Counter gotchas
 
 - **Counters are in-memory and survive only as long as the microservice instance**, except
   for whatever the last inventory push persisted — they are reloaded from that fragment on
@@ -504,7 +533,7 @@ loaded; the next housekeeping cycle restores them.
 
 ---
 
-## Tests
+### Tests
 
 | Test | Covers |
 |---|---|

@@ -10,7 +10,44 @@ pipeline described in [`docs/backend/architecture.md`](../backend/architecture.m
 This is the "hub" document for the framework itself. Per-connector deep-dive pages
 (mqtt.md, kafka.md, etc.) are a later addition — see the placeholder table at the bottom.
 
-## Core abstraction: `AConnectorClient`
+---
+
+## Requirements
+
+**What it is for.** Every broker integration behaves the same way from the outside — same
+lifecycle, same status reporting, same QoS contract, same relationship to mappings — so that
+adding a broker does not add a new set of rules for users to learn. The framework is what makes
+that true; the per-connector pages describe only where a broker genuinely differs.
+
+### Every connector must
+
+- **Declare what it supports** and be taken at its word: the directions it handles, whether it
+  accepts wildcards per direction, and the QoS levels it can honour. A mapping asking for more is
+  clamped rather than silently mis-served, and the UI offers only what the connector declares.
+- **Declare its configuration** as a specification the UI renders — which properties exist, which
+  are required, which are secret. Secret values are never returned in readable form.
+- **Report its connection state** continuously, so a tenant can see CONNECTED / DISCONNECTED /
+  FAILED with the reason, rather than inferring it from missing data.
+- **Reconnect on its own** after a transient failure, with back-off, and recover its
+  subscriptions afterwards without user action.
+- **Subscribe only to what is needed.** A topic is subscribed while at least one active mapping
+  deployed to that connector needs it, and released when the last one stops — several mappings
+  sharing a topic must not cause duplicate delivery, and removing one must not silently unsubscribe
+  the others.
+- **Survive a bad message.** A single payload that always fails must not block a subscription
+  indefinitely; see [reliability.md](reliability.md).
+
+### Deliberate non-goals
+
+- A connector does **not** transform payloads. It moves bytes and reports state; everything about
+  interpreting them belongs to mappings.
+- A connector does **not** decide which mappings exist — only which of them are deployed to it.
+
+---
+
+## Implementation
+
+### Core abstraction: `AConnectorClient`
 
 [`AConnectorClient`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/client/AConnectorClient.java)
 (1400+ lines) is the abstract base every connector extends. It owns the broker-agnostic
@@ -39,7 +76,7 @@ itself:
 and [`ConnectorSslSupport`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/client/ConnectorSslSupport.java) (certificate/keystore handling shared across TLS-capable
 connectors).
 
-## Declaring a connector: `ConnectorSpecification`
+### Declaring a connector: `ConnectorSpecification`
 
 [`ConnectorSpecification`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/ConnectorSpecification.java) is the schema a connector type publishes so the UI can
 render a configuration form without any connector-specific frontend code:
@@ -57,7 +94,7 @@ Each concrete client exposes a static/builder method that returns its
 `ConnectorSpecification` (e.g. `MQTT3Client`'s builder at
 [`MQTT3Client.java:478`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/MQTT3Client.java#L478) creates one via `.create("MQTT", ConnectorType.MQTT)`).
 
-## Registration and routing
+### Registration and routing
 
 [`ConnectorRegistry`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/registry/ConnectorRegistry.java) is the tenant-scoped directory of live connector clients and
 their outbound dispatchers:
@@ -72,7 +109,7 @@ their outbound dispatchers:
   instance with its `CamelDispatcherOutbound`, so outbound Cumulocity notifications know
   which connector(s) to publish through.
 
-## Message flow
+### Message flow
 
 ```mermaid
 flowchart LR
@@ -111,7 +148,7 @@ subscribes to Cumulocity notifications (`NotificationSubscriber`/`NotificationCa
 and, for each connector registered against a mapping, calls that connector's
 `publishMEAO(ProcessingContext<?>)` to actually put the transformed message on the wire.
 
-## Adding a new connector
+### Adding a new connector
 
 1. Extend `AConnectorClient` and implement the abstract lifecycle methods
    (`initialize`, `connect`, `disconnect`, `subscribe`, `unsubscribe`, `publishMEAO`,
@@ -128,7 +165,7 @@ and, for each connector registered against a mapping, calls that connector's
 See [`docs/backend/conventions.md`](../backend/conventions.md) for the condensed version
 of this checklist.
 
-## Concrete connectors
+### Concrete connectors
 
 | `ConnectorType` | Class | Description |
 |---|---|---|
@@ -151,7 +188,7 @@ of this checklist.
 but this is a **removed/dead** enum value kept only for backward compatibility (e.g.
 deserializing old persisted connector configurations). `ConnectorClientFactory` no
 longer instantiates a client for it —
-[`ConnectorClientFactory.java:95-98`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/registry/ConnectorClientFactory.java#L95-L98)
+[`ConnectorClientFactory.java:95-98`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/ConnectorClientFactory.java#L95-L98)
 logs a warning ("no longer supported ... Use CUMULOCITY_MQTT_SERVICE_PULSAR instead")
 and returns without creating anything. The real, live Cumulocity-managed MQTT Service
 connector is `CUMULOCITY_MQTT_SERVICE_PULSAR` / `MQTTServicePulsarClient` (see the table
@@ -159,7 +196,7 @@ above) — it does not extend `AMQTTClient` at all; it speaks the Apache Pulsar 
 protocol against Cumulocity's internal Pulsar-backed MQTT Service broker. See
 [connector-mqtt-service.md](connector-mqtt-service.md) for details.
 
-## See also (per-connector detail pages)
+### See also (per-connector detail pages)
 
 | Page | Connector(s) |
 |---|---|

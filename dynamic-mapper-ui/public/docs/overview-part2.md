@@ -1,3 +1,7 @@
+---
+title: Getting started and mappings
+---
+
 The Dynamic Mapper is **AI empowered**.
 
 :::info AI-Powered Development
@@ -283,6 +287,47 @@ The following screenshot shows the **Transformation** step for transformation ty
 Expression**. This step shows a JavaScript editor if you choose **Smart Function (JavaScript)**.
 
 ![Substitution stepper](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png "Screenshot of fourth wizard step to define substitutions using JSONata expressions.")
+
+#### Execution Filter {#execution-filter}
+
+An optional **execution filter** lets you narrow which messages a mapping actually processes, without writing any
+transformation code. It applies to **both inbound and outbound mappings**.
+
+You define it in the third step of the wizard, **Select templates**, in the **Filter execution mapping** field.
+Select a node in the source template and press **Update Filter Execution Mapping** to seed the expression, then
+refine it. The **Filter Result** field below shows the value the expression currently evaluates to against the
+source template.
+
+The expression is a JSONata expression that **must evaluate to a boolean**. The editor rejects anything else — an
+expression returning a number or a string leaves the step invalid and you cannot continue. When the expression
+returns `false` for a message, the mapping is skipped for that message:
+
+- **Inbound:** the message is not mapped to Cumulocity. If no other mapping matches the topic, the message is
+  discarded.
+- **Outbound:** the message is silently dropped and not forwarded to the broker.
+
+```javascript
+// Inbound: only process readings above a threshold
+telemetry.telemetryReadings[0].value > 10.00
+
+// Outbound: only forward high-temperature measurements
+c8y_TemperatureMeasurement.T.value > 95
+
+// Outbound: only forward critical alarms
+severity = "CRITICAL"
+
+// Only process messages of a specific type
+type = "c8y_Uplink"
+```
+
+The default value is `true`, i.e. every message is processed.
+
+:::info
+The expression is evaluated against the **incoming payload** — the broker message for inbound mappings, and the
+Cumulocity source object (measurement, event, alarm, or managed object) that triggered the mapping for outbound
+mappings. To filter on **device inventory** properties instead, use the [Inventory
+Filter](#inventory-filter) — that one is available for outbound mappings only.
+:::
 
 ### SparkPlug B {#sparkplugb}
 
@@ -585,16 +630,19 @@ and the outcome (e.g. number of devices subscribed) can be tracked via Service E
 
 ![Resync existing devices into a type subscription](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Subscription_Outbound_Resync.png "Screenshot of the dialog used to resync existing devices into a device type subscription.")
 
-#### Inventory Filter and Execution Filter
+#### Inventory Filter and Execution Filter {#outbound-filters}
 
 Two optional filters let you narrow which outbound messages are processed without writing any transformation
-code:
+code.
 
-##### Inventory Filter
+##### Inventory Filter {#inventory-filter}
 
 Evaluated once against the device's managed object properties when the mapping is first triggered for that
 device. If the expression returns `false`, the mapping is skipped entirely for that device. The expression is a
 JSONata expression evaluated against the device's inventory data.
+
+This filter is defined on the **General settings** step of the wizard and is available for **outbound mappings
+only**.
 
 ```javascript
 // Only process pressure sensors
@@ -607,27 +655,24 @@ $exists(c8y_Hardware.serialNumber)
 c8y_IsDevice = true and c8y_Hardware.model = "SmartSensor v2"
 ```
 
-##### Execution Filter
+:::important
+Any property referenced here has to be added under **Configuration → Service Configuration → Fragments from
+inventory to cache**, otherwise it is not available to the filter at runtime.
+:::
+
+##### Execution Filter {#outbound-execution-filter}
 
 Evaluated at runtime against each outgoing message payload. If the expression returns `false`, the message is
-silently dropped and not forwarded to the broker. The expression is a JSONata expression evaluated against the
-Cumulocity source object (measurement, event, alarm, or managed object) that triggered the mapping.
+silently dropped and not forwarded to the broker.
 
-```javascript
-// Only forward high-temperature measurements
-c8y_TemperatureMeasurement.T.value > 95
-
-// Only forward critical alarms
-severity = "CRITICAL"
-
-// Only forward events of a specific type
-type = "c8y_Uplink"
-```
+The execution filter is not specific to outbound mappings — it works the same way for inbound mappings and is
+defined on the same wizard step in both directions. See [Execution Filter →](#execution-filter) for the full
+description, the editor's boolean requirement, and examples.
 
 :::info
-Both filters use JSONata expression syntax. The **Inventory Filter** operates on the device managed object, while
-the **Execution Filter** operates on the triggering payload (measurement, event, alarm). Use filters to reduce
-unnecessary broker traffic without modifying your transformation logic.
+The **Inventory Filter** operates on the device managed object, while the **Execution Filter** operates on the
+triggering payload (measurement, event, alarm). Use filters to reduce unnecessary broker traffic without
+modifying your transformation logic.
 :::
 
 ### Transformation types {#transformation-types}
@@ -674,9 +719,9 @@ single input message, or state management across messages.
 #### Removed: Substitution as JavaScript (release 6.3) {#javascript-substitution}
 
 :::important Removed in release 6.3
-**TransformationType.SUBSTITUTION_AS_CODE has been removed.** Existing mappings of this type are no longer
-executed. The only permitted operations are **Export** and **Delete**. Editing, testing, activating, or
-duplicating such mappings is not supported.
+**The transformation type Substitution as JavaScript is no longer supported.** Existing mappings of this type
+are automatically deactivated on startup and are no longer executed. The only permitted operations are **Export**
+and **Delete**. Editing, testing, activating, or duplicating such mappings is not supported.
 :::
 
 Migrate to **Smart Function (JavaScript)**:

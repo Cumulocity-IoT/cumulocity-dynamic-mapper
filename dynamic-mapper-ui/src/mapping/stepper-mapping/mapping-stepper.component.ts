@@ -200,7 +200,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   };
 
   step?: string;
-  expertMode = false;
   templatesInitialized = false;
   extensions = new Map<string, Extension>();
   editorOptions?: EditorComponent['editorOptions'];
@@ -741,8 +740,6 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
             this.substitutionService.addSubstitution(
               sub,
               this.mapping,
-              this.stepperConfiguration,
-              this.expertMode,
               () => {
                 this.stepperService.refreshSubstitutionValidity(
                   this.mapping,

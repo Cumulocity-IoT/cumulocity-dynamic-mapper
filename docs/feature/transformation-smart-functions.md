@@ -14,7 +14,34 @@ see [`docs/smart-functions.md`](../smart-functions.md) (developer reference) and
 [`docs/smart-function-type-sync.md`](../smart-function-type-sync.md) (TypeScript↔Java
 type parity) — this document does not repeat that API surface.
 
-## Why Smart Functions exist
+---
+
+## Requirements
+
+**What it is for.** Expressing a transformation as JavaScript when substitutions or JSONata are
+not enough — conditionals, loops, derived values, state across messages.
+
+- **The tenant writes a function with a fixed entry point** that receives the message and returns
+  the Cumulocity objects to create. One invocation may return several objects.
+- **A shared library is available to every function**, so common helpers are written once; the
+  tenant can edit it.
+- **A function may keep state between messages** — per device, per mapping — for deduplication,
+  running statistics, or change detection. That state has a bounded lifetime.
+- **A function may look data up in Cumulocity**, e.g. resolving a managed object by external ID,
+  so a transformation can enrich from inventory.
+- **Execution is sandboxed.** A function cannot reach the host, the filesystem, the network, or
+  another tenant's data — a tenant runs untrusted code by definition.
+- **Execution is bounded.** A function that never returns is stopped, and its failure is attributed
+  to its mapping rather than affecting the service — see [reliability.md](reliability.md).
+- **Errors must point at the function**, with the line number where it failed, not at mapper
+  internals.
+- **Both directions are supported**, inbound and outbound.
+
+---
+
+## Implementation
+
+### Why Smart Functions exist
 
 Per [mapping-validation.md](mapping-validation.md), several situations are rejected for
 JSONata/DEFAULT transformations and require `SMART_FUNCTION`:
@@ -32,13 +59,13 @@ JSONata/DEFAULT transformations and require `SMART_FUNCTION`:
 In all three cases, the validator enforces this at `MappingValidator.validate()` time —
 see the corresponding rules in [mapping-validation.md](mapping-validation.md) rules 2 and 4.
 
-## Execution model
+### Execution model
 
 Smart Function code runs inside a GraalVM polyglot JS `Context`, one per tenant `Engine`,
 pooled per mapping+code-hash so repeated invocations reuse a warmed-up context instead of
 paying JS parse/JIT cost every message.
 
-### Context construction and sandboxing
+#### Context construction and sandboxing
 
 `AbstractEnrichmentProcessor.createGraalContext()`
 ([`AbstractEnrichmentProcessor.java:178-205`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractEnrichmentProcessor.java#L178-L205)) builds each `Context` with an
@@ -70,7 +97,7 @@ flag is set, to allow `export function` module syntax in mapping code.
 > CPU/wall-clock cancellation (below) — not from a `SandboxPolicy` call. If your mental
 > model of this feature says otherwise, treat the code as authoritative.
 
-### Context pooling and lifecycle
+#### Context pooling and lifecycle
 
 `GraalVMContextService.borrowOrCreateContext()` / `returnContext()`
 (`dynamic-mapper-service/src/main/java/dynamic/mapper/core/GraalVMContextService.java`)
@@ -97,7 +124,7 @@ runs — a `try { processSmartMapping(context); } ... finally { context.close();
 every Smart Function invocation, so the pooled/raw context is always released or closed
 exactly once per message regardless of success or failure.
 
-### Cancellation
+#### Cancellation
 
 A running Smart Function can be forcibly stopped mid-execution — e.g. an MQTT-side
 timeout — via `Context.close(cancelIfExecuting=true)`, since plain thread interruption is
@@ -109,7 +136,7 @@ message's `ProcessingResultWrapper` before invoking the function
 timeout/kill rather than a script bug, and any `console.log()` output written before the
 kill is salvaged into the processing result when possible.
 
-## Console, logs, and warnings plumbing
+### Console, logs, and warnings plumbing
 
 Smart Function code gets a `console` object backed by
 [`JavaScriptConsole`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/flow/JavaScriptConsole.java), which formats GraalVM `Value` arguments (including nested
@@ -125,7 +152,7 @@ The actual JS-callable entry point is the
 `AbstractFlowProcessor.processSmartMapping()` against the compiled mapping code loaded
 into the pooled `Context`.
 
-## Runtime state: `SmartFunctionContext`
+### Runtime state: `SmartFunctionContext`
 
 At runtime, `context` inside a Smart Function is backed by
 [`SmartFunctionContext`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/SmartFunctionContext.java), the concrete
@@ -138,7 +165,7 @@ mapping's persisted flow state loaded from `FlowStateStore` — this is the back
 for the `context.getState()`/`setState()` persistence documented in
 `docs/smart-functions.md`.
 
-## Where this fits in the pipeline
+### Where this fits in the pipeline
 
 ```mermaid
 flowchart LR

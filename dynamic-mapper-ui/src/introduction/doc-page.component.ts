@@ -82,7 +82,16 @@ export class DocPageComponent implements OnInit {
     const target = (event.target as HTMLElement)?.closest('a');
     if (!target) return;
     const href = target.getAttribute('href');
-    if (!href || !href.startsWith(DocPageComponent.INTERNAL_LINK_PREFIX)) return;
+    if (!href) return;
+    // Same-page anchors (the {#id} heading ids these pages define) must scroll rather than
+    // navigate: routing to "#id" would leave the doc route and reload the page. Mirrors the
+    // handling in DocOverviewComponent.
+    if (href.startsWith('#')) {
+      event.preventDefault();
+      this.scrollToElement(href.slice(1));
+      return;
+    }
+    if (!href.startsWith(DocPageComponent.INTERNAL_LINK_PREFIX)) return;
     event.preventDefault();
     this.router.navigateByUrl(href);
   }

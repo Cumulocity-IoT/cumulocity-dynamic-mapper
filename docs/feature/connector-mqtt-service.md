@@ -8,14 +8,37 @@ entirely separate implementation that speaks the Apache Pulsar wire protocol, no
 MQTT over TCP/WebSocket, against Cumulocity's internal Pulsar-backed MQTT Service
 broker.
 
-## `CUMULOCITY_MQTT_SERVICE` vs `CUMULOCITY_MQTT_SERVICE_PULSAR`
+---
+
+## Requirements
+
+**What it is for.** Using Cumulocity's own managed MQTT Service as the broker, so a tenant needs
+no external broker at all. Devices connect to Cumulocity; the mapper exchanges their traffic with
+the service over Pulsar.
+
+- **Both directions**, with no broker credentials to configure: the connector authenticates with
+  the microservice's own credentials and the connection parameters are filled in automatically.
+  One instance per tenant.
+- **Only the QoS levels MQTT Service implements are offered** — at-most-once and at-least-once.
+  A mapping asking for exactly-once runs at at-least-once. See [reliability.md](reliability.md).
+- **Delivery guarantees end at the service.** MQTT Service requires clean sessions, so a message
+  addressed to a disconnected device is dropped rather than queued; no mapping setting changes
+  that. Retained messages are rejected outright.
+- **Device isolation is optional.** When enabled, outbound messages reach only registered clients,
+  via the device↔client relations.
+
+---
+
+## Implementation
+
+### `CUMULOCITY_MQTT_SERVICE` vs `CUMULOCITY_MQTT_SERVICE_PULSAR`
 
 `ConnectorType` (see
 [`ConnectorType.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/client/ConnectorType.java))
 still declares both values, but only one is live:
 
 - **`CUMULOCITY_MQTT_SERVICE`** — dead/removed. In
-  [`ConnectorClientFactory.createConnectorClient()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/registry/ConnectorClientFactory.java#L95-L98),
+  [`ConnectorClientFactory.createConnectorClient()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/ConnectorClientFactory.java#L95-L98),
   this case logs a warning ("Connector type CUMULOCITY_MQTT_SERVICE ... is no longer
   supported ... Use CUMULOCITY_MQTT_SERVICE_PULSAR instead") and instantiates no client.
   Kept only so old persisted connector configurations still deserialize. Git history
@@ -32,7 +55,7 @@ still declares both values, but only one is live:
 If you're reading `connector/mqtt/*.java` looking for this connector's implementation,
 you're in the wrong package — it lives in `connector/pulsar/`.
 
-## Topic model — inverted from plain Pulsar/MQTT
+### Topic model — inverted from plain Pulsar/MQTT
 
 Instead of subscribing per mapping topic, `MQTTServicePulsarClient` uses exactly two
 fixed persistent Pulsar topics per tenant:
@@ -54,7 +77,7 @@ message properties, not real Pulsar subscriptions:
 - `supportsWildcardInTopic()` unconditionally returns `true` for both directions, since
   filtering isn't done via Pulsar topic-pattern subscriptions at all.
 
-## Configuration — mostly pre-wired
+### Configuration — mostly pre-wired
 
 `createConnectorSpecification()` exposes a connection-property set where nearly
 everything is `.readonly(true).hidden(true)` — the create/config body needs only
@@ -70,7 +93,7 @@ type/id/name; connection parameters are auto-filled at connect time:
 So authentication uses the microservice's own bootstrap/service-user credentials, not
 user-supplied broker credentials.
 
-## QoS
+### QoS
 
 `supportedQos = [AT_MOST_ONCE, AT_LEAST_ONCE]`. This matches the service itself: per the
 [MQTT Service documentation](https://cumulocity.com/docs/device-integration/mqtt-service/),
@@ -97,7 +120,7 @@ MQTT Service documentation:
   is disconnected are **not** delivered on reconnect. Even QoS 1 towards a device is therefore
   not a durable-delivery guarantee across a disconnect.
 
-## Connection lifecycle specifics
+### Connection lifecycle specifics
 
 - `connect()` is fully overridden and retries via `connectWithRetry()`, trying three
   subscription "strategies" (standard, async, basic) as fallbacks for brokers that don't
@@ -125,7 +148,7 @@ MQTT Service documentation:
   from the broker-side Pulsar subscription, creating a temporary consumer if needed
   just to call `unsubscribe()`.
 
-## Gotchas
+### Gotchas
 
 - Negative-ack / retransmission / processing-cancellation correctness for this
   connector specifically has been iterated on repeatedly (commits `57f23caa8` "Properly
@@ -136,7 +159,7 @@ MQTT Service documentation:
   Cumulocity-Pulsar-broker versions that don't support PIP-344 — if inbound messages
   aren't arriving, check which strategy actually succeeded in the logs.
 
-## Testing
+### Testing
 
 `resources/script/test/run-tests.sh [SUITE] [CONNECTOR]` supports `CONNECTOR=m` to run
 the test suite against Cumulocity MQTT Service (`CUMULOCITY_MQTT_SERVICE_PULSAR`, TLS

@@ -9,7 +9,30 @@ using Spring's reactive `WebClient` (WebFlux), and extends `AConnectorClient` �
 are built reactively but `.block()`ed synchronously in `publishMEAO()`, so despite the
 reactive API it behaves as a blocking client.
 
-## Direction: outbound only
+---
+
+## Requirements
+
+**What it is for.** Forwarding Cumulocity data to a system that exposes an HTTP endpoint rather
+than a broker — an alerting service, a partner API, another Cumulocity tenant.
+
+- **Outbound only.** There is no way for a WebHook to receive; a system that needs to push data
+  in uses the [HTTP connector](connector-http.md).
+- **Many instances per tenant.** Unlike the HTTP connector, each WebHook targets its own URL, so a
+  tenant can run as many as it has destinations.
+- **The mapping decides the payload, the connector decides the destination.** The target URL,
+  method, headers and authentication belong to the connector configuration; what is sent is
+  whatever the mapping produced.
+- **Delivery is at-least-once.** A call either succeeds or is retried.
+- **Posting back into Cumulocity is a supported destination.** A WebHook may target the platform's
+  own API, in which case it authenticates with the microservice's credentials rather than
+  configured ones — this is how mappings feed data back into Cumulocity.
+
+---
+
+## Implementation
+
+### Direction: outbound only
 
 ```java
 public List<Direction> supportedDirections() {
@@ -21,7 +44,7 @@ public List<Direction> supportedDirections() {
 support inbound mappings")`, and `monitorSubscriptions()` is an explicit no-op — "no
 subscriptions to monitor."
 
-## Configuration (`ConnectorSpecification`)
+### Configuration (`ConnectorSpecification`)
 
 Built via `ConnectorSpecificationBuilder.create("Webhook", ConnectorType.WEB_HOOK)`:
 
@@ -41,7 +64,7 @@ Built via `ConnectorSpecificationBuilder.create("Webhook", ConnectorType.WEB_HOO
 Supports POST/PUT/PATCH/DELETE; the mapping's publish topic is appended to `baseUrl`
 (auto-inserting a `/` separator as needed).
 
-## Publish (`publishMEAO`)
+### Publish (`publishMEAO`)
 
 For each request in the batch:
 
@@ -64,7 +87,7 @@ For each request in the batch:
   request/context — there is no automatic retry loop for outbound publish, unlike some
   other connectors.
 
-## `cumulocityInternal` mode
+### `cumulocityInternal` mode
 
 When `cumulocityInternal=true`, `configureCumulocityInternal()` auto-wires the
 connector to point at Cumulocity's own internal API rather than an external URL:
@@ -89,7 +112,7 @@ extends `WebHook` and does not override `publishMEAO`/`connect`/`subscribe` — 
 All the actual "talk to Cumulocity's own API" logic lives in the shared parent class's
 `configureCumulocityInternal()` — `WebHookInternal` just narrows what's user-visible.
 
-## Gotchas
+### Gotchas
 
 - No automatic retry/backoff on any outbound HTTP call — a transient failure is a
   single-attempt failure.

@@ -9,7 +9,34 @@ send. This page describes that pipeline's shape and sequencing; the transformati
 mechanisms themselves (JSONata, Smart Functions, Java extensions) are documented
 separately.
 
-## Where it runs
+---
+
+## Requirements
+
+**What it is for.** Turning a message that arrived on a broker into Cumulocity data, according to
+the mappings the tenant configured.
+
+- **A message is offered to every mapping whose topic matches it.** One message can produce
+  several Cumulocity objects through several mappings; a message matching none is counted and
+  otherwise ignored.
+- **Mappings only run on connectors they are deployed to.** Matching a topic is not enough.
+- **The pipeline is: deserialize → enrich with identity → transform → send.** A failure at any
+  stage stops that mapping's processing of that message, records the failure, and must not affect
+  other mappings processing the same message.
+- **A mapping may reject a message deliberately** via its filter expression. That is not a
+  failure and must not be counted as one.
+- **Payload formats supported inbound**: JSON, flat file, hexadecimal, Protobuf, Sparkplug B, and
+  arbitrary payloads handled by an extension.
+- **An array in the payload may produce one object per element**, when the mapping says so.
+- **Processing must be bounded**: no message may occupy a worker indefinitely, and a runaway
+  transformation must be stoppable — see [reliability.md](reliability.md).
+- **Test runs must never change runtime state** — no counters, no failure streaks.
+
+---
+
+## Implementation
+
+### Where it runs
 
 | Stage | Class | Role |
 |---|---|---|
@@ -23,7 +50,7 @@ separately.
 | Send | [`SendInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/SendInboundProcessor.java) | Resolves external IDs to C8Y source IDs, upserts devices, calls `C8YAgent.createMEAO`, merges multiple MEASUREMENT requests into one bulk request, creates processing alarms, handles SparkPlug B birth/active-state bookkeeping. |
 | Cleanup | [`ConsolidationProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/util/ConsolidationProcessor.java) | Moves the `ProcessingContext` from Camel header to exchange body for the aggregation strategy, and closes the context's GraalVM resources (idempotent — the one point every leg passes through, including early-`.stop()` exits). |
 
-## End-to-end flow
+### End-to-end flow
 
 ```mermaid
 sequenceDiagram
@@ -56,7 +83,7 @@ sequenceDiagram
     Dispatcher-->>Connector: ProcessingResultWrapper (Future, consolidated QoS)
 ```
 
-## Dispatch and resolution (`CamelDispatcherInbound`)
+### Dispatch and resolution (`CamelDispatcherInbound`)
 
 `onMessage()`/`onTestMessage()` both funnel into `processMessage()`
 ([`CamelDispatcherInbound.java:93-253`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/CamelDispatcherInbound.java#L93-L253)):
@@ -85,7 +112,7 @@ sequenceDiagram
    (`CamelDispatcherInbound.java:203-238`). See [`identity-resolution.md`](identity-resolution.md)
    for why there are two caches.
 
-## Camel route structure (`DynamicMapperInboundRoutes`)
+### Camel route structure (`DynamicMapperInboundRoutes`)
 
 - `direct:processInboundMessage` — no-op short-circuit when no mappings were resolved.
 - `direct:processWithMappingsOutbound` — filters candidate mappings to those actually
@@ -111,7 +138,7 @@ sequenceDiagram
   `direct:inboundErrorHandling`, which guarantees `PROCESSED_CONTEXTS` is never null so the
   dispatcher's header read always succeeds.
 
-## `ProcessingContext` and its focused sub-contexts
+### `ProcessingContext` and its focused sub-contexts
 
 `ProcessingContext<O>` ([`ProcessingContext.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/ProcessingContext.java))
 is the per-message state object threaded through every processor via the Camel header
@@ -147,7 +174,7 @@ purpose. Use `try (ProcessingContext<?> ctx = ...) { ... }` (or rely on
 `ConsolidationProcessor`, which does this on every pipeline exit) rather than looking for a
 dedicated `ExecutionContext` type.
 
-## Filtering (`FilterInboundProcessor`)
+### Filtering (`FilterInboundProcessor`)
 
 Runs once, right after enrichment, only for inbound. It evaluates `mapping.getFilterMapping()`
 (a JSONata boolean expression) against the deserialized payload
@@ -161,7 +188,7 @@ post-substitution filter — `filterInventory` — applied later in
 [`mapping-validation.md`](mapping-validation.md) for the full validation rule set around both
 filters.
 
-## Transformation dispatch
+### Transformation dispatch
 
 The four transformation paths are documented individually — this page only covers how the
 route selects and sequences them:
@@ -174,7 +201,7 @@ route selects and sequences them:
 handled by `InternalProtobufProcessor` directly on the inbound route and is not one of the
 three pluggable transformation types above.
 
-## Substitution and identity resolution
+### Substitution and identity resolution
 
 `SubstitutionResultInboundProcessor` walks every `pathTarget` in
 `context.getProcessingCache()` and writes the corresponding value into a copy of
@@ -197,7 +224,7 @@ resulting `DynamicMapperRequest`s are processed sequentially (`false` → parall
 devices; `true` → sequential, since device creation must happen deterministically before
 dependent MEAO requests).
 
-## Sending (`SendInboundProcessor`)
+### Sending (`SendInboundProcessor`)
 
 Beyond resolving external IDs and creating/updating devices via `C8YAgent.upsertDevice()`
 and `C8YAgent.createMEAO()`, this processor also:
@@ -212,7 +239,7 @@ and `C8YAgent.createMEAO()`, this processor also:
   NDATA/DDATA messages can resolve metric aliases, and maintains
   `sparkPlugB_isActive[_<deviceId>]` flags from BIRTH/DATA/DEATH message types.
 
-## Cancellation
+### Cancellation
 
 Both `CamelDispatcherInbound` and the outbound dispatcher submit processing to a virtual
 thread and store the `Future` on a `ProcessingResultWrapper`. A caller (e.g. a connector
