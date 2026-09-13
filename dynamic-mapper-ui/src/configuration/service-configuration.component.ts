@@ -107,6 +107,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     this.initializeForm();
     await this.loadData();
     this.initializeSettingsSection();
+    this.restoreExpertMode();
     this.subscribeToAIAgents();
   }
 
@@ -117,14 +118,62 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
 
   private initializeSettingsSection(): void {
     const href = this.router.url;
-    if (href.includes('/serviceConfiguration/general')) {
-      this.section = "general";
+    if (href.includes('/serviceConfiguration/processing')) {
+      this.section = 'processing';
     } else if (href.includes('/serviceConfiguration/ai')) {
-      this.section = "ai";
+      this.section = 'ai';
     } else if (href.includes('/serviceConfiguration/caching')) {
-      this.section = "caching";
+      this.section = 'caching';
+    } else if (href.includes('/serviceConfiguration/monitoring')
+      // 'logging' is the pre-6.5 path; keep it working so bookmarks do not 404 into General.
+      || href.includes('/serviceConfiguration/logging')) {
+      this.section = 'monitoring';
     } else {
-      this.section = "logging";
+      this.section = 'general';
+    }
+  }
+
+  /**
+   * Settings that require understanding the runtime internals (GraalVM engine sizing, alias-map
+   * caching, per-substitution logging). Hidden by default so the tabs show what an administrator
+   * actually has to decide; revealed by the "Expert settings" toggle.
+   *
+   * Keyed by section so the "N settings hidden" hint below the list can be accurate — a count of
+   * *everything* hidden would be misleading on a tab that hides nothing.
+   */
+  private static readonly EXPERT_SETTINGS: Readonly<Record<string, string[]>> = {
+    processing: ['supportESM', 'engineRotationThreshold', 'engineMaxAgeMinutes', 'contextPoolSize'],
+    caching: ['cacheAliasMaps'],
+    monitoring: ['logSubstitution', 'logConnectorErrorInBackend']
+  };
+
+  private static readonly EXPERT_MODE_STORAGE_KEY = 'dynamic-mapper.serviceConfiguration.expertMode';
+
+  expertMode = false;
+
+  /** How many settings the current tab is hiding, for the hint under the list. */
+  get hiddenExpertCount(): number {
+    return ServiceConfigurationComponent.EXPERT_SETTINGS[this.section]?.length ?? 0;
+  }
+
+  toggleExpertMode(): void {
+    this.expertMode = !this.expertMode;
+    try {
+      localStorage.setItem(
+        ServiceConfigurationComponent.EXPERT_MODE_STORAGE_KEY,
+        String(this.expertMode)
+      );
+    } catch {
+      // Private browsing / blocked storage: the preference simply does not persist.
+    }
+  }
+
+  private restoreExpertMode(): void {
+    try {
+      this.expertMode =
+        localStorage.getItem(ServiceConfigurationComponent.EXPERT_MODE_STORAGE_KEY) === 'true';
+    } catch {
+      this.expertMode = false;
     }
   }
 

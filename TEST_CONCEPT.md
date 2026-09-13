@@ -312,6 +312,7 @@ mocked dependencies.
 | Services | `shared/service/connector-configuration.service.spec.ts`, `mapping/core/testing.service.spec.ts`, `mapping/service/mapping-stepper.service.spec.ts` |
 | Connectors / subscriptions / monitoring | `shared/connector-configuration/edit/connector-configuration-drawer.component.spec.ts`, `mapping/subscription/subscription.component.spec.ts`, `monitoring/versions-tab.factory.spec.ts` |
 | Mapping creation | `mapping/mapping-create/mapping-type-drawer.component.spec.ts` |
+| Service configuration | `configuration/service-configuration.component.spec.ts` (expert-mode visibility, processing-budget validation) |
 
 **Pattern for c8y standalone components:** their templates import `CoreModule`, which eagerly
 reaches into the app-shell DI graph the test injector does not provide (`NG0201

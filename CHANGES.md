@@ -58,6 +58,23 @@ expected case, since it is internal status bookkeeping — are unaffected.
 `MappingStatus.equals`/`hashCode` now compare the mapping `identifier` rather than `id`, and
 `reset()` additionally clears `currentFailureCount`.
 
+### Service configuration reorganised
+
+The settings were split across General / AI Agent / Caching / Logging, which put unrelated things
+together: *General* mixed feature switches with GraalVM engine internals, *Logging* mixed log
+verbosity with the events published to Cumulocity, and *Caching* held retention policies that are
+not caches.
+
+- New **Processing** tab for the Smart Function execution limits and the GraalVM engine settings;
+  the *Rotate GraalVM Engine* action moved with them.
+- **Logging** is now **Monitoring**, split into "Events published to Cumulocity" and
+  "Log verbosity". The old `/serviceConfiguration/logging` path still resolves.
+- `mappingVersionRetention` moved from Caching to General; *Caching* now holds the caches plus
+  flow-state retention, grouped by what they cache.
+- New **Expert settings** toggle in the action bar hides the seven settings that require knowing
+  the runtime internals (GraalVM engine sizing, alias-map caching, per-substitution logging).
+  Off by default, remembered per browser; each tab states how many settings it is hiding.
+
 ### Multi-tenancy fixes
 
 - The catch-all mapping status was a single mutable `static` shared by every subscribed tenant,

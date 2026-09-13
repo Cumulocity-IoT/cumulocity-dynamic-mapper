@@ -20,7 +20,19 @@
 -->
 
 <c8y-title translate>Service configuration</c8y-title>
-@if (section == 'general'){
+<c8y-action-bar-item [placement]="'right'">
+  <button class="btn btn-link" [title]="expertMode
+      ? ('Hide advanced settings' | translate)
+      : ('Show advanced settings' | translate)" (click)="toggleExpertMode()"
+    data-cy="dm-service-config-expert-toggle">
+    <i [c8yIcon]="expertMode ? 'eye-slash' : 'eye'"></i>
+    {{ 'Expert settings' | translate }}
+    @if (expertMode) {
+    <span class="label label-info m-l-4">{{ 'on' | translate }}</span>
+    }
+  </button>
+</c8y-action-bar-item>
+@if (section == 'processing'){
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Rotate GraalVM Engine' | translate }}"
     (click)="clickedRotateGraalVMEngine()" [disabled]="!feature?.userHasMappingAdminRole">
@@ -66,7 +78,544 @@
     <div class="card-block">
       <c8y-list-group class="p-l-24 p-r-24">
         <form [formGroup]="serviceForm">
-          @if (section == 'logging'){
+          @if (section == 'general') {
+          <c8y-li>
+            <c8y-li-icon icon="swipe-left"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Outbound mappings' | translate }}</p>
+                <p>
+                  <small translate>Outbound mappings enabled. Changing this property require unsubscribing/subscribing
+                    the Dynamic Mapper microservice to this tenant.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Outbound mappings' | translate }}">
+                  <input name="outboundMappingEnabled" type="checkbox" formControlName="outboundMappingEnabled" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="relay-home-automation"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Device Isolation Cumulocity MQTT Service' | translate }}</p>
+                <p>
+                  <small translate>When device isolation for Cumulocity MQTT Service is enabled only registered MQTT
+                    clients receive outbound MQTT messages. Changing this property require unsubscribing/subscribing the
+                    Dynamic Mapper microservice to this tenant.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Device Isolation Cumulocity MQTT Service' | translate }}">
+                  <input name="deviceIsolationMQTTServiceEnabled" type="checkbox"
+                    formControlName="deviceIsolationMQTTServiceEnabled" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="link"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'External ID binding during MO creation' | translate }}</p>
+                <p>
+                  <small translate>Bind external IDs atomically during managed object creation in a single request
+                    (requires Cumulocity platform &ge; May 2026). Disable this on older instances such as
+                    Cumulocity Edge that do not yet support this feature.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="c8y-switch c8y-switch--inline"
+                  title="{{ 'External ID binding during MO creation' | translate }}">
+                  <input name="externalIdBinding" type="checkbox" formControlName="externalIdBinding" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="list"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Number of mapping versions to retain' | translate }}</p>
+                <p>
+                  <small translate>Maximum number of versions kept per mapping. When a new version is published, the
+                    oldest versions beyond this limit are deleted; the active version is never deleted.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Number of mapping versions to retain' | translate }}">
+                  <input class="form-control" name="mappingVersionRetention" type="number" min="1"
+                    formControlName="mappingVersionRetention" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="clock-o"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Message Explorer session TTL (minutes)' | translate }}</p>
+                <p>
+                  <small translate>Default lifetime of a Message Explorer session: it is automatically stopped once
+                    the UI has not polled it for this long. Can be overridden per session when starting it.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Message Explorer session TTL (minutes)' | translate }}">
+                  <input class="form-control" name="explorerSessionTTLMinutes" type="number" min="1"
+                    formControlName="explorerSessionTTLMinutes" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          }
+          @if (section == 'processing') {
+          <c8y-li class="p-t-16">
+            <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
+              Smart Function execution limits
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="alarm1"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Maximum CPU time for Smart Function JavaScript code' | translate }}</p>
+                <p>
+                  <small translate>Maximum CPU time in milliseconds the JavaScript engine is allowed to consume.
+                    The script is forcibly stopped when this limit is reached, preventing runaway or malicious code from
+                    starving the CPU.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Maximum CPU time for Smart Function JavaScript code' | translate }}">
+                  <input class="form-control" name="maxCPUTimeMS" type="number" formControlName="maxCPUTimeMS" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="alarm1"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Maximum end-to-end processing time for Smart Functions' | translate }}</p>
+                <p>
+                  <small translate>Maximum wall-clock time in milliseconds the system waits for a Smart Function to
+                    finish processing a message end-to-end — including JavaScript execution and any Cumulocity API calls.
+                    When exceeded the message is not acknowledged (QoS &gt; 0) and will be redelivered.
+                    Must be greater than the CPU time limit above.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable"
+                  title="{{ 'Maximum end-to-end processing time for Smart Functions' | translate }}">
+                  <input class="form-control" name="pipelineTimeoutMS" type="number" min="1000"
+                    formControlName="pipelineTimeoutMS" />
+                  <span></span>
+                </label>
+                @if (pipelineTimeoutInvalid) {
+                <div class="text-danger small m-t-4" data-cy="dm-pipeline-timeout-error">
+                  {{ 'Must be greater than the CPU time limit — otherwise the CPU limit is never reached.' | translate }}
+                </div>
+                }
+              </div>
+            </div>
+          </c8y-li>
+          @if (expertMode) {
+          <c8y-li class="p-t-16">
+            <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
+              JavaScript engine (advanced)
+              <small class="text-muted">Memory and warm-up trade-offs of the GraalVM engine. The defaults suit most tenants.</small>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="package"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Support ESM modules' | translate }}</p>
+                <p>
+                  <small translate>Enable ECMAScript Module (ESM) support for JavaScript mapping code. When enabled,
+                    code may use <code>export function</code> syntax and is evaluated as an ES module. When disabled
+                    (default), code runs in flat-script mode.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Support ESM modules' | translate }}">
+                  <input name="supportESM" type="checkbox" formControlName="supportESM" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="restore"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'GraalVM engine rotation threshold' | translate }}</p>
+                <p>
+                  <small translate>Number of unique JavaScript source compilations after which the GraalVM Engine is
+                    rotated to reclaim JVM Metaspace. Each new or updated mapping code counts once per Engine lifetime;
+                    re-executing the same code is a cache hit and does not count. Lower values free memory more often;
+                    higher values retain JIT warm-up longer. Default: 100.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'GraalVM engine rotation threshold' | translate }}">
+                  <input class="form-control" name="engineRotationThreshold" type="number" min="1"
+                    formControlName="engineRotationThreshold" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="clock-o"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'GraalVM engine max age (minutes)' | translate }}</p>
+                <p>
+                  <small translate>Optional time-based rotation: rotate the GraalVM Engine after this many minutes
+                    regardless of compilation count. Set to 0 (default) to disable — the compilation counter alone
+                    drives rotation.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'GraalVM engine max age (minutes)' | translate }}">
+                  <input class="form-control" name="engineMaxAgeMinutes" type="number" min="1"
+                    formControlName="engineMaxAgeMinutes" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="numbered-list"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'GraalVM context pool size' | translate }}</p>
+                <p>
+                  <small translate>Maximum number of GraalVM contexts kept idle in the per-mapping context pool.
+                    Higher values reduce per-message context-creation overhead at high throughput; lower values
+                    reduce memory usage. Each pooled context holds a pre-loaded onMessage function and shared/system
+                    code. Default: 20.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'GraalVM context pool size' | translate }}">
+                  <input class="form-control" name="contextPoolSize" type="number" min="1" max="100"
+                    formControlName="contextPoolSize" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          }
+          }
+          @if (section == 'caching') {
+          <c8y-li class="p-t-16">
+            <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
+              External ID caches
+              <small class="text-muted">Resolution of device external IDs to Cumulocity managed objects.</small>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="numbered-list"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Size inbound Id cache' | translate }}</p>
+                <p>
+                  <small translate>Set size inbound Id cache. After changing the size you have
+                    to clear the cache to take effect</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Size inbound Id cache' | translate }}">
+                  <input class="form-control" name="inboundExternalIdCacheSize" type="number"
+                    formControlName="inboundExternalIdCacheSize" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="time-machine"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Days lifetime inbound Id cache' | translate }}</p>
+                <p>
+                  <small translate>Set time after which complete cache in cleared. This is
+                    useful when you plan to delete a device or assign an
+                    external id to different device</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Days lifetime ' | translate }}">
+                  <input class="form-control" name="inboundExternalIdCacheRetention" type="number"
+                    formControlName="inboundExternalIdCacheRetention" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="numbered-list"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Size outbound Id cache' | translate }}</p>
+                <p>
+                  <small translate>Set size of the outbound external Id cache. Used by outbound mappings
+                    with "useExternalId" enabled to avoid resolving the external Id from Cumulocity on every
+                    message. After changing the size you have to clear the cache to take effect</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Size outbound Id cache' | translate }}">
+                  <input class="form-control" name="outboundExternalIdCacheSize" type="number"
+                    formControlName="outboundExternalIdCacheSize" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="time-machine"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Days lifetime outbound Id cache' | translate }}</p>
+                <p>
+                  <small translate>Set time after which complete outbound Id cache is cleared. This is
+                    useful when you plan to delete a device or re-assign an
+                    external id to a different device</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Days lifetime' | translate }}">
+                  <input class="form-control" name="outboundExternalIdCacheRetention" type="number"
+                    formControlName="outboundExternalIdCacheRetention" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li class="p-t-16">
+            <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
+              Inventory cache
+              <small class="text-muted">Device metadata made available to mappings.</small>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="numbered-list"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Size inventory cache' | translate }}</p>
+                <p>
+                  <small translate>Set size inventory cache. After changing the size you have
+                    to clear the cache to take effect</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Size inventory cache' | translate }}">
+                  <input class="form-control" name="inventoryCacheSize" type="number"
+                    formControlName="inventoryCacheSize" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="time-machine"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Days lifetime inventory cache' | translate }}</p>
+                <p>
+                  <small translate>Set time after which complete cache in cleared. This is
+                    useful when you plan to delete a device or assign an
+                    external id to different device</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Days lifetime' | translate }}">
+                  <input class="form-control" name="inventoryCacheRetention" type="number"
+                    formControlName="inventoryCacheRetention" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="list"></c8y-li-icon>
+            <div class="d-flex a-i-start">
+              <div class="config-label-grow">
+                <p>{{ 'Fragments from inventory to cache' | translate }}</p>
+                <p>
+                  <small translate>The listed fragments will be cached and can be referenced in
+                    'filterInventory'. Each entry can be an exact fragment name (e.g. <code>type</code>,
+                    <code>c8y_Hardware</code>) or a glob pattern using <code>*</code> (any sequence of
+                    characters) and <code>?</code> (single character), e.g.
+                    <code>sparkPlugB_DBIRTH_*</code> to cache all fragments whose name starts with
+                    <code>sparkPlugB_DBIRTH_</code>.</small>
+                </p>
+              </div>
+              <div class="m-l-auto config-control-col">
+                <ul class="list-unstyled m-b-0 p-l-4" c8yInputGroupListContainer>
+                  @for (item of inventoryFragmentsList; track trackByFragmentFn(i, item); let i = $index) {
+                    <li class="m-b-8">
+                      <c8y-input-group-list [index]="i" (onAdd)="addFragment()" (onRemove)="removeFragment($event)" [minus]="inventoryFragmentsList.length > 0">
+                        <div class="fragment-input">
+                          <input class="form-control" placeholder="e.g. type, c8y_Hardware, sparkPlugB_DBIRTH_*" type="text"
+                            [(ngModel)]="inventoryFragmentsList[i]" [ngModelOptions]="{standalone: true}" />
+                        </div>
+                      </c8y-input-group-list>
+                    </li>
+                  }
+                </ul>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li class="p-t-16">
+            <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
+              Retention
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="time-machine"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Minutes lifetime flow state' | translate }}</p>
+                <p>
+                  <small translate>Set time in minutes after which the complete flow state for Smart Functions and Java
+                    Extensions is cleared. Set to 0 to disable TTL.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Minutes lifetime flow state' | translate }}" >
+                  <input class="form-control" name="flowStateRetention" type="number"
+                    formControlName="flowStateRetention" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          @if (expertMode) {
+          <c8y-li class="p-t-16">
+            <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
+              Advanced
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="exchange"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Cache alias maps for SparkPlug B mappings' | translate }}</p>
+                <p>
+                  <small translate>When enabled, the SparkPlug B BIRTH fragments (sparkPlugB_NBIRTH,
+                    sparkPlugB_DBIRTH) are automatically included in the inventory cache for all cached
+                    managed objects. This removes the need to add these fragments manually to the list
+                    above.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Cache alias maps for SparkPlug B mappings' | translate }}">
+                  <input type="checkbox" name="cacheAliasMaps" formControlName="cacheAliasMaps" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          }
+          }
+          @if (section == 'monitoring') {
+          <c8y-li class="p-t-16">
+            <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
+              Events published to Cumulocity
+              <small class="text-muted">What the mapper reports into the platform event log.</small>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="process"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Send connector lifecycle' | translate }}</p>
+                <p>
+                  <small translate>Send events when status of a connector changes. Be aware
+                    this can cause additional costs </small><i c8yIcon="euro"></i>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Send connector lifecycle' | translate }}">
+                  <input name="sendMappingStatus" type="checkbox" formControlName="sendConnectorLifecycle" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="c8y-usage-statistics"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Send mapping statistics' | translate }}</p>
+                <p>
+                  <small translate>Send statics about how often a mapping was applied. Be
+                    aware this can cause additional costs </small><i c8yIcon="euro"></i>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Send mapping status' | translate }}">
+                  <input name="sendMappingStatus" type="checkbox" formControlName="sendMappingStatus" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="subscription"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Send events on topic subscriptions' | translate }}</p>
+                <p>
+                  <small translate>Send events when the subscription for a topic changes. Be
+                    aware this can cause additional costs </small><i c8yIcon="euro"></i>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Send events on topic subscriptions' | translate }}">
+                  <input name="sendSubscriptionEvents" type="checkbox" formControlName="sendSubscriptionEvents" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="process"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Send notification lifecycle' | translate }}</p>
+                <p>
+                  <small translate>Send events when status for outbound notifications changes.
+                    Be aware this can cause additional costs </small><i c8yIcon="euro"></i>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="c8y-switch c8y-switch--inline" title="{{ 'Send notification lifecycle' | translate }}">
+                  <input name="sendNotificationLifecycle" type="checkbox" formControlName="sendNotificationLifecycle" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
+          <c8y-li class="p-t-16">
+            <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
+              Log verbosity
+              <small class="text-muted">Raise only while troubleshooting — verbose logging costs throughput.</small>
+            </div>
+          </c8y-li>
           <c8y-li>
             <c8y-li-icon icon="file-type-document"></c8y-li-icon>
             <div class="d-flex a-i-center">
@@ -84,6 +633,7 @@
               </div>
             </div>
           </c8y-li>
+          @if (expertMode) {
           <c8y-li>
             <c8y-li-icon icon="replace"></c8y-li-icon>
             <div class="d-flex a-i-center">
@@ -119,83 +669,9 @@
               </div>
             </div>
           </c8y-li>
-          <c8y-li>
-            <c8y-li-icon icon="process"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Send connector lifecycle' | translate }}</p>
-                <p>
-                  <small translate>Send events when status of a connector changes. Be aware
-                    this can cause additional costs </small><i c8yIcon="euro"></i>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="c8y-switch c8y-switch--inline" title="{{ 'Send connector lifecycle' | translate }}">
-                  <input name="sendMappingStatus" type="checkbox" formControlName="sendConnectorLifecycle" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="c8y-usage-statistics"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Send mapping statistics' | translate }}</p>
-                <p>
-                  <small translate>Send statics about how often a mapping was applied. Be
-                    aware this can cause additional costs </small><i c8yIcon="euro"></i>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="c8y-switch c8y-switch--inline" title="{{ 'Send mapping status' | translate }}">
-                  <input name="sendMappingStatus" type="checkbox" formControlName="sendMappingStatus" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="subscription"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Send events on topic subscriptions' | translate }}</p>
-                <p>
-                  <small translate>Send events when the subscription for a topic changes. Be
-                    aware this can cause additional costs </small><i c8yIcon="euro"></i>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="c8y-switch c8y-switch--inline" title="{{ 'Send events on topic subscriptions' | translate }}">
-                  <input name="sendSubscriptionEvents" type="checkbox" formControlName="sendSubscriptionEvents" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="process"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Send notification lifecycle' | translate }}</p>
-                <p>
-                  <small translate>Send events when status for outbound notifications changes.
-                    Be aware this can cause additional costs </small><i c8yIcon="euro"></i>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="c8y-switch c8y-switch--inline" title="{{ 'Send notification lifecycle' | translate }}">
-                  <input name="sendNotificationLifecycle" type="checkbox" formControlName="sendNotificationLifecycle" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
           }
-          @if (section == 'ai'){
+          }
+          @if (section == 'ai') {
           <c8y-li>
             <c8y-li-icon icon="bot"></c8y-li-icon>
             <div class="d-flex a-i-center">
@@ -230,9 +706,6 @@
               </div>
             </div>
           </c8y-li>
-
-          <!-- javaScriptAgent hidden: Substitution As Code deprecated since 6.3, field kept for backend compatibility -->
-
           <c8y-li>
             <c8y-li-icon icon="bot"></c8y-li-icon>
             <div class="d-flex a-i-center">
@@ -270,439 +743,15 @@
             </div>
           </c8y-li>
           }
-          @if (section == 'general'){
+          @if (!expertMode && hiddenExpertCount > 0) {
           <c8y-li>
-            <c8y-li-icon icon="swipe-left"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Outbound mappings' | translate }}</p>
-                <p>
-                  <small translate>Outbound mappings enabled. Changing this property require unsubscribing/subscribing
-                    the Dynamic Mapper microservice to this tenant.</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="c8y-switch c8y-switch--inline" title="{{ 'Outbound mappings' | translate }}">
-                  <input name="outboundMappingEnabled" type="checkbox" formControlName="outboundMappingEnabled" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="relay-home-automation"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Device Isolation Cumulocity MQTT Service' | translate }}</p>
-                <p>
-                  <small translate>When device isolation for Cumulocity MQTT Service is enabled only registered MQTT
-                    clients receive outbound MQTT messages. Changing this property require unsubscribing/subscribing the
-                    Dynamic Mapper microservice to this tenant.</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="c8y-switch c8y-switch--inline" title="{{ 'Device Isolation Cumulocity MQTT Service' | translate }}">
-                  <input name="deviceIsolationMQTTServiceEnabled" type="checkbox"
-                    formControlName="deviceIsolationMQTTServiceEnabled" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="link"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'External ID binding during MO creation' | translate }}</p>
-                <p>
-                  <small translate>Bind external IDs atomically during managed object creation in a single request
-                    (requires Cumulocity platform &ge; May 2026). Disable this on older instances such as
-                    Cumulocity Edge that do not yet support this feature.</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="c8y-switch c8y-switch--inline"
-                  title="{{ 'External ID binding during MO creation' | translate }}">
-                  <input name="externalIdBinding" type="checkbox" formControlName="externalIdBinding" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="alarm1"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Maximum CPU time for Smart Function JavaScript code' | translate }}</p>
-                <p>
-                  <small translate>Maximum CPU time in milliseconds the JavaScript engine is allowed to consume.
-                    The script is forcibly stopped when this limit is reached, preventing runaway or malicious code from
-                    starving the CPU.</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ 'Maximum CPU time for Smart Function JavaScript code' | translate }}">
-                  <input class="form-control" name="maxCPUTimeMS" type="number" formControlName="maxCPUTimeMS" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="alarm1"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Maximum end-to-end processing time for Smart Functions' | translate }}</p>
-                <p>
-                  <small translate>Maximum wall-clock time in milliseconds the system waits for a Smart Function to
-                    finish processing a message end-to-end — including JavaScript execution and any Cumulocity API calls.
-                    When exceeded the message is not acknowledged (QoS &gt; 0) and will be redelivered.
-                    Must be greater than the CPU time limit above.</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable"
-                  title="{{ 'Maximum end-to-end processing time for Smart Functions' | translate }}">
-                  <input class="form-control" name="pipelineTimeoutMS" type="number" min="1000"
-                    formControlName="pipelineTimeoutMS" />
-                  <span></span>
-                </label>
-                @if (pipelineTimeoutInvalid) {
-                <div class="text-danger small m-t-4" data-cy="dm-pipeline-timeout-error">
-                  {{ 'Must be greater than the CPU time limit — otherwise the CPU limit is never reached.' | translate }}
-                </div>
-                }
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="restore"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'GraalVM engine rotation threshold' | translate }}</p>
-                <p>
-                  <small translate>Number of unique JavaScript source compilations after which the GraalVM Engine is
-                    rotated to reclaim JVM Metaspace. Each new or updated mapping code counts once per Engine lifetime;
-                    re-executing the same code is a cache hit and does not count. Lower values free memory more often;
-                    higher values retain JIT warm-up longer. Default: 100.</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ 'GraalVM engine rotation threshold' | translate }}">
-                  <input class="form-control" name="engineRotationThreshold" type="number" min="1"
-                    formControlName="engineRotationThreshold" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="clock-o"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'GraalVM engine max age (minutes)' | translate }}</p>
-                <p>
-                  <small translate>Optional time-based rotation: rotate the GraalVM Engine after this many minutes
-                    regardless of compilation count. Set to 0 (default) to disable — the compilation counter alone
-                    drives rotation.</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ 'GraalVM engine max age (minutes)' | translate }}">
-                  <input class="form-control" name="engineMaxAgeMinutes" type="number" min="1"
-                    formControlName="engineMaxAgeMinutes" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="numbered-list"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'GraalVM context pool size' | translate }}</p>
-                <p>
-                  <small translate>Maximum number of GraalVM contexts kept idle in the per-mapping context pool.
-                    Higher values reduce per-message context-creation overhead at high throughput; lower values
-                    reduce memory usage. Each pooled context holds a pre-loaded onMessage function and shared/system
-                    code. Default: 20.</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ 'GraalVM context pool size' | translate }}">
-                  <input class="form-control" name="contextPoolSize" type="number" min="1" max="100"
-                    formControlName="contextPoolSize" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="clock-o"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Message Explorer session TTL (minutes)' | translate }}</p>
-                <p>
-                  <small translate>Default lifetime of a Message Explorer session: it is automatically stopped once
-                    the UI has not polled it for this long. Can be overridden per session when starting it.</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ 'Message Explorer session TTL (minutes)' | translate }}">
-                  <input class="form-control" name="explorerSessionTTLMinutes" type="number" min="1"
-                    formControlName="explorerSessionTTLMinutes" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="package"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Support ESM modules' | translate }}</p>
-                <p>
-                  <small translate>Enable ECMAScript Module (ESM) support for JavaScript mapping code. When enabled,
-                    code may use <code>export function</code> syntax and is evaluated as an ES module. When disabled
-                    (default), code runs in flat-script mode.</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="c8y-switch c8y-switch--inline" title="{{ 'Support ESM modules' | translate }}">
-                  <input name="supportESM" type="checkbox" formControlName="supportESM" />
-                  <span></span>
-                </label>
-              </div>
+            <div class="text-muted text-center p-t-16 p-b-8">
+              <i c8yIcon="eye-slash" class="m-r-4"></i>
+              {{ hiddenExpertCount }} {{ 'advanced setting(s) hidden. Enable "Expert settings" to show them.' | translate }}
             </div>
           </c8y-li>
           }
-          @if (section == 'caching'){
-          <c8y-li>
-            <c8y-li-icon icon="numbered-list"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Size inbound Id cache' | translate }}</p>
-                <p>
-                  <small translate>Set size inbound Id cache. After changing the size you have
-                    to clear the cache to take effect</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ 'Size inbound Id cache' | translate }}">
-                  <input class="form-control" name="inboundExternalIdCacheSize" type="number"
-                    formControlName="inboundExternalIdCacheSize" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="time-machine"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Days lifetime inbound Id cache' | translate }}</p>
-                <p>
-                  <small translate>Set time after which complete cache in cleared. This is
-                    useful when you plan to delete a device or assign an
-                    external id to different device</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ 'Days lifetime ' | translate }}">
-                  <input class="form-control" name="inboundExternalIdCacheRetention" type="number"
-                    formControlName="inboundExternalIdCacheRetention" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="numbered-list"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Size outbound Id cache' | translate }}</p>
-                <p>
-                  <small translate>Set size of the outbound external Id cache. Used by outbound mappings
-                    with "useExternalId" enabled to avoid resolving the external Id from Cumulocity on every
-                    message. After changing the size you have to clear the cache to take effect</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ 'Size outbound Id cache' | translate }}">
-                  <input class="form-control" name="outboundExternalIdCacheSize" type="number"
-                    formControlName="outboundExternalIdCacheSize" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="time-machine"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Days lifetime outbound Id cache' | translate }}</p>
-                <p>
-                  <small translate>Set time after which complete outbound Id cache is cleared. This is
-                    useful when you plan to delete a device or re-assign an
-                    external id to a different device</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ 'Days lifetime' | translate }}">
-                  <input class="form-control" name="outboundExternalIdCacheRetention" type="number"
-                    formControlName="outboundExternalIdCacheRetention" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="numbered-list"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Size inventory cache' | translate }}</p>
-                <p>
-                  <small translate>Set size inventory cache. After changing the size you have
-                    to clear the cache to take effect</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ 'Size inventory cache' | translate }}">
-                  <input class="form-control" name="inventoryCacheSize" type="number"
-                    formControlName="inventoryCacheSize" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="time-machine"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Days lifetime inventory cache' | translate }}</p>
-                <p>
-                  <small translate>Set time after which complete cache in cleared. This is
-                    useful when you plan to delete a device or assign an
-                    external id to different device</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ 'Days lifetime' | translate }}">
-                  <input class="form-control" name="inventoryCacheRetention" type="number"
-                    formControlName="inventoryCacheRetention" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="time-machine"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Minutes lifetime flow state' | translate }}</p>
-                <p>
-                  <small translate>Set time in minutes after which the complete flow state for Smart Functions and Java
-                    Extensions is cleared. Set to 0 to disable TTL.</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ 'Minutes lifetime flow state' | translate }}" >
-                  <input class="form-control" name="flowStateRetention" type="number"
-                    formControlName="flowStateRetention" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="list"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Number of mapping versions to retain' | translate }}</p>
-                <p>
-                  <small translate>Maximum number of versions kept per mapping. When a new version is published, the
-                    oldest versions beyond this limit are deleted; the active version is never deleted.</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ 'Number of mapping versions to retain' | translate }}">
-                  <input class="form-control" name="mappingVersionRetention" type="number" min="1"
-                    formControlName="mappingVersionRetention" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="list"></c8y-li-icon>
-            <div class="d-flex a-i-start">
-              <div class="config-label-grow">
-                <p>{{ 'Fragments from inventory to cache' | translate }}</p>
-                <p>
-                  <small translate>The listed fragments will be cached and can be referenced in
-                    'filterInventory'. Each entry can be an exact fragment name (e.g. <code>type</code>,
-                    <code>c8y_Hardware</code>) or a glob pattern using <code>*</code> (any sequence of
-                    characters) and <code>?</code> (single character), e.g.
-                    <code>sparkPlugB_DBIRTH_*</code> to cache all fragments whose name starts with
-                    <code>sparkPlugB_DBIRTH_</code>.</small>
-                </p>
-              </div>
-              <div class="m-l-auto config-control-col">
-                <ul class="list-unstyled m-b-0 p-l-4" c8yInputGroupListContainer>
-                  @for (item of inventoryFragmentsList; track trackByFragmentFn(i, item); let i = $index) {
-                    <li class="m-b-8">
-                      <c8y-input-group-list [index]="i" (onAdd)="addFragment()" (onRemove)="removeFragment($event)" [minus]="inventoryFragmentsList.length > 0">
-                        <div class="fragment-input">
-                          <input class="form-control" placeholder="e.g. type, c8y_Hardware, sparkPlugB_DBIRTH_*" type="text"
-                            [(ngModel)]="inventoryFragmentsList[i]" [ngModelOptions]="{standalone: true}" />
-                        </div>
-                      </c8y-input-group-list>
-                    </li>
-                  }
-                </ul>
-              </div>
-            </div>
-          </c8y-li>
-
-          <c8y-li>
-            <c8y-li-icon icon="exchange"></c8y-li-icon>
-            <div class="d-flex a-i-center">
-              <div>
-                <p>{{ 'Cache alias maps for SparkPlug B mappings' | translate }}</p>
-                <p>
-                  <small translate>When enabled, the SparkPlug B BIRTH fragments (sparkPlugB_NBIRTH,
-                    sparkPlugB_DBIRTH) are automatically included in the inventory cache for all cached
-                    managed objects. This removes the need to add these fragments manually to the list
-                    above.</small>
-                </p>
-              </div>
-              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="c8y-switch c8y-switch--inline" title="{{ 'Cache alias maps for SparkPlug B mappings' | translate }}">
-                  <input type="checkbox" name="cacheAliasMaps" formControlName="cacheAliasMaps" />
-                  <span></span>
-                </label>
-              </div>
-            </div>
-          </c8y-li>
-          }
-        </form>
+</form>
       </c8y-list-group>
     </div>
   </div>

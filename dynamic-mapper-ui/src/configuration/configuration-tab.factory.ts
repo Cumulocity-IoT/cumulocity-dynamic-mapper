@@ -37,6 +37,8 @@ export class ConfigurationTabFactory implements TabFactory {
 
     const tabs: Tab[] = [];
     if (this.router.url.match(/c8y-pkg-dynamic-mapper\/node3\/serviceConfiguration/g)) {
+      // Ordered by how often an administrator touches them: the feature switches first, then
+      // the runtime tuning, then the caches, then what the mapper reports about itself.
       tabs.push({
         path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/general`,
         priority: 930,
@@ -44,11 +46,11 @@ export class ConfigurationTabFactory implements TabFactory {
         icon: 'settings',
         orientation: 'horizontal',
       } as Tab);
-            tabs.push({
-        path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/ai`,
+      tabs.push({
+        path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/processing`,
         priority: 925,
-        label: 'Ai Agent',
-        icon: 'bot',
+        label: 'Processing',
+        icon: 'rocket',
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
@@ -59,10 +61,17 @@ export class ConfigurationTabFactory implements TabFactory {
         orientation: 'horizontal',
       } as Tab);
       tabs.push({
-        path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/logging`,
+        path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/monitoring`,
         priority: 915,
-        label: 'Logging',
+        label: 'Monitoring',
         icon: 'system-report',
+        orientation: 'horizontal',
+      } as Tab);
+      tabs.push({
+        path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/ai`,
+        priority: 910,
+        label: 'AI Agent',
+        icon: 'bot',
         orientation: 'horizontal',
       } as Tab);
     }
