@@ -20,37 +20,10 @@
 -->
 
 <c8y-title translate>Service configuration</c8y-title>
-<c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" [title]="expertMode
-      ? ('Hide advanced settings' | translate)
-      : ('Show advanced settings' | translate)" (click)="toggleExpertMode()"
-    data-cy="dm-service-config-expert-toggle">
-    <i [c8yIcon]="expertMode ? 'eye-slash' : 'eye'"></i>
-    {{ 'Expert settings' | translate }}
-    @if (expertMode) {
-    <span class="label label-info m-l-4">{{ 'on' | translate }}</span>
-    }
-  </button>
-</c8y-action-bar-item>
-<c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Export service configuration' | translate }}"
-    (click)="clickedExportServiceConfiguration()" data-cy="dm-service-config-export">
-    <i c8yIcon="download"></i>
-    {{ 'Export' | translate }}
-  </button>
-</c8y-action-bar-item>
-<c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Import service configuration' | translate }}"
-    (click)="clickedImportServiceConfiguration()" [disabled]="!feature?.userHasMappingAdminRole"
-    data-cy="dm-service-config-import">
-    <i c8yIcon="upload"></i>
-    {{ 'Import' | translate }}
-  </button>
-</c8y-action-bar-item>
 @if (section == 'processing'){
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Rotate GraalVM Engine' | translate }}"
-    (click)="clickedRotateGraalVMEngine()" [disabled]="!feature?.userHasMappingAdminRole">
+  <button class="btn btn-link" title="{{ 'Rotate GraalVM Engine' | translate }}" (click)="clickedRotateGraalVMEngine()"
+    [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="restore"></i>
     {{ 'Rotate GraalVM Engine' | translate }}
   </button>
@@ -86,6 +59,32 @@
   </button>
 </c8y-action-bar-item>
 }
+<c8y-action-bar-item [placement]="'right'" [priority]="-800">
+  <button class="btn btn-link" title="{{ 'Export service configuration' | translate }}"
+    (click)="clickedExportServiceConfiguration()" data-cy="dm-service-config-export">
+    <i c8yIcon="download"></i>
+    {{ 'Export' | translate }}
+  </button>
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'" [priority]="-900">
+  <button class="btn btn-link" title="{{ 'Import service configuration' | translate }}"
+    (click)="clickedImportServiceConfiguration()" [disabled]="!feature?.userHasMappingAdminRole"
+    data-cy="dm-service-config-import">
+    <i c8yIcon="upload"></i>
+    {{ 'Import' | translate }}
+  </button>
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'" [priority]="-1000">
+  <button class="btn btn-link" [title]="expertMode
+      ? ('Hide advanced settings' | translate)
+      : ('Show advanced settings' | translate)" (click)="toggleExpertMode()" data-cy="dm-service-config-expert-toggle">
+    <i [c8yIcon]="expertMode ? 'eye-slash' : 'eye'"></i>
+    {{ 'Expert settings' | translate }}
+    @if (expertMode) {
+    <span class="label label-info m-l-4">{{ 'on' | translate }}</span>
+    }
+  </button>
+</c8y-action-bar-item>
 
 
 <div class="card content-fullpage d-col flex-grow">
@@ -124,7 +123,8 @@
                 </p>
               </div>
               <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="c8y-switch c8y-switch--inline" title="{{ 'Device Isolation Cumulocity MQTT Service' | translate }}">
+                <label class="c8y-switch c8y-switch--inline"
+                  title="{{ 'Device Isolation Cumulocity MQTT Service' | translate }}">
                   <input name="deviceIsolationMQTTServiceEnabled" type="checkbox"
                     formControlName="deviceIsolationMQTTServiceEnabled" />
                   <span></span>
@@ -223,7 +223,8 @@
                 <p>{{ 'Maximum end-to-end processing time for Smart Functions' | translate }}</p>
                 <p>
                   <small translate>Maximum wall-clock time in milliseconds the system waits for a Smart Function to
-                    finish processing a message end-to-end — including JavaScript execution and any Cumulocity API calls.
+                    finish processing a message end-to-end — including JavaScript execution and any Cumulocity API
+                    calls.
                     When exceeded the message is not acknowledged (QoS &gt; 0) and will be redelivered.
                     Must be greater than the CPU time limit above.</small>
                 </p>
@@ -237,7 +238,8 @@
                 </label>
                 @if (pipelineTimeoutInvalid) {
                 <div class="text-danger small m-t-4" data-cy="dm-pipeline-timeout-error">
-                  {{ 'Must be greater than the CPU time limit — otherwise the CPU limit is never reached.' | translate }}
+                  {{ 'Must be greater than the CPU time limit — otherwise the CPU limit is never reached.' | translate
+                  }}
                 </div>
                 }
               </div>
@@ -247,7 +249,8 @@
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
               JavaScript engine (advanced)
-              <small class="text-muted">Memory and warm-up trade-offs of the GraalVM engine. The defaults suit most tenants.</small>
+              <small class="text-muted">Memory and warm-up trade-offs of the GraalVM engine. The defaults suit most
+                tenants.</small>
             </div>
           </c8y-li>
           <c8y-li>
@@ -481,14 +484,15 @@
               <div class="m-l-auto config-control-col">
                 <ul class="list-unstyled m-b-0 p-l-4" c8yInputGroupListContainer>
                   @for (item of inventoryFragmentsList; track trackByFragmentFn(i, item); let i = $index) {
-                    <li class="m-b-8">
-                      <c8y-input-group-list [index]="i" (onAdd)="addFragment()" (onRemove)="removeFragment($event)" [minus]="inventoryFragmentsList.length > 0">
-                        <div class="fragment-input">
-                          <input class="form-control" placeholder="e.g. type, c8y_Hardware, sparkPlugB_DBIRTH_*" type="text"
-                            [(ngModel)]="inventoryFragmentsList[i]" [ngModelOptions]="{standalone: true}" />
-                        </div>
-                      </c8y-input-group-list>
-                    </li>
+                  <li class="m-b-8">
+                    <c8y-input-group-list [index]="i" (onAdd)="addFragment()" (onRemove)="removeFragment($event)"
+                      [minus]="inventoryFragmentsList.length > 0">
+                      <div class="fragment-input">
+                        <input class="form-control" placeholder="e.g. type, c8y_Hardware, sparkPlugB_DBIRTH_*"
+                          type="text" [(ngModel)]="inventoryFragmentsList[i]" [ngModelOptions]="{standalone: true}" />
+                      </div>
+                    </c8y-input-group-list>
+                  </li>
                   }
                 </ul>
               </div>
@@ -510,7 +514,7 @@
                 </p>
               </div>
               <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="editable" title="{{ 'Minutes lifetime flow state' | translate }}" >
+                <label class="editable" title="{{ 'Minutes lifetime flow state' | translate }}">
                   <input class="form-control" name="flowStateRetention" type="number"
                     formControlName="flowStateRetention" />
                   <span></span>
@@ -537,7 +541,8 @@
                 </p>
               </div>
               <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="c8y-switch c8y-switch--inline" title="{{ 'Cache alias maps for SparkPlug B mappings' | translate }}">
+                <label class="c8y-switch c8y-switch--inline"
+                  title="{{ 'Cache alias maps for SparkPlug B mappings' | translate }}">
                   <input type="checkbox" name="cacheAliasMaps" formControlName="cacheAliasMaps" />
                   <span></span>
                 </label>
@@ -600,7 +605,8 @@
                 </p>
               </div>
               <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
-                <label class="c8y-switch c8y-switch--inline" title="{{ 'Send events on topic subscriptions' | translate }}">
+                <label class="c8y-switch c8y-switch--inline"
+                  title="{{ 'Send events on topic subscriptions' | translate }}">
                   <input name="sendSubscriptionEvents" type="checkbox" formControlName="sendSubscriptionEvents" />
                   <span></span>
                 </label>
@@ -678,7 +684,8 @@
               </div>
               <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label class="c8y-switch c8y-switch--inline" title="{{ 'Log connector errors' | translate }}">
-                  <input name="logConnectorErrorInBackend" type="checkbox" formControlName="logConnectorErrorInBackend" />
+                  <input name="logConnectorErrorInBackend" type="checkbox"
+                    formControlName="logConnectorErrorInBackend" />
                   <span></span>
                 </label>
               </div>
@@ -762,11 +769,12 @@
           <c8y-li>
             <div class="text-muted text-center p-t-16 p-b-8">
               <i c8yIcon="eye-slash" class="m-r-4"></i>
-              {{ hiddenExpertCount }} {{ 'advanced setting(s) hidden. Enable "Expert settings" to show them.' | translate }}
+              {{ hiddenExpertCount }} {{ 'advanced setting(s) hidden. Enable "Expert settings" to show them.' |
+              translate }}
             </div>
           </c8y-li>
           }
-</form>
+        </form>
       </c8y-list-group>
     </div>
   </div>
