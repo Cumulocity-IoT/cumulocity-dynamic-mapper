@@ -59,16 +59,15 @@ public class HttpClient extends AConnectorClient {
     public static final String HTTP_CONNECTOR_ABSOLUTE_PATH = "/httpConnector";
     public static final String PROPERTY_CUTOFF_LEADING_SLASH = "cutOffLeadingSlash";
 
-    @Getter
-    protected List<Qos> supportedQOS;
-
     /**
      * Default constructor
      */
     public HttpClient() {
         this.connectorType = ConnectorType.HTTP;
         this.singleton = true; // HTTP endpoint is singleton
-        this.supportedQOS = Arrays.asList(Qos.AT_LEAST_ONCE);
+        // The HTTP connector acknowledges the request only after the mapping pipeline ran,
+        // so every message is delivered at-least-once regardless of the mapping's setting.
+        this.supportedQos = Arrays.asList(Qos.AT_LEAST_ONCE);
         this.connectorSpecification = createConnectorSpecification();
     }
 

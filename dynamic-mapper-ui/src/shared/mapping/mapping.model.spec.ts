@@ -18,8 +18,8 @@
  * @authors Christof Strack
  */
 
-import { definesDeviceIdentifier } from './mapping.model';
-import { Direction, Mapping, RepairStrategy, Substitution } from '../../shared';
+import { clampQos, definesDeviceIdentifier, QOS_DEFAULT, QOS_OPTIONS, qosLabel, qosLevel } from './mapping.model';
+import { Direction, Mapping, Qos, RepairStrategy, Substitution } from '../../shared';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -80,5 +80,48 @@ describe('definesDeviceIdentifier', () => {
     const mapping = makeMapping(Direction.INBOUND);
     const sub = makeSubstitution('$.someSource', 'c8y_Temperature.T.value');
     expect(definesDeviceIdentifier(mapping, sub)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// QoS metadata — mirrors dynamic.mapper.model.Qos on the backend
+// ---------------------------------------------------------------------------
+
+describe('QoS metadata', () => {
+  it('numbers the levels like MQTT and covers every enum value', () => {
+    expect(QOS_OPTIONS.map((option) => option.value)).toEqual([
+      Qos.AT_MOST_ONCE,
+      Qos.AT_LEAST_ONCE,
+      Qos.EXACTLY_ONCE
+    ]);
+    expect(QOS_OPTIONS.map((option) => option.level)).toEqual([0, 1, 2]);
+    expect(QOS_DEFAULT).toBe(Qos.AT_LEAST_ONCE);
+  });
+
+  it('labels every level and falls back to the raw value', () => {
+    expect(qosLabel(Qos.AT_MOST_ONCE)).toBe('At most once');
+    expect(qosLabel('SOMETHING_ELSE')).toBe('SOMETHING_ELSE');
+    expect(qosLevel('SOMETHING_ELSE')).toBe(-1);
+  });
+
+  it('leaves a supported level untouched', () => {
+    expect(clampQos(Qos.EXACTLY_ONCE, [Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE, Qos.EXACTLY_ONCE]))
+      .toBe(Qos.EXACTLY_ONCE);
+  });
+
+  it('downgrades to the strongest supported level below the request', () => {
+    expect(clampQos(Qos.EXACTLY_ONCE, [Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE]))
+      .toBe(Qos.AT_LEAST_ONCE);
+    expect(clampQos(Qos.EXACTLY_ONCE, [Qos.AT_MOST_ONCE])).toBe(Qos.AT_MOST_ONCE);
+  });
+
+  it('upgrades when the connector supports nothing weaker', () => {
+    // HTTP/WebHook are always at-least-once
+    expect(clampQos(Qos.AT_MOST_ONCE, [Qos.AT_LEAST_ONCE])).toBe(Qos.AT_LEAST_ONCE);
+  });
+
+  it('treats a missing capability as no restriction', () => {
+    expect(clampQos(Qos.EXACTLY_ONCE, undefined)).toBe(Qos.EXACTLY_ONCE);
+    expect(clampQos(Qos.EXACTLY_ONCE, [])).toBe(Qos.EXACTLY_ONCE);
   });
 });

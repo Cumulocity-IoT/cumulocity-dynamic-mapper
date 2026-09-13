@@ -46,7 +46,6 @@ import jakarta.jms.MessageProducer;
 import jakarta.jms.Session;
 import jakarta.jms.TextMessage;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.qpid.jms.JmsConnectionFactory;
@@ -89,11 +88,11 @@ public class AMQP10Client extends AConnectorClient {
     private static final int RECONNECT_DELAY_STEP_MS = 10000;
     private static final int RECONNECT_DELAY_MAX_MS = 300000; // 5 minutes
 
-    @Getter
-    @Setter
-    private List<Qos> supportedQOS = Arrays.asList(
-            Qos.AT_MOST_ONCE,
-            Qos.AT_LEAST_ONCE);
+    {
+        // AMQP 1.0 offers unsettled (at-least-once) and settled (at-most-once) delivery only;
+        // EXACTLY_ONCE is clamped to AT_LEAST_ONCE by AConnectorClient.
+        this.supportedQos = Arrays.asList(Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE);
+    }
 
     // -------------------------------------------------------------------------
     // Constructors
@@ -420,6 +419,8 @@ public class AMQP10Client extends AConnectorClient {
             return;
         }
 
+        Qos publishQos = effectivePublishQos(context);
+
         for (int i = 0; i < requests.size(); i++) {
             DynamicMapperRequest request = requests.get(i);
 
@@ -449,7 +450,8 @@ public class AMQP10Client extends AConnectorClient {
                     if (StringUtils.isNotEmpty(contentType)) {
                         message.setStringProperty("JMS_AMQP_ContentType", contentType);
                     }
-                    int deliveryMode = (context.getQos() == Qos.AT_LEAST_ONCE)
+                    // Same rule as AMQP 0.9.1: every level above AT_MOST_ONCE is persistent.
+                    int deliveryMode = publishQos.requiresAcknowledgement()
                             ? DeliveryMode.PERSISTENT
                             : DeliveryMode.NON_PERSISTENT;
                     producer.setDeliveryMode(deliveryMode);
@@ -458,10 +460,10 @@ public class AMQP10Client extends AConnectorClient {
 
                 if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
                     log.info("{} - OUTBOUND SEND: connector={}, topic={}, qos={}, payload={}",
-                            tenant, getConnectorName(), address, context.getQos(), payload);
+                            tenant, getConnectorName(), address, publishQos, payload);
                 } else {
                     log.debug("{} - AMQP 1.0 published ({}/{}): address=[{}], QoS: {}",
-                            tenant, i + 1, requests.size(), address, context.getQos());
+                            tenant, i + 1, requests.size(), address, publishQos);
                 }
 
             } catch (Exception e) {

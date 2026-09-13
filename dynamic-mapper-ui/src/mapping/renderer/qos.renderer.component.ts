@@ -19,6 +19,7 @@
  */
 import { Component } from '@angular/core';
 import { CellRendererContext } from '@c8y/ngx-components';
+import { qosLabel } from '../../shared';
 
 @Component({
   selector: 'd11r-mapping-renderer-qos',
@@ -28,13 +29,8 @@ import { CellRendererContext } from '@c8y/ngx-components';
 export class QOSRendererComponent {
   constructor(public context: CellRendererContext) {}
 
-  private readonly qosLabels: Record<string, string> = {
-    'AT_MOST_ONCE': 'At most once',
-    'AT_LEAST_ONCE': 'At least once',
-    'EXACTLY_ONCE': 'Exactly once'
-  };
-
+  /** Labels come from the shared QoS metadata so grid and editor never drift apart. */
   get qosLabel(): string {
-    return this.qosLabels[this.context.value] ?? this.context.value;
+    return qosLabel(this.context.value);
   }
 }

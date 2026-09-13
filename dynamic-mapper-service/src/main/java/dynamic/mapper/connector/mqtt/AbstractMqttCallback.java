@@ -180,8 +180,11 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
 
         ProcessingResultWrapper<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
         int publishQos = extractQos(mqttMessage);
-        int mappingQos = processedResults.getConsolidatedQos().ordinal();
+        int mappingQos = processedResults.getConsolidatedQos().getLevel();
         int timeout = processedResults.getPipelineTimeoutMS();
+        // The guarantee we can actually provide is bounded by both ends: the publisher's QoS
+        // (a QoS 0 message is gone the moment it is delivered, no matter what the mapping asks
+        // for) and the strongest QoS among the mappings that matched.
         int effectiveQos = Math.min(publishQos, mappingQos);
 
         if (serviceConfiguration.getLogPayload()) {

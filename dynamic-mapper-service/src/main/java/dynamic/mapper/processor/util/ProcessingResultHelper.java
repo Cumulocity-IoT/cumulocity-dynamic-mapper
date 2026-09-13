@@ -86,8 +86,8 @@ public class ProcessingResultHelper {
         Qos consolidatedQos = contexts.stream()
                 .map(ProcessingContext::getQos)
                 .filter(qos -> qos != null)
-                .reduce((q1, q2) -> getHigherQos(q1, q2))
-                .orElse(Qos.AT_LEAST_ONCE);
+                .reduce(Qos::max)
+                .orElse(Qos.DEFAULT);
 
         return ProcessingResultWrapper.<T>builder()
                 .processingResult(future)
@@ -406,29 +406,6 @@ public class ProcessingResultHelper {
         return anyError ? maxStatus : -1;
     }
 
-    /**
-     * Determines the higher Quality of Service level between two QoS values.
-     *
-     * <p>QoS priority order (highest to lowest):
-     * <ol>
-     *   <li>EXACTLY_ONCE - highest reliability</li>
-     *   <li>AT_LEAST_ONCE - medium reliability</li>
-     *   <li>AT_MOST_ONCE - lowest reliability</li>
-     * </ol>
-     *
-     * @param q1 first QoS value
-     * @param q2 second QoS value
-     * @return the higher QoS level between the two inputs
-     */
-    private static Qos getHigherQos(Qos q1, Qos q2) {
-        if (q1 == Qos.EXACTLY_ONCE || q2 == Qos.EXACTLY_ONCE) {
-            return Qos.EXACTLY_ONCE;
-        }
-        if (q1 == Qos.AT_LEAST_ONCE || q2 == Qos.AT_LEAST_ONCE) {
-            return Qos.AT_LEAST_ONCE;
-        }
-        return Qos.AT_MOST_ONCE;
-    }
 
     /**
      * Creates a DynamicMapperRequest using focused contexts without adding to collector.

@@ -89,9 +89,6 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
     private MQTTServicePulsarCallback mqttServiceCallback;
 
-    @Getter
-    protected List<Qos> supportedQOS;
-
     /**
      * Default constructor
      */
@@ -99,7 +96,10 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         super();
         this.connectorType = ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR;
         this.singleton = true;
-        this.supportedQOS = Arrays.asList(Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE);
+        // Cumulocity MQTT Service implements MQTT QoS 0 and 1 only — QoS 2 is not supported by
+        // the service (https://cumulocity.com/docs/device-integration/mqtt-service/), so
+        // EXACTLY_ONCE is clamped to AT_LEAST_ONCE.
+        this.supportedQos = Arrays.asList(Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE);
         this.connectorSpecification = createConnectorSpecification();
     }
 
@@ -640,7 +640,15 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 ? request.getBinaryPayload()
                 : request.getRequest().getBytes(StandardCharsets.UTF_8);
         String originalMqttTopic = context.getResolvedPublishTopic();
-        Qos qos = Qos.AT_LEAST_ONCE; // MQTT Service uses AT_LEAST_ONCE
+        // NOTE on layering: this connector does not perform an MQTT PUBLISH — it produces to
+        // the Pulsar topic persistent://<tenant>/mqtt/to-device, and MQTT Service relays from
+        // there to the device. So this QoS selects the *Pulsar producer* send mode
+        // (AT_MOST_ONCE -> fire-and-forget sendAsync, higher -> awaited send); the MQTT QoS the
+        // device finally sees is decided by MQTT Service and capped by the device's own
+        // SUBSCRIBE QoS. Honour the mapping's setting rather than hard-coding AT_LEAST_ONCE, so
+        // a mapping that opted into at-most-once does not pay for a synchronous, acknowledged
+        // send. EXACTLY_ONCE is clamped to AT_LEAST_ONCE by supportedQos.
+        Qos qos = effectivePublishQos(context);
 
         try {
             // Check/recreate producer if needed. The whole decision is made under
@@ -847,7 +855,9 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         return ConnectorSpecificationBuilder
                 .create("Cumulocity MQTT-Service", ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR)
                 .description("Connector for connecting to Cumulocity MQTT Service using Pulsar protocol. " +
-                        "The QoS 'exactly once' is reduced to 'at least once'.")
+                        "MQTT Service supports the QoS levels 'at most once' and 'at least once'; " +
+                        "'exactly once' is reduced to 'at least once'. Inbound messages are always " +
+                        "processed at least once, independent of the QoS configured on the mapping.")
                 .singleton(true)
                 .supportedDirections(supportedDirections())
 

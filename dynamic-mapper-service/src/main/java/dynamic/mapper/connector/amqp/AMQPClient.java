@@ -39,7 +39,6 @@ import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
@@ -72,11 +71,11 @@ public class AMQPClient extends AConnectorClient {
     private static final int RECONNECT_DELAY_STEP_MS = 10000;
     private static final int RECONNECT_DELAY_MAX_MS = 300000; // 5 minutes
 
-    @Getter
-    @Setter
-    private List<Qos> supportedQOS = Arrays.asList(
-            Qos.AT_MOST_ONCE,
-            Qos.AT_LEAST_ONCE);
+    {
+        // AMQP 0.9.1 has no exactly-once delivery: a requested EXACTLY_ONCE is clamped to
+        // AT_LEAST_ONCE (persistent delivery mode + consumer ack) by AConnectorClient.
+        this.supportedQos = Arrays.asList(Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE);
+    }
 
     /**
      * Default constructor - initializes connector specification
@@ -488,6 +487,11 @@ public class AMQPClient extends AConnectorClient {
                 .getOrDefault("exchange", "");
 
         // Process each request
+        // Anything above AT_MOST_ONCE must be published persistently (delivery mode 2);
+        // testing for AT_LEAST_ONCE alone made EXACTLY_ONCE fall into the non-persistent
+        // branch, i.e. a stronger request produced a weaker guarantee.
+        Qos publishQos = effectivePublishQos(context);
+
         for (int i = 0; i < requests.size(); i++) {
             DynamicMapperRequest request = requests.get(i);
 
@@ -509,9 +513,8 @@ public class AMQPClient extends AConnectorClient {
                 // Convert topic to routing key (replace / with .)
                 String routingKey = topic.replace("/", ".");
 
-                // Build message properties
                 AMQP.BasicProperties props = new AMQP.BasicProperties.Builder()
-                        .deliveryMode(context.getQos() == Qos.AT_LEAST_ONCE ? 2 : 1)
+                        .deliveryMode(publishQos.requiresAcknowledgement() ? 2 : 1)
                         .contentType("application/json")
                         .build();
 
@@ -527,10 +530,10 @@ public class AMQPClient extends AConnectorClient {
 
                 if (context.getMapping().getDebug() || context.getServiceConfiguration().getLogPayload()) {
                     log.info("{} - OUTBOUND SEND: connector={}, topic={}, qos={}, payload={}",
-                            tenant, getConnectorName(), topic, context.getQos(), payload);
+                            tenant, getConnectorName(), topic, publishQos, payload);
                 } else {
                     log.debug("{} - Published message ({}/{}): exchange=[{}], routingKey=[{}], QoS: {}",
-                            tenant, i + 1, requests.size(), exchangeName, routingKey, context.getQos());
+                            tenant, i + 1, requests.size(), exchangeName, routingKey, publishQos);
                 }
 
             } catch (Exception e) {

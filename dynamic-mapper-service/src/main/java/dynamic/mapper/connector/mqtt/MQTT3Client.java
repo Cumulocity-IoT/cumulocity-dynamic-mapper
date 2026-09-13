@@ -383,7 +383,9 @@ public class MQTT3Client extends AMQTTClient {
             return;
         }
 
-        MqttQos mqttQos = MqttQos.fromCode(context.getQos().ordinal());
+        // Clamped to the connector's capabilities (and null-safe) — publishing must obey
+        // the same QoS contract as subscribing.
+        MqttQos mqttQos = MqttQos.fromCode(effectivePublishQos(context).getLevel());
 
         // Process each request
         for (int i = 0; i < requests.size(); i++) {

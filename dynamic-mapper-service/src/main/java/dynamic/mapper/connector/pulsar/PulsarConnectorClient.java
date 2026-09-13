@@ -78,9 +78,6 @@ public class PulsarConnectorClient extends AConnectorClient {
     protected final Map<String, Consumer<byte[]>> consumers = new ConcurrentHashMap<>();
     protected final Map<String, Producer<byte[]>> producers = new ConcurrentHashMap<>();
 
-    @Getter
-    protected List<Qos> supportedQOS;
-
     // Sparkplug Host support
     protected SparkplugCertificateManager sparkplugCertificateManager;
     protected boolean isSparkplugHost = false;
@@ -92,7 +89,7 @@ public class PulsarConnectorClient extends AConnectorClient {
     public PulsarConnectorClient() {
         this.connectorType = ConnectorType.PULSAR;
         this.singleton = false;
-        this.supportedQOS = Arrays.asList(Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE, Qos.EXACTLY_ONCE);
+        this.supportedQos = Arrays.asList(Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE, Qos.EXACTLY_ONCE);
         this.connectorSpecification = createConnectorSpecification();
     }
 
@@ -327,7 +324,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                         .subscriptionName(subscriptionName)
                         .subscriptionType(subscriptionType)
                         .messageListener(new QoSAwarePulsarCallback(pulsarCallback, qos))
-                        .acknowledgmentGroupTime(requiresAcknowledgment(qos) ? 100 : 0, TimeUnit.MILLISECONDS)
+                        .acknowledgmentGroupTime(qos.requiresAcknowledgement() ? 100 : 0, TimeUnit.MILLISECONDS)
                         .subscribe();
                 log.info("{} - Subscribed to pattern: [{}] (MQTT: [{}])", tenant, pulsarPattern, topic);
             } else {
@@ -338,7 +335,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                         .subscriptionName(subscriptionName)
                         .subscriptionType(subscriptionType)
                         .messageListener(new QoSAwarePulsarCallback(pulsarCallback, qos))
-                        .acknowledgmentGroupTime(requiresAcknowledgment(qos) ? 100 : 0, TimeUnit.MILLISECONDS)
+                        .acknowledgmentGroupTime(qos.requiresAcknowledgement() ? 100 : 0, TimeUnit.MILLISECONDS)
                         .subscribe();
                 log.info("{} - Subscribed to topic: [{}] (MQTT: [{}])", tenant, pulsarTopic, topic);
             }
@@ -434,7 +431,7 @@ public class PulsarConnectorClient extends AConnectorClient {
             return;
         }
 
-        Qos qos = context.getQos();
+        Qos qos = effectivePublishQos(context);
 
         // Process each request
         for (int i = 0; i < requests.size(); i++) {
@@ -692,13 +689,6 @@ public class PulsarConnectorClient extends AConnectorClient {
             default:
                 return SubscriptionType.Shared;
         }
-    }
-
-    /**
-     * Check if acknowledgment is required
-     */
-    private Boolean requiresAcknowledgment(Qos qos) {
-        return qos != Qos.AT_MOST_ONCE;
     }
 
     /**

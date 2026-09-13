@@ -72,10 +72,30 @@ user-supplied broker credentials.
 
 ## QoS
 
-`supportedQOS = [AT_MOST_ONCE, AT_LEAST_ONCE]` — no `EXACTLY_ONCE`. `publishMEAO()` is
-overridden to always use `AT_LEAST_ONCE` regardless of the mapping's configured QoS; the
-spec description states this explicitly: "The QoS 'exactly once' is reduced to 'at
-least once'."
+`supportedQos = [AT_MOST_ONCE, AT_LEAST_ONCE]`. This matches the service itself: per the
+[MQTT Service documentation](https://cumulocity.com/docs/device-integration/mqtt-service/),
+Cumulocity MQTT Service implements **QoS 0 and QoS 1 only** — QoS 2 is not supported (unlike
+Core MQTT, which does support all three). A mapping configured as `EXACTLY_ONCE` is therefore
+clamped to `AT_LEAST_ONCE`; see [`qos.md`](qos.md) for the general clamping mechanism.
+
+**What the mapping's QoS actually controls here is not the MQTT QoS.** This connector never
+performs an MQTT `PUBLISH` — it produces to the Pulsar topic
+`persistent://<tenant>/mqtt/to-device`, and MQTT Service relays from there to the device:
+
+| Direction | Effect of `mapping.qos` |
+|---|---|
+| Outbound | Selects the **Pulsar producer send mode** in `sendMessageToDevice()`: `AT_MOST_ONCE` → `sendAsync()` (fire and forget, send failures only logged at DEBUG), anything higher → `send()` (awaited, i.e. the Pulsar broker confirmed persistence). The MQTT QoS the device finally sees is decided by MQTT Service and capped by the device's own `SUBSCRIBE` QoS. |
+| Inbound | **Nothing.** `MQTTServicePulsarCallback` always waits for the pipeline and then acks (success / client error) or negative-acks (server error, timeout, cancellation) — i.e. inbound is *always* at-least-once, whatever the mapping says. The QoS of the device→service leg is whatever the device published at. |
+
+Two service-level caveats limit what any of this can guarantee end-to-end, both from the
+MQTT Service documentation:
+
+- **Retained messages are rejected** — a `PUBLISH` with the RETAIN flag set is not accepted
+  and the connection is closed. (This is why Sparkplug B Birth certificates are re-published
+  periodically instead of being retained; see the lifecycle section below.)
+- **Clean Session is mandatory** (`cleanSession=1`), so messages sent *to* a device while it
+  is disconnected are **not** delivered on reconnect. Even QoS 1 towards a device is therefore
+  not a durable-delivery guarantee across a disconnect.
 
 ## Connection lifecycle specifics
 

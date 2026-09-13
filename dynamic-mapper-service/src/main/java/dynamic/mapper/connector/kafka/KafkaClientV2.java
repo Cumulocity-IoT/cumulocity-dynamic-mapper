@@ -122,16 +122,16 @@ public class KafkaClientV2 extends AConnectorClient {
     // "myTopic-0").
     private final Map<String, MutableInt> processingErrorCounts = new ConcurrentHashMap<>();
 
-    @Getter
-    protected List<Qos> supportedQOS;
-
     /**
      * Default constructor
      */
     public KafkaClientV2() {
         this.connectorType = ConnectorType.KAFKA;
         this.singleton = false;
-        this.supportedQOS = Arrays.asList(Qos.AT_MOST_ONCE); // Kafka doesn't have MQTT-like QoS
+        // Kafka has no MQTT-style QoS, but the consumer defers the offset commit until the
+        // pipeline reports success (see processMessageWithQos), which is exactly at-least-once.
+        // EXACTLY_ONCE would need transactional consume-process-produce and is not implemented.
+        this.supportedQos = Arrays.asList(Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE);
         loadDefaultProperties();
         this.connectorSpecification = createConnectorSpecification();
     }
@@ -727,7 +727,7 @@ public class KafkaClientV2 extends AConnectorClient {
 
         ProcessingResultWrapper<?> processedResults = dispatcher.onMessage(connectorMessage);
 
-        int mappingQos = processedResults.getConsolidatedQos().ordinal();
+        int mappingQos = processedResults.getConsolidatedQos().getLevel();
         int timeout = processedResults.getPipelineTimeoutMS();
 
         if (mappingQos > 0) {

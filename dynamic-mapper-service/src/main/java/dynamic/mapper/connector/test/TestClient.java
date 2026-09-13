@@ -38,7 +38,6 @@ import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ProcessingContext;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
@@ -55,12 +54,8 @@ public class TestClient extends AConnectorClient {
     public static final String TEST_CONNECTOR_IDENTIFIER = "TESTCONNECTOR";
     public static final String TEST_CONNECTOR_NAME = "Test Connector";
 
-    @Getter
-    @Setter
-    private List<Qos> supportedQOS = Arrays.asList(
-            Qos.AT_MOST_ONCE,
-            Qos.AT_LEAST_ONCE,
-            Qos.EXACTLY_ONCE);
+    // supportedQos is inherited from AConnectorClient (all three levels), so the test
+    // connector never clamps and mappings can be exercised at their configured QoS.
 
     // Track subscriptions for testing
     private final Map<String, Qos> testSubscriptions = new ConcurrentHashMap<>();
@@ -210,7 +205,7 @@ public class TestClient extends AConnectorClient {
             return;
         }
 
-        Qos qos = context.getQos();
+        Qos qos = effectivePublishQos(context);
 
         // Process each request
         for (int i = 0; i < requests.size(); i++) {

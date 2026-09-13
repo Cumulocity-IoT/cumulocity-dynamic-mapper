@@ -29,6 +29,7 @@ import com.fasterxml.jackson.annotation.Nulls;
 
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.model.Direction;
+import dynamic.mapper.model.Qos;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -79,6 +80,22 @@ public class ConnectorSpecification implements Cloneable {
 	@JsonSetter(nulls = Nulls.SKIP)
     public List<Direction> supportedDirections;
 
+	@Schema(description = "The QoS levels this connector can actually honour. A mapping configured with a stronger level is clamped to the strongest level in this list when it runs on this connector.", example = "[ \"AT_MOST_ONCE\", \"AT_LEAST_ONCE\"] ")
+	@JsonSetter(nulls = Nulls.SKIP)
+	public List<Qos> supportedQos;
+
+	/**
+	 * Convenience constructor for connectors that do not declare a QoS capability themselves —
+	 * {@code supportedQos} is then stamped from the client instance
+	 * ({@code AConnectorClient.getConnectorSpecification()}).
+	 */
+	public ConnectorSpecification(String name, String description, ConnectorType connectorType, boolean singleton,
+			Map<String, ConnectorProperty> properties, boolean supportsMessageContext,
+			List<Direction> supportedDirections) {
+		this(name, description, connectorType, singleton, properties, supportsMessageContext, supportedDirections,
+				null);
+	}
+
 	public boolean isPropertySensitive(String property) {
 		if (properties == null || property == null) {
 			log.warn("{} - Cannot check property sensitivity: properties={}, property={}",
@@ -109,6 +126,9 @@ public class ConnectorSpecification implements Cloneable {
 			}
 			if (this.supportedDirections != null) {
 				cloned.supportedDirections = new java.util.ArrayList<>(this.supportedDirections);
+			}
+			if (this.supportedQos != null) {
+				cloned.supportedQos = new java.util.ArrayList<>(this.supportedQos);
 			}
 			return cloned;
 		} catch (CloneNotSupportedException e) {

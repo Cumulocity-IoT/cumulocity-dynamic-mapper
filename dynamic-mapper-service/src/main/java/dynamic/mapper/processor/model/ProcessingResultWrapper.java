@@ -37,8 +37,23 @@ import lombok.extern.slf4j.Slf4j;
 public class ProcessingResultWrapper<O> {
     @Getter @Setter
     private Future<List<ProcessingContext<O>>> processingResult;
-    @Getter @Setter
+    /**
+     * Strongest QoS across all mappings that matched the message, already clamped to the
+     * connector's capabilities. Broker callbacks use this to decide whether the message may be
+     * acknowledged immediately (AT_MOST_ONCE) or only after the pipeline reported success.
+     * Never {@code null} — see {@link #getConsolidatedQos()}.
+     */
+    @Setter
     private Qos consolidatedQos;
+
+    /**
+     * Null-safe accessor: a wrapper built on an early-exit path (no mapping resolved, invalid
+     * payload) may never have had a QoS set, and every caller would otherwise have to guard
+     * against that before reading the level.
+     */
+    public Qos getConsolidatedQos() {
+        return Qos.orDefault(consolidatedQos);
+    }
     /** Pipeline wait-timeout (milliseconds) used by broker callbacks for Future.get(). 30 s for
      *  SmartFunction mappings (covers JS + post-JS C8Y calls), 0 for non-code mappings. */
     @Getter @Setter

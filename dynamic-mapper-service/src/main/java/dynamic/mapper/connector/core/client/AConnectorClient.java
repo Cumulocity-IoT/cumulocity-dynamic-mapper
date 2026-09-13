@@ -53,9 +53,12 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -112,11 +115,25 @@ public abstract class AConnectorClient {
     @Setter
     protected boolean singleton;
 
+    /**
+     * The delivery guarantees this connector can actually honour. Subclasses narrow this in
+     * their constructor (e.g. Kafka has no exactly-once consumer semantics here, HTTP always
+     * delivers at-least-once). Every QoS that reaches the broker — whether for a subscription
+     * or for a publish — is clamped to this set by {@link #adjustQos(Qos)}, so a mapping can
+     * never silently run at a level the connector does not implement.
+     *
+     * @see Qos#clampTo(Qos, java.util.Collection)
+     */
+    @Getter
+    protected List<Qos> supportedQos = Arrays.asList(Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE, Qos.EXACTLY_ONCE);
+
+    /** Requested QoS levels already reported as clamped, so the WARN in adjustQos fires once each. */
+    private final Set<Qos> loggedQosClamps = ConcurrentHashMap.newKeySet();
+
     // Configuration
     @Getter
     @Setter
     protected ConnectorConfiguration connectorConfiguration;
-    @Getter
     @Setter
     protected ConnectorSpecification connectorSpecification;
     @Getter
@@ -557,7 +574,10 @@ public abstract class AConnectorClient {
                 new MappingSubscriptionManager.SubscriptionCallback() {
                     @Override
                     public void subscribe(String topic, Qos qos) throws ConnectorException {
-                        AConnectorClient.this.subscribe(topic, qos);
+                        // Single enforcement point: whatever QoS the mapping(s) ask for is
+                        // clamped to the connector's capabilities before it reaches the
+                        // protocol-specific subscribe().
+                        AConnectorClient.this.subscribe(topic, adjustQos(qos));
                     }
 
                     @Override
@@ -978,7 +998,7 @@ public abstract class AConnectorClient {
         // updates — without depending on a separate "activationChanged" hint that callers
         // do not always set (e.g. a mapping update that also flips the active flag).
         if (mapping.getActive() && isDeployedInConnector(mapping)) {
-            mappingSubscriptionManager.addSubscriptionInbound(mapping, mapping.getQos());
+            mappingSubscriptionManager.addSubscriptionInbound(mapping, Qos.orDefault(mapping.getQos()));
         } else {
             mappingSubscriptionManager.removeSubscriptionInbound(mapping);
         }
@@ -1170,13 +1190,66 @@ public abstract class AConnectorClient {
         return determineMaxQos(mappings, Mapping::getActive);
     }
 
+    /**
+     * Consolidates the QoS of a set of mappings into the single level the transport has to
+     * honour for the message that triggered them: the strongest requested level, clamped to
+     * what this connector supports.
+     *
+     * <p>Null-safe on both the list (an unresolved topic yields no mappings at all) and on the
+     * individual {@code qos} field (mappings created through the API before {@code qos} became
+     * a defaulted field may carry {@code null}).
+     */
     private Qos determineMaxQos(List<Mapping> mappings, java.util.function.Predicate<Mapping> filter) {
-        int qosOrdinal = mappings.stream()
+        if (mappings == null || mappings.isEmpty()) {
+            return Qos.AT_MOST_ONCE;
+        }
+        Qos maxQos = mappings.stream()
+                .filter(Objects::nonNull)
                 .filter(filter)
-                .map(m -> m.getQos().ordinal())
-                .max(Integer::compareTo)
-                .orElse(0);
-        return Qos.values()[qosOrdinal];
+                .map(m -> Qos.orDefault(m.getQos()))
+                .reduce(Qos::max)
+                .orElse(Qos.AT_MOST_ONCE);
+        return adjustQos(maxQos);
+    }
+
+    /**
+     * The connector's specification, with {@link #supportedQos} stamped onto it so the UI can
+     * show (and restrict) the QoS levels a mapping may pick for this connector without the
+     * capability having to be repeated in every {@code createConnectorSpecification()}.
+     */
+    public ConnectorSpecification getConnectorSpecification() {
+        if (connectorSpecification != null && connectorSpecification.getSupportedQos() == null) {
+            connectorSpecification.setSupportedQos(supportedQos);
+        }
+        return connectorSpecification;
+    }
+
+    /**
+     * Clamps a requested QoS to {@link #supportedQos}, logging a downgrade/upgrade once per
+     * occurrence so an operator can see why a mapping is not running at the configured level.
+     *
+     * @param requestedQos the level configured on the mapping; {@code null} means {@link Qos#DEFAULT}
+     * @return the level this connector will actually use, never {@code null}
+     */
+    public Qos adjustQos(Qos requestedQos) {
+        Qos effective = Qos.clampTo(requestedQos, supportedQos);
+        if (requestedQos != null && effective != requestedQos && loggedQosClamps.add(requestedQos)) {
+            // Logged once per requested level: adjustQos also runs on the per-message publish
+            // and consolidation paths, where an unconditional WARN would flood the log.
+            log.warn("{} - QoS {} is not supported by connector: {} ({}), using {} instead",
+                    tenant, requestedQos, connectorName, connectorType, effective);
+        }
+        return effective;
+    }
+
+    /**
+     * The QoS a publish (outbound) should use for the given processing context: the QoS of the
+     * mapping that produced it, clamped to this connector's capabilities. Connectors must use
+     * this instead of reading {@code context.getQos()} directly, so publishing is subject to
+     * the same capability check as subscribing.
+     */
+    protected Qos effectivePublishQos(ProcessingContext<?> context) {
+        return adjustQos(context == null ? null : context.getQos());
     }
 
     /**

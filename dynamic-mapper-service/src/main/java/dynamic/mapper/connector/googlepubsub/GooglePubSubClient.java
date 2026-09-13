@@ -106,6 +106,9 @@ public class GooglePubSubClient extends AConnectorClient {
     public GooglePubSubClient() {
         this.connectorType = ConnectorType.GOOGLE_PUBSUB;
         this.singleton = false;
+        // Pub/Sub gives ack/nack semantics only: ack-before-processing (at-most-once) or
+        // ack-after-processing with redelivery on nack (at-least-once). No exactly-once.
+        this.supportedQos = java.util.Arrays.asList(Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE);
         this.connectorSpecification = createConnectorSpecification();
     }
 

@@ -251,9 +251,11 @@ public class Mapping implements Serializable {
     @NotNull
     private long maxFailureCount = 0;
 
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Quality of Service level for MQTT", implementation = Qos.class, example = "AT_LEAST_ONCE")
+    @Builder.Default
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Requested delivery guarantee. Clamped at runtime to what the connector the mapping is deployed to actually supports.", implementation = Qos.class, example = "AT_LEAST_ONCE")
     @NotNull
-    private Qos qos;
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Qos qos = Qos.DEFAULT;
 
     @Schema(description = "Base64 encoded code for custom substitutions")
     private String code;

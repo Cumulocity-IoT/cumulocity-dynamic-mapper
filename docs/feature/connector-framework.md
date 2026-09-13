@@ -27,7 +27,7 @@ abstract methods:
 | `publishMEAO(ProcessingContext<?>)` | Publish a Measurement/Event/Alarm/Operation-derived outbound message to the broker. |
 | `supportsWildcardInTopic(Direction)` | Whether this broker's topic scheme supports wildcards for the given direction. |
 | `supportedDirections()` | Which of `INBOUND`/`OUTBOUND` this connector type supports. |
-| `subscribe(String topic, Qos qos)` (protected) | Subscribe to one topic. |
+| `subscribe(String topic, Qos qos)` (protected) | Subscribe to one topic. The `qos` handed in is already clamped to the connector's `supportedQos` — see [`qos.md`](qos.md). |
 | `unsubscribe(String topic)` (protected) | Unsubscribe from one topic. |
 | `connectorSpecificHousekeeping(String tenant)` (protected) | Periodic broker-specific maintenance (reconnect checks, etc.), invoked every `HOUSEKEEPING_INTERVAL_SECONDS` (30s). |
 

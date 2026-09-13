@@ -32,18 +32,25 @@ import { FormGroup } from '@angular/forms';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { PopoverModule } from 'ngx-bootstrap/popover';
-import { debounceTime, distinctUntilChanged, Subject, takeUntil } from 'rxjs';
+import { debounceTime, distinctUntilChanged, firstValueFrom, Subject, takeUntil } from 'rxjs';
 import {
   API,
+  clampQos,
+  ConnectorConfiguration,
+  ConnectorSpecification,
+  DeploymentMapEntry,
   Direction,
   Feature,
   FormatStringPipe,
   Mapping,
   MappingTypeLabels,
   Qos,
+  qosLabel,
+  QOS_OPTIONS,
   SharedService,
   StepperConfiguration
 } from '../../shared';
+import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
 import { MappingService } from '../core/mapping.service';
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import { EditorMode } from '../shared/stepper.model';
@@ -69,6 +76,11 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
   @Input() stepperConfiguration: StepperConfiguration;
   @Input() propertyFormly: FormGroup;
+  /**
+   * The connectors this mapping is deployed to. Used to tell the user when the QoS they picked
+   * cannot be honoured by one of those connectors — the backend clamps it silently otherwise.
+   */
+  @Input() deploymentMapEntry: DeploymentMapEntry;
   @Output() targetAPIChanged = new EventEmitter<string>();
 
   readonly MappingTypeLabels = MappingTypeLabels;
@@ -89,9 +101,14 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   private readonly mappingService = inject(MappingService);
   private readonly stepperService = inject(MappingStepperService);
   private readonly formatStringPipe = inject(FormatStringPipe);
+  private readonly connectorConfigurationService = inject(ConnectorConfigurationService);
+
+  /** QoS levels supported per deployed connector, keyed by connector name (for the hint text). */
+  private qosCapabilityPerConnector: { name: string; supportedQos?: Qos[] }[] = [];
 
   async ngOnInit(): Promise<void> {
     this.feature = await this.sharedService.getFeatures();
+    await this.loadQosCapabilities();
     this.initializeDirection();
     this.initializeFilterModels();
 
@@ -363,19 +380,23 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'QoS',
-              options: Object.values(Qos).filter(key => {
-                // When direction is OUTBOUND, only include AT_MOST_ONCE and AT_LEAST_ONCE
-                if (this.stepperConfiguration.direction === Direction.OUTBOUND) {
-                  return key === Qos.AT_MOST_ONCE || key === Qos.AT_LEAST_ONCE;
-                }
-                // Otherwise, include all QoS options
-                return true;
-              }).
-                map((key) => {
-                  return { label: this.formatStringPipe.transform(key), value: key };
-                }),
+              // Labels and the per-level explanation come from the shared QoS metadata, so the
+              // grid renderer and this picker can never describe a level differently.
+              options: QOS_OPTIONS
+                // Outbound publishing is offered at at-most-once / at-least-once only.
+                .filter(
+                  (option) =>
+                    this.stepperConfiguration.direction !== Direction.OUTBOUND ||
+                    option.value !== Qos.EXACTLY_ONCE
+                )
+                .map((option) => ({ label: option.label, value: option.value })),
               disabled: this.isFieldDisabled,
               required: true
+            },
+            expressions: {
+              // Recomputed on every change so the user sees immediately when the level they
+              // picked will be clamped by one of the connectors this mapping is deployed to.
+              'templateOptions.description': (field) => this.describeQos(field.model?.qos)
             }
           }
         ]
@@ -496,6 +517,59 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
 
   clearAlerts(): void {
     this.alertService.clearAll();
+  }
+
+  /**
+   * Resolves the QoS capability of every connector this mapping is deployed to. Failures are
+   * non-fatal: without the capability the QoS hint simply omits the connector-specific part.
+   */
+  private async loadQosCapabilities(): Promise<void> {
+    const identifiers = this.deploymentMapEntry?.connectors ?? [];
+    if (!identifiers.length) {
+      return;
+    }
+    try {
+      const [configurations, specifications] = await Promise.all([
+        firstValueFrom(this.connectorConfigurationService.getConfigurations()),
+        firstValueFrom(this.connectorConfigurationService.getSpecifications())
+      ]);
+      this.qosCapabilityPerConnector = identifiers
+        .map((identifier) =>
+          configurations.find((configuration: ConnectorConfiguration) => configuration.identifier === identifier)
+        )
+        .filter((configuration) => !!configuration)
+        .map((configuration) => ({
+          name: configuration.name,
+          supportedQos: specifications.find(
+            (specification: ConnectorSpecification) =>
+              specification.connectorType === configuration.connectorType
+          )?.supportedQos
+        }));
+    } catch (error) {
+      this.qosCapabilityPerConnector = [];
+    }
+  }
+
+  /**
+   * Description shown under the QoS picker: what the selected level means, plus a warning for
+   * every deployed connector that cannot honour it (the backend clamps those to the strongest
+   * level they support).
+   */
+  describeQos(qos: Qos): string {
+    const description = QOS_OPTIONS.find((option) => option.value === qos)?.description;
+    if (!description) {
+      // Nothing selected yet (or an unknown value) — there is no level to warn about.
+      return '';
+    }
+    const clamped = this.qosCapabilityPerConnector
+      .filter((connector) => clampQos(qos, connector.supportedQos) !== qos)
+      .map(
+        (connector) =>
+          `${connector.name} (handled as ${qosLabel(clampQos(qos, connector.supportedQos)).toLowerCase()})`
+      );
+    return clamped.length
+      ? `${description} NOTE: this level is not supported by: ${clamped.join(', ')}.`
+      : description;
   }
 
   private initializeDirection(): void {

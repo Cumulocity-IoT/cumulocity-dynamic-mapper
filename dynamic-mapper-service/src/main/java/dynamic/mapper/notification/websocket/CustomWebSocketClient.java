@@ -117,7 +117,7 @@ public class CustomWebSocketClient extends WebSocketClient {
             }
             return;
         }
-        int mappingQos = processedResults.getConsolidatedQos().ordinal();
+        int mappingQos = processedResults.getConsolidatedQos().getLevel();
         int timeout = processedResults.getPipelineTimeoutMS();
 
         if (mappingQos > 0) {

@@ -185,12 +185,33 @@ class AMQPClientTest {
         assertNotNull(client);
         assertEquals(ConnectorType.AMQP_091, client.getConnectorType());
         assertFalse(client.isSingleton());
-        assertNotNull(client.getSupportedQOS());
-        assertEquals(2, client.getSupportedQOS().size());
-        assertTrue(client.getSupportedQOS().contains(Qos.AT_MOST_ONCE));
-        assertTrue(client.getSupportedQOS().contains(Qos.AT_LEAST_ONCE));
+        assertNotNull(client.getSupportedQos());
+        assertEquals(2, client.getSupportedQos().size());
+        assertTrue(client.getSupportedQos().contains(Qos.AT_MOST_ONCE));
+        assertTrue(client.getSupportedQos().contains(Qos.AT_LEAST_ONCE));
 
         log.info("✅ Default constructor test passed");
+    }
+
+    @Test
+    void testQosIsClampedToConnectorCapability() {
+        AMQPClient client = new AMQPClient();
+
+        // AMQP 0.9.1 has no exactly-once delivery — asking for it must yield the strongest
+        // level the connector can actually honour, not the requested one.
+        assertEquals(Qos.AT_LEAST_ONCE, client.adjustQos(Qos.EXACTLY_ONCE));
+        assertEquals(Qos.AT_LEAST_ONCE, client.adjustQos(Qos.AT_LEAST_ONCE));
+        assertEquals(Qos.AT_MOST_ONCE, client.adjustQos(Qos.AT_MOST_ONCE));
+        assertEquals(Qos.DEFAULT, client.adjustQos(null));
+    }
+
+    @Test
+    void testConnectorSpecificationExposesSupportedQos() {
+        AMQPClient client = new AMQPClient();
+
+        // The UI restricts the QoS picker from the specification, so the capability declared on
+        // the client has to reach the specification without being repeated there.
+        assertEquals(client.getSupportedQos(), client.getConnectorSpecification().getSupportedQos());
     }
 
     @Test
