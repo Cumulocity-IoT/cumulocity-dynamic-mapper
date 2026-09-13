@@ -28,6 +28,7 @@ import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import dynamic.mapper.configuration.ConnectorId;
+import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
@@ -80,6 +81,10 @@ public class MappingService {
     // cache) runs atomically, so concurrent activations on the same mapping line cannot
     // interleave (NFR-2 / C-1). Keyed by "tenant:mappingId".
     private final Map<String, java.util.concurrent.locks.ReentrantLock> activationLocks = new ConcurrentHashMap<>();
+
+    // Mappings whose maxFailureCount-triggered deactivation has been submitted but not yet
+    // finished, keyed "<tenant>:<identifier>" — see increaseAndHandleFailureCount().
+    private final Set<String> deactivationsInFlight = ConcurrentHashMap.newKeySet();
 
     // ========== Resource Lifecycle Management ==========
 
@@ -853,14 +858,86 @@ public class MappingService {
     }
 
     /**
-     * Increments failure count and potentially deactivates mapping
+     * Clears a mapping's consecutive-failure streak after a message processed without an error.
+     *
+     * @see dynamic.mapper.service.status.MappingStatusService#resetFailureCountOnSuccess
+     */
+    public void resetFailureCountOnSuccess(String tenant, Mapping mapping) {
+        statusService.resetFailureCountOnSuccess(tenant, mapping);
+    }
+
+    /**
+     * Records a failed message for a mapping and deactivates the mapping once it has failed
+     * {@code maxFailureCount} times in a row.
+     *
+     * <p>The deactivation runs asynchronously through the regular
+     * {@link #setActivationMapping(String, String, Boolean, String)} path — it persists the
+     * mapping, updates the cache and makes the connectors unsubscribe — because this method is
+     * called from Camel processing threads, where taking the per-mapping activation lock and
+     * doing a blocking Cumulocity round-trip would stall the pipeline.
+     *
+     * <p>{@code deactivationsInFlight} collapses the burst of failures that typically arrives
+     * together (in-flight messages all failing for the same reason) into a single deactivation
+     * instead of one per failed message.
      */
     public void increaseAndHandleFailureCount(String tenant, Mapping mapping, MappingStatus mappingStatus) {
-        statusService.incrementFailureCount(tenant, mapping, mappingStatus);
+        boolean thresholdExceeded = statusService.incrementFailureCount(tenant, mapping, mappingStatus);
+        if (!thresholdExceeded) {
+            return;
+        }
 
-        // If mapping was deactivated, update cache
-        if (!mapping.getActive()) {
-            cacheManager.removeMapping(tenant, mapping);
+        String key = tenant + ":" + mapping.getIdentifier();
+        if (!deactivationsInFlight.add(key)) {
+            log.debug("{} - Deactivation already in progress for mapping: {}", tenant, mapping.getIdentifier());
+            return;
+        }
+
+        configurationRegistry.getVirtualThreadPool().submit(() -> {
+            try {
+                Mapping deactivated = setActivationMapping(tenant, mapping.getId(), false, null);
+                // setActivationMapping only persists and updates the cache; the connectors have
+                // to be told separately, exactly as OperationController does for a manual
+                // (de)activation. Without this the mapping would be flagged inactive but its
+                // topic would stay subscribed, and every further message would keep failing.
+                notifyDeployedConnectorsOfDeactivation(tenant, deactivated != null ? deactivated : mapping);
+                log.warn("{} - Deactivated mapping {} after {} consecutive failures (maxFailureCount: {})",
+                        tenant, mapping.getIdentifier(), mappingStatus.getCurrentFailureCount(),
+                        mapping.getMaxFailureCount());
+            } catch (Exception e) {
+                log.error("{} - Failed to deactivate mapping {} after exceeding maxFailureCount: {}",
+                        tenant, mapping.getIdentifier(), e.getMessage(), e);
+            } finally {
+                deactivationsInFlight.remove(key);
+            }
+        });
+    }
+
+    /**
+     * Makes the connectors this mapping is deployed to drop it: inbound connectors release
+     * their topic subscription (reference-counted, so a topic shared with another active
+     * mapping stays subscribed), outbound connectors remove it from their applied set.
+     *
+     * <p>Best-effort per connector — one unreachable connector must not prevent the others
+     * from being updated.
+     */
+    private void notifyDeployedConnectorsOfDeactivation(String tenant, Mapping mapping) {
+        List<String> deployedConnectorIds = getDeploymentMapEntry(tenant, mapping.getIdentifier());
+        if (deployedConnectorIds == null || deployedConnectorIds.isEmpty()) {
+            return;
+        }
+        for (String connectorId : deployedConnectorIds) {
+            try {
+                AConnectorClient client = configurationRegistry.getConnectorRegistry()
+                        .getClientForTenant(tenant, connectorId);
+                if (Direction.OUTBOUND.equals(mapping.getDirection())) {
+                    client.updateSubscriptionForOutbound(mapping, false, true);
+                } else {
+                    client.updateSubscriptionForInbound(mapping, false, true);
+                }
+            } catch (Exception e) {
+                log.warn("{} - Could not update subscription on connector {} while deactivating mapping {}: {}",
+                        tenant, connectorId, mapping.getIdentifier(), e.getMessage());
+            }
         }
     }
 

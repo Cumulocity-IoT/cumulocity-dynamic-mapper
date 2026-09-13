@@ -29,7 +29,7 @@ import java.util.Collection;
  * <p>The enum constants are ordered from weakest to strongest guarantee, and
  * {@link #getLevel()} is the numeric MQTT level (0, 1, 2). Non-MQTT connectors map these
  * onto their own primitives (AMQP delivery mode, Kafka offset-commit timing, Pulsar
- * subscription type / ack mode) — see {@code docs/feature/qos.md}.
+ * subscription type / ack mode) — see {@code docs/feature/reliability.md}.
  *
  * <p>Comparisons must go through {@link #getLevel()} / the helpers below rather than
  * {@code ordinal()} at call sites, so that the "which is stronger" rule lives in one place.

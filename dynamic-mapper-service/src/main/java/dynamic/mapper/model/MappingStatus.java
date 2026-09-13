@@ -83,9 +83,20 @@ public class MappingStatus implements Serializable {
     @NotNull
     public long errors = 0;
 
+    /**
+     * Number of <strong>consecutive</strong> failures of this mapping: incremented on every
+     * failed message, reset to 0 by the first message that completes without an error and on
+     * (re)activation. Compared against {@code Mapping.maxFailureCount} to auto-deactivate a
+     * persistently broken mapping — see {@code docs/feature/reliability.md}.
+     *
+     * <p>{@code volatile}: increments are serialized by {@link #incrementFailureCount()}'s
+     * monitor, but the threshold check and the status report read the field from other threads,
+     * where a plain non-volatile {@code long} read is neither guaranteed to be current nor
+     * guaranteed to be non-torn.
+     */
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Current consecutive failure count", example = "0")
     @NotNull
-    public long currentFailureCount = 0;
+    public volatile long currentFailureCount = 0;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Error message if mapping failed to load", example = "Invalid JSON template")
     @NotNull

@@ -76,7 +76,7 @@ user-supplied broker credentials.
 [MQTT Service documentation](https://cumulocity.com/docs/device-integration/mqtt-service/),
 Cumulocity MQTT Service implements **QoS 0 and QoS 1 only** — QoS 2 is not supported (unlike
 Core MQTT, which does support all three). A mapping configured as `EXACTLY_ONCE` is therefore
-clamped to `AT_LEAST_ONCE`; see [`qos.md`](qos.md) for the general clamping mechanism.
+clamped to `AT_LEAST_ONCE`; see [`reliability.md`](reliability.md) for the general clamping mechanism.
 
 **What the mapping's QoS actually controls here is not the MQTT QoS.** This connector never
 performs an MQTT `PUBLISH` — it produces to the Pulsar topic

@@ -470,10 +470,22 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             templateOptions: {
               label: 'Max failure count',
+              type: 'number',
+              min: 0,
               disabled: this.isFieldDisabled,
               description:
-                'Max failure count, if this is exceeded the mapping is automatically deactivated. A value of 0 means no limit. The failure count is reset to 0 if the mapping is reactivated.',
+                'Number of consecutive failures after which the mapping is automatically deactivated. A value of 0 means no limit. The counter is reset by the first message that is processed without an error, and when the mapping is reactivated.'
             },
+            validators: {
+              // A negative threshold would silently behave like 0 (check disabled) instead of
+              // being rejected, so catch it in the form.
+              nonNegative: {
+                expression: (control) =>
+                  control.value === null || control.value === undefined || control.value === '' ||
+                  Number(control.value) >= 0,
+                message: 'The max failure count must not be negative.'
+              }
+            }
           }
         ]
       }

@@ -247,8 +247,7 @@ public class Mapping implements Serializable {
     private String filterInventory;
 
     @Builder.Default
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Maximum number of failures before disabling mapping", example = "10")
-    @NotNull
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Number of consecutive failures after which the mapping is automatically deactivated. 0 (the default) disables the check. The counter is reset by the first message that processes without an error, and on (re)activation.", example = "10")
     private long maxFailureCount = 0;
 
     @Builder.Default

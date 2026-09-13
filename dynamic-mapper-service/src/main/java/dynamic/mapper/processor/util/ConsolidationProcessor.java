@@ -20,7 +20,10 @@
  */
 package dynamic.mapper.processor.util;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import dynamic.mapper.service.MappingService;
 
 import dynamic.mapper.processor.CommonProcessor;
 import dynamic.mapper.processor.model.ProcessingContext;
@@ -42,6 +45,11 @@ import org.apache.camel.Exchange;
  * {@code FilterInboundProcessor} right after enrichment) — otherwise that Context
  * (and its Engine reference) would leak.
  *
+ * <p>Because it is the single terminal point of every leg, it is also where a mapping's
+ * consecutive-failure streak is cleared: a leg that ends without an error means the mapping
+ * is working again, so the {@code maxFailureCount} counter must start over. See
+ * {@code docs/feature/reliability.md}.
+ *
  * <p>The name "ConsolidationProcessor" is historical. Its responsibility grew from
  * "move the context from the in-header to the exchange body" to also covering this
  * cleanup.
@@ -49,11 +57,19 @@ import org.apache.camel.Exchange;
 @Component
 public class ConsolidationProcessor extends CommonProcessor {
 
+    @Autowired
+    private MappingService mappingService;
+
     @Override
     public void process(Exchange exchange) throws Exception {
         ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
         exchange.getIn().setBody(context);
         if (context != null) {
+            // A clean leg ends the failure streak. Skipped for test runs, which must never
+            // change the runtime status of a mapping.
+            if (!context.hasError() && !context.isTesting() && context.getMapping() != null) {
+                mappingService.resetFailureCountOnSuccess(context.getTenant(), context.getMapping());
+            }
             context.close();
         }
     }

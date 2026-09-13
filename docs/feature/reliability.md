@@ -1,6 +1,23 @@
-# Quality of Service (QoS)
+# Reliability: delivery guarantees and failure handling
 
-Every mapping carries a `qos` field — the **delivery guarantee it asks for**. This page
+What happens to a message when something goes wrong. Two independent mechanisms, both
+configured per mapping, plus the transport-level retry that sits underneath them:
+
+| Mechanism | Mapping field | Question it answers | Section |
+|---|---|---|---|
+| Delivery guarantee | `qos` | When may the broker message be acknowledged — before processing, or only after it succeeded? | [Quality of Service](#quality-of-service) |
+| Failure threshold | `maxFailureCount` | When should a mapping that keeps failing be taken out of service? | [Failure handling](#failure-handling) |
+| Poison-pill guard | — (fixed at 5) | How often may one message be redelivered before it is dropped? | [The poison-pill guard](#the-poison-pill-guard) |
+
+They compose: `qos > 0` is what causes a failed message to be redelivered at all;
+`maxFailureCount` is what stops a mapping that fails every time; the poison-pill guard is
+what stops a single bad message from being redelivered forever.
+
+---
+
+## Quality of Service
+
+Every mapping carries a `qos` field — the **delivery guarantee it asks for**. This section
 describes where that value comes from, how it is consolidated when several mappings match
 one message, how each connector translates it onto its own protocol primitives, and what
 the UI shows.
@@ -21,7 +38,7 @@ themselves. The JSON wire format is unchanged — the enum **name** (`"AT_LEAST_
 
 ---
 
-## Where QoS is set
+### Where QoS is set
 
 | Layer | Field | Notes |
 |---|---|---|
@@ -36,7 +53,7 @@ clamped at runtime instead (and the UI warns about it up front).
 
 ---
 
-## How QoS flows through a message
+### How QoS flows through a message
 
 ```
 Mapping.qos (per mapping)
@@ -52,7 +69,7 @@ ProcessingResultWrapper.consolidatedQos
    └── outbound → AConnectorClient.effectivePublishQos(context) → connector publish
 ```
 
-### Consolidation
+#### Consolidation
 
 One inbound message can match several mappings, each with its own `qos`. The transport
 can only make **one** ack decision for that message, so
@@ -65,7 +82,7 @@ The result lands in
 whose getter is null-safe: early-exit paths (no mapping resolved, unparseable payload)
 never set it, and every caller would otherwise have to guard before reading the level.
 
-### The two-sided bound (inbound)
+#### The two-sided bound (inbound)
 
 For MQTT, the guarantee actually achievable is bounded on *both* ends — see
 [`AbstractMqttCallback`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/AbstractMqttCallback.java):
@@ -83,7 +100,7 @@ If `effectiveQos > 0` the callback defers the ACK until the pipeline reports suc
 reconnects/re-delivers on error, bounded by the poison-pill counter); otherwise it acks
 straight away.
 
-### Subscriptions
+#### Subscriptions
 
 Inbound QoS is also a **subscription** parameter, managed by
 [`MappingSubscriptionManager`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/client/MappingSubscriptionManager.java):
@@ -100,7 +117,7 @@ Inbound QoS is also a **subscription** parameter, managed by
 
 ---
 
-## Connector capabilities and clamping
+### Connector capabilities and clamping
 
 Not every broker can implement every level. Each connector declares what it supports in
 `AConnectorClient.supportedQos`, and **every** QoS that reaches the broker passes through
@@ -138,7 +155,7 @@ stamps `supportedQos` onto the
 returned by the connector-specification endpoint, so the capability is declared exactly
 once — on the client — and never repeated in each `createConnectorSpecification()`.
 
-### Adding a connector
+#### Adding a connector
 
 Set `this.supportedQos` in the constructor (before `createConnectorSpecification()`), and
 use `effectivePublishQos(context)` in `publishMEAO`. Nothing else is required — subscribe
@@ -148,7 +165,7 @@ the UI offers.
 
 ---
 
-## UI
+### QoS in the UI
 
 | Place | File |
 |---|---|
@@ -176,9 +193,7 @@ The picker:
 MQTT and Pulsar can publish at level 2. This is a deliberate UI restriction, not a
 transport limitation.
 
----
-
-## Gotchas
+### QoS gotchas
 
 - **A stronger request never means a weaker guarantee.** AMQP used to test
   `qos == AT_LEAST_ONCE` for persistence, which made `EXACTLY_ONCE` fall into the
@@ -198,6 +213,114 @@ transport limitation.
   Cumulocity MQTT Service, for example, mandatory clean sessions mean a message sent to a
   disconnected device is dropped regardless of the level configured here.
 
+---
+
+## Failure handling
+
+QoS decides whether a *failed message* is redelivered. `maxFailureCount` decides when a
+*failing mapping* is taken out of service — a mapping whose template no longer matches the
+payload, whose Smart Function throws on every message, or whose target device was deleted
+would otherwise keep failing (and, at QoS > 0, keep forcing redeliveries) indefinitely.
+
+| Field | Where | Meaning |
+|---|---|---|
+| [`Mapping.maxFailureCount`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/Mapping.java) | per mapping, set in the editor | Number of **consecutive** failures after which the mapping is deactivated. **0 (the default) disables the check.** |
+| [`MappingStatus.currentFailureCount`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/MappingStatus.java) | runtime status, shown in *Monitoring* | The current streak. |
+| `MappingStatus.errors` | runtime status | Lifetime error count — never reset by processing, purely informational. |
+
+### The counter is a streak, not a total
+
+`currentFailureCount` is incremented by every failed message and reset to 0 by:
+
+- the first message that completes **without an error**
+  ([`ConsolidationProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/util/ConsolidationProcessor.java),
+  the single terminal point every pipeline leg passes through), and
+- **(re)activation** of the mapping (`MappingService.setActivationMapping`).
+
+This matters: with a cumulative counter, a healthy mapping processing millions of messages
+at a 0.01 % transient error rate would eventually cross any threshold and be disabled. The
+threshold is meant to catch a *persistently* broken mapping, so only an unbroken run of
+failures counts.
+
+The reset is deliberately cheap on the hot path — a mapping that did not opt in
+(`maxFailureCount == 0`) or that has no failures pending costs a map lookup and a volatile
+read, and never takes the status monitor. Test runs (`context.isTesting()`) never touch the
+counter.
+
+### What happens at the threshold
+
+The failure that makes `currentFailureCount >= maxFailureCount` triggers, via
+[`MappingService.increaseAndHandleFailureCount()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/MappingService.java):
+
+1. A `MAPPING_FAILURE_EVENT` logging event carrying `mappingId` and `failureCount`.
+2. A real deactivation through the regular `setActivationMapping(tenant, id, false, null)`
+   path — the mapping is persisted as inactive and the cache is refreshed.
+3. A subscription update on every connector the mapping is deployed to, so inbound
+   connectors release its topic (reference-counted, so a topic shared with another active
+   mapping stays subscribed) and outbound connectors drop it from their applied set.
+   `setActivationMapping` does **not** do this by itself — the REST controllers notify the
+   connectors separately after calling it, and this path has to do the same. Without it the
+   mapping would be flagged inactive while its topic stayed subscribed, and every further
+   message would keep failing.
+
+The deactivation runs **asynchronously** on the virtual-thread pool: this code path is on a
+Camel processing thread, where taking the per-mapping activation lock and doing a blocking
+Cumulocity round-trip would stall the pipeline. A `deactivationsInFlight` guard collapses
+the burst of failures that typically arrives together — in-flight messages all failing for
+the same reason — into a single deactivation.
+
+Reactivating the mapping (UI or `PUT /mapping/{id}/activation`) clears the streak, so it
+starts with a clean slate.
+
+> **Note:** before this was implemented, the threshold only produced the logging event —
+> `handleFailureThresholdExceeded()` never actually deactivated anything, despite the
+> editor promising "if this is exceeded the mapping is automatically deactivated". If you
+> are looking at an older release, `maxFailureCount` is inert there.
+
+### What counts as a failure
+
+Any processor calling `mappingService.increaseAndHandleFailureCount(...)` — deserialization
+errors, enrichment/identity-resolution errors, JSONata and Smart Function evaluation errors,
+extension errors, and failures sending to Cumulocity. A message **filtered out** by
+`filterMapping`/`filterInventory` is not a failure; nor is a test run.
+
+### The poison-pill guard
+
+Independently of the mapping-level threshold, every callback that can request redelivery
+caps how often it will do so for the *same message*: `MAX_CONSECUTIVE_FAILURES` /
+`MAX_CONSECUTIVE_RECONNECTS`, **fixed at 5** in
+[`AbstractMqttCallback`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/AbstractMqttCallback.java),
+[`AbstractPulsarCallback`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/pulsar/AbstractPulsarCallback.java),
+[`KafkaClientV2`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/kafka/KafkaClientV2.java) and
+[`CustomWebSocketClient`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/notification/websocket/CustomWebSocketClient.java).
+After 5 attempts the message is acknowledged and dropped, so one undigestible payload
+cannot block a subscription forever. This is not configurable per mapping.
+
+For MQTT the redelivery is achieved by *reconnecting* (with exponential back-off), so the
+broker retransmits whatever it has not seen acknowledged — which is why it is gated by the
+connector property `reconnectOnProcessingError`. With that property off, the connector
+simply leaves the message unacknowledged and waits for the broker to retransmit on its own.
+
+Note the two counters are per different things: the poison-pill counter is **per message**
+(and cleared as soon as that message succeeds), `currentFailureCount` is **per mapping**.
+
+### Failure-handling gotchas
+
+- **The two counters are driven from different places.** `currentFailureCount` is
+  incremented by the *processor* that failed, for every failure. Whether the *message* is
+  then redelivered is a separate decision made by the connector callback from the HTTP
+  status class: `< 500` (client error, e.g. a malformed payload) is acknowledged —
+  redelivering would not help — while `>= 500` triggers a redelivery. So a mapping can be
+  deactivated by failures that were never retried.
+- **`maxFailureCount` is not a rate.** 10 means "10 in a row", however long that takes. A
+  mapping that alternates success/failure forever never trips it. That is intentional —
+  use the `errors` counter and the *Monitoring* tab to spot those.
+- **Deactivation is silent for the device.** The broker keeps publishing; the mapping is
+  simply no longer subscribed. The `MAPPING_FAILURE_EVENT` and the mapping's inactive state
+  in the UI are the only signals, so alert on that event if a mapping is business-critical.
+
+---
+
 ## Tests
 
 | Test | Covers |
@@ -207,3 +330,5 @@ transport limitation.
 | [`AMQPClientTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/connector/amqp/AMQPClientTest.java) | Clamping to a connector's capability, and `supportedQos` reaching the specification. |
 | [`MQTT3ClientTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/connector/mqtt/MQTT3ClientTest.java) | MQTT never clamps; `null` falls back to the default. |
 | [`GooglePubSubClientTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/connector/googlepubsub/GooglePubSubClientTest.java) | Ack-before-processing vs. ack-after-success / nack-on-error. |
+| [`MappingStatusServiceFailureCountTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/service/status/MappingStatusServiceFailureCountTest.java) | The streak semantics: threshold reported only on the failure that reaches it, `maxFailureCount == 0` never trips, success clears the streak. |
+| [`MappingServiceFailureThresholdTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/service/MappingServiceFailureThresholdTest.java) | The mapping is really deactivated at the threshold, and a burst of failures deactivates only once. |

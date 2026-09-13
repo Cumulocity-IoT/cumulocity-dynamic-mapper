@@ -66,7 +66,7 @@ sequenceDiagram
    — or, for a test call, the single `testMapping` passed in is used directly. Their QoS is
    consolidated into the wrapper's `consolidatedQos` (strongest level requested, clamped to the
    connector's capabilities), which decides when the connector acknowledges the message — see
-   [`qos.md`](qos.md).
+   [`reliability.md`](reliability.md).
 3. `testing` is computed as `testMapping != null && !sendPayload` — a dry-run test uses
    mocked identity/inventory lookups, but as soon as `sendPayload=true` (the user created a
    real test device beforehand) the mapping runs against real Cumulocity services. See

@@ -198,24 +198,29 @@ public class MappingStatusService {
     }
 
     /**
-     * Increments the failure count for a mapping and handles automatic deactivation.
+     * Increments the consecutive-failure count for a mapping and reports whether that pushed it
+     * over the mapping's configured {@code maxFailureCount}.
      *
-     * <p>If the failure count reaches or exceeds the mapping's configured max failure count
-     * (and max failure count is greater than 0), an event is created and the mapping should
-     * be deactivated by the caller.</p>
+     * <p>This method only records the threshold breach (log + {@code MAPPING_FAILURE_EVENT});
+     * the actual deactivation is performed by the caller
+     * ({@link dynamic.mapper.service.MappingService#increaseAndHandleFailureCount}), which owns
+     * persistence, the mapping cache and the connector subscriptions.
      *
      * @param tenant the tenant identifier (must not be null or empty)
      * @param mapping the mapping that failed (must not be null with valid identifier)
      * @param status the status to update (must not be null)
+     * @return {@code true} if the mapping has now reached its failure threshold and must be
+     *         deactivated; {@code false} otherwise (including when the check is disabled with
+     *         {@code maxFailureCount == 0})
      * @throws IllegalArgumentException if tenant or mapping is invalid
      */
-    public void incrementFailureCount(String tenant, Mapping mapping, MappingStatus status) {
+    public boolean incrementFailureCount(String tenant, Mapping mapping, MappingStatus status) {
         validateTenant(tenant);
         validateMapping(mapping);
         if (status == null) {
             log.error("{} - Cannot increment failure count: status is null for mapping {}",
                      tenant, mapping.getIdentifier());
-            return;
+            return false;
         }
 
         status.incrementFailureCount();
@@ -224,7 +229,37 @@ public class MappingStatusService {
 
         if (shouldDeactivateMapping(mapping, status)) {
             handleFailureThresholdExceeded(tenant, mapping, status);
+            return true;
         }
+        return false;
+    }
+
+    /**
+     * Clears the consecutive-failure streak after a message processed without an error.
+     *
+     * <p>Without this, {@code currentFailureCount} would count failures cumulatively since
+     * activation, so a healthy mapping with a rare transient error would eventually cross its
+     * threshold and be deactivated. The threshold is meant to catch a <em>persistently</em>
+     * broken mapping.
+     *
+     * <p>Deliberately cheap on the hot path: mappings that did not opt into the check
+     * ({@code maxFailureCount == 0}, the default) and mappings with no failures pending cost a
+     * map lookup and a volatile read, and never take the status monitor.
+     *
+     * @param tenant the tenant identifier
+     * @param mapping the mapping that just processed a message successfully
+     */
+    public void resetFailureCountOnSuccess(String tenant, Mapping mapping) {
+        if (tenant == null || mapping == null || mapping.getMaxFailureCount() <= 0) {
+            return;
+        }
+        MappingStatus status = getStatusMap(tenant).get(mapping.getIdentifier());
+        if (status == null || status.currentFailureCount == 0) {
+            return;
+        }
+        status.resetFailureCount();
+        log.debug("{} - Reset failure streak after successful processing for mapping: {}",
+                tenant, mapping.getIdentifier());
     }
 
     /**
@@ -385,7 +420,7 @@ public class MappingStatusService {
         return config.getSendMappingStatus() && initialized.getOrDefault(tenant, false);
     }
 
-    private Boolean shouldDeactivateMapping(Mapping mapping, MappingStatus status) {
+    private boolean shouldDeactivateMapping(Mapping mapping, MappingStatus status) {
         return mapping.getMaxFailureCount() > 0 &&
                 status.currentFailureCount >= mapping.getMaxFailureCount();
     }
