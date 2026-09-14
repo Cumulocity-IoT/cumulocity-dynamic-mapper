@@ -135,7 +135,7 @@ export class MappingNavigationFactory implements NavigatorNodeFactory {
 
     monitoringNode: new NavigatorNode({
       label: gettext('Monitoring'),
-      icon: 'pie-chart',
+      icon: 'heartbeat',
       path: `/c8y-pkg-dynamic-mapper/${NODE2}/monitoring/statistic/inbound`,
       priority: 300,
       preventDuplicates: true
