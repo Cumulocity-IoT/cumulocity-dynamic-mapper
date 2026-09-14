@@ -269,7 +269,7 @@ public class MQTT3Client extends AMQTTClient {
 
             } catch (Exception e) {
                 attempt++;
-                log.error("{} - Connection attempt {} failed: {}", tenant, attempt, e.getMessage());
+                log.error("{} - Connection attempt {} failed: {}", tenant, attempt, e.getMessage(), e);
 
                 if (attempt >= maxAttempts) {
                     connectionStateManager.updateStatusWithError(e);

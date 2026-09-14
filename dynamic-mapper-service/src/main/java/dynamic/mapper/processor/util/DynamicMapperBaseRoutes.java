@@ -202,7 +202,7 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
         log.error("Endpoint: {}", endpoint);
         if (cause != null) {
             log.error("Exception Type: {}", cause.getClass().getSimpleName());
-            log.error("Exception Message: {}", cause.getMessage());
+            log.error("Exception Message: {}", cause.getMessage(), cause);
             log.error("Full Stack Trace: ", cause);
         } else {
             log.error("Exception Type: unknown (no exception captured on exchange)");

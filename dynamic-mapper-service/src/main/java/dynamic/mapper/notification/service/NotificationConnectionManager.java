@@ -827,7 +827,7 @@ public class NotificationConnectionManager {
             ConnectorId connectorId) throws URISyntaxException {
 
         if (token == null || callback == null || connectorId == null) {
-            log.warn("Cannot connect: invalid parameters");
+            log.warn("{} - Cannot connect: invalid parameters", tenant);
             return null;
         }
 

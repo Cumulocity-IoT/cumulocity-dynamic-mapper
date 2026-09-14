@@ -210,7 +210,7 @@ public class AMQP10Client extends AConnectorClient {
                             tenant, ex.getMessage());
                     return;
                 }
-                log.error("{} - AMQP 1.0 JMS exception: {}", tenant, ex.getMessage());
+                log.error("{} - AMQP 1.0 JMS exception: {}", tenant, ex.getMessage(), ex);
                 physicallyConnected = false;
                 connectionStateManager.setConnected(false, ex);
             });
@@ -330,7 +330,7 @@ public class AMQP10Client extends AConnectorClient {
             log.info("{} - AMQP 1.0 client disconnect completed", tenant);
 
         } catch (Exception e) {
-            log.error("{} - Error during disconnect: {}", tenant, e.getMessage());
+            log.error("{} - Error during disconnect: {}", tenant, e.getMessage(), e);
             connectionStateManager.setConnected(false);
         } finally {
             endDisconnection();
@@ -397,7 +397,7 @@ public class AMQP10Client extends AConnectorClient {
                 log.info("{} - AMQP 1.0: unsubscribed from address [{}]", tenant, topic);
                 sendSubscriptionEvents(topic, "Unsubscribed");
             } catch (JMSException e) {
-                log.error("{} - Failed to close consumer for topic [{}]: {}", tenant, topic, e.getMessage());
+                log.error("{} - Failed to close consumer for topic [{}]: {}", tenant, topic, e.getMessage(), e);
             }
         }
     }

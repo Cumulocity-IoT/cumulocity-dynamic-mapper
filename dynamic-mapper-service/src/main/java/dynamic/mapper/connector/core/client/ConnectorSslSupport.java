@@ -135,8 +135,7 @@ public class ConnectorSslSupport {
             return true;
         }
 
-        log.warn("{} - SSL certificate configuration incomplete. Either provide 'certificateChainInPemFormat' " +
-                 "or both 'nameCertificate' and 'fingerprintSelfSignedCertificate'", tenant);
+        log.warn("{} - SSL certificate configuration incomplete. Either provide 'certificateChainInPemFormat' or both 'nameCertificate' and 'fingerprintSelfSignedCertificate'", tenant);
         return false;
     }
 

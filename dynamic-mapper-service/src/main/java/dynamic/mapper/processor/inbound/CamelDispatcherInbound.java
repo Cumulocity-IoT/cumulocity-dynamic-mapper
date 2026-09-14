@@ -166,7 +166,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         } catch (Exception e) {
             log.warn("{} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!",
                     tenant, topic);
-            log.debug(e.getMessage(), e);
+            log.debug("Error resolving appropriate mapping: {}", e.getMessage(), e);
             // Mirrors CamelDispatcherOutbound: a resolution failure belongs to no single
             // mapping, so it is reported on the catch-all status instead of being dropped.
             MappingStatus mappingStatusUnspecified = mappingService.getMappingStatus(tenant,

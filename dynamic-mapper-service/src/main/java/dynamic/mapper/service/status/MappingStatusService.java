@@ -318,7 +318,7 @@ public class MappingStatusService {
             log.debug("{} - Successfully sent {} statuses to inventory", tenant, statusArray.length);
 
         } catch (IllegalArgumentException e) {
-            log.error("{} - Invalid argument when sending status to inventory: {}", tenant, e.getMessage());
+            log.error("{} - Invalid argument when sending status to inventory: {}", tenant, e.getMessage(), e);
         } catch (Exception e) {
             var transientError = CumulocityErrors.findTransientPlatformError(e);
             if (transientError.isPresent()) {

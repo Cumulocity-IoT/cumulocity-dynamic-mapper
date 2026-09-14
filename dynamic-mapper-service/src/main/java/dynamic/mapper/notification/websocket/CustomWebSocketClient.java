@@ -256,9 +256,7 @@ public class CustomWebSocketClient extends WebSocketClient {
                     }
 
                     if (!futureCompleted) {
-                        log.error("{} - Future did NOT complete within 2 seconds after cancellation! " +
-                                "This indicates that a thread is stuck in a blocking operation that cannot be interrupted. " +
-                                "Check for long-running HTTP calls or other blocking I/O. connector: {}", tenant, connectorId.getName());
+                        log.error("{} - Future did NOT complete within 2 seconds after cancellation! This indicates that a thread is stuck in a blocking operation that cannot be interrupted. Check for long-running HTTP calls or other blocking I/O. connector: {}", tenant, connectorId.getName());
                     }
 
                     log.warn(

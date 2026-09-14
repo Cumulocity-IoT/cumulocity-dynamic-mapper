@@ -177,8 +177,8 @@ public abstract class AMQTTClient extends AConnectorClient {
                     .build();
 
             log.info("{} - MQTT SSL configuration initialized successfully", tenant);
-            log.info("{}   Custom CAs: {}", tenant, customCertificates.size());
-            log.info("{}   Protocols: {}", tenant, DEFAULT_TLS_PROTOCOLS);
+            log.info("{} - Custom CAs: {}", tenant, customCertificates.size());
+            log.info("{} - Protocols: {}", tenant, DEFAULT_TLS_PROTOCOLS);
 
             // Log chain structure
             logChainStructure(cert);
@@ -356,7 +356,7 @@ public abstract class AMQTTClient extends AConnectorClient {
                      sparkplugCertificateManager.publishDeathCertificate();
                      log.info("{} - Published Sparkplug Death Certificate before disconnect", tenant);
                  } catch (Exception e) {
-                     log.error("{} - Error publishing Sparkplug Death Certificate: {}", tenant, e.getMessage());
+                     log.error("{} - Error publishing Sparkplug Death Certificate: {}", tenant, e.getMessage(), e);
                  }
              }
 
@@ -375,7 +375,7 @@ public abstract class AMQTTClient extends AConnectorClient {
             log.info("{} - MQTT client disconnect completed", tenant);
 
         } catch (Exception e) {
-            log.error("{} - Error during disconnect: {}", tenant, e.getMessage());
+            log.error("{} - Error during disconnect: {}", tenant, e.getMessage(), e);
             // Still mark as disconnected even if there was an error
             connectionStateManager.setConnected(false);
         } finally {

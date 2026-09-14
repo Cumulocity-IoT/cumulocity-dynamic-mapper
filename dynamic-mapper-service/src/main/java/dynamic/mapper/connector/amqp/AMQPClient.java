@@ -417,7 +417,7 @@ public class AMQPClient extends AConnectorClient {
             log.info("{} - AMQP client disconnect completed", tenant);
 
         } catch (Exception e) {
-            log.error("{} - Error during disconnect: {}", tenant, e.getMessage());
+            log.error("{} - Error during disconnect: {}", tenant, e.getMessage(), e);
             connectionStateManager.setConnected(false);
         } finally {
             endDisconnection();

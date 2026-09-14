@@ -321,7 +321,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         } catch (Exception e) {
             log.warn("{} - Error resolving appropriate mapping for C8Y message. Could NOT be parsed. Ignoring this message!",
                     tenant);
-            log.debug(e.getMessage(), e);
+            log.debug("Error resolving appropriate mapping: {}", e.getMessage(), e);
             
             // Update unspecified mapping status
             MappingStatus mappingStatusUnspecified = mappingService.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);

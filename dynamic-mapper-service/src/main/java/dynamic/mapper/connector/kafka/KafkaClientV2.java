@@ -482,8 +482,7 @@ public class KafkaClientV2 extends AConnectorClient {
             try {
                 task.get(CONSUMER_SHUTDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS);
             } catch (TimeoutException e) {
-                log.warn("{} - Timed out waiting for consumer task to stop for topic: [{}]; " +
-                        "it will finish closing shortly on its own", tenant, topic);
+                log.warn("{} - Timed out waiting for consumer task to stop for topic: [{}]; it will finish closing shortly on its own", tenant, topic);
             } catch (Exception e) {
                 log.debug("{} - Consumer task for topic [{}] ended while unsubscribing: {}",
                         tenant, topic, e.getMessage());
@@ -554,8 +553,7 @@ public class KafkaClientV2 extends AConnectorClient {
             try {
                 task.get(CONSUMER_SHUTDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS);
             } catch (TimeoutException e) {
-                log.warn("{} - Timed out waiting for explorer consumer task to stop for topic: [{}]; " +
-                        "it will finish closing shortly on its own", tenant, topic);
+                log.warn("{} - Timed out waiting for explorer consumer task to stop for topic: [{}]; it will finish closing shortly on its own", tenant, topic);
             } catch (Exception e) {
                 log.debug("{} - Explorer consumer task for topic [{}] ended while unsubscribing: {}",
                         tenant, topic, e.getMessage());
@@ -652,8 +650,7 @@ public class KafkaClientV2 extends AConnectorClient {
                     failCount.increment();
 
                     if (failCount.intValue() > MAX_CONSECUTIVE_FAILURES) {
-                        log.error("{} - Too many consecutive failures for topic: [{}], stopping this consumer; " +
-                                "housekeeping will retry it", tenant, topic);
+                        log.error("{} - Too many consecutive failures for topic: [{}], stopping this consumer; housekeeping will retry it", tenant, topic);
                         // Hand off to the slower housekeeping-driven retry cycle (monitorSubscriptions())
                         // instead of leaving the count above MAX_RETRY_ATTEMPTS, where it would never
                         // be picked up again.
@@ -867,7 +864,7 @@ public class KafkaClientV2 extends AConnectorClient {
      */
     private void handleConsumerError(String topic, Exception e) {
         if (e instanceof KafkaException) {
-            log.error("{} - Kafka error for topic [{}]: {}", tenant, topic, e.getMessage());
+            log.error("{} - Kafka error for topic [{}]: {}", tenant, topic, e.getMessage(), e);
         } else {
             log.error("{} - Unexpected error for topic [{}]: {}", tenant, topic, e.getMessage(), e);
         }

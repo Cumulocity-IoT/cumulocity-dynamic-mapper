@@ -609,7 +609,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                 try {
                     entry.getValue().close();
                 } catch (PulsarClientException e) {
-                    log.error("{} - Error closing disconnected consumer: {}", tenant, e.getMessage());
+                    log.error("{} - Error closing disconnected consumer: {}", tenant, e.getMessage(), e);
                 }
                 return true;
             }
