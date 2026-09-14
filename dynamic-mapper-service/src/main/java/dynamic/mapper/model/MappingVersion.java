@@ -40,7 +40,7 @@ import java.io.Serializable;
  * mapping line is also stored as a {@code MappingVersion} with {@link #isDraft}
  * set to {@code true}.
  *
- * <p>See {@code docs/feature/REQUIREMENTS-VERSION-MAPPING.md} (D-1, D-7).
+ * <p>See {@code docs/planning/REQUIREMENTS-VERSION-MAPPING.md} (D-1, D-7).
  */
 @Data
 @Builder

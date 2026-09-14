@@ -222,9 +222,9 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       contextPoolSize: [''],
       explorerSessionTTLMinutes: [''],
       supportESM: [''],
-      jsonataAgent: [{ value: '', disabled: true }],
-      javaScriptAgent: [{ value: '', disabled: true }],
-      smartFunctionAgent: [{ value: '', disabled: true }],
+      jsonataAgent: [''],
+      javaScriptAgent: [''],
+      smartFunctionAgent: [''],
       suppressDeprecationWarning: [''],
       cacheAliasMaps: [''],
       externalIdBinding: [''],
@@ -241,27 +241,13 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
         next: agentNames => {
           this.agents$.next(agentNames);
           this.aiAgentDeployed = agentNames.length > 0;
-          this.updateAgentControlsState();
         },
         error: error => {
           console.error('Failed to check AI agent availability:', error);
           this.agents$.next([]);
           this.aiAgentDeployed = false;
-          this.updateAgentControlsState();
         }
       });
-  }
-
-  private updateAgentControlsState(): void {
-    const agentControls = ['javaScriptAgent', 'jsonataAgent', 'smartFunctionAgent'];
-    agentControls.forEach(controlName => {
-      const control = this.serviceForm.get(controlName);
-      if (this.aiAgentDeployed) {
-        control?.enable();
-      } else {
-        control?.disable();
-      }
-    });
   }
 
   private readonly SPARKPLUGB_BIRTH_FRAGMENTS = ['sparkPlugB_NBIRTH', 'sparkPlugB_DBIRTH'];
@@ -367,15 +353,17 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       );
       return;
     }
-    const conf = this.serviceForm.value;
+    // getRawValue() instead of value: disabled controls are omitted from `value`, which used to
+    // silently wipe the AI agent names on every save while those controls were disabled.
+    const conf = this.serviceForm.getRawValue();
 
     conf.inventoryFragmentsToCache = this.inventoryFragmentsList
       .map(f => f.trim())
       .filter(f => f.length > 0 && !this.SPARKPLUGB_BIRTH_FRAGMENTS.includes(f));
 
-    conf.javaScriptAgent = this.trimOrUndefined(this.serviceForm.value['javaScriptAgent']);
-    conf.jsonataAgent = this.trimOrUndefined(this.serviceForm.value['jsonataAgent']);
-    conf.smartFunctionAgent = this.trimOrUndefined(this.serviceForm.value['smartFunctionAgent']);
+    conf.javaScriptAgent = this.trimOrUndefined(conf['javaScriptAgent']);
+    conf.jsonataAgent = this.trimOrUndefined(conf['jsonataAgent']);
+    conf.smartFunctionAgent = this.trimOrUndefined(conf['smartFunctionAgent']);
 
     const response = await this.sharedService.updateServiceConfiguration(conf);
 

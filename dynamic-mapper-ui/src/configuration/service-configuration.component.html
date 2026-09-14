@@ -706,22 +706,16 @@
               </div>
               <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label title="{{ ' Name of jsonata agent' | translate }}">
-                  <div class="c8y-select-wrapper p-r-4">
-                    <select class="form-control" formControlName="jsonataAgent" name="jsonataAgent">
-                      <option value="" disabled selected>
-                        Select agent
-                      </option>
-                      @for (agent of (agents$| async); track agent) {
-                      <option [value]="agent">
-                        {{ agent }}
-                      </option>
-                      }
-                    </select>
-                  </div>
-                  <span></span>
+                  <input class="form-control" type="text" formControlName="jsonataAgent" name="jsonataAgent"
+                    list="dynamic-mapper-jsonata-agents" autocomplete="off" placeholder="{{ 'Select or enter agent name' | translate }}" />
+                  <datalist id="dynamic-mapper-jsonata-agents">
+                    @for (agent of (agents$| async); track agent) {
+                    <option [value]="agent"></option>
+                    }
+                  </datalist>
                   @if (!aiAgentDeployed) {
                   <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-                    popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+                    popover="{{'No agents could be listed - either the AI Agent Manager is not deployed in this tenant, or your user may not list them. You can still enter the agent name manually.'| translate}}"
                     placement="bottom" triggers="focus" type="button" container="body"></button>
                   }
                 </label>
@@ -742,22 +736,16 @@
               </div>
               <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
                 <label title="{{ ' Name of smartFunction agent' | translate }}">
-                  <div class="c8y-select-wrapper">
-                    <select class="form-control" formControlName="smartFunctionAgent" name="smartFunctionAgent">
-                      <option value="" disabled selected>
-                        Select agent
-                      </option>
-                      @for (agent of (agents$| async); track agent) {
-                      <option [value]="agent">
-                        {{ agent }}
-                      </option>
-                      }
-                    </select>
-                  </div>
-                  <span></span>
+                  <input class="form-control" type="text" formControlName="smartFunctionAgent" name="smartFunctionAgent"
+                    list="dynamic-mapper-smart-function-agents" autocomplete="off" placeholder="{{ 'Select or enter agent name' | translate }}" />
+                  <datalist id="dynamic-mapper-smart-function-agents">
+                    @for (agent of (agents$| async); track agent) {
+                    <option [value]="agent"></option>
+                    }
+                  </datalist>
                   @if (!aiAgentDeployed) {
                   <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-                    popover="{{'Select box is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+                    popover="{{'No agents could be listed - either the AI Agent Manager is not deployed in this tenant, or your user may not list them. You can still enter the agent name manually.'| translate}}"
                     placement="bottom" triggers="focus" type="button" container="body"></button>
                   }
                 </label>
