@@ -316,6 +316,13 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                          // Flat-script mode: strip ES module export/import statements so the code
                          // runs without SyntaxErrors, then wrap in an IIFE to scope any top-level
                          // declarations (e.g. `const globalConfig` from bundled libraries).
+                         if (JavaScriptModuleStripper.containsExportStatement(decodedCode)) {
+                             context.getWarnings().add(String.format(
+                                 "Mapping code for '%s' uses ES module 'export' syntax, which is being stripped " +
+                                     "because 'Support ESM modules' is disabled in the service configuration. " +
+                                     "Enable it to run this code natively without stripping.",
+                                 mapping.getName()));
+                         }
                          decodedCode = JavaScriptModuleStripper.toPlainScript(decodedCode);
                          String wrappedCode = "(function() {\n"
                                  + decodedCode + "\n"

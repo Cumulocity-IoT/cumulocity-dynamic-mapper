@@ -101,6 +101,17 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         boolean supportESM = Boolean.TRUE.equals(serviceConfiguration.getSupportESM());
         if (mapping.getCode() != null
                 && TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
+            if (!supportESM) {
+                String decodedForCheck = new String(
+                        java.util.Base64.getDecoder().decode(mapping.getCode()), StandardCharsets.UTF_8);
+                if (dynamic.mapper.processor.util.JavaScriptModuleStripper.containsExportStatement(decodedForCheck)) {
+                    context.getWarnings().add(String.format(
+                        "Mapping code for '%s' uses ES module 'export' syntax, which is being stripped " +
+                            "because 'Support ESM modules' is disabled in the service configuration. " +
+                            "Enable it to run this code natively without stripping.",
+                        mapping.getName()));
+                }
+            }
             try {
                 var graalVMContextService = configurationRegistry.getGraalVMContextService();
                 // peekGraalEngine does rotation checks without incrementing the engine counter;
