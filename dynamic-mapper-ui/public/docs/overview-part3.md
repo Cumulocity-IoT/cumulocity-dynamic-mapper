@@ -24,7 +24,7 @@ type check out the code templates, which contains samples on how to achieve the 
 [Smart Functions](/c8y-pkg-dynamic-mapper/introduction/smartfunction).
 :::
 
-![Change metadata](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png "Screenshot showing additional substitution changing the target API to 'EVENT'")
+![Change metadata](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png "Screenshot showing additional substitution changing the target API to 'EVENT'")
 
 The following table lists all metadata nodes for inbound mappings:
 
@@ -39,7 +39,7 @@ The following table lists all metadata nodes for inbound mappings:
 | Target template (Cumulocity) | `_CONTEXT_DATA_.deviceName` | map-to | Defines the device name of a device that is created implicitly when the mapping uses `Create non-existing devices` |
 | Target template (Cumulocity) | `_CONTEXT_DATA_.deviceType` | map-to | Defines the device type of a device that is created implicitly when the mapping uses `Create non-existing devices` |
 
-![Metadata inbound](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Inbound.png "Screenshot showing the metadata added for inbound mappings.")
+![Metadata inbound](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Inbound.png "Screenshot showing the metadata added for inbound mappings.")
 
 :::info Info - MQTT 5 User Properties
 **Publisher Client ID with MQTT 5:**
@@ -88,7 +88,7 @@ The following table lists all metadata nodes for outbound mappings:
 - Use `_CONTEXT_DATA_.retain` for MQTT to ensure last message is always available to new subscribers
 :::
 
-![Metadata outbound](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Outbound.png "Screenshot showing the metadata added for outbound mappings.")
+![Metadata outbound](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Outbound.png "Screenshot showing the metadata added for outbound mappings.")
 
 ### Using reliability settings in mappings {#reliability-settings}
 
@@ -237,7 +237,7 @@ the action bar to zero all counters — useful for measuring throughput during a
 lost on microservice restart.
 :::
 
-![Statistic processed](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Monitoring.png "The Statistic processed (Inbound) view listing received/error counts per mapping.")
+![Statistic processed](../../../resources/image/Dynamic_Mapper_Monitoring.png "The Statistic processed (Inbound) view listing received/error counts per mapping.")
 
 #### Chart processed
 
@@ -315,7 +315,7 @@ mapping registered at each leaf (its full definition, including its substitution
 trace why a message did — or did not — match a particular mapping, especially once several mappings share
 overlapping topic prefixes.
 
-![Hierarchy mapping](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Monitoring_Tree.png "The Hierarchy mapping view showing the topic-matching tree as JSON, down to one mapping's substitutions.")
+![Hierarchy mapping](../../../resources/image/Dynamic_Mapper_Monitoring_Tree.png "The Hierarchy mapping view showing the topic-matching tree as JSON, down to one mapping's substitutions.")
 
 ### Message Explorer {#message-explorer}
 
@@ -330,7 +330,7 @@ transformation is applied — you see the raw payloads exactly as they arrive fr
 Notification 2.0 API.
 :::
 
-![Message Explorer](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Message_Explorer.png "Screenshot of the Message Explorer showing captured live messages from a broker topic.")
+![Message Explorer](../../../resources/image/Dynamic_Mapper_Mapping_Message_Explorer.png "Screenshot of the Message Explorer showing captured live messages from a broker topic.")
 
 #### Starting a session
 

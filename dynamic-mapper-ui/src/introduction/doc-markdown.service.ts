@@ -104,6 +104,22 @@ function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// Doc sources use a repo-relative path to resources/image/ (e.g. "../../../resources/image/
+// Foo.png") so the image also resolves when the .md file is browsed directly on GitHub — this
+// module lives 3 levels under the repo root (dynamic-mapper-ui/public/docs/), so that's always
+// "../../../". At render time (only ever reached in the deployed app, never on GitHub) that
+// prefix is rewritten to the actual bundled asset location. Resolving against document.baseURI
+// (like loadAndRender() does for the .md fetch itself) rather than hardcoding the contextPath
+// keeps this correct under the local-dev "-dev" contextPath suffix workaround too.
+const REPO_RELATIVE_IMAGE_PREFIX = /^(?:\.\.\/)+resources\/image\//;
+
+function resolveImageHref(href: string): string {
+  const match = REPO_RELATIVE_IMAGE_PREFIX.exec(href);
+  if (!match) return href; // already absolute, or an external URL — leave untouched
+  const filename = href.slice(match[0].length);
+  return new URL(`image/${filename}`, document.baseURI).pathname;
+}
+
 // Images carry a visible caption in the title attribute (alt stays the short a11y label),
 // matching the "<img> + .image-description <p>" pairing every doc page used previously.
 const docRenderer: Partial<RendererObject> = {
@@ -119,7 +135,7 @@ const docRenderer: Partial<RendererObject> = {
     return `<a href="${href}"${titleAttr}${target}>${text}</a>`;
   },
   image({ href, title, text }) {
-    const img = `<img src="${href}" alt="${text}">`;
+    const img = `<img src="${resolveImageHref(href)}" alt="${text}">`;
     if (!title) return img;
     // Marked wraps a lone inline image in a <p> (it's still an inline token); the caption
     // <p> below is unwrapped from that in unwrapImageCaptions() since a <p> can't nest a <p>.

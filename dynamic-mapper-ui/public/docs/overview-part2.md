@@ -21,7 +21,7 @@ configuration of the Cumulocity AI Agent Manager is introduced
 [here](https://community.cumulocity.com/t/introducing-the-ai-agent-manager-powering-enterprise-aiot-on-cumulocity/12567).
 The following screenshot shows a prompt to generate a list of substitutions (mapping rules):
 
-![Substitution annotation](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png "Screenshot showing a prompt to generate a list of substitutions (mapping rules).")
+![Substitution annotation](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png "Screenshot showing a prompt to generate a list of substitutions (mapping rules).")
 
 ### Getting started {#getting-started}
 
@@ -162,9 +162,9 @@ Now you start adding a mapping by clicking [Inbound](/c8y-pkg-dynamic-mapper/nod
 Mapping**.
 The following two screenshots show the selection of the **Payload Type** and **Transformation Type**.
 
-![Payload type](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png "Screenshot showing available payload types.")
+![Payload type](../../../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png "Screenshot showing available payload types.")
 
-![Transformation type](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png "Screenshot showing available transformation types.")
+![Transformation type](../../../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png "Screenshot showing available transformation types.")
 
 #### Payload Types in Detail {#payload-types-detail}
 
@@ -226,14 +226,14 @@ The stepper guides you through these steps to define a mapping using JSONata for
 4. Transformation for copying content from the source to the target payload. These will be applied at runtime.
 5. Test the mapping by applying the substitutions and save the mapping.
 
-![Connector selection](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_Select.png "Selecting the connector(s) a mapping is deployed to.")
+![Connector selection](../../../resources/image/Dynamic_Mapper_Connector_Select.png "Selecting the connector(s) a mapping is deployed to.")
 
 In the second step of the wizard you define the most important properties for the mapping, e.g. Mapping Name,
 Target API, Mapping Topic (topic to which this mapping should listen for, this supports wildcards: `#`, `+`). The
 Mapping Topic Sample is a sample topic replacing all wildcards from the Mapping Topic, e.g. `datalogger/+` becomes
 `datalogger/logger_13579`, this helps in the later steps to use concrete values instead of the abstract wildcards.
 
-![Mapping stepper properties](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png "Screenshot of second wizard step to define general properties.")
+![Mapping stepper properties](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png "Screenshot of second wizard step to define general properties.")
 
 Mappings are organized in a tree, one node per topic segment (`+`/`#` wildcards are ordinary segment values in
 that tree). When a message arrives, the tree is walked one segment at a time; exact-match and wildcard branches
@@ -255,7 +255,7 @@ ensures smooth operation.
 The following screenshot shows the **Transformation** step for transformation type **Substitution as JSONata
 Expression**. This step shows a JavaScript editor if you choose **Smart Function (JavaScript)**.
 
-![Substitution stepper](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png "Screenshot of fourth wizard step to define substitutions using JSONata expressions.")
+![Substitution stepper](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png "Screenshot of fourth wizard step to define substitutions using JSONata expressions.")
 
 #### Execution Filter {#execution-filter}
 
@@ -267,7 +267,7 @@ Select a node in the source template and press **Update Filter Execution Mapping
 refine it. The **Filter Result** field below shows the value the expression currently evaluates to against the
 source template.
 
-![Execution filter](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Filter_Outbound.png "The Templates step showing Filter execution mapping and Filter Result.")
+![Execution filter](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Filter_Outbound.png "The Templates step showing Filter execution mapping and Filter Result.")
 
 The expression is a JSONata expression that **must evaluate to a boolean**. The editor rejects anything else — an
 expression returning a number or a string leaves the step invalid and you cannot continue. When the expression
@@ -304,7 +304,7 @@ Filter](#inventory-filter) — that one is available for outbound mappings only.
 
 The **Inbound Mappings** / **Outbound Mappings** table is the entry point for working with existing mappings:
 
-![Mapping table](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Table.png "The Inbound Mappings table listing all configured mappings.")
+![Mapping table](../../../resources/image/Dynamic_Mapper_Mapping_Table.png "The Inbound Mappings table listing all configured mappings.")
 
 - **Add Mapping** — starts the wizard described above.
 - The pencil icon on a row opens that mapping for editing. Editing does not need the mapping to be deactivated
@@ -317,7 +317,7 @@ The **Inbound Mappings** / **Outbound Mappings** table is the entry point for wo
   [inbound](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/blob/main/resources/samples/mappings-INBOUND.json),
   [outbound](https://github.com/Cumulocity-IoT/cumulocity-dynamic-mapper/blob/main/resources/samples/mappings-OUTBOUND.json).
 
-![Import mappings](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Table_Import.png "The import dialog for adding mappings from a JSON file.")
+![Import mappings](../../../resources/image/Dynamic_Mapper_Mapping_Table_Import.png "The import dialog for adding mappings from a JSON file.")
 
 #### Testing a mapping {#testing-a-mapping}
 
@@ -329,7 +329,7 @@ transformation without waiting for a real device message:
   than one request — e.g. a measurement for a device that does not exist yet and is implicitly created also
   produces an inventory request. Use **Show Next Test Result** to step through all of them.
 
-![Transform test message](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_TestTransformation.png "The Testing step showing the result of Transform Test Message.")
+![Transform test message](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_TestTransformation.png "The Testing step showing the result of Transform Test Message.")
 - **Reset Transform** — clears the test results and lets you run the transformation again, e.g. after editing the
   source payload or a substitution.
 - **Send Test Message** — sends the transformed result(s) to Cumulocity for real. This requires the mapping to
@@ -337,7 +337,7 @@ transformation without waiting for a real device message:
   device in inventory first, tagged with the fragment `d11r_testDevice` so it can be identified and cleaned up
   afterwards.
 
-![Send test message](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_SendTestMessage.png "Sending a transformed test message to a test device in Cumulocity.")
+![Send test message](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_SendTestMessage.png "Sending a transformed test message to a test device in Cumulocity.")
 
 ### SparkPlug B {#sparkplugb}
 
@@ -609,7 +609,7 @@ The following screen offers two ways to define subscriptions:
   created explicitly for the chosen devices and are not updated automatically when devices are added or removed
   from a group.
 
-  ![Static subscription device picker](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Outbound_subscription.png "Selecting individual devices for a static outbound subscription.")
+  ![Static subscription device picker](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Outbound_subscription.png "Selecting individual devices for a static outbound subscription.")
 - **Subscriptions dynamic (by group)**: Specify device groups. When a group is added, subscriptions for all
   assigned devices are created. When a device is added to or removed from a chosen group, the subscription is
   automatically created or deleted. The filter applies to child assets and child devices.
@@ -621,7 +621,7 @@ Use **dynamic subscriptions** with device types when you have many devices of th
 creates subscriptions for new devices as they're added to the system, reducing manual configuration overhead.
 :::
 
-![Substitution mapping outbound](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Subscription_Outbound.png "Screenshot of subscribed devices to receive messages for outbound.")
+![Substitution mapping outbound](../../../resources/image/Dynamic_Mapper_Mapping_Subscription_Outbound.png "Screenshot of subscribed devices to receive messages for outbound.")
 
 #### Resync existing devices into a type subscription
 
@@ -640,7 +640,7 @@ type triggers a background job that rescans the full inventory for devices of th
 subscriptions. This can take a while on large inventories, so the request is submitted asynchronously — progress
 and the outcome (e.g. number of devices subscribed) can be tracked via Service Events.
 
-![Resync existing devices into a type subscription](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Subscription_Outbound_Resync.png "Screenshot of the dialog used to resync existing devices into a device type subscription.")
+![Resync existing devices into a type subscription](../../../resources/image/Dynamic_Mapper_Mapping_Subscription_Outbound_Resync.png "Screenshot of the dialog used to resync existing devices into a device type subscription.")
 
 #### Inventory Filter and Execution Filter {#outbound-filters}
 
@@ -656,7 +656,7 @@ JSONata expression evaluated against the device's inventory data.
 This filter is defined on the **General settings** step of the wizard and is available for **outbound mappings
 only**.
 
-![Inventory filter](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Topic_Outbound.png "The General Settings step of an outbound mapping, including the Filter Inventory field.")
+![Inventory filter](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Topic_Outbound.png "The General Settings step of an outbound mapping, including the Filter Inventory field.")
 
 ```javascript
 // Only process pressure sensors

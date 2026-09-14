@@ -13,11 +13,22 @@ Image registries:
 - **Filesystem:** `resources/image/` — source-of-truth for image files
 - **Build config:** `dynamic-mapper-ui/cumulocity.config.ts` `buildTime.copy` array — images bundled into the Angular app
 
-**Config requirement rule:** Only images referenced from these two sources need to be in `cumulocity.config.ts`:
+**Config requirement rule:** Images referenced from these sources need to be in `cumulocity.config.ts`:
 1. `dynamic-mapper-ui/src/introduction/**/*.html` — Angular in-app documentation components
 2. `dynamic-mapper-ui/README.md` — the README bundled with the UI plugin
+3. `dynamic-mapper-ui/public/docs/*.md` — see note below
 
-Images referenced only in other docs (docs/**/*.md, etc.) are served from GitHub/external and do NOT need a config entry. Images referenced from `dynamic-mapper-ui/public/docs/*.md` use the `/apps/c8y-pkg-dynamic-mapper/image/...` path and are bundled the same way as the `src/introduction/**/*.html` references — treat them as app-facing (rule 1a below), not as external/GitHub-served.
+Images referenced only in other docs (docs/**/*.md, root README.md/CHANGES.md/FAQ.md, etc.) are served from
+GitHub and do NOT need a config entry.
+
+**`public/docs/*.md` image syntax is deliberately GitHub-shaped, but still config-required.** These files write
+image references as a repo-relative path — `![...](../../../resources/image/<name>.png)` — identical in shape to
+a `docs/**/*.md` reference, so that the raw `.md` file also renders correctly when browsed directly on GitHub.
+`DocMarkdownService.resolveImageHref()` (`dynamic-mapper-ui/src/introduction/doc-markdown.service.ts`) rewrites
+that prefix to the bundled asset path (`/apps/<contextPath>/image/<name>.png`, resolved against
+`document.baseURI`) at render time in the deployed app — so despite the relative-looking source syntax, these
+images are still app-facing and **do** need the `cumulocity.config.ts` entry (rule 1a below). Don't misclassify
+them as 1b just because the path looks like a `docs/**/*.md` reference.
 
 ---
 
@@ -27,7 +38,8 @@ Images referenced only in other docs (docs/**/*.md, etc.) are served from GitHub
 Scan `dynamic-mapper-ui/src/introduction/**/*.html`, `dynamic-mapper-ui/public/docs/*.md`, and
 `dynamic-mapper-ui/README.md`.
 Extract every `<img src="...">` and `![alt](...)`.
-For each: record source file, line number, image filename (basename only).
+For each: record source file, line number, image filename (basename only) — for `public/docs/*.md`, the filename
+is the last path segment of the `../../../resources/image/<name>.png` reference (see the note above).
 
 **1b. Other doc references (config not required)**
 Scan all other markdown files in scope (including `docs/**/*.md`).

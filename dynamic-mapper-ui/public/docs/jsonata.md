@@ -20,7 +20,7 @@ complex transformations, explore [JSONata documentation](https://jsonata.org/).
 
 At runtime, this substitution copies the value at `_TOPIC_LEVEL_[1]` to `source.id` in the target payload.
 
-![Substitution annotation](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png "Screenshot showing step 4 / tab Transformation for defining substitutions using JSONata.")
+![Substitution annotation](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png "Screenshot showing step 4 / tab Transformation for defining substitutions using JSONata.")
 
 For more advanced mapping rules, e.g. extracting parts of a string for a name (40404-psid-device100-w2w2),
 expressions in JSONata can be used.
@@ -33,7 +33,7 @@ To use this option you have to toggle the button **Toggle expert mode**.
 - Array operations: `sensors[type="temperature"].value`
 :::
 
-![Defining Substitutions in ExpertMode](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png "Screenshot showing the definition of substitutions in ExpertMode using JSONata.")
+![Defining Substitutions in ExpertMode](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png "Screenshot showing the definition of substitutions in ExpertMode using JSONata.")
 
 ### Repair strategy {#jsonata-repair-strategy}
 

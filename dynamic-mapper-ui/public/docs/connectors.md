@@ -14,7 +14,7 @@ tenant at microservice startup. It is reachable at
 after `.../httpConnector/` is used directly as the mapping topic. For example, a JSON payload POSTed to
 `.../httpConnector/temp/berlin_01` is resolved against a mapping with mapping topic `temp/berlin_01`.
 
-![HTTP connector settings](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_Http.png "Default HTTP Connector (inbound) configuration properties.")
+![HTTP connector settings](../../../resources/image/Dynamic_Mapper_Connector_Http.png "Default HTTP Connector (inbound) configuration properties.")
 
 ### Adding and managing connectors
 
@@ -22,16 +22,16 @@ Add a new connector using the following wizard
 [**Configuration → Connectors → Add connector**](/c8y-pkg-dynamic-mapper/node3/connectorConfiguration). The
 configuration properties shown are dynamically adapted to the selected connector type.
 
-![Payload type](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_New.png "Creating a new connector.")
+![Payload type](../../../resources/image/Dynamic_Mapper_Connector_New.png "Creating a new connector.")
 
 The configured connectors are listed in a table that can be deleted, enabled/disabled, or updated/copied:
 
-![Connector overview](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_Overview.png "The table of configured connectors.")
+![Connector overview](../../../resources/image/Dynamic_Mapper_Connector_Overview.png "The table of configured connectors.")
 
 When a connection fails to establish, the connection logs on the same page show the underlying error, which is
 often the fastest way to spot an incorrect parameter:
 
-![Connector logs](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_Details.png "Connection logs helping identify why a connector failed to connect.")
+![Connector logs](../../../resources/image/Dynamic_Mapper_Connector_Details.png "Connection logs helping identify why a connector failed to connect.")
 
 ### Webhook connector
 
@@ -39,11 +39,11 @@ The **Webhook** connector has a setting **Cumulocity Internal** which can be use
 processed and sent back to Cumulocity Core as transformed MEA, e.g. receive an `EVENT` of type `c8y_Uplink` and use
 a **SMART_FUNCTION** to decode the payload and transform it into a `MEASUREMENT`.
 
-![Webhook connector settings](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_WebHook.png "Webhook connector configuration properties.")
+![Webhook connector settings](../../../resources/image/Dynamic_Mapper_Connector_WebHook.png "Webhook connector configuration properties.")
 
 ### Kafka connector security {#kafka-connector-security}
 
-![Kafka connector settings](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Connector_Kafka.png "Kafka connector configuration properties.")
+![Kafka connector settings](../../../resources/image/Dynamic_Mapper_Connector_Kafka.png "Kafka connector configuration properties.")
 
 The Kafka connector derives its `security.protocol` automatically — you do not set it directly:
 
