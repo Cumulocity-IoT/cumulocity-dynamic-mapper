@@ -11,7 +11,7 @@ bais = "bais"
 dashjoin = "dashjoin"
 CBOR = "CBOR"
 unparseable="unparseable"
-mis-served="mis-served"
+mis = "mis"
 
 [files]
 extend-exclude = ["**/MQTT3ClientTest.java","**/AMQPClientTest.java","**/mappings**.json", "**/*Mappings**.json" , "**/profiler/*.json", "**/SparkplugBProto.java"]
