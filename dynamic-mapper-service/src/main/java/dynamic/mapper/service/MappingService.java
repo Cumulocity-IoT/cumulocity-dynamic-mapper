@@ -895,6 +895,13 @@ public class MappingService {
 
         configurationRegistry.getVirtualThreadPool().submit(() -> {
             try {
+                // Re-check the threshold: a success arriving while this task was queued could
+                // have reset currentFailureCount to zero (resetFailureCountOnSuccess mutates the
+                // same shared MappingStatus instance), and deactivating a mapping that has
+                // already recovered would be wrong.
+                if (mappingStatus.getCurrentFailureCount() < mapping.getMaxFailureCount()) {
+                    return;
+                }
                 Mapping deactivated = setActivationMapping(tenant, mapping.getId(), false, null);
                 // setActivationMapping only persists and updates the cache; the connectors have
                 // to be told separately, exactly as OperationController does for a manual

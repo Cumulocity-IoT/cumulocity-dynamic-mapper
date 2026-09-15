@@ -25,9 +25,11 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import jakarta.jms.BytesMessage;
 import jakarta.jms.Destination;
+import jakarta.jms.JMSException;
 import jakarta.jms.Message;
 import jakarta.jms.MessageListener;
 import jakarta.jms.Queue;
@@ -41,6 +43,13 @@ import java.nio.charset.StandardCharsets;
  * Callback handler for incoming AMQP 1.0 messages via JMS.
  * Implements {@link MessageListener} to handle JMS message delivery from
  * an Apache Qpid JMS consumer.
+ *
+ * <p>The session backing this consumer is always {@code CLIENT_ACKNOWLEDGE}
+ * (see {@link AMQP10Client#connect()}), so every message must be explicitly
+ * acknowledged or it is redelivered. The acknowledgement point is chosen per
+ * the subscription's {@link Qos}: AT_MOST_ONCE acknowledges before dispatch
+ * (never redelivered, even if processing fails), AT_LEAST_ONCE acknowledges
+ * only after dispatch completes successfully (redelivered on failure).</p>
  */
 @Slf4j
 public class AMQP10Callback implements MessageListener {
@@ -50,6 +59,7 @@ public class AMQP10Callback implements MessageListener {
     private final String connectorIdentifier;
     private final String connectorName;
     private final String subscriptionTopic;
+    private final Qos qos;
     private final ServiceConfiguration serviceConfiguration;
 
     /**
@@ -61,18 +71,21 @@ public class AMQP10Callback implements MessageListener {
      * @param connectorIdentifier  connector identifier
      * @param connectorName        connector display name
      * @param subscriptionTopic    the topic/address this consumer was subscribed on
+     * @param qos                  the QoS this consumer was subscribed with
      */
     public AMQP10Callback(String tenant,
             ConfigurationRegistry configurationRegistry,
             GenericMessageCallback callback,
             String connectorIdentifier,
             String connectorName,
-            String subscriptionTopic) {
+            String subscriptionTopic,
+            Qos qos) {
         this.genericMessageCallback = callback;
         this.tenant = tenant;
         this.connectorIdentifier = connectorIdentifier;
         this.connectorName = connectorName;
         this.subscriptionTopic = subscriptionTopic;
+        this.qos = qos;
         this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
     }
 
@@ -83,7 +96,13 @@ public class AMQP10Callback implements MessageListener {
         try {
             byte[] payload = extractPayload(message);
             if (payload == null) {
+                acknowledgeQuietly(message, address);
                 return;
+            }
+
+            // AT_MOST_ONCE: ack now so a failure below never causes redelivery.
+            if (qos == Qos.AT_MOST_ONCE) {
+                acknowledgeQuietly(message, address);
             }
 
             ConnectorMessage connectorMessage = ConnectorMessage.builder()
@@ -101,6 +120,12 @@ public class AMQP10Callback implements MessageListener {
 
             genericMessageCallback.onMessage(connectorMessage);
 
+            // AT_LEAST_ONCE: only ack once processing has completed successfully, so a failure
+            // leaves the message unacknowledged and it gets redelivered.
+            if (qos != Qos.AT_MOST_ONCE) {
+                acknowledgeQuietly(message, address);
+            }
+
             if (serviceConfiguration.getLogPayload()) {
                 log.info("{} - PROCESSING_COMPLETED: AMQP 1.0 message on address: [{}], connector: {}",
                         tenant, address, connectorIdentifier);
@@ -108,6 +133,16 @@ public class AMQP10Callback implements MessageListener {
 
         } catch (Exception e) {
             log.error("{} - Error processing AMQP 1.0 message on address: [{}]",
+                    tenant, address, e);
+        }
+    }
+
+    /** Acknowledge the message, swallowing (and logging) any JMSException. */
+    private void acknowledgeQuietly(Message message, String address) {
+        try {
+            message.acknowledge();
+        } catch (JMSException e) {
+            log.error("{} - Failed to acknowledge AMQP 1.0 message on address: [{}]",
                     tenant, address, e);
         }
     }

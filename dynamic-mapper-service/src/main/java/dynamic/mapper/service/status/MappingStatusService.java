@@ -423,9 +423,20 @@ public class MappingStatusService {
         return config.getSendMappingStatus() && initialized.getOrDefault(tenant, false);
     }
 
+    /**
+     * True only on the message that crosses the threshold.
+     *
+     * <p>{@code ==} rather than {@code >=}: {@code currentFailureCount} is incremented by exactly
+     * 1 per call (and reset to 0 on success by {@link #resetFailureCountOnSuccess}), so equality
+     * catches the crossing exactly once. With {@code >=} this would re-fire — and re-emit the
+     * {@code MAPPING_FAILURE_EVENT} logging event via {@link #handleFailureThresholdExceeded} —
+     * for every subsequent failed message once the mapping is already over the threshold; the
+     * in-flight-deactivation set in {@code MappingService} suppresses duplicate deactivation work
+     * but not this event, so a burst of failures would otherwise flood the tenant's event log.
+     */
     private boolean shouldDeactivateMapping(Mapping mapping, MappingStatus status) {
         return mapping.getMaxFailureCount() > 0 &&
-                status.currentFailureCount >= mapping.getMaxFailureCount();
+                status.currentFailureCount == mapping.getMaxFailureCount();
     }
 
     private void handleFailureThresholdExceeded(String tenant, Mapping mapping, MappingStatus status) {
