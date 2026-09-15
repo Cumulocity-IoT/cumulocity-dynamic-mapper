@@ -524,9 +524,17 @@
                 </configuration>
                 <executions>
                     <!-- Fast Dispatcher Integration Tests -->
+                    <!-- Bound to the "test" phase (before "package") rather than the default
+                         "integration-test" phase: when this runs in the same Maven session
+                         AFTER spring-boot-maven-plugin's package-phase "repackage" execution,
+                         Failsafe's forked JVM fails to resolve the module's own classes
+                         (NoClassDefFoundError on ordinary classes like Mapping), silently
+                         discovering 0 tests while still reporting BUILD SUCCESS. Running before
+                         "package" avoids the corrupted classpath outright; these tests don't
+                         need the packaged/repackaged artifact anyway. -->
                     <execution>
                         <id>integration-test-dispatcher</id>
-                        <phase>integration-test</phase>
+                        <phase>test</phase>
                         <goals>
                             <goal>integration-test</goal>
                         </goals>
@@ -559,12 +567,25 @@
                         </configuration>
                     </execution>
 
-                    <!-- Verify all integration tests passed -->
+                    <!-- Verify all integration tests passed. Must list the custom summaryFile
+                         path from the dispatcher execution above explicitly: this goal's default
+                         is target/failsafe-reports/failsafe-summary.xml, which that execution
+                         doesn't write to, so without this it silently reports "No tests to run"
+                         and never fails the build even when the dispatcher tests actually fail.
+                         The transformation summary file is added on top of this by the
+                         "full-validation" profile below, where that execution is enabled -
+                         listing it here unconditionally would fail the (default) build with a
+                         missing-file error since that execution is disabled by default. -->
                     <execution>
                         <id>verify</id>
                         <goals>
                             <goal>verify</goal>
                         </goals>
+                        <configuration>
+                            <summaryFiles>
+                                <summaryFile>${project.build.directory}/failsafe-reports/failsafe-summary-dispatcher.xml</summaryFile>
+                            </summaryFiles>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -610,6 +631,21 @@
                                 <goals>
                                     <goal>integration-test</goal>
                                 </goals>
+                            </execution>
+
+                            <!-- This execution now runs, so verify must also check its
+                                 summary file, on top of the dispatcher one checked by default. -->
+                            <execution>
+                                <id>verify</id>
+                                <goals>
+                                    <goal>verify</goal>
+                                </goals>
+                                <configuration>
+                                    <summaryFiles>
+                                        <summaryFile>${project.build.directory}/failsafe-reports/failsafe-summary-dispatcher.xml</summaryFile>
+                                        <summaryFile>${project.build.directory}/failsafe-reports/failsafe-summary-transformation.xml</summaryFile>
+                                    </summaryFiles>
+                                </configuration>
                             </execution>
                         </executions>
                     </plugin>

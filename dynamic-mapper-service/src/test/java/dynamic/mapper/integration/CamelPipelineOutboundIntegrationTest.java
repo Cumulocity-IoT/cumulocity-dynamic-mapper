@@ -552,9 +552,11 @@ class CamelPipelineOutboundIntegrationTest {
     void testTransformationTypeValidation() {
         // Given - All mappings
 
-        // When - Count transformation types
-        long defaultTransforms = outboundMappings.stream()
-                .filter(m -> m.getTransformationType() == TransformationType.DEFAULT)
+        // When - Count transformation types. DEFAULT is deprecated: MappingRepository migrates
+        // it (and a null transformationType) to JSONATA on load, so no loaded mapping should
+        // ever carry it.
+        long jsonataTransforms = outboundMappings.stream()
+                .filter(m -> m.getTransformationType() == TransformationType.JSONATA)
                 .count();
 
         long smartFunctions = outboundMappings.stream()
@@ -562,10 +564,10 @@ class CamelPipelineOutboundIntegrationTest {
                 .count();
 
         // Then - Log coverage
-        log.info("✅ Transformation types - DEFAULT: {}, SMART_FUNCTION: {}",
-                defaultTransforms, smartFunctions);
+        log.info("✅ Transformation types - JSONATA: {}, SMART_FUNCTION: {}",
+                jsonataTransforms, smartFunctions);
 
-        assertTrue(defaultTransforms > 0, "Should have DEFAULT transformations");
+        assertTrue(jsonataTransforms > 0, "Should have JSONATA transformations");
     }
 
     // ========== RESOLVED PUBLISH TOPIC AND PAYLOAD TRANSFORMATION TESTS ==========
