@@ -188,16 +188,16 @@ public class TestController {
             return new ResponseEntity<>(result, HttpStatus.OK);
 
         } catch (ConnectorRegistryException e) {
-            log.error("{} - Connector not found for tenant: {}", tenant, e.getMessage());
+            log.error("{} - Connector not found for tenant: {}", tenant, e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Connector not found: " + e.getMessage());
         } catch (InterruptedException e) {
-            log.error("{} - Test interrupted: {}", tenant, e.getMessage());
+            log.error("{} - Test interrupted: {}", tenant, e.getMessage(), e);
             Thread.currentThread().interrupt(); // Restore interrupt status
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Test execution interrupted");
         } catch (ExecutionException e) {
-            log.error("{} - Error executing test: {}", tenant, e.getMessage());
+            log.error("{} - Error executing test: {}", tenant, e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Test execution failed: " + (e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
         } catch (Exception ex) {

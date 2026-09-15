@@ -30,6 +30,7 @@ import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.PulsarClientException;
 
+import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.core.ConfigurationRegistry;
@@ -84,11 +85,11 @@ public class PulsarCallback extends AbstractPulsarCallback {
         virtualThreadPool.submit(() -> {
             try {
                 List<? extends ProcessingContext<?>> results;
-                if (timeout > 0) {
-                    results = processedResults.getProcessingResult().get(timeout, TimeUnit.MILLISECONDS);
-                } else {
-                    results = processedResults.getProcessingResult().get();
-                }
+                // Always bounded: an unbounded get() parks this worker — and leaves the message
+                // unacknowledged — forever if the pipeline blocks in I/O. Mappings without their
+                // own budget (non-Smart-Function) fall back to the hard ceiling.
+                long effectiveTimeout = timeout > 0 ? timeout : ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
+                results = processedResults.getProcessingResult().get(effectiveTimeout, TimeUnit.MILLISECONDS);
 
                 // JS CPU timeout may have fired before the wall-clock timeout.
                 if (processedResults.getCancellationRequested().get()) {

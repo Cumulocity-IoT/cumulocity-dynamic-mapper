@@ -189,7 +189,6 @@ public class ConnectorConfigurationService {
             return configuration;
         } catch (SDKException exception) {
             log.warn("{} - No configuration found, returning empty element!", tenant);
-            // exception.printStackTrace();
         } catch (Exception e) {
             String exceptionMsg = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
             String msg = String.format("Failed to convert configurator object %s. Error: %s",

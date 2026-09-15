@@ -190,7 +190,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   hasExtensionParameter = false;
   codeTemplateItems: Array<{ label: string, value: string }> = [];
 
-  expertMode = false;
   templatesInitialized = false;
   extensions = new Map<string, Extension>();
   editorOptions?: EditorComponent['editorOptions'];
@@ -737,8 +736,6 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
             this.substitutionService.addSubstitution(
               sub,
               this.mapping,
-              this.stepperConfiguration,
-              this.expertMode,
               () => {
                 this.stepperService.refreshSubstitutionValidity(
                   this.mapping,

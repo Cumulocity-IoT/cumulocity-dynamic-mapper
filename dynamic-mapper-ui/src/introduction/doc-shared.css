@@ -315,6 +315,23 @@ pre {
   position: relative !important;
 }
 
+/* Mermaid diagrams (rendered by DocMarkdownService.renderMermaidDiagrams()) are not code, so
+   they must not inherit the dark, monospace "pre code" styling above — mermaid's own 'neutral'
+   theme already renders a light-background SVG, and the two would clash. Overriding the
+   !important rule above requires !important here too (a more specific selector alone does not
+   win against it). */
+pre.mermaid {
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 8px 0 !important;
+  text-align: center;
+}
+
+pre.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
 /* Code element styling */
 pre code {
   font-family: 'Courier New', Courier, monospace !important;

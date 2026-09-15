@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Backward-compatibility and round-trip tests for the P1 versioning model
- * additions (see docs/feature/REQUIREMENTS-VERSION-MAPPING.md, NFR-1 / NFR-1a).
+ * additions (see docs/planning/REQUIREMENTS-VERSION-MAPPING.md, NFR-1 / NFR-1a).
  */
 class MappingVersioningTest {
 

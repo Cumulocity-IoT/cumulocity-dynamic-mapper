@@ -69,7 +69,20 @@ import { ConfigurationTabFactory } from './configuration-tab.factory';
       }
     }),
     hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/monitoring`,
+      component: ServiceConfigurationComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    // Pre-6.5 path, kept so existing bookmarks still land on the renamed tab.
+    hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/logging`,
+      component: ServiceConfigurationComponent, resolve: {
+        feature: featureResolver
+      }
+    }),
+    hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE3}/serviceConfiguration/processing`,
       component: ServiceConfigurationComponent, resolve: {
         feature: featureResolver
       }

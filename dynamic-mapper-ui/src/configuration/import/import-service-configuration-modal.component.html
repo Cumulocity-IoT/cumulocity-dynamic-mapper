@@ -1,0 +1,76 @@
+<!--
+  ~ Copyright (c) 2025 Cumulocity GmbH
+  ~
+  ~ SPDX-License-Identifier: Apache-2.0
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  ~
+  ~ @authors Christof Strack
+-->
+<c8y-modal title="Import service configuration" (onClose)="onConfirm()" (onDismiss)="onDismiss()" [labels]="labels"
+  [disabled]="!pendingConfiguration || isLoading" [headerClasses]="'modal-header dialog-header'">
+  <ng-container c8y-modal-title>
+    <span [c8yIcon]="'data-import'"></span>
+  </ng-container>
+  <div class="p-24 modal-inner-scroll animated fadeIn">
+    <div class="modal-body">
+      @if (isImported) {
+      <div class="d-flex a-i-center j-c-center" style="min-height: 285px">
+        <c8y-operation-result text="{{ successText | translate }}" [vertical]="true" [size]="84" class="lead"
+          type="success">
+        </c8y-operation-result>
+      </div>
+      } @else if (pendingConfiguration) {
+      <!-- Step 2: what was found, and what applying it will do. -->
+      <div class="p-b-16" data-cy="dm-service-config-import-summary">
+        <p class="text-medium">
+          <i c8yIcon="file-text" class="m-r-4"></i>{{ fileName }}
+        </p>
+        <ul class="list-unstyled text-muted">
+          <li>{{ pendingSettingsCount }} {{ 'setting(s)' | translate }}</li>
+          @if (pendingCodeTemplateCount > 0) {
+          <li>{{ pendingCodeTemplateCount }} {{ 'code template(s)' | translate }}</li>
+          }
+        </ul>
+      </div>
+      <div class="alert alert-warning" role="alert">
+        <p class="text-medium">{{ 'This replaces the current service configuration.' | translate }}</p>
+        <p class="m-b-0">
+          {{ 'All settings of this tenant are overwritten with the contents of the file, and take effect
+          immediately — enabling outbound mappings reconnects the connectors, and device isolation requires
+          unsubscribing and subscribing the microservice.' | translate }}
+        </p>
+      </div>
+      <button class="btn btn-link p-l-0" type="button" (click)="onChooseAnotherFile()"
+        data-cy="dm-service-config-import-another">
+        {{ 'Choose another file' | translate }}
+      </button>
+      } @else {
+      <!-- Step 1: pick the file. -->
+      <c8y-form-group [hasError]="!!errorMessage" class="m-auto" style="max-width: 285px">
+        <c8y-drop-area (dropped)="onFileDroppedEvent($event)" [accept]="'.json'" [loading]="isLoading"
+          [maxAllowedFiles]="1" [message]="'Upload a JSON file' | translate" [progress]="progress$ | async"
+          class="drop-area" data-cy="dm-service-config-import-file-input">
+        </c8y-drop-area>
+        <c8y-messages>
+          @if (errorMessage) {
+          <c8y-message data-cy="dm-service-config-import-error">
+            {{ errorMessage | translate }}
+          </c8y-message>
+          }
+        </c8y-messages>
+      </c8y-form-group>
+      }
+    </div>
+  </div>
+</c8y-modal>

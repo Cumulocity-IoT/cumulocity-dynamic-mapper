@@ -10,7 +10,28 @@ shared abstraction. This is one of the newer connectors in the codebase (added a
 outbound-only sink, later extended to bidirectional support), so expect the
 implementation to still be settling relative to the more established connectors.
 
-## Configuration (`ConnectorSpecification`)
+---
+
+## Requirements
+
+**What it is for.** Connecting a tenant to Google Cloud Pub/Sub in both directions: consuming from
+a subscription into mappings, and publishing mapping output to a topic.
+
+- **Both directions.** Inbound requires a subscription ID; outbound requires a topic.
+- **Authentication is a service-account key**, supplied as connector configuration. No other
+  scheme is offered.
+- **No wildcards.** Pub/Sub has no topic-pattern subscription, so a mapping topic must name its
+  subscription exactly — patterns that work on MQTT do not translate.
+- **Delivery is at-most-once or at-least-once**, chosen per mapping: at-most-once acknowledges
+  before processing, at-least-once acknowledges only after the pipeline succeeded and negatively
+  acknowledges on failure so Pub/Sub redelivers. Exactly-once is not offered — see
+  [reliability.md](reliability.md).
+
+---
+
+## Implementation
+
+### Configuration (`ConnectorSpecification`)
 
 Built via `ConnectorSpecificationBuilder.create("Google Cloud Pub/Sub", ConnectorType.GOOGLE_PUBSUB)`:
 
@@ -27,14 +48,14 @@ Built via `ConnectorSpecificationBuilder.create("Google Cloud Pub/Sub", Connecto
 The service account needs `roles/pubsub.subscriber` for inbound and
 `roles/pubsub.publisher` for outbound.
 
-## Credentials
+### Credentials
 
 Both auth modes are **pasted-JSON-string** based, not the client library's automatic
 file-discovery ADC mechanism — `GoogleCredentials.fromStream(...)` is built directly
 from the configured JSON string (service-account key or ADC file contents), wrapped in
 a `FixedCredentialsProvider`.
 
-## Publisher / subscriber lifecycle
+### Publisher / subscriber lifecycle
 
 Publishers and subscribers are cached per topic in concurrent maps. There's no
 persistent socket managed directly — the Pub/Sub client library manages gRPC channels
@@ -44,7 +65,7 @@ itself. Subscribers are created in `subscribe()` and started with
 `subscriber.startAsync().awaitRunning()`, using asynchronous streaming pull (a
 `MessageReceiver` callback), not synchronous `pull()` RPCs.
 
-## Ack / nack model
+### Ack / nack model
 
 - `AT_MOST_ONCE`: the consumer acks immediately, before dispatching to the processing
   pipeline — fire-and-forget.
@@ -55,7 +76,7 @@ itself. Subscribers are created in `subscribe()` and started with
 - No explicit ack-deadline configuration is set on the subscriber builder — it uses the
   library's default deadline.
 
-## Publish (`publishMEAO`)
+### Publish (`publishMEAO`)
 
 Topic resolution: the mapping's own publish topic takes precedence, falling back to
 the connector's configured default `topicId`. Message body is raw bytes (binary
@@ -68,13 +89,13 @@ still no retry of the publish call itself if it fails (only publisher *creation*
 retries, see above). The publish loop honors cooperative cancellation (checks
 `Thread.currentThread().isInterrupted()` each iteration), e.g. for a pipeline timeout.
 
-## Supported directions and wildcards
+### Supported directions and wildcards
 
 `INBOUND` and `OUTBOUND`. `supportsWildcardInTopic()` always returns `false` for both
 directions — Pub/Sub topic names are plain identifiers with no MQTT-style wildcard
 concept.
 
-## Connection health
+### Connection health
 
 `isPhysicallyConnected()` is an approximation, since there's no single socket to probe:
 it checks that credentials are set and that all currently-tracked subscribers report
@@ -84,7 +105,7 @@ simply recreated on demand on the next publish attempt. Disconnect budgets publi
 and subscriber teardown to 3s each, kept under the connector framework's overall 5s
 disconnect ceiling.
 
-## Gotchas
+### Gotchas
 
 - A `PUBLISHER_RETRY_OVERHEAD_SECONDS` constant is documented in a comment as capping
   the library's internal 600s default retry timeout to `publishTimeoutSeconds + 5s`, so

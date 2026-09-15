@@ -189,11 +189,11 @@ class MQTT3ClientTest {
         assertNotNull(client);
         assertEquals(ConnectorType.MQTT, client.getConnectorType());
         assertFalse(client.isSingleton());
-        assertNotNull(client.getSupportedQOS());
-        assertEquals(3, client.getSupportedQOS().size());
-        assertTrue(client.getSupportedQOS().contains(Qos.AT_MOST_ONCE));
-        assertTrue(client.getSupportedQOS().contains(Qos.AT_LEAST_ONCE));
-        assertTrue(client.getSupportedQOS().contains(Qos.EXACTLY_ONCE));
+        assertNotNull(client.getSupportedQos());
+        assertEquals(3, client.getSupportedQos().size());
+        assertTrue(client.getSupportedQos().contains(Qos.AT_MOST_ONCE));
+        assertTrue(client.getSupportedQos().contains(Qos.AT_LEAST_ONCE));
+        assertTrue(client.getSupportedQos().contains(Qos.EXACTLY_ONCE));
 
         log.info("✅ Default constructor test passed");
     }
@@ -587,18 +587,13 @@ class MQTT3ClientTest {
                 TEST_SUBSCRIPTION_ID,
                 TEST_TENANT);
 
-        // Test via reflection since adjustQos is protected in AMQTTClient base class
-        java.lang.reflect.Method method = AMQTTClient.class.getDeclaredMethod("adjustQos", Qos.class);
-        method.setAccessible(true);
+        // When & Then - a missing QoS falls back to the documented default rather than
+        // silently degrading to fire-and-forget
+        assertEquals(Qos.DEFAULT, mqtt3Client.adjustQos(null));
 
-        // When & Then - Test null QoS
-        Qos result = (Qos) method.invoke(mqtt3Client, (Qos) null);
-        assertEquals(Qos.AT_MOST_ONCE, result);
-
-        // Test supported QoS values
+        // MQTT supports all three levels, so nothing is ever clamped here
         for (Qos qos : Arrays.asList(Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE, Qos.EXACTLY_ONCE)) {
-            result = (Qos) method.invoke(mqtt3Client, qos);
-            assertEquals(qos, result);
+            assertEquals(qos, mqtt3Client.adjustQos(qos));
         }
 
         log.info("✅ QoS adjustment test passed");

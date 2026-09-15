@@ -85,13 +85,23 @@ public class SubstituteValue implements Cloneable {
                     }
                 }
             } else {
-                if ((substitute.repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING_OR_NULL)
+                // repairStrategy is nullable on SubstituteValues built by extensions/Smart
+                // Functions; treat a missing one as DEFAULT rather than failing with an NPE.
+                RepairStrategy repairStrategy = substitute.repairStrategy != null
+                        ? substitute.repairStrategy
+                        : RepairStrategy.DEFAULT;
+                if ((repairStrategy.equals(RepairStrategy.REMOVE_IF_MISSING_OR_NULL)
                         && subValueMissingOrNull)) {
-                    payloadTarget.delete(pathTarget);
-                } else if (substitute.repairStrategy.equals(RepairStrategy.IGNORE) && subValueMissingOrNull) {
+                    try {
+                        payloadTarget.delete(pathTarget);
+                    } catch (PathNotFoundException e) {
+                        // The node the caller wanted removed is not in the target template to
+                        // begin with — that is the requested end state, not an error.
+                    }
+                } else if (repairStrategy.equals(RepairStrategy.IGNORE) && subValueMissingOrNull) {
                     // Skip this substitution entirely: leave the target node untouched (whatever
                     // was already in the template, e.g. a default value, stays as-is).
-                } else if (substitute.repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
+                } else if (repairStrategy.equals(RepairStrategy.CREATE_IF_MISSING)) {
                     // jsonObject.put("$", keys, sub.value);
                     SubstitutionEvaluation.addNestedValue(payloadTarget, pathTarget, substitute.value);
                 } else {

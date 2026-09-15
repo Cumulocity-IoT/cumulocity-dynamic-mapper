@@ -843,7 +843,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         log.error("{} - Not existing API!", tenant);
                     }
                 } catch (JsonProcessingException e) {
-                    log.error("{} - Could not map payload: {} {}", tenant, targetAPI, payload, e.getMessage());
+                    log.error("{} - Could not map payload: {} {}", tenant, targetAPI, payload, e);
                     pe.set(new ProcessingException("Could not map payload: " + targetAPI + "/" + payload, e));
                     // error.append("Could not map payload: " + targetAPI + "/" + payload);
                 } catch (SDKException s) {
@@ -1232,6 +1232,17 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return cacheManager.getOutboundExternalIdCacheSize(tenant);
     }
 
+    /**
+     * Drops the cached {@code RestConnector} for a tenant.
+     *
+     * <p>That connector holds the tenant's service-user credentials, so it must not outlive the
+     * subscription: without this, an unsubscribed tenant's credentials stay resident for the
+     * lifetime of the process, and a credential rotation is never picked up.
+     */
+    public void clearProcessingModeConnectorCache(String tenant) {
+        processingModeService.clearConnectorCache(tenant);
+    }
+
     public InventoryCache removeInventoryCache(String tenant) {
         return cacheManager.removeInventoryCache(tenant);
     }
@@ -1324,7 +1335,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             if (e.getHttpStatus() == 404) {
                 return false;
             } else {
-                log.error("{} - Error while checking if user {} exists: {}", tenant, username, e.getMessage());
+                log.error("{} - Error while checking if user {} exists: {}", tenant, username, e.getMessage(), e);
                 return false;
             }
         }

@@ -87,7 +87,19 @@ public class Mapping implements Serializable {
     public static final String KEY_TIME = "time";
 
     public static final String SPLIT_TOPIC_REGEXP = "((?<=/)|(?=/))";
-    public static Mapping UNSPECIFIED_MAPPING;
+    /**
+     * Read-only sentinel identifying the catch-all mapping status — the bucket for messages that
+     * matched no mapping. It is only ever passed to
+     * {@code MappingService.getMappingStatus(tenant, mapping)}, which reads its {@code identifier}
+     * to look the per-tenant status up.
+     *
+     * <p><strong>Never mutate it, and never use it as a per-tenant carrier.</strong> It is one
+     * instance shared by every subscribed tenant, so any field written here would be observed by
+     * all of them — the defect that {@code MappingStatus.UNSPECIFIED_MAPPING_STATUS} had before it
+     * was replaced by {@link MappingStatus#createUnspecified()} (a per-tenant factory).
+     * {@code final} so it cannot be swapped out at runtime.
+     */
+    public static final Mapping UNSPECIFIED_MAPPING;
 
     static final String REGEXP_REMOVE_TRAILING_SLASHES = "#\\/$";
     static final String REGEXP_REDUCE_LEADING_TRAILING_SLASHES = "(\\/{2,}$)|(^\\/{2,})";
@@ -247,13 +259,14 @@ public class Mapping implements Serializable {
     private String filterInventory;
 
     @Builder.Default
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Maximum number of failures before disabling mapping", example = "10")
-    @NotNull
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Number of consecutive failures after which the mapping is automatically deactivated. 0 (the default) disables the check. The counter is reset by the first message that processes without an error, and on (re)activation.", example = "10")
     private long maxFailureCount = 0;
 
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Quality of Service level for MQTT", implementation = Qos.class, example = "AT_LEAST_ONCE")
+    @Builder.Default
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Requested delivery guarantee. Clamped at runtime to what the connector the mapping is deployed to actually supports.", implementation = Qos.class, example = "AT_LEAST_ONCE")
     @NotNull
-    private Qos qos;
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Qos qos = Qos.DEFAULT;
 
     @Schema(description = "Base64 encoded code for custom substitutions")
     private String code;

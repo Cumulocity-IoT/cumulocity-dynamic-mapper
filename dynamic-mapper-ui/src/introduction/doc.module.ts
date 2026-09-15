@@ -52,6 +52,7 @@ const OVERVIEW_SECTIONS = [
         { path: 'javaextension',  component: DocPageComponent },
         { path: 'custom-routing', component: DocPageComponent },
         { path: 'versioning',     component: DocPageComponent },
+        { path: 'connectors',     component: DocPageComponent },
       ]
     }),
     hookNavigator(DocNavigationFactory),

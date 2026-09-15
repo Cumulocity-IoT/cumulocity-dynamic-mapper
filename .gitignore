@@ -55,7 +55,6 @@ dynamic-mapper-ui/node_modules_tmp/
 .env
 setEnv.sh
 setup-env.sh
-USERGUIDE.html
 .claude/settings.json
 resources/test-env/amqp/setup.sh
 dynamic-mapper-service/src/main/resources/application-dev.properties

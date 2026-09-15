@@ -35,6 +35,7 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.ConnectorStatus;
 import dynamic.mapper.model.Direction;
+import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
@@ -122,16 +123,16 @@ public class KafkaClientV2 extends AConnectorClient {
     // "myTopic-0").
     private final Map<String, MutableInt> processingErrorCounts = new ConcurrentHashMap<>();
 
-    @Getter
-    protected List<Qos> supportedQOS;
-
     /**
      * Default constructor
      */
     public KafkaClientV2() {
         this.connectorType = ConnectorType.KAFKA;
         this.singleton = false;
-        this.supportedQOS = Arrays.asList(Qos.AT_MOST_ONCE); // Kafka doesn't have MQTT-like QoS
+        // Kafka has no MQTT-style QoS, but the consumer defers the offset commit until the
+        // pipeline reports success (see processMessageWithQos), which is exactly at-least-once.
+        // EXACTLY_ONCE would need transactional consume-process-produce and is not implemented.
+        this.supportedQos = Arrays.asList(Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE);
         loadDefaultProperties();
         this.connectorSpecification = createConnectorSpecification();
     }
@@ -481,8 +482,7 @@ public class KafkaClientV2 extends AConnectorClient {
             try {
                 task.get(CONSUMER_SHUTDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS);
             } catch (TimeoutException e) {
-                log.warn("{} - Timed out waiting for consumer task to stop for topic: [{}]; " +
-                        "it will finish closing shortly on its own", tenant, topic);
+                log.warn("{} - Timed out waiting for consumer task to stop for topic: [{}]; it will finish closing shortly on its own", tenant, topic);
             } catch (Exception e) {
                 log.debug("{} - Consumer task for topic [{}] ended while unsubscribing: {}",
                         tenant, topic, e.getMessage());
@@ -553,8 +553,7 @@ public class KafkaClientV2 extends AConnectorClient {
             try {
                 task.get(CONSUMER_SHUTDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS);
             } catch (TimeoutException e) {
-                log.warn("{} - Timed out waiting for explorer consumer task to stop for topic: [{}]; " +
-                        "it will finish closing shortly on its own", tenant, topic);
+                log.warn("{} - Timed out waiting for explorer consumer task to stop for topic: [{}]; it will finish closing shortly on its own", tenant, topic);
             } catch (Exception e) {
                 log.debug("{} - Explorer consumer task for topic [{}] ended while unsubscribing: {}",
                         tenant, topic, e.getMessage());
@@ -651,8 +650,7 @@ public class KafkaClientV2 extends AConnectorClient {
                     failCount.increment();
 
                     if (failCount.intValue() > MAX_CONSECUTIVE_FAILURES) {
-                        log.error("{} - Too many consecutive failures for topic: [{}], stopping this consumer; " +
-                                "housekeeping will retry it", tenant, topic);
+                        log.error("{} - Too many consecutive failures for topic: [{}], stopping this consumer; housekeeping will retry it", tenant, topic);
                         // Hand off to the slower housekeeping-driven retry cycle (monitorSubscriptions())
                         // instead of leaving the count above MAX_RETRY_ATTEMPTS, where it would never
                         // be picked up again.
@@ -727,7 +725,7 @@ public class KafkaClientV2 extends AConnectorClient {
 
         ProcessingResultWrapper<?> processedResults = dispatcher.onMessage(connectorMessage);
 
-        int mappingQos = processedResults.getConsolidatedQos().ordinal();
+        int mappingQos = processedResults.getConsolidatedQos().getLevel();
         int timeout = processedResults.getPipelineTimeoutMS();
 
         if (mappingQos > 0) {
@@ -750,7 +748,10 @@ public class KafkaClientV2 extends AConnectorClient {
             if (timeout > 0) {
                 results = processedResults.getProcessingResult().get(timeout, TimeUnit.MILLISECONDS);
             } else {
-                results = processedResults.getProcessingResult().get();
+                // Always bounded — an unbounded get() parks this worker, and blocks the offset
+                // commit, forever if the pipeline hangs in I/O.
+                results = processedResults.getProcessingResult()
+                        .get(ServiceConfiguration.PROCESSING_HARD_CEILING_MS, TimeUnit.MILLISECONDS);
             }
 
             boolean hasErrors = false;
@@ -787,9 +788,12 @@ public class KafkaClientV2 extends AConnectorClient {
                     tenant, topic, record.offset(), e);
             handleProcessingError(record, 0);
         } catch (TimeoutException e) {
-            processedResults.getProcessingResult().cancel(true);
-            log.warn("{} - Processing timed out for topic: [{}], offset: {}",
-                    tenant, topic, record.offset());
+            // cancelAndDrain, not Future.cancel(true): the bare cancel only interrupts the worker
+            // thread, which CPU-bound GraalVM JavaScript ignores — the registered cancel actions
+            // (Context.close(cancelIfExecuting=true)) are what actually stop it.
+            boolean drained = processedResults.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
+            log.warn("{} - Processing timed out for topic: [{}], offset: {}, worker drained: {}",
+                    tenant, topic, record.offset(), drained);
             handleProcessingTimeout(record);
         }
 
@@ -860,7 +864,7 @@ public class KafkaClientV2 extends AConnectorClient {
      */
     private void handleConsumerError(String topic, Exception e) {
         if (e instanceof KafkaException) {
-            log.error("{} - Kafka error for topic [{}]: {}", tenant, topic, e.getMessage());
+            log.error("{} - Kafka error for topic [{}]: {}", tenant, topic, e.getMessage(), e);
         } else {
             log.error("{} - Unexpected error for topic [{}]: {}", tenant, topic, e.getMessage(), e);
         }

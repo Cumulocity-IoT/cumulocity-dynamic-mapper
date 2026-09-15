@@ -44,7 +44,9 @@ public class ProcessingModeService {
     private final ContextService<MicroserviceCredentials> contextService;
     private final PlatformProperties platformProperties;
     
-    // Cache connectors per tenant to avoid recreating expensive Client instances
+    // Cache connectors per tenant to avoid recreating expensive Client instances.
+    // Each entry holds that tenant's service-user credentials, so it must be dropped when the
+    // tenant unsubscribes — see clearConnectorCache(), called from BootstrapService's cleanup.
     private final ConcurrentMap<String, RestConnector> connectorCache = new ConcurrentHashMap<>();
 
     public <T> T callWithProcessingMode(String processingMode, ConnectorFunction<T> function) throws Exception {
@@ -70,10 +72,26 @@ public class ProcessingModeService {
      * Thread-safe and reuses the expensive Client instance.
      */
     private RestConnector getOrCreateConnector(String tenant) {
-        return connectorCache.computeIfAbsent(tenant, t -> {
-            log.debug("Creating new RestConnector for tenant: {}", t);
+        RestConnector cached = connectorCache.get(tenant);
+        if (cached != null) {
+            return cached;
+        }
+
+        // The credentials come from the ambient microservice context, not from the `tenant`
+        // argument — so caching under that key is only correct while the two agree. They do for
+        // callWithProcessingMode (which reads the tenant from the very same context), but an
+        // explicit-tenant caller running under another tenant's context would otherwise store
+        // THAT tenant's credentials under this key, and every later call for `tenant` would be
+        // executed as the wrong tenant. Build it uncached instead of poisoning the cache.
+        final String contextTenant = contextService.getContext().getTenant();
+        if (!tenant.equals(contextTenant)) {
+            log.warn("Requested RestConnector for tenant {} while running in the context of {} — "
+                    + "returning an uncached connector bound to {}", tenant, contextTenant, contextTenant);
             return createRestConnector();
-        });
+        }
+
+        log.debug("Creating new RestConnector for tenant: {}", tenant);
+        return connectorCache.computeIfAbsent(tenant, t -> createRestConnector());
     }
 
     /**

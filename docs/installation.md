@@ -64,21 +64,21 @@ The Web App is part of the community store and should be available directly in y
 ~~Go to "All Applications" and click on "Add Application". Select "Duplicate existing application" and afterward "Administration".~~
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_DuplicateApp.png" style="width: 40%;" />
+<img src="../resources/image/Dynamic_Mapper_DuplicateApp.png" style="width: 40%;" />
 </p>
 <br/>
 
 ~~Now select the cloned Administration App and go to the "Plugin" Tab. Click on "Install Plugin" and select "Dynamic Mapper Widget"~~
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Installation_Plugin.png" style="width: 50%;" />
+<img src="../resources/image/Dynamic_Mapper_Installation_Plugin.png" style="width: 50%;" />
 </p>
 <br/>
 
 ~~After successfully adding the plugin you need to refresh the Administration App by pressing F5 and you should see a new navigation entry "Dynamic Mapper"~~
 
 <p align="center">
- <img src="resources/image/Dynamic_Mapper_WebAppPlugin.png" style="width: 40%;" />
+ <img src="../resources/image/Dynamic_Mapper_WebAppPlugin.png" style="width: 40%;" />
 </p>
 
 ##### Blueprint
@@ -86,7 +86,7 @@ The Web App is part of the community store and should be available directly in y
 For the blueprint go to "Administration" -> "Ecosystem" -> "dynamic-mapper" -> "Deploy application"
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_BlueprintDeploy.png" style="width: 50%;" />
+<img src="../resources/image/Dynamic_Mapper_BlueprintDeploy.png" style="width: 50%;" />
 </p>
 
 Enter an application key and path and click on "Deploy".
@@ -94,7 +94,7 @@ Enter an application key and path and click on "Deploy".
 After successful deployment you can find the dynamic-mapper App in the Application Switcher
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_BlueprintApp.png" style="width: 40%;" />
+<img src="../resources/image/Dynamic_Mapper_BlueprintApp.png" style="width: 40%;" />
 </p>
 #### Manual
 

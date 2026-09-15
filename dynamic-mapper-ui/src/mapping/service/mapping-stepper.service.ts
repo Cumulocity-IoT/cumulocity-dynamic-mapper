@@ -41,6 +41,7 @@ import {
     createCustomUuid,
     getExternalTemplate,
 } from '../../shared';
+import { PROTECTED_TOKENS } from '../core/processor/processor.model';
 import { MappingService } from '../core/mapping.service';
 import { SharedService } from '../../shared';
 import { ExtensionService } from '../../extension';
@@ -114,32 +115,46 @@ export class MappingStepperService {
         }
     }
 
+    /** True when the template holds at least one key that is not a metadata token. */
+    private hasPayloadContent(template: any): boolean {
+        if (typeof template !== 'object' || Array.isArray(template)) {
+            return true;
+        }
+        return Object.keys(template).some(
+            key => !(PROTECTED_TOKENS as readonly string[]).includes(key)
+        );
+    }
+
     async evaluateFilterExpression(sourceTemplate: any, path: string): Promise<{
         resultType: string;
         result: string;
         valid: boolean;
+        message?: string;
     }> {
-        try {
-            // Safety net: if no template is available at all, skip evaluation.
-            if (!sourceTemplate) {
-                return { resultType: '', result: '', valid: true };
-            }
+        // Safety net: if no template is available at all, skip evaluation.
+        // An unexpanded template (empty, or carrying nothing but metadata tokens) counts
+        // as "not available yet": evaluating against it yields undefined and would raise a
+        // spurious "must evaluate to a boolean" error while the step is still initializing.
+        if (!sourceTemplate || !this.hasPayloadContent(sourceTemplate)) {
+            return { resultType: '', result: '', valid: true };
+        }
 
-            const resultExpression: JSON = await this.mappingService.evaluateExpression(sourceTemplate, path);
-            const resultType = getTypeOf(resultExpression);
+        const resultExpression: JSON = await this.mappingService.evaluateExpression(sourceTemplate, path);
+        const resultType = getTypeOf(resultExpression);
+        const result = JSON.stringify(resultExpression, null, 4);
 
-            if (path && resultType != 'Boolean') {
-                throw Error('The filter expression must evaluate to a boolean value: either true or false');
-            }
-
+        // Non-boolean is invalid, but still surface the evaluated value/type so the
+        // user can see *what* the expression evaluated to, rather than an empty box.
+        if (path && resultType != 'Boolean') {
             return {
                 resultType,
-                result: JSON.stringify(resultExpression, null, 4),
-                valid: true
+                result,
+                valid: false,
+                message: 'The filter expression must evaluate to a boolean value: either true or false'
             };
-        } catch (error) {
-            throw error;
         }
+
+        return { resultType, result, valid: true };
     }
 
     /**

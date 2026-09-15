@@ -43,15 +43,20 @@ It supports zero-code mapping, code-based mapping, and AI-assisted mapping sugge
 
 ## Documentation
 
-- [Architecture Overview](ARCHITECTURE.md)
-- [Installation Guide](INSTALLATION.md)
-- [User Guide](USERGUIDE.md)
+Everything beyond this page, `CHANGES.md`, and `FAQ.md` lives under [`docs/`](docs/) — see
+[`docs/README.md`](docs/README.md) for the full index. Frequently needed pages:
+
+- [Architecture Overview](docs/architecture.md)
+- [Installation Guide](docs/installation.md)
+- User Guide — the full walkthrough of using the deployed app lives in the app itself (Help menu),
+  built from [`dynamic-mapper-ui/public/docs`](dynamic-mapper-ui/public/docs)
 - [FAQ](FAQ.md)
-- [Limitations](LIMITATIONS.md)
-- [Extensions Guide](EXTENSIONS.md)
+- [Limitations](docs/limitations.md)
+- [Extensions Guide](docs/extensions.md)
 - [Backend Docs](docs/backend.md)
 - [Frontend Docs](docs/ui.md)
 - [Smart Functions Docs](docs/smart-functions.md)
+- [Test Concept](docs/testing.md)
 
 ## API
 

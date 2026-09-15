@@ -19,11 +19,13 @@
  */
 
 import { TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
 import { MappingStepPropertiesComponent } from './mapping-properties.component';
-import { Direction, Mapping, SharedService, StepperConfiguration } from '../../shared';
+import { Direction, Mapping, Qos, SharedService, StepperConfiguration } from '../../shared';
+import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
 import { MappingService } from '../core/mapping.service';
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import { FormatStringPipe } from '../../shared/misc/format-string.pipe';
@@ -41,12 +43,17 @@ function makeStepperConfiguration(): StepperConfiguration {
   return { direction: Direction.INBOUND, editorMode: EditorMode.CREATE };
 }
 
-async function createComponent(): Promise<MappingStepPropertiesComponent> {
+async function createComponent(
+  deployedConnectors?: string[]
+): Promise<MappingStepPropertiesComponent> {
   const fixture = TestBed.createComponent(MappingStepPropertiesComponent);
   const component = fixture.componentInstance;
   component.mapping = makeMapping();
   component.stepperConfiguration = makeStepperConfiguration();
   component.propertyFormly = new FormGroup({});
+  if (deployedConnectors) {
+    component.deploymentMapEntry = { identifier: 'mapping-1', connectors: deployedConnectors };
+  }
   await component.ngOnInit();
   return component;
 }
@@ -60,6 +67,7 @@ describe('MappingStepPropertiesComponent', () => {
   let mockMappingService: jasmine.SpyObj<MappingService>;
   let mockStepperService: jasmine.SpyObj<MappingStepperService>;
   let mockAlertService: jasmine.SpyObj<AlertService>;
+  let mockConnectorConfigurationService: jasmine.SpyObj<ConnectorConfigurationService>;
 
   beforeEach(() => {
     mockSharedService = jasmine.createSpyObj<SharedService>('SharedService', ['getFeatures']);
@@ -72,6 +80,23 @@ describe('MappingStepPropertiesComponent', () => {
     mockAlertService = jasmine.createSpyObj<AlertService>('AlertService', ['clearAll', 'add', 'remove']);
     Object.defineProperty(mockAlertService, 'state', { value: [] });
 
+    mockConnectorConfigurationService = jasmine.createSpyObj<ConnectorConfigurationService>(
+      'ConnectorConfigurationService',
+      ['getConfigurations', 'getSpecifications']
+    );
+    // One Kafka connector, whose specification stops at AT_LEAST_ONCE.
+    mockConnectorConfigurationService.getConfigurations.and.returnValue(
+      of([{ identifier: 'kafka-1', name: 'Kafka Prod', connectorType: 'KAFKA' }] as any)
+    );
+    mockConnectorConfigurationService.getSpecifications.and.returnValue(
+      of([
+        {
+          connectorType: 'KAFKA',
+          supportedQos: [Qos.AT_MOST_ONCE, Qos.AT_LEAST_ONCE]
+        }
+      ] as any)
+    );
+
     TestBed.configureTestingModule({
       imports: [MappingStepPropertiesComponent],
       providers: [
@@ -79,6 +104,7 @@ describe('MappingStepPropertiesComponent', () => {
         { provide: MappingService, useValue: mockMappingService },
         { provide: MappingStepperService, useValue: mockStepperService },
         { provide: AlertService, useValue: mockAlertService },
+        { provide: ConnectorConfigurationService, useValue: mockConnectorConfigurationService },
         FormatStringPipe
       ]
     });
@@ -139,6 +165,39 @@ describe('MappingStepPropertiesComponent', () => {
 
       expect(component.mapping.targetAPI).toBe('EVENT');
       expect(emitSpy).toHaveBeenCalledWith('EVENT');
+    });
+  });
+
+  describe('QoS description', () => {
+    it('explains the selected level when every deployed connector supports it', async () => {
+      const component = await createComponent(['kafka-1']);
+
+      const description = component.describeQos(Qos.AT_LEAST_ONCE);
+
+      expect(description).toContain('acknowledged only after');
+      expect(description).not.toContain('NOTE');
+    });
+
+    it('warns which deployed connector clamps the selected level, and to what', async () => {
+      const component = await createComponent(['kafka-1']);
+
+      const description = component.describeQos(Qos.EXACTLY_ONCE);
+
+      expect(description).toContain('Kafka Prod');
+      expect(description).toContain('handled as at least once');
+    });
+
+    it('says nothing while no level is selected', async () => {
+      const component = await createComponent(['kafka-1']);
+
+      expect(component.describeQos(undefined as unknown as Qos)).toBe('');
+    });
+
+    it('omits the warning when the mapping is not deployed to any connector', async () => {
+      const component = await createComponent();
+
+      expect(component.describeQos(Qos.EXACTLY_ONCE)).not.toContain('NOTE');
+      expect(mockConnectorConfigurationService.getConfigurations).not.toHaveBeenCalled();
     });
   });
 });

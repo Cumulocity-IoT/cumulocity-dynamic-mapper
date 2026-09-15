@@ -88,16 +88,14 @@ public class WebHook extends AConnectorClient {
     protected String baseUrl;
     protected Boolean baseUrlEndsWithSlash;
 
-    @Getter
-    protected List<Qos> supportedQOS;
-
     /**
      * Default constructor
      */
     public WebHook() {
         this.connectorType = ConnectorType.WEB_HOOK;
         this.singleton = false;
-        this.supportedQOS = Arrays.asList(Qos.AT_LEAST_ONCE);
+        // Outbound-only connector: an HTTP call either succeeds or is retried, i.e. at-least-once.
+        this.supportedQos = Arrays.asList(Qos.AT_LEAST_ONCE);
         this.connectorSpecification = createConnectorSpecification();
     }
 

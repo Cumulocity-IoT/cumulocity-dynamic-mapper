@@ -878,7 +878,7 @@ dm_require_extension() {   # <eventName_or_fqn> [direction]
     _evt=$(printf '%s' "$_entry" | jq -r '.eventName // empty' 2>/dev/null || printf '')
     if [ -z "$_entry" ] || [ -z "$_evt" ]; then
         dm_skip_exit "Processor extension '${_needle}'${_direction:+ (${_direction})} is not registered on this tenant." \
-                     "Upload the dynamic-mapper-extension JAR (see EXTENSIONS.md), then re-run."
+                     "Upload the dynamic-mapper-extension JAR (see docs/extensions.md), then re-run."
     fi
     _DM_RESOLVED_EXTENSION="$_entry"
     dm_info "Resolved extension '${_needle}' -> $(printf '%s' "$_entry" | jq -r '.extensionName + ":" + .eventName' 2>/dev/null || printf '%s' "$_needle")"

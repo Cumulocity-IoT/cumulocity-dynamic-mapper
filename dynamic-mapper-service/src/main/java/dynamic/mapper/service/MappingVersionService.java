@@ -64,7 +64,7 @@ import java.util.stream.Collectors;
  * runnable {@code d11r_mapping} record), keeping this service decoupled from
  * {@link MappingService} and independently testable.
  *
- * <p>See {@code docs/feature/REQUIREMENTS-VERSION-MAPPING.md}.
+ * <p>See {@code docs/planning/REQUIREMENTS-VERSION-MAPPING.md}.
  */
 @Slf4j
 @Service

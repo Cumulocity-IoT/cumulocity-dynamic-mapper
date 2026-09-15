@@ -115,12 +115,26 @@ export class AIAgentService {
     );
 
     if (!res.ok) {
-      console.error(`Failed to fetch agents: ${res.status} ${res.statusText}`);
+      // Surfaced verbatim (including the body) because this endpoint is undocumented and not part of
+      // the SDK's AIService: a 401/403 here means the *browser user* may not list agents even though
+      // the microservice can, and the two look identical from the empty agent list alone.
+      const detail = await res.text().catch(() => '');
+      console.error(
+        `Failed to fetch agents from ${BASE_AI_URL}/${PATH_AGENT_ENDPOINT}: ${res.status} ${res.statusText}`,
+        detail
+      );
       return [];
     }
 
     const data = await res.json();
-    return Array.isArray(data) ? data : [];
+    if (!Array.isArray(data)) {
+      console.error(
+        `Unexpected response from ${BASE_AI_URL}/${PATH_AGENT_ENDPOINT}: expected an array of agents`,
+        data
+      );
+      return [];
+    }
+    return data;
   }
 
   async isAIOperable(): Promise<boolean> {

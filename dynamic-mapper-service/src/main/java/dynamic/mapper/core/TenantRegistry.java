@@ -314,10 +314,15 @@ public class TenantRegistry {
         if (tenant == null) {
             externalIdCache.clear();
             externalIdCacheReverse.clear();
+            externalIdLocks.clear();
             log.info("Cleared entire external ID cache");
         } else {
-            externalIdCache.entrySet().removeIf(entry -> entry.getKey().startsWith(tenant + "|"));
-            externalIdCacheReverse.entrySet().removeIf(entry -> entry.getKey().startsWith(tenant + "|"));
+            String prefix = tenant + "|";
+            externalIdCache.entrySet().removeIf(entry -> entry.getKey().startsWith(prefix));
+            externalIdCacheReverse.entrySet().removeIf(entry -> entry.getKey().startsWith(prefix));
+            // The locks are keyed identically and were previously left behind, so they grew by
+            // one entry per distinct external ID ever seen and were never reclaimed.
+            externalIdLocks.entrySet().removeIf(entry -> entry.getKey().startsWith(prefix));
             log.debug("{} - Cleared external ID cache", tenant);
         }
     }

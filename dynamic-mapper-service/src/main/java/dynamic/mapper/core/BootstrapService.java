@@ -254,6 +254,25 @@ public class BootstrapService {
             log.error("{} - Error removing C8Y agent caches: {}", tenant, e.getMessage(), e);
         }
 
+        try {
+            // The external-ID resolution cache and its per-ID locks are keyed "tenant|…", so they
+            // survive an unsubscribe unless cleared explicitly: the entries would grow without
+            // bound across tenant churn, and a tenant that re-subscribes would resolve external
+            // IDs to managed objects that may have been deleted in the meantime.
+            configurationRegistry.clearExternalIdCache(tenant);
+            log.debug("{} - Cleared external ID cache", tenant);
+        } catch (Exception e) {
+            log.error("{} - Error clearing external ID cache: {}", tenant, e.getMessage(), e);
+        }
+
+        try {
+            // Holds the tenant's service-user credentials — must not outlive the subscription.
+            c8YAgent.clearProcessingModeConnectorCache(tenant);
+            log.debug("{} - Cleared processing-mode connector cache", tenant);
+        } catch (Exception e) {
+            log.error("{} - Error clearing processing-mode connector cache: {}", tenant, e.getMessage(), e);
+        }
+
         log.info("{} - Completed tenant resource cleanup", tenant);
     }
 

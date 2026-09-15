@@ -19,7 +19,7 @@ The solution is composed of two major components:
 ## Component Overview
 
 <p align="center">
-<img src="resources/image/Dynamic_Mapper_Diagram_Architecture.png"  style="width: 100%;" />
+<img src="../resources/image/Dynamic_Mapper_Diagram_Architecture.png"  style="width: 100%;" />
 </p>
 <br/>
 
@@ -37,7 +37,7 @@ The solution is composed of two major components:
 | **MQTT Service** | Connects to the Cumulocity built-in MQTT Service via the unified Pulsar-based connector path |
 | **Webhook** | Exposes an HTTP endpoint accepting inbound push payloads |
 
-Custom connectors can be added by extending `AConnectorClient` — see [EXTENSIONS.md](EXTENSIONS.md).
+Custom connectors can be added by extending `AConnectorClient` — see [extensions.md](extensions.md).
 
 ### Data Mapper
 
@@ -106,12 +106,22 @@ Inbound processing pipeline:
 AConnectorClient → CamelDispatcherInbound → deserialize → enrich → substitute/eval → emit to C8Y
 ```
 
-<p align="center">
-<img src="resources/image/Dynamic_Mapper_Diagram_Dispatcher.png"  style="width: 100%;" />
-</p>
-<br/>
+See [feature/mapping-processing-inbound.md](feature/mapping-processing-inbound.md) and
+[feature/mapping-processing-outbound.md](feature/mapping-processing-outbound.md) for the
+per-step breakdown and a worked example end to end.
 
 ---
+
+## Key Technologies
+
+Exact versions are pinned in the root `pom.xml` / `dynamic-mapper-ui/package.json` — check those
+before quoting a version elsewhere, this list is a pointer, not a second source of truth:
+
+- **Java 25**, **Spring Boot 4.0.7**, **Apache Camel 4.x** (internal message routing)
+- **GraalVM polyglot** (`org.graalvm.polyglot`) — sandboxed JS execution for Smart Functions
+- **JSONata** (`com.dashjoin:jsonata`) — expression language for substitutions
+- **Cumulocity Microservice SDK** (`c8y.version` in `pom.xml`) — multi-tenancy, REST client, notification subscriptions
+- **Angular** with **@c8y/ngx-components** — Cumulocity web plugin framework
 
 ## Multi-tenancy and Multi-broker
 

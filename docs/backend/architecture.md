@@ -1,6 +1,6 @@
 # Backend Architecture
 
-The backend is the `dynamic-mapper-service` Spring Boot microservice. See [ARCHITECTURE.md](../../ARCHITECTURE.md) for the full system-level component overview.
+The backend is the `dynamic-mapper-service` Spring Boot microservice. See [architecture.md](../architecture.md) for the full system-level component overview and key technology versions.
 
 ## Key Packages
 
@@ -38,11 +38,6 @@ Abstract processor hierarchy:
 |------|-------------|
 | **JSONata** | Expression language evaluated by `com.dashjoin:jsonata` |
 | **Smart Functions** | JavaScript executed in a GraalVM polyglot sandbox — see [smart-functions.md](../smart-functions.md) |
-| **Extensions** | Java `ProcessorExtensionInbound<O>` / `ProcessorExtensionOutbound<O>` plugins — see [EXTENSIONS.md](../../EXTENSIONS.md) |
+| **Extensions** | Java `ProcessorExtensionInbound<O>` / `ProcessorExtensionOutbound<O>` plugins — see [extensions.md](../extensions.md) |
 
-## Key Technologies
-
-- Java 21, Spring Boot 3.5.13, Apache Camel 4.x (internal message routing)
-- GraalVM polyglot (`org.graalvm.polyglot`) — sandboxed JS for Smart Functions
-- JSONata (`com.dashjoin:jsonata`) — expression language for substitutions
-- Cumulocity Microservice SDK (`c8y.version=2026.41.0`)
+Key technologies and exact version pins are listed once, in [architecture.md](../architecture.md#key-technologies).

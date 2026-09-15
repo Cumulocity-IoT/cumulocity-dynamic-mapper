@@ -237,22 +237,22 @@ export interface DeploymentMapEntryDetailed {
  * missing data, arrays, or other special conditions during data transformation.
  */
 export enum RepairStrategy {
-  /** Process substitution as defined without any special handling */
+  /** Write the extracted value to the target path as-is. The path must already exist in the target template. */
   DEFAULT = 'DEFAULT',
 
-  /** If extracted content from source is an array, use only the first element */
+  /** If the extracted value is an array and expandArray is not set, use only its first element. JSONATA substitutions only. */
   USE_FIRST_VALUE_OF_ARRAY = 'USE_FIRST_VALUE_OF_ARRAY',
 
-  /** If extracted content from source is an array, use only the last element */
+  /** If the extracted value is an array and expandArray is not set, use only its last element. JSONATA substitutions only. */
   USE_LAST_VALUE_OF_ARRAY = 'USE_LAST_VALUE_OF_ARRAY',
 
-  /** Skip this substitution if source path evaluation fails */
+  /** If the extracted value is missing or null, skip the substitution and leave the target node as defined in the target template. */
   IGNORE = 'IGNORE',
 
-  /** Remove the target node if source evaluation returns undefined, null, or empty. Enables dynamic content handling */
+  /** If the extracted value is missing or null, delete the target node from the target template. */
   REMOVE_IF_MISSING_OR_NULL = 'REMOVE_IF_MISSING_OR_NULL',
 
-  /** Create the target node if it doesn't exist. Enables dynamic content creation */
+  /** Create the target node, including missing parent nodes, if it does not exist in the target template. */
   CREATE_IF_MISSING = 'CREATE_IF_MISSING'
 }
 
@@ -284,6 +284,75 @@ export enum Qos {
   AT_MOST_ONCE = 'AT_MOST_ONCE',
   AT_LEAST_ONCE = 'AT_LEAST_ONCE',
   EXACTLY_ONCE = 'EXACTLY_ONCE'
+}
+
+/** Default applied when a mapping carries no explicit QoS — mirrors `Qos.DEFAULT` in the backend. */
+export const QOS_DEFAULT = Qos.AT_LEAST_ONCE;
+
+/**
+ * Presentation metadata for the QoS levels, kept in one place so the mapping grid, the
+ * properties step and any future view label a level identically. `level` is the numeric MQTT
+ * QoS and defines the ordering: a connector that cannot honour a level falls back to the
+ * strongest level below it.
+ */
+export const QOS_OPTIONS: ReadonlyArray<{
+  value: Qos;
+  label: string;
+  level: number;
+  description: string;
+}> = [
+  {
+    value: Qos.AT_MOST_ONCE,
+    label: 'At most once',
+    level: 0,
+    description:
+      'Fire and forget. The message is acknowledged towards the broker immediately, before the mapping runs, so a processing failure loses it. Lowest latency.'
+  },
+  {
+    value: Qos.AT_LEAST_ONCE,
+    label: 'At least once',
+    level: 1,
+    description:
+      'The message is acknowledged only after the mapping was processed successfully. A failure causes a redelivery, so the same message can be processed more than once.'
+  },
+  {
+    value: Qos.EXACTLY_ONCE,
+    label: 'Exactly once',
+    level: 2,
+    description:
+      'As at least once, but the broker additionally suppresses duplicates. Only MQTT and Pulsar support this; other connectors fall back to at least once.'
+  }
+];
+
+/** Label for a QoS level, falling back to the raw value for unknown input. */
+export function qosLabel(qos: Qos | string): string {
+  return QOS_OPTIONS.find((option) => option.value === qos)?.label ?? qos;
+}
+
+/** Numeric MQTT level of a QoS value; -1 for unknown input. */
+export function qosLevel(qos: Qos | string): number {
+  return QOS_OPTIONS.find((option) => option.value === qos)?.level ?? -1;
+}
+
+/**
+ * Mirrors the backend's `Qos.clampTo`: the strongest supported level that is not stronger than
+ * `requested`; if the connector supports nothing that weak, its weakest supported level (the
+ * connector then over-delivers rather than running at a level it cannot implement).
+ *
+ * @param supported the connector's `supportedQos`; empty/undefined means "no restriction"
+ */
+export function clampQos(requested: Qos, supported?: Qos[]): Qos {
+  if (!supported?.length || supported.includes(requested)) {
+    return requested;
+  }
+  const requestedLevel = qosLevel(requested);
+  const weaker = supported.filter((qos) => qosLevel(qos) < requestedLevel);
+  const candidates = weaker.length ? weaker : supported;
+  return candidates.reduce((best, qos) =>
+    weaker.length
+      ? qosLevel(qos) > qosLevel(best) ? qos : best
+      : qosLevel(qos) < qosLevel(best) ? qos : best
+  );
 }
 
 export interface StepperConfiguration {
@@ -678,11 +747,38 @@ export interface MappingStatus {
   id: string;
   name: string;
   identifier: string;
-  direction: Direction;
+  /**
+   * `null`/`undefined` for the catch-all "Unmapped messages" status, which spans both
+   * directions — it counts messages that matched no mapping at all.
+   */
+  direction?: Direction;
   mappingTopic: string;
+  publishTopic: string;
   errors: number;
   messagesReceived: number;
+  /** Consecutive failures; reset by the first successful message. See `Mapping.maxFailureCount`. */
+  currentFailureCount: number;
+  /** Set only when the mapping could not be loaded; not a processing error. */
+  loadingError?: string;
 }
+
+/**
+ * Identifier of the catch-all status — mirrors `MappingStatus.IDENT_UNSPECIFIED_MAPPING`.
+ * This is the stable wire value; the row's label is display-only, see
+ * {@link MAPPING_STATUS_UNSPECIFIED_LABEL}.
+ */
+export const MAPPING_STATUS_UNSPECIFIED = 'UNSPECIFIED';
+
+/**
+ * Label shown for the catch-all status row.
+ *
+ * <p>Rendered by the frontend rather than taken from the `name` the backend sends, because that
+ * name reaches the UI from two places that can both be stale: an older microservice still sends
+ * "Unspecified", and a status restored from the persisted `d11r_mapping` fragment carries
+ * whatever name was written when it was last pushed. Deriving the label from the identifier
+ * makes the row read correctly regardless of backend version, and keeps it translatable here.
+ */
+export const MAPPING_STATUS_UNSPECIFIED_LABEL = 'Unmapped messages';
 
 export const API = {
   ALARM: {

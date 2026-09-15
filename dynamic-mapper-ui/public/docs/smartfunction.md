@@ -66,7 +66,7 @@ sequence) and `?` (single character), e.g. `sparkPlugB_DBIRTH_*` to cache all fr
 `sparkPlugB_DBIRTH_`. Make sure to add all required fragments to this list before using them in your code.
 :::
 
-![JavaScript substitution](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png "Screenshot showing step 4 for defining complete transformation using JavaScript.")
+![JavaScript substitution](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png "Screenshot showing step 4 for defining complete transformation using JavaScript.")
 
 #### ECMAScript Module (ESM) Support
 

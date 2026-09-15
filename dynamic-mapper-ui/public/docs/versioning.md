@@ -63,7 +63,7 @@ menu: **Publish** (on the draft, opens the version-picker dialog), **Activate** 
 published versions), and inline note editing (on any published version). The active version cannot be deleted —
 activate another version first.
 
-![Versions drawer](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Versions_Drawer.png "The Versions drawer for a mapping.")
+![Versions drawer](../../../resources/image/Dynamic_Mapper_Mapping_Versions_Drawer.png "The Versions drawer for a mapping.")
 
 ### Version and draft indicators in the mapping list {#versioning-status-badge}
 
@@ -71,7 +71,7 @@ The **Status** column of the inbound/outbound mapping list shows, at a glance, t
 mapping (for example <span class="label label-default">v1.2.0</span>) and a <span class="label label-info">draft</span>
 badge when the mapping has unpublished changes.
 
-![Version and draft badges in the mapping list](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Versions_Status_Badge.png "The mapping list Status column showing the active version badge and a draft badge.")
+![Version and draft badges in the mapping list](../../../resources/image/Dynamic_Mapper_Mapping_Versions_Status_Badge.png "The mapping list Status column showing the active version badge and a draft badge.")
 
 ### Change notes {#versioning-labels}
 
@@ -87,7 +87,7 @@ under **Configuration → Service configuration → Caching** in the field **Num
 (default 10). When a new version is published, versions older than this limit are deleted, ordered by publish date
 — the **active version is never deleted**, even if it falls outside the retention window.
 
-![Mapping version retention setting](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Versions_Retention_Config.png "The \"Number of mapping versions to retain\" setting under Service configuration → Caching.")
+![Mapping version retention setting](../../../resources/image/Dynamic_Mapper_Mapping_Versions_Retention_Config.png "The \"Number of mapping versions to retain\" setting under Service configuration → Caching.")
 
 ### Relationship in the inventory {#versioning-inventory}
 

@@ -6,29 +6,43 @@ Audit all project documentation for broken image references, stale cross-links, 
 
 Markdown files to audit (search recursively from repo root, skip `node_modules`, `.git`, `target`):
 - `docs/**/*.md`
-- `*.md` at repo root (README.md, ARCHITECTURE.md, EXTENSIONS.md, CHANGELOG.md, etc.)
+- `*.md` at repo root (README.md, CHANGES.md, FAQ.md, CLAUDE.md, AGENTS.md, CONTRIBUTING.md)
+- `dynamic-mapper-ui/public/docs/*.md` — in-app documentation, fetched and rendered live by the deployed plugin
 
 Image registries:
 - **Filesystem:** `resources/image/` — source-of-truth for image files
 - **Build config:** `dynamic-mapper-ui/cumulocity.config.ts` `buildTime.copy` array — images bundled into the Angular app
 
-**Config requirement rule:** Only images referenced from these two sources need to be in `cumulocity.config.ts`:
+**Config requirement rule:** Images referenced from these sources need to be in `cumulocity.config.ts`:
 1. `dynamic-mapper-ui/src/introduction/**/*.html` — Angular in-app documentation components
 2. `dynamic-mapper-ui/README.md` — the README bundled with the UI plugin
+3. `dynamic-mapper-ui/public/docs/*.md` — see note below
 
-Images referenced only in other docs (USERGUIDE.md, ARCHITECTURE.md, EXTENSIONS.md, docs/**/*.md, etc.) are served from GitHub/external and do NOT need a config entry.
+Images referenced only in other docs (docs/**/*.md, root README.md/CHANGES.md/FAQ.md, etc.) are served from
+GitHub and do NOT need a config entry.
+
+**`public/docs/*.md` image syntax is deliberately GitHub-shaped, but still config-required.** These files write
+image references as a repo-relative path — `![...](../../../resources/image/<name>.png)` — identical in shape to
+a `docs/**/*.md` reference, so that the raw `.md` file also renders correctly when browsed directly on GitHub.
+`DocMarkdownService.resolveImageHref()` (`dynamic-mapper-ui/src/introduction/doc-markdown.service.ts`) rewrites
+that prefix to the bundled asset path (`/apps/<contextPath>/image/<name>.png`, resolved against
+`document.baseURI`) at render time in the deployed app — so despite the relative-looking source syntax, these
+images are still app-facing and **do** need the `cumulocity.config.ts` entry (rule 1a below). Don't misclassify
+them as 1b just because the path looks like a `docs/**/*.md` reference.
 
 ---
 
 ## Step 1 — Collect all image references
 
 **1a. App-facing references (must be in config)**
-Scan `dynamic-mapper-ui/src/introduction/**/*.html` and `dynamic-mapper-ui/README.md`.
+Scan `dynamic-mapper-ui/src/introduction/**/*.html`, `dynamic-mapper-ui/public/docs/*.md`, and
+`dynamic-mapper-ui/README.md`.
 Extract every `<img src="...">` and `![alt](...)`.
-For each: record source file, line number, image filename (basename only).
+For each: record source file, line number, image filename (basename only) — for `public/docs/*.md`, the filename
+is the last path segment of the `../../../resources/image/<name>.png` reference (see the note above).
 
 **1b. Other doc references (config not required)**
-Scan all other markdown files in scope (including `USERGUIDE.md`, `ARCHITECTURE.md`, `EXTENSIONS.md`, `docs/**/*.md`).
+Scan all other markdown files in scope (including `docs/**/*.md`).
 Extract image references the same way — these are tracked for file-existence only, not config registration.
 
 ## Step 2 — Collect all known images
@@ -87,7 +101,7 @@ Docs to read for this pass:
 - `docs/ui/architecture.md`
 - `docs/smart-functions.md`
 - `README.md`
-- `ARCHITECTURE.md`
+- `docs/architecture.md`
 
 For each finding: file + line, issue description, suggested fix. Skip minor style/grammar — focus on factual correctness.
 

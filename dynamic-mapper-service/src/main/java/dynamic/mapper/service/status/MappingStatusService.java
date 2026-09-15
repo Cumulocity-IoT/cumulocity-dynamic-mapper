@@ -198,24 +198,29 @@ public class MappingStatusService {
     }
 
     /**
-     * Increments the failure count for a mapping and handles automatic deactivation.
+     * Increments the consecutive-failure count for a mapping and reports whether that pushed it
+     * over the mapping's configured {@code maxFailureCount}.
      *
-     * <p>If the failure count reaches or exceeds the mapping's configured max failure count
-     * (and max failure count is greater than 0), an event is created and the mapping should
-     * be deactivated by the caller.</p>
+     * <p>This method only records the threshold breach (log + {@code MAPPING_FAILURE_EVENT});
+     * the actual deactivation is performed by the caller
+     * ({@link dynamic.mapper.service.MappingService#increaseAndHandleFailureCount}), which owns
+     * persistence, the mapping cache and the connector subscriptions.
      *
      * @param tenant the tenant identifier (must not be null or empty)
      * @param mapping the mapping that failed (must not be null with valid identifier)
      * @param status the status to update (must not be null)
+     * @return {@code true} if the mapping has now reached its failure threshold and must be
+     *         deactivated; {@code false} otherwise (including when the check is disabled with
+     *         {@code maxFailureCount == 0})
      * @throws IllegalArgumentException if tenant or mapping is invalid
      */
-    public void incrementFailureCount(String tenant, Mapping mapping, MappingStatus status) {
+    public boolean incrementFailureCount(String tenant, Mapping mapping, MappingStatus status) {
         validateTenant(tenant);
         validateMapping(mapping);
         if (status == null) {
             log.error("{} - Cannot increment failure count: status is null for mapping {}",
                      tenant, mapping.getIdentifier());
-            return;
+            return false;
         }
 
         status.incrementFailureCount();
@@ -224,7 +229,37 @@ public class MappingStatusService {
 
         if (shouldDeactivateMapping(mapping, status)) {
             handleFailureThresholdExceeded(tenant, mapping, status);
+            return true;
         }
+        return false;
+    }
+
+    /**
+     * Clears the consecutive-failure streak after a message processed without an error.
+     *
+     * <p>Without this, {@code currentFailureCount} would count failures cumulatively since
+     * activation, so a healthy mapping with a rare transient error would eventually cross its
+     * threshold and be deactivated. The threshold is meant to catch a <em>persistently</em>
+     * broken mapping.
+     *
+     * <p>Deliberately cheap on the hot path: mappings that did not opt into the check
+     * ({@code maxFailureCount == 0}, the default) and mappings with no failures pending cost a
+     * map lookup and a volatile read, and never take the status monitor.
+     *
+     * @param tenant the tenant identifier
+     * @param mapping the mapping that just processed a message successfully
+     */
+    public void resetFailureCountOnSuccess(String tenant, Mapping mapping) {
+        if (tenant == null || mapping == null || mapping.getMaxFailureCount() <= 0) {
+            return;
+        }
+        MappingStatus status = getStatusMap(tenant).get(mapping.getIdentifier());
+        if (status == null || status.currentFailureCount == 0) {
+            return;
+        }
+        status.resetFailureCount();
+        log.debug("{} - Reset failure streak after successful processing for mapping: {}",
+                tenant, mapping.getIdentifier());
     }
 
     /**
@@ -283,7 +318,7 @@ public class MappingStatusService {
             log.debug("{} - Successfully sent {} statuses to inventory", tenant, statusArray.length);
 
         } catch (IllegalArgumentException e) {
-            log.error("{} - Invalid argument when sending status to inventory: {}", tenant, e.getMessage());
+            log.error("{} - Invalid argument when sending status to inventory: {}", tenant, e.getMessage(), e);
         } catch (Exception e) {
             var transientError = CumulocityErrors.findTransientPlatformError(e);
             if (transientError.isPresent()) {
@@ -371,13 +406,16 @@ public class MappingStatusService {
         return mappingStatuses.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
     }
 
+    /**
+     * Makes sure the tenant has its own catch-all status for messages that matched no mapping.
+     *
+     * <p>{@code computeIfAbsent} with a fresh instance per tenant: sharing one static instance
+     * across tenants made every subscribed tenant report the sum of all tenants' unmatched
+     * messages, and made a reset of one tenant's statistics visible in all the others.
+     */
     private void ensureUnspecifiedStatus(String tenant) {
-        Map<String, MappingStatus> statusMap = getStatusMap(tenant);
-        if (!statusMap.containsKey(MappingStatus.IDENT_UNSPECIFIED_MAPPING)) {
-            statusMap.put(
-                    MappingStatus.UNSPECIFIED_MAPPING_STATUS.identifier,
-                    MappingStatus.UNSPECIFIED_MAPPING_STATUS);
-        }
+        getStatusMap(tenant).computeIfAbsent(MappingStatus.IDENT_UNSPECIFIED_MAPPING,
+                k -> MappingStatus.createUnspecified());
     }
 
     private Boolean shouldSendStatus(String tenant) {
@@ -385,9 +423,20 @@ public class MappingStatusService {
         return config.getSendMappingStatus() && initialized.getOrDefault(tenant, false);
     }
 
-    private Boolean shouldDeactivateMapping(Mapping mapping, MappingStatus status) {
+    /**
+     * True only on the message that crosses the threshold.
+     *
+     * <p>{@code ==} rather than {@code >=}: {@code currentFailureCount} is incremented by exactly
+     * 1 per call (and reset to 0 on success by {@link #resetFailureCountOnSuccess}), so equality
+     * catches the crossing exactly once. With {@code >=} this would re-fire — and re-emit the
+     * {@code MAPPING_FAILURE_EVENT} logging event via {@link #handleFailureThresholdExceeded} —
+     * for every subsequent failed message once the mapping is already over the threshold; the
+     * in-flight-deactivation set in {@code MappingService} suppresses duplicate deactivation work
+     * but not this event, so a burst of failures would otherwise flood the tenant's event log.
+     */
+    private boolean shouldDeactivateMapping(Mapping mapping, MappingStatus status) {
         return mapping.getMaxFailureCount() > 0 &&
-                status.currentFailureCount >= mapping.getMaxFailureCount();
+                status.currentFailureCount == mapping.getMaxFailureCount();
     }
 
     private void handleFailureThresholdExceeded(String tenant, Mapping mapping, MappingStatus status) {
@@ -406,9 +455,18 @@ public class MappingStatusService {
                         "failureCount", String.valueOf(status.getCurrentFailureCount())));
     }
 
+    /**
+     * Builds the array pushed to the inventory: a consistent point-in-time copy per status.
+     *
+     * <p>Snapshots rather than the live instances, for two reasons: the processing threads keep
+     * mutating the originals while Jackson serializes them, and the name/topic enrichment below
+     * writes into whatever it is handed — so enriching the live objects let display values from
+     * the reporting path leak into the objects the processing path owns.
+     */
     private MappingStatus[] buildStatusArray(String tenant, Map<String, MappingStatus> statusMap) {
         return statusMap.values().stream()
                 .filter(status -> shouldIncludeStatus(tenant, status))
+                .map(MappingStatus::snapshot)
                 .peek(status -> enrichStatusWithName(tenant, status))
                 .toArray(MappingStatus[]::new);
     }
@@ -419,7 +477,7 @@ public class MappingStatusService {
             return false;
         }
 
-        return MappingStatus.IDENT_UNSPECIFIED_MAPPING.equals(status.identifier) ||
+        return status.isUnspecified() ||
                 cacheManager.containsInboundMappingByIdentifier(tenant, status.identifier) ||
                 cacheManager.containsOutboundMappingByIdentifier(tenant, status.identifier);
     }
@@ -431,8 +489,10 @@ public class MappingStatusService {
         }
 
         try {
-            if (MappingStatus.IDENT_UNSPECIFIED_MAPPING.equals(status.identifier)) {
-                status.name = "Unspecified";
+            if (status.isUnspecified()) {
+                // Display label only — the identifier stays IDENT_UNSPECIFIED_MAPPING, which is
+                // what persisted status fragments and every consumer key off.
+                status.name = MappingStatus.UNSPECIFIED_DISPLAY_NAME;
             } else {
                 cacheManager.getInboundMappingByIdentifier(tenant, status.identifier)
                         .or(() -> cacheManager.getOutboundMappingByIdentifier(tenant, status.identifier))

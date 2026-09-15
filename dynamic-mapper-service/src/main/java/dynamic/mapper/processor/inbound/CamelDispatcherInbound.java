@@ -25,6 +25,7 @@ import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.ProcessingContext;
 import dynamic.mapper.processor.model.ProcessingResultWrapper;
@@ -132,6 +133,14 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                 resolvedMappings = mappingService.resolveMappingInbound(tenant, topic);
             }
             if (resolvedMappings == null || resolvedMappings.isEmpty()) {
+                // Count it on the catch-all status: a message arriving on a topic no mapping
+                // covers is the single most common "my device publishes but nothing happens"
+                // situation, and it was previously only visible in the log — no counter moved
+                // anywhere, so the monitoring screen showed a perfectly idle system.
+                if (!testing) {
+                    mappingService.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING)
+                            .incrementMessagesReceived();
+                }
                 log.info("{} - No mapping found for topic {}. Processing stopped.", tenant, topic);
             } else {
                 log.info("{} - Resolved {} mapping(s) for topic {}", tenant, resolvedMappings.size(), topic);
@@ -146,8 +155,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
             if (resolvedMappings != null) {
                 for (Mapping mapping : resolvedMappings) {
                     if (mapping.isTransformationAsCode()) {
-                        tempPipelineTimeout = serviceConfiguration.getPipelineTimeoutMS() != null
-                                ? serviceConfiguration.getPipelineTimeoutMS() : 5_000;
+                        tempPipelineTimeout = serviceConfiguration.getEffectivePipelineTimeoutMS();
                         break;
                     }
                 }
@@ -158,12 +166,22 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         } catch (Exception e) {
             log.warn("{} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!",
                     tenant, topic);
-            log.debug(e.getMessage(), e);
+            log.debug("Error resolving appropriate mapping: {}", e.getMessage(), e);
+            // Mirrors CamelDispatcherOutbound: a resolution failure belongs to no single
+            // mapping, so it is reported on the catch-all status instead of being dropped.
+            MappingStatus mappingStatusUnspecified = mappingService.getMappingStatus(tenant,
+                    Mapping.UNSPECIFIED_MAPPING);
+            if (mappingStatusUnspecified != null) {
+                mappingStatusUnspecified.incrementErrors();
+            }
             return result;
         }
 
         // Process using Camel routes asynchronously
         Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(() -> {
+            // Lets a timed-out callback verify that this thread really left — Future.isDone()
+            // cannot tell it that, see ProcessingResultWrapper.workerCompleted.
+            result.markWorkerStarted();
             try {
                 Exchange exchange = createExchange(connectorMessage, resolvedMappings, testing); // Now can use final variable
                 // Pass the result wrapper so in-flight processors can register cancel actions
@@ -244,6 +262,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                 log.error("{} - Error processing inbound message through Camel routes: {}", tenant, e.getMessage(), e);
                 throw new RuntimeException("Camel processing failed", e);
             } finally {
+                result.markWorkerCompleted();
             }
         });
 

@@ -459,7 +459,7 @@ array) and drives the interactive menu. The categories below mirror it:
 
 ## See Also
 
-- [ARCHITECTURE.md](../../ARCHITECTURE.md) — Component overview
-- [CLAUDE.md](../../CLAUDE.md) — Build commands and backend architecture
-- [TEST_CONCEPT.md](../../TEST_CONCEPT.md) — Detailed test planning
-- [EXTENSIONS.md](../../EXTENSIONS.md) — Custom extension development
+- [architecture.md](../../../docs/architecture.md) — Component overview
+- [CLAUDE.md](../../../CLAUDE.md) — Build commands and backend architecture
+- [testing.md](../../../docs/testing.md) — Detailed test planning
+- [extensions.md](../../../docs/extensions.md) — Custom extension development

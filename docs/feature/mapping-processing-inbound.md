@@ -9,7 +9,34 @@ send. This page describes that pipeline's shape and sequencing; the transformati
 mechanisms themselves (JSONata, Smart Functions, Java extensions) are documented
 separately.
 
-## Where it runs
+---
+
+## Requirements
+
+**What it is for.** Turning a message that arrived on a broker into Cumulocity data, according to
+the mappings the tenant configured.
+
+- **A message is offered to every mapping whose topic matches it.** One message can produce
+  several Cumulocity objects through several mappings; a message matching none is counted and
+  otherwise ignored.
+- **Mappings only run on connectors they are deployed to.** Matching a topic is not enough.
+- **The pipeline is: deserialize → enrich with identity → transform → send.** A failure at any
+  stage stops that mapping's processing of that message, records the failure, and must not affect
+  other mappings processing the same message.
+- **A mapping may reject a message deliberately** via its filter expression. That is not a
+  failure and must not be counted as one.
+- **Payload formats supported inbound**: JSON, flat file, hexadecimal, Protobuf, Sparkplug B, and
+  arbitrary payloads handled by an extension.
+- **An array in the payload may produce one object per element**, when the mapping says so.
+- **Processing must be bounded**: no message may occupy a worker indefinitely, and a runaway
+  transformation must be stoppable — see [reliability.md](reliability.md).
+- **Test runs must never change runtime state** — no counters, no failure streaks.
+
+---
+
+## Implementation
+
+### Where it runs
 
 | Stage | Class | Role |
 |---|---|---|
@@ -23,7 +50,7 @@ separately.
 | Send | [`SendInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/SendInboundProcessor.java) | Resolves external IDs to C8Y source IDs, upserts devices, calls `C8YAgent.createMEAO`, merges multiple MEASUREMENT requests into one bulk request, creates processing alarms, handles SparkPlug B birth/active-state bookkeeping. |
 | Cleanup | [`ConsolidationProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/util/ConsolidationProcessor.java) | Moves the `ProcessingContext` from Camel header to exchange body for the aggregation strategy, and closes the context's GraalVM resources (idempotent — the one point every leg passes through, including early-`.stop()` exits). |
 
-## End-to-end flow
+### End-to-end flow
 
 ```mermaid
 sequenceDiagram
@@ -56,14 +83,94 @@ sequenceDiagram
     Dispatcher-->>Connector: ProcessingResultWrapper (Future, consolidated QoS)
 ```
 
-## Dispatch and resolution (`CamelDispatcherInbound`)
+### Worked example
+
+A concrete run through the diagram above, for a mapping with `mappingTopic: "event/+/train"`
+and a substitution `_TOPIC_LEVEL_[1]` → `_IDENTITY_.externalId`:
+
+```mermaid
+sequenceDiagram
+    participant Broker as MQTT broker
+    participant Dispatch as CamelDispatcherInbound
+    participant Extract as JSONata extraction processor
+    participant Subst as Substitution result processor
+    participant Identity as IdentityResolutionService
+    participant C8Y as Cumulocity
+
+    Note over Broker,C8Y: mappingTopic "event/+/train", substitution pathTarget _IDENTITY_.externalId from pathSource _TOPIC_LEVEL_[1]
+    Broker->>Dispatch: topic "event/102030/train"<br/>payload: ts, msg
+    Dispatch->>Dispatch: split topic into _TOPIC_LEVEL_ array,<br/>merge into deserialized payload
+    Dispatch->>Extract: resolved mapping + enriched payload
+    Extract->>Extract: evaluate every substitution's pathSource
+    Extract->>Subst: processingCache[pathTarget] = SubstituteValue(s)
+    Subst->>Identity: resolve externalId "102030"
+    Identity-->>Subst: c8y internal id "47002030"
+    Subst->>Subst: write every cached pathTarget<br/>into a copy of targetTemplate
+    Subst->>C8Y: POST /event/events<br/>source.id = "47002030"
+```
+
+How the mapping in that example was found in the first place — the topic-matching tree
+(`MappingTreeNode`) that resolves `event/102030/train` to `event/+/train` — one node per topic
+segment, `+`/`#` wildcards are ordinary segment values in that tree, walked one level at a time
+with exact-match and wildcard branches followed in parallel so a single message can match more
+than one mapping:
+
+```mermaid
+flowchart TD
+    classDef build fill:#eef6ff,stroke:#2f6fb3,color:#1a3f66,text-align:left;
+    classDef decision fill:#fff7e6,stroke:#b8860b,color:#5c4400,text-align:left;
+    classDef leaf fill:#e9f7ef,stroke:#2e8b57,color:#1b5e3a,text-align:left;
+    classDef msg fill:#f3f0fa,stroke:#6a4c93,color:#3d2b5c,text-align:left;
+    classDef result fill:#fdecea,stroke:#c0392b,color:#7b241c,text-align:left;
+
+    subgraph reg["Building the tree (once per mapping, on save)"]
+        direction LR
+        m1["mappingTopic: device/+/data<br/>mappingTopic: device/#<br/>mappingTopic: device/berlin/data"]:::build
+        m1 --> tree["One child node per topic segment.<br/>'+' and '#' are ordinary segment values,<br/>tried like any other literal segment."]:::build
+    end
+
+    subgraph match["Resolving an incoming message (per level)"]
+        direction TB
+        msg["Message on topic device/berlin/data,<br/>split into levels: [device, berlin, data]"]:::msg --> level0
+
+        level0["At node 'device', level index 0"]:::msg --> exact0{"child 'berlin'?"}:::decision
+        level0 --> plus0{"child '+' ?"}:::decision
+        level0 --> hash0{"child '#' ?"}:::decision
+
+        exact0 -- yes --> level1a["recurse into 'berlin' at index 1"]:::msg
+        plus0 -- yes --> level1b["recurse into '+' at index 1<br/>(matches any single segment)"]:::msg
+        hash0 -- yes --> leafHash["'#' is itself a leaf result —<br/>consumes all remaining levels,<br/>no further recursion"]:::leaf
+
+        level1a --> exact1{"child 'data'?"}:::decision
+        exact1 -- yes, index==levels.size --> leafExact["mapping leaf: device/berlin/data"]:::leaf
+        level1b --> exact1b{"child 'data'?"}:::decision
+        exact1b -- yes --> leafPlus["mapping leaf: device/+/data"]:::leaf
+    end
+
+    result["All leaves reached this way are collected.<br/>Exact and wildcard branches are walked in parallel,<br/>so one message can match several distinct mappings<br/>(e.g. device/+/data and device/#) —<br/>not several mappings on one node: each node holds at most one."]:::result
+    leafExact --> result
+    leafPlus --> result
+    leafHash --> result
+
+    reg -.-> match
+```
+
+The levels of the Mapping Topic are split and added to the source payload as `_TOPIC_LEVEL_`, e.g.
+`["device", "express", "berlin_01"]` for topic `device/express/berlin_01` — see
+[`MappingTreeNode.resolveTopicPath`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/MappingTreeNode.java)
+and [mapping-validation.md](mapping-validation.md).
+
+### Dispatch and resolution (`CamelDispatcherInbound`)
 
 `onMessage()`/`onTestMessage()` both funnel into `processMessage()`
 ([`CamelDispatcherInbound.java:93-253`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/CamelDispatcherInbound.java#L93-L253)):
 
 1. System topics (`$SYS*`) and null payloads are dropped immediately.
 2. Mappings are resolved for the topic via `mappingService.resolveMappingInbound(tenant, topic)`
-   — or, for a test call, the single `testMapping` passed in is used directly.
+   — or, for a test call, the single `testMapping` passed in is used directly. Their QoS is
+   consolidated into the wrapper's `consolidatedQos` (strongest level requested, clamped to the
+   connector's capabilities), which decides when the connector acknowledges the message — see
+   [`reliability.md`](reliability.md).
 3. `testing` is computed as `testMapping != null && !sendPayload` — a dry-run test uses
    mocked identity/inventory lookups, but as soon as `sendPayload=true` (the user created a
    real test device beforehand) the mapping runs against real Cumulocity services. See
@@ -82,7 +189,7 @@ sequenceDiagram
    (`CamelDispatcherInbound.java:203-238`). See [`identity-resolution.md`](identity-resolution.md)
    for why there are two caches.
 
-## Camel route structure (`DynamicMapperInboundRoutes`)
+### Camel route structure (`DynamicMapperInboundRoutes`)
 
 - `direct:processInboundMessage` — no-op short-circuit when no mappings were resolved.
 - `direct:processWithMappingsOutbound` — filters candidate mappings to those actually
@@ -108,7 +215,7 @@ sequenceDiagram
   `direct:inboundErrorHandling`, which guarantees `PROCESSED_CONTEXTS` is never null so the
   dispatcher's header read always succeeds.
 
-## `ProcessingContext` and its focused sub-contexts
+### `ProcessingContext` and its focused sub-contexts
 
 `ProcessingContext<O>` ([`ProcessingContext.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/ProcessingContext.java))
 is the per-message state object threaded through every processor via the Camel header
@@ -144,7 +251,7 @@ purpose. Use `try (ProcessingContext<?> ctx = ...) { ... }` (or rely on
 `ConsolidationProcessor`, which does this on every pipeline exit) rather than looking for a
 dedicated `ExecutionContext` type.
 
-## Filtering (`FilterInboundProcessor`)
+### Filtering (`FilterInboundProcessor`)
 
 Runs once, right after enrichment, only for inbound. It evaluates `mapping.getFilterMapping()`
 (a JSONata boolean expression) against the deserialized payload
@@ -158,7 +265,7 @@ post-substitution filter — `filterInventory` — applied later in
 [`mapping-validation.md`](mapping-validation.md) for the full validation rule set around both
 filters.
 
-## Transformation dispatch
+### Transformation dispatch
 
 The four transformation paths are documented individually — this page only covers how the
 route selects and sequences them:
@@ -171,12 +278,16 @@ route selects and sequences them:
 handled by `InternalProtobufProcessor` directly on the inbound route and is not one of the
 three pluggable transformation types above.
 
-## Substitution and identity resolution
+### Substitution and identity resolution
 
 `SubstitutionResultInboundProcessor` walks every `pathTarget` in
 `context.getProcessingCache()` and writes the corresponding value into a copy of
-`targetTemplate` for each device (cardinality is driven by the maximum `expandArray` fan-out
-across all cached substitutions — see `BaseProcessor.validateProcessingCache()`). Two
+`targetTemplate` for each device. The cardinality is the number of cached values for the
+device-identifier `pathTarget`, after `BaseProcessor.validateProcessingCache()` has padded
+that list up to the largest fan-out across all cached substitutions by repeating its first
+entry. A `pathTarget` holding exactly one value is broadcast to every request; one holding
+fewer values than the cardinality without being broadcastable falls back to its declared
+`repairStrategy` (and to the `NOT_DEFINED` marker for `DEFAULT`/`CREATE_IF_MISSING`). Two
 `pathTarget` values are handled specially before the generic JSONPath write, because they
 drive Cumulocity identity:
 
@@ -194,7 +305,7 @@ resulting `DynamicMapperRequest`s are processed sequentially (`false` → parall
 devices; `true` → sequential, since device creation must happen deterministically before
 dependent MEAO requests).
 
-## Sending (`SendInboundProcessor`)
+### Sending (`SendInboundProcessor`)
 
 Beyond resolving external IDs and creating/updating devices via `C8YAgent.upsertDevice()`
 and `C8YAgent.createMEAO()`, this processor also:
@@ -209,7 +320,7 @@ and `C8YAgent.createMEAO()`, this processor also:
   NDATA/DDATA messages can resolve metric aliases, and maintains
   `sparkPlugB_isActive[_<deviceId>]` flags from BIRTH/DATA/DEATH message types.
 
-## Cancellation
+### Cancellation
 
 Both `CamelDispatcherInbound` and the outbound dispatcher submit processing to a virtual
 thread and store the `Future` on a `ProcessingResultWrapper`. A caller (e.g. a connector

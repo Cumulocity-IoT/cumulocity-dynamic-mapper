@@ -60,6 +60,9 @@ public abstract class AbstractPulsarCallback implements MessageListener<byte[]> 
      */
     protected static final int MAX_CONSECUTIVE_FAILURES = 5;
 
+    /** Upper bound on the per-retransmission timeout escalation, as a multiple of the base budget. */
+    protected static final int MAX_TIMEOUT_ESCALATION_FACTOR = 3;
+
     protected final GenericMessageCallback genericMessageCallback;
     protected final String tenant;
     protected final String connectorIdentifier;
@@ -95,29 +98,12 @@ public abstract class AbstractPulsarCallback implements MessageListener<byte[]> 
      * @return true if the future completed within the 2-second window, false otherwise
      */
     protected boolean cancelAndDrain(ProcessingResultWrapper<?> processedResults) {
-        var cancelResult = processedResults.cancelProcessing();
-        log.info("{} - Cancellation result: future was cancelled={}, connector: {}",
-                tenant, cancelResult, connectorIdentifier);
-
-        for (int i = 0; i < 20; i++) {
-            if (processedResults.getProcessingResult().isDone()) {
-                log.info("{} - Future completed after {}ms wait, connector: {}",
-                        tenant, (i + 1) * 100, connectorIdentifier);
-                return true;
-            }
-            try {
-                Thread.sleep(100); //NOSONAR intentional wait for future completion
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                log.warn("{} - Interrupted while waiting for future completion, connector: {}",
-                        tenant, connectorIdentifier);
-                return false;
-            }
+        boolean drained = processedResults.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
+        if (!drained) {
+            log.error("{} - Processing thread still running after cancellation, connector: {}",
+                    tenant, connectorIdentifier);
         }
-        log.error("{} - Future did NOT complete within 2 seconds after cancellation! "
-                + "Check for long-running HTTP calls or other blocking I/O. connector: {}",
-                tenant, connectorIdentifier);
-        return false;
+        return drained;
     }
 
     /**

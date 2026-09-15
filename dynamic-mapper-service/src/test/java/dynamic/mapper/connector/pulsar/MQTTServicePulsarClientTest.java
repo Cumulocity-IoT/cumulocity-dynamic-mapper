@@ -177,10 +177,10 @@ class MQTTServicePulsarClientTest {
         assertNotNull(client);
         assertEquals(ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR, client.getConnectorType());
         assertTrue(client.isSingleton());
-        assertNotNull(client.getSupportedQOS());
-        assertEquals(2, client.getSupportedQOS().size());
-        assertTrue(client.getSupportedQOS().contains(Qos.AT_MOST_ONCE));
-        assertTrue(client.getSupportedQOS().contains(Qos.AT_LEAST_ONCE));
+        assertNotNull(client.getSupportedQos());
+        assertEquals(2, client.getSupportedQos().size());
+        assertTrue(client.getSupportedQos().contains(Qos.AT_MOST_ONCE));
+        assertTrue(client.getSupportedQos().contains(Qos.AT_LEAST_ONCE));
     }
 
     @Test

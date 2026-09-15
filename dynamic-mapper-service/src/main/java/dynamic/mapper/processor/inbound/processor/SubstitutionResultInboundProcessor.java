@@ -320,6 +320,34 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
         }
     }
 
+    /**
+     * Look up the configured {@link Substitution} that writes to {@code pathTarget}.
+     * Returns {@code null} for mappings that have no substitution list at all
+     * (Smart Functions, Java extensions, internal protobuf), where the
+     * {@link SubstituteValue}s are produced in code instead.
+     */
+    private static Substitution findSubstitution(Mapping mapping, String pathTarget) {
+        if (mapping.getSubstitutions() == null) {
+            return null;
+        }
+        return Arrays.stream(mapping.getSubstitutions())
+                .filter(s -> pathTarget.equals(s.getPathTarget()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * The {@link RepairStrategy} declared on the mapping for {@code pathTarget}, or
+     * {@link RepairStrategy#DEFAULT} when the mapping has no matching substitution.
+     */
+    private static RepairStrategy declaredRepairStrategy(Mapping mapping, String pathTarget) {
+        Substitution substitution = findSubstitution(mapping, pathTarget);
+        if (substitution == null || substitution.getRepairStrategy() == null) {
+            return RepairStrategy.DEFAULT;
+        }
+        return substitution.getRepairStrategy();
+    }
+
     private ProcessingContext<Object> getBuildProcessingContext(ProcessingContext<Object> context,
             SubstituteValue device, int finalI,
             int size) throws ProcessingException {
@@ -328,9 +356,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
         String tenant = context.getTenant();
         DocumentContext payloadTarget = JsonPath.parse(mapping.getTargetTemplate());
         for (String pathTarget : pathTargets) {
-            SubstituteValue substitute = new SubstituteValue(
-                    "NOT_DEFINED", TYPE.TEXTUAL,
-                    RepairStrategy.DEFAULT, false);
+            SubstituteValue substitute;
             List<SubstituteValue> pathTargetSubstitute = context.getFromProcessingCache(pathTarget);
             if (finalI < pathTargetSubstitute.size()) {
                 substitute = pathTargetSubstitute.get(finalI).clone();
@@ -341,19 +367,34 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 // cached value, "first" and "last" are the same element, so no repairStrategy
                 // branching is needed here.)
                 substitute = pathTargetSubstitute.get(0).clone();
+                log.debug(
+                        "{} - Broadcasting single cached value of pathTarget: '{}' to request {}, repairStrategy: '{}'.",
+                        tenant, pathTarget, finalI, substitute.repairStrategy);
+            } else {
+                // This pathTarget produced fewer values than the cardinality of the message and
+                // cannot be broadcast either (0 values, or 2 values for a cardinality of 3). The
+                // declared repairStrategy decides what happens to the target node — IGNORE keeps
+                // whatever the target template already holds, REMOVE_IF_MISSING_OR_NULL deletes
+                // it. For DEFAULT/CREATE_IF_MISSING there is nothing sensible to write, so the
+                // "NOT_DEFINED" marker is kept as before to make the gap visible in the result.
+                RepairStrategy declared = declaredRepairStrategy(mapping, pathTarget);
+                if (RepairStrategy.IGNORE.equals(declared)
+                        || RepairStrategy.REMOVE_IF_MISSING_OR_NULL.equals(declared)) {
+                    substitute = new SubstituteValue(null, TYPE.IGNORE, declared, false);
+                } else {
+                    substitute = new SubstituteValue("NOT_DEFINED", TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
+                }
                 log.warn(
-                        "{} - Processing pathTarget: '{}', repairStrategy: '{}'.",
-                        tenant,
-                        pathTarget, substitute.repairStrategy);
+                        "{} - Mapping '{}' has only {} value(s) cached for pathTarget: '{}' but a cardinality of {};"
+                                + " applying repairStrategy: '{}' for request {}.",
+                        tenant, mapping.getName(), pathTargetSubstitute.size(), pathTarget, size,
+                        substitute.repairStrategy, finalI);
             }
 
             try {
                 prepareAndSubstituteInPayload(context, payloadTarget, pathTarget, substitute);
             } catch (Exception e) {
-                Substitution matchedSub = Arrays.stream(mapping.getSubstitutions())
-                        .filter(s -> pathTarget.equals(s.getPathTarget()))
-                        .findFirst()
-                        .orElse(null);
+                Substitution matchedSub = findSubstitution(mapping, pathTarget);
                 String pathSource = matchedSub != null ? matchedSub.getPathSource() : "unknown";
                 boolean alreadyCreateIfMissing = matchedSub != null
                         && RepairStrategy.CREATE_IF_MISSING.equals(matchedSub.getRepairStrategy());

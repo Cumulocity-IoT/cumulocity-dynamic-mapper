@@ -369,7 +369,7 @@ class EnrichmentOutboundProcessorTest {
         // requirements
         // This test verifies that the processor correctly handles GraalVM setup errors
         mapping.setTransformationType(TransformationType.SMART_FUNCTION);
-        mapping.setCode("function onMessage(message) { return message; }");
+        mapping.setCode(java.util.Base64.getEncoder().encodeToString("function onMessage(message) { return message; }".getBytes()));
 
         // The mocked engine will cause GraalVM context creation to fail
         when(graalVMContextService.peekGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
@@ -398,7 +398,7 @@ class EnrichmentOutboundProcessorTest {
     void testProcessWithSmartFunction() throws Exception {
         // Given - Smart function transformation
         mapping.setTransformationType(TransformationType.SMART_FUNCTION);
-        mapping.setCode("function onMessage(message) { return message; }");
+        mapping.setCode(java.util.Base64.getEncoder().encodeToString("function onMessage(message) { return message; }".getBytes()));
 
         // GraalVM Engine mock will cause context creation to fail
         when(graalVMContextService.peekGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
@@ -423,7 +423,7 @@ class EnrichmentOutboundProcessorTest {
     void testCompleteOutboundFlowWithGraalVMHandling() throws Exception {
         // Given - Smart function transformation that will trigger GraalVM setup
         mapping.setTransformationType(TransformationType.SMART_FUNCTION);
-        mapping.setCode("function onMessage(message, context) { return {transformed: message}; }");
+        mapping.setCode(java.util.Base64.getEncoder().encodeToString("function onMessage(message, context) { return {transformed: message}; }".getBytes()));
         mapping.setDebug(true);
         when(serviceConfiguration.getLogPayload()).thenReturn(true);
 
@@ -534,7 +534,7 @@ class EnrichmentOutboundProcessorTest {
     void testGraalVMContextCreationError() throws Exception {
         // Given - GraalVM engine throws exception
         mapping.setTransformationType(TransformationType.SMART_FUNCTION);
-        mapping.setCode("function transform(input) { return input; }");
+        mapping.setCode(java.util.Base64.getEncoder().encodeToString("function transform(input) { return input; }".getBytes()));
 
         // Force an exception from the configuration registry
         when(graalVMContextService.peekGraalEngine(TEST_TENANT))
@@ -558,7 +558,7 @@ class EnrichmentOutboundProcessorTest {
     void testGraalContextBuilderReuse() throws Exception {
         // Given - Multiple calls with code-based transformations
         mapping.setTransformationType(TransformationType.SMART_FUNCTION);
-        mapping.setCode("function transform(input) { return input; }");
+        mapping.setCode(java.util.Base64.getEncoder().encodeToString("function transform(input) { return input; }".getBytes()));
 
         // GraalVM Engine mock will cause context creation to fail
         when(graalVMContextService.peekGraalEngine(TEST_TENANT)).thenReturn(graalEngine);

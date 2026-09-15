@@ -10,7 +10,31 @@ Extensions are the right tool when transformation logic needs full Java (existin
 libraries, binary protocol parsing, complex control flow) rather than JSONata's
 expression language or GraalVM JavaScript.
 
-## The extension interfaces
+---
+
+## Requirements
+
+**What it is for.** Payload formats that cannot reasonably be handled in JavaScript or JSONata —
+a proprietary binary protocol, a Protobuf schema, anything needing a Java library.
+
+- **A tenant can upload compiled Java** implementing a published interface, and use it as a
+  mapping's transformation.
+- **The published interface is versioned and separate from the service**, so an extension compiles
+  against a stable artifact rather than service internals.
+- **Extensions are per tenant.** An uploaded extension is visible and loadable only within the
+  tenant that uploaded it.
+- **Both directions are supported.**
+- **An extension declares the events it handles**, and a mapping selects one of them.
+- **A failing extension must not destabilise the service**: its errors are attributed to the
+  mapping that used it and reported with enough detail to locate the fault in the extension's own
+  code.
+- **Uploading, listing and removing extensions is a tenant operation**, not a redeployment.
+
+---
+
+## Implementation
+
+### The extension interfaces
 
 An extension implements one of two marker interfaces from `dynamic-mapper-interface`
 (source lives under `dynamic-mapper-service/src/main/java/dynamic/mapper/processor/extension/`
@@ -24,7 +48,7 @@ Both follow the same "SMART function pattern" as Smart Functions: a pure functio
 returns what to emit, rather than an imperative API that calls back into a C8Y client
 directly.
 
-## `JavaExtensionContext` / `DataPrepContext`
+### `JavaExtensionContext` / `DataPrepContext`
 
 The context parameter is
 [`JavaExtensionContext`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/JavaExtensionContext.java), which extends
@@ -55,7 +79,7 @@ The concrete implementation wired into `JavaExtensionContext` is
 available, logging a warning and returning a safe default when it is not (e.g.
 `getClientId()`/`setState()` on outbound extensions where no flow context exists).
 
-## Loading and lookup
+### Loading and lookup
 
 [`ExtensionManager`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/ExtensionManager.java) owns the lifecycle of extension JARs per tenant:
 
@@ -99,7 +123,7 @@ Both failure modes raise a specific `ProcessingException` with a clear message r
 than propagating a `NullPointerException` — see [Hardening](#hardening-commit-eda07ef59)
 below.
 
-## Processing flow
+### Processing flow
 
 ```mermaid
 flowchart LR
@@ -127,7 +151,7 @@ error.
 (`process()` → `processWithExtension()` → subclass-specific `handleProcessingError()`)
 used by both `ExtensibleInboundProcessor` and `ExtensibleOutboundProcessor`.
 
-## Hardening (commit `eda07ef59`)
+### Hardening (commit `eda07ef59`)
 
 Commit `eda07ef593c7c548fb1ab7ae637b9ef2d409b156` ("Harden Java Extension feature: safer
 lookup, resource cleanup, UI polish") changed the following in
@@ -159,7 +183,7 @@ capped upload size, required extension/event selection before creating an
 `EXTENSION_JAVA` mapping, and added loading/empty/warning states to the extension picker
 in the mapping stepper.
 
-## Related validation rule
+### Related validation rule
 
 `MappingValidator` requires the `extension` field to be set whenever
 `transformationType == EXTENSION_JAVA` — see rule 3,

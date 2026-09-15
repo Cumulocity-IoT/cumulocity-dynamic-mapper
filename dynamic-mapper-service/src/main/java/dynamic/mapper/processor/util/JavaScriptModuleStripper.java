@@ -99,6 +99,12 @@ public final class JavaScriptModuleStripper {
     private static final Pattern IMPORT_LINE = Pattern.compile(
             "(?m)^\\s*+import\\s++[^\\n]*$");
 
+    /** Any {@code export { …} opening — single- or multi-line block. Detection-only variant of
+     *  {@link #EXPORT_BLOCK_OPEN}/{@link #EXPORT_BLOCK_SINGLE_LINE} with {@code (?m)} so it can be
+     *  matched against the whole source rather than line-by-line. */
+    private static final Pattern EXPORT_BLOCK_ANY = Pattern.compile(
+            "(?m)^\\s*+export\\s*+\\{");
+
     /**
      * Strips all ESM {@code export} and {@code import} declarations from
      * {@code source} and returns plain-script code.
@@ -182,5 +188,19 @@ public final class JavaScriptModuleStripper {
      */
     public static String stripImports(String source) {
         return IMPORT_LINE.matcher(source).replaceAll("").trim();
+    }
+
+    /**
+     * True if {@code source} contains any ESM {@code export} declaration that
+     * {@link #toPlainScript(String)} would strip or unwrap. Used to hint users that they can
+     * enable "Support ESM modules" instead of relying on the stripping fallback.
+     *
+     * @param source raw source text
+     * @return whether the source uses ES module export syntax
+     */
+    public static boolean containsExportStatement(String source) {
+        return INLINE_EXPORT.matcher(source).find()
+                || EXPORT_BLOCK_ANY.matcher(source).find()
+                || EXPORT_DEFAULT.matcher(source).find();
     }
 }

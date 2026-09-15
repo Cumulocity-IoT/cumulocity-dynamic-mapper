@@ -22,19 +22,33 @@ installed, they appear in the Processor Extension configuration and become avail
 stepper.
 :::
 
+##### End-to-end overview
+
+```mermaid
+flowchart TD
+    s1["1. Implement ProcessorExtensionInbound&lt;byte[]&gt;<br/>(or ProcessorExtensionOutbound&lt;O&gt; for C8Y to broker)"]
+    s2["2. Register the class in<br/>extension-external.yaml<br/>eventName, className, description, version,<br/>optional default parameter map"]
+    s3["3. Package extension-external.yaml + compiled classes<br/>into a zip archive"]
+    s4["4. Upload the zip:<br/>Configuration &rarr; Processor Extension &rarr; Add Extension<br/>(the microservice loads it dynamically, per tenant)"]
+    s5["5. Create a mapping with transformation type Extension Java,<br/>select the extension and its eventName;<br/>optionally override the parameter map for this mapping"]
+    s6["Mapping is active:<br/>onMessage(...) runs on every matching broker message,<br/>context.getConfigAsMap() exposes tenant/topic/parameter,<br/>and its CumulocityObject results are sent to Cumulocity"]
+
+    s1 --> s2 --> s3 --> s4 --> s5 --> s6
+```
+
 ##### Selecting Java Extensions in the Mapping Stepper
 
 When creating a mapping, you can select from installed Java Extensions that define the transformation logic. The
 mapping stepper displays all available extensions along with their associated templates:
 
-![Java Extension in Mapping Stepper](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ProcessorExtension.png "Screenshot showing the mapping stepper with Java Extension templates. The dropdown displays available extensions for payload parsing, including various custom extensions like CustomEvent, CustomMeasurement, and MeasurementWithImplicitDevice. Each extension provides pre-configured templates for both source and target payloads.")
+![Java Extension in Mapping Stepper](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ProcessorExtension.png "Screenshot showing step 4 / tab Transformation of the mapping stepper with Java Extension templates. The dropdown displays available extensions for payload parsing, including various custom extensions like CustomEvent, CustomMeasurement, and MeasurementWithImplicitDevice. Each extension provides pre-configured templates for both source and target payloads.")
 
 ##### Managing Installed Java Extensions
 
 To manage and view installed Java Extensions, navigate to the Processor Extension configuration page. This page
 displays all deployed extensions with their properties, implementation details, and supported message types:
 
-![Processor Extension Configuration](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Configuration_ProcessorExtension_Plugin_Installed.png "Screenshot showing the Processor Extension configuration page with installed plugins. Each extension displays its name (e.g., CustomEvent, MeasurementToCustomJson), implementation class path, message type, direction (Outbound/Inbound), and active status. The interface allows you to view extension properties and verify that plugins are correctly installed and operational.")
+![Processor Extension Configuration](../../../resources/image/Dynamic_Mapper_Configuration_ProcessorExtension_Plugin_Installed.png "Screenshot showing the Processor Extension configuration page with installed plugins. Each extension displays its name (e.g., CustomEvent, MeasurementToCustomJson), implementation class path, message type, direction (Outbound/Inbound), and active status. The interface allows you to view extension properties and verify that plugins are correctly installed and operational.")
 
 The signature and structure of a **Java Extension** has the form:
 

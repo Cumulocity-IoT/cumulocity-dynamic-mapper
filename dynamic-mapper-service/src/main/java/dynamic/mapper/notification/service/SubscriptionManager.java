@@ -669,7 +669,7 @@ public class SubscriptionManager {
                 return subIt.next();
             }
         } catch (Exception e) {
-            log.warn("Error finding existing type subscription: {}", e.getMessage());
+            log.warn("{} - Error finding existing type subscription: {}", subscriptionsService.getTenant(), e.getMessage());
         }
         return null;
     }
@@ -694,17 +694,17 @@ public class SubscriptionManager {
         } catch (SDKException e) {
             if (e.getHttpStatus() == 409) {
                 // Already exists, fetch it
-                log.debug("Type subscription already exists, fetching it");
+                log.debug("{} - Type subscription already exists, fetching it", subscriptionsService.getTenant());
                 NotificationSubscriptionRepresentation existing = findExistingTypeSubscription();
                 if (existing != null) {
                     return existing;
                 }
                 throw new RuntimeException("Type subscription not found after duplicate error");
             }
-            log.error("Error creating type subscription: {}", e.getMessage(), e);
+            log.error("{} - Error creating type subscription: {}", subscriptionsService.getTenant(), e.getMessage(), e);
             throw new RuntimeException("Failed to create type subscription: " + e.getMessage(), e);
         } catch (Exception e) {
-            log.error("Error creating type subscription: {}", e.getMessage(), e);
+            log.error("{} - Error creating type subscription: {}", subscriptionsService.getTenant(), e.getMessage(), e);
             throw new RuntimeException("Failed to create type subscription: " + e.getMessage(), e);
         }
     }

@@ -201,7 +201,7 @@ public class MappingSubscriptionManager {
                 // the (lower) QoS of whichever mapping happened to subscribe first, silently
                 // under-serving this mapping's QoS requirement.
                 Qos currentQos = subscribedQos.getOrDefault(topic, Qos.AT_MOST_ONCE);
-                if (qos.ordinal() > currentQos.ordinal()) {
+                if (Qos.orDefault(qos).getLevel() > currentQos.getLevel()) {
                     subscriptionCallback.subscribe(topic, qos);
                     subscribedQos.put(topic, qos);
                     log.info("{} - Upgraded subscription QoS for topic: [{}] from {} to {} for connector: {}",
@@ -301,11 +301,10 @@ public class MappingSubscriptionManager {
                         effectiveMappingsInbound.put(mapping.getIdentifier(), mapping);
                         desiredMappingIds.add(mapping.getIdentifier());
 
-                        // Track max QoS per topic (use highest QoS among all mappings for that topic)
-                        Qos currentQos = topicQosMap.getOrDefault(topic, Qos.AT_MOST_ONCE);
-                        if (mapping.getQos().ordinal() > currentQos.ordinal()) {
-                            topicQosMap.put(topic, mapping.getQos());
-                        }
+                        // Track max QoS per topic (use highest QoS among all mappings for that
+                        // topic). Null-safe: a mapping persisted before `qos` was a defaulted
+                        // field would otherwise NPE here and abort the whole reconcile.
+                        topicQosMap.merge(topic, Qos.orDefault(mapping.getQos()), Qos::max);
                     });
 
             // Drop mappings that are no longer effective on this connector (e.g. un-deployed
@@ -362,7 +361,7 @@ public class MappingSubscriptionManager {
                 .forEach(topic -> {
                     Qos desiredQos = topicQosMap.getOrDefault(topic, Qos.AT_MOST_ONCE);
                     Qos currentQos = subscribedQos.getOrDefault(topic, Qos.AT_MOST_ONCE);
-                    if (desiredQos.ordinal() > currentQos.ordinal()) {
+                    if (desiredQos.getLevel() > currentQos.getLevel()) {
                         try {
                             subscriptionCallback.subscribe(topic, desiredQos);
                             subscribedQos.put(topic, desiredQos);

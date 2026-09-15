@@ -26,7 +26,7 @@ import { HttpStatusCode } from "@angular/common/http";
 import { ConnectorConfigurationService } from "../service/connector-configuration.service";
 import { SharedService } from "../service/shared.service";
 import { Operation } from "../service/shared.model";
-import { Direction } from "../mapping/mapping.model";
+import { Direction, Qos } from "../mapping/mapping.model";
 import { ALERT_INFO_TIMEOUT } from "../mapping/util";
 
 export enum ConnectorPropertyType {
@@ -90,6 +90,11 @@ export interface ConnectorSpecification {
   singleton: boolean;
   supportsMessageContext?: boolean;
   supportedDirections?: Direction[];
+  /**
+   * QoS levels this connector can actually honour. A mapping configured with a stronger level
+   * is clamped to the strongest level in this list when it runs on this connector.
+   */
+  supportedQos?: Qos[];
   properties: { [name: string]: ConnectorProperty };
 }
 

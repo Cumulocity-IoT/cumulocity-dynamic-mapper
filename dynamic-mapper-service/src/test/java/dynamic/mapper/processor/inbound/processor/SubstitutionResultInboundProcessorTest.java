@@ -25,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -409,6 +411,66 @@ class SubstitutionResultInboundProcessorTest {
 
         // Then - Processing completes with multiple devices
         log.info("Multiple device entries test completed");
+    }
+
+    /**
+     * Cardinality is driven by the number of device entries (padded up to the largest
+     * fan-out by {@code validateProcessingCache}). A non-device pathTarget that produced
+     * fewer values than that — and cannot simply be broadcast, because it has more than
+     * one — falls back to its declared repairStrategy for the requests it cannot fill.
+     */
+    private void givenUnderSuppliedTemperatureValues(RepairStrategy repairStrategy) {
+        Map<String, List<SubstituteValue>> cache = processingContext.getProcessingCache();
+        cache.put("_IDENTITY_.externalId", new ArrayList<>(List.of(
+                new SubstituteValue("device1", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false),
+                new SubstituteValue("device2", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false),
+                new SubstituteValue("device3", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false))));
+        // Only two of the three requests can be filled from this pathTarget.
+        cache.put("c8y_TemperatureMeasurement.T.value", new ArrayList<>(List.of(
+                new SubstituteValue(20.5, SubstituteValue.TYPE.NUMBER, repairStrategy, false),
+                new SubstituteValue(22.1, SubstituteValue.TYPE.NUMBER, repairStrategy, false))));
+
+        Arrays.stream(mapping.getSubstitutions())
+                .filter(s -> "c8y_TemperatureMeasurement.T.value".equals(s.getPathTarget()))
+                .forEach(s -> s.setRepairStrategy(repairStrategy));
+    }
+
+    @Test
+    void testUnderSuppliedValueWithIgnoreKeepsTargetTemplateValue() throws Exception {
+        givenUnderSuppliedTemperatureValues(RepairStrategy.IGNORE);
+
+        processor.process(exchange);
+
+        assertEquals(3, processingContext.getRequests().size());
+        String thirdRequest = processingContext.getRequests().get(2).getRequest();
+        // IGNORE leaves the node exactly as the target template defined it.
+        assertTrue(thirdRequest.contains("\"value\":0"), thirdRequest);
+        assertFalse(thirdRequest.contains("NOT_DEFINED"), thirdRequest);
+    }
+
+    @Test
+    void testUnderSuppliedValueWithRemoveIfMissingDeletesTargetNode() throws Exception {
+        givenUnderSuppliedTemperatureValues(RepairStrategy.REMOVE_IF_MISSING_OR_NULL);
+
+        processor.process(exchange);
+
+        assertEquals(3, processingContext.getRequests().size());
+        String thirdRequest = processingContext.getRequests().get(2).getRequest();
+        assertFalse(thirdRequest.contains("\"value\""), thirdRequest);
+        assertFalse(thirdRequest.contains("NOT_DEFINED"), thirdRequest);
+        // The first two requests are still filled normally.
+        assertTrue(processingContext.getRequests().get(0).getRequest().contains("20.5"));
+    }
+
+    @Test
+    void testUnderSuppliedValueWithDefaultKeepsNotDefinedMarker() throws Exception {
+        givenUnderSuppliedTemperatureValues(RepairStrategy.DEFAULT);
+
+        processor.process(exchange);
+
+        assertEquals(3, processingContext.getRequests().size());
+        // DEFAULT has nothing sensible to write, so the gap stays visible in the result.
+        assertTrue(processingContext.getRequests().get(2).getRequest().contains("NOT_DEFINED"));
     }
 
     @Test

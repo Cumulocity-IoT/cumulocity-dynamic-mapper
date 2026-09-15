@@ -32,6 +32,8 @@ import {
   ConfirmationModalComponent,
   Direction,
   Feature,
+  MAPPING_STATUS_UNSPECIFIED,
+  MAPPING_STATUS_UNSPECIFIED_LABEL,
   MappingStatus,
   Operation,
   SharedService
@@ -78,7 +80,12 @@ export class MonitoringComponent implements OnInit, OnDestroy {
 
   readonly mappingStatus$ = this.state$.pipe(
     map(state => state.mappingStatuses),
-    map(statuses => statuses.filter(st => st.direction === this.direction)))
+    // Keep the catch-all "Unmapped messages" row (direction is null because it spans both
+    // directions): it counts messages that matched no mapping and errors raised before any
+    // mapping could be resolved. Filtering strictly by direction hid it from both tabs, so
+    // those messages were counted server-side and never shown anywhere.
+    map(statuses => statuses.filter(st => st.direction === this.direction || !st.direction)),
+    map(statuses => this.sortWithUnmappedLast(statuses)))
   readonly isLoading$ = this.state$.pipe(map(state => state.isLoading));
   readonly error$ = this.state$.pipe(map(state => state.error));
 
@@ -88,7 +95,11 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       header: 'Name',
       path: 'name',
       filterable: false,
-      sortOrder: 'asc',
+      // No sortOrder: the grid would then re-sort the rows alphabetically and drop the
+      // catch-all row into the middle of the list. Ordering is done in sortWithUnmappedLast()
+      // instead, which keeps that row pinned to the end; the header stays clickable for users
+      // who want a different order.
+      sortable: true,
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: NameRendererComponent,
       gridTrackSize: '25%',
@@ -203,6 +214,29 @@ export class MonitoringComponent implements OnInit, OnDestroy {
         }
         modalRef.hide();
       });
+  }
+
+  /**
+   * Mappings by name, with the catch-all "Unmapped messages" row always last: it is not a
+   * mapping, it is the bucket for everything no mapping claimed, so it belongs at the bottom
+   * rather than wherever its label happens to fall alphabetically.
+   */
+  private sortWithUnmappedLast(statuses: MappingStatus[]): MappingStatus[] {
+    return [...(statuses ?? [])].sort((a, b) => {
+      const aUnmapped = a.identifier === MAPPING_STATUS_UNSPECIFIED;
+      const bUnmapped = b.identifier === MAPPING_STATUS_UNSPECIFIED;
+      if (aUnmapped !== bUnmapped) {
+        return aUnmapped ? 1 : -1;
+      }
+      return this.displayName(a).localeCompare(this.displayName(b), undefined, { sensitivity: 'base' });
+    });
+  }
+
+  /** Mirrors NameRendererComponent: sort by what the user actually reads. */
+  private displayName(status: MappingStatus): string {
+    return status.identifier === MAPPING_STATUS_UNSPECIFIED
+      ? MAPPING_STATUS_UNSPECIFIED_LABEL
+      : status.name ?? '';
   }
 
   private initializeDirection(): void {

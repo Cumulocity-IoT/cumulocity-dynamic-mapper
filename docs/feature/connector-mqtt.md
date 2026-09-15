@@ -9,7 +9,32 @@ Service offering, see [connector-mqtt-service.md](connector-mqtt-service.md) —
 the similar name it is a different code path, not a configuration variant of this
 connector.
 
-## Class hierarchy and library
+---
+
+## Requirements
+
+**What it is for.** Connecting a tenant to any MQTT 3.1.1 or 5.0 broker, in both directions. This
+is the reference connector: the QoS model and the topic/wildcard semantics used throughout the
+product are MQTT's.
+
+- **Both directions**, and both protocol versions, selected per connector.
+- **Wildcards are supported** in inbound mapping topics (`+`, `#`) with MQTT's own matching rules.
+  Outbound publish topics must be concrete — a wildcard there is resolved from the message.
+- **All three QoS levels are honoured**, on subscription and on publish. A topic shared by several
+  mappings is subscribed at the strongest level any of them asks for; see
+  [reliability.md](reliability.md).
+- **TLS with a self-signed or private CA certificate must be possible**, since brokers are
+  frequently not publicly trusted.
+- **A processing failure must not silently drop the message** at QoS > 0: the connector withholds
+  the acknowledgement so the broker redelivers, bounded by the poison-pill guard.
+- **Sparkplug B is supported** as a payload convention on top of MQTT, including the host
+  application's birth/death certificate lifecycle.
+
+---
+
+## Implementation
+
+### Class hierarchy and library
 
 [`AMQTTClient`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/AMQTTClient.java)
 (abstract, ~700 lines) extends `AConnectorClient` and implements everything
@@ -27,7 +52,7 @@ declared in `dynamic-mapper-service/pom.xml`), not Eclipse Paho.
 `MQTT3Client.java` imports `com.hivemq.client.mqtt.mqtt3.*`; `MQTT5Client.java` imports
 `com.hivemq.client.mqtt.mqtt5.*`.
 
-## Configuration (`ConnectorSpecification`)
+### Configuration (`ConnectorSpecification`)
 
 Built in
 [`AMQTTClient.buildCommonMqttProperties()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/AMQTTClient.java#L517-L633),
@@ -57,7 +82,7 @@ Spec name/type: `MQTT3Client` registers as `ConnectorSpecificationBuilder.create
 `ConnectorType.MQTT`. `singleton = false` — multiple MQTT connector instances per
 tenant are allowed.
 
-## Connection lifecycle
+### Connection lifecycle
 
 - `connect()`/`disconnect()` are orchestrated in `AMQTTClient` (lines 225-300, 353-412)
   and delegate the actual HiveMQ client build/connect/disconnect calls to the
@@ -74,7 +99,7 @@ tenant are allowed.
   new connect attempt has started — the result of historical lifecycle/concurrency bug
   fixes (commits `dc098d56e`, `ff1622522`, `2815e8bd1`).
 
-## QoS and delivery
+### QoS and delivery
 
 - `Qos` enum (`AT_MOST_ONCE`, `AT_LEAST_ONCE`, `EXACTLY_ONCE`) maps directly to MQTT QoS
   0/1/2 via `MqttQos.fromCode(qos.ordinal())`.
@@ -87,20 +112,20 @@ tenant are allowed.
   per retry and poison-pill detection after `MAX_CONSECUTIVE_RECONNECTS=5`.
 - Retained-message publish is honored via `retain(context.isRetain())`.
 
-## Wildcard support
+### Wildcard support
 
 `supportsWildcardInTopic(Direction)` reads the `supportsWildcardInTopicInbound`/
 `supportsWildcardInTopicOutbound` config properties per direction — both default
 `true`, i.e. MQTT-style `+`/`#` wildcards are supported both ways out of the box.
 
-## TLS
+### TLS
 
 `AMQTTClient.initializeMqttSslConfiguration()` builds a HiveMQ `MqttClientSslConfig`
 (trust manager factory, hostname verifier, 30s handshake timeout) when
 `useSelfSignedCertificate=true`. Without a custom cert, `mqtts`/`wss` connections fall
 back to the system default trust store (`builder.sslWithDefaultConfig()`).
 
-## Sparkplug B Host support
+### Sparkplug B Host support
 
 Opt-in via `isSparkplugHost`/`sparkplugHostId`. On connect,
 [`SparkplugCertificateManager`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/SparkplugCertificateManager.java)
@@ -111,7 +136,7 @@ Sparkplug B protocol terminology for online/offline state messages. Actual Spark
 payload encode/decode (protobuf) is handled by a separate extension, not by this
 connector package.
 
-## Gotchas
+### Gotchas
 
 - `clientId` is passed into `MQTT3Callback` but never actually used by MQTT3 (kept only
   for API symmetry with MQTT5, per commit `7dec71a1b` — "don't set clientId in MQTT3 as
@@ -124,7 +149,7 @@ connector package.
 - `reconnectOnProcessingError` defaults to `false` (changed from an earlier default via
   commit `0278edf41`).
 
-## Testing
+### Testing
 
 The project's integration test suite (`resources/script/test/run-tests.sh`) can run
 against either a generic public MQTT broker or Cumulocity's MQTT Service, selected via

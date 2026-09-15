@@ -1,10 +1,6 @@
-Each template includes sample code demonstrating best practices for:
-
-- Accessing and transforming payload data
-- Working with device identifiers and external IDs
-- Enriching data with device inventory information
-- Handling different Cumulocity API types (measurements, events, alarms, inventory)
-- Error handling and logging
+---
+title: Metadata, monitoring and troubleshooting
+---
 
 ### Using metadata in source templates and target templates {#metadata}
 
@@ -28,7 +24,7 @@ type check out the code templates, which contains samples on how to achieve the 
 [Smart Functions](/c8y-pkg-dynamic-mapper/introduction/smartfunction).
 :::
 
-![Change metadata](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png "Screenshot showing additional substitution changing the target API to 'EVENT'")
+![Change metadata](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png "Screenshot showing additional substitution changing the target API to 'EVENT'")
 
 The following table lists all metadata nodes for inbound mappings:
 
@@ -43,7 +39,7 @@ The following table lists all metadata nodes for inbound mappings:
 | Target template (Cumulocity) | `_CONTEXT_DATA_.deviceName` | map-to | Defines the device name of a device that is created implicitly when the mapping uses `Create non-existing devices` |
 | Target template (Cumulocity) | `_CONTEXT_DATA_.deviceType` | map-to | Defines the device type of a device that is created implicitly when the mapping uses `Create non-existing devices` |
 
-![Metadata inbound](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Inbound.png "Screenshot showing the metadata added for inbound mappings.")
+![Metadata inbound](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Inbound.png "Screenshot showing the metadata added for inbound mappings.")
 
 :::info Info - MQTT 5 User Properties
 **Publisher Client ID with MQTT 5:**
@@ -92,7 +88,7 @@ The following table lists all metadata nodes for outbound mappings:
 - Use `_CONTEXT_DATA_.retain` for MQTT to ensure last message is always available to new subscribers
 :::
 
-![Metadata outbound](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Outbound.png "Screenshot showing the metadata added for outbound mappings.")
+![Metadata outbound](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Mapping_Metadata_Outbound.png "Screenshot showing the metadata added for outbound mappings.")
 
 ### Using reliability settings in mappings {#reliability-settings}
 
@@ -219,9 +215,9 @@ permissions and assign them to global roles or specific user groups based on you
 
 ### Monitoring {#monitoring}
 
-The **Monitoring** section in the left navigation contains four views: **Statistic processed**, **Chart
-processed**, **Cache statistic**, and **Service events**. Each gives a different operational perspective on what
-the mapper is doing at runtime.
+The **Monitoring** section in the left navigation contains views for **Statistic processed**, **Chart
+processed**, **Cache statistic**, **Service events**, and **Hierarchy mapping**. Each gives a different
+operational perspective on what the mapper is doing at runtime.
 
 #### Statistic processed (Inbound / Outbound)
 
@@ -240,6 +236,8 @@ Counters accumulate since the last reset (or since microservice startup). Use th
 the action bar to zero all counters — useful for measuring throughput during a specific time window. Counters are
 lost on microservice restart.
 :::
+
+![Statistic processed](../../../resources/image/Dynamic_Mapper_Monitoring.png "The Statistic processed (Inbound) view listing received/error counts per mapping.")
 
 #### Chart processed
 
@@ -309,6 +307,16 @@ trails, configure the Cumulocity platform's built-in audit log or forward events
 system.
 :::
 
+#### Hierarchy mapping
+
+This view exposes the topic-matching tree described under [Mapping Topic](#define-mapping) as a JSON document: an
+array of nodes, each keyed by a topic segment, nested the same way the tree is walked at runtime, down to the
+mapping registered at each leaf (its full definition, including its substitutions). It is the most direct way to
+trace why a message did — or did not — match a particular mapping, especially once several mappings share
+overlapping topic prefixes.
+
+![Hierarchy mapping](../../../resources/image/Dynamic_Mapper_Monitoring_Tree.png "The Hierarchy mapping view showing the topic-matching tree as JSON, down to one mapping's substitutions.")
+
 ### Message Explorer {#message-explorer}
 
 The **Message Explorer** lets you capture and inspect live messages flowing through the Dynamic Mapper — before
@@ -322,7 +330,7 @@ transformation is applied — you see the raw payloads exactly as they arrive fr
 Notification 2.0 API.
 :::
 
-![Message Explorer](/apps/c8y-pkg-dynamic-mapper/image/Dynamic_Mapper_Mapping_Message_Explorer.png "Screenshot of the Message Explorer showing captured live messages from a broker topic.")
+![Message Explorer](../../../resources/image/Dynamic_Mapper_Mapping_Message_Explorer.png "Screenshot of the Message Explorer showing captured live messages from a broker topic.")
 
 #### Starting a session
 
@@ -401,6 +409,8 @@ The following lists common problems and how to resolve them.
   semantics.
 - Open [**Monitoring → Statistics**](/c8y-pkg-dynamic-mapper/node2/monitoring/statistic/inbound) and check
   whether the message counter for the mapping increases. If it does not, the topic pattern is not matching.
+- Check the **Execution Filter** (**Filter execution mapping** on the *Select templates* step) — if set, it must
+  evaluate to `true` for the incoming payload, otherwise the message is skipped without an error.
 - If the counter increases but objects are not created, check the **Event Log** for transformation errors.
 
 #### Transformation errors in the Event Log

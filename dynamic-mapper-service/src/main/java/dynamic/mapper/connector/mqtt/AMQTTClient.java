@@ -36,7 +36,6 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.net.ssl.TrustManagerFactory;
@@ -71,12 +70,8 @@ public abstract class AMQTTClient extends AConnectorClient {
     // reconnect-trigger in createMqttCallback().
     protected final AtomicLong connectGeneration = new AtomicLong(0);
 
-     @Getter
-     @Setter
-     protected List<Qos> supportedQOS = Arrays.asList(
-             Qos.AT_MOST_ONCE,
-             Qos.AT_LEAST_ONCE,
-             Qos.EXACTLY_ONCE);
+     // supportedQos is inherited from AConnectorClient and already lists all three levels:
+     // MQTT is the protocol the Qos model is derived from, so nothing has to be narrowed here.
 
      // Sparkplug Host support
      protected SparkplugCertificateManager sparkplugCertificateManager;
@@ -182,8 +177,8 @@ public abstract class AMQTTClient extends AConnectorClient {
                     .build();
 
             log.info("{} - MQTT SSL configuration initialized successfully", tenant);
-            log.info("{}   Custom CAs: {}", tenant, customCertificates.size());
-            log.info("{}   Protocols: {}", tenant, DEFAULT_TLS_PROTOCOLS);
+            log.info("{} - Custom CAs: {}", tenant, customCertificates.size());
+            log.info("{} - Protocols: {}", tenant, DEFAULT_TLS_PROTOCOLS);
 
             // Log chain structure
             logChainStructure(cert);
@@ -361,7 +356,7 @@ public abstract class AMQTTClient extends AConnectorClient {
                      sparkplugCertificateManager.publishDeathCertificate();
                      log.info("{} - Published Sparkplug Death Certificate before disconnect", tenant);
                  } catch (Exception e) {
-                     log.error("{} - Error publishing Sparkplug Death Certificate: {}", tenant, e.getMessage());
+                     log.error("{} - Error publishing Sparkplug Death Certificate: {}", tenant, e.getMessage(), e);
                  }
              }
 
@@ -380,7 +375,7 @@ public abstract class AMQTTClient extends AConnectorClient {
             log.info("{} - MQTT client disconnect completed", tenant);
 
         } catch (Exception e) {
-            log.error("{} - Error during disconnect: {}", tenant, e.getMessage());
+            log.error("{} - Error during disconnect: {}", tenant, e.getMessage(), e);
             // Still mark as disconnected even if there was an error
             connectionStateManager.setConnected(false);
         } finally {
@@ -400,35 +395,6 @@ public abstract class AMQTTClient extends AConnectorClient {
         disconnect();
         closeMqttResources();
         log.info("{} - MQTT client closed", tenant);
-    }
-
-    /**
-     * Adjust QoS to supported level
-     * Common logic for both MQTT 3.x and MQTT 5.0
-     */
-    protected Qos adjustQos(Qos requestedQos) {
-        if (requestedQos == null) {
-            return Qos.AT_MOST_ONCE;
-        }
-
-        if (!supportedQOS.contains(requestedQos)) {
-            // Find maximum supported QoS that is less than requested
-            Qos adjusted = Qos.AT_MOST_ONCE;
-            for (Qos supported : supportedQOS) {
-                if (supported.ordinal() < requestedQos.ordinal() &&
-                        supported.ordinal() > adjusted.ordinal()) {
-                    adjusted = supported;
-                }
-            }
-
-            if (adjusted.ordinal() < requestedQos.ordinal()) {
-                log.warn("{} - QoS {} not supported, using {} instead",
-                        tenant, requestedQos, adjusted);
-            }
-            return adjusted;
-        }
-
-        return requestedQos;
     }
 
     @Override

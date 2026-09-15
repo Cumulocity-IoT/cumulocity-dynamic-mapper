@@ -9,7 +9,31 @@ Every `Mapping` is checked against a set of business rules when it is created, u
 or published. This documents each check — where it runs, the error code it produces, and
 worked examples that pass/fail it.
 
-## Where validation runs
+---
+
+## Requirements
+
+**What it is for.** A mapping that cannot work should be rejected when it is saved, with a
+specific reason, rather than failing later on every message.
+
+- **Validation runs on the server** and is authoritative. The editor validates too, but only to
+  give immediate feedback — bypassing the UI must not bypass the rules.
+- **All violations are reported at once**, not one per attempt.
+- **Drafts are exempt.** Work in progress may be incomplete; the rules apply when a mapping is
+  published or activated.
+- **Rules cover**: templates being parseable, the transformation type matching the payload shape,
+  a device identifier being defined, topic and sample topic being consistent, wildcard placement,
+  and uniqueness of what must be unique.
+- **Every failure names a specific error code**, so the UI and API clients can explain it rather
+  than showing "invalid".
+- **Deactivating is never blocked by validation** — only activating is. A broken mapping must
+  always be switchable off.
+
+---
+
+## Implementation
+
+### Where validation runs
 
 | Layer | Class / function | When | Notes |
 |---|---|---|---|
@@ -24,9 +48,9 @@ stop at the first failure — so an API response can list several violations at 
 
 ---
 
-## Rules that apply to both directions
+### Rules that apply to both directions
 
-### 1. Source/target templates must be valid JSON
+#### 1. Source/target templates must be valid JSON
 
 - `sourceTemplate` must always parse as valid JSON.
 - `targetTemplate` must parse as valid JSON **unless** the mapping is
@@ -39,7 +63,7 @@ stop at the first failure — so an API response can list several violations at 
 | `Source_Template_Must_Be_Valid_JSON` | `sourceTemplate: "{temperature: 25.5"` (missing closing brace, unquoted key) | `sourceTemplate: "{\"temperature\": 25.5}"` |
 | `Target_Template_Must_Be_Valid_JSON` | `targetTemplate: "not json at all"` | `targetTemplate: "{\"c8y_Temperature\": {}}"` |
 
-### 2. Array-rooted templates require `SMART_FUNCTION`
+#### 2. Array-rooted templates require `SMART_FUNCTION`
 
 If either `sourceTemplate` or `targetTemplate` is a JSON **array** at the root, the
 mapping's `transformationType` must be `SMART_FUNCTION` (JSONata/DEFAULT transformations
@@ -49,7 +73,7 @@ can't iterate an array root).
 |---|---|---|
 | `Wrong_Transformation_Type_Array_In_Source_Template_Or_Target_Template_Requires_Transformation_Type_Smart_Function` | `sourceTemplate: "[{\"t\":1},{\"t\":2}]"` with `transformationType: JSONATA` | Same template with `transformationType: SMART_FUNCTION` |
 
-### 3. `EXTENSION_JAVA` mappings must reference an extension
+#### 3. `EXTENSION_JAVA` mappings must reference an extension
 
 If `transformationType` is `EXTENSION_JAVA`, the `extension` field must be set (the
 loaded Java processor extension + event to invoke). See
@@ -60,7 +84,7 @@ field is resolved at runtime.
 |---|---|---|
 | `Extension_Must_Be_Defined_For_Extension_Java_Mapping` | `transformationType: EXTENSION_JAVA`, `extension: null` | `transformationType: EXTENSION_JAVA`, `extension: {extensionName: "my-extension", eventName: "onMeasurement"}` |
 
-### 4. `ANY_PAYLOAD` / `SPARKPLUGB` require `SMART_FUNCTION`
+#### 4. `ANY_PAYLOAD` / `SPARKPLUGB` require `SMART_FUNCTION`
 
 - `MappingType.ANY_PAYLOAD` requires `SMART_FUNCTION` — except when `transformationType`
   is `EXTENSION_JAVA` (a Java extension is also allowed to handle an unparsed/raw payload).
@@ -71,7 +95,7 @@ field is resolved at runtime.
 | `Unparsed_MappingType_Requires_Smart_Function_Transformation_Type` | `mappingType: ANY_PAYLOAD`, `transformationType: JSONATA` | `mappingType: ANY_PAYLOAD`, `transformationType: SMART_FUNCTION` (or `EXTENSION_JAVA`) |
 | `Unparsed_MappingType_Requires_Smart_Function_Transformation_Type` | `mappingType: SPARKPLUGB`, `transformationType: JSONATA` | `mappingType: SPARKPLUGB`, `transformationType: SMART_FUNCTION` |
 
-### 5. One valid device-identifier substitution (direction-dependent cardinality)
+#### 5. One valid device-identifier substitution (direction-dependent cardinality)
 
 A substitution "defines the device identifier" if its path (for INBOUND: `pathTarget`,
 for OUTBOUND: `pathSource`) references `_IDENTITY_.externalId` or `_IDENTITY_.c8ySourceId`.
@@ -94,9 +118,9 @@ substitution list to check.
 
 ---
 
-## INBOUND-only rules
+### INBOUND-only rules
 
-### 6. `mappingTopic` wildcard syntax
+#### 6. `mappingTopic` wildcard syntax
 
 MQTT-style wildcards in `mappingTopic`:
 
@@ -108,7 +132,7 @@ MQTT-style wildcards in `mappingTopic`:
 | `Only_One_Multi_Level_Wildcard` | `mappingTopic: "device/#/data/#"` | `mappingTopic: "device/+/data/#"` |
 | `Multi_Level_Wildcard_Only_At_End` | `mappingTopic: "device/#/data"` | `mappingTopic: "device/data/#"` |
 
-### 7. `mappingTopic` vs. `mappingTopicSample` consistency
+#### 7. `mappingTopic` vs. `mappingTopicSample` consistency
 
 `mappingTopicSample` is a concrete example topic used for testing/preview; it must have
 the same *structure* as `mappingTopic`:
@@ -134,7 +158,7 @@ the same *structure* as `mappingTopic`:
 > supported fan-out (e.g. one mapping writing a measurement, another raising an alarm
 > from the same payload), not an error condition, so no such rule is implemented.
 
-#### Illustrated: same topic vs. string-overlap vs. real (wildcard) overlap
+##### Illustrated: same topic vs. string-overlap vs. real (wildcard) overlap
 
 `MappingTreeNode` builds a tree keyed by topic level (`/`-separated segment); a node is
 a `mappingNode` only when some mapping's `mappingTopic` ends exactly there.
@@ -197,9 +221,9 @@ mappings — genuine, wildcard-driven fan-out, supported by design.
 
 ---
 
-## OUTBOUND-only rules
+### OUTBOUND-only rules
 
-### 8. `publishTopic` vs. `publishTopicSample` consistency
+#### 8. `publishTopic` vs. `publishTopicSample` consistency
 
 Same idea as rule 7, but for outbound publishing and **without** the `#`-matches-any-suffix
 relaxation — `publishTopic`/`publishTopicSample` must always have exactly the same
@@ -210,7 +234,7 @@ number of levels, and every non-wildcard segment must match.
 | `PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name` | `publishTopic: "out/+/temp"`, `publishTopicSample: "out/berlin/west/temp"` (3 vs 4 levels) | `publishTopic: "out/+/temp"`, `publishTopicSample: "out/berlin/temp"` |
 | `PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name` | `publishTopic: "out/berlin/temp"`, `publishTopicSample: "out/hamburg/temp"` | `publishTopic: "out/+/temp"`, `publishTopicSample: "out/hamburg/temp"` |
 
-### 9. `filterMapping` must be unique across OUTBOUND mappings
+#### 9. `filterMapping` must be unique across OUTBOUND mappings
 
 Two outbound mappings must not have the **exact same** `filterMapping` expression — a
 duplicate filter means both mappings would fire for the same Cumulocity notification
@@ -224,7 +248,7 @@ here — only the filter string itself.)
 
 ---
 
-## Full example: a valid INBOUND mapping
+### Full example: a valid INBOUND mapping
 
 ```json
 {
@@ -249,7 +273,7 @@ not `EXTENSION_JAVA`/`ANY_PAYLOAD`/`SPARKPLUGB` so rules 3–4 don't apply, exac
 identifier substitution (rule 5), no `#` wildcard issues (rule 6), and topic/sample have
 matching structure — `+` in the topic aligns with `temp001` in the sample (rule 7).
 
-## Full example: a valid OUTBOUND mapping
+### Full example: a valid OUTBOUND mapping
 
 ```json
 {
@@ -274,7 +298,7 @@ Passes every rule the same way, plus rule 8 (topic/sample level counts and stati
 segments match) and rule 9 (assuming no other outbound mapping already uses the exact
 filter `$.severity = "CRITICAL"`).
 
-## Full example: a mapping that fails multiple rules at once
+### Full example: a mapping that fails multiple rules at once
 
 ```json
 {

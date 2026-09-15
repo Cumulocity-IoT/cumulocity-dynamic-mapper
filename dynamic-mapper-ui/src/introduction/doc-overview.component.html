@@ -51,8 +51,23 @@
       <!-- Static prose (rest of Overview through the Code Templates section intro) rendered from markdown. -->
       <div [innerHTML]="htmlPart2"></div>
 
+      <!-- Static prose (rest of Code Templates section through Troubleshooting) rendered from markdown. -->
+      <div [innerHTML]="htmlPart3"></div>
+
       <!-- Native widget: code template gallery — iterates live codeTemplates and opens the code
-           drawer, so it stays as a real Angular template for the same reason as above. -->
+           drawer, so it stays as a real Angular template for the same reason as above. Kept as an
+           appendix at the end of the page (rather than inline after the Code Templates intro) so
+           this long, per-mapping-type table doesn't interrupt the reading flow into Metadata,
+           Reliability, etc. -->
+      <h3 id="code-template-gallery">Appendix: Code Template Gallery</h3>
+      <p>Each template includes sample code demonstrating best practices for:</p>
+      <ul>
+        <li>Accessing and transforming payload data</li>
+        <li>Working with device identifiers and external IDs</li>
+        <li>Enriching data with device inventory information</li>
+        <li>Handling different Cumulocity API types (measurements, events, alarms, inventory)</li>
+        <li>Error handling and logging</li>
+      </ul>
       <div class="table-responsive table-width-100">
         <table class="table table-striped table-layout-fixed">
           <thead class="thead-light">
@@ -75,8 +90,5 @@
           </tbody>
         </table>
       </div>
-
-      <!-- Static prose (rest of Code Templates section through Troubleshooting) rendered from markdown. -->
-      <div [innerHTML]="htmlPart3"></div>
     </div>
   </div>

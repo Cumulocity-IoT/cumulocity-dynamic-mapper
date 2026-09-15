@@ -11,7 +11,29 @@ not a separate code path re-implementing the pipeline, it reuses
 [`mapping-processing-outbound.md`](mapping-processing-outbound.md) with mocked identity and
 inventory services swapped in.
 
-## Backend endpoint
+---
+
+## Requirements
+
+**What it is for.** Finding out what a mapping does to a payload without a device, a broker, or
+data being written into the tenant.
+
+- **A test takes a payload and returns what the mapping produced** — the resulting Cumulocity
+  objects, or the error with enough detail to fix the mapping.
+- **A dry run writes nothing.** Identity lookups are mocked and no object is created; the tenant's
+  data is untouched.
+- **A test can optionally be run for real** against a test device, when the user wants to see the
+  object actually created.
+- **Testing never changes the mapping's runtime state** — no message counters, no failure streaks,
+  no auto-deactivation.
+- **An inactive or draft mapping must be testable**; testing is how you check it before activating.
+- **Test devices are identifiable and removable**, so a tenant can clean up what testing created.
+
+---
+
+## Implementation
+
+### Backend endpoint
 
 | Endpoint | Class | Description |
 |---|---|---|
@@ -23,7 +45,7 @@ The frontend calls this through `PATH_TESTING_ENDPOINT` (resolved to `/test`), s
 path from the UI is `${BASE_URL}/test/mapping` — see
 [`TestingService.testMapping()`](../../dynamic-mapper-ui/src/mapping/core/testing.service.ts#L44-L59).
 
-### Request/response shape
+#### Request/response shape
 
 `TestContext` ([`TestContext.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/TestContext.java)):
 
@@ -46,7 +68,7 @@ path from the UI is `${BASE_URL}/test/mapping` — see
 | `testDeviceId` | `String` | Set only when `createTestDevice=true` and a device was actually created. |
 | `key` | `String` | The broker message key the transformation produced (e.g. mapped to `_CONTEXT_DATA_.key`), context-level rather than per-request. |
 
-## What is simulated vs. real
+### What is simulated vs. real
 
 | Condition | Identity/inventory resolution | Publish/create side effects |
 |---|---|---|
@@ -76,7 +98,7 @@ The UI clears this mock state before each test run and on "Reset Transformation"
 results from a previous test run (e.g. an implicitly-created mock device) would leak into
 the next one.
 
-### Inbound `send=true`: test device creation
+#### Inbound `send=true`: test device creation
 
 When `send=true`, `createTestDevice=true`, and the mapping is `INBOUND`, `testMapping()`
 creates a real throwaway device in inventory before dispatching
@@ -92,7 +114,7 @@ determined, in order of preference:
 3. `deriveExternalIdFromTopic()` — last resort: the last non-wildcard segment of
    `mapping.getMappingTopicSample()`.
 
-## Dispatch reuse
+### Dispatch reuse
 
 Testing does not have its own processing pipeline — it calls the same dispatcher entry
 points used for live traffic, with a `testMapping` argument:
@@ -118,7 +140,7 @@ approximation.
 `expandArray` substitutions) will log a warning that only the first result is returned to
 the UI.
 
-## Frontend
+### Frontend
 
 | Component/service | File | Role |
 |---|---|---|
@@ -154,7 +176,7 @@ Key interactions in `MappingStepTestingComponent`:
 - Errors carrying `possibleIgnoreErrorNonExisting` similarly offer to re-run with
   `createNonExistingDevice = true`.
 
-## Known gotchas
+### Known gotchas
 
 - **Only the first result is shown** when a mapping fans out to multiple `DynamicMapperRequest`s (see above) — the backend logs a warning but the UI has no indication beyond that server log.
 - **Outbound `useExternalId` requirement**: `disableTestSending()` in the UI disables "Send Test Message" unless `testMapping.useExternalId` is set, since outbound test payloads have no real external ID to resolve otherwise.

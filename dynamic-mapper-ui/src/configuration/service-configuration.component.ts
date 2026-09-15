@@ -20,16 +20,19 @@
 import { HttpStatusCode } from '@angular/common/http';
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { PopoverModule } from 'ngx-bootstrap/popover';
+import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
+import { saveAs } from 'file-saver';
 import { BehaviorSubject, from, map, Subject, takeUntil } from 'rxjs';
 import packageJson from '../../package.json';
 import { AIAgentService } from '../mapping/core/ai-agent.service';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from './shared/configuration.model';
+import { ImportServiceConfigurationComponent } from './import/import-service-configuration-modal.component';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',
@@ -46,6 +49,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private aiAgentService = inject(AIAgentService);
   private readonly router = inject(Router);
+  private readonly bsModalService = inject(BsModalService);
 
   version: string = packageJson.version;
   serviceForm: FormGroup;
@@ -107,6 +111,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     this.initializeForm();
     await this.loadData();
     this.initializeSettingsSection();
+    this.restoreExpertMode();
     this.subscribeToAIAgents();
   }
 
@@ -117,15 +122,78 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
 
   private initializeSettingsSection(): void {
     const href = this.router.url;
-    if (href.includes('/serviceConfiguration/general')) {
-      this.section = "general";
+    if (href.includes('/serviceConfiguration/processing')) {
+      this.section = 'processing';
     } else if (href.includes('/serviceConfiguration/ai')) {
-      this.section = "ai";
+      this.section = 'ai';
     } else if (href.includes('/serviceConfiguration/caching')) {
-      this.section = "caching";
+      this.section = 'caching';
+    } else if (href.includes('/serviceConfiguration/monitoring')
+      // 'logging' is the pre-6.5 path; keep it working so bookmarks do not 404 into General.
+      || href.includes('/serviceConfiguration/logging')) {
+      this.section = 'monitoring';
     } else {
-      this.section = "logging";
+      this.section = 'general';
     }
+  }
+
+  /**
+   * Settings that require understanding the runtime internals (GraalVM engine sizing, alias-map
+   * caching, per-substitution logging). Hidden by default so the tabs show what an administrator
+   * actually has to decide; revealed by the "Expert settings" toggle.
+   *
+   * Keyed by section so the "N settings hidden" hint below the list can be accurate — a count of
+   * *everything* hidden would be misleading on a tab that hides nothing.
+   */
+  private static readonly EXPERT_SETTINGS: Readonly<Record<string, string[]>> = {
+    processing: ['supportESM', 'engineRotationThreshold', 'engineMaxAgeMinutes', 'contextPoolSize'],
+    caching: ['cacheAliasMaps'],
+    monitoring: ['logSubstitution', 'logConnectorErrorInBackend']
+  };
+
+  private static readonly EXPERT_MODE_STORAGE_KEY = 'dynamic-mapper.serviceConfiguration.expertMode';
+
+  expertMode = false;
+
+  /** How many settings the current tab is hiding, for the hint under the list. */
+  get hiddenExpertCount(): number {
+    return ServiceConfigurationComponent.EXPERT_SETTINGS[this.section]?.length ?? 0;
+  }
+
+  toggleExpertMode(): void {
+    this.expertMode = !this.expertMode;
+    try {
+      localStorage.setItem(
+        ServiceConfigurationComponent.EXPERT_MODE_STORAGE_KEY,
+        String(this.expertMode)
+      );
+    } catch {
+      // Private browsing / blocked storage: the preference simply does not persist.
+    }
+  }
+
+  private restoreExpertMode(): void {
+    try {
+      this.expertMode =
+        localStorage.getItem(ServiceConfigurationComponent.EXPERT_MODE_STORAGE_KEY) === 'true';
+    } catch {
+      this.expertMode = false;
+    }
+  }
+
+  /**
+   * The JavaScript CPU budget is nested inside the end-to-end pipeline budget: if the pipeline
+   * timeout is not strictly larger, the callback cancels the pipeline before the JavaScript can
+   * ever reach its own limit, making `maxCPUTimeMS` unreachable. The backend defends itself by
+   * raising the value at runtime; catching it here means the user sees what they actually get.
+   */
+  static pipelineTimeoutExceedsCpuBudget(group: AbstractControl): ValidationErrors | null {
+    const cpu = Number(group.get('maxCPUTimeMS')?.value);
+    const pipeline = Number(group.get('pipelineTimeoutMS')?.value);
+    if (!Number.isFinite(cpu) || !Number.isFinite(pipeline) || cpu <= 0) {
+      return null;
+    }
+    return pipeline > cpu ? null : { pipelineTimeoutTooSmall: { cpu, pipeline } };
   }
 
   private initializeForm(): void {
@@ -154,13 +222,13 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       contextPoolSize: [''],
       explorerSessionTTLMinutes: [''],
       supportESM: [''],
-      jsonataAgent: [{ value: '', disabled: true }],
-      javaScriptAgent: [{ value: '', disabled: true }],
-      smartFunctionAgent: [{ value: '', disabled: true }],
+      jsonataAgent: [''],
+      javaScriptAgent: [''],
+      smartFunctionAgent: [''],
       suppressDeprecationWarning: [''],
       cacheAliasMaps: [''],
       externalIdBinding: [''],
-    });
+    }, { validators: ServiceConfigurationComponent.pipelineTimeoutExceedsCpuBudget });
   }
 
   private subscribeToAIAgents(): void {
@@ -173,27 +241,13 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
         next: agentNames => {
           this.agents$.next(agentNames);
           this.aiAgentDeployed = agentNames.length > 0;
-          this.updateAgentControlsState();
         },
         error: error => {
           console.error('Failed to check AI agent availability:', error);
           this.agents$.next([]);
           this.aiAgentDeployed = false;
-          this.updateAgentControlsState();
         }
       });
-  }
-
-  private updateAgentControlsState(): void {
-    const agentControls = ['javaScriptAgent', 'jsonataAgent', 'smartFunctionAgent'];
-    agentControls.forEach(controlName => {
-      const control = this.serviceForm.get(controlName);
-      if (this.aiAgentDeployed) {
-        control?.enable();
-      } else {
-        control?.disable();
-      }
-    });
   }
 
   private readonly SPARKPLUGB_BIRTH_FRAGMENTS = ['sparkPlugB_NBIRTH', 'sparkPlugB_DBIRTH'];
@@ -250,16 +304,66 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Writes the tenant's current service configuration to a JSON file.
+   *
+   * <p>A snapshot for restoring after a reset, so it deliberately contains the whole document —
+   * including `codeTemplates`, which `ServiceConfigurationService.initialize()` wipes along with
+   * everything else and which may hold Smart Function templates written by the customer.
+   * There are no credentials in this document, unlike a connector export.
+   */
+  async clickedExportServiceConfiguration(): Promise<void> {
+    try {
+      // Read through the service rather than the form: the form only binds the settings the UI
+      // renders, and a snapshot has to cover the whole document.
+      const configuration = await this.sharedService.getServiceConfiguration();
+      const blob = new Blob([JSON.stringify(configuration, undefined, 2)], {
+        type: 'application/json'
+      });
+      saveAs(blob, 'service-configuration.json');
+    } catch (error) {
+      this.alertService.danger(gettext('Failed to export the service configuration'));
+    }
+  }
+
+  clickedImportServiceConfiguration(): void {
+    const modalRef: BsModalRef = this.bsModalService.show(ImportServiceConfigurationComponent, {
+      initialState: {}
+    });
+    modalRef.content.closeSubject
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(async (didImport: boolean) => {
+        if (didImport) {
+          // The restored document is what the service now holds — reload so the form shows it
+          // instead of the values the user was looking at before the import.
+          await this.loadData();
+        }
+        modalRef.hide();
+      });
+  }
+
+  get pipelineTimeoutInvalid(): boolean {
+    return !!this.serviceForm?.errors?.['pipelineTimeoutTooSmall'];
+  }
+
   async clickedSaveServiceConfiguration() {
-    const conf = this.serviceForm.value;
+    if (this.pipelineTimeoutInvalid) {
+      this.alertService.danger(
+        gettext('The processing timeout must be greater than the CPU time limit.')
+      );
+      return;
+    }
+    // getRawValue() instead of value: disabled controls are omitted from `value`, which used to
+    // silently wipe the AI agent names on every save while those controls were disabled.
+    const conf = this.serviceForm.getRawValue();
 
     conf.inventoryFragmentsToCache = this.inventoryFragmentsList
       .map(f => f.trim())
       .filter(f => f.length > 0 && !this.SPARKPLUGB_BIRTH_FRAGMENTS.includes(f));
 
-    conf.javaScriptAgent = this.trimOrUndefined(this.serviceForm.value['javaScriptAgent']);
-    conf.jsonataAgent = this.trimOrUndefined(this.serviceForm.value['jsonataAgent']);
-    conf.smartFunctionAgent = this.trimOrUndefined(this.serviceForm.value['smartFunctionAgent']);
+    conf.javaScriptAgent = this.trimOrUndefined(conf['javaScriptAgent']);
+    conf.jsonataAgent = this.trimOrUndefined(conf['jsonataAgent']);
+    conf.smartFunctionAgent = this.trimOrUndefined(conf['smartFunctionAgent']);
 
     const response = await this.sharedService.updateServiceConfiguration(conf);
 

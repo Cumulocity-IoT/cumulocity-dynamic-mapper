@@ -216,6 +216,23 @@ describe('MappingTemplateStepComponent', () => {
       expect(component.filterFormly.get('filterMapping')?.errors).toBeTruthy();
     });
 
+    it('surfaces the evaluated value and a form error when the result is not boolean', async () => {
+      const evaluated = {
+        result: '"6aa7d0c0211301ebaeef09f9"',
+        resultType: 'String',
+        valid: false,
+        message: 'The filter expression must evaluate to a boolean value: either true or false'
+      };
+      mockStepperService.evaluateFilterExpression.and.returnValue(Promise.resolve(evaluated));
+
+      await component.updateFilterExpressionResult('id', { id: '6aa7d0c0211301ebaeef09f9' });
+
+      expect(component.filterModel.filterExpression).toEqual(evaluated);
+      expect(component.filterFormly.get('filterMapping')?.errors).toEqual({
+        validationError: { message: evaluated.message }
+      });
+    });
+
     it('clears prior info/warning alerts before evaluating', async () => {
       const warn = { type: 'warning', text: 'old' } as any;
       Object.defineProperty(mockAlertService, 'state', { get: () => [warn], configurable: true });
