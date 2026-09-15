@@ -139,6 +139,10 @@ class MappingServiceFailureThresholdTest {
     void thresholdDeactivatesMapping() throws Exception {
         Mapping mapping = mapping(3);
         MappingStatus status = new MappingStatus();
+        // Mirrors what the real (here mocked) MappingStatusService.incrementFailureCount does:
+        // mutate the shared status before reporting the threshold as exceeded. The async
+        // deactivation task re-reads this same field to guard against a since-cleared streak.
+        status.currentFailureCount = 3;
         when(statusService.incrementFailureCount(TENANT, mapping, status)).thenReturn(true);
 
         service.increaseAndHandleFailureCount(TENANT, mapping, status);
@@ -152,6 +156,7 @@ class MappingServiceFailureThresholdTest {
     void concurrentFailuresDeactivateOnlyOnce() throws Exception {
         Mapping mapping = mapping(3);
         MappingStatus status = new MappingStatus();
+        status.currentFailureCount = 3;
         when(statusService.incrementFailureCount(TENANT, mapping, status)).thenReturn(true);
         // Hold the deactivation open so every follow-up failure arrives while the first is
         // still in flight — the situation this guard exists for.
@@ -185,6 +190,7 @@ class MappingServiceFailureThresholdTest {
     void deactivationUnsubscribesDeployedConnectors() throws Exception {
         Mapping mapping = mapping(3);
         MappingStatus status = new MappingStatus();
+        status.currentFailureCount = 3;
         when(statusService.incrementFailureCount(TENANT, mapping, status)).thenReturn(true);
         doReturn(mapping).when(service).setActivationMapping(TENANT, MO_ID, false, null);
 
