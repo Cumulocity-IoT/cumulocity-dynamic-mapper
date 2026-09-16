@@ -7,10 +7,11 @@ MQTT, Kafka, HTTP, AMQP, Apache Pulsar, or Google Cloud Pub/Sub, providing the f
   incoming messages, and applies the configured mappings in either direction. Exposes REST
   endpoints for the UI to manage connector configurations and mappings.
 * A **Frontend Plugin** - uses those endpoints to configure broker connections and to perform
-  mapping within the Cumulocity IoT UI, either graphically or in code. Mappings can be defined
-  using [JSONata](https://jsonata.org/) expressions, as JavaScript ("Smart Functions"), or as a
-  Java processor extension; an AI agent can also generate a first draft of a mapping from a
-  sample payload.
+  mapping within the Cumulocity IoT UI, either graphically or in code. Mappings can be defined as
+  JavaScript **Smart Functions** — full programmatic transformations with access to device
+  inventory data, multiple outputs, and persistent state across messages — as declarative
+  [JSONata](https://jsonata.org/) expressions for simple field mappings, or as a Java processor
+  extension; an AI agent can also generate a first draft of a mapping from a sample payload.
 
 Using the solution you are able to connect to any of the supported brokers and map arbitrary
 payloads on any topic dynamically to the Cumulocity IoT Domain Model, without writing or
@@ -25,21 +26,27 @@ The mapper processes messages in both directions:
 2. `OUTBOUND`: from C8Y to external source
 
 Mappings are defined in a graphical stepper wizard: pick a connector, a payload format (JSON, Flat
-File, Hexadecimal, Protobuf, Any Payload, or native SparkPlug B), and a transformation type —
-declarative **JSONata** expressions for straightforward field mappings, a JavaScript **Smart
-Function** for full programmatic control (device inventory access, multiple outputs, stateful
-processing), or a **Java Extension** for enterprise-grade, compiled transformations.
+File, Hexadecimal, Protobuf, Any Payload, or native SparkPlug B), and a transformation type.
+
+**Smart Functions** are the most flexible and most-used transformation type: write the
+`onMessage(msg, context)` function in JavaScript and return the fully-built Cumulocity object(s)
+directly, with access to device inventory data, multiple outputs from a single message, binary/CBOR
+payload decoding, and per-mapping persistent state (counters, running averages, deduplication)
+across invocations — no substitution rules to configure. Ready-to-use code templates are provided
+per direction, and are fully customizable. For simple field-to-field mappings without any
+JavaScript, declarative **JSONata** expressions cover the same ground with less setup. A **Java
+Extension** is also available for enterprise-grade, compiled, type-safe transformations.
 <br>
 <br>
 ![Add mapping](image/Dynamic_Mapper_Mapping_Table_Add_Modal.png)
 <br>
 <br>
-![Define mappings](image/Dynamic_Mapper_Mapping_Stepper_Substitution_Basic.png)
+![Define mappings](image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png)
 <br>
 <br>
 The Dynamic Mapper is **AI-empowered**: assign an AI agent (via the Cumulocity AI Agent Manager) to
-generate JSONata expressions or Smart Function code from a sample payload and a natural-language
-description, instead of writing the transformation by hand.
+generate Smart Function JavaScript or JSONata expressions from a sample payload and a
+natural-language description, instead of writing the transformation by hand.
 
 Once connected, use the **Message Explorer** to capture live broker or Notification 2.0 traffic and
 build a mapping directly from a captured payload. Before activating a mapping, **test** it against
