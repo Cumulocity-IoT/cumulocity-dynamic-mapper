@@ -25,7 +25,7 @@ import com.cumulocity.model.ID;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -27,8 +27,8 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 

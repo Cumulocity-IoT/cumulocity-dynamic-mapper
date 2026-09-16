@@ -36,7 +36,7 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 

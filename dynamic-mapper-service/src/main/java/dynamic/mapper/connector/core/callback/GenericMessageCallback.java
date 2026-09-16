@@ -22,7 +22,7 @@
 package dynamic.mapper.connector.core.callback;
 
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 
 public interface GenericMessageCallback {
     void onClose(String closeMessage, Throwable closeException);

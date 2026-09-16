@@ -51,10 +51,10 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.C8YMessage;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.RepairStrategy;
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.RepairStrategy;
+import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -97,13 +97,7 @@ class EnrichmentOutboundProcessorTest {
     private HostAccess hostAccess;
 
     @Mock
-    private dynamic.mapper.processor.model.RoutingContext routingContext;
-
-    @Mock
-    private dynamic.mapper.processor.model.PayloadContext<Object> payloadContext;
-
-    @Mock
-    private dynamic.mapper.processor.model.ProcessingState processingState;
+    private dynamic.mapper.processor.runtime.RoutingContext routingContext;
 
     private EnrichmentOutboundProcessor processor;
 
@@ -143,10 +137,7 @@ class EnrichmentOutboundProcessorTest {
 
         // Setup focused context mocks
         when(processingContext.getRoutingContext()).thenReturn(routingContext);
-        when(processingContext.getPayloadContext()).thenReturn(payloadContext);
-        when(processingContext.getProcessingState()).thenReturn(processingState);
         when(routingContext.getTenant()).thenReturn(TEST_TENANT);
-        when(payloadContext.getDeserializedPayload()).thenReturn("test payload");
 
         // Setup mapping status mocks
         when(mappingService.getMappingStatus(anyString(), any(Mapping.class))).thenReturn(mappingStatus);

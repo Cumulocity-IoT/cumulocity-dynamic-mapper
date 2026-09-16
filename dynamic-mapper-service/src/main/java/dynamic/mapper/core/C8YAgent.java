@@ -88,9 +88,9 @@ import dynamic.mapper.model.ConnectorStatus;
 import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
+import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalId;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.service.ExtensionInboundRegistry;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
@@ -641,7 +641,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
         // Check for cancellation BEFORE starting any C8Y API calls
         // This prevents unnecessary HTTP requests when the processing has already timed out
-        dynamic.mapper.processor.model.ProcessingResultWrapper<?> wrapper = context.getProcessingResultWrapper();
+        dynamic.mapper.processor.runtime.ProcessingResultWrapper<?> wrapper = context.getProcessingResultWrapper();
         if (wrapper != null && wrapper.getCancellationRequested().get()) {
             log.info("{} - Cancellation detected in createMEAO before API call, aborting C8Y request for API: {}",
                     tenant, targetAPI);

@@ -17,7 +17,7 @@ import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.AbstractFlowProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.CumulocityObject;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.service.MappingService;

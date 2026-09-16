@@ -20,8 +20,8 @@ import dynamic.mapper.processor.inbound.deserializer.HexPayloadDeserializer;
 import dynamic.mapper.processor.inbound.deserializer.JSONPayloadDeserializer;
 import dynamic.mapper.processor.inbound.deserializer.PayloadDeserializer;
 import dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 

@@ -55,7 +55,7 @@ JSONata paths or JavaScript.
 
 ## Implementation
 
-### Backend: agent bootstrap, not generation — [`AIAgentService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/AIAgentService.java)
+### Backend: agent bootstrap, not generation — [`AIAgentService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/ai/AIAgentService.java)
 
 Despite the name, `AIAgentService` does not generate substitutions or code itself; it
 provisions agent *definitions* on the external AI Agent Manager and exposes one MCP tool. The

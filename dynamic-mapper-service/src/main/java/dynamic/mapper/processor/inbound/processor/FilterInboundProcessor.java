@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 

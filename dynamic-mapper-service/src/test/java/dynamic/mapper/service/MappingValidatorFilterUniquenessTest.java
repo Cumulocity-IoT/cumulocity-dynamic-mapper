@@ -46,8 +46,8 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.ValidationError;
 import dynamic.mapper.model.ValidationIssue;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.model.TransformationType;
 
 /**
  * Covers the duplicate-outbound-filter check in {@link MappingValidator}. This was previously

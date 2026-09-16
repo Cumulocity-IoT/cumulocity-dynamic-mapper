@@ -110,7 +110,7 @@ strictest mapping wins, and no mapping ever gets a weaker guarantee than it aske
 (the other direction, giving a mapping *more* than it asked for, is harmless).
 
 The result lands in
-[`ProcessingResultWrapper.consolidatedQos`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/ProcessingResultWrapper.java),
+[`ProcessingResultWrapper.consolidatedQos`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/runtime/ProcessingResultWrapper.java),
 whose getter is null-safe: early-exit paths (no mapping resolved, unparseable payload)
 never set it, and every caller would otherwise have to guard before reading the level.
 
@@ -544,7 +544,7 @@ loaded; the next housekeeping cycle restores them.
 | [`GooglePubSubClientTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/connector/googlepubsub/GooglePubSubClientTest.java) | Ack-before-processing vs. ack-after-success / nack-on-error. |
 | [`MappingStatusServiceFailureCountTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/service/status/MappingStatusServiceFailureCountTest.java) | The streak semantics: threshold reported only on the failure that reaches it, `maxFailureCount == 0` never trips, success clears the streak. |
 | [`MappingServiceFailureThresholdTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/service/MappingServiceFailureThresholdTest.java) | The mapping is really deactivated at the threshold, and a burst of failures deactivates only once. |
-| [`ProcessingCancellationTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/processor/model/ProcessingCancellationTest.java) | That a misbehaving mapping is really stopped: cancel actions run (including when one throws), a runaway `while(true){}` GraalVM context is killed and its thread terminates, and a worker that ignores interruption is reported as **not** drained instead of silently leaking. |
+| [`ProcessingCancellationTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/processor/runtime/ProcessingCancellationTest.java) | That a misbehaving mapping is really stopped: cancel actions run (including when one throws), a runaway `while(true){}` GraalVM context is killed and its thread terminates, and a worker that ignores interruption is reported as **not** drained instead of silently leaking. |
 | [`ServiceConfigurationTimeoutTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/configuration/ServiceConfigurationTimeoutTest.java) | Budget defaults, null fallbacks, and the `pipelineTimeoutMS > maxCPUTimeMS` invariant. |
 | [`MappingStatusTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/model/MappingStatusTest.java) | Counter semantics: per-tenant catch-all status, `reset()` clearing the streak, lifetime errors surviving a recovery, snapshot isolation, and no lost updates under 8 concurrent writers. |
 | [`MappingStatusPersistenceCompatibilityTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/service/status/MappingStatusPersistenceCompatibilityTest.java) | A status fragment written by an older release still loads with its counters and is still pushed back to the inventory. |

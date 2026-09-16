@@ -31,9 +31,9 @@ import dynamic.mapper.processor.processor.fixed.InternalCustomMeasurementOuter;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.RepairStrategy;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.RepairStrategy;
 
 
 import org.apache.camel.Exchange;

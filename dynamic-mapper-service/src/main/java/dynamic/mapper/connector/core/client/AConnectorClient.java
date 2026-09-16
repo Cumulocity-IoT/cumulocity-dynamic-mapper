@@ -43,7 +43,7 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.LoggingEventType;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.service.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.ServiceConfigurationService;

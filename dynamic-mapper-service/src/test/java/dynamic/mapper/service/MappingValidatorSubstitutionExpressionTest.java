@@ -22,8 +22,8 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.model.ValidationError;
 import dynamic.mapper.model.ValidationIssue;
-import dynamic.mapper.processor.model.RepairStrategy;
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.model.RepairStrategy;
+import dynamic.mapper.model.TransformationType;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

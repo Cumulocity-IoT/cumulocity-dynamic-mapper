@@ -115,7 +115,7 @@ context.setEngineReleaseAction(() -> graalVMContextService.returnContext(poolKey
 
 `ProcessingContext` — the per-message context, not a separate `ExecutionContext` type —
 implements `AutoCloseable` itself and centralizes GraalVM cleanup in its own `close()`
-([`ProcessingContext.java:509-556`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/ProcessingContext.java#L509-L556)): if a pooled context is set, `close()` returns
+([`ProcessingContext.java:509-556`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/runtime/ProcessingContext.java#L509-L556)): if a pooled context is set, `close()` returns
 it to the pool via `engineReleaseAction` (or discards it if it was killed) instead of
 closing the raw GraalVM `Context` directly; for the non-pooled path it calls
 `graalContext.close()` directly. `AbstractFlowProcessor.process()`
@@ -155,7 +155,7 @@ into the pooled `Context`.
 ### Runtime state: `SmartFunctionContext`
 
 At runtime, `context` inside a Smart Function is backed by
-[`SmartFunctionContext`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/SmartFunctionContext.java), the concrete
+[`SmartFunctionContext`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/runtime/SmartFunctionContext.java), the concrete
 `DataPrepContext` implementation used for `SMART_FUNCTION` (as opposed to
 `JavaExtensionContext`, used for `EXTENSION_JAVA` — see
 [transformation-java-extensions.md](transformation-java-extensions.md)). It is

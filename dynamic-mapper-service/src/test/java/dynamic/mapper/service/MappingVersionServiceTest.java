@@ -39,8 +39,8 @@ import dynamic.mapper.model.MappingVersion;
 import dynamic.mapper.model.MappingVersionRepresentation;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.SemVer;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.model.TransformationType;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

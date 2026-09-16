@@ -21,6 +21,8 @@
 
 package dynamic.mapper.core;
 
+import dynamic.mapper.ai.AIAgentService;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -31,7 +33,7 @@ import java.util.concurrent.Future;
 import dynamic.mapper.configuration.*;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;

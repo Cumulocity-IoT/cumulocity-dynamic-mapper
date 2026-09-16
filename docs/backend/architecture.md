@@ -13,7 +13,7 @@ Under `dynamic-mapper-service/src/main/java/dynamic/mapper/`:
 | `connector/core/ConnectorSpecification.java` | Declares connector properties/configuration schema |
 | `processor/inbound/CamelDispatcherInbound.java` | Apache Camel entry point for Broker → C8Y |
 | `processor/outbound/CamelDispatcherOutbound.java` | Entry point for C8Y → Broker |
-| `processor/model/ProcessingContext.java` | Per-message processing state (see [conventions.md](conventions.md)) |
+| `processor/runtime/ProcessingContext.java` | Per-message processing state (see [conventions.md](conventions.md)) |
 | `processor/flow/JavaScriptProcessor.java` | GraalVM JS execution for Smart Functions |
 | `core/C8YAgent.java` | Cumulocity REST API client (inventory, measurements, events, alarms) |
 | `core/ConfigurationRegistry.java` | Central service registry (per-tenant) |

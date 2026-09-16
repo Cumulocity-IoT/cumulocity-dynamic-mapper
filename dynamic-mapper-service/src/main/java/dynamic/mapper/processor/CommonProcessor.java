@@ -14,7 +14,7 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.ExternalId;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.service.resolver.InventoryFilterEvaluator;

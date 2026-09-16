@@ -34,7 +34,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapper.processor.model.RepairStrategy;
+import dynamic.mapper.model.RepairStrategy;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;

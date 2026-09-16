@@ -29,7 +29,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
-import dynamic.mapper.processor.model.PooledGraalContext;
+import dynamic.mapper.processor.runtime.PooledGraalContext;
 import dynamic.mapper.service.cache.FlowStateStore;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
@@ -57,9 +57,9 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.configuration.CodeTemplate;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 

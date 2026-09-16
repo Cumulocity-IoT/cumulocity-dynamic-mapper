@@ -98,7 +98,6 @@ and `MultiTenancyIsolationTest`; what a runaway function does to the *pipeline* 
 | `MappingsRepresentationTest` | Mapping serialization / deserialization round-trip |
 | `EscapeEncodedPayloadTest` | Escaped payload encoding/decoding |
 | `OutputCollectorTest` | Thread-safe result accumulation |
-| `ProcessingStateTest` | AtomicBoolean flags, ConcurrentHashMap state |
 | `RoutingContextTest` | Immutable context construction |
 | `BuildersTest` | `CumulocityObject` and `DeviceMessage` builder pattern |
 | `ContextMemoryBenchmark` | Per-context memory baseline (benchmark, not a functional test) |

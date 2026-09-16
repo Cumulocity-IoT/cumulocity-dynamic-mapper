@@ -34,9 +34,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingState;
-import dynamic.mapper.processor.model.RoutingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.RoutingContext;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -68,14 +67,13 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
 
         // Extract focused contexts at entry point
         RoutingContext routing = context.getRoutingContext();
-        ProcessingState state = context.getProcessingState();
 
         String tenant = routing.getTenant();
         Mapping mapping = context.getMapping();
 
         try {
-            processFlowResults(routing, state, context);
-            postProcessFlowResults(state, context);
+            processFlowResults(routing, context);
+            postProcessFlowResults(context);
         } catch (Exception e) {
             handleProcessingError(e, context, tenant, mapping);
         }
@@ -88,14 +86,13 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
      */
     private void processFlowResults(
             RoutingContext routing,
-            ProcessingState state,
             ProcessingContext<?> context) throws ProcessingException {
         Object flowResult = context.getFlowResult();
         String tenant = routing.getTenant();
 
         if (flowResult == null) {
             log.debug("{} - No flow result available, skipping flow result processing", tenant);
-            state.setIgnoreFurtherProcessing(true);
+            context.setIgnoreFurtherProcessing(true);
             return;
         }
 
@@ -103,7 +100,7 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
 
         if (messagesToProcess.isEmpty()) {
             log.info("{} - Flow result is empty, skipping processing", tenant);
-            state.setIgnoreFurtherProcessing(true);
+            context.setIgnoreFurtherProcessing(true);
             return;
         }
 
@@ -112,10 +109,10 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
 
         int requestCountBefore = context.getRequests().size();
         for (Object message : messagesToProcess) {
-            processMessage(message, routing, state, context);
+            processMessage(message, routing, context);
         }
 
-        handleEmptyRequests(requestCountBefore, state, context, tenant);
+        handleEmptyRequests(requestCountBefore, context, tenant);
     }
 
     /**
@@ -149,12 +146,11 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
      * Compares request count before and after the batch loop to detect whether
      * this processing step produced anything.
      */
-    private void handleEmptyRequests(int requestCountBefore, ProcessingState state,
-                                     ProcessingContext<?> context, String tenant) {
+    private void handleEmptyRequests(int requestCountBefore,                                     ProcessingContext<?> context, String tenant) {
         int added = context.getRequests().size() - requestCountBefore;
         if (added == 0) {
             log.info("{} - No requests generated from flow result", tenant);
-            state.setIgnoreFurtherProcessing(true);
+            context.setIgnoreFurtherProcessing(true);
         } else {
             log.info("{} - Generated {} requests from flow result", tenant, added);
         }
@@ -204,15 +200,13 @@ public abstract class AbstractFlowResultProcessor extends CommonProcessor {
     protected abstract void processMessage(
             Object message,
             RoutingContext routing,
-            ProcessingState state,
             ProcessingContext<?> context) throws ProcessingException;
 
     /**
      * Hook for subclass-specific post-processing.
      * Default implementation does nothing.
      */
-    protected void postProcessFlowResults(ProcessingState state,
-                                         ProcessingContext<?> context) throws ProcessingException {
+    protected void postProcessFlowResults(                                         ProcessingContext<?> context) throws ProcessingException {
         // Default: no post-processing
     }
 

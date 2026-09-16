@@ -43,7 +43,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.model.MappingType;
+import dynamic.mapper.model.MappingType;
 import lombok.extern.slf4j.Slf4j;
 
 /**

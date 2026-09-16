@@ -49,7 +49,7 @@ import dynamic.mapper.model.ConnectorStatus;
 import dynamic.mapper.model.ConnectorStatusEvent;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.service.MappingService;
 
 /**

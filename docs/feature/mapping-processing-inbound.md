@@ -217,10 +217,10 @@ and [mapping-validation.md](mapping-validation.md).
 
 ### `ProcessingContext` and its focused sub-contexts
 
-`ProcessingContext<O>` ([`ProcessingContext.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/ProcessingContext.java))
+`ProcessingContext<O>` ([`ProcessingContext.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/runtime/ProcessingContext.java))
 is the per-message state object threaded through every processor via the Camel header
 `CamelHeaders.PROCESSING_CONTEXT`. It is `AutoCloseable`: `close()`
-([`ProcessingContext.java:509-556`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/ProcessingContext.java#L509-L556))
+([`ProcessingContext.java:509-556`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/runtime/ProcessingContext.java#L509-L556))
 releases GraalVM resources — either returning a pooled `Context` to the pool via
 `engineReleaseAction`, or closing a non-pooled `Context` directly — and is called by
 `ConsolidationProcessor` on every terminal path so a filtered-out mapping still releases its
@@ -230,26 +230,31 @@ Several fields on `ProcessingContext` (`requests`, `errors`, `warnings`, `logs`,
 `processingCache`) already use thread-safe collections (`CopyOnWriteArrayList`,
 `ConcurrentSkipListMap`) because the parallel-request route above can mutate the same
 context concurrently across virtual threads. On top of that, `ProcessingContext` exposes
-adapter methods to five focused, more narrowly-scoped views:
+two **read-only projections** used to narrow method signatures:
 
-| Context class | Getter on `ProcessingContext` | Fields | Thread-safety notes |
+| Context class | Getter on `ProcessingContext` | Fields | Notes |
 |---|---|---|---|
-| [`RoutingContext`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/RoutingContext.java) | `getRoutingContext()` | `topic`, `clientId`, `api`, `qos`, `resolvedPublishTopic`, `tenant` | `@Value` (Lombok immutable); `with*` methods return a new copy. |
-| [`PayloadContext<T>`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/PayloadContext.java) | `getPayloadContext()` | `deserializedPayload`, `rawPayload`, `binaryInfo` | Immutable snapshot. |
-| [`DeviceContext`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/DeviceContext.java) | `getDeviceContext()` | `sourceId`, `externalId`, `deviceName`, `deviceType`, `deviceFragments`, `deviceGroups`, `alarms` | Immutable, copy-on-write via `with*`; **read-only snapshot — there is no `syncFromDeviceContext()`**, so mutating the returned copy does not affect the original `ProcessingContext`. |
-| [`ProcessingState`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/ProcessingState.java) | `getProcessingState()` / `syncFromState()` | `processingCache` (`ConcurrentHashMap`), `needsRepair`/`ignoreFurtherProcessing` (`AtomicBoolean`) | Genuinely mutable and thread-safe; changes must be synced back explicitly with `syncFromState()`. |
-| [`OutputCollector`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/model/OutputCollector.java) | `getOutputCollector()` / `syncFromOutputCollector()` | `requests` (`CopyOnWriteArrayList`), `errors`/`warnings`/`logs` (`ConcurrentLinkedQueue`) | Same pattern as `ProcessingState`: a snapshot copy, synced back explicitly. |
+| [`RoutingContext`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/runtime/RoutingContext.java) | `getRoutingContext()` | `topic`, `clientId`, `api`, `qos`, `resolvedPublishTopic`, `tenant` | `@Value` (Lombok immutable); `with*` methods return a new copy. |
+| [`DeviceContext`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/runtime/DeviceContext.java) | `getDeviceContext()` | `sourceId`, `externalId`, `deviceName`, `deviceType`, `deviceFragments`, `deviceGroups`, `alarms` | Immutable, copy-on-write via `with*`. **Read-only projection — there is no `syncFromDeviceContext()`**, deliberately: `ProcessingContext` stays the single mutable owner. |
 
-**Note on project memory:** the six-context refactor described in this repository's saved
-memory (`RoutingContext`, `PayloadContext`, `DeviceContext`, `ProcessingState`,
-`OutputCollector`, plus a sixth `ExecutionContext` for GraalVM resources) matches the code
-for the first five classes. There is, however, no separate `ExecutionContext` class in
-`processor/model/` — GraalVM lifecycle (the pooled `Context`, `Engine` reference, and release
-callback) lives directly on `ProcessingContext` itself (`graalContext`, `pooledGraalContext`,
-`engineReleaseAction`), and `ProcessingContext` itself implements `AutoCloseable` for that
-purpose. Use `try (ProcessingContext<?> ctx = ...) { ... }` (or rely on
-`ConsolidationProcessor`, which does this on every pipeline exit) rather than looking for a
-dedicated `ExecutionContext` type.
+Both are snapshots with no sync-back, so they cannot be used to mutate state. To change state,
+mutate `ProcessingContext` directly — its fields are already concurrent.
+
+[`OutputCollector`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/runtime/OutputCollector.java)
+is a **standalone accumulator**, not a `ProcessingContext` view. Construct it with
+`new OutputCollector()`, pass it down, and merge results up.
+
+> **History:** earlier revisions also exposed `getPayloadContext()`, `getProcessingState()` /
+> `syncFromState()` and `getOutputCollector()` / `syncFromOutputCollector()`. These were
+> copy-out/copy-back adapters: sync-back *replaced* collections wholesale, which would have
+> reintroduced lost updates on the parallel route that the concurrent fields above already make
+> safe. They have been removed, along with the `PayloadContext` and `ProcessingState` classes.
+
+**GraalVM lifecycle:** there is no separate `ExecutionContext` class. The pooled `Context`,
+`Engine` reference and release callback live directly on `ProcessingContext`
+(`graalContext`, `pooledGraalContext`, `engineReleaseAction`), which implements
+`AutoCloseable` for that purpose. Use `try (ProcessingContext<?> ctx = ...) { ... }` (or rely
+on `ConsolidationProcessor`, which does this on every pipeline exit).
 
 ### Filtering (`FilterInboundProcessor`)
 

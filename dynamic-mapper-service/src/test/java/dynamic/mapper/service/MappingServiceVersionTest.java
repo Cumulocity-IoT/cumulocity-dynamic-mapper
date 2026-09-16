@@ -31,8 +31,8 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingVersion;
 import dynamic.mapper.model.MappingVersionCount;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.model.TransformationType;
 
 import java.util.List;
 import java.util.Map;

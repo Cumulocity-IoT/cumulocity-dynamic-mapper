@@ -22,7 +22,7 @@ import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.MappingAction;
 
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 
 /**
  * Helper class for working with JavaScript union types and arrays in GraalJS

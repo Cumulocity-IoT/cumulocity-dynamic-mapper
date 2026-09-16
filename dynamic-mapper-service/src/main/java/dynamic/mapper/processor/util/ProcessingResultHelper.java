@@ -43,10 +43,10 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
+import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.MappingAction;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 
 /**
  * Utility class for creating and managing processing results in the dynamic mapper system.
@@ -74,7 +74,7 @@ public class ProcessingResultHelper {
      * Creates a successful processing result wrapper from a list of already-completed processing
      * contexts. The future is pre-completed so {@code processingTimeMS} is 0 — the caller
      * (dispatcher) is responsible for setting the actual elapsed time via
-     * {@link dynamic.mapper.processor.model.ProcessingResultWrapper#setProcessingTimeMS}.
+     * {@link dynamic.mapper.processor.runtime.ProcessingResultWrapper#setProcessingTimeMS}.
      *
      * @param <T> the type of payload in the processing contexts
      * @param contexts the list of processing contexts that were successfully processed
@@ -421,8 +421,8 @@ public class ProcessingResultHelper {
      * @return the created DynamicMapperRequest (not yet added to any collector)
      */
     public static DynamicMapperRequest createDynamicMapperRequest(
-            dynamic.mapper.processor.model.DeviceContext device,
-            dynamic.mapper.processor.model.RoutingContext routing,
+            dynamic.mapper.processor.runtime.DeviceContext device,
+            dynamic.mapper.processor.runtime.RoutingContext routing,
             String payloadJson,
             MappingAction action,
             Mapping mapping) {

@@ -44,7 +44,7 @@ import org.springframework.stereotype.Component;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.model.PooledGraalContext;
+import dynamic.mapper.processor.runtime.PooledGraalContext;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import lombok.extern.slf4j.Slf4j;
 
@@ -113,7 +113,7 @@ import lombok.extern.slf4j.Slf4j;
  *       the tenant lookup map. No new Contexts are created against it.</li>
  *   <li>Drain: existing in-flight Contexts continue to run to completion. Each Context's
  *       {@code close()} triggers the {@code engineReleaseAction} callback set on
- *       {@link dynamic.mapper.processor.model.ProcessingContext}, which calls
+ *       {@link dynamic.mapper.processor.runtime.ProcessingContext}, which calls
  *       {@link #releaseEngine(Engine)}.</li>
  *   <li>Close: when the active-context counter reaches zero and the Engine is still in
  *       {@code retiredEngines}, {@link Engine#close()} is called and the Engine is removed
@@ -738,7 +738,7 @@ public class GraalVMContextService {
      * retired engine's active count drops to zero it is explicitly closed so the JVM
      * can reclaim its Metaspace rather than waiting for GC.
      *
-     * <p>Called from {@link dynamic.mapper.processor.model.ProcessingContext#close()}
+     * <p>Called from {@link dynamic.mapper.processor.runtime.ProcessingContext#close()}
      * via a callback set by {@link dynamic.mapper.processor.AbstractEnrichmentProcessor}.
      *
      * @param engine the Engine that backed the just-closed Context
@@ -926,11 +926,11 @@ public class GraalVMContextService {
      * {@link #warmupMappingCodes} stay consistent.
      */
     private static boolean isAllowedHostClass(String className) {
-        return className.equals("dynamic.mapper.processor.model.SubstitutionContext")
+        return className.equals("dynamic.mapper.processor.runtime.SubstitutionContext")
                 || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
                 || className.equals("dynamic.mapper.processor.model.SubstituteValue")
                 || className.equals("dynamic.mapper.processor.model.SubstituteValue$TYPE")
-                || className.equals("dynamic.mapper.processor.model.RepairStrategy")
+                || className.equals("dynamic.mapper.model.RepairStrategy")
                 || className.equals("java.nio.charset.StandardCharsets")
                 || className.equals("java.util.Base64")
                 || className.equals("java.lang.String")

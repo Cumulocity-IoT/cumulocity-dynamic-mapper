@@ -22,7 +22,7 @@
 package dynamic.mapper.notification.websocket;
 
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
+import dynamic.mapper.model.DynamicMapperRequest;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.java_websocket.client.WebSocketClient;
@@ -31,8 +31,8 @@ import org.java_websocket.handshake.ServerHandshake;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 
 import java.net.URI;
 import java.util.List;

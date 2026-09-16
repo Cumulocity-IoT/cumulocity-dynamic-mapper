@@ -34,7 +34,7 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.*;
 import dynamic.mapper.processor.model.C8YMessage;
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import dynamic.mapper.service.cache.FlowStateStore;
 import dynamic.mapper.service.cache.MappingCacheManager;

@@ -50,9 +50,9 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.model.DynamicMapperRequest;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayInputStream;

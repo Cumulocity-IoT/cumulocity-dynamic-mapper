@@ -40,7 +40,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.ser.Serializers;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
-import dynamic.mapper.core.AIAgentService;
+import dynamic.mapper.ai.AIAgentService;
 import dynamic.mapper.model.MappingTreeNode;
 import dynamic.mapper.model.MappingTreeNodeSerializer;
 import io.micrometer.core.instrument.MeterRegistry;

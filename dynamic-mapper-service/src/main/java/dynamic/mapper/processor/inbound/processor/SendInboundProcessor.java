@@ -26,9 +26,9 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.model.DynamicMapperRequest;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer;
 import dynamic.mapper.util.Utils;
@@ -430,7 +430,7 @@ public class SendInboundProcessor extends BaseProcessor {
      */
     @SuppressWarnings("unchecked")
     private void storeSparkPlugBBirthMessage(ProcessingContext<Object> context) {
-        if (!dynamic.mapper.processor.model.MappingType.SPARKPLUGB
+        if (!dynamic.mapper.model.MappingType.SPARKPLUGB
                 .equals(context.getMapping().getMappingType())) {
             return;
         }
@@ -577,7 +577,7 @@ public class SendInboundProcessor extends BaseProcessor {
      * holds the DBIRTH alias maps), not on a separate device MO.
      */
     private void updateSparkPlugBActiveStatus(ProcessingContext<Object> context) {
-        if (!dynamic.mapper.processor.model.MappingType.SPARKPLUGB
+        if (!dynamic.mapper.model.MappingType.SPARKPLUGB
                 .equals(context.getMapping().getMappingType())) {
             return;
         }

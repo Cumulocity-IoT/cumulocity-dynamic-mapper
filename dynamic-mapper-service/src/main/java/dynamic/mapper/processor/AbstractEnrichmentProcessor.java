@@ -29,7 +29,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.model.TransformationType;
 
 import org.apache.camel.Exchange;
 import org.graalvm.polyglot.Context;
@@ -43,10 +43,10 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.PooledGraalContext;
-import dynamic.mapper.processor.model.RoutingContext;
-import dynamic.mapper.processor.model.SmartFunctionContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.PooledGraalContext;
+import dynamic.mapper.processor.runtime.RoutingContext;
+import dynamic.mapper.processor.runtime.SmartFunctionContext;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.cache.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
@@ -195,11 +195,11 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 .allowHostAccess(configurationRegistry.getGraalVMContextService().getHostAccess())
                 .allowHostClassLookup(className ->
                 // Allow only the specific SubstitutionContext class
-                className.equals("dynamic.mapper.processor.model.SubstitutionContext")
+                className.equals("dynamic.mapper.processor.runtime.SubstitutionContext")
                         || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
                         || className.equals("dynamic.mapper.processor.model.SubstituteValue")
                         || className.equals("dynamic.mapper.processor.model.SubstituteValue$TYPE")
-                        || className.equals("dynamic.mapper.processor.model.RepairStrategy")
+                        || className.equals("dynamic.mapper.model.RepairStrategy")
                         || className.equals("java.nio.charset.StandardCharsets")
                         || className.equals("java.lang.String")
                         || className.equals("java.util.Base64")

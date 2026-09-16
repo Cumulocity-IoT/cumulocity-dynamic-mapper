@@ -47,8 +47,8 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.service.cache.MappingCacheManager;
 
 import org.junit.jupiter.api.BeforeEach;

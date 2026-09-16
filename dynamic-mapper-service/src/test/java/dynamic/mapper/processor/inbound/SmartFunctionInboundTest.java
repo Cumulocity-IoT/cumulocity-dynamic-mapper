@@ -53,7 +53,7 @@ import org.mockito.ArgumentCaptor;
 import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.InputMessage;
-import dynamic.mapper.processor.model.SmartFunctionContext;
+import dynamic.mapper.processor.runtime.SmartFunctionContext;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import lombok.extern.slf4j.Slf4j;
 

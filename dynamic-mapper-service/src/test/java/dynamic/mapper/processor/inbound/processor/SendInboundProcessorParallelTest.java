@@ -51,10 +51,10 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.model.DynamicMapperRequest;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.processor.util.CamelHeaders;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
@@ -246,7 +246,7 @@ class SendInboundProcessorParallelTest {
         when(exchange.getIn()).thenReturn(message);
         when(message.getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class))
                 .thenReturn(processingContext);
-        when(message.getHeader(eq(CamelHeaders.PROCESSING_RESULT_WRAPPER), eq(dynamic.mapper.processor.model.ProcessingResultWrapper.class)))
+        when(message.getHeader(eq(CamelHeaders.PROCESSING_RESULT_WRAPPER), eq(dynamic.mapper.processor.runtime.ProcessingResultWrapper.class)))
                 .thenReturn(null);
         when(message.getBody(DynamicMapperRequest.class)).thenReturn(bodyRequest);
         return exchange;

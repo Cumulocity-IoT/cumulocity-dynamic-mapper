@@ -57,10 +57,10 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 

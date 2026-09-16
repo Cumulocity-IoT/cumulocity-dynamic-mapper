@@ -43,8 +43,8 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.notification.websocket.Notification;
 import dynamic.mapper.processor.util.APITopicUtil;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
@@ -823,7 +823,7 @@ class OutboundTransformationValidationTest {
         return dynamic.mapper.model.Substitution.builder()
                 .pathSource(source)
                 .pathTarget(target)
-                .repairStrategy(dynamic.mapper.processor.model.RepairStrategy.DEFAULT)
+                .repairStrategy(dynamic.mapper.model.RepairStrategy.DEFAULT)
                 .build();
     }
 }

@@ -26,7 +26,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.notification.websocket.NotificationCallback;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;

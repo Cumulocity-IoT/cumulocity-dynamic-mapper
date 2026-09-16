@@ -50,11 +50,11 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.Substitution;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.RepairStrategy;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 

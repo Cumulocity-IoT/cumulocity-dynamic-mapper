@@ -26,7 +26,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.ExternalId;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.service.cache.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 import org.graalvm.polyglot.Value;

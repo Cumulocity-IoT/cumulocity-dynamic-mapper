@@ -49,9 +49,9 @@ import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.model.DynamicMapperRequest;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -770,8 +770,8 @@ class InboundTransformationValidationTest {
                 .mappingTopic("test/+")
                 .targetAPI(API.MEASUREMENT)
                 .direction(dynamic.mapper.model.Direction.INBOUND)
-                .mappingType(dynamic.mapper.processor.model.MappingType.JSON)
-                .transformationType(dynamic.mapper.processor.model.TransformationType.DEFAULT)
+                .mappingType(dynamic.mapper.model.MappingType.JSON)
+                .transformationType(dynamic.mapper.model.TransformationType.DEFAULT)
                 .sourceTemplate("{\"value\":0,\"unit\":\"C\",\"type\":\"c8y_TemperatureMeasurement\"}")
                 .targetTemplate("{\"type\":\"c8y_TemperatureMeasurement\",\"time\":\"2025-01-20T10:00:00.000Z\","
                         + "\"c8y_TemperatureMeasurement\":{\"T\":{\"value\":0,\"unit\":\"C\"}}}")
@@ -804,8 +804,8 @@ class InboundTransformationValidationTest {
                 .mappingTopic("sensor/multi")
                 .targetAPI(API.MEASUREMENT)
                 .direction(dynamic.mapper.model.Direction.INBOUND)
-                .mappingType(dynamic.mapper.processor.model.MappingType.JSON)
-                .transformationType(dynamic.mapper.processor.model.TransformationType.DEFAULT)
+                .mappingType(dynamic.mapper.model.MappingType.JSON)
+                .transformationType(dynamic.mapper.model.TransformationType.DEFAULT)
                 .sourceTemplate("{\"temperature\":0,\"humidity\":0,\"pressure\":0}")
                 .targetTemplate("{\"type\":\"c8y_Environment\",\"time\":\"2025-01-20T10:00:00.000Z\","
                         + "\"c8y_Environment\":{\"temperature\":{\"value\":0},\"humidity\":{\"value\":0},"
@@ -873,7 +873,7 @@ class InboundTransformationValidationTest {
         dynamic.mapper.model.Substitution tempSub = dynamic.mapper.model.Substitution.builder()
                 .pathSource("values.temp")
                 .pathTarget("c8y_Temperature.T.value")
-                .repairStrategy(dynamic.mapper.processor.model.RepairStrategy.DEFAULT)
+                .repairStrategy(dynamic.mapper.model.RepairStrategy.DEFAULT)
                 .expandArray(true)
                 .build();
 
@@ -941,7 +941,7 @@ class InboundTransformationValidationTest {
         return dynamic.mapper.model.Substitution.builder()
                 .pathSource(source)
                 .pathTarget(target)
-                .repairStrategy(dynamic.mapper.processor.model.RepairStrategy.DEFAULT)
+                .repairStrategy(dynamic.mapper.model.RepairStrategy.DEFAULT)
                 .build();
     }
 }
