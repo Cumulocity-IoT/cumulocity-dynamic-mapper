@@ -49,6 +49,13 @@ decided against rather than forgotten.
 | [connector-framework.md](connector-framework.md) | The shared abstraction every connector extends |
 | [connector-mqtt.md](connector-mqtt.md) · [connector-mqtt-service.md](connector-mqtt-service.md) · [connector-kafka.md](connector-kafka.md) · [connector-pulsar.md](connector-pulsar.md) · [connector-amqp.md](connector-amqp.md) · [connector-http.md](connector-http.md) · [connector-webhook.md](connector-webhook.md) · [connector-google-pubsub.md](connector-google-pubsub.md) | Per-connector specifics |
 
+### Tooling
+
+| Page | Covers |
+|---|---|
+| [message-explorer.md](message-explorer.md) | Live inspection of broker traffic, seeding a mapping from a captured message |
+| [ai-agent-generation.md](ai-agent-generation.md) | Generating substitutions and Smart Functions via the AI Agent Manager |
+
 ---
 
 ## Not documented yet
@@ -58,12 +65,10 @@ rediscovered; ordered by how much a reader loses without them.
 
 | Feature | Where it lives | Why it matters |
 |---|---|---|
-| **Message Explorer** | `ExplorerController` (`/session`, `/session/{id}/messages`), `ExplorerListenerRegistry`, per-connector `subscribeExplorer` | Live inspection of broker traffic and building a mapping from a real payload. Replaced snooping in 6.4.0, and snooping's removal *is* documented — its successor is not. Has per-connector subtleties (Kafka needs an isolated consumer group, MQTT Service has no real subscriptions) that are currently only visible in code comments. |
 | **Deployment map** | `DeploymentController` (`/defined`, `/effective`), `DeploymentMapService` | Which mappings run on which connector — a core concept with no page at all. "Defined" vs. "effective" deployment is not obvious, and failing deployment is a common cause of "my mapping does nothing". |
 | **Outbound subscription management** | `NotificationSubscriptionController` (`/subscription`, `/type`, `/type/resync/{type}`, `/group`, `/device`) | How a device comes to be subscribed at all: static, by device type, by group, plus the resync that backfills pre-existing devices. `mapping-processing-outbound.md` documents the pipeline *after* a notification arrives, never how the subscription got there. |
 | **Code templates** | `ConfigurationController` (`/code`, `/code/{id}`), `codeTemplates` in `ServiceConfiguration` | The shared/system JavaScript library and the per-type starting templates behind every Smart Function. Customer-editable, and part of what a tenant loses on a configuration reset. |
 | **Device isolation / client relations** | `ClientRelationController`, `deviceIsolationMQTTServiceEnabled` | Restricting outbound MQTT Service delivery to registered clients, and the device↔client mapping behind it. A tenant-wide switch whose semantics are undocumented. |
-| **AI agent integration** | `AIAgentService`, `jsonataAgent` / `smartFunctionAgent` settings | Generating substitutions and Smart Functions from a payload. Named as a headline capability in the project overview, with no page describing what it does or requires. |
 | **Import / export** | UI only — mappings, connectors (#563), service configuration (#567) | Three different scopes with three different behaviours (mappings additive, connectors imported disabled because secrets are masked, service configuration a full overwrite). The differences are the documentation-worthy part. |
 | **Mapping tree** | `MappingController` `/tree`, `MappingTreeNode` | The topic hierarchy view, and how the resolver tree it renders relates to mapping resolution. |
 | **Roles and permissions** | `ROLE_DYNAMIC_MAPPER_ADMIN` / `_CREATE`, `Feature` flags | Which role may do what, and what the UI hides rather than disables. Renamed in 5.5.0 (see `CHANGES.md`) with no feature page to point at. |

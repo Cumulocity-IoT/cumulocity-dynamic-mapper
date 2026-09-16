@@ -345,30 +345,32 @@ export class AIPromptComponent implements OnInit {
    * A response with no code block (e.g. a clarifying question or acknowledgement) is common in a
    * multi-turn conversation and must NOT revoke a previously extracted, valid `generatedCode` —
    * so this only ever flips `valid` from false to true, never the other way around.
+   *
+   * A response may contain multiple fenced code blocks — e.g. the agent illustrating an
+   * alternative approach before presenting its final `onMessage` implementation — so, mirroring
+   * checkIfResponseContainsSubstitutions(), candidates are tried most-recent-first: last
+   * ```javascript-tagged block, then last generic ``` block. Using a plain (non-global) .match()
+   * here previously always grabbed the FIRST code block, which could be an earlier example
+   * instead of the final function and silently produced the wrong generatedCode.
    */
   checkIfResponseContainsJavaScript(content: any): void {
     try {
-      // Look for JavaScript code blocks
-      const jsBlockRegex = /```javascript\s*([\s\S]*?)\s*```/;
-      const match = content.match(jsBlockRegex);
+      const trimmedContent = typeof content === 'string' ? content.trim() : '';
+      if (!trimmedContent) return;
 
-      let jsContent: string | undefined;
-      if (match && match[1]) {
-        jsContent = match[1].trim();
-      } else {
-        // Try alternative patterns for code blocks
-        const genericCodeRegex = /```(?:js|javascript)?\s*([\s\S]*?)\s*```/;
-        const genericMatch = content.match(genericCodeRegex);
-        if (genericMatch && genericMatch[1]) {
-          jsContent = genericMatch[1].trim();
+      const jsBlocks = [...trimmedContent.matchAll(/```javascript\s*([\s\S]*?)\s*```/g)].map(m => m[1]);
+      const genericBlocks = [...trimmedContent.matchAll(/```(?:js|javascript)?\s*([\s\S]*?)\s*```/g)].map(m => m[1]);
+      const candidates = [...jsBlocks.reverse(), ...genericBlocks.reverse()];
+
+      for (const candidate of candidates) {
+        const jsContent = candidate?.trim();
+        if (jsContent?.includes('function') && jsContent.includes('function onMessage')) {
+          this.generatedCode = this.applyESMExport(jsContent);
+          this.valid = true;
+          return;
         }
       }
-
-      if (jsContent?.includes('function') && jsContent.includes('function onMessage')) {
-        this.generatedCode = this.applyESMExport(jsContent);
-        this.valid = true;
-      }
-      // else: no code block, or one without a recognizable onMessage function — keep the
+      // else: no code block, or none with a recognizable onMessage function — keep the
       // previous generatedCode/valid state untouched rather than disabling Save.
     } catch (error) {
       console.error('Error parsing JavaScript from response:', error);

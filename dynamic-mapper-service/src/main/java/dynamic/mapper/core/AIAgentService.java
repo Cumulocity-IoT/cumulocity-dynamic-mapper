@@ -147,35 +147,6 @@ public class AIAgentService {
         }
     }
 
-    /*
-     * public boolean checkMCPServerAvailable() {
-     * HttpHeaders headers = new HttpHeaders();
-     * headers.set("Authorization",
-     * contextService.getContext().toCumulocityCredentials().getAuthenticationString
-     * ());
-     * headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
-     * String tenant =
-     * contextService.getContext().toCumulocityCredentials().getTenantId();
-     * ResponseEntity<String> response = null;
-     * try {
-     * String serverUrl = clientProperties.getBaseURL() + MCP_HEALTH_ENDPOINT;
-     * RestTemplate restTemplate = new RestTemplate();
-     * HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
-     * response = restTemplate.exchange(serverUrl, HttpMethod.GET, requestEntity,
-     * String.class);
-     * } catch (Exception e) {
-     * log.info("{} - MCP-Server is not available", tenant);
-     * }
-     * if (response != null && response.getStatusCode().is2xxSuccessful()) {
-     * log.info("{} - MCP-Server is available", tenant);
-     * return true;
-     * } else {
-     * log.info("{} - MCP-Server is not available", tenant);
-     * return false;
-     * }
-     * }
-     */
-
     public void createDefaultAIAgents() {
         HashMap<String, String> prompts = getAgentPrompts();
 
