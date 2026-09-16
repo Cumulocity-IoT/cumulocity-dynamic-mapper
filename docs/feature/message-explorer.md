@@ -167,3 +167,16 @@ which `consume()`s the hand-off to pre-fill the new mapping's source template.
   subscription alive for up to the TTL.
 - **A device-type OUTBOUND session only subscribes devices that exist at session start** — a
   device created afterwards under the same type is not picked up until a new session starts.
+- **Sessions are per-JVM in-memory and assume a single service replica.** A poll routed to a
+  different instance than the one holding the session returns 404 "session expired". This is
+  safe today only because the service runs single-instance by design — see
+  [architecture.md § Single-instance requirement](../architecture.md#single-instance-requirement).
+- **Navigating away does not stop the session.** `ngOnDestroy` deliberately leaves the backend
+  session running so returning to the page resumes it (the UI persists the session id in
+  `localStorage`). The broker/Notification 2.0 subscriptions therefore stay live, and messages
+  keep being captured, until the idle TTL expires them — by default up to 10 minutes after the
+  user stopped looking. An explicit "Stop" is the only immediate teardown.
+- **Polling re-transfers the whole buffer.** `GET /messages` returns every buffered message
+  (up to 500), not a delta since the last poll, and the UI re-matches them against what it
+  already has to preserve sequence numbers. Both costs grow with `maxMessages`; a large buffer
+  on a short refresh interval is measurably more expensive than it looks.

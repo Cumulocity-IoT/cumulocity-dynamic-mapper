@@ -86,6 +86,14 @@ export const ValidationFormlyError = {
   },
   Unparsed_MappingType_Requires_Smart_Function_Transformation_Type: {
     message: 'This payload format requires the Smart Function transformation type.'
+  },
+  Substitution_Source_Expression_Must_Be_Valid_JSONata: {
+    message:
+      'At least one substitution has a source expression that is not valid JSONata. It would fail for every message, so the mapping cannot be saved. Check the microservice log for the offending expression.'
+  },
+  Substitution_Paths_Must_Not_Be_Empty: {
+    message:
+      'At least one substitution has an empty source or target path. Both must be set.'
   }
 };
 

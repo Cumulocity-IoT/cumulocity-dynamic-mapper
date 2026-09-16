@@ -81,6 +81,8 @@ import { ExplorerMappingHandoffService } from '../core/explorer-mapping-handoff.
 import { SubscriptionService } from '../core/subscription.service';
 import { ImportMappingsComponent } from '../import/import-modal.component';
 import { MappingVersionDrawerComponent } from '../versions/mapping-version-drawer.component';
+import { MappingValidationError } from '../shared/mapping-validation-error';
+import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
 import { MappingIdCellRendererComponent } from '../renderer/mapping-id.renderer.component';
@@ -106,6 +108,8 @@ import { DEPRECATION_NOTICE_VERSION } from '../../shared';
 })
 export class MappingComponent implements OnInit, OnDestroy {
   @ViewChild('mappingGrid') mappingGrid!: DataGridComponent;
+  // Used to move the stepper to a substitution a validation failure points at.
+  @ViewChild('mappingStepper') mappingStepperRef?: MappingStepperComponent;
 
   showConfigMapping = false;
   isLoading = false;
@@ -781,6 +785,10 @@ export class MappingComponent implements OnInit, OnDestroy {
     // to — true for UPDATE (the row already exists) unless a draft save is attempted and fails,
     // and true for CREATE/COPY only once the create call itself succeeds.
     let mappingPersisted = false;
+    // Tracked separately from mappingPersisted: a save that failed must keep the editor open so
+    // the edits are not thrown away, and a validation rejection is shown as an actionable list.
+    let saveFailed = false;
+    let validationError: MappingValidationError | null = null;
     if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
       mappingPersisted = true;
       // Connector-only changes (contentChanged === false) must not create a draft — a draft
@@ -795,10 +803,15 @@ export class MappingComponent implements OnInit, OnDestroy {
             gettext(`Saved draft for ${mapping.name}. Publish and activate it (Versions) to apply the changes.`)
           );
         } catch (error) {
-          this.alertService.danger(
-            gettext(`Failed to save draft for ${mapping.name}: `) + error.message
-          );
           mappingPersisted = false;
+          saveFailed = true;
+          if (error instanceof MappingValidationError) {
+            validationError = error;
+          } else {
+            this.alertService.danger(
+              gettext(`Failed to save draft for ${mapping.name}: `) + error.message
+            );
+          }
         }
       }
     } else if (
@@ -812,9 +825,14 @@ export class MappingComponent implements OnInit, OnDestroy {
         mappingPersisted = true;
         this.alertService.success(gettext(`Mapping ${mapping.name} created successfully`));
       } catch (error) {
-        this.alertService.danger(
-          gettext(`Failed to create mapping ${mapping.name}: `) + error.message
-        );
+        saveFailed = true;
+        if (error instanceof MappingValidationError) {
+          validationError = error;
+        } else {
+          this.alertService.danger(
+            gettext(`Failed to create mapping ${mapping.name}: `) + error.message
+          );
+        }
       }
     }
 
@@ -835,9 +853,38 @@ export class MappingComponent implements OnInit, OnDestroy {
     }
     this.mappingService.refreshMappings(this.stepperConfiguration.direction);
 
+    // Closing the editor on a failed save discarded the user's edits along with it, leaving them
+    // nothing to correct. Keep it open so the reported problems can actually be fixed and re-saved.
+    if (saveFailed) {
+      if (validationError) {
+        await this.showValidationIssues(mapping, validationError);
+      }
+      return;
+    }
+
     this.showConfigMapping = false;
 
     this.subscriptionService.validateSubscriptionOutbound(this.stepperConfiguration.direction);
+  }
+
+  /**
+   * Lists the rejected-save problems and, if the user picks one tied to a substitution, moves the
+   * stepper to the transformation step and selects it so it is ready to edit.
+   */
+  private async showValidationIssues(mapping: Mapping, error: MappingValidationError): Promise<void> {
+    const drawer = this.bottomDrawerService.openDrawer(MappingValidationDrawerComponent, {
+      initialState: {
+        issues: error.details,
+        errors: error.errors,
+        mappingName: mapping?.name
+      }
+    });
+
+    const result = await drawer.instance.result;
+    if (result.action !== 'goto') {
+      return;
+    }
+    await this.mappingStepperRef?.goToSubstitution(result.index);
   }
 
   async onReload() {

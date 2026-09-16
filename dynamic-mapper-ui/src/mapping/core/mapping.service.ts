@@ -60,6 +60,7 @@ import {
   RealtimeSubjectService
 } from '@c8y/ngx-components';
 import { buildBackendErrorMessage } from '../shared/util';
+import { toBackendError } from '../shared/mapping-validation-error';
 
 @Injectable({
   providedIn: 'root'
@@ -198,7 +199,7 @@ export class MappingService {
     );
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(buildBackendErrorMessage(error, response.statusText));
+      throw toBackendError(error, buildBackendErrorMessage(error, response.statusText));
     }
     const m = await response.json();
     this.refreshAfterMutation(mapping.direction);
@@ -215,7 +216,7 @@ export class MappingService {
     });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(buildBackendErrorMessage(error, 'Could not create mapping'));
+      throw toBackendError(error, buildBackendErrorMessage(error, 'Could not create mapping'));
     }
     const m = await response.json();
     this.refreshAfterMutation(mapping.direction);
@@ -272,7 +273,7 @@ export class MappingService {
     }
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(buildBackendErrorMessage(error, response.statusText));
+      throw toBackendError(error, buildBackendErrorMessage(error, response.statusText));
     }
     return response.json();
   }
@@ -302,7 +303,7 @@ export class MappingService {
     );
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(buildBackendErrorMessage(error, response.statusText));
+      throw toBackendError(error, buildBackendErrorMessage(error, response.statusText));
     }
     const mv = await response.json();
     this.clearVersionsCache(id);

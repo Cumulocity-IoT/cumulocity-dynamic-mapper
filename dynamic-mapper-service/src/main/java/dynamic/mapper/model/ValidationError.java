@@ -46,5 +46,7 @@ public enum ValidationError {
   FilterOutbound_Must_Be_Unique,
   Wrong_Transformation_Type_Array_In_Source_Template_Or_Target_Template_Requires_Transformation_Type_Smart_Function,
   Extension_Must_Be_Defined_For_Extension_Java_Mapping,
-  Unparsed_MappingType_Requires_Smart_Function_Transformation_Type
+  Unparsed_MappingType_Requires_Smart_Function_Transformation_Type,
+  Substitution_Source_Expression_Must_Be_Valid_JSONata,
+  Substitution_Paths_Must_Not_Be_Empty
 }

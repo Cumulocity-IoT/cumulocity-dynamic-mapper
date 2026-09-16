@@ -26,6 +26,10 @@ specific reason, rather than failing later on every message.
   and uniqueness of what must be unique.
 - **Every failure names a specific error code**, so the UI and API clients can explain it rather
   than showing "invalid".
+- **A failure identifies what broke, where it can.** When a rule can tell which element is at
+  fault, the response says which one and why — enough for a client to take the user to it.
+- **A rejected save never costs the user their work.** The editor stays open with the edits
+  intact so the reported problems can be corrected and the save retried.
 - **Deactivating is never blocked by validation** — only activating is. A broken mapping must
   always be switchable off.
 
@@ -45,6 +49,44 @@ If you bypass the UI (e.g. call the REST API directly), only the two backend lay
 
 `MappingValidator.validate()` collects **all** applicable errors in one pass — it does not
 stop at the first failure — so an API response can list several violations at once.
+
+### Error detail
+
+The 422 body carries both a flat list of codes and, where the rule could identify what failed,
+a parallel list of details:
+
+```json
+{
+  "message": "Mapping validation failed",
+  "errors": ["Substitution_Source_Expression_Must_Be_Valid_JSONata"],
+  "details": [
+    {
+      "code": "Substitution_Source_Expression_Must_Be_Valid_JSONata",
+      "field": "substitutions[2].pathSource",
+      "index": 2,
+      "value": "temperature +",
+      "reason": "Expected end of expression"
+    }
+  ]
+}
+```
+
+`ValidationError` stays a payload-free vocabulary of machine-readable codes; the context lives in
+[`ValidationIssue`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/ValidationIssue.java),
+so a rule can gain detail without changing what its code means. `details` is **additive**:
+`errors` keeps exactly the contents and ordering it always had, every entry in `errors` has a
+matching entry in `details` (rules with no context simply leave the extra fields unset), and
+`details` is omitted entirely when empty. A client reading only `errors` is unaffected.
+
+Only the substitution rules populate the context fields today. Every other rule emits its code
+alone; the structure is there for them to be enriched one at a time.
+
+**In the editor.** A rejected save opens a drawer
+([`MappingValidationDrawerComponent`](../../dynamic-mapper-ui/src/mapping/validation/mapping-validation-drawer.component.ts))
+listing each problem with its detail, and failures carrying an `index` offer **Go to problem**,
+which moves to the transformation step and selects that substitution. The editor stays open and
+keeps the unsaved edits, so the correction can be made and the save retried. This replaces a
+single joined toast that closed the editor and discarded the work.
 
 ---
 
@@ -115,6 +157,39 @@ substitution list to check.
 | `One_Substitution_Defining_Device_Identifier_Must_Be_Used` | INBOUND | No substitution targets `_IDENTITY_.externalId`/`c8ySourceId` | Exactly one substitution has `pathTarget: "_IDENTITY_.externalId"` |
 | `Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used` | INBOUND | Two substitutions both target `_IDENTITY_.externalId` | Only one such substitution |
 | `One_Substitution_Defining_Device_Identifier_Must_Be_Used` | OUTBOUND | No substitution sources `_IDENTITY_.externalId`/`c8ySourceId` | At least one substitution has `pathSource: "_IDENTITY_.externalId"` |
+
+#### Substitution expressions must be runnable
+
+Every substitution's `pathSource` must parse as JSONata, and neither path may be blank.
+Validation calls the same `jsonata(...)` parse the runtime processor makes, so **a mapping
+rejected by this rule could never have worked** — the check cannot fail an expression that
+runs today. Without it, an unparseable expression saved and activated cleanly and then failed
+once per message (the processor logs the parse error and substitutes `null`), so the only
+symptom was missing data until the mapping hit `maxFailureCount` and auto-deactivated.
+
+Skipped for `SMART_FUNCTION` and `EXTENSION_JAVA`, whose substitutions are never evaluated.
+
+Only `pathSource` is parsed as an expression. `pathTarget` is **not** evaluated as JSONata at
+runtime — it is a plain target path and processing-cache key — so parsing it here would reject
+paths the engine accepts. (The mapping editor and the AI drawer do evaluate `pathTarget` as
+JSONata, but only to preview the target node; that is a UI aid, not this rule.)
+
+Every offending substitution is reported separately, each carrying its index, the offending
+expression and the parser's message — see [Error detail](#error-detail) below.
+
+| Error code | Fails | Passes |
+|---|---|---|
+| `Substitution_Source_Expression_Must_Be_Valid_JSONata` | `pathSource: "temperature +"`, `pathSource: "$number(temperature"` | `pathSource: "temperature"`, `"$number(payload.value)"`, `"readings[type='temp'].value"`, `"does.not.exist"` (a path resolving to nothing is legal) |
+| `Substitution_Paths_Must_Not_Be_Empty` | `pathSource: ""` or `pathTarget: "  "` | Both non-blank |
+
+Deliberately **not** rejected, because each can describe a mapping that works today and
+rejecting it would break editing an existing one — both are surfaced as warnings in the AI
+generation drawer instead (see
+[ai-agent-generation.md](ai-agent-generation.md#what-is-and-is-not-validated)):
+
+- a duplicate `pathTarget` (last writer wins);
+- an identity substitution using the token that does not match `useExternalId` (both tokens
+  are accepted downstream).
 
 ---
 

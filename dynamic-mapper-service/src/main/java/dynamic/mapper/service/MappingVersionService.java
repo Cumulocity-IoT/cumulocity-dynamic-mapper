@@ -36,7 +36,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingVersion;
 import dynamic.mapper.model.MappingVersionRepresentation;
 import dynamic.mapper.model.SemVer;
-import dynamic.mapper.model.ValidationError;
+import dynamic.mapper.model.ValidationIssue;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -108,9 +108,9 @@ public class MappingVersionService {
         }
 
         // Validate the snapshot - publish is the commitment point (a draft may be incomplete).
-        List<ValidationError> errors = mappingValidator.validate(tenant, mapping, mapping.getId());
-        if (!errors.isEmpty()) {
-            throw new MappingValidationException(errors);
+        List<ValidationIssue> issues = mappingValidator.validate(tenant, mapping, mapping.getId());
+        if (!issues.isEmpty()) {
+            throw MappingValidationException.ofIssues(issues);
         }
 
         return subscriptionsService.callForTenant(tenant, () -> {

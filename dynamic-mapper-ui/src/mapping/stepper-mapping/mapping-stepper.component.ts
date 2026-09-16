@@ -335,6 +335,18 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     this.commit.emit(result);
   }
 
+  /**
+   * Moves to the substitutions step and selects one, so a validation failure reported after a
+   * rejected save can put the user directly on the substitution that caused it.
+   */
+  async goToSubstitution(index: number): Promise<void> {
+    if (this.stepper && this.stepper.selectedIndex !== STEP_DEFINE_SUBSTITUTIONS) {
+      this.stepper.selectedIndex = STEP_DEFINE_SUBSTITUTIONS;
+    }
+    // The step's content is rendered lazily, so the child only exists after the switch above.
+    await this.transformationStepRef?.onSelectSubstitution(index);
+  }
+
   async onSampleTargetTemplatesButton(): Promise<void> {
     this.targetTemplate = this.stepperService.computeSampleTargetTemplate(this.mapping, this.stepperConfiguration);
     this.templateStepRef?.editorTargetStepTemplate?.set(this.targetTemplate);

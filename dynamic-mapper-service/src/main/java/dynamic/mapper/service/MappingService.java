@@ -133,9 +133,9 @@ public class MappingService {
      */
     public Mapping createMapping(String tenant, Mapping mapping) {
         // Validate using the validator
-        List<ValidationError> errors = mappingValidator.validate(tenant, mapping, null);
-        if (!errors.isEmpty()) {
-            throw new MappingValidationException(errors);
+        List<ValidationIssue> issues = mappingValidator.validate(tenant, mapping, null);
+        if (!issues.isEmpty()) {
+            throw MappingValidationException.ofIssues(issues);
         }
 
         // Capture version hints before prepareForCreate resets them to 0.
@@ -211,9 +211,9 @@ public class MappingService {
             boolean allowUpdateWhenActive, boolean ignoreValidation, boolean logEvent) {
         // Validate unless ignoring
         if (!ignoreValidation) {
-            List<ValidationError> errors = mappingValidator.validate(tenant, mapping, mapping.getId());
-            if (!errors.isEmpty()) {
-                throw new MappingValidationException(errors);
+            List<ValidationIssue> issues = mappingValidator.validate(tenant, mapping, mapping.getId());
+            if (!issues.isEmpty()) {
+                throw MappingValidationException.ofIssues(issues);
             }
         }
 
@@ -488,6 +488,7 @@ public class MappingService {
                         && toPersist.getCode() != null && !toPersist.getCode().isBlank()) {
                     final String identifier = toPersist.getIdentifier();
                     final String b64Code = toPersist.getCode();
+                    final String mappingName = toPersist.getName();
                     configurationRegistry.getVirtualThreadPool().submit(() -> {
                         try {
                             byte[] decoded = java.util.Base64.getDecoder().decode(b64Code);
@@ -498,8 +499,21 @@ public class MappingService {
                             log.info("{} - Pre-compiled SmartFunction code for activated mapping [{}]",
                                     tenant, identifier);
                         } catch (Exception e) {
+                            // This is the only compile a Smart Function ever gets before a real
+                            // message hits it: code is persisted unvalidated, and this warm-up runs
+                            // after activation already succeeded. Failing silently into a log line
+                            // left a mapping that is active in the UI but cannot run — so the
+                            // failure is published as a service event the user can actually see.
                             log.warn("{} - Failed to pre-compile SmartFunction on activation [{}]: {}",
                                     tenant, identifier, e.getMessage());
+                            configurationRegistry.getC8yAgent().createLoggingEvent(
+                                    String.format(
+                                            "Mapping %s [%s] is active but its Smart Function code failed to compile: %s",
+                                            mappingName, identifier, e.getMessage()),
+                                    LoggingEventType.MAPPING_ACTIVATION_ERROR_EVENT_TYPE,
+                                    DateTime.now(),
+                                    tenant,
+                                    null);
                         }
                     });
                 }

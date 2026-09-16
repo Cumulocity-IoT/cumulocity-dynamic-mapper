@@ -45,6 +45,7 @@ import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.ValidationError;
+import dynamic.mapper.model.ValidationIssue;
 import dynamic.mapper.processor.model.MappingType;
 import dynamic.mapper.processor.model.TransformationType;
 
@@ -115,7 +116,7 @@ class MappingValidatorFilterUniquenessTest {
 
         Mapping candidate = makeOutboundMapping("id", "$.temp > 10");
 
-        List<ValidationError> errors = validator.validate(TENANT, candidate, null);
+        List<ValidationError> errors = codesOf(validator.validate(TENANT, candidate, null));
 
         assertTrue(errors.contains(ValidationError.FilterOutbound_Must_Be_Unique));
     }
@@ -127,7 +128,7 @@ class MappingValidatorFilterUniquenessTest {
 
         Mapping candidate = makeOutboundMapping("id", "$.temp > 50");
 
-        List<ValidationError> errors = validator.validate(TENANT, candidate, null);
+        List<ValidationError> errors = codesOf(validator.validate(TENANT, candidate, null));
 
         assertFalse(errors.contains(ValidationError.FilterOutbound_Must_Be_Unique));
     }
@@ -139,8 +140,13 @@ class MappingValidatorFilterUniquenessTest {
 
         // Re-validating the same mapping (unchanged filter) during an update must not
         // flag itself as a duplicate of itself.
-        List<ValidationError> errors = validator.validate(TENANT, self, "m1");
+        List<ValidationError> errors = codesOf(validator.validate(TENANT, self, "m1"));
 
         assertFalse(errors.contains(ValidationError.FilterOutbound_Must_Be_Unique));
+    }
+
+    /** validate() reports issues (code plus context); these tests only care about the codes. */
+    private static List<ValidationError> codesOf(List<ValidationIssue> issues) {
+        return issues.stream().map(ValidationIssue::code).toList();
     }
 }

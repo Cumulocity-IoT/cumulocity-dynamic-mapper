@@ -23,6 +23,8 @@ package dynamic.mapper.model;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
@@ -32,6 +34,11 @@ import lombok.Getter;
  * {@link ValidationError} codes (not just a flattened string) so the frontend can translate each
  * one to a human-readable message and render a proper per-error list instead of a single toast
  * built from the raw enum names.
+ *
+ * <p>{@code details} adds, for rules able to supply it, which element failed and why — enough for
+ * the UI to take the user to the offending substitution. It is purely additive: {@code errors}
+ * keeps its exact previous contents and ordering, and {@code details} is omitted entirely when
+ * empty, so a response for a rule with no detail is unchanged from before.
  */
 @Getter
 @Builder
@@ -43,4 +50,8 @@ public class ValidationErrorResponse {
 
     @Schema(description = "The individual validation error codes that caused the failure")
     private List<ValidationError> errors;
+
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    @Schema(description = "Per-failure detail: which element failed and why, when the rule could determine it")
+    private List<ValidationIssue> details;
 }

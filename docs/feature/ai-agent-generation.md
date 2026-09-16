@@ -157,12 +157,54 @@ Wraps `@c8y/ngx-components/ai/agent-chat`'s `AgentChatComponent`, configured wit
 - `save()` resolves the drawer's promise with either `generatedCode` (Smart Function) or
   `substitutions` (JSONata) back to the caller.
 
+### What is and is not validated
+
+The AI path applies substitutions through a different route than the manual editor: the manual
+path gates its Add/Update buttons on `isSubstitutionValid()`
+([`substitution-management.service.ts:30-36`](../../dynamic-mapper-ui/src/mapping/service/substitution-management.service.ts#L30-L36)),
+but that is a *button guard, not an invariant* — `replaceAllSubstitutions()` and
+`addSubstitution()`, which the AI path calls directly, do not check it.
+
+`AIPromptComponent` therefore runs its own checks on each answer before the result can be
+applied, and reports what it finds in a warning panel in the drawer, with a button that sends
+the problems back to the agent as a follow-up turn. The checks are deliberately **warnings, not
+a hard gate** — Save stays enabled, because an expression can fail against the *sample* template
+while being correct for real payloads, and that judgement belongs to the user.
+
+| Defect in AI output | Caught where? |
+|---|---|
+| Invalid JSONata in `pathSource` | **Drawer** (`validateSubstitutions()`) *and* rejected at save by `MappingValidator` → HTTP 422, naming the substitution index and the parser's reason, so it is caught even when substitutions are posted straight to the API. See [mapping-validation.md](mapping-validation.md#substitution-expressions-must-be-runnable). |
+| Empty `pathSource` / `pathTarget` | Rejected at save by `MappingValidator` → HTTP 422, naming which of the two paths is empty. |
+| Identity mapped to the wrong `_IDENTITY_` token for the mapping's `useExternalId` | **Drawer** (`identityTokenIssue()`). Neither the frontend nor the backend validator rejects it — both accept either token — so this check exists only here. |
+| Duplicate `pathTarget` | **Drawer** (`duplicateTargetIssues()`). Still not rejected downstream, and handled inconsistently there: bulk replace keeps both, per-item add collapses them. |
+| Syntactically broken / truncated Smart Function code | **Drawer** (`validateSmartFunctionCode()`), by parsing the extracted code after stripping module syntax. Degrades to "no finding" if `Function()` is blocked by a Content-Security-Policy. |
+| Smart Function that fails to compile on the backend | **Service event** (`MAPPING_ACTIVATION_ERROR_EVENT_TYPE`) raised by the activation warm-up, so an active-but-uncompilable mapping is visible rather than only logged. |
+| Invalid `repairStrategy` | Coerced back to `DEFAULT` in the extractor, so it never reaches Jackson (which would reject it as an opaque HTTP 400). |
+| Missing/duplicate `_IDENTITY_` substitution (INBOUND JSONata) | `MappingValidator` → HTTP 422 at save. Skipped entirely for `SMART_FUNCTION`. |
+| Invalid `targetAPI` enum value | Jackson, as an HTTP 400. |
+| `pathTarget` absent from the target template (with `repairStrategy=DEFAULT`) | **Still nowhere.** JSONata returns `undefined` for a missing path rather than throwing, so evaluation cannot detect it, and checking template membership directly would false-positive on `CREATE_IF_MISSING` and on `_IDENTITY_` tokens. Fails at runtime with `PathNotFoundException`. |
+
+The split is deliberate. Unparseable JSONata and blank paths are rejected server-side, because
+such a mapping could never run under any circumstances — so refusing it cannot break anything
+that works. Everything else stays a drawer warning: a duplicate `pathTarget` or a mismatched
+identity token can describe a mapping that works today, and rejecting those at save would make
+an existing mapping uneditable. That means a caller posting substitutions straight to
+`POST /mapping` still bypasses the warning-level checks.
+
+Sandboxing is unaffected by the AI path — generated code goes through the same
+`allowHostAccess` / `allowHostClassLookup` allowlist in `GraalVMContextService` as
+hand-written code. The AI cannot introduce a capability a human author could not; the
+difference is purely that nobody necessarily reviewed it.
+
 ### Known gotchas
 
-- **No JSON-schema validation on LLM output** — extraction relies entirely on regex plus
-  duck-typing, not a schema check. The most-recent-first, multi-fallback matching strategy in
-  both extractors exists because a single naive "first code block" match was previously
-  observed to grab an earlier example instead of the model's actual final answer.
+- **Extraction is regex plus duck-typing, not schema validation.** The most-recent-first,
+  multi-fallback matching strategy in both extractors exists because a naive "first code block"
+  match was observed to grab an earlier example instead of the model's actual final answer.
+- **The full mapping is sent to an external LLM on every message.** `groundingContextProvider`
+  re-sends the mapping (including source/target templates, which for an Explorer-seeded mapping
+  contain a real captured device payload) with each turn. Where that data goes is governed by
+  the AI Agent Manager's provider configuration, not by anything in this project.
 - **`service/ai/agent` is an undocumented platform endpoint**, called directly from the
   browser — a 401/403 from it looks identical, from the UI's perspective, to "no AI agents
   configured for this tenant".

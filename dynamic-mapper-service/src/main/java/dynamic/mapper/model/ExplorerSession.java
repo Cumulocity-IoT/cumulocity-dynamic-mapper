@@ -30,9 +30,9 @@ import lombok.Setter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 @Data
 @Builder
@@ -55,11 +55,13 @@ public class ExplorerSession {
      *  does not match this value are dropped. Ignored when sourceId is set. */
     private String deviceType;
 
-    /** Device IDs subscribed via EXPLORER_DEVICE_SUBSCRIPTION when deviceType filter is used. */
+    /** Device IDs subscribed via EXPLORER_DEVICE_SUBSCRIPTION when deviceType filter is used.
+     *  A Set, not a List: {@link #isDeviceSubscribed(String)} is called on the per-message hot
+     *  path for every captured outbound message, and a group can expand to hundreds of devices. */
     @Builder.Default
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
-    private List<String> subscribedDeviceIds = new CopyOnWriteArrayList<>();
+    private Set<String> subscribedDeviceIds = ConcurrentHashMap.newKeySet();
 
     /** Cache of sourceId → resolved C8Y device type to avoid repeated inventory lookups per session. */
     @Builder.Default
@@ -82,17 +84,36 @@ public class ExplorerSession {
      *  as an "active" session that will never receive messages. */
     private String subscriptionWarning;
 
+    /** Snapshot copy, safe to iterate while the session is running. Not for per-message use —
+     *  see {@link #isDeviceSubscribed(String)}. */
     public List<String> getSubscribedDeviceIds() {
         return Collections.unmodifiableList(new ArrayList<>(subscribedDeviceIds));
     }
 
     public void setSubscribedDeviceIds(List<String> subscribedDeviceIds) {
-        this.subscribedDeviceIds = subscribedDeviceIds == null
-                ? new CopyOnWriteArrayList<>()
-                : new CopyOnWriteArrayList<>(subscribedDeviceIds);
+        Set<String> replacement = ConcurrentHashMap.newKeySet();
+        if (subscribedDeviceIds != null) {
+            replacement.addAll(subscribedDeviceIds);
+        }
+        this.subscribedDeviceIds = replacement;
     }
 
     public void addSubscribedDeviceId(String deviceId) {
         this.subscribedDeviceIds.add(deviceId);
+    }
+
+    /** Allocation-free membership check for the per-message filter path. The null guard is
+     *  required, not defensive: a captured message can carry no source ID, and the backing
+     *  ConcurrentHashMap key set throws on a null lookup (unlike a List). */
+    public boolean isDeviceSubscribed(String deviceId) {
+        return deviceId != null && subscribedDeviceIds.contains(deviceId);
+    }
+
+    public boolean hasSubscribedDevices() {
+        return !subscribedDeviceIds.isEmpty();
+    }
+
+    public int getSubscribedDeviceCount() {
+        return subscribedDeviceIds.size();
     }
 }

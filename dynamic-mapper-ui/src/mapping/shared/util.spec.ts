@@ -40,6 +40,7 @@ import {
   TemplateEditorRef
 } from './util';
 import { Direction, Mapping, MappingType, RepairStrategy, TransformationType } from '../../shared';
+import { MappingValidationError, toBackendError } from './mapping-validation-error';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -502,6 +503,59 @@ describe('buildBackendErrorMessage', () => {
 
   it('should ignore an empty errors array and fall back to message', () => {
     expect(buildBackendErrorMessage({ message: 'msg', errors: [] }, 'fallback')).toBe('msg');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// toBackendError
+// The structured 422 body used to be flattened into a bare Error, leaving the editor unable to
+// do anything but show a toast. These cover that the detail now survives, without changing the
+// message any existing handler reads.
+// ---------------------------------------------------------------------------
+
+describe('toBackendError', () => {
+  it('should produce a MappingValidationError carrying errors and details', () => {
+    const body = {
+      message: 'Mapping validation failed',
+      errors: ['Substitution_Source_Expression_Must_Be_Valid_JSONata'],
+      details: [
+        {
+          code: 'Substitution_Source_Expression_Must_Be_Valid_JSONata',
+          field: 'substitutions[2].pathSource',
+          index: 2,
+          value: 'temperature +',
+          reason: 'Expected end of expression'
+        }
+      ]
+    };
+
+    const error = toBackendError(body, 'some message');
+
+    expect(error instanceof MappingValidationError).toBe(true);
+    const validationError = error as MappingValidationError;
+    expect(validationError.message).toBe('some message');
+    expect(validationError.errors).toEqual(['Substitution_Source_Expression_Must_Be_Valid_JSONata']);
+    expect(validationError.details[0].index).toBe(2);
+    expect(validationError.details[0].reason).toBe('Expected end of expression');
+    expect(validationError.hasActionableDetail).toBe(true);
+  });
+
+  it('should still be a MappingValidationError when only codes are returned', () => {
+    const error = toBackendError(
+      { message: 'Mapping validation failed', errors: ['Only_One_Multi_Level_Wildcard'] },
+      'some message'
+    );
+
+    expect(error instanceof MappingValidationError).toBe(true);
+    // Nothing to jump to, so the drawer offers no "Go to problem" for it.
+    expect((error as MappingValidationError).hasActionableDetail).toBe(false);
+  });
+
+  it('should produce a plain Error for a non-validation failure', () => {
+    const error = toBackendError({ message: 'Internal server error' }, 'some message');
+
+    expect(error instanceof MappingValidationError).toBe(false);
+    expect(error.message).toBe('some message');
   });
 });
 

@@ -242,7 +242,7 @@ public class ExplorerService {
                     // Also open a subscriber WebSocket for this session so events actually arrive
                     notificationSubscriber.initializeExplorerDeviceClient(tenant, sessionId);
                     log.info("{} - Explorer subscription created for source {} ({} device(s))",
-                            tenant, resolvedSourceId, session.getSubscribedDeviceIds().size());
+                            tenant, resolvedSourceId, session.getSubscribedDeviceCount());
                 } else {
                     log.warn("{} - Source {} not found; explorer will rely on existing subscriptions",
                             tenant, resolvedSourceId);
@@ -259,10 +259,10 @@ public class ExplorerService {
                             Utils.EXPLORER_DEVICE_SUBSCRIPTION);
                     session.addSubscribedDeviceId(devId);
                 }
-                if (!session.getSubscribedDeviceIds().isEmpty()) {
+                if (session.hasSubscribedDevices()) {
                     notificationSubscriber.initializeExplorerDeviceClient(tenant, sessionId);
                     log.info("{} - Explorer subscribed {} devices of type {} for session {}",
-                            tenant, session.getSubscribedDeviceIds().size(), resolvedDeviceType, sessionId);
+                            tenant, session.getSubscribedDeviceCount(), resolvedDeviceType, sessionId);
                 } else {
                     log.info("{} - No devices found for type {} at session start; relying on per-message filter",
                             tenant, resolvedDeviceType);
@@ -424,8 +424,13 @@ public class ExplorerService {
                 }
             }
         }
-        // Purge stale outbound deduplication entries older than the window
+        // Purge stale deduplication entries older than their window. Both caches must be purged
+        // here: an entry is only ever consulted within its (sub-second to 3s) window, but nothing
+        // removes it afterwards, so without this the maps grow by one entry per captured message
+        // for the lifetime of the JVM — unbounded, and independent of the per-session message
+        // buffer cap, since dedup happens before the buffer is trimmed.
         outboundDedupCache.entrySet().removeIf(e -> now - e.getValue() > OUTBOUND_DEDUP_WINDOW_MS);
+        inboundDedupCache.entrySet().removeIf(e -> now - e.getValue() > INBOUND_DEDUP_WINDOW_MS);
     }
 
     // -------------------------------------------------------------------------
@@ -469,7 +474,7 @@ public class ExplorerService {
                 }
                 // Remove the dedicated explorer source subscription(s) if any were created —
                 // covers both a single selected device and a group expanded to its member devices.
-                if (!session.getSubscribedDeviceIds().isEmpty()) {
+                if (session.hasSubscribedDevices()) {
                     notificationSubscriber.closeExplorerDeviceClient(session.getSessionId());
                     for (String devId : session.getSubscribedDeviceIds()) {
                         ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, devId, false);
@@ -479,7 +484,7 @@ public class ExplorerService {
                         }
                     }
                     log.info("{} - Explorer subscriptions removed for {} device(s) (source={}, deviceType={})",
-                            tenant, session.getSubscribedDeviceIds().size(), session.getSourceId(), session.getDeviceType());
+                            tenant, session.getSubscribedDeviceCount(), session.getSourceId(), session.getDeviceType());
                 }
             } else {
                 AConnectorClient client = connectorRegistry.getClientForTenant(tenant, session.getConnectorIdentifier());
@@ -510,7 +515,7 @@ public class ExplorerService {
             // to its member device IDs at session start, so membership — not equality with the
             // originally selected sourceId — is what determines a match here.
             if (session.getSourceId() != null
-                    && !session.getSubscribedDeviceIds().contains(message.getSourceId())) {
+                    && !session.isDeviceSubscribed(message.getSourceId())) {
                 return;
             }
 

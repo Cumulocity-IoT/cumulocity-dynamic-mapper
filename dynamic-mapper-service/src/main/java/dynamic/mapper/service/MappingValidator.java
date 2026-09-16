@@ -42,6 +42,8 @@
 
 package dynamic.mapper.service;
 
+import static com.dashjoin.jsonata.Jsonata.jsonata;
+
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
@@ -86,11 +88,15 @@ public class MappingValidator {
      * @param excludeMappingId ID to exclude from duplicate checks (for updates)
      * @return List of validation errors (empty if valid)
      */
-    public List<ValidationError> validate(String tenant, Mapping mapping, String excludeMappingId) {
+    public List<ValidationIssue> validate(String tenant, Mapping mapping, String excludeMappingId) {
         return subscriptionsService.callForTenant(tenant, () -> {
-            List<ValidationError> errors = new ArrayList<>();
+            List<ValidationIssue> issues = new ArrayList<>();
 
-            // Run all validation checks
+            // Checks that can say which element failed contribute issues directly; the rest
+            // contribute a bare code, wrapped here so every failure has the same shape.
+            issues.addAll(validateSubstitutionExpressions(mapping));
+
+            List<ValidationError> errors = new ArrayList<>();
             errors.addAll(validateSubstitutions(mapping));
             errors.addAll(validateTransformationType(mapping));
             errors.addAll(validateTopics(mapping));
@@ -107,12 +113,14 @@ public class MappingValidator {
                 }
             }
 
-            if (!errors.isEmpty()) {
+            errors.stream().map(ValidationIssue::of).forEach(issues::add);
+
+            if (!issues.isEmpty()) {
                 log.debug("{} - Validation failed for mapping {}: {}",
-                        tenant, mapping.getIdentifier(), errors);
+                        tenant, mapping.getIdentifier(), issues);
             }
 
-            return errors;
+            return issues;
         });
     }
 
@@ -179,6 +187,87 @@ public class MappingValidator {
         }
 
         return errors;
+    }
+
+    /**
+     * Validates that every substitution can actually run: its {@code pathSource} must parse as
+     * JSONata, and neither path may be empty.
+     *
+     * <p>This closes the gap where a mapping with a broken expression saved and activated
+     * cleanly, then failed once per message at runtime —
+     * {@code AbstractJSONataExtractionProcessor} logs the parse failure and substitutes
+     * {@code null}, so the only symptom was missing data until the mapping hit
+     * {@code maxFailureCount} and auto-deactivated. It is the same
+     * {@link com.dashjoin.jsonata.Jsonata#jsonata(String)} call the processor makes, so a
+     * mapping rejected here could never have worked: the check cannot produce a false positive
+     * against an expression that runs today.
+     *
+     * <p>Only {@code pathSource} is checked as an expression. {@code pathTarget} is not
+     * evaluated as JSONata at runtime — it is used as a plain target path and processing-cache
+     * key — so parsing it here would reject paths the engine accepts.
+     *
+     * <p>Deliberately not rejected, because each can describe a mapping that works today and
+     * rejecting it would break editing an existing one: a duplicate {@code pathTarget} (last
+     * writer wins) and an identity substitution using the token that does not match
+     * {@code useExternalId} (both tokens are accepted downstream). Both are surfaced as
+     * warnings in the AI generation drawer instead.
+     *
+     * <p>Each failing substitution yields its own {@link ValidationIssue}, carrying the index,
+     * the offending expression and the parser's message, so the editor can take the user
+     * straight to it.
+     */
+    public List<ValidationIssue> validateSubstitutionExpressions(Mapping mapping) {
+        List<ValidationIssue> issues = new ArrayList<>();
+
+        // Smart Functions and Java extensions build their result in code; their substitutions
+        // are unused, so an expression there is not something the engine would ever evaluate.
+        TransformationType transformationType = mapping.getTransformationType();
+        if (TransformationType.SMART_FUNCTION.equals(transformationType)
+                || TransformationType.EXTENSION_JAVA.equals(transformationType)
+                || mapping.getSubstitutions() == null) {
+            return issues;
+        }
+
+        Substitution[] substitutions = mapping.getSubstitutions();
+        for (int i = 0; i < substitutions.length; i++) {
+            Substitution substitution = substitutions[i];
+            if (substitution == null) {
+                continue;
+            }
+
+            String pathSource = substitution.getPathSource();
+            String pathTarget = substitution.getPathTarget();
+
+            boolean sourceMissing = pathSource == null || pathSource.isBlank();
+            boolean targetMissing = pathTarget == null || pathTarget.isBlank();
+            if (sourceMissing || targetMissing) {
+                issues.add(new ValidationIssue(
+                        ValidationError.Substitution_Paths_Must_Not_Be_Empty,
+                        substitutionField(i, sourceMissing ? "pathSource" : "pathTarget"),
+                        i,
+                        sourceMissing ? pathSource : pathTarget,
+                        sourceMissing ? "The source path must not be empty"
+                                : "The target path must not be empty"));
+                continue;
+            }
+
+            try {
+                jsonata(pathSource);
+            } catch (Exception e) {
+                issues.add(new ValidationIssue(
+                        ValidationError.Substitution_Source_Expression_Must_Be_Valid_JSONata,
+                        substitutionField(i, "pathSource"),
+                        i,
+                        pathSource,
+                        e.getMessage()));
+            }
+        }
+
+        return issues;
+    }
+
+    private static String substitutionField(int index, String property) {
+        return "substitutions[" + index + "]." + property;
     }
 
     /**

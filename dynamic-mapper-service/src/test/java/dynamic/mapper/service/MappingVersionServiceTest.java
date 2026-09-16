@@ -216,7 +216,8 @@ class MappingVersionServiceTest {
     @Test
     void publishFailsValidationLeavesNoVersion() {
         when(mappingValidator.validate(eq(TENANT), any(), any()))
-                .thenReturn(List.of(dynamic.mapper.model.ValidationError.Source_Template_Must_Be_Valid_JSON));
+                .thenReturn(List.of(dynamic.mapper.model.ValidationIssue.of(
+                        dynamic.mapper.model.ValidationError.Source_Template_Must_Be_Valid_JSON)));
 
         assertThrows(MappingValidationException.class,
                 () -> service.publish(TENANT, mapping(IDENTIFIER), "1.0.0", "bad", null));

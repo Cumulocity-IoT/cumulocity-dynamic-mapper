@@ -41,6 +41,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.cumulocity.microservice.context.ContextService;
@@ -55,6 +56,14 @@ import java.util.Map;
 @RequestMapping("/explorer")
 @Tag(name = "Message Explorer Controller", description = "API for live exploration of raw inbound messages from broker connectors")
 public class ExplorerController {
+
+    /**
+     * An explorer session reads raw device payloads for any topic on the tenant (wildcards
+     * included) and, for OUTBOUND, creates real Notification 2.0 subscriptions as a side effect —
+     * the same class of capability {@code NotificationSubscriptionController} gates, so it is
+     * gated identically rather than being left at "any authenticated tenant user".
+     */
+    private static final String ADMIN_CREATE_ROLES = "hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')";
 
     private final ExplorerService explorerService;
     private final ContextService<UserCredentials> contextService;
@@ -98,6 +107,7 @@ public class ExplorerController {
             @ApiResponse(responseCode = "404", description = "Connector not found"),
             @ApiResponse(responseCode = "400", description = "Invalid request body")
     })
+    @PreAuthorize(ADMIN_CREATE_ROLES)
     @PostMapping(value = "/session", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> startSession(@Valid @RequestBody StartSessionRequest request) {
         String tenant = contextService.getContext().getTenant();
@@ -151,6 +161,7 @@ public class ExplorerController {
             @ApiResponse(responseCode = "204", description = "Session stopped"),
             @ApiResponse(responseCode = "404", description = "Session not found")
     })
+    @PreAuthorize(ADMIN_CREATE_ROLES)
     @DeleteMapping("/session/{sessionId}")
     public ResponseEntity<Void> stopSession(
             @Parameter(description = "Session ID returned by POST /explorer/session", required = true)
@@ -172,6 +183,7 @@ public class ExplorerController {
                             array = @ArraySchema(schema = @Schema(implementation = ExplorerMessage.class)))),
             @ApiResponse(responseCode = "404", description = "Session not found")
     })
+    @PreAuthorize(ADMIN_CREATE_ROLES)
     @GetMapping(value = "/session/{sessionId}/messages", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<ExplorerMessage>> getMessages(
             @Parameter(description = "Session ID", required = true)
@@ -190,6 +202,7 @@ public class ExplorerController {
             @ApiResponse(responseCode = "204", description = "Messages cleared"),
             @ApiResponse(responseCode = "404", description = "Session not found")
     })
+    @PreAuthorize(ADMIN_CREATE_ROLES)
     @DeleteMapping("/session/{sessionId}/messages")
     public ResponseEntity<Void> clearMessages(
             @Parameter(description = "Session ID", required = true)

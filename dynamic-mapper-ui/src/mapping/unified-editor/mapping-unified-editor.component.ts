@@ -68,6 +68,8 @@ import {
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, toTemplateType } from '../../configuration/shared/configuration.model';
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
 import { AIPromptComponent } from '../prompt/ai-prompt.component';
+import { MappingValidationError } from '../shared/mapping-validation-error';
+import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 import { MappingStepTestingComponent } from '../step-testing/mapping-testing.component';
 import { MappingStepperService } from '../service/mapping-stepper.service';
@@ -123,6 +125,8 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   @ViewChild('templateStep', { static: false }) templateStepRef!: MappingTemplateStepComponent;
   @ViewChild('mappingTestingStep', { static: false }) mappingTestingStep!: MappingStepTestingComponent;
   @ViewChild('codeEditor', { static: false }) codeEditor!: EditorComponent;
+  // Needed to select the substitution a validation failure points at.
+  @ViewChild('transformationStep', { static: false }) transformationStepRef!: MappingSubstitutionStepComponent;
 
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly bsModalService = inject(BsModalService);
@@ -582,6 +586,13 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
         this.alertService.success(gettext(`Mapping ${this.mapping.name} created successfully`));
       }
     } catch (error) {
+      // A validation rejection is actionable — show the problems in a drawer and offer to jump
+      // to the offending substitution, instead of a toast the user can only dismiss. The editor
+      // is already kept open by the early return below, so the edits survive.
+      if (error instanceof MappingValidationError) {
+        await this.showValidationIssues(error);
+        return;
+      }
       this.alertService.danger(gettext(`Failed to save mapping ${this.mapping.name}: `) + error.message);
       return;
     }
@@ -700,6 +711,33 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
         this.updateCodeTemplateEntries();
       }
     });
+  }
+
+  /**
+   * Lists the rejected-save problems and, if the user picks one tied to a substitution, switches
+   * to the transformation tab and selects it so it is ready to edit.
+   */
+  private async showValidationIssues(error: MappingValidationError): Promise<void> {
+    const drawer = this.bottomDrawerService.openDrawer(MappingValidationDrawerComponent, {
+      initialState: {
+        issues: error.details,
+        errors: error.errors,
+        mappingName: this.mapping?.name
+      }
+    });
+
+    const result = await drawer.instance.result;
+    if (result.action !== 'goto') {
+      return;
+    }
+
+    // Go through the normal transition rather than assigning activeTabIndex: it is queued behind
+    // any in-flight tab change and performs the per-tab setup the step depends on.
+    await this.onTabSelected(TAB_DEFINE_TRANSFORMATION);
+    // The tab's content is rendered lazily, so the step only exists once that has been applied.
+    this.cdr.detectChanges();
+    await this.transformationStepRef?.onSelectSubstitution(result.index);
+    this.cdr.detectChanges();
   }
 
   async openGenerateSubstitutionDrawer(): Promise<void> {

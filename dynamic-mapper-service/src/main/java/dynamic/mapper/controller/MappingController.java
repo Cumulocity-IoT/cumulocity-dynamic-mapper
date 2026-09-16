@@ -91,6 +91,7 @@ public class MappingController {
                 .body(ValidationErrorResponse.builder()
                         .message("Mapping validation failed")
                         .errors(e.getErrors())
+                        .details(e.getIssues())
                         .build());
     }
 

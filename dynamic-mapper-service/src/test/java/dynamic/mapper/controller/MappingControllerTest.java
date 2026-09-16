@@ -51,6 +51,7 @@ import dynamic.mapper.model.MappingVersion;
 import dynamic.mapper.model.MappingVersionCount;
 import dynamic.mapper.model.ValidationError;
 import dynamic.mapper.model.ValidationErrorResponse;
+import dynamic.mapper.model.ValidationIssue;
 import dynamic.mapper.service.MappingService;
 import dynamic.mapper.service.MappingValidationException;
 
@@ -111,6 +112,50 @@ class MappingControllerTest {
         assertEquals(
                 List.of(ValidationError.Source_Template_Must_Be_Valid_JSON, ValidationError.Only_One_Multi_Level_Wildcard),
                 response.getBody().getErrors());
+    }
+
+    /**
+     * The detailed form is additive: `errors` keeps exactly the codes it always carried, in order,
+     * and `details` carries the context alongside it. Anything reading only `errors` is unaffected.
+     */
+    @Test
+    void handleMappingValidationException_returns422WithDetailsAlongsideErrors() {
+        MappingValidationException ex = MappingValidationException.ofIssues(List.of(
+                new ValidationIssue(ValidationError.Substitution_Source_Expression_Must_Be_Valid_JSONata,
+                        "substitutions[2].pathSource", 2, "temperature +", "Expected end of expression"),
+                ValidationIssue.of(ValidationError.Only_One_Multi_Level_Wildcard)));
+
+        ResponseEntity<ValidationErrorResponse> response = controller.handleMappingValidationException(ex);
+
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, response.getStatusCode());
+        assertEquals(
+                List.of(ValidationError.Substitution_Source_Expression_Must_Be_Valid_JSONata,
+                        ValidationError.Only_One_Multi_Level_Wildcard),
+                response.getBody().getErrors());
+
+        List<ValidationIssue> details = response.getBody().getDetails();
+        assertEquals(2, details.size());
+        assertEquals(2, details.get(0).index());
+        assertEquals("substitutions[2].pathSource", details.get(0).field());
+        assertEquals("temperature +", details.get(0).value());
+        assertEquals("Expected end of expression", details.get(0).reason());
+        // A rule with no context still appears, just without detail fields.
+        assertNull(details.get(1).index());
+        assertNull(details.get(1).field());
+    }
+
+    /** A code-only exception still populates details, so the UI has one shape to render. */
+    @Test
+    void handleMappingValidationException_codeOnlyExceptionStillYieldsDetails() {
+        MappingValidationException ex = new MappingValidationException(
+                List.of(ValidationError.Source_Template_Must_Be_Valid_JSON));
+
+        ResponseEntity<ValidationErrorResponse> response = controller.handleMappingValidationException(ex);
+
+        assertEquals(List.of(ValidationError.Source_Template_Must_Be_Valid_JSON), response.getBody().getErrors());
+        assertEquals(1, response.getBody().getDetails().size());
+        assertEquals(ValidationError.Source_Template_Must_Be_Valid_JSON,
+                response.getBody().getDetails().get(0).code());
     }
 
     @Test

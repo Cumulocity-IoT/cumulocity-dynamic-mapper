@@ -42,6 +42,23 @@
   }
 </div>
 
+@if (validationIssues.length) {
+<div class="alert alert-warning m-b-0 m-l-16 m-r-16 flex-no-shrink" data-cy="dm-ai-prompt-issues">
+  <div class="d-flex a-i-center m-b-8">
+    <i c8yIcon="exclamation-triangle" class="m-r-8"></i>
+    <strong translate>Check the generated result before saving</strong>
+  </div>
+  <ul class="m-b-8 p-l-24">
+    @for (issue of validationIssues; track issue) {
+    <li class="text-13">{{ issue }}</li>
+    }
+  </ul>
+  <button type="button" class="btn btn-default btn-sm" (click)="askAIToFixIssues()" data-cy="dm-ai-prompt-fix" translate>
+    Ask the agent to fix these
+  </button>
+</div>
+}
+
 <div class="card-footer separator text-center flex-no-shrink">
   <div class="form-group">
     <button type="button" name="update" class="btn btn-primary" (click)="save()" [disabled]="!valid" data-cy="dm-ai-prompt-save" translate>

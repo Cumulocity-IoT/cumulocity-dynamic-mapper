@@ -26,11 +26,13 @@ import {
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { Mapping, Substitution, MappingType, RepairStrategy, SAMPLE_TEMPLATES_C8Y, SharedService, isSubstitutionsAsCode, TransformationType, getGenericDeviceIdentifier } from '../../shared';
+import { Mapping, Substitution, MappingType, RepairStrategy, SAMPLE_TEMPLATES_C8Y, SharedService, isSubstitutionsAsCode, TransformationType, getGenericDeviceIdentifier, Direction } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
 import { AIMessage, ClientAgentDefinition, Suggestion } from '@c8y/ngx-components/ai';
 import { toClientAgentDefinition } from '../core/ai-agent.service';
+import { MappingService } from '../core/mapping.service';
+import { MappingTokens } from '../core/processor/processor.model';
 import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
 import { ServiceConfiguration } from '../../configuration';
 import { base64ToBytes } from '../shared/util';
@@ -52,6 +54,7 @@ export class AIPromptComponent implements OnInit {
   private readonly sharedService = inject(SharedService);
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly mappingService = inject(MappingService);
 
   @ViewChild(AgentChatComponent) agentChat?: AgentChatComponent;
 
@@ -70,6 +73,17 @@ export class AIPromptComponent implements OnInit {
 
   substitutions: Substitution[] = [];
   generatedCode: string = '';
+
+  /**
+   * Problems found in the AI's most recent answer. Shown in the drawer so the user sees them
+   * before applying the result, and can push them straight back to the agent.
+   *
+   * These are warnings, not a hard gate: Save stays enabled. The checks mirror what the manual
+   * substitution editor does (live JSONata evaluation), and that editor treats any evaluation
+   * failure as invalid — but an expression can also fail purely against the *sample* template
+   * while being right for real payloads, so the user, not this component, makes the final call.
+   */
+  validationIssues: string[] = [];
 
   hasIssue = false;
   isLoading = false;
@@ -319,7 +333,7 @@ export class AIPromptComponent implements OnInit {
   }
 
   /** Called via (onMessageFinish) once the agent's response has fully streamed in. */
-  onMessageFinish(message: AIMessage): void {
+  async onMessageFinish(message: AIMessage): Promise<void> {
     if (message.role !== 'assistant') {
       return;
     }
@@ -336,8 +350,9 @@ export class AIPromptComponent implements OnInit {
     if (this.isCodeMapping) {
       this.checkIfResponseContainsJavaScript(content);
     } else {
-      this.checkIfResponseContainsSubstitutions(content);
+      await this.checkIfResponseContainsSubstitutions(content);
     }
+    this.cdr.detectChanges();
   }
 
   /**
@@ -366,6 +381,7 @@ export class AIPromptComponent implements OnInit {
         const jsContent = candidate?.trim();
         if (jsContent?.includes('function') && jsContent.includes('function onMessage')) {
           this.generatedCode = this.applyESMExport(jsContent);
+          this.validationIssues = this.validateSmartFunctionCode(jsContent);
           this.valid = true;
           return;
         }
@@ -396,7 +412,7 @@ export class AIPromptComponent implements OnInit {
    * multi-turn conversation and must NOT revoke a previously extracted, valid `substitutions` array —
    * so this only ever flips `valid` from false to true, never the other way around.
    */
-  checkIfResponseContainsSubstitutions(content: any) {
+  async checkIfResponseContainsSubstitutions(content: any): Promise<void> {
     const trimmedContent = typeof content === 'string' ? content.trim() : '';
     if (!trimmedContent) return;
 
@@ -424,19 +440,28 @@ export class AIPromptComponent implements OnInit {
         if (!Array.isArray(parsedSubstitutions)) continue;
 
         const isValidSubstitutions = parsedSubstitutions.every(sub =>
-          sub.hasOwnProperty('pathSource') &&
-          sub.hasOwnProperty('pathTarget') &&
+          sub !== null &&
+          typeof sub === 'object' &&
+          typeof sub.pathSource === 'string' &&
+          typeof sub.pathTarget === 'string' &&
+          sub.pathSource.trim() !== '' &&
+          sub.pathTarget.trim() !== '' &&
           sub.hasOwnProperty('expandArray')
         );
         if (!isValidSubstitutions) continue;
 
         // The LLM's JSON block may omit repairStrategy (or emit it as null) — default it here so
         // every downstream consumer (edit modal, persisted mapping) always sees a real value
-        // instead of undefined/null.
+        // instead of undefined/null. A *hallucinated* strategy name is also coerced back to
+        // DEFAULT: nothing between here and the backend checks it, and Jackson rejects an unknown
+        // enum constant with an opaque HTTP 400 at save time rather than a mapping-validation
+        // error, which is very hard to trace back to the AI-generated substitution that caused it.
         this.substitutions = parsedSubstitutions.map(sub => ({
           ...sub,
-          repairStrategy: sub.repairStrategy ?? RepairStrategy.DEFAULT
+          expandArray: !!sub.expandArray,
+          repairStrategy: this.coerceRepairStrategy(sub.repairStrategy)
         }));
+        this.validationIssues = await this.validateSubstitutions(this.substitutions);
         this.valid = true;
         return;
       } catch {
@@ -446,6 +471,139 @@ export class AIPromptComponent implements OnInit {
     }
     // No candidate parsed into a valid substitutions array — keep the previous substitutions/valid
     // state untouched (common mid-conversation, e.g. a clarifying question with no final answer yet).
+  }
+
+  /** Maps an LLM-supplied repairStrategy onto the enum, falling back to DEFAULT when it is
+   *  missing, null, or not a real strategy name. */
+  private coerceRepairStrategy(value: unknown): RepairStrategy {
+    return typeof value === 'string' && Object.values(RepairStrategy).includes(value as RepairStrategy)
+      ? (value as RepairStrategy)
+      : RepairStrategy.DEFAULT;
+  }
+
+  /**
+   * Runs the same JSONata evaluation the manual substitution editor uses to set
+   * `sourceExpression.valid` / `targetExpression.valid`, plus the device-identity rule the
+   * generation prompt asks for but nothing downstream enforces.
+   *
+   * Applying an AI-generated set previously went straight to `replaceAllSubstitutions()` /
+   * `addSubstitution()`, neither of which validates — `isSubstitutionValid()` only ever gated
+   * the manual editor's Add button. So a broken expression saved and activated cleanly and
+   * first failed per-message at runtime, eventually auto-deactivating the mapping.
+   */
+  private async validateSubstitutions(substitutions: Substitution[]): Promise<string[]> {
+    const issues: string[] = [];
+    const sourceTemplate = this.mappingForAI?.sourceTemplate;
+    const targetTemplate = this.mappingForAI?.targetTemplate;
+
+    for (const [index, sub] of substitutions.entries()) {
+      const label = `Substitution ${index + 1} [${sub.pathTarget}]`;
+
+      const sourceIssue = await this.evaluationIssue(sourceTemplate, sub.pathSource);
+      if (sourceIssue) {
+        issues.push(`${label}: source expression "${sub.pathSource}" did not evaluate against the source template — ${sourceIssue}`);
+      }
+
+      const targetIssue = await this.evaluationIssue(targetTemplate, sub.pathTarget);
+      if (targetIssue) {
+        issues.push(`${label}: target path "${sub.pathTarget}" is not a valid expression — ${targetIssue}`);
+      }
+    }
+
+    const identityIssue = this.identityTokenIssue(substitutions);
+    if (identityIssue) {
+      issues.push(identityIssue);
+    }
+    issues.push(...this.duplicateTargetIssues(substitutions));
+    return issues;
+  }
+
+  /**
+   * Two substitutions writing the same target are never both meaningful, and which one survives
+   * depends on where the generated set is applied — the bulk replace used by the transformation
+   * step keeps both, while the stepper's per-item add silently collapses them.
+   */
+  private duplicateTargetIssues(substitutions: Substitution[]): string[] {
+    const seen = new Set<string>();
+    const duplicates = new Set<string>();
+    for (const sub of substitutions) {
+      if (seen.has(sub.pathTarget)) duplicates.add(sub.pathTarget);
+      seen.add(sub.pathTarget);
+    }
+    return [...duplicates].map(
+      pathTarget => `More than one substitution writes to "${pathTarget}" — only one of them will take effect.`
+    );
+  }
+
+  /** Returns the error message if evaluating `path` against `template` fails, else null. */
+  private async evaluationIssue(template: any, path: string): Promise<string | null> {
+    if (!path || template === undefined) return null;
+    try {
+      await this.mappingService.evaluateExpression(template, path);
+      return null;
+    } catch (error) {
+      return error?.message ?? 'unknown error';
+    }
+  }
+
+  /**
+   * The mapping's `useExternalId` decides which identity token is correct, and the generation
+   * prompt says which one to use — but both the frontend and backend validators accept either,
+   * so picking the wrong one is silently allowed and resolves the wrong device.
+   */
+  private identityTokenIssue(substitutions: Substitution[]): string | null {
+    const expected = getGenericDeviceIdentifier(this.mapping);
+    const other = expected.endsWith('externalId')
+      ? `${MappingTokens.IDENTITY}.c8ySourceId`
+      : `${MappingTokens.IDENTITY}.externalId`;
+    const isInbound = (this.mapping.direction ?? Direction.INBOUND) === Direction.INBOUND;
+
+    const usesWrongToken = substitutions.some(sub => {
+      const path = isInbound ? sub.pathTarget : sub.pathSource;
+      return typeof path === 'string' && path.includes(other) && !path.includes(expected);
+    });
+    return usesWrongToken
+      ? `The device identity is mapped via "${other}", but this mapping has useExternalId=${!!this.mapping.useExternalId}, so it must use "${expected}".`
+      : null;
+  }
+
+  /**
+   * Syntax-checks generated Smart Function code. Nothing else does: the backend persists
+   * `code` untouched, and the only compile is an opportunistic warm-up on activation that runs
+   * on a virtual thread and swallows failures into a log line — so broken code saves *and*
+   * activates silently and first fails per message.
+   */
+  private validateSmartFunctionCode(code: string): string[] {
+    // `new Function` parses a function *body*, so module syntax has to go first — the agent may
+    // already have emitted the ESM export that applyESMExport() would otherwise add. The backend
+    // strips the same constructs via JavaScriptModuleStripper before compiling.
+    const plainScript = code
+      .replace(/^\s*export\s+\{[^}]*\}\s*;?\s*$/gm, '')
+      .replace(/^\s*import\s+.*$/gm, '')
+      .replace(/^\s*export\s+(?=(?:function|const|let|var|class)\b)/gm, '');
+
+    try {
+      new Function(plainScript);
+      return [];
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        return [`The generated code is not valid JavaScript: ${error.message}. It was most likely truncated before the function was complete — ask the agent to regenerate it.`];
+      }
+      // Anything else (e.g. a Content-Security-Policy block on Function()) means the check could
+      // not run at all, which says nothing about the code — so report nothing.
+      return [];
+    }
+  }
+
+  /** Sends the detected problems back to the agent as a follow-up turn. */
+  async askAIToFixIssues(): Promise<void> {
+    if (!this.validationIssues.length) return;
+    const subject = this.isCodeMapping ? 'Smart Function' : 'substitutions';
+    this.newMessage =
+      `The ${subject} you generated have the following problems:\n` +
+      this.validationIssues.map(issue => `- ${issue}`).join('\n') +
+      `\nPlease correct them and return the complete corrected ${subject}.\n`;
+    await this.sendMessage();
   }
 
 }
