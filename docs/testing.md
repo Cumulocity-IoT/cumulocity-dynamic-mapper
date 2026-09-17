@@ -222,7 +222,7 @@ The behaviour described in [`feature/reliability.md`](feature/reliability.md).
 | Test Class | Coverage |
 |------------|----------|
 | `QosTest` (`model/`) | Levels, `max`/`min`/`orDefault`, `clampTo` (downgrade, upgrade, no restriction), JSON wire format, `Mapping.qos` default |
-| `ProcessingCancellationTest` (`processor/model/`) | A runaway `while(true){}` GraalVM context is killed and its thread terminates; cancel actions run (including when one throws); a worker that ignores interruption is reported as **not** drained |
+| `ProcessingCancellationTest` (`processor/runtime/`) | A runaway `while(true){}` GraalVM context is killed and its thread terminates; cancel actions run (including when one throws); a worker that ignores interruption is reported as **not** drained |
 | `ServiceConfigurationTimeoutTest` (`configuration/`) | `maxCPUTimeMS` / `pipelineTimeoutMS` defaults, null fallbacks, the `pipeline > cpu` invariant, no derived accessor leaking into the persisted configuration |
 | `MappingStatusServiceFailureCountTest` (`service/status/`) | Consecutive-failure streak: threshold reported only on the failure that reaches it, `maxFailureCount == 0` never trips, success clears the streak |
 | `MappingServiceFailureThresholdTest` (`service/`) | The mapping is really deactivated at the threshold, its connectors are told to drop it, and a burst of failures deactivates only once |

@@ -19,25 +19,23 @@
  *
  */
 
-package dynamic.mapper.controller;
+package dynamic.mapper.notification;
+
+import dynamic.mapper.model.API;
 
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.model.NotificationSubscriptionRequest;
-import dynamic.mapper.model.NotificationSubscriptionResponse;
 import dynamic.mapper.model.Device;
 import dynamic.mapper.exception.OutboundMappingDisabledException;
 import dynamic.mapper.exception.DeviceNotFoundException;
-import dynamic.mapper.service.NotificationSubscriptionService;
-import dynamic.mapper.service.ServiceConfigurationService;
+import dynamic.mapper.configuration.ServiceConfigurationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.notification.Utils;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;

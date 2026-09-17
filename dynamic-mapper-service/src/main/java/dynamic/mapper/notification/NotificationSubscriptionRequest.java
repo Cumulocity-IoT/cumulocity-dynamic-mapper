@@ -19,7 +19,11 @@
  *
  */
 
-package dynamic.mapper.model;
+package dynamic.mapper.notification;
+
+import dynamic.mapper.model.Device;
+
+import dynamic.mapper.model.API;
 
 import java.util.List;
 import io.swagger.v3.oas.annotations.media.Schema;

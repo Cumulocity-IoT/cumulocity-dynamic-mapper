@@ -31,7 +31,7 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.LoggingEventType;
-import dynamic.mapper.model.NotificationSubscriptionResponse;
+import dynamic.mapper.notification.NotificationSubscriptionResponse;
 import dynamic.mapper.notification.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;

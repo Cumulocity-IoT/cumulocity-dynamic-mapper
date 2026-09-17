@@ -83,7 +83,7 @@ flowchart TD
 ([`CamelDispatcherOutbound.java:110-159`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/CamelDispatcherOutbound.java#L110-L159))
 receives a parsed `Notification` from the Notification 2.0 WebSocket subscription (device or
 device-group subscriptions are managed separately — see
-[`NotificationSubscriptionService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/NotificationSubscriptionService.java),
+[`NotificationSubscriptionService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/notification/NotificationSubscriptionService.java),
 which subscribes/unsubscribes individual devices and device groups as mappings are deployed).
 Only `CREATE`/`UPDATE` operations are processed further (`UPDATE` on `API.OPERATION` is
 skipped outside of testing). `convertNotificationToC8YMessage()`

@@ -19,11 +19,10 @@
  *
  */
 
-package dynamic.mapper.service;
+package dynamic.mapper.notification;
 
-import dynamic.mapper.model.NotificationSubscriptionRequest;
-import dynamic.mapper.model.NotificationSubscriptionResponse;
-import dynamic.mapper.notification.Utils;
+import dynamic.mapper.model.API;
+
 import dynamic.mapper.model.Device;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;

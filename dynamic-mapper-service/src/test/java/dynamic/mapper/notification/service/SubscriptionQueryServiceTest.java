@@ -63,7 +63,7 @@ import com.cumulocity.sdk.client.messaging.notifications.PagedNotificationSubscr
 
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.model.NotificationSubscriptionResponse;
+import dynamic.mapper.notification.NotificationSubscriptionResponse;
 import dynamic.mapper.notification.Utils;
 
 /**

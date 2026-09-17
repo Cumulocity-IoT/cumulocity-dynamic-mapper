@@ -34,7 +34,7 @@ import com.cumulocity.sdk.client.messaging.notifications.PagedNotificationSubscr
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Device;
-import dynamic.mapper.model.NotificationSubscriptionResponse;
+import dynamic.mapper.notification.NotificationSubscriptionResponse;
 import dynamic.mapper.notification.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
