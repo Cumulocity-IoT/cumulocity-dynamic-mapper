@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.service;
+package dynamic.mapper.mapping;
 
 import dynamic.mapper.model.ValidationError;
 import org.junit.jupiter.api.Test;

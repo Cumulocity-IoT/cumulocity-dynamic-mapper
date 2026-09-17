@@ -62,7 +62,7 @@ import dynamic.mapper.processor.outbound.processor.JSONataOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.SubstitutionResultOutboundProcessor;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**

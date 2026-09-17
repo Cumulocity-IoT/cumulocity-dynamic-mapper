@@ -41,7 +41,7 @@ import dynamic.mapper.model.RepairStrategy;
 import dynamic.mapper.processor.runtime.RoutingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.util.SubstitutionEvaluation;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**

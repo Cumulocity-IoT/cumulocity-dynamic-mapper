@@ -49,7 +49,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.MappingTreeNode;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.model.ConnectorStatusEvent;
 import dynamic.mapper.model.MappingStatus;
 

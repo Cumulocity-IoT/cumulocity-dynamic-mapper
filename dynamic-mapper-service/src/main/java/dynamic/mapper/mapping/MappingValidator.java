@@ -40,7 +40,7 @@
  *
  */
 
-package dynamic.mapper.service;
+package dynamic.mapper.mapping;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 

@@ -28,7 +28,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
 import dynamic.mapper.processor.processor.fixed.InternalCustomMeasurementOuter;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.model.MappingType;

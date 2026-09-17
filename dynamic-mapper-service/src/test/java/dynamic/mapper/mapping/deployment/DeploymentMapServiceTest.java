@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package dynamic.mapper.service.deployment;
+package dynamic.mapper.mapping.deployment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.service.status;
+package dynamic.mapper.mapping.status;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 
@@ -32,7 +32,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TransformationType;
-import dynamic.mapper.service.cache.MappingCacheManager;
+import dynamic.mapper.mapping.cache.MappingCacheManager;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

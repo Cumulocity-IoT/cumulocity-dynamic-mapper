@@ -63,8 +63,8 @@ import dynamic.mapper.processor.model.MappingAction;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.model.TransformationType;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.resolver.MappingResolverService;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.mapping.resolver.MappingResolverService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

@@ -36,7 +36,7 @@ import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.model.TransformationType;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.processor.flow.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 

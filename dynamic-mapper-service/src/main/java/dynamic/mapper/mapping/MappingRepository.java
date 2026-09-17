@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.service;
+package dynamic.mapper.mapping;
 
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;

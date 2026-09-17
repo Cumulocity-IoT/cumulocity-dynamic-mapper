@@ -62,7 +62,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Feature;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;

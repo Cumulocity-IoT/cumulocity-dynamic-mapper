@@ -43,7 +43,7 @@ import dynamic.mapper.processor.runtime.OutputCollector;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.RoutingContext;
 import dynamic.mapper.processor.util.CamelHeaders;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 
 /**
  * Covers {@code AbstractExtensibleResultProcessor.syncOutputToContext(...)}.

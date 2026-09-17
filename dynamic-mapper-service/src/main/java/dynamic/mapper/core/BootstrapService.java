@@ -59,7 +59,7 @@ import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 
 import dynamic.mapper.configuration.ConnectorConfigurationService;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;

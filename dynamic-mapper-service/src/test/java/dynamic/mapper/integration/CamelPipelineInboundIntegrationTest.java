@@ -61,7 +61,7 @@ import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**

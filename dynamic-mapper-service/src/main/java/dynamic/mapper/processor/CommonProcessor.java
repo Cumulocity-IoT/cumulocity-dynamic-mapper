@@ -17,7 +17,7 @@ import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
-import dynamic.mapper.service.resolver.InventoryFilterEvaluator;
+import dynamic.mapper.mapping.resolver.InventoryFilterEvaluator;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 

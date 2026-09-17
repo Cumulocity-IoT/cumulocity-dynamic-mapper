@@ -17,7 +17,7 @@ Under `dynamic-mapper-service/src/main/java/dynamic/mapper/`:
 | `processor/flow/JavaScriptProcessor.java` | GraalVM JS execution for Smart Functions |
 | `core/C8YAgent.java` | Cumulocity REST API client (inventory, measurements, events, alarms) |
 | `core/ConfigurationRegistry.java` | Central service registry (per-tenant) |
-| `service/MappingService.java` | Mapping CRUD and lookup |
+| `mapping/MappingService.java` | Mapping CRUD and lookup |
 
 ## Message Flow
 

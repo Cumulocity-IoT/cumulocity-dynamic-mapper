@@ -56,7 +56,7 @@ import dynamic.mapper.model.MappingType;
 import dynamic.mapper.processor.runtime.OutputCollector;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.core.GraalVMContextService;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**

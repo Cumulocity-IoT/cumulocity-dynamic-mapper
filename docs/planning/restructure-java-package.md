@@ -251,8 +251,10 @@ By contrast these are **never imported from outside `service/`** — they are in
 of `MappingService`, and stayed put: `MappingRepository`, `MappingValidator`,
 `MappingVersionService`, `MappingVersionRepository`, `DeviceToClientMapService`.
 
-`service/` is now 16 → 12 files, all of them mapping domain code. That makes a later rename to
-`mapping/` a reasonable next step; it was **not** done here.
+`service/` went from 16 → 12 files, all of them mapping domain code, and was then **renamed to
+`mapping/`** (with its `cache/`, `deployment/`, `resolver/`, `status/` subpackages). The name now
+says what the package holds rather than which layer it belongs to — `dynamic.mapper.service` was
+only ever a layer label, and the code in it is one domain.
 
 > **Caveat — this is tidying, not decoupling.** `ConfigurationRegistry` is a service locator
 > imported by **54 files**, holding `MappingService`, both configuration services, `C8YAgent`,
@@ -260,8 +262,27 @@ of `MappingService`, and stayed put: `MappingRepository`, `MappingValidator`,
 > through it rather than importing it, so moving packages does not change the dependency graph.
 > If real decoupling is the goal, `ConfigurationRegistry` is the thing to address — not folder names.
 
-**Deliberately not done:** mass-migrating `controller/` and `service/` into feature packages, and
-renaming `service/` → `mapping/`. On the fan-in evidence above the former is churn without decoupling.
+**Deliberately not done:** mass-migrating the remaining `controller/` classes into feature packages.
+On the fan-in evidence above that is churn without decoupling.
+
+### Why two controllers live outside `controller/`
+
+`ExplorerController` (`/explorer`) and `NotificationSubscriptionController` (`/subscription`) sit in
+their feature packages; the other ten stay in `controller/`. That looks inconsistent, and it is worth
+stating the rule that produces it:
+
+> A feature package owns its **whole vertical**, controller included. A feature whose service layer
+> is shared has no package to own it, so its controller stays in `controller/`.
+
+`explorer/` and `notification/` are self-contained — their services are used by nothing else. The
+other ten controllers sit on top of `MappingService` (5 of them), `ConnectorConfigurationService` and
+`ServiceConfigurationService`, which are shared and cannot move. Splitting those controllers out
+would scatter each feature across two locations without decoupling anything.
+
+So the predicate is: **does a package for this feature exist?** If yes, the controller lives there.
+If you dislike the split, the consistent alternative is to move those two controllers back into
+`controller/` and accept that `explorer/` and `notification/` are partial slices — not to create
+eight more feature packages.
 
 ---
 

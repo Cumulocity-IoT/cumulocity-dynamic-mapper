@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.service.resolver;
+package dynamic.mapper.mapping.resolver;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 

@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.service.cache;
+package dynamic.mapper.mapping.cache;
 
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.model.Direction;

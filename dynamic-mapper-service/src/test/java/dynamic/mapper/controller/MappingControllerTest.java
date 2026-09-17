@@ -52,8 +52,8 @@ import dynamic.mapper.model.MappingVersionCount;
 import dynamic.mapper.model.ValidationError;
 import dynamic.mapper.model.ValidationErrorResponse;
 import dynamic.mapper.model.ValidationIssue;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.MappingValidationException;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.mapping.MappingValidationException;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;

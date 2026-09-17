@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package dynamic.mapper.service;
+package dynamic.mapper.mapping;
 
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Substitution;

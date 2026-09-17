@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.service;
+package dynamic.mapper.mapping;
 
 import dynamic.mapper.configuration.ServiceConfigurationService;
 

@@ -40,7 +40,7 @@ inventory update — into a message published to a broker.
 |---|---|---|
 | Entry point | [`CamelDispatcherOutbound`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/CamelDispatcherOutbound.java) | Implements `NotificationCallback`; `onNotification()` (live WebSocket) and `onTestNotification()` (dry-run/test) both funnel into `processNotification()`. |
 | Route definitions | [`DynamicMapperOutboundRoutes`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/route/DynamicMapperOutboundRoutes.java) | Camel `RouteBuilder` wiring the processor beans below into `direct:` routes. |
-| Mapping resolution + filtering | [`MappingResolverService.resolveOutbound()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/resolver/MappingResolverService.java) | Matches active outbound mappings by `targetAPI`, then applies `filterMapping` and `filterInventory` — **before** any Camel route runs. |
+| Mapping resolution + filtering | [`MappingResolverService.resolveOutbound()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/resolver/MappingResolverService.java) | Matches active outbound mappings by `targetAPI`, then applies `filterMapping` and `filterInventory` — **before** any Camel route runs. |
 | Deserialize | [`DeserializationOutboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/processor/DeserializationOutboundProcessor.java) | Builds the `ProcessingContext` from the already-parsed `C8YMessage`. |
 | Enrich | [`EnrichmentOutboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/processor/EnrichmentOutboundProcessor.java) (extends [`AbstractEnrichmentProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractEnrichmentProcessor.java)) | Extracts the source device ID from the payload, injects `_IDENTITY_` (c8ySourceId/externalId), resolves `useExternalId`, loads SparkPlug B alias/active state. |
 | Transform (dispatch) | `DynamicMapperOutboundRoutes.configure()` `.choice()` block | Routes to `processOutboundExtension` / `processOutboundFlowFunction` / `processOutboundJSONataExtraction` based on `TransformationType`; unmatched types fall back to JSONata. |
@@ -101,19 +101,19 @@ a full re-fetch of the object.
 
 Unlike inbound (where `FilterInboundProcessor` is a pipeline stage), outbound filtering is
 resolved entirely in
-[`MappingResolverService.shouldProcessMapping()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/resolver/MappingResolverService.java#L86-L114),
+[`MappingResolverService.shouldProcessMapping()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/resolver/MappingResolverService.java#L86-L114),
 called from `resolveOutbound()` before any mapping enters the Camel pipeline. A mapping is
 selected only if, in order:
 
 1. `mapping.getActive()` is true.
 2. `mapping.getTargetAPI()` equals the notification's `API`.
 3. If `filterMapping` is set: `evaluateMessageFilter()`
-   ([`MappingResolverService.java:116-137`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/resolver/MappingResolverService.java#L116-L137))
+   ([`MappingResolverService.java:116-137`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/resolver/MappingResolverService.java#L116-L137))
    evaluates the JSONata expression **against `message.getParsedPayload()`** — i.e. the raw,
    possibly-partial notification body described above — and any evaluation error is treated
    as "no match" (fails closed).
 4. If `filterInventory` is set: `evaluateInventoryFilter()`
-   ([`MappingResolverService.java:139-157`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/resolver/MappingResolverService.java#L139-L157))
+   ([`MappingResolverService.java:139-157`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/resolver/MappingResolverService.java#L139-L157))
    evaluates a separate JSONata expression against the **source device's full inventory
    representation** (looked up by `sourceId` via `InventoryFilterEvaluator`), independent of
    whatever fields happen to be present in the notification delta.

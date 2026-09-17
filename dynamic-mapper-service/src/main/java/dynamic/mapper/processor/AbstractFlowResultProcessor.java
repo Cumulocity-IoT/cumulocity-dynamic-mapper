@@ -36,7 +36,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.RoutingContext;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**

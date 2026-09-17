@@ -36,7 +36,7 @@ import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

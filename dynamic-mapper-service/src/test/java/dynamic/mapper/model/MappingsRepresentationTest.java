@@ -22,8 +22,8 @@
 package dynamic.mapper.model;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
-import dynamic.mapper.service.MappingRepository;
-import dynamic.mapper.service.MappingValidator;
+import dynamic.mapper.mapping.MappingRepository;
+import dynamic.mapper.mapping.MappingValidator;
 import dynamic.util.LogLevelExtension;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;

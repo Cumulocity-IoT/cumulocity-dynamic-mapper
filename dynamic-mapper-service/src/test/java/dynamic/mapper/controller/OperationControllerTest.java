@@ -62,11 +62,11 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Operation;
 import dynamic.mapper.model.ServiceOperation;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.processor.flow.FlowStateStore;
-import dynamic.mapper.service.deployment.DeploymentMapService;
-import dynamic.mapper.service.status.MappingStatusService;
+import dynamic.mapper.mapping.deployment.DeploymentMapService;
+import dynamic.mapper.mapping.status.MappingStatusService;
 
 /**
  * Unit tests for {@link OperationController}'s {@code ACTIVATE_MAPPING} handling

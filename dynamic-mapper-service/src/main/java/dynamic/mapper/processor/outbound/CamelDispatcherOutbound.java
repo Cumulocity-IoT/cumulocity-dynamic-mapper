@@ -54,7 +54,7 @@ import dynamic.mapper.notification.websocket.NotificationCallback;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;

@@ -23,7 +23,7 @@ package dynamic.mapper.model;
 
 /**
  * Every value here must correspond to an error actually produced by
- * {@link dynamic.mapper.service.MappingValidator}. Codes that no check produces (dead
+ * {@link dynamic.mapper.mapping.MappingValidator}. Codes that no check produces (dead
  * enum values) have been removed rather than kept "for documentation" — an unused
  * error code is a naming trap, not documentation. See the class-level checks:
  * {@code validateMappingTopic}, {@code validateMappingTopicAndSampleConsistency},

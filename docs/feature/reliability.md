@@ -369,7 +369,7 @@ counter.
 #### What happens at the threshold
 
 The failure that makes `currentFailureCount >= maxFailureCount` triggers, via
-[`MappingService.increaseAndHandleFailureCount()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/MappingService.java):
+[`MappingService.increaseAndHandleFailureCount()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java):
 
 1. A `MAPPING_FAILURE_EVENT` logging event carrying `mappingId` and `failureCount`.
 2. A real deactivation through the regular `setActivationMapping(tenant, id, false, null)`
@@ -512,7 +512,7 @@ Statuses persisted by an earlier release keep loading and keep being reported: t
 unchanged, unknown properties from removed features (e.g. the 6.4.0 `snoopedTemplates*` fields)
 are ignored, and `ensureUnspecifiedStatus()` uses `computeIfAbsent`, so a persisted catch-all
 entry is reused rather than replaced with a zeroed one. Covered by
-[`MappingStatusPersistenceCompatibilityTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/service/status/MappingStatusPersistenceCompatibilityTest.java).
+[`MappingStatusPersistenceCompatibilityTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/mapping/status/MappingStatusPersistenceCompatibilityTest.java).
 
 A status whose mapping is no longer in the cache is omitted from the push (not from memory), so
 counters can briefly disappear from the fragment if a push happens before the mappings are
@@ -542,9 +542,9 @@ loaded; the next housekeeping cycle restores them.
 | [`AMQPClientTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/connector/amqp/AMQPClientTest.java) | Clamping to a connector's capability, and `supportedQos` reaching the specification. |
 | [`MQTT3ClientTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/connector/mqtt/MQTT3ClientTest.java) | MQTT never clamps; `null` falls back to the default. |
 | [`GooglePubSubClientTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/connector/googlepubsub/GooglePubSubClientTest.java) | Ack-before-processing vs. ack-after-success / nack-on-error. |
-| [`MappingStatusServiceFailureCountTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/service/status/MappingStatusServiceFailureCountTest.java) | The streak semantics: threshold reported only on the failure that reaches it, `maxFailureCount == 0` never trips, success clears the streak. |
-| [`MappingServiceFailureThresholdTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/service/MappingServiceFailureThresholdTest.java) | The mapping is really deactivated at the threshold, and a burst of failures deactivates only once. |
+| [`MappingStatusServiceFailureCountTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/mapping/status/MappingStatusServiceFailureCountTest.java) | The streak semantics: threshold reported only on the failure that reaches it, `maxFailureCount == 0` never trips, success clears the streak. |
+| [`MappingServiceFailureThresholdTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/mapping/MappingServiceFailureThresholdTest.java) | The mapping is really deactivated at the threshold, and a burst of failures deactivates only once. |
 | [`ProcessingCancellationTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/processor/runtime/ProcessingCancellationTest.java) | That a misbehaving mapping is really stopped: cancel actions run (including when one throws), a runaway `while(true){}` GraalVM context is killed and its thread terminates, and a worker that ignores interruption is reported as **not** drained instead of silently leaking. |
 | [`ServiceConfigurationTimeoutTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/configuration/ServiceConfigurationTimeoutTest.java) | Budget defaults, null fallbacks, and the `pipelineTimeoutMS > maxCPUTimeMS` invariant. |
 | [`MappingStatusTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/model/MappingStatusTest.java) | Counter semantics: per-tenant catch-all status, `reset()` clearing the streak, lifetime errors surviving a recovery, snapshot isolation, and no lost updates under 8 concurrent writers. |
-| [`MappingStatusPersistenceCompatibilityTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/service/status/MappingStatusPersistenceCompatibilityTest.java) | A status fragment written by an older release still loads with its counters and is still pushed back to the inventory. |
+| [`MappingStatusPersistenceCompatibilityTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/mapping/status/MappingStatusPersistenceCompatibilityTest.java) | A status fragment written by an older release still loads with its counters and is still pushed back to the inventory. |

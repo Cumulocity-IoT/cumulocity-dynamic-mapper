@@ -42,17 +42,17 @@ import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.SemVer;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TransformationType;
-import dynamic.mapper.service.DeviceToClientMapService;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.MappingValidator;
-import dynamic.mapper.service.MappingVersionRepository;
-import dynamic.mapper.service.MappingVersionService;
+import dynamic.mapper.mapping.DeviceToClientMapService;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.mapping.MappingValidator;
+import dynamic.mapper.mapping.MappingVersionRepository;
+import dynamic.mapper.mapping.MappingVersionService;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.processor.flow.FlowStateStore;
-import dynamic.mapper.service.cache.MappingCacheManager;
-import dynamic.mapper.service.deployment.DeploymentMapService;
-import dynamic.mapper.service.resolver.MappingResolverService;
-import dynamic.mapper.service.status.MappingStatusService;
+import dynamic.mapper.mapping.cache.MappingCacheManager;
+import dynamic.mapper.mapping.deployment.DeploymentMapService;
+import dynamic.mapper.mapping.resolver.MappingResolverService;
+import dynamic.mapper.mapping.status.MappingStatusService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -104,7 +104,7 @@ class MappingVersioningIntegrationTest {
     @Mock private C8YAgent c8yAgent;
 
     // MappingService peripheral collaborators (no-op for these scenarios)
-    @Mock private dynamic.mapper.service.MappingRepository mappingRepository;
+    @Mock private dynamic.mapper.mapping.MappingRepository mappingRepository;
     @Mock private MappingCacheManager cacheManager;
     @Mock private MappingStatusService statusService;
     @Mock private MappingResolverService resolverService;

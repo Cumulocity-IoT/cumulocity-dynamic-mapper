@@ -23,7 +23,7 @@ package dynamic.mapper.processor.util;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 
 import dynamic.mapper.processor.CommonProcessor;
 import dynamic.mapper.processor.runtime.ProcessingContext;

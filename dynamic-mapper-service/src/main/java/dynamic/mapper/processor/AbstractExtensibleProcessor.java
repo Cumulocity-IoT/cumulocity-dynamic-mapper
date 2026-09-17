@@ -34,7 +34,7 @@ import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.RoutingContext;
 import dynamic.mapper.core.ExtensionInboundRegistry;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**

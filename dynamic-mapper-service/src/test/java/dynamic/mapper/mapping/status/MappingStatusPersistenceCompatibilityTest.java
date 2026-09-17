@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.service.status;
+package dynamic.mapper.mapping.status;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -49,7 +49,7 @@ import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TransformationType;
-import dynamic.mapper.service.cache.MappingCacheManager;
+import dynamic.mapper.mapping.cache.MappingCacheManager;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

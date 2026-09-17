@@ -45,7 +45,7 @@ import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.RoutingContext;
 import dynamic.mapper.processor.util.APITopicUtil;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;

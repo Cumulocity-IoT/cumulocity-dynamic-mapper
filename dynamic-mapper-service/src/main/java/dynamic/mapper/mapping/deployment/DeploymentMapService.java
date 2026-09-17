@@ -18,7 +18,7 @@
  *  @authors Christof Strack, Stefan Witschel
  *
  */
- package dynamic.mapper.service.deployment;
+ package dynamic.mapper.mapping.deployment;
 
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;

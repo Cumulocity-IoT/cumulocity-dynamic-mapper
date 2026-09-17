@@ -19,13 +19,13 @@
  *
  */
 
-package dynamic.mapper.service.resolver;
+package dynamic.mapper.mapping.resolver;
 
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.ResolveException;
 import dynamic.mapper.processor.model.C8YMessage;
-import dynamic.mapper.service.cache.MappingCacheManager;
+import dynamic.mapper.mapping.cache.MappingCacheManager;
 import dynamic.mapper.util.Utils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

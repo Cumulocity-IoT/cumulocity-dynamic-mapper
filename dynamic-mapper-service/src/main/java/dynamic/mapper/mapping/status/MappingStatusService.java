@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.service.status;
+package dynamic.mapper.mapping.status;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
@@ -28,7 +28,7 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.*;
-import dynamic.mapper.service.cache.MappingCacheManager;
+import dynamic.mapper.mapping.cache.MappingCacheManager;
 import dynamic.mapper.util.CumulocityErrors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -203,7 +203,7 @@ public class MappingStatusService {
      *
      * <p>This method only records the threshold breach (log + {@code MAPPING_FAILURE_EVENT});
      * the actual deactivation is performed by the caller
-     * ({@link dynamic.mapper.service.MappingService#increaseAndHandleFailureCount}), which owns
+     * ({@link dynamic.mapper.mapping.MappingService#increaseAndHandleFailureCount}), which owns
      * persistence, the mapping cache and the connector subscriptions.
      *
      * @param tenant the tenant identifier (must not be null or empty)

@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.service;
+package dynamic.mapper.mapping;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
@@ -37,10 +37,10 @@ import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import dynamic.mapper.processor.flow.FlowStateStore;
-import dynamic.mapper.service.cache.MappingCacheManager;
-import dynamic.mapper.service.deployment.DeploymentMapService;
-import dynamic.mapper.service.resolver.MappingResolverService;
-import dynamic.mapper.service.status.MappingStatusService;
+import dynamic.mapper.mapping.cache.MappingCacheManager;
+import dynamic.mapper.mapping.deployment.DeploymentMapService;
+import dynamic.mapper.mapping.resolver.MappingResolverService;
+import dynamic.mapper.mapping.status.MappingStatusService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -875,7 +875,7 @@ public class MappingService {
     /**
      * Clears a mapping's consecutive-failure streak after a message processed without an error.
      *
-     * @see dynamic.mapper.service.status.MappingStatusService#resetFailureCountOnSuccess
+     * @see dynamic.mapper.mapping.status.MappingStatusService#resetFailureCountOnSuccess
      */
     public void resetFailureCountOnSuccess(String tenant, Mapping mapping) {
         statusService.resetFailureCountOnSuccess(tenant, mapping);

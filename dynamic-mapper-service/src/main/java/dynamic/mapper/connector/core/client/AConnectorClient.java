@@ -45,7 +45,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.util.CumulocityErrors;
 import lombok.Getter;
@@ -731,7 +731,7 @@ public abstract class AConnectorClient {
      * Called by {@link dynamic.mapper.connector.mqtt.AMQTTClient#connect()} when
      * {@code cleanSession=false} so that mapping resolution is ready before the TCP
      * connection is established.  When the broker immediately delivers queued messages
-     * upon reconnect, the {@link dynamic.mapper.service.MappingService} can resolve them
+     * upon reconnect, the {@link dynamic.mapper.mapping.MappingService} can resolve them
      * to their mappings even before {@link #initializeSubscriptionsAfterConnect()} runs.
      */
     public void prepareForPersistentSessionReconnect() {

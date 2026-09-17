@@ -36,7 +36,7 @@ import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.ExternalSource;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.ProcessingContext;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
