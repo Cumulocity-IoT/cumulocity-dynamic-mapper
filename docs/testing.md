@@ -481,7 +481,7 @@ cy.c8yscrn('mapping-stepper-step2');
 
 ## 3. System / Shell Integration Tests
 
-**Location:** `resources/script/test/`
+**Location:** `resources/testing/integration/`
 **Prerequisites:** `c8y` CLI configured and authenticated; dynamic mapper microservice deployed
 
 Run all tests with `run-tests.sh` (see [3.4 Test Runner](#34-test-runner)).
@@ -626,7 +626,7 @@ most useful property of the runner, and the one worth using before a release.
 
 | Script | Purpose |
 |--------|---------|
-| `test-c8y-mqtt-service-spike.sh` | Verbose first-time probe for a Cumulocity MQTT Service setup on a new tenant — creates its own throwaway connector, tears it down (`--keep` to inspect). Not run by `run-tests.sh`; the same path is covered by `./run-tests.sh test-inbound-json-default m` |
+| `diagnose-mqtt-service-setup.sh` | Verbose first-time probe for a Cumulocity MQTT Service setup on a new tenant — creates its own throwaway connector, tears it down (`--keep` to inspect). Not run by `run-tests.sh`; the same path is covered by `./run-tests.sh test-inbound-json-default m` |
 | `test-harness.sh` | Shared helper library sourced by every test script (assertions, cleanup, MQTT helpers) |
 | `TEST_TEMPLATE.sh` | Starting point for a new test script |
 | `create-mqtt-service-x509-cert.sh` | Generates the X.509 client certificate the `m` connector lane needs |
@@ -858,7 +858,7 @@ c8y identity create \
 | Sample mappings | `resources/samples/` |
 | Cypress tests | `dynamic-mapper-ui/cypress/` |
 | Angular unit tests | `dynamic-mapper-ui/src/**/*.spec.ts` |
-| Shell test scripts | `resources/script/test/` |
+| Shell test scripts | `resources/testing/integration/` |
 | Java test sources | `dynamic-mapper-service/src/test/java/` |
 | Smart Function tests | `dynamic-mapper-smart-function/src/` |
 

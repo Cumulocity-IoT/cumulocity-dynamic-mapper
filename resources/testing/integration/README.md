@@ -263,15 +263,39 @@ These tests are verified to run against **both** brokers with no per-file change
 - `test-outbound-static-subscription` — outbound subscription management
 - `test-outbound-topic-resolution` — outbound EVENT with a dynamic topic; also
   subscribes with `mosquitto_sub` to verify the **actual broker round-trip** (in `m`
-  mode this exercises real MQTT Service delivery — best-effort, since service-side
-  delivery is scoped to the publishing device's identity; see ENHANCEMENT.md)
+  mode this exercises real MQTT Service delivery — best-effort, see *Outbound receipt*
+  below)
 
 Other tests may run against `m` too, but those that need broker-specific features
 (HTTP connector, Kafka/Sparkplug extensions, multi-connector) are not expected to pass.
 
-See [ENHANCEMENT.md](ENHANCEMENT.md) for the full design and
-[test-c8y-mqtt-service-spike.sh](test-c8y-mqtt-service-spike.sh) for a standalone
-end-to-end cert-auth round-trip spike.
+For bringing MQTT Service up on a new tenant, or diagnosing cert / reachability /
+connector problems, run [diagnose-mqtt-service-setup.sh](diagnose-mqtt-service-setup.sh) —
+a deliberately verbose, self-contained probe of the full cert-authenticated round trip.
+It is a diagnostic, not a regression test, so it is not part of `run-tests.sh`.
+
+### Known traps
+
+**Outbound receipt is asserted best-effort.** MQTT Service delivery appears to be scoped to
+the publishing device's identity: a separate cert-authenticated subscriber (a different CN) may
+not receive a message the mapper published for another device. So
+`test-outbound-topic-resolution` and `test-outbound-smartfunction-externalsource` **warn**
+rather than fail when no message is captured — the assertion that the mapping *processed* the
+notification is still hard. Asserting receipt hard would require the subscriber to authenticate
+as a cert whose CN maps to the target device.
+
+**Deployment must be verified, not assumed.** `PUT /deployment/defined/{id}` takes a top-level
+array body `["<connector>"]`. Serializing that through the generic `--template input.value` path
+gets mangled by go-c8y-cli, so the deployment registers **no connector** while the PUT still
+returns 2xx — the mapping then shows "No active connector" and inbound messages are dropped by
+the route filter. `dm_deploy_mapping_to_connector` therefore PUTs a literal
+`--template "[\"<connector>\"]"` and verifies the connector is present afterwards, failing
+loudly if not. This is a CLI serialization trap, not a backend bug.
+
+**The connector is a singleton per tenant.** Because the clientId is pinned to the cert CN,
+parallel runs on one tenant contend for the same connector. Run them serially.
+
+**CI egress to `:9883` must be open**, or `m` mode is unusable there.
 
 ### Smart Function Test Pattern
 
@@ -363,6 +387,7 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-inbound-hex` | HEX → EVENT |
 | `test-inbound-http-connector` | HTTP connector → MEASUREMENT |
 | `test-inbound-implicit-device` | Implicit device auto-creation |
+| `test-inbound-implicit-device-recreate-after-delete` | Regression: an implicit device is recreated after the original is deleted from inventory (stale-cache bug) |
 | `test-inbound-multi-device` | Array payload → multiple devices |
 | `test-inbound-alarm` | JSON / DEFAULT → ALARM |
 | `test-inbound-operation` | JSON / DEFAULT → OPERATION |
@@ -372,7 +397,9 @@ array) and drives the interactive menu. The categories below mirror it:
 | Test | Purpose |
 |------|---------|
 | `test-inbound-smartfunction-02` | Topic-based external ID + sensor filter |
+| `test-inbound-smartfunction-03` | `context.getManagedObjectByExternalId` — enrich an event payload from the managed object |
 | `test-inbound-smartfunction-04` | Dual payload type + deduplication |
+| `test-inbound-smartfunction-05` | Per-device running statistics keyed on the MQTT client ID from context |
 
 ### Inbound (Java extensions)
 | Test | Purpose |
@@ -394,6 +421,7 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-outbound-topic-resolution` | Dynamic publish topic resolution |
 | `test-outbound-json-smartfunction` | Smart Function: Measurement → MQTT JSON |
 | `test-outbound-smartfunction-externalsource` | Smart Function `externalSource` resolves the `_externalId_` topic token — verified by a real broker round-trip (`mosquitto_sub -v`) |
+| `test-outbound-smartfunction-molookup` | Smart Function `getManagedObjectByExternalId` — a C8Y measurement notification is enriched with managed-object properties before publishing |
 | `test-outbound-static-subscription` | Static subscription management |
 | `test-outbound-type-subscription` | Dynamic type subscription |
 | `test-outbound-group-subscription` | Dynamic group subscription |

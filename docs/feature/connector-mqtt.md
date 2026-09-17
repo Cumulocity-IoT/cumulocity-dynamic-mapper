@@ -151,7 +151,7 @@ connector package.
 
 ### Testing
 
-The project's integration test suite (`resources/script/test/run-tests.sh`) can run
+The project's integration test suite (`resources/testing/integration/run-tests.sh`) can run
 against either a generic public MQTT broker or Cumulocity's MQTT Service, selected via
 the `CONNECTOR` argument (`g` = generic MQTT, the default) or the `DM_BROKER_MODE`
 environment variable. See [connector-mqtt-service.md](connector-mqtt-service.md) for the

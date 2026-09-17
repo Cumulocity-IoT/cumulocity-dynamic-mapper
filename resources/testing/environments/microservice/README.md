@@ -69,7 +69,7 @@ curl -s -X DELETE http://localhost:80/readings | jq
 ## Building and deploying to Cumulocity
 
 ```bash
-cd resources/test-env/microservice
+cd resources/testing/environments/microservice
 
 # Build Docker image + create ZIP (requires Docker)
 ./build.sh

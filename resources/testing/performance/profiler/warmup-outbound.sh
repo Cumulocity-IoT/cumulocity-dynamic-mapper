@@ -1,5 +1,5 @@
 #!/bin/bash
-# File: resources/script/performance/profiler/warmup-outbound.sh
+# File: resources/testing/performance/profiler/warmup-outbound.sh
 #
 # Bootstrap credentials are fetched automatically via:
 #   c8y microservices getBootstrapUser --id dynamic-mapper-service

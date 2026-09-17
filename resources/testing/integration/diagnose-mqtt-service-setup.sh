@@ -1,14 +1,17 @@
 #!/bin/bash
 #
-# test-c8y-mqtt-service-spike: Phase 0 spike — full inbound round-trip
+# diagnose-mqtt-service-setup: verbose end-to-end probe of a tenant's
+# Cumulocity MQTT Service setup.
 #
-# OPTIONAL standalone diagnostic — NOT part of the suite (run-tests.sh) and not
-# required for regression. The same inbound path is covered by
+# A DIAGNOSTIC, not a regression test — deliberately not registered in
+# run-tests.sh. The same inbound path is covered by
 #   ./run-tests.sh test-inbound-json-default m
-# Keep this as a self-contained, verbose probe for first-time MQTT Service setup
-# on a new tenant or when diagnosing cert/reachability/connector problems: it
-# creates its own throwaway connector and tears everything down (use --keep to
-# inspect). See ENHANCEMENT.md (Phase 0).
+#
+# Reach for this when bringing MQTT Service up on a new tenant, or when
+# diagnosing cert / reachability / connector problems: it is self-contained and
+# noisy on purpose, creates its own throwaway connector, and tears everything
+# down afterwards (use --keep to inspect what it made).
+# See README.md, "Running against the Cumulocity MQTT Service".
 #
 # Proves the gating end-to-end path: an X.509-cert-authenticated MQTT client
 # publishes to the Cumulocity MQTT Service, the message flows through a
@@ -35,9 +38,9 @@
 #   MQTT_INSECURE      (true to skip server hostname verification)
 #
 # Usage:
-#   ./test-c8y-mqtt-service-spike.sh                 # run + cleanup
-#   ./test-c8y-mqtt-service-spike.sh --keep          # keep created artifacts
-#   ./test-c8y-mqtt-service-spike.sh --validate-only # checks only, no data
+#   ./diagnose-mqtt-service-setup.sh                 # run + cleanup
+#   ./diagnose-mqtt-service-setup.sh --keep          # keep created artifacts
+#   ./diagnose-mqtt-service-setup.sh --validate-only # checks only, no data
 
 set -euo pipefail
 
@@ -45,7 +48,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="MQTT Service Spike — cert-auth inbound round-trip"
+TEST_TITLE="MQTT Service setup diagnostic — cert-auth inbound round-trip"
 
 CONNECTOR_TYPE="CUMULOCITY_MQTT_SERVICE_PULSAR"
 MQTT_HOST="${DM_C8Y_MQTT_HOST:-${C8Y_DOMAIN:-}}"
@@ -68,7 +71,7 @@ _CREATED_DEVICE=false
 dm_parse_args "$@"
 
 cleanup() {
-    dm_info "Cleaning up spike resources ..."
+    dm_info "Cleaning up diagnostic resources ..."
     [ -n "${MAPPING_ID:-}" ] && dm_delete_mapping "$MAPPING_ID" 2>/dev/null || true
     if [ "${_CREATED_DEVICE}" = "true" ] && [ -n "${DEVICE_ID:-}" ]; then
         c8y inventory delete --id "$DEVICE_ID" --force </dev/null >/dev/null 2>&1 || true
@@ -87,8 +90,8 @@ dm_banner "$TEST_TITLE"
 
 dm_step "Validating environment ..."
 dm_test_setup_and_validate false
-command -v openssl >/dev/null 2>&1 || dm_error "openssl is required for this spike"
-command -v mosquitto_pub >/dev/null 2>&1 || dm_error "mosquitto_pub is required for this spike"
+command -v openssl >/dev/null 2>&1 || dm_error "openssl is required for this diagnostic"
+command -v mosquitto_pub >/dev/null 2>&1 || dm_error "mosquitto_pub is required for this diagnostic"
 
 [ -n "$MQTT_HOST" ] || dm_error "MQTT host unknown — set DM_C8Y_MQTT_HOST or ensure C8Y_DOMAIN is exported"
 [ -n "$TENANT" ]    || dm_error "Tenant unknown — ensure C8Y_TENANT is exported by the c8y session"
@@ -110,9 +113,9 @@ dm_validate_only_exit
 dm_step "Resolving (or creating) a CONNECTED ${CONNECTOR_TYPE} connector ..."
 PULSAR_ID="$(dm_list_connector_ids_by_type "$CONNECTOR_TYPE" | head -n 1 || true)"
 if [ -z "$PULSAR_ID" ]; then
-    PULSAR_ID="spikec8ymqtt$$"
+    PULSAR_ID="diagc8ymqtt$$"
     dm_info "No existing ${CONNECTOR_TYPE} connector — creating ${PULSAR_ID}"
-    dm_setup_c8y_mqtt_service_connector "$PULSAR_ID" "Spike Cumulocity MQTT Service" "$CONNECTOR_TYPE"
+    dm_setup_c8y_mqtt_service_connector "$PULSAR_ID" "Diagnostic Cumulocity MQTT Service" "$CONNECTOR_TYPE"
     _CREATED_CONNECTOR=true
 else
     dm_info "Using existing connector: $PULSAR_ID"
@@ -132,7 +135,7 @@ DEVICE_ID="$(dm_lookup_device_by_ext_id "$EXT_ID" "c8y_Serial")"
 if [ -n "$DEVICE_ID" ]; then
     dm_info "Device already exists for external id ${EXT_ID}: ${DEVICE_ID}"
 else
-    dm_create_device "spike-mqttsvc-${CLIENT_ID}" "c8y_MQTTService"
+    dm_create_device "diag-mqttsvc-${CLIENT_ID}" "c8y_MQTTService"
     DEVICE_ID="$_DM_LAST_DEVICE_ID"
     _CREATED_DEVICE=true
     c8y identity create --device "$DEVICE_ID" --type c8y_Serial --name "$EXT_ID" \
@@ -149,8 +152,8 @@ dm_step "Creating + deploying inbound mapping (JSON/DEFAULT → MEASUREMENT) ...
 # the external id from the 3-level topic.
 MAPPING_JSON=$(cat <<EOF
 {
-  "name": "spike-mqttsvc-$$",
-  "identifier": "spikemqtt$$",
+  "name": "diag-mqttsvc-$$",
+  "identifier": "diagmqtt$$",
   "mappingTopic": "${TOPIC}",
   "mappingTopicSample": "${TOPIC}",
   "targetAPI": "MEASUREMENT",

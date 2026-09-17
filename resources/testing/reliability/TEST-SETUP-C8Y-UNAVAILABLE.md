@@ -170,14 +170,14 @@ proxy transparently carries the WebSocket traffic too (reverse-proxy mode handle
    listen port, so no override is needed if you kept step 3's `--listen-port 8888`):
    ```bash
    cd "$REPO_ROOT" # or wherever the repo root is
-   ./resources/script/backend/debug_local_service.sh
+   ./resources/testing/reliability/debug_local_service.sh
    ```
    It always opens a debug socket in **listen mode** (`server=y`, `suspend=n` by default) on port
    `54346`, so the JVM starts immediately whether or not a debugger ever attaches — no separate
    "skip the debugger" variant is needed. Override via env vars if required:
    ```bash
    C8Y_BASE_URL=http://localhost:8888 DEBUG_PORT=54346 DEBUG_SUSPEND=n \
-     ./resources/script/backend/debug_local_service.sh
+     ./resources/testing/reliability/debug_local_service.sh
    ```
    Set `DEBUG_SUSPEND=y` if you need the JVM to block at startup until a debugger attaches (e.g.
    to catch early bootstrap code).

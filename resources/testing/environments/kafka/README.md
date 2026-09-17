@@ -29,7 +29,7 @@ connection-failure loop in the logs. The workaround for local testing is:
 ## 1. Start Kafka locally
 
 ```bash
-cd resources/test-env/kafka
+cd resources/testing/environments/kafka
 
 # Start broker + Kafka UI
 docker compose up -d

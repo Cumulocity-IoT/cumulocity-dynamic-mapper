@@ -23,7 +23,7 @@ matching declaration in the TypeScript types — no more, no less.
 | `ExternalId.java` | `ExternalId` in `dataprep.types.ts` |
 | `ExternalSource.java` | `ExternalSource` in `smart-function-dynamic-mapper.types.ts` |
 | Templates in `resources/templates/` | Code examples in JSDoc comments |
-| Test scripts in `resources/script/test/` | `*.spec.ts` tests |
+| Test scripts in `resources/testing/integration/` | `*.spec.ts` tests |
 | Angular docs in `doc-smartfunction.component.html` | JSDoc and inline docs |
 
 ---
@@ -135,7 +135,7 @@ Use this checklist whenever a Smart Function API change is made.
 ### 4.4 Template-only change (new example, bug fix)
 
 1. Change the template in `resources/templates/`.
-2. Verify the template runs correctly against a local instance using the corresponding script in `resources/script/test/` (e.g., `test-inbound-json-smartfunction.sh`).
+2. Verify the template runs correctly against a local instance using the corresponding script in `resources/testing/integration/` (e.g., `test-inbound-json-smartfunction.sh`).
 3. Use **field style only** (`msg.payload`, `msg.topic`). Getter style (`msg.getPayload()`) is deprecated and must not appear in templates.
 4. Use `msg.time` as the timestamp fallback — it is set by the connector at receive time. Do NOT use `new Date().toISOString()`. Pattern: `var time = payload["time"] || msg.time;`
 5. If the template demonstrates a new pattern, add a matching JSDoc `@example` to the relevant TypeScript type.

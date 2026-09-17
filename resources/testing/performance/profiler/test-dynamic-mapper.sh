@@ -1,5 +1,5 @@
 #!/bin/bash
-# File: resources/script/performance/profiler/test-dynamic-mapper.sh
+# File: resources/testing/performance/profiler/test-dynamic-mapper.sh
 #
 # Runs the service locally with Spring profiles memtest + dev.
 # Credentials are loaded from application-dev.properties (packaged in the JAR).

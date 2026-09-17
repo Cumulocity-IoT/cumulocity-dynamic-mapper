@@ -161,7 +161,7 @@ MQTT Service documentation:
 
 ### Testing
 
-`resources/script/test/run-tests.sh [SUITE] [CONNECTOR]` supports `CONNECTOR=m` to run
+`resources/testing/integration/run-tests.sh [SUITE] [CONNECTOR]` supports `CONNECTOR=m` to run
 the test suite against Cumulocity MQTT Service (`CUMULOCITY_MQTT_SERVICE_PULSAR`, TLS
 port `:9883`, X.509 client-cert auth where the client ID equals the cert CN and the
 tenant is embedded in the username), selectable also via the `DM_BROKER_MODE=c8y-mqtt-service`

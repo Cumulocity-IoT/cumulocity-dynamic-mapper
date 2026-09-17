@@ -1,5 +1,5 @@
 #!/bin/bash
-# File: resources/script/performance/profiler/setup.sh
+# File: resources/testing/performance/profiler/setup.sh
 #
 # One-time setup for local profiling tests.
 # Creates the required device + external ID in C8Y and loads the inbound

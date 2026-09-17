@@ -20,7 +20,7 @@ const adminAuth = () => ({
 
 /**
  * Inbound JSON → C8Y Event mapping payload — a faithful port of
- * resources/script/test/test-inbound-json-jsonata.sh (mappingTopic dmtest/event/+,
+ * resources/testing/integration/test-inbound-json-jsonata.sh (mappingTopic dmtest/event/+,
  * targetAPI EVENT, DEFAULT transformation with _TOPIC_LEVEL_, txt→text, msg_type→type
  * and $now()→time substitutions, createNonExistingDevice via c8y_Serial external id).
  */

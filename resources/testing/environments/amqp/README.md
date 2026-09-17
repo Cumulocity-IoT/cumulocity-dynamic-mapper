@@ -13,7 +13,7 @@ Local AMQP (RabbitMQ) test environment using Docker Compose.
 
 ```bash
 # Navigate to the AMQP test environment directory
-cd resources/test-env/amqp
+cd resources/testing/environments/amqp
 
 # Start RabbitMQ
 docker compose up -d

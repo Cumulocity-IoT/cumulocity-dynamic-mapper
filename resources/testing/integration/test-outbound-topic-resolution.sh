@@ -127,7 +127,7 @@ wait "$SUB_PID" 2>/dev/null || true
 if [ -s "$RECEIVED_FILE" ]; then
     dm_success "MQTT message received on topic: $(head -c 200 "$RECEIVED_FILE")"
 elif [ "${_DM_MQTT_SVC_MODE:-false}" = "true" ]; then
-    dm_warn "No message captured from the MQTT Service. The mapping processed the notification (asserted above), but the cert-authenticated subscriber did not receive it — likely because MQTT Service delivery is scoped to the publishing device's identity, not this test's client cert. (Open item — see ENHANCEMENT.md.)"
+    dm_warn "No message captured from the MQTT Service. The mapping processed the notification (asserted above), but the cert-authenticated subscriber did not receive it — likely because MQTT Service delivery is scoped to the publishing device's identity, not this test's client cert. (Known trap — see README.md, "Outbound receipt is asserted best-effort".)"
 else
     dm_warn "mosquitto_sub did not capture a message within timeout (OK if broker not reachable from test host)"
 fi

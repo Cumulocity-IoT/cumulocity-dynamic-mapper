@@ -170,7 +170,7 @@ if [ -s "$RECEIVED_FILE" ]; then
         dm_fail "Publish topic still contains the unresolved _externalId_ token"
     fi
 elif [ "${_DM_MQTT_SVC_MODE:-false}" = "true" ]; then
-    dm_warn "No message captured from the MQTT Service. The mapping processed the notification (asserted above), but the cert-authenticated subscriber did not receive it — MQTT Service delivery is scoped to the publishing device's identity. (Open item — see ENHANCEMENT.md.)"
+    dm_warn "No message captured from the MQTT Service. The mapping processed the notification (asserted above), but the cert-authenticated subscriber did not receive it — MQTT Service delivery is scoped to the publishing device's identity. (Known trap — see README.md, "Outbound receipt is asserted best-effort".)"
 else
     dm_warn "mosquitto_sub did not capture a message within timeout (OK if broker egress is blocked from the test host); topic-resolution round-trip not verified this run"
 fi
