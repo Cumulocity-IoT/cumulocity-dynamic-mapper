@@ -35,7 +35,7 @@ import { GlobalContextService } from '@c8y/ngx-components/global-context';
 import { FormlyFieldConfig } from '@ngx-formly/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, ReplaySubject, Subject, takeUntil } from 'rxjs';
+import { firstValueFrom, Observable, ReplaySubject, Subject, takeUntil } from 'rxjs';
 import { Mode } from 'vanilla-jsoneditor';
 import {
   DeploymentMapEntry,
@@ -58,6 +58,7 @@ import {
   buildTestMapping,
   captureMappingContentSnapshot,
   checkTransformationType,
+  hasMappingContentChanged,
   isConnectorSelectionEmpty,
   MappingContentSnapshot,
   stripTemplateMetadataTags,
@@ -67,7 +68,10 @@ import {
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, tryToTemplateType } from '../../configuration/shared/configuration.model';
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
 import { AIPromptComponent } from '../prompt/ai-prompt.component';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { ConfirmationModalComponent } from '../../shared';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
+import { ConfirmsUnsavedChanges } from '../core/unsaved-changes.guard';
 import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { MappingStepTestingComponent } from '../step-testing/mapping-testing.component';
@@ -127,7 +131,7 @@ const TAB_FOR_BLOCKER: Partial<Record<CommitBlocker, number>> = {
     MappingStepTestingComponent
   ]
 })
-export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnDestroy {
+export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnDestroy, ConfirmsUnsavedChanges {
   mapping!: Mapping;
   stepperConfiguration!: StepperConfiguration;
   deploymentMapEntry!: DeploymentMapEntry;
@@ -606,7 +610,49 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   }
 
   onCancel(): void {
+    // Navigation itself is guarded by unsavedChangesGuard, so there is no confirmation here —
+    // otherwise closing with unsaved edits would prompt twice.
     this.navigateToGrid();
+  }
+
+  /**
+   * Whether the editor holds edits that have not been saved.
+   *
+   * Syncs the Monaco editors first: `sourceTemplate`/`targetTemplate` are only written back on
+   * {@link updateTemplatesInEditors}, so a comparison without it misses whatever the user typed
+   * since the last tab switch — which is exactly the work most worth protecting.
+   */
+  private hasUnsavedChanges(): boolean {
+    if (this.stepperConfiguration.editorMode === EditorMode.READ_ONLY) return false;
+
+    this.updateTemplatesInEditors();
+    return hasMappingContentChanged(
+      this.mapping,
+      this.sourceTemplate,
+      this.targetTemplate,
+      this.mappingCode,
+      this.initialContentSnapshot
+    ) || snapshotConnectors(this.deploymentMapEntry) !== this.initialDeploymentConnectors;
+  }
+
+  /** {@link ConfirmsUnsavedChanges} — called by `unsavedChangesGuard` on every way out. */
+  async confirmLeaveWithUnsavedChanges(): Promise<boolean> {
+    if (!this.hasUnsavedChanges()) return true;
+
+    const modalRef = this.bsModalService.show(ConfirmationModalComponent, {
+      initialState: {
+        title: gettext('Discard unsaved changes'),
+        message: gettext(
+          'This mapping has changes that have not been saved. Leaving now discards them.'
+        ),
+        labels: { ok: gettext('Discard and leave'), cancel: gettext('Keep editing') }
+      }
+    });
+    // defaultValue guards the case where the modal is destroyed without answering:
+    // ConfirmationModalComponent.ngOnDestroy completes closeSubject without emitting, and a bare
+    // firstValueFrom would then reject with EmptyError and break the navigation outright.
+    // Defaulting to false keeps the user in the editor, which is the safe direction.
+    return firstValueFrom(modalRef.content!.closeSubject, { defaultValue: false });
   }
 
   private navigateToGrid(): void {

@@ -51,7 +51,7 @@ import {
   Qos
 } from '../../shared';
 import { EditorMode } from '../../shared/mapping/stepper.model';
-import { configurationToYaml, yamlToConfiguration } from '../../shared/mapping/util';
+import { captureMappingContentSnapshot, configurationToYaml, yamlToConfiguration } from '../../shared/mapping/util';
 
 // Tab indices (mirrors the private constants in the component under test)
 const TAB_CONNECTOR = 0;
@@ -648,6 +648,95 @@ describe('MappingUnifiedEditorComponent', () => {
 
       expect(mockAlertService.danger).not.toHaveBeenCalled();
       expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+    });
+  });
+
+
+  /**
+   * The editor is a routed page, so Close, the browser Back button and a nav-bar click are all the
+   * same departure — all of them go through `unsavedChangesGuard`, which calls this. It is the
+   * UI's only unsaved-changes protection.
+   */
+  describe('confirmLeaveWithUnsavedChanges', () => {
+    function showReturns(answer: boolean | undefined): Subject<boolean> {
+      const closeSubject = new Subject<boolean>();
+      mockBsModalService.show.and.returnValue({ content: { closeSubject } } as any);
+      if (answer !== undefined) {
+        // Answer on the next tick, after the guard has subscribed.
+        setTimeout(() => { closeSubject.next(answer); closeSubject.complete(); });
+      }
+      return closeSubject;
+    }
+
+    beforeEach(() => {
+      component.mapping = buildMapping();
+      component.stepperConfiguration = buildConfig();
+      component.deploymentMapEntry = deploymentMapEntry;
+      component.sourceTemplate = { a: 1 };
+      component.targetTemplate = { b: 2 };
+      component.stepperViewModel = { showExtensionSelectorsSource: false, showExtensionSelectorsTarget: false } as any;
+      component.templateForm = new FormGroup({});
+      component['initialDeploymentConnectors'] = JSON.stringify(deploymentMapEntry.connectors);
+      component['initialContentSnapshot'] = captureMappingContentSnapshot(
+        component.mapping, component.sourceTemplate, component.targetTemplate, component.mappingCode
+      );
+    });
+
+    it('leaves immediately when nothing has changed', async () => {
+      await expectAsync(component.confirmLeaveWithUnsavedChanges()).toBeResolvedTo(true);
+      expect(mockBsModalService.show).not.toHaveBeenCalled();
+    });
+
+    it('leaves immediately in read-only mode', async () => {
+      component.stepperConfiguration = buildConfig({ editorMode: EditorMode.READ_ONLY });
+      component.mapping.name = 'edited somehow';
+
+      await expectAsync(component.confirmLeaveWithUnsavedChanges()).toBeResolvedTo(true);
+      expect(mockBsModalService.show).not.toHaveBeenCalled();
+    });
+
+    it('asks before discarding edited mapping content', async () => {
+      component.mapping.name = 'edited';
+      showReturns(true);
+
+      await expectAsync(component.confirmLeaveWithUnsavedChanges()).toBeResolvedTo(true);
+      expect(mockBsModalService.show).toHaveBeenCalled();
+    });
+
+    it('asks when only the connector selection changed', async () => {
+      component.deploymentMapEntry = { identifier: '42', connectors: ['c1', 'c2'] };
+      showReturns(true);
+
+      await expectAsync(component.confirmLeaveWithUnsavedChanges()).toBeResolvedTo(true);
+    });
+
+    it('keeps the user in the editor when they decline', async () => {
+      component.mapping.name = 'edited';
+      showReturns(false);
+
+      await expectAsync(component.confirmLeaveWithUnsavedChanges()).toBeResolvedTo(false);
+    });
+
+    it('keeps the user in the editor if the modal is destroyed without answering', async () => {
+      // ConfirmationModalComponent.ngOnDestroy completes closeSubject without emitting; a bare
+      // firstValueFrom would reject with EmptyError and break the navigation outright.
+      component.mapping.name = 'edited';
+      const closeSubject = showReturns(undefined);
+      setTimeout(() => closeSubject.complete());
+
+      await expectAsync(component.confirmLeaveWithUnsavedChanges()).toBeResolvedTo(false);
+    });
+
+    it('does not ask again after a successful save', async () => {
+      component.mapping.name = 'edited';
+      mockStepperService.commitMapping.and.resolveTo({
+        status: 'saved', contentChanged: true, deploymentChanged: false, persisted: component.mapping
+      });
+
+      await component.onCommitButton();
+
+      await expectAsync(component.confirmLeaveWithUnsavedChanges()).toBeResolvedTo(true);
+      expect(mockBsModalService.show).not.toHaveBeenCalled();
     });
   });
 

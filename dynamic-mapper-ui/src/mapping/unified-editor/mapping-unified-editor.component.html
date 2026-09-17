@@ -158,7 +158,7 @@
     <!-- center: buttons (truly centered because both flanking divs are flex:1) -->
     <div class="d-flex a-i-center" style="gap:16px;">
       <button type="button" class="btn btn-default" (click)="onCancel()" translate data-cy="dm-unified-editor-cancel">
-        Cancel
+        Close
       </button>
       <button type="button" class="btn btn-primary" (click)="onCommitButton()"
         [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.editorMode === EditorMode.READ_ONLY || mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE || (isButtonDisabled$ | async) || (stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim())"

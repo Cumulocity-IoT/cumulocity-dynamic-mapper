@@ -186,8 +186,21 @@ is `lastUpdate`: the server issues a fresh token on every draft save, so an edit
 old one fails its *next* save with "modified concurrently". Re-taking the content and connector
 snapshots is what stops that next save from writing a redundant draft or rewriting the deployment.
 
-`Cancel` keeps its label. It still means "leave without saving pending edits", and "Close" would
-imply those edits are safe.
+The button is now **Close**, and leaving with unsaved edits asks first. The confirmation lives in
+`unsavedChangesGuard` (`mapping/core/unsaved-changes.guard.ts`), a `CanDeactivate` guard on both
+`edit/:identifier` routes, rather than inside the Close handler — the editor is a routed page, so
+the browser Back button and a nav-bar click are the same departure and would otherwise be
+unguarded. It is the UI's only unsaved-changes protection; there is no other `CanDeactivate`
+anywhere, and before this there was none at all.
+
+Two details that would each have produced a wedged router:
+
+- The dirty check calls `updateTemplatesInEditors()` first. `sourceTemplate`/`targetTemplate` are
+  only written back from Monaco on that call, so comparing without it misses everything typed
+  since the last tab switch — the work most worth protecting.
+- `firstValueFrom(closeSubject, { defaultValue: false })`. `ConfirmationModalComponent.ngOnDestroy`
+  completes the subject **without emitting**, so a bare `firstValueFrom` rejects with `EmptyError`
+  and breaks the navigation outright. Defaulting to "stay" fails safe.
 
 ### Smaller alignments that fell out of the merge
 
