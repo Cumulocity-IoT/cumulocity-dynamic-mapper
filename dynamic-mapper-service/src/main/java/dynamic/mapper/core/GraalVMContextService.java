@@ -923,9 +923,12 @@ public class GraalVMContextService {
     /**
      * Host-class allow-list shared by all GraalVM context builders in this service.
      * Kept in one place so that {@link #createGraalsResources} and
-     * {@link #warmupMappingCodes} stay consistent.
+     * {@link #warmupMappingCodes} stay consistent. Package-private so
+     * {@code GraalVMTemplateHostClassTest} can check the shipped templates against it —
+     * a template naming a class that moved package fails only at runtime, as happened when
+     * {@code RepairStrategy} moved out of {@code processor.model}.
      */
-    private static boolean isAllowedHostClass(String className) {
+    static boolean isAllowedHostClass(String className) {
         return className.equals("dynamic.mapper.processor.runtime.SubstitutionContext")
                 || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
                 || className.equals("dynamic.mapper.processor.model.SubstituteValue")
