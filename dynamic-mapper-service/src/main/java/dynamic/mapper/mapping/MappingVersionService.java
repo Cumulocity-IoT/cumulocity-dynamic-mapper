@@ -168,7 +168,7 @@ public class MappingVersionService {
             SemVer highest = loadVersions(tenant, identifier).stream()
                     .filter(v -> !v.isDraft() && SemVer.isValid(v.getVersion()))
                     .map(v -> SemVer.parse(v.getVersion()))
-                    .max(SemVer::compareTo)
+                    .max(Comparator.naturalOrder())
                     .orElse(new SemVer(0, 9, 9)); // so patch → 1.0.0, minor → 0.10.0 → normalised
             // When no versions exist at all, suggest starting at 1.0.0
             if (highest.equals(new SemVer(0, 9, 9))) {
