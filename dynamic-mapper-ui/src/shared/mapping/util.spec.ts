@@ -436,6 +436,70 @@ describe('stripTemplateMetadataTags', () => {
     expect(result).toContain('function onMessage(msg, context) { return []; }');
   });
 
+  /**
+   * Regression: the system section owns the block's `/**` opener, so cutting up to the marker line
+   * deleted it and left the author's sample payload as a dangling `* ... *\/`. Every default
+   * Smart Function template ships documentation below the marker, so creating a mapping from one
+   * produced code that would not parse.
+   */
+  it('should keep the documentation block valid JavaScript, not just present', () => {
+    const code =
+      '/**\n' +
+      ' * @name Default template for Smart Function\n' +
+      ' * @templateType OUTBOUND_SMART_FUNCTION\n' +
+      ' * @readonly true\n' +
+      ' * --- metadata above is auto-generated, add your documentation below ---\n' +
+      ' *\n' +
+      ' * Sample Cumulocity measurement payload (source)\n' +
+      ' * { "time": "2025-01-01T12:00:00.000Z" }\n' +
+      '*/\n\n' +
+      'function onMessage(msg, context) { return []; }\n';
+
+    const result = stripTemplateMetadataTags(code);
+
+    expect(result.startsWith('/**')).toBe(true);
+    expect(result).toContain('Sample Cumulocity measurement payload');
+    // Balanced delimiters, and no orphaned continuation line before the opener.
+    expect((result.match(/\/\*\*/g) ?? []).length).toBe(1);
+    expect((result.match(/\*\//g) ?? []).length).toBe(1);
+    expect(() => new Function(result)).not.toThrow();
+  });
+
+  it('should drop the block entirely when the author wrote no documentation below the marker', () => {
+    const code =
+      '/**\n' +
+      ' * @name My Template\n' +
+      ' * --- metadata above is auto-generated, add your documentation below ---\n' +
+      ' */\n\n' +
+      'function onMessage(msg, context) { return []; }\n';
+
+    const result = stripTemplateMetadataTags(code);
+
+    // Nothing worth keeping, so no empty `/** */` is left behind.
+    expect(result).not.toContain('/**');
+    expect(result).not.toContain('*/');
+    expect(result.trim()).toBe('function onMessage(msg, context) { return []; }');
+    expect(() => new Function(result)).not.toThrow();
+  });
+
+  it('should keep code that precedes the header intact', () => {
+    const code =
+      'const before = 1;\n' +
+      '/**\n' +
+      ' * @name My Template\n' +
+      ' * --- metadata above is auto-generated, add your documentation below ---\n' +
+      ' * Docs\n' +
+      ' */\n' +
+      'const after = 2;\n';
+
+    const result = stripTemplateMetadataTags(code);
+
+    expect(result).toContain('const before = 1;');
+    expect(result).toContain('const after = 2;');
+    expect(result).toContain('Docs');
+    expect(() => new Function(result)).not.toThrow();
+  });
+
   it('should fall back to stripping individual system tags when no marker is present (legacy templates)', () => {
     const code =
       '/**\n' +

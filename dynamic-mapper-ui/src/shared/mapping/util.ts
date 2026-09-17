@@ -770,8 +770,25 @@ export function stripTemplateMetadataTags(code: string): string {
   if (markerIndex !== -1) {
     const blockStart = code.lastIndexOf('/**', markerIndex);
     const markerLineEnd = code.indexOf('\n', markerIndex);
-    if (blockStart !== -1 && markerLineEnd !== -1) {
-      return (code.slice(0, blockStart) + code.slice(markerLineEnd + 1)).replace(/^\n+/, '');
+    // The marker sits inside the JSDoc block, so the next `*/` closes that same block.
+    const blockEnd = code.indexOf('*/', markerIndex);
+    if (blockStart !== -1 && markerLineEnd !== -1 && blockEnd !== -1) {
+      const before = code.slice(0, blockStart);
+      const after = code.slice(blockEnd + 2);
+      // Drop leading empty continuation lines left behind by the removed system section.
+      const documentation = code
+        .slice(markerLineEnd + 1, blockEnd)
+        .replace(/^(?:[ \t]*\*[ \t]*\n)+/, '');
+
+      // The system section owns the block's `/**` opener. Simply cutting up to the marker line
+      // would delete that opener and leave the author's documentation as a dangling `* ... */`,
+      // which is a syntax error — so re-open the block whenever there is documentation to keep,
+      // and remove the block entirely when there is not.
+      const hasDocumentation = documentation.replace(/^[ \t]*\*?/gm, '').trim() !== '';
+      const rebuilt = hasDocumentation
+        ? `${before}/**\n${documentation}*/${after}`
+        : before + after;
+      return rebuilt.replace(/^\n+/, '');
     }
   }
 
