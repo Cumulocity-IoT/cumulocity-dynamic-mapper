@@ -35,7 +35,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 
 /**
@@ -53,7 +53,7 @@ class DeploymentMapServiceTest {
     private InventoryFacade inventoryApi;
 
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
 
     @Mock
     private MicroserviceSubscriptionsService subscriptionsService;

@@ -32,15 +32,15 @@ import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingVersion;
-import dynamic.mapper.model.MappingVersionRepresentation;
+import dynamic.mapper.model.version.MappingVersion;
+import dynamic.mapper.model.version.MappingVersionRepresentation;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.model.SemVer;
+import dynamic.mapper.model.version.SemVer;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TransformationType;
 
@@ -82,7 +82,7 @@ class MappingVersionServiceTest {
     @Mock private MappingValidator mappingValidator;
     @Mock private MicroserviceSubscriptionsService subscriptionsService;
     @Mock private ContextService<UserCredentials> contextService;
-    @Mock private ConfigurationRegistry configurationRegistry;
+    @Mock private ServiceRegistry serviceRegistry;
 
     private MappingVersionService service;
 
@@ -95,7 +95,7 @@ class MappingVersionServiceTest {
     @BeforeEach
     void setUp() {
         service = new MappingVersionService(inventoryApi, versionRepository, serviceConfigurationService,
-                mappingValidator, subscriptionsService, contextService, configurationRegistry);
+                mappingValidator, subscriptionsService, contextService, serviceRegistry);
 
         lenient().when(subscriptionsService.callForTenant(eq(TENANT), any())).thenAnswer(inv -> {
             java.util.concurrent.Callable<?> c = inv.getArgument(1);
@@ -107,7 +107,7 @@ class MappingVersionServiceTest {
             return null;
         }).when(subscriptionsService).runForTenant(eq(TENANT), any());
 
-        lenient().when(configurationRegistry.getObjectMapper()).thenReturn(new ObjectMapper());
+        lenient().when(serviceRegistry.getObjectMapper()).thenReturn(new ObjectMapper());
         lenient().when(mappingValidator.validate(eq(TENANT), any(), any())).thenReturn(Collections.emptyList());
         lenient().when(serviceConfigurationService.getServiceConfiguration(TENANT)).thenReturn(config);
 
@@ -218,8 +218,8 @@ class MappingVersionServiceTest {
     @Test
     void publishFailsValidationLeavesNoVersion() {
         when(mappingValidator.validate(eq(TENANT), any(), any()))
-                .thenReturn(List.of(dynamic.mapper.model.ValidationIssue.of(
-                        dynamic.mapper.model.ValidationError.Source_Template_Must_Be_Valid_JSON)));
+                .thenReturn(List.of(dynamic.mapper.model.validation.ValidationIssue.of(
+                        dynamic.mapper.model.validation.ValidationError.Source_Template_Must_Be_Valid_JSON)));
 
         assertThrows(MappingValidationException.class,
                 () -> service.publish(TENANT, mapping(IDENTIFIER), "1.0.0", "bad", null));

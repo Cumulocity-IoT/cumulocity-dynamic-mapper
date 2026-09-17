@@ -19,42 +19,36 @@
  *
  */
 
-package dynamic.mapper.model;
+package dynamic.mapper.model.device;
 
 import java.io.Serializable;
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
-/**
- * Managed-object envelope for a {@link MappingVersion}, persisted in the
- * inventory under type {@value #MAPPING_VERSION_TYPE}. Parallel to
- * {@link MappingRepresentation}.
- */
-@Slf4j
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class MappingVersionRepresentation implements Serializable {
+public class DeviceToClientMapRepresentation implements Serializable {
 
-    public static final String MAPPING_VERSION_TYPE = "d11r_mapping_version";
-    public static final String MAPPING_VERSION_FRAGMENT = "d11r_mapping_version";
+	public static final String DEVICE_TO_CLIENT_MAP_NAME = "Dynamic Mapper Device To Client Map";
+	public static final String DEVICE_TO_CLIENT_MAP_TYPE = "d11r_deviceToClientMap_type";
+	public static final String DEVICE_TO_CLIENT_MAP_ID = "d11r_deviceToClientMap_id";
+    public static final String DEVICE_TO_CLIENT_MAP_FRAGMENT = "d11r_deviceToClientMap";
 
-    @JsonProperty("id")
-    private String id;
+	@JsonProperty("id")
+	private String id;
 
-    @JsonProperty("type")
-    private String type;
+	@JsonProperty("type")
+	private String type;
 
-    @JsonProperty(value = "name")
-    private String name;
+	@JsonProperty(value = "name")
+	private String name;
 
-    @JsonProperty(value = "description")
-    private String description;
-
-    @JsonProperty(value = MAPPING_VERSION_FRAGMENT)
-    private MappingVersion mappingVersion;
+	@JsonProperty(value = DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT)
+	private Map<String, String> deviceToClientMap;
 }

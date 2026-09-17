@@ -44,7 +44,7 @@ back to it if the change is wrong.
 | `draftDirty` | Boolean flag on the mapping line ([`Mapping.java:292`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/Mapping.java#L292)) set whenever a draft is saved and cleared on publish or discard. Used by the UI grid to flag lines with unpublished edits. It is *not* recomputed by diffing the draft against the active version. |
 
 Both the draft and every published version are stored as the **same** record type,
-[`MappingVersion`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/MappingVersion.java) —
+[`MappingVersion`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/version/MappingVersion.java) —
 a managed object of type `d11r_mapping_version`, distinguished by the `isDraft` flag.
 This uniform storage (decision D-1 in the requirements doc) is implemented as designed.
 

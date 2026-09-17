@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.deserializer.BytePayloadDeserializer;
 import dynamic.mapper.processor.inbound.deserializer.FlatFilePayloadDeserializer;

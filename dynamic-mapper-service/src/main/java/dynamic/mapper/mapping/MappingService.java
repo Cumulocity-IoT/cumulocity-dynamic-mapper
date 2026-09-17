@@ -30,9 +30,16 @@ import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.*;
+import dynamic.mapper.model.device.Device;
+import dynamic.mapper.model.status.LoggingEventType;
+import dynamic.mapper.model.status.MappingStatus;
+import dynamic.mapper.model.validation.ResolveException;
+import dynamic.mapper.model.validation.ValidationIssue;
+import dynamic.mapper.model.version.MappingVersion;
+import dynamic.mapper.model.version.MappingVersionCount;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
@@ -68,7 +75,7 @@ public class MappingService {
     private final MappingResolverService resolverService;
     private final DeploymentMapService deploymentMapService;
     private final DeviceToClientMapService deviceToClientMapService;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
     private final MicroserviceSubscriptionsService subscriptionsService;
     private final MappingValidator mappingValidator;
     private final FlowStateStore flowStateStore;
@@ -164,7 +171,7 @@ public class MappingService {
             mor.setName(mapping.getName());
             inventoryApi.update(mor, false);
 
-            configurationRegistry.getC8yAgent().createLoggingEvent(
+            serviceRegistry.getC8yAgent().createLoggingEvent(
                     String.format("Mapping created: %s [%s]", mapping.getName(), mapping.getId()),
                     LoggingEventType.MAPPING_CREATED_EVENT_TYPE,
                     DateTime.now(),
@@ -183,7 +190,7 @@ public class MappingService {
         }
 
         // Backfill the version record and sync the MO's version field.
-        dynamic.mapper.model.MappingVersion v1 = mappingVersionService.ensureBackfilled(tenant, created);
+        dynamic.mapper.model.version.MappingVersion v1 = mappingVersionService.ensureBackfilled(tenant, created);
         if (v1 != null) {
             created.setVersion(v1.getVersion());
             updateMapping(tenant, created, false, true);
@@ -244,12 +251,12 @@ public class MappingService {
 
             if (TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())
                     && !Objects.equals(previousCodeFinal, mapping.getCode())) {
-                configurationRegistry.getGraalVMContextService()
+                serviceRegistry.getGraalVMContextService()
                         .invalidateMappingPool(tenant, mapping.getIdentifier());
             }
 
             if (logEvent) {
-                configurationRegistry.getC8yAgent().createLoggingEvent(
+                serviceRegistry.getC8yAgent().createLoggingEvent(
                         String.format("Mapping updated: %s [%s]", mapping.getName(), mapping.getId()),
                         LoggingEventType.MAPPING_UPDATED_EVENT_TYPE,
                         DateTime.now(),
@@ -352,7 +359,7 @@ public class MappingService {
             deploymentMapService.removeMappingDeployment(tenant, mapping.getIdentifier());
             flowStateStore.clearMappingState(tenant, mapping.getIdentifier());
 
-            configurationRegistry.getC8yAgent().createLoggingEvent(
+            serviceRegistry.getC8yAgent().createLoggingEvent(
                     String.format("Mapping deleted: %s [%s]", mapping.getName(), id),
                     LoggingEventType.MAPPING_DELETED_EVENT_TYPE,
                     DateTime.now(),
@@ -468,7 +475,7 @@ public class MappingService {
 
                 String versionInfo = versionSwitched ? String.format(" (version %s)", toPersist.getVersion())
                         : "";
-                configurationRegistry.getC8yAgent().createLoggingEvent(
+                serviceRegistry.getC8yAgent().createLoggingEvent(
                         String.format("Mapping %s [%s] %s%s", toPersist.getName(), mappingId,
                                 active ? "activated" : "deactivated", versionInfo),
                         LoggingEventType.MAPPING_ACTIVATION_EVENT_TYPE,
@@ -489,12 +496,12 @@ public class MappingService {
                     final String identifier = toPersist.getIdentifier();
                     final String b64Code = toPersist.getCode();
                     final String mappingName = toPersist.getName();
-                    configurationRegistry.getVirtualThreadPool().submit(() -> {
+                    serviceRegistry.getVirtualThreadPool().submit(() -> {
                         try {
                             byte[] decoded = java.util.Base64.getDecoder().decode(b64Code);
                             String code = JavaScriptModuleStripper.toPlainScript(new String(decoded));
                             String sourceName = Mapping.SMART_FUNCTION_NAME + "_" + identifier + ".js";
-                            configurationRegistry.getGraalVMContextService()
+                            serviceRegistry.getGraalVMContextService()
                                     .warmupMappingCodes(tenant, Map.of(sourceName, code));
                             log.info("{} - Pre-compiled SmartFunction code for activated mapping [{}]",
                                     tenant, identifier);
@@ -506,7 +513,7 @@ public class MappingService {
                             // failure is published as a service event the user can actually see.
                             log.warn("{} - Failed to pre-compile SmartFunction on activation [{}]: {}",
                                     tenant, identifier, e.getMessage());
-                            configurationRegistry.getC8yAgent().createLoggingEvent(
+                            serviceRegistry.getC8yAgent().createLoggingEvent(
                                     String.format(
                                             "Mapping %s [%s] is active but its Smart Function code failed to compile: %s",
                                             mappingName, identifier, e.getMessage()),
@@ -520,7 +527,7 @@ public class MappingService {
 
                 return toPersist;
             } catch (Exception e) {
-                configurationRegistry.getC8yAgent().createLoggingEvent(
+                serviceRegistry.getC8yAgent().createLoggingEvent(
                         String.format("Failed to %s mapping %s [%s]: %s",
                                 active ? "activate" : "deactivate", mapping.getName(), mappingId, e.getMessage()),
                         LoggingEventType.MAPPING_ACTIVATION_ERROR_EVENT_TYPE,
@@ -542,7 +549,7 @@ public class MappingService {
      * stored version record is never aliased.
      */
     private Mapping applyVersion(String tenant, Mapping runnable, String version) {
-        dynamic.mapper.model.MappingVersion mv = mappingVersionService.getVersion(tenant,
+        dynamic.mapper.model.version.MappingVersion mv = mappingVersionService.getVersion(tenant,
                 runnable.getIdentifier(), version);
         if (mv == null || mv.getSnapshot() == null) {
             throw new IllegalArgumentException(String.format(
@@ -559,7 +566,7 @@ public class MappingService {
     }
 
     private Mapping copyOf(Mapping mapping) {
-        return configurationRegistry.getObjectMapper().convertValue(mapping, Mapping.class);
+        return serviceRegistry.getObjectMapper().convertValue(mapping, Mapping.class);
     }
 
     private java.util.concurrent.locks.ReentrantLock activationLockFor(String tenant, String mappingId) {
@@ -581,7 +588,7 @@ public class MappingService {
         updateMapping(tenant, mapping, true, true);
         updateCacheAfterChange(tenant, mapping);
 
-        configurationRegistry.getC8yAgent().createLoggingEvent(
+        serviceRegistry.getC8yAgent().createLoggingEvent(
                 String.format("Mapping %s [%s] debug mode %s", mapping.getName(), mappingId,
                         debug ? "enabled" : "disabled"),
                 LoggingEventType.MAPPING_UPDATED_EVENT_TYPE,
@@ -606,7 +613,7 @@ public class MappingService {
         updateMapping(tenant, mapping, true, false);
         updateCacheAfterChange(tenant, mapping);
 
-        configurationRegistry.getC8yAgent().createLoggingEvent(
+        serviceRegistry.getC8yAgent().createLoggingEvent(
                 String.format("Mapping %s [%s] filter updated", mapping.getName(), mappingId),
                 LoggingEventType.MAPPING_UPDATED_EVENT_TYPE,
                 DateTime.now(),
@@ -631,7 +638,7 @@ public class MappingService {
         updateMapping(tenant, mapping, true, false);
         updateCacheAfterChange(tenant, mapping);
 
-        configurationRegistry.getC8yAgent().createLoggingEvent(
+        serviceRegistry.getC8yAgent().createLoggingEvent(
                 String.format("Mapping %s [%s] code updated", mapping.getName(), mappingId),
                 LoggingEventType.MAPPING_UPDATED_EVENT_TYPE,
                 DateTime.now(),
@@ -653,7 +660,7 @@ public class MappingService {
         if (runnable == null) {
             throw new IllegalArgumentException("Mapping not found: " + id);
         }
-        dynamic.mapper.model.MappingVersion draft = mappingVersionService.getDraft(tenant, runnable.getIdentifier());
+        dynamic.mapper.model.version.MappingVersion draft = mappingVersionService.getDraft(tenant, runnable.getIdentifier());
         return draft != null ? draft.getSnapshot() : null;
     }
 
@@ -672,7 +679,7 @@ public class MappingService {
             }
             edits.setId(id);
             edits.setIdentifier(runnable.getIdentifier());
-            dynamic.mapper.model.MappingVersion draft = mappingVersionService.saveDraft(tenant,
+            dynamic.mapper.model.version.MappingVersion draft = mappingVersionService.saveDraft(tenant,
                     runnable.getIdentifier(), edits);
 
             // Mark the line as having unpublished changes so the grid can flag it. Persisting
@@ -697,7 +704,7 @@ public class MappingService {
      * none yet (NFR-1a), then the draft snapshot becomes the next version and the
      * draft is cleared. Does not activate the new version.
      */
-    public dynamic.mapper.model.MappingVersion publishDraft(String tenant, String id, String version, String note) {
+    public dynamic.mapper.model.version.MappingVersion publishDraft(String tenant, String id, String version, String note) {
         java.util.concurrent.locks.ReentrantLock lock = activationLockFor(tenant, id);
         lock.lock();
         try {
@@ -710,14 +717,14 @@ public class MappingService {
             // Preserve the currently active config in history before publishing a new version.
             mappingVersionService.ensureBackfilled(tenant, runnable);
 
-            dynamic.mapper.model.MappingVersion draft = mappingVersionService.getDraft(tenant, identifier);
+            dynamic.mapper.model.version.MappingVersion draft = mappingVersionService.getDraft(tenant, identifier);
             if (draft == null || draft.getSnapshot() == null) {
                 throw new IllegalStateException(
                         String.format("Tenant %s - No draft to publish for mapping %s [%s]", tenant, identifier, id));
             }
 
             String effectiveNote = note != null ? note : draft.getSnapshot().getVersionNote();
-            dynamic.mapper.model.MappingVersion published = mappingVersionService.publish(tenant, draft.getSnapshot(),
+            dynamic.mapper.model.version.MappingVersion published = mappingVersionService.publish(tenant, draft.getSnapshot(),
                     version, effectiveNote, runnable.getVersion());
 
             // The draft's content now lives in an immutable version; clear the working copy
@@ -738,7 +745,7 @@ public class MappingService {
     }
 
     /** Lists all published versions of a mapping line, identified by its managed-object id. */
-    public List<dynamic.mapper.model.MappingVersion> listVersions(String tenant, String id) {
+    public List<dynamic.mapper.model.version.MappingVersion> listVersions(String tenant, String id) {
         Mapping runnable = getMapping(tenant, id);
         if (runnable == null) {
             throw new IllegalArgumentException("Mapping not found: " + id);
@@ -750,7 +757,7 @@ public class MappingService {
     }
 
     /** Returns a single published version of a mapping line, or {@code null} if not found. */
-    public dynamic.mapper.model.MappingVersion getVersion(String tenant, String id, String version) {
+    public dynamic.mapper.model.version.MappingVersion getVersion(String tenant, String id, String version) {
         Mapping runnable = getMapping(tenant, id);
         if (runnable == null) {
             throw new IllegalArgumentException("Mapping not found: " + id);
@@ -759,7 +766,7 @@ public class MappingService {
     }
 
     /** Updates the change note of a published version (note is the only mutable field). */
-    public dynamic.mapper.model.MappingVersion updateVersionNote(String tenant, String id, String version,
+    public dynamic.mapper.model.version.MappingVersion updateVersionNote(String tenant, String id, String version,
             String note) {
         Mapping runnable = getMapping(tenant, id);
         if (runnable == null) {
@@ -907,7 +914,7 @@ public class MappingService {
             return;
         }
 
-        configurationRegistry.getVirtualThreadPool().submit(() -> {
+        serviceRegistry.getVirtualThreadPool().submit(() -> {
             try {
                 // Re-check the threshold: a success arriving while this task was queued could
                 // have reset currentFailureCount to zero (resetFailureCountOnSuccess mutates the
@@ -949,7 +956,7 @@ public class MappingService {
         }
         for (String connectorId : deployedConnectorIds) {
             try {
-                AConnectorClient client = configurationRegistry.getConnectorRegistry()
+                AConnectorClient client = serviceRegistry.getConnectorRegistry()
                         .getClientForTenant(tenant, connectorId);
                 if (Direction.OUTBOUND.equals(mapping.getDirection())) {
                     client.updateSubscriptionForOutbound(mapping, false, true);
@@ -1037,7 +1044,7 @@ public class MappingService {
 
         dirty.clear();
 
-        configurationRegistry.getC8yAgent().createLoggingEvent(
+        serviceRegistry.getC8yAgent().createLoggingEvent(
                 String.format("Mappings updated in backend, %d dirty mapping(s) cleaned!", dirtyCount),
                 LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
                 DateTime.now(),

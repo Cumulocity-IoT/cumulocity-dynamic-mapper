@@ -32,13 +32,13 @@ import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingVersion;
-import dynamic.mapper.model.MappingVersionRepresentation;
-import dynamic.mapper.model.SemVer;
-import dynamic.mapper.model.ValidationIssue;
+import dynamic.mapper.model.version.MappingVersion;
+import dynamic.mapper.model.version.MappingVersionRepresentation;
+import dynamic.mapper.model.version.SemVer;
+import dynamic.mapper.model.validation.ValidationIssue;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -82,7 +82,7 @@ public class MappingVersionService {
     private final MappingValidator mappingValidator;
     private final MicroserviceSubscriptionsService subscriptionsService;
     private final ContextService<UserCredentials> contextService;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
 
     // ========== Publish ==========
 
@@ -550,7 +550,7 @@ public class MappingVersionService {
      * ObjectMapper, the same mechanism used for managed-object conversion.
      */
     private Mapping copyOf(Mapping mapping) {
-        return configurationRegistry.getObjectMapper().convertValue(mapping, Mapping.class);
+        return serviceRegistry.getObjectMapper().convertValue(mapping, Mapping.class);
     }
 
     private int retention(String tenant) {

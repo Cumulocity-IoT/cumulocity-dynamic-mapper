@@ -21,6 +21,11 @@
 
 package dynamic.mapper.model;
 
+import dynamic.mapper.model.extension.Extension;
+import dynamic.mapper.model.extension.ExtensionEntry;
+import dynamic.mapper.model.status.MappingStatus;
+import dynamic.mapper.model.validation.ValidationError;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -28,8 +28,8 @@ import dynamic.mapper.connector.core.*;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.model.ConnectorStatus;
+import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
@@ -105,14 +105,14 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     /**
      * Full constructor with dependencies
      */
-    public MQTTServicePulsarClient(ConfigurationRegistry configurationRegistry,
+    public MQTTServicePulsarClient(ServiceRegistry serviceRegistry,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             CamelDispatcherInbound dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
         this();
-        wireFromRegistry(configurationRegistry, connectorRegistry, connectorConfiguration,
+        wireFromRegistry(serviceRegistry, connectorRegistry, connectorConfiguration,
                 dispatcher, additionalSubscriptionIdTest, tenant);
 
         // Configure for Cumulocity internal
@@ -129,7 +129,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         Map<String, ConnectorProperty> props = connectorSpecification.getProperties();
 
         // Set service URL
-        String serviceUrl = configurationRegistry.getMqttServicePulsarUrl();
+        String serviceUrl = serviceRegistry.getMqttServicePulsarUrl();
         props.put("serviceUrl",
                 new ConnectorProperty(null, true, 0, ConnectorPropertyType.STRING_PROPERTY,
                         true, true, serviceUrl, null, null));
@@ -139,7 +139,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                 new ConnectorProperty(null, true, 5, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY,
                         true, true, "basic", null, null));
 
-        MicroserviceCredentials credentials = configurationRegistry.getMicroserviceCredential(tenant);
+        MicroserviceCredentials credentials = serviceRegistry.getMicroserviceCredential(tenant);
         String authParams = MessageFormat.format(
                 "'{'\"userId\":\"{0}/{1}\",\"password\":\"{2}\"'}'",
                 tenant, credentials.getUsername(), credentials.getPassword());
@@ -213,7 +213,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
             // Create callback
             mqttServiceCallback = new MQTTServicePulsarCallback(
                     tenant,
-                    configurationRegistry,
+                    serviceRegistry,
                     dispatcher,
                     connectorIdentifier,
                     connectorName);

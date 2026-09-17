@@ -13,7 +13,7 @@ import org.graalvm.polyglot.Value;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.AbstractFlowProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.CumulocityObject;

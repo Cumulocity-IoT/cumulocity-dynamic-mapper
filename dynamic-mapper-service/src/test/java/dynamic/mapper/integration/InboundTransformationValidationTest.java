@@ -45,7 +45,7 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
@@ -74,10 +74,10 @@ import lombok.extern.slf4j.Slf4j;
 class InboundTransformationValidationTest {
 
     // CamelDispatcherInbound is not a Spring bean (it is created per connector), so it is built
-    // manually from the autowired ConfigurationRegistry, which provides the real, route-registered
+    // manually from the autowired ServiceRegistry, which provides the real, route-registered
     // Camel context. MappingService is mocked so mapping resolution can be stubbed per test.
     @MockitoSpyBean
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
 
     @MockitoBean
     private MappingService mappingService;
@@ -110,20 +110,20 @@ class InboundTransformationValidationTest {
         when(c8yAgent.upsertDevice(eq(TEST_TENANT), any(ID.class), any(ProcessingContext.class), anyInt()))
                 .thenReturn(mockDevice);
 
-        // The real ConfigurationRegistry has no service configuration for the test tenant, so stub
+        // The real ServiceRegistry has no service configuration for the test tenant, so stub
         // it on the spy while keeping the real Camel context / thread pool / mapping service.
         ServiceConfiguration serviceConfiguration = mock(ServiceConfiguration.class);
         lenient().when(serviceConfiguration.getLogPayload()).thenReturn(false);
         lenient().when(serviceConfiguration.getLogSubstitution()).thenReturn(false);
         lenient().when(serviceConfiguration.getMaxCPUTimeMS()).thenReturn(5000);
-        doReturn(serviceConfiguration).when(configurationRegistry).getServiceConfiguration(TEST_TENANT);
+        doReturn(serviceConfiguration).when(serviceRegistry).getServiceConfiguration(TEST_TENANT);
 
         // Build the dispatcher against the real, route-registered Camel context.
         connectorClient = mock(AConnectorClient.class);
         lenient().when(connectorClient.getTenant()).thenReturn(TEST_TENANT);
         lenient().when(connectorClient.getConnectorIdentifier()).thenReturn(TEST_CONNECTOR);
         lenient().when(connectorClient.getC8yAgent()).thenReturn(c8yAgent);
-        dispatcher = new CamelDispatcherInbound(configurationRegistry, connectorClient);
+        dispatcher = new CamelDispatcherInbound(serviceRegistry, connectorClient);
     }
 
     /**

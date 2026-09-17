@@ -23,7 +23,7 @@
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import jakarta.validation.Valid;
@@ -68,7 +68,7 @@ import java.util.stream.Collectors;
 public class DeploymentMapService {
 
     private final InventoryFacade inventoryApi;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
     private final MicroserviceSubscriptionsService subscriptionsService;
 
     // Structure: <Tenant, <MappingIdentifier, List<ConnectorIdentifier>>>
@@ -84,7 +84,7 @@ public class DeploymentMapService {
      * @param reset if true, creates a new empty deployment map; if false, loads existing configuration
      */
     public void initializeTenantDeploymentMap(String tenant, boolean reset) {
-        MapperServiceRepresentation serviceRep = configurationRegistry.getMapperServiceRepresentation(tenant);
+        MapperServiceRepresentation serviceRep = serviceRegistry.getMapperServiceRepresentation(tenant);
 
         if (serviceRep.getDeploymentMap() != null && !reset) {
             log.debug("{} - Initializing deployment map with {} entries",
@@ -336,7 +336,7 @@ public class DeploymentMapService {
      */
     private void persistDeploymentMap(String tenant) {
         subscriptionsService.runForTenant(tenant, () -> {
-            MapperServiceRepresentation serviceRep = configurationRegistry.getMapperServiceRepresentation(tenant);
+            MapperServiceRepresentation serviceRep = serviceRegistry.getMapperServiceRepresentation(tenant);
             
             Map<String, List<String>> deploymentMap = getOrCreateDeploymentMap(tenant);
             

@@ -41,11 +41,11 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.model.MappingType;
@@ -69,7 +69,7 @@ import lombok.extern.slf4j.Slf4j;
 class EnrichmentInboundProcessorTest {
 
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
 
     @Mock
     private MappingService mappingService;
@@ -118,7 +118,7 @@ class EnrichmentInboundProcessorTest {
                 null // loadingError
         );
 
-        processor = new EnrichmentInboundProcessor(configurationRegistry, mappingService, flowStateStore);
+        processor = new EnrichmentInboundProcessor(serviceRegistry, mappingService, flowStateStore);
 
         when(exchange.getIn()).thenReturn(message);
         when(mappingService.getMappingStatus(any(), any(Mapping.class))).thenReturn(mappingStatus);

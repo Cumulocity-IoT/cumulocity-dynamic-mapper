@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.model;
+package dynamic.mapper.model.version;
 
 import java.util.Comparator;
 import java.util.regex.Matcher;

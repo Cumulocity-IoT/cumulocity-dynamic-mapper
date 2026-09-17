@@ -39,7 +39,8 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.core.BootstrapService;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.CacheManager;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.ExtensionManager;
 import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
@@ -62,7 +63,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.model.LoggingEventType;
+import dynamic.mapper.model.status.LoggingEventType;
 import org.joda.time.DateTime;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.mapping.MappingService;
@@ -94,7 +95,8 @@ public class OperationController {
     private final BootstrapService bootstrapService;
     private final C8YAgent c8YAgent;
     private final ContextService<UserCredentials> contextService;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
+    private final CacheManager cacheManager;
     private final DeploymentMapService deploymentMapService;
     private final MappingStatusService mappingStatusService;
     private final IdentityFacade identityFacade;
@@ -279,7 +281,7 @@ public class OperationController {
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                                 "User does not have permission to rotate GraalVM engine");
                     }
-                    configurationRegistry.getGraalVMContextService().rotateEngine(tenant);
+                    serviceRegistry.getGraalVMContextService().rotateEngine(tenant);
                     return ResponseEntity.status(HttpStatus.CREATED).build();
                 default:
                     throw new IllegalArgumentException("Unknown operation: " + operationType);
@@ -299,7 +301,7 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleClearCacheDeviceToClient(String tenant, Map<String, String> parameters) {
-        configurationRegistry.clearCacheDeviceToClient(tenant);
+        serviceRegistry.clearCacheDeviceToClient(tenant);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -354,7 +356,7 @@ public class OperationController {
 
         try {
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-            configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
+            serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
         } catch (JsonProcessingException ex) {
             log.error("{} - Error saving service configuration with code templates: {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -488,7 +490,7 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleRefreshNotifications(String tenant) throws Exception {
-        configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+        serviceRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -544,7 +546,7 @@ public class OperationController {
         // Reconnect outbound notification subscriptions after the connector is ready
         AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
         if (client != null && client.supportedDirections().contains(Direction.OUTBOUND)) {
-            configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+            serviceRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -576,7 +578,7 @@ public class OperationController {
         connectorConfigurationService.saveConnectorConfiguration(configuration);
         bootstrapService.disableConnector(tenant, client.getConnectorIdentifier());
         // Reconnect other notification clients for remaining connectors
-        boolean reconnected = configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+        boolean reconnected = serviceRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
         if (!reconnected) {
             // Connector is disconnected and marked disabled locally, but reconnecting the
             // remaining notification subscriptions against Cumulocity failed (e.g. backend
@@ -596,19 +598,19 @@ public class OperationController {
         if ("INBOUND_ID_CACHE".equals(cacheId)) {
             Integer cacheSize = serviceConfigurationService
                     .getServiceConfiguration(tenant).getInboundExternalIdCacheSize();
-            configurationRegistry.getC8yAgent().clearInboundExternalIdCache(tenant, false, cacheSize);
+            cacheManager.clearInboundExternalIdCache(tenant, false, cacheSize);
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } else if ("OUTBOUND_ID_CACHE".equals(cacheId)) {
             Integer cacheSize = serviceConfigurationService
                     .getServiceConfiguration(tenant).getOutboundExternalIdCacheSize();
-            configurationRegistry.getC8yAgent().clearOutboundExternalIdCache(tenant, false, cacheSize);
+            cacheManager.clearOutboundExternalIdCache(tenant, false, cacheSize);
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } else if ("INVENTORY_CACHE".equals(cacheId)) {
             Integer cacheSize = serviceConfigurationService
                     .getServiceConfiguration(tenant).getInventoryCacheSize();
-            configurationRegistry.getC8yAgent().clearInventoryCache(tenant, false, cacheSize);
+            cacheManager.clearInventoryCache(tenant, false, cacheSize);
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } else if ("MOCK_IDENTITY_CACHE".equals(cacheId)) {

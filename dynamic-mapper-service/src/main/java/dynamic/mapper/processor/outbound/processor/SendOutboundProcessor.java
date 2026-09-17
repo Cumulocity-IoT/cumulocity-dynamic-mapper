@@ -37,7 +37,7 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;

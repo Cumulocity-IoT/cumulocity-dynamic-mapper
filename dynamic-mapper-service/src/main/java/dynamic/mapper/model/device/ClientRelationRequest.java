@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package dynamic.mapper.model;
+package dynamic.mapper.model.device;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

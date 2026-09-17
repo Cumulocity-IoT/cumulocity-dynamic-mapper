@@ -28,8 +28,8 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.model.ConnectorStatus;
+import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.notification.CacheInventoryUpdateClient;
 import dynamic.mapper.notification.ManagementSubscriptionClient;
 import dynamic.mapper.notification.Utils;
@@ -61,20 +61,20 @@ public class NotificationConnectionManager {
     private final MqttPushManager mqttPushManager;
     private final ConnectorRegistry connectorRegistry;
     private final SubscriptionQueryService queryService;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
 
     public NotificationConnectionManager(MicroserviceSubscriptionsService subscriptionsService,
                                           TokenManager tokenManager,
                                           MqttPushManager mqttPushManager,
                                           ConnectorRegistry connectorRegistry,
                                           SubscriptionQueryService queryService,
-                                          @Lazy ConfigurationRegistry configurationRegistry) {
+                                          @Lazy ServiceRegistry serviceRegistry) {
         this.subscriptionsService = subscriptionsService;
         this.tokenManager = tokenManager;
         this.mqttPushManager = mqttPushManager;
         this.connectorRegistry = connectorRegistry;
         this.queryService = queryService;
-        this.configurationRegistry = configurationRegistry;
+        this.serviceRegistry = serviceRegistry;
     }
 
     @Value("${C8Y.baseURL}")
@@ -245,10 +245,10 @@ public class NotificationConnectionManager {
 
         try {
             NotificationCallback managementCallback = managementCallbacks.computeIfAbsent(tenant,
-                    k -> new ManagementSubscriptionClient(configurationRegistry, tenant));
+                    k -> new ManagementSubscriptionClient(serviceRegistry, tenant));
 
             NotificationCallback cacheInventoryCallback = cacheInventoryCallbacks.computeIfAbsent(tenant,
-                    k -> new CacheInventoryUpdateClient(configurationRegistry, tenant));
+                    k -> new CacheInventoryUpdateClient(serviceRegistry, tenant));
 
             List<NotificationSubscriptionRepresentation> managementSubs = queryService
                     .getNotificationSubscriptionForDeviceGroup(tenant, null, null)
@@ -419,7 +419,7 @@ public class NotificationConnectionManager {
 
         // Send notification
         try {
-            configurationRegistry.getC8yAgent().sendNotificationLifecycle(
+            serviceRegistry.getC8yAgent().sendNotificationLifecycle(
                     tenant, ConnectorStatus.DISCONNECTED, null);
         } catch (Exception e) {
             log.warn("{} - Error sending disconnect notification: {}", tenant, e.getMessage());
@@ -722,7 +722,7 @@ public class NotificationConnectionManager {
         for (NotificationSubscriptionRepresentation sub : deviceSubs) {
             try {
                 if (isValidSubscription(sub)) {
-                    ExternalIDRepresentation extId = configurationRegistry.getC8yAgent()
+                    ExternalIDRepresentation extId = serviceRegistry.getC8yAgent()
                             .resolveGlobalId2ExternalId(tenant, sub.getSource().getId(), null, false);
 
                     if (extId != null) {
@@ -743,7 +743,7 @@ public class NotificationConnectionManager {
         for (NotificationSubscriptionRepresentation sub : subs) {
             try {
                 if (isValidSubscription(sub)) {
-                    ManagedObjectRepresentation groupMO = configurationRegistry.getC8yAgent()
+                    ManagedObjectRepresentation groupMO = serviceRegistry.getC8yAgent()
                             .getManagedObjectForId(tenant, sub.getSource().getId().getValue(), false);
                     if (groupMO != null && callback instanceof ManagementSubscriptionClient) {
                         ((ManagementSubscriptionClient) callback).addGroupToCache(groupMO);
@@ -832,7 +832,7 @@ public class NotificationConnectionManager {
         }
 
         try {
-            configurationRegistry.getC8yAgent().sendNotificationLifecycle(
+            serviceRegistry.getC8yAgent().sendNotificationLifecycle(
                     tenant, ConnectorStatus.CONNECTING, null);
 
             // L3: replace("http","ws") corrupts any hostname that contains "http" as a substring;
@@ -843,7 +843,7 @@ public class NotificationConnectionManager {
             URI webSocketUrl = new URI(webSocketBaseUrl + Utils.WEBSOCKET_PATH + token);
 
             CustomWebSocketClient client = new CustomWebSocketClient(
-                    tenant, configurationRegistry, webSocketUrl, callback, connectorId);
+                    tenant, serviceRegistry, webSocketUrl, callback, connectorId);
             client.setConnectionLostTimeout(Utils.CONNECTION_TIMEOUT_SECONDS);
 
             boolean connected = client.connectBlocking(Utils.CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
@@ -863,7 +863,7 @@ public class NotificationConnectionManager {
                             return null;
                         }
                         CustomWebSocketClient retryClient = new CustomWebSocketClient(
-                                tenant, configurationRegistry, webSocketUrl, callback, connectorId);
+                                tenant, serviceRegistry, webSocketUrl, callback, connectorId);
                         retryClient.setConnectionLostTimeout(Utils.CONNECTION_TIMEOUT_SECONDS);
                         boolean retryConnected = retryClient.connectBlocking(Utils.CONNECTION_TIMEOUT_SECONDS,
                                 TimeUnit.SECONDS);
@@ -896,7 +896,7 @@ public class NotificationConnectionManager {
         } catch (Exception e) {
             log.error("{} - Error connecting WebSocket for connector {}: {}",
                     tenant, connectorId.getName(), e.getMessage(), e);
-            configurationRegistry.getC8yAgent().sendNotificationLifecycle(
+            serviceRegistry.getC8yAgent().sendNotificationLifecycle(
                     tenant, ConnectorStatus.FAILED, e.getLocalizedMessage());
             return null;
         }
@@ -972,12 +972,12 @@ public class NotificationConnectionManager {
                 reconnectDeviceClients(tenant);
                 reconnectManagementClients(tenant);
 
-                configurationRegistry.getC8yAgent().sendNotificationLifecycle(
+                serviceRegistry.getC8yAgent().sendNotificationLifecycle(
                         tenant, ConnectorStatus.CONNECTED, null);
 
             } catch (Exception e) {
                 log.error("{} - Error during reconnection: {}", tenant, e.getMessage(), e);
-                configurationRegistry.getC8yAgent().sendNotificationLifecycle(
+                serviceRegistry.getC8yAgent().sendNotificationLifecycle(
                         tenant, ConnectorStatus.FAILED, e.getLocalizedMessage());
             }
         });

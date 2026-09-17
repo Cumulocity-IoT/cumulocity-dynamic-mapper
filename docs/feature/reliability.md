@@ -344,7 +344,7 @@ would otherwise keep failing (and, at QoS > 0, keep forcing redeliveries) indefi
 | Field | Where | Meaning |
 |---|---|---|
 | [`Mapping.maxFailureCount`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/Mapping.java) | per mapping, set in the editor | Number of **consecutive** failures after which the mapping is deactivated. **0 (the default) disables the check.** |
-| [`MappingStatus.currentFailureCount`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/MappingStatus.java) | runtime status, shown in *Monitoring* | The current streak — see [Status and counters](#status-and-counters). |
+| [`MappingStatus.currentFailureCount`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/status/MappingStatus.java) | runtime status, shown in *Monitoring* | The current streak — see [Status and counters](#status-and-counters). |
 | `MappingStatus.errors` | runtime status | Lifetime error count — never reset by processing, purely informational. |
 
 #### The counter is a streak, not a total
@@ -442,7 +442,7 @@ Note the two counters are per different things: the poison-pill counter is **per
 
 ### Status and counters
 
-Every mapping has a [`MappingStatus`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/MappingStatus.java)
+Every mapping has a [`MappingStatus`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/status/MappingStatus.java)
 holding its runtime counters. They are the only per-mapping runtime signal the product
 exposes, so what each one counts — and when it resets — matters.
 

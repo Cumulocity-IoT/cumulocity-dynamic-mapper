@@ -40,13 +40,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MapperServiceRepresentation;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.mapping.cache.MappingCacheManager;
@@ -87,7 +87,7 @@ class MappingStatusPersistenceCompatibilityTest {
             """;
 
     @Mock private InventoryFacade inventoryApi;
-    @Mock private ConfigurationRegistry configurationRegistry;
+    @Mock private ServiceRegistry serviceRegistry;
     @Mock private MappingCacheManager cacheManager;
     @Mock private MicroserviceSubscriptionsService subscriptionsService;
     @Mock private C8YAgent c8yAgent;
@@ -96,7 +96,7 @@ class MappingStatusPersistenceCompatibilityTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        service = new MappingStatusService(inventoryApi, configurationRegistry, cacheManager,
+        service = new MappingStatusService(inventoryApi, serviceRegistry, cacheManager,
                 subscriptionsService);
 
         MapperServiceRepresentation serviceRep = new MapperServiceRepresentation();
@@ -104,9 +104,9 @@ class MappingStatusPersistenceCompatibilityTest {
         serviceRep.setMappingStatus(new ObjectMapper().readValue(PERSISTED_BY_OLDER_RELEASE,
                 new com.fasterxml.jackson.core.type.TypeReference<List<MappingStatus>>() {}));
 
-        lenient().when(configurationRegistry.getMapperServiceRepresentation(anyString()))
+        lenient().when(serviceRegistry.getMapperServiceRepresentation(anyString()))
                 .thenReturn(serviceRep);
-        lenient().when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        lenient().when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
     }
 
     private Mapping mapping() {
@@ -154,7 +154,7 @@ class MappingStatusPersistenceCompatibilityTest {
     @Test
     @DisplayName("loaded statuses are pushed back to the inventory and therefore show up in the UI")
     void oldStatusesAreReported() {
-        lenient().when(configurationRegistry.getServiceConfiguration(TENANT))
+        lenient().when(serviceRegistry.getServiceConfiguration(TENANT))
                 .thenReturn(sendingEnabled());
         lenient().when(cacheManager.containsInboundMappingByIdentifier(TENANT, "abc")).thenReturn(true);
         lenient().when(cacheManager.getInboundMappingByIdentifier(TENANT, "abc"))

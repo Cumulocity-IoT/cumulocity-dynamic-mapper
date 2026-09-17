@@ -37,7 +37,7 @@ import dynamic.mapper.connector.pulsar.MQTTServicePulsarClient;
 import dynamic.mapper.connector.pulsar.PulsarConnectorClient;
 import dynamic.mapper.connector.webhook.WebHook;
 import dynamic.mapper.connector.webhook.WebHookInternal;
-import dynamic.mapper.model.ConnectorStatusEvent;
+import dynamic.mapper.model.status.ConnectorStatusEvent;
 
 import org.springframework.stereotype.Component;
 

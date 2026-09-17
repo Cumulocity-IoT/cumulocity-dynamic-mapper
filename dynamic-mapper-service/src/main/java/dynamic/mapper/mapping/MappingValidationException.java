@@ -21,8 +21,8 @@
 
 package dynamic.mapper.mapping;
 
-import dynamic.mapper.model.ValidationError;
-import dynamic.mapper.model.ValidationIssue;
+import dynamic.mapper.model.validation.ValidationError;
+import dynamic.mapper.model.validation.ValidationIssue;
 import lombok.Getter;
 
 import java.util.List;

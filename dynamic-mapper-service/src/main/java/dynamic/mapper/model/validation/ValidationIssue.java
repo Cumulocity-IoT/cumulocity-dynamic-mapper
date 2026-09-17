@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package dynamic.mapper.model;
+package dynamic.mapper.model.validation;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

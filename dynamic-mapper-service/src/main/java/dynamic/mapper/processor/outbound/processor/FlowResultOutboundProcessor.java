@@ -31,7 +31,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.AbstractFlowResultProcessor;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.processor.outbound.serializer.SparkPlugBSerializer;

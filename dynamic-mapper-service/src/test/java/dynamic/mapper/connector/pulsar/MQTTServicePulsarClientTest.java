@@ -28,7 +28,7 @@ import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
@@ -74,7 +74,7 @@ class MQTTServicePulsarClientTest {
     private static final String TEST_PASSWORD = "test_password";
 
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
     @Mock
     private ConnectorRegistry connectorRegistry;
     @Mock
@@ -116,16 +116,16 @@ class MQTTServicePulsarClientTest {
         objectMapper = new ObjectMapper();
 
         // Setup configuration registry mocks
-        lenient().when(configurationRegistry.getMappingService()).thenReturn(mappingService);
-        lenient().when(configurationRegistry.getServiceConfigurationService()).thenReturn(serviceConfigurationService);
-        lenient().when(configurationRegistry.getConnectorConfigurationService())
+        lenient().when(serviceRegistry.getMappingService()).thenReturn(mappingService);
+        lenient().when(serviceRegistry.getServiceConfigurationService()).thenReturn(serviceConfigurationService);
+        lenient().when(serviceRegistry.getConnectorConfigurationService())
                 .thenReturn(connectorConfigurationService);
-        lenient().when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
-        lenient().when(configurationRegistry.getVirtualThreadPool()).thenReturn(virtualThreadPool);
-        lenient().when(configurationRegistry.getObjectMapper()).thenReturn(objectMapper);
-        lenient().when(configurationRegistry.getServiceConfiguration(anyString())).thenReturn(serviceConfiguration);
-        lenient().when(configurationRegistry.getMqttServicePulsarUrl()).thenReturn(TEST_SERVICE_URL);
-        lenient().when(configurationRegistry.getMicroserviceCredential(anyString()))
+        lenient().when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        lenient().when(serviceRegistry.getVirtualThreadPool()).thenReturn(virtualThreadPool);
+        lenient().when(serviceRegistry.getObjectMapper()).thenReturn(objectMapper);
+        lenient().when(serviceRegistry.getServiceConfiguration(anyString())).thenReturn(serviceConfiguration);
+        lenient().when(serviceRegistry.getMqttServicePulsarUrl()).thenReturn(TEST_SERVICE_URL);
+        lenient().when(serviceRegistry.getMicroserviceCredential(anyString()))
                 .thenReturn(microserviceCredentials);
 
         // Setup credentials
@@ -186,7 +186,7 @@ class MQTTServicePulsarClientTest {
     @Test
     void testFullConstructor() {
         mqttServicePulsarClient = new MQTTServicePulsarClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -340,7 +340,7 @@ class MQTTServicePulsarClientTest {
         when(connectorConfiguration.getEnabled()).thenReturn(false);
 
         mqttServicePulsarClient = spy(new MQTTServicePulsarClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -359,7 +359,7 @@ class MQTTServicePulsarClientTest {
         setupMocksForPublish();
 
         mqttServicePulsarClient = new MQTTServicePulsarClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -388,7 +388,7 @@ class MQTTServicePulsarClientTest {
         setupMocksForPublish();
 
         mqttServicePulsarClient = new MQTTServicePulsarClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -417,7 +417,7 @@ class MQTTServicePulsarClientTest {
     @Test
     void testPublishMEAO_ClientClosed() {
         mqttServicePulsarClient = spy(new MQTTServicePulsarClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -440,7 +440,7 @@ class MQTTServicePulsarClientTest {
     void testSupportsWildcardInTopic() {
         // Use the full constructor to initialize connectorConfiguration
         mqttServicePulsarClient = new MQTTServicePulsarClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -466,7 +466,7 @@ class MQTTServicePulsarClientTest {
     @Test
     void testIsConnected() {
         mqttServicePulsarClient = new MQTTServicePulsarClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -483,7 +483,7 @@ class MQTTServicePulsarClientTest {
     @Test
     void testClose() {
         mqttServicePulsarClient = spy(new MQTTServicePulsarClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -550,7 +550,7 @@ class MQTTServicePulsarClientTest {
     @Test
     void testConfigureAuthentication_Basic() throws Exception {
         mqttServicePulsarClient = new MQTTServicePulsarClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -595,7 +595,7 @@ class MQTTServicePulsarClientTest {
     @Test
     void testConnectorSpecificHousekeeping() throws Exception {
         mqttServicePulsarClient = new MQTTServicePulsarClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,

@@ -62,7 +62,7 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.processor.inbound.processor.JSONataInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SubstitutionResultInboundProcessor;
@@ -120,7 +120,7 @@ class MappingInboundExecutionIntegrationTest {
 
         // Create processors
         jsonataProcessor = new JSONataInboundProcessor(mappingService);
-        // configurationRegistry is not exercised by these tests (no inventory-filter mappings)
+        // serviceRegistry is not exercised by these tests (no inventory-filter mappings)
         substitutionProcessor = new SubstitutionResultInboundProcessor(c8yAgent, mappingService, null, null);
 
         // Setup common mocks

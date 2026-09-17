@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.model;
+package dynamic.mapper.model.device;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;

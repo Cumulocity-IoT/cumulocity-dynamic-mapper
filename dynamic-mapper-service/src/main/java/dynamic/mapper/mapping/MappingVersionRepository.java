@@ -24,10 +24,10 @@ package dynamic.mapper.mapping;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 
-import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.model.MappingVersion;
-import dynamic.mapper.model.MappingVersionRepresentation;
-import dynamic.mapper.model.SemVer;
+import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.model.version.MappingVersion;
+import dynamic.mapper.model.version.MappingVersionRepresentation;
+import dynamic.mapper.model.version.SemVer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
@@ -51,10 +51,10 @@ import java.util.stream.StreamSupport;
 @Repository
 public class MappingVersionRepository {
 
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
 
-    public MappingVersionRepository(ConfigurationRegistry configurationRegistry) {
-        this.configurationRegistry = configurationRegistry;
+    public MappingVersionRepository(ServiceRegistry serviceRegistry) {
+        this.serviceRegistry = serviceRegistry;
     }
 
     /**
@@ -114,10 +114,10 @@ public class MappingVersionRepository {
     // ========== Conversion helpers ==========
 
     public ManagedObjectRepresentation toManagedObject(MappingVersionRepresentation rep) {
-        return configurationRegistry.getObjectMapper().convertValue(rep, ManagedObjectRepresentation.class);
+        return serviceRegistry.getObjectMapper().convertValue(rep, ManagedObjectRepresentation.class);
     }
 
     private MappingVersionRepresentation toRepresentation(ManagedObjectRepresentation mor) {
-        return configurationRegistry.getObjectMapper().convertValue(mor, MappingVersionRepresentation.class);
+        return serviceRegistry.getObjectMapper().convertValue(mor, MappingVersionRepresentation.class);
     }
 }

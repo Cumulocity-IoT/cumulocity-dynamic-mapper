@@ -34,9 +34,9 @@ import org.springframework.stereotype.Component;
 
 /**
  * Thread-safe device identity resolution: create-or-lookup an implicit C8Y
- * device given an external ID.  Extracted from {@link ConfigurationRegistry} so
- * that {@code ConfigurationRegistry} no longer holds a direct reference to
- * {@link C8YAgent}, breaking the {@code ConfigurationRegistry ↔ C8YAgent}
+ * device given an external ID.  Extracted from {@link ServiceRegistry} so
+ * that {@code ServiceRegistry} no longer holds a direct reference to
+ * {@link C8YAgent}, breaking the {@code ServiceRegistry ↔ C8YAgent}
  * circular dependency.
  */
 @Slf4j

@@ -24,9 +24,9 @@ package dynamic.mapper.mapping;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
-import dynamic.mapper.model.DeviceToClientMapRepresentation;
+import dynamic.mapper.model.device.DeviceToClientMapRepresentation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -43,14 +43,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DeviceToClientMapService {
 
     private final InventoryFacade inventoryApi;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
     private final MicroserviceSubscriptionsService subscriptionsService;
 
     /**
      * Sends the device-to-client map to inventory
      */
     public void sendToInventory(String tenant) {
-        Map<String, String> clientToDeviceMap = configurationRegistry.getAllClientRelations(tenant);
+        Map<String, String> clientToDeviceMap = serviceRegistry.getAllClientRelations(tenant);
         
         if (clientToDeviceMap == null) {
             log.debug("{} - No device-to-client map to send", tenant);
@@ -58,7 +58,7 @@ public class DeviceToClientMapService {
         }
 
         subscriptionsService.runForTenant(tenant, () -> {
-            String deviceToClientMapId = configurationRegistry.getDeviceToClientMapId(tenant);
+            String deviceToClientMapId = serviceRegistry.getDeviceToClientMapId(tenant);
 
             log.debug("{} - Sending device-to-client map with {} entries", tenant, clientToDeviceMap.size());
 

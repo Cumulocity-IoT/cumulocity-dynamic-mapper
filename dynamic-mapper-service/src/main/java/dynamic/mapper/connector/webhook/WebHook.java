@@ -34,9 +34,9 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
-import dynamic.mapper.model.ConnectorStatus;
+import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
@@ -101,14 +101,14 @@ public class WebHook extends AConnectorClient {
     /**
      * Full constructor with dependencies
      */
-    public WebHook(ConfigurationRegistry configurationRegistry,
+    public WebHook(ServiceRegistry serviceRegistry,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             CamelDispatcherInbound dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
         this();
-        wireFromRegistry(configurationRegistry, connectorRegistry, connectorConfiguration,
+        wireFromRegistry(serviceRegistry, connectorRegistry, connectorConfiguration,
                 dispatcher, additionalSubscriptionIdTest, tenant);
 
         // Configure for Cumulocity internal if needed
@@ -133,7 +133,7 @@ public class WebHook extends AConnectorClient {
         log.info("{} - Connector {} - Cumulocity internal: {}", tenant, connectorName, cumulocityInternal);
 
         if (cumulocityInternal) {
-            MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
+            MicroserviceCredentials msc = serviceRegistry.getMicroserviceCredential(tenant);
             String user = String.format("%s/%s", tenant, msc.getUsername());
 
             Map<String, ConnectorProperty> props = connectorSpecification.getProperties();
@@ -762,7 +762,7 @@ public class WebHook extends AConnectorClient {
         }
 
         if (isCumulocityInternal()) {
-            MicroserviceCredentials msc = configurationRegistry.getMicroserviceCredential(tenant);
+            MicroserviceCredentials msc = serviceRegistry.getMicroserviceCredential(tenant);
             if (msc == null || StringUtils.isEmpty(msc.getUsername()) || StringUtils.isEmpty(msc.getPassword())) {
                 return false;
             }

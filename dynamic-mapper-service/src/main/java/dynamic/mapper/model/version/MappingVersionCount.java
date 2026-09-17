@@ -19,11 +19,23 @@
  *
  */
 
-package dynamic.mapper.model;
+package dynamic.mapper.model.version;
 
-public enum ExtensionStatus {
-    COMPLETE,
-    PARTIALLY,
-    NOT_LOADED,
-    UNKNOWN
+import dynamic.mapper.model.Mapping;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
+/**
+ * Lightweight projection returned by the bulk version-count endpoint.
+ * Contains only the mapping MO id and the number of published versions,
+ * avoiding the cost of loading full version records per mapping line.
+ */
+@Schema(description = "Mapping id with its published version count")
+public record MappingVersionCount(
+
+        @Schema(description = "Managed-object id of the mapping", example = "34573838974")
+        String id,
+
+        @Schema(description = "Number of published (non-draft) versions", example = "3")
+        long versionCount) {
 }

@@ -21,6 +21,8 @@
 
 package dynamic.mapper.model;
 
+import dynamic.mapper.model.validation.ResolveException;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

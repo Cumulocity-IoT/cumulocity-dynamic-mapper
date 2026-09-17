@@ -32,9 +32,9 @@ import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptio
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
 import com.cumulocity.sdk.client.messaging.notifications.PagedNotificationSubscriptionCollectionRepresentation;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
-import dynamic.mapper.model.LoggingEventType;
+import dynamic.mapper.model.status.LoggingEventType;
 import dynamic.mapper.notification.Utils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,7 +71,7 @@ class SubscriptionManagerTest {
     @Mock
     private MqttPushManager mqttPushManager;
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
 
     private ExecutorService virtualThreadPool;
     private SubscriptionManager subscriptionManager;
@@ -95,7 +95,7 @@ class SubscriptionManagerTest {
                 connectionManager,
                 mqttPushManager,
                 virtualThreadPool,
-                configurationRegistry);
+                serviceRegistry);
     }
 
     // -------------------------------------------------------------------------
@@ -331,7 +331,7 @@ class SubscriptionManagerTest {
         assertThrows(IllegalArgumentException.class,
                 () -> subscriptionManager.resyncTypeSubscription("t1", "myType"));
 
-        verifyNoInteractions(configurationRegistry);
+        verifyNoInteractions(serviceRegistry);
     }
 
     @Test
@@ -370,7 +370,7 @@ class SubscriptionManagerTest {
         when(subscriptionAPI.subscribe(any())).thenReturn(stubNsr("device-2"));
 
         C8YAgent mockC8yAgent = mock(C8YAgent.class);
-        when(configurationRegistry.getC8yAgent()).thenReturn(mockC8yAgent);
+        when(serviceRegistry.getC8yAgent()).thenReturn(mockC8yAgent);
         doAnswer(inv -> {
             Consumer<ManagedObjectRepresentation> consumer = inv.getArgument(3);
             consumer.accept(morWithId("device-1")); // already dynamically subscribed -> should be skipped
@@ -410,7 +410,7 @@ class SubscriptionManagerTest {
         when(subscriptionAPI.subscribe(any())).thenThrow(new SDKException(500, "C8Y unavailable"));
 
         C8YAgent mockC8yAgent = mock(C8YAgent.class);
-        when(configurationRegistry.getC8yAgent()).thenReturn(mockC8yAgent);
+        when(serviceRegistry.getC8yAgent()).thenReturn(mockC8yAgent);
         doAnswer(inv -> {
             Consumer<ManagedObjectRepresentation> consumer = inv.getArgument(3);
             consumer.accept(morWithId("device-1"));

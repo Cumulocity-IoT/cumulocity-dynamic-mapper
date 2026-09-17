@@ -55,7 +55,7 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TransformationType;
@@ -87,7 +87,7 @@ import lombok.extern.slf4j.Slf4j;
 class CamelPipelineInboundIntegrationTest {
 
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
 
     @Mock
     private MappingService mappingService;
@@ -124,11 +124,11 @@ class CamelPipelineInboundIntegrationTest {
         camelContext = new DefaultCamelContext();
         virtualThreadPool = Executors.newVirtualThreadPerTaskExecutor();
 
-        // Setup ConfigurationRegistry mocks
-        when(configurationRegistry.getCamelContext()).thenReturn(camelContext);
-        when(configurationRegistry.getVirtualThreadPool()).thenReturn(virtualThreadPool);
-        when(configurationRegistry.getMappingService()).thenReturn(mappingService);
-        when(configurationRegistry.getServiceConfiguration(TEST_TENANT)).thenReturn(serviceConfiguration);
+        // Setup ServiceRegistry mocks
+        when(serviceRegistry.getCamelContext()).thenReturn(camelContext);
+        when(serviceRegistry.getVirtualThreadPool()).thenReturn(virtualThreadPool);
+        when(serviceRegistry.getMappingService()).thenReturn(mappingService);
+        when(serviceRegistry.getServiceConfiguration(TEST_TENANT)).thenReturn(serviceConfiguration);
 
         // Setup ServiceConfiguration mocks
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
@@ -153,7 +153,7 @@ class CamelPipelineInboundIntegrationTest {
         // the dispatcher entry point.
 
         // Create dispatcher
-        dispatcher = new CamelDispatcherInbound(configurationRegistry, connectorClient);
+        dispatcher = new CamelDispatcherInbound(serviceRegistry, connectorClient);
 
         log.info("✅ Camel pipeline test setup completed");
     }

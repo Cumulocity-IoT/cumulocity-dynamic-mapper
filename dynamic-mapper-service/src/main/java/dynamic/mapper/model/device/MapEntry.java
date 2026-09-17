@@ -18,7 +18,7 @@
  *  @authors Christof Strack, Stefan Witschel
  *
  */
-package dynamic.mapper.model;
+package dynamic.mapper.model.device;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

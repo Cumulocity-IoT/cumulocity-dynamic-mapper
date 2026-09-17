@@ -28,14 +28,14 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.model.Device;
+import dynamic.mapper.model.device.Device;
 import dynamic.mapper.exception.OutboundMappingDisabledException;
 import dynamic.mapper.exception.DeviceNotFoundException;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -62,7 +62,7 @@ public class NotificationSubscriptionController {
 
     private final C8YAgent c8yAgent;
     private final ContextService<UserCredentials> contextService;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
     private final ServiceConfigurationService serviceConfigurationService;
     private final NotificationSubscriptionService subscriptionService;
 
@@ -147,9 +147,9 @@ public class NotificationSubscriptionController {
             // returned (backward compatible) — required by consumers that need the complete set
             // (e.g. the "manage subscriptions" drawers, which re-commit the full desired set).
             NotificationSubscriptionResponse response = (pageSize == null)
-                    ? configurationRegistry.getNotificationSubscriber()
+                    ? serviceRegistry.getNotificationSubscriber()
                             .getSubscriptionsDevices(tenant, null, subscription)
-                    : configurationRegistry.getNotificationSubscriber()
+                    : serviceRegistry.getNotificationSubscriber()
                             .getSubscriptionsDevices(tenant, null, subscription,
                                     currentPage == null ? 1 : currentPage, pageSize, withTotalPages, search);
             return ResponseEntity.ok(response);
@@ -172,7 +172,7 @@ public class NotificationSubscriptionController {
                 throw new DeviceNotFoundException("Device with id " + deviceId + " not found");
             }
 
-            configurationRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant, mor, subscription);
+            serviceRegistry.getNotificationSubscriber().unsubscribeDeviceAndDisconnect(tenant, mor, subscription);
             log.info("{} - Successfully deleted subscription for device {}", tenant, deviceId);
             return ResponseEntity.ok().build();
         } catch (DeviceNotFoundException e) {
@@ -216,9 +216,9 @@ public class NotificationSubscriptionController {
             // Paging is opt-in (see getSubscriptions). The group list currently feeds the manage
             // drawers/enrichment, which need the full set, so the UI calls this without paging.
             NotificationSubscriptionResponse response = (pageSize == null)
-                    ? configurationRegistry.getNotificationSubscriber()
+                    ? serviceRegistry.getNotificationSubscriber()
                             .getSubscriptionsByDeviceGroup(tenant)
-                    : configurationRegistry.getNotificationSubscriber()
+                    : serviceRegistry.getNotificationSubscriber()
                             .getSubscriptionsByDeviceGroup(tenant,
                                     currentPage == null ? 1 : currentPage, pageSize, withTotalPages);
             return ResponseEntity.ok(response);
@@ -259,7 +259,7 @@ public class NotificationSubscriptionController {
         validateOutboundMappingEnabled(tenant);
 
         try {
-            NotificationSubscriptionResponse response = configurationRegistry.getNotificationSubscriber()
+            NotificationSubscriptionResponse response = serviceRegistry.getNotificationSubscriber()
                     .getSubscriptionsByDeviceType(tenant);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -281,9 +281,9 @@ public class NotificationSubscriptionController {
             // Ensure management WebSocket is up — it drives type-based device discovery.
             // Device WebSocket clients are not needed here (type subscription only changes the C8Y filter).
             log.info("{} - Ensuring management client is initialized for type subscription", tenant);
-            configurationRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
+            serviceRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
 
-            NotificationSubscriptionResponse response = configurationRegistry
+            NotificationSubscriptionResponse response = serviceRegistry
                     .getNotificationSubscriber().updateSubscriptionByType(tenant, request.getTypes());
             log.info("{} - Successfully updated type subscription", tenant);
             return ResponseEntity.ok(response);
@@ -309,7 +309,7 @@ public class NotificationSubscriptionController {
         validateOutboundMappingEnabled(tenant);
 
         try {
-            configurationRegistry.getNotificationSubscriber().resyncTypeSubscription(tenant, type);
+            serviceRegistry.getNotificationSubscriber().resyncTypeSubscription(tenant, type);
             log.info("{} - Resync accepted for type {}", tenant, type);
             return ResponseEntity.status(HttpStatus.ACCEPTED).build();
         } catch (IllegalArgumentException e) {

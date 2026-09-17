@@ -19,7 +19,9 @@
  *
  */
 
-package dynamic.mapper.model;
+package dynamic.mapper.model.validation;
+
+import dynamic.mapper.model.Mapping;
 
 import lombok.Getter;
 

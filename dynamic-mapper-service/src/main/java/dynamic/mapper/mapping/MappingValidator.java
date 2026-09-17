@@ -49,6 +49,8 @@ import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.*;
+import dynamic.mapper.model.validation.ValidationError;
+import dynamic.mapper.model.validation.ValidationIssue;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TransformationType;
 import lombok.RequiredArgsConstructor;

@@ -27,8 +27,8 @@ import java.util.Map;
 
 import org.apache.camel.Exchange;
 
-import dynamic.mapper.model.Extension;
-import dynamic.mapper.model.ExtensionEntry;
+import dynamic.mapper.model.extension.Extension;
+import dynamic.mapper.model.extension.ExtensionEntry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.runtime.ProcessingContext;

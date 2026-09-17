@@ -44,8 +44,8 @@ import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.ValidationError;
-import dynamic.mapper.model.ValidationIssue;
+import dynamic.mapper.model.validation.ValidationError;
+import dynamic.mapper.model.validation.ValidationIssue;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TransformationType;
 

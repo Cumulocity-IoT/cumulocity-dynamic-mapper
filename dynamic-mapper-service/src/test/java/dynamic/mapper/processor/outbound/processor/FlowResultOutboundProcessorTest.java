@@ -53,7 +53,7 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.CumulocityType;

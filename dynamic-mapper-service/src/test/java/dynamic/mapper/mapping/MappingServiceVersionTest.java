@@ -23,13 +23,13 @@ package dynamic.mapper.mapping;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingVersion;
-import dynamic.mapper.model.MappingVersionCount;
+import dynamic.mapper.model.version.MappingVersion;
+import dynamic.mapper.model.version.MappingVersionCount;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TransformationType;
@@ -72,7 +72,7 @@ class MappingServiceVersionTest {
     @Mock private MappingResolverService resolverService;
     @Mock private DeploymentMapService deploymentMapService;
     @Mock private DeviceToClientMapService deviceToClientMapService;
-    @Mock private ConfigurationRegistry configurationRegistry;
+    @Mock private ServiceRegistry serviceRegistry;
     @Mock private MicroserviceSubscriptionsService subscriptionsService;
     @Mock private MappingValidator mappingValidator;
     @Mock private FlowStateStore flowStateStore;
@@ -83,7 +83,7 @@ class MappingServiceVersionTest {
     @BeforeEach
     void setUp() {
         service = spy(new MappingService(inventoryApi, mappingRepository, cacheManager, statusService,
-                resolverService, deploymentMapService, deviceToClientMapService, configurationRegistry,
+                resolverService, deploymentMapService, deviceToClientMapService, serviceRegistry,
                 subscriptionsService, mappingValidator, flowStateStore, mappingVersionService));
     }
 

@@ -20,11 +20,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.IdentityResolutionService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.ProcessingContext;
@@ -40,7 +40,7 @@ public class SendInboundProcessor extends BaseProcessor {
 
     private final C8YAgent c8yAgent;
 
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
 
     private final IdentityResolutionService identityResolutionService;
 
@@ -48,11 +48,11 @@ public class SendInboundProcessor extends BaseProcessor {
 
     private final MappingService mappingService;
 
-    public SendInboundProcessor(C8YAgent c8yAgent, ConfigurationRegistry configurationRegistry,
+    public SendInboundProcessor(C8YAgent c8yAgent, ServiceRegistry serviceRegistry,
             IdentityResolutionService identityResolutionService, ObjectMapper objectMapper,
             MappingService mappingService) {
         this.c8yAgent = c8yAgent;
-        this.configurationRegistry = configurationRegistry;
+        this.serviceRegistry = serviceRegistry;
         this.identityResolutionService = identityResolutionService;
         this.objectMapper = objectMapper;
         this.mappingService = mappingService;
@@ -294,7 +294,7 @@ public class SendInboundProcessor extends BaseProcessor {
 
                     // Cache the mapping of device to client ID
                     if (context.getClientId() != null) {
-                        configurationRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
+                        serviceRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                                 request.getSourceId());
                     }
                 }
@@ -348,7 +348,7 @@ public class SendInboundProcessor extends BaseProcessor {
 
                     // Cache the mapping of device to client ID
                     if (context.getClientId() != null) {
-                        configurationRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
+                        serviceRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                                 request.getSourceId());
                     }
                 }

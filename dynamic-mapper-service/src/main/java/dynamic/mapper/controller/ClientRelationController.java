@@ -25,13 +25,13 @@ import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.model.MapEntry;
+import dynamic.mapper.model.device.MapEntry;
 import dynamic.mapper.exception.OutboundMappingDisabledException;
 import dynamic.mapper.exception.DeviceNotFoundException;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -58,7 +58,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class ClientRelationController {
 
     private final ContextService<UserCredentials> contextService;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
     private final ServiceConfigurationService serviceConfigurationService;
 
     private static final String OUTBOUND_MAPPING_DISABLED_MESSAGE = "Outbound relation is disabled!";
@@ -84,7 +84,7 @@ public class ClientRelationController {
         try {
 
             // Add client relation
-            configurationRegistry.addOrUpdateClientRelations(tenant, clientId, deviceIds);
+            serviceRegistry.addOrUpdateClientRelations(tenant, clientId, deviceIds);
 
             log.info("{} - Successfully updated client relations: client {}",
                     tenant, clientId, deviceIds);
@@ -118,7 +118,7 @@ public class ClientRelationController {
         validateOutboundMappingEnabled(tenant);
 
         try {
-            Map<String, String> allRelations = configurationRegistry.getAllClientRelations(tenant);
+            Map<String, String> allRelations = serviceRegistry.getAllClientRelations(tenant);
 
             // Convert Map to List of MapEntry
             List<MapEntry> relationsList = allRelations.entrySet().stream()
@@ -150,7 +150,7 @@ public class ClientRelationController {
         validateOutboundMappingEnabled(tenant);
 
         try {
-            List<String> devices = configurationRegistry.getDevicesForClient(tenant, clientId);
+            List<String> devices = serviceRegistry.getDevicesForClient(tenant, clientId);
 
             if (devices.isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -189,14 +189,14 @@ public class ClientRelationController {
 
         try {
             // Check if client mapping exists before attempting to remove
-            String existingClientId = configurationRegistry.resolveDeviceToClient(tenant, deviceId);
+            String existingClientId = serviceRegistry.resolveDeviceToClient(tenant, deviceId);
             if (existingClientId == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "No client mapping found for device " + deviceId);
             }
 
             // Remove client mapping for this specific device
-            configurationRegistry.removeClientRelation(tenant, deviceId);
+            serviceRegistry.removeClientRelation(tenant, deviceId);
 
             log.info("{} - Successfully removed client mapping: device {} (was mapped to client {})",
                     tenant, deviceId, existingClientId);
@@ -234,7 +234,7 @@ public class ClientRelationController {
 
         try {
             // Get devices mapped to this client before removing
-            List<String> devicesForClient = configurationRegistry.getDevicesForClient(tenant, clientId);
+            List<String> devicesForClient = serviceRegistry.getDevicesForClient(tenant, clientId);
 
             if (devicesForClient.isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -242,7 +242,7 @@ public class ClientRelationController {
             }
 
             // Remove all mappings for this client
-            configurationRegistry.removeClientById(tenant, clientId);
+            serviceRegistry.removeClientById(tenant, clientId);
 
             log.info("{} - Successfully removed all mappings for client {}: {} devices affected",
                     tenant, clientId, devicesForClient.size());
@@ -277,7 +277,7 @@ public class ClientRelationController {
 
         try {
             // Resolve client mapping
-            String clientId = configurationRegistry.resolveDeviceToClient(tenant, deviceId);
+            String clientId = serviceRegistry.resolveDeviceToClient(tenant, deviceId);
             if (clientId == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "No client mapping found for device " + deviceId);
@@ -314,7 +314,7 @@ public class ClientRelationController {
         validateOutboundMappingEnabled(tenant);
 
         try {
-            List<String> allClients = configurationRegistry.getAllClients(tenant);
+            List<String> allClients = serviceRegistry.getAllClients(tenant);
 
             Map<String, Object> response = Map.of(
                     "clientCount", allClients.size(),
@@ -343,8 +343,8 @@ public class ClientRelationController {
         validateOutboundMappingEnabled(tenant);
 
         try {
-            int mappingCount = configurationRegistry.getAllClientRelations(tenant).size();
-            configurationRegistry.clearCacheDeviceToClient(tenant);
+            int mappingCount = serviceRegistry.getAllClientRelations(tenant).size();
+            serviceRegistry.clearCacheDeviceToClient(tenant);
 
             log.info("{} - Successfully cleared {} client relations", tenant, mappingCount);
 

@@ -34,7 +34,7 @@ import org.apache.camel.Exchange;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.model.RepairStrategy;

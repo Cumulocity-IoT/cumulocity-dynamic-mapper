@@ -25,7 +25,7 @@ import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingTreeNode;
-import dynamic.mapper.model.ResolveException;
+import dynamic.mapper.model.validation.ResolveException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

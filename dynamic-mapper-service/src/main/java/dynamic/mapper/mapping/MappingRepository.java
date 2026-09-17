@@ -23,9 +23,9 @@ package dynamic.mapper.mapping;
 
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.model.LoggingEventType;
+import dynamic.mapper.model.status.LoggingEventType;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingRepresentation;
 import dynamic.mapper.model.MappingType;
@@ -49,7 +49,7 @@ import java.util.stream.StreamSupport;
 @Repository
 public class MappingRepository {
 
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
     private final MappingService mappingService;
 
     // Tracks moIds for which a loading warning has already been logged this session,
@@ -57,9 +57,9 @@ public class MappingRepository {
     // Structure: <"tenant:moId">
     private final Set<String> reportedLoadingWarnings = ConcurrentHashMap.newKeySet();
 
-    public MappingRepository(ConfigurationRegistry configurationRegistry,
+    public MappingRepository(ServiceRegistry serviceRegistry,
                             @Lazy MappingService mappingService) {
-        this.configurationRegistry = configurationRegistry;
+        this.serviceRegistry = serviceRegistry;
         this.mappingService = mappingService;
     }
 
@@ -334,7 +334,7 @@ public class MappingRepository {
             mappingService.updateMapping(tenant, mapping, true, true);
             switch (migration.notice()) {
                 case LOADING_ERROR -> mappingService.sendMappingLoadingError(tenant, mo, migration.message());
-                case OPERATION_EVENT -> configurationRegistry.getC8yAgent().createLoggingEvent(
+                case OPERATION_EVENT -> serviceRegistry.getC8yAgent().createLoggingEvent(
                         migration.message(), LoggingEventType.MAPPING_MIGRATION_EVENT_TYPE, DateTime.now(), tenant, null);
             }
         } catch (Exception updateEx) {
@@ -409,11 +409,11 @@ public class MappingRepository {
     // Helper methods - these are used by MappingService for conversion
 
     public ManagedObjectRepresentation toManagedObject(MappingRepresentation mr) {
-        return configurationRegistry.getObjectMapper().convertValue(mr, ManagedObjectRepresentation.class);
+        return serviceRegistry.getObjectMapper().convertValue(mr, ManagedObjectRepresentation.class);
     }
 
     private MappingRepresentation toMappingObject(ManagedObjectRepresentation mor) {
-        return configurationRegistry.getObjectMapper().convertValue(mor, MappingRepresentation.class);
+        return serviceRegistry.getObjectMapper().convertValue(mor, MappingRepresentation.class);
     }
 
 }

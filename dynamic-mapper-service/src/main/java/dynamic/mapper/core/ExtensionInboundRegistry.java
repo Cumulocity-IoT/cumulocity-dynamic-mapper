@@ -6,9 +6,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.stereotype.Service;
 
-import dynamic.mapper.model.Extension;
-import dynamic.mapper.model.ExtensionEntry;
-import dynamic.mapper.model.ExtensionStatus;
+import dynamic.mapper.model.extension.Extension;
+import dynamic.mapper.model.extension.ExtensionEntry;
+import dynamic.mapper.model.extension.ExtensionStatus;
 import lombok.extern.slf4j.Slf4j;
 
 @Service

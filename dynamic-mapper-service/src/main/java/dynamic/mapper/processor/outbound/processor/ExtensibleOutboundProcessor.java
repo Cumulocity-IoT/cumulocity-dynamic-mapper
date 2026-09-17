@@ -26,9 +26,9 @@ import dynamic.mapper.processor.util.CamelHeaders;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.model.ExtensionEntry;
+import dynamic.mapper.model.extension.ExtensionEntry;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.AbstractExtensibleProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;

@@ -25,9 +25,9 @@ import org.springframework.stereotype.Component;
 
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.model.ExtensionEntry;
+import dynamic.mapper.model.extension.ExtensionEntry;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.AbstractExtensibleProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;

@@ -20,8 +20,8 @@ package dynamic.mapper.mapping;
 
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Substitution;
-import dynamic.mapper.model.ValidationError;
-import dynamic.mapper.model.ValidationIssue;
+import dynamic.mapper.model.validation.ValidationError;
+import dynamic.mapper.model.validation.ValidationIssue;
 import dynamic.mapper.model.RepairStrategy;
 import dynamic.mapper.model.TransformationType;
 import org.junit.jupiter.api.Test;

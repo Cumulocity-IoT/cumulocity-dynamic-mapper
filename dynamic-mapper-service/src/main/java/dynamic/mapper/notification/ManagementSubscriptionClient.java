@@ -29,7 +29,7 @@ import dynamic.mapper.notification.websocket.NotificationCallback;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.notification.task.UpdateSubscriptionDeviceGroupTask;
 import dynamic.mapper.notification.task.UpdateSubscriptionDeviceTypeTask;
 import dynamic.mapper.notification.websocket.Notification;
@@ -49,15 +49,15 @@ public class ManagementSubscriptionClient implements NotificationCallback {
 
     private final String tenant;
     private final ExecutorService virtualThreadPool;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
     private final NotificationSubscriber notificationSubscriber;
     private final GroupCacheManager groupCacheManager;
     
-    public ManagementSubscriptionClient(ConfigurationRegistry configurationRegistry, String tenant) {
+    public ManagementSubscriptionClient(ServiceRegistry serviceRegistry, String tenant) {
         this.tenant = tenant;
-        this.configurationRegistry = configurationRegistry;
-        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
-        this.notificationSubscriber = configurationRegistry.getNotificationSubscriber();
+        this.serviceRegistry = serviceRegistry;
+        this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
+        this.notificationSubscriber = serviceRegistry.getNotificationSubscriber();
         this.groupCacheManager = new GroupCacheManager(tenant);
         
         log.info("{} - ManagementSubscriptionClient initialized", tenant);
@@ -105,7 +105,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
 
         virtualThreadPool.submit(
             new UpdateSubscriptionDeviceGroupTask(
-                configurationRegistry,
+                serviceRegistry,
                 message,
                 groupCacheManager
             )
@@ -121,7 +121,7 @@ public class ManagementSubscriptionClient implements NotificationCallback {
         log.debug("{} - Handling device creation for: {}", notificationTenant, message.getSourceId());
 
         virtualThreadPool.submit(
-            new UpdateSubscriptionDeviceTypeTask(configurationRegistry, message)
+            new UpdateSubscriptionDeviceTypeTask(serviceRegistry, message)
         );
 
         return ProcessingResultWrapper.builder()

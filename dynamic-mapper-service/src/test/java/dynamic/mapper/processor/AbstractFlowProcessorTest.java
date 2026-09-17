@@ -325,7 +325,7 @@ class AbstractFlowProcessorTest {
 
     @Test
     void testLoadSharedCodeWithValidCode() {
-        // Given - Create cached Source object (simulating ConfigurationRegistry behavior)
+        // Given - Create cached Source object (simulating ServiceRegistry behavior)
         String sharedJsCode = "var sharedValue = 'shared';";
         Source sharedSource = Source.newBuilder("js", sharedJsCode, "sharedCode.js")
                 .cached(true)

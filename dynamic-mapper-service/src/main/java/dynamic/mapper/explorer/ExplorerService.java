@@ -27,9 +27,9 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
-import dynamic.mapper.model.Device;
+import dynamic.mapper.model.device.Device;
 import dynamic.mapper.explorer.ExplorerMessage;
 import dynamic.mapper.explorer.ExplorerSession;
 import dynamic.mapper.notification.NotificationSubscriber;
@@ -73,18 +73,18 @@ public class ExplorerService {
     static final int DEFAULT_MAX_MESSAGES = 50;
 
     private final ConnectorRegistry connectorRegistry;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
     private final NotificationSubscriber notificationSubscriber;
     private final C8YAgent c8yAgent;
     private final DeviceDiscoveryService deviceDiscoveryService;
 
     public ExplorerService(ConnectorRegistry connectorRegistry,
-                            ConfigurationRegistry configurationRegistry,
+                            ServiceRegistry serviceRegistry,
                             NotificationSubscriber notificationSubscriber,
                             C8YAgent c8yAgent,
                             DeviceDiscoveryService deviceDiscoveryService) {
         this.connectorRegistry = connectorRegistry;
-        this.configurationRegistry = configurationRegistry;
+        this.serviceRegistry = serviceRegistry;
         this.notificationSubscriber = notificationSubscriber;
         this.c8yAgent = c8yAgent;
         this.deviceDiscoveryService = deviceDiscoveryService;
@@ -438,7 +438,7 @@ public class ExplorerService {
     // -------------------------------------------------------------------------
 
     private long resolveSessionTtlMs(String tenant) {
-        ServiceConfiguration config = configurationRegistry.getServiceConfiguration(tenant);
+        ServiceConfiguration config = serviceRegistry.getServiceConfiguration(tenant);
         Integer minutes = config != null ? config.getExplorerSessionTTLMinutes() : null;
         return (minutes != null && minutes > 0) ? minutes * 60_000L : SESSION_TTL_MS;
     }

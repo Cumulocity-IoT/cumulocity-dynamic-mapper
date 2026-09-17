@@ -24,12 +24,12 @@ package dynamic.mapper.mapping.status;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.mapping.cache.MappingCacheManager;
@@ -58,7 +58,7 @@ class MappingStatusServiceFailureCountTest {
     private static final String IDENTIFIER = "abc";
 
     @Mock private InventoryFacade inventoryApi;
-    @Mock private ConfigurationRegistry configurationRegistry;
+    @Mock private ServiceRegistry serviceRegistry;
     @Mock private MappingCacheManager cacheManager;
     @Mock private MicroserviceSubscriptionsService subscriptionsService;
     @Mock private C8YAgent c8yAgent;
@@ -67,9 +67,9 @@ class MappingStatusServiceFailureCountTest {
 
     @BeforeEach
     void setUp() {
-        service = new MappingStatusService(inventoryApi, configurationRegistry, cacheManager, subscriptionsService);
-        lenient().when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
-        lenient().when(configurationRegistry.getMapperServiceRepresentation(anyString()))
+        service = new MappingStatusService(inventoryApi, serviceRegistry, cacheManager, subscriptionsService);
+        lenient().when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        lenient().when(serviceRegistry.getMapperServiceRepresentation(anyString()))
                 .thenReturn(mock(dynamic.mapper.model.MapperServiceRepresentation.class));
     }
 

@@ -47,7 +47,7 @@ Four types moved `processor/model` → `model`. All four are persisted fields of
 
 `model/` → `processor/model` is now **zero imports**.
 
-One outbound edge remains and is deliberate: [`ExtensionEntry`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/ExtensionEntry.java)
+One outbound edge remains and is deliberate: [`ExtensionEntry`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/extension/ExtensionEntry.java)
 imports the `processor.extension` SPI interfaces. This is **not** a cycle — `processor/extension`
 never imports `model`. It is still a smell (a model class holding a live plugin instance) but was
 out of scope.

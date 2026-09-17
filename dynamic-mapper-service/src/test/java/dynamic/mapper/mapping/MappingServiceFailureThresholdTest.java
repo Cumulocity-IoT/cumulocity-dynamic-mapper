@@ -25,12 +25,12 @@ import com.cumulocity.microservice.subscription.service.MicroserviceSubscription
 
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.processor.flow.FlowStateStore;
@@ -71,7 +71,7 @@ class MappingServiceFailureThresholdTest {
     @Mock private MappingResolverService resolverService;
     @Mock private DeploymentMapService deploymentMapService;
     @Mock private DeviceToClientMapService deviceToClientMapService;
-    @Mock private ConfigurationRegistry configurationRegistry;
+    @Mock private ServiceRegistry serviceRegistry;
     @Mock private MicroserviceSubscriptionsService subscriptionsService;
     @Mock private MappingValidator mappingValidator;
     @Mock private FlowStateStore flowStateStore;
@@ -86,11 +86,11 @@ class MappingServiceFailureThresholdTest {
     void setUp() throws Exception {
         pool = Executors.newSingleThreadExecutor();
         MappingService real = new MappingService(inventoryApi, mappingRepository, cacheManager, statusService,
-                resolverService, deploymentMapService, deviceToClientMapService, configurationRegistry,
+                resolverService, deploymentMapService, deviceToClientMapService, serviceRegistry,
                 subscriptionsService, mappingValidator, flowStateStore, mappingVersionService);
         service = spy(real);
-        lenient().when(configurationRegistry.getVirtualThreadPool()).thenReturn(pool);
-        lenient().when(configurationRegistry.getConnectorRegistry()).thenReturn(connectorRegistry);
+        lenient().when(serviceRegistry.getVirtualThreadPool()).thenReturn(pool);
+        lenient().when(serviceRegistry.getConnectorRegistry()).thenReturn(connectorRegistry);
         lenient().when(connectorRegistry.getClientForTenant(eq(TENANT), anyString())).thenReturn(connectorClient);
         lenient().when(deploymentMapService.getDeployedConnectors(TENANT, IDENTIFIER))
                 .thenReturn(java.util.List.of("connector-1"));

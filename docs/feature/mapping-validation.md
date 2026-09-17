@@ -72,7 +72,7 @@ a parallel list of details:
 ```
 
 `ValidationError` stays a payload-free vocabulary of machine-readable codes; the context lives in
-[`ValidationIssue`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/ValidationIssue.java),
+[`ValidationIssue`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/validation/ValidationIssue.java),
 so a rule can gain detail without changing what its code means. `details` is **additive**:
 `errors` keeps exactly the contents and ordering it always had, every entry in `errors` has a
 matching entry in `details` (rules with no context simply leave the extra fields unset), and

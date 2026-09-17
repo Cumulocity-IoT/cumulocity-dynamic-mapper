@@ -27,7 +27,7 @@ import com.cumulocity.rest.representation.reliable.notification.NotificationSubs
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.API;
-import dynamic.mapper.model.Device;
+import dynamic.mapper.model.device.Device;
 import dynamic.mapper.notification.service.*;
 import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
 import lombok.Getter;

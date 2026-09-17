@@ -39,7 +39,7 @@ import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import dynamic.mapper.model.Extension;
+import dynamic.mapper.model.extension.Extension;
 import jakarta.validation.constraints.NotBlank;
 
 import io.swagger.v3.oas.annotations.Operation;

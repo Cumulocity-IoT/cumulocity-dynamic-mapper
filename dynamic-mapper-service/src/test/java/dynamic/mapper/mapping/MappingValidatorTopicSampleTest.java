@@ -21,7 +21,7 @@
 
 package dynamic.mapper.mapping;
 
-import dynamic.mapper.model.ValidationError;
+import dynamic.mapper.model.validation.ValidationError;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

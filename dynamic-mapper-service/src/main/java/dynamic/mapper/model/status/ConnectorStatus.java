@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.model;
+package dynamic.mapper.model.status;
 
 public enum ConnectorStatus {
     UNKNOWN,

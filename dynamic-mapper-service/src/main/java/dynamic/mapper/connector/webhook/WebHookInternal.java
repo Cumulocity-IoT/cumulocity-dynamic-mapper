@@ -27,7 +27,7 @@ import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import lombok.extern.slf4j.Slf4j;
@@ -55,13 +55,13 @@ public class WebHookInternal extends WebHook {
     /**
      * Full constructor with dependencies
      */
-    public WebHookInternal(ConfigurationRegistry configurationRegistry,
+    public WebHookInternal(ServiceRegistry serviceRegistry,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             CamelDispatcherInbound dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
-        super(configurationRegistry, connectorRegistry, connectorConfiguration,
+        super(serviceRegistry, connectorRegistry, connectorConfiguration,
                 dispatcher, additionalSubscriptionIdTest, tenant);
         this.connectorType = ConnectorType.WEB_HOOK_INTERNAL;
         // Update the specification name and description without replacing the entire specification

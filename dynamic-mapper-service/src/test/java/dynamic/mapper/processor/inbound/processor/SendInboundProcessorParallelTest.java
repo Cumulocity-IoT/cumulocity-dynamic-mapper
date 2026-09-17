@@ -44,12 +44,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.IdentityResolutionService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.model.MappingType;
@@ -84,7 +84,7 @@ class SendInboundProcessorParallelTest {
     private C8YAgent c8yAgent;
 
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
 
     @Mock
     private IdentityResolutionService identityResolutionService;
@@ -105,7 +105,7 @@ class SendInboundProcessorParallelTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        processor = new SendInboundProcessor(c8yAgent, configurationRegistry, identityResolutionService,
+        processor = new SendInboundProcessor(c8yAgent, serviceRegistry, identityResolutionService,
                 new ObjectMapper(), mappingService);
 
         mapping = buildJsonMapping();

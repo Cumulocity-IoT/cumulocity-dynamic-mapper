@@ -19,7 +19,9 @@
  *
  */
 
-package dynamic.mapper.model;
+package dynamic.mapper.model.extension;
+
+import dynamic.mapper.model.Direction;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;

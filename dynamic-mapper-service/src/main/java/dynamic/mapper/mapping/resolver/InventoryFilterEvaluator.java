@@ -27,7 +27,7 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.util.Utils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,7 +43,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class InventoryFilterEvaluator {
 
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
 
     /**
      * @param filterExpression the JSONata expression to evaluate; a null/blank expression
@@ -63,7 +63,7 @@ public class InventoryFilterEvaluator {
             return false;
         }
         try {
-            Map<String, Object> cachedInventoryContent = configurationRegistry.getC8yAgent()
+            Map<String, Object> cachedInventoryContent = serviceRegistry.getC8yAgent()
                     .getMOFromInventoryCache(tenant, sourceId, testing);
             log.debug("{} - Evaluating inventory filter for source {} with fragments: {}",
                     tenant, sourceId, cachedInventoryContent.keySet());

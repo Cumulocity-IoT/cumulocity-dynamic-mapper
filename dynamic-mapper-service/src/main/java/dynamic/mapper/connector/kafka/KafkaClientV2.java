@@ -32,8 +32,8 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.model.ConnectorStatus;
+import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Qos;
@@ -140,14 +140,14 @@ public class KafkaClientV2 extends AConnectorClient {
     /**
      * Full constructor with dependencies
      */
-    public KafkaClientV2(ConfigurationRegistry configurationRegistry,
+    public KafkaClientV2(ServiceRegistry serviceRegistry,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             CamelDispatcherInbound dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
         this();
-        wireFromRegistry(configurationRegistry, connectorRegistry, connectorConfiguration,
+        wireFromRegistry(serviceRegistry, connectorRegistry, connectorConfiguration,
                 dispatcher, additionalSubscriptionIdTest, tenant);
         initializeManagers();
     }

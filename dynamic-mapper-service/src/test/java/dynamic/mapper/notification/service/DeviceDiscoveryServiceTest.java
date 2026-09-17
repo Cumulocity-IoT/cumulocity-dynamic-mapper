@@ -53,14 +53,14 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectReferenceRepres
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.model.Device;
+import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.model.device.Device;
 
 @ExtendWith(MockitoExtension.class)
 class DeviceDiscoveryServiceTest {
 
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
 
     @Mock
     private C8YAgent c8yAgent;
@@ -75,10 +75,10 @@ class DeviceDiscoveryServiceTest {
 
     @BeforeEach
     void setUp() {
-        // configurationRegistry.getC8yAgent() is the only collaborator the service
+        // serviceRegistry.getC8yAgent() is the only collaborator the service
         // dereferences; mark lenient since not every test path hits it.
-        lenient().when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
-        deviceDiscoveryService = new DeviceDiscoveryService(configurationRegistry);
+        lenient().when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        deviceDiscoveryService = new DeviceDiscoveryService(serviceRegistry);
     }
 
     // === Helpers ===

@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.model;
+package dynamic.mapper.model.validation;
 
 /**
  * Every value here must correspond to an error actually produced by

@@ -37,20 +37,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.model.DeviceToClientMapRepresentation;
+import dynamic.mapper.model.device.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
-import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.configuration.ServiceConfigurationService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-public class ConfigurationRegistry implements IMapperConfiguration {
+public class ServiceRegistry implements IMapperConfiguration {
 
     @Getter
     private final TenantRegistry tenantRegistry;
@@ -60,6 +60,9 @@ public class ConfigurationRegistry implements IMapperConfiguration {
 
     @Getter
     private final C8YAgent c8yAgent;
+
+    @Getter
+    private final CacheManager cacheManager;
 
     @Value("${APP.mqttServiceUrl}")
     @Getter
@@ -85,20 +88,20 @@ public class ConfigurationRegistry implements IMapperConfiguration {
     private final ConnectorConfigurationService connectorConfigurationService;
 
     @Getter
-    public final ServiceConfigurationService serviceConfigurationService;
+    private final ServiceConfigurationService serviceConfigurationService;
 
     @Getter
     private final ExecutorService virtualThreadPool;
 
-    // @Lazy breaks the ConfigurationRegistry <-> camelContext circular dependency: the Camel
+    // @Lazy breaks the ServiceRegistry <-> camelContext circular dependency: the Camel
     // context pulls in the RouteBuilder beans during its own creation, and those routes depend
-    // (transitively, via their processors) back on ConfigurationRegistry. Injecting a lazy proxy
-    // lets ConfigurationRegistry be constructed without forcing camelContext creation; the real
+    // (transitively, via their processors) back on ServiceRegistry. Injecting a lazy proxy
+    // lets ServiceRegistry be constructed without forcing camelContext creation; the real
     // context is resolved on first use (when connector dispatchers are built at runtime). Without
     // this the cycle surfaces under lazy bean initialization (e.g. the test profile).
     private final CamelContext camelContext;
 
-    public ConfigurationRegistry(
+    public ServiceRegistry(
             TenantRegistry tenantRegistry,
             GraalVMContextService graalVMContextService,
             ConnectorRegistry connectorRegistry,
@@ -107,6 +110,7 @@ public class ConfigurationRegistry implements IMapperConfiguration {
             @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool,
             @Lazy CamelContext camelContext,
             @Lazy C8YAgent c8yAgent,
+            CacheManager cacheManager,
             @Lazy MappingService mappingService,
             @Lazy ConnectorConfigurationService connectorConfigurationService,
             @Lazy ServiceConfigurationService serviceConfigurationService) {
@@ -118,6 +122,7 @@ public class ConfigurationRegistry implements IMapperConfiguration {
         this.virtualThreadPool = virtualThreadPool;
         this.camelContext = camelContext;
         this.c8yAgent = c8yAgent;
+        this.cacheManager = cacheManager;
         this.mappingService = mappingService;
         this.connectorConfigurationService = connectorConfigurationService;
         this.serviceConfigurationService = serviceConfigurationService;

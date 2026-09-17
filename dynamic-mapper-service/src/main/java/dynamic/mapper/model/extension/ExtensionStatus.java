@@ -19,9 +19,11 @@
  *
  */
 
-package dynamic.mapper.model;
+package dynamic.mapper.model.extension;
 
-public enum ExtensionType {
-  EXTENSION_INBOUND,
-  EXTENSION_OUTBOUND
+public enum ExtensionStatus {
+    COMPLETE,
+    PARTIALLY,
+    NOT_LOADED,
+    UNKNOWN
 }

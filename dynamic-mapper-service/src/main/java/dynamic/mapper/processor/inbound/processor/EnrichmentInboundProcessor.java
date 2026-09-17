@@ -28,9 +28,9 @@ import org.springframework.stereotype.Component;
 
 import com.cumulocity.sdk.client.ProcessingMode;
 
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.AbstractEnrichmentProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DataPrepContext;
@@ -49,10 +49,10 @@ import lombok.extern.slf4j.Slf4j;
 public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
 
     public EnrichmentInboundProcessor(
-            ConfigurationRegistry configurationRegistry,
+            ServiceRegistry serviceRegistry,
             MappingService mappingService,
             FlowStateStore flowStateStore) {
-        super(configurationRegistry, mappingService, flowStateStore);
+        super(serviceRegistry, mappingService, flowStateStore);
     }
 
     @Override

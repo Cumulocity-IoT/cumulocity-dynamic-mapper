@@ -23,9 +23,9 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.connector.core.client.AConnectorClient;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
@@ -38,7 +38,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
     private final AConnectorClient connectorClient;
     private final ExecutorService virtualThreadPool;
     private final MappingService mappingService;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
 
     private final ProducerTemplate producerTemplate;
     private final CamelContext camelContext;
@@ -49,16 +49,16 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
     /**
      * Constructor matching DispatcherInbound signature
      */
-    public CamelDispatcherInbound(ConfigurationRegistry configurationRegistry,
+    public CamelDispatcherInbound(ServiceRegistry serviceRegistry,
             AConnectorClient connectorClient) {
         this.connectorClient = connectorClient;
-        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
-        this.mappingService = configurationRegistry.getMappingService();
-        this.configurationRegistry = configurationRegistry;
+        this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
+        this.mappingService = serviceRegistry.getMappingService();
+        this.serviceRegistry = serviceRegistry;
 
 
         // Initialize Camel components
-        this.camelContext = configurationRegistry.getCamelContext();
+        this.camelContext = serviceRegistry.getCamelContext();
         this.producerTemplate = camelContext.createProducerTemplate();
         this.inboundProcessingTimer = Timer.builder("dynmapper_inbound_processing_time")
                 .tag("tenant", connectorClient.getTenant())
@@ -99,7 +99,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         boolean testing = testMapping != null && !Boolean.TRUE.equals(connectorMessage.getSendPayload());
         String topic = connectorMessage.getTopic();
         String tenant = connectorMessage.getTenant();
-        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        ServiceConfiguration serviceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
 
         // Log incoming message if configured
         if (serviceConfiguration.getLogPayload()) {
@@ -222,13 +222,13 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                                 log.info("{} - Removing device from Identity Cache with external ID: {}",
                                         tenant, context.getCurrentRequest().getExternalId());
                                 ID identity = new ID(context.getCurrentRequest().getExternalIdType(), context.getExternalId());
-                                this.connectorClient.getC8yAgent().removeDeviceFromInboundExternalIdCache(tenant, identity);
+                                this.serviceRegistry.getCacheManager().removeDeviceFromInboundExternalIdCache(tenant, identity);
                                 // Also evict the implicit-device-creation cache
                                 // (IdentityResolutionService.getOrCreateDeviceThreadSafe reads from
                                 // this one, not InboundExternalIdCache above) — otherwise the resend
                                 // below re-substitutes the same stale, no-longer-existing sourceId and
                                 // fails identically. See attic/fix/inconsistant-cache/ISSUE.md.
-                                this.configurationRegistry.getTenantRegistry().removeFromExternalIdCache(tenant, identity);
+                                this.serviceRegistry.getTenantRegistry().removeFromExternalIdCache(tenant, identity);
                                 if(context.getMapping().getCreateNonExistingDevice())
                                     resend = true;
                             }
@@ -289,7 +289,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         camelMessage.setHeader(CamelHeaders.MAPPINGS, resolvedMappings);
         camelMessage.setHeader(CamelHeaders.CONNECTOR_MESSAGE, message);
         camelMessage.setHeader(CamelHeaders.SERVICE_CONFIGURATION,
-                configurationRegistry.getServiceConfiguration(message.getTenant()));
+                serviceRegistry.getServiceConfiguration(message.getTenant()));
 
         // Set payload information
         camelMessage.setHeader(CamelHeaders.PAYLOAD_BYTES, message.getPayload());

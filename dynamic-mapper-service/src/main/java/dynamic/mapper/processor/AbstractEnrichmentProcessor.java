@@ -39,10 +39,10 @@ import org.graalvm.polyglot.Source;
 import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.PooledGraalContext;
 import dynamic.mapper.processor.runtime.RoutingContext;
@@ -59,15 +59,15 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
 
-    protected final ConfigurationRegistry configurationRegistry;
+    protected final ServiceRegistry serviceRegistry;
     protected final MappingService mappingService;
     protected final FlowStateStore flowStateStore;
 
     protected AbstractEnrichmentProcessor(
-            ConfigurationRegistry configurationRegistry,
+            ServiceRegistry serviceRegistry,
             MappingService mappingService,
             FlowStateStore flowStateStore) {
-        this.configurationRegistry = configurationRegistry;
+        this.serviceRegistry = serviceRegistry;
         this.mappingService = mappingService;
         this.flowStateStore = flowStateStore;
     }
@@ -113,7 +113,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                             mapping.getName()));
                     }
                 }
-                var graalVMContextService = configurationRegistry.getGraalVMContextService();
+                var graalVMContextService = serviceRegistry.getGraalVMContextService();
                 // peekGraalEngine does rotation checks without incrementing the engine counter;
                 // borrowOrCreateContext handles the counter at borrow time.
                 var graalEngine = graalVMContextService.peekGraalEngine(tenant);
@@ -155,7 +155,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 context.setFlowState(new HashMap<String, Object>());
                 Map<String, Object> initialState = flowStateStore.loadState(tenant, mapping.getIdentifier());
                 context.setFlowContext(new SmartFunctionContext(pooledCtx.getGraalContext(), tenant,
-                        (InventoryEnrichmentClient) configurationRegistry.getC8yAgent(),
+                        (InventoryEnrichmentClient) serviceRegistry.getC8yAgent(),
                         context.isTesting(), flowStateStore, mapping.getIdentifier(), initialState));
 
                 // engineReleaseAction returns the borrowed context to the pool (or closes it if
@@ -192,7 +192,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         Context.Builder builder = Context.newBuilder("js")
                 .engine(graalEngine)
                 .option("js.text-encoding", "true")
-                .allowHostAccess(configurationRegistry.getGraalVMContextService().getHostAccess())
+                .allowHostAccess(serviceRegistry.getGraalVMContextService().getHostAccess())
                 .allowHostClassLookup(className ->
                 // Allow only the specific SubstitutionContext class
                 className.equals("dynamic.mapper.processor.runtime.SubstitutionContext")

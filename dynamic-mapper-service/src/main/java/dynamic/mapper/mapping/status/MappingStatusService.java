@@ -25,9 +25,12 @@ import com.cumulocity.microservice.subscription.service.MicroserviceSubscription
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.*;
+import dynamic.mapper.model.status.LoggingEventType;
+import dynamic.mapper.model.MapperServiceRepresentation;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.mapping.cache.MappingCacheManager;
 import dynamic.mapper.util.CumulocityErrors;
 import lombok.RequiredArgsConstructor;
@@ -65,7 +68,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MappingStatusService {
 
     private final InventoryFacade inventoryApi;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
     private final MappingCacheManager cacheManager;
     private final MicroserviceSubscriptionsService subscriptionsService;
 
@@ -93,7 +96,7 @@ public class MappingStatusService {
      */
     public void initializeTenantStatus(String tenant, boolean reset) {
         validateTenant(tenant);
-        MapperServiceRepresentation serviceRep = configurationRegistry.getMapperServiceRepresentation(tenant);
+        MapperServiceRepresentation serviceRep = serviceRegistry.getMapperServiceRepresentation(tenant);
 
         if (serviceRep.getMappingStatus() != null && !reset) {
             log.debug("{} - Initializing status with {} existing entries",
@@ -370,7 +373,7 @@ public class MappingStatusService {
                     "message", resolvedMessage,
                     "id", moId);
 
-            configurationRegistry.getC8yAgent().createLoggingEvent(
+            serviceRegistry.getC8yAgent().createLoggingEvent(
                     resolvedMessage,
                     LoggingEventType.MAPPING_LOADING_ERROR_EVENT_TYPE,
                     DateTime.now(),
@@ -419,7 +422,7 @@ public class MappingStatusService {
     }
 
     private Boolean shouldSendStatus(String tenant) {
-        ServiceConfiguration config = configurationRegistry.getServiceConfiguration(tenant);
+        ServiceConfiguration config = serviceRegistry.getServiceConfiguration(tenant);
         return config.getSendMappingStatus() && initialized.getOrDefault(tenant, false);
     }
 
@@ -446,7 +449,7 @@ public class MappingStatusService {
 
         log.warn("{} - {}", tenant, message);
 
-        configurationRegistry.getC8yAgent().createLoggingEvent(
+        serviceRegistry.getC8yAgent().createLoggingEvent(
                 message,
                 LoggingEventType.MAPPING_FAILURE_EVENT_TYPE,
                 DateTime.now(),
@@ -514,7 +517,7 @@ public class MappingStatusService {
     }
 
     private void updateInventoryWithStatuses(String tenant, MappingStatus[] statuses) {
-        MapperServiceRepresentation serviceRep = configurationRegistry.getMapperServiceRepresentation(tenant);
+        MapperServiceRepresentation serviceRep = serviceRegistry.getMapperServiceRepresentation(tenant);
 
         Map<String, Object> fragment = new ConcurrentHashMap<>();
         fragment.put(MapperServiceRepresentation.MAPPING_FRAGMENT, statuses);

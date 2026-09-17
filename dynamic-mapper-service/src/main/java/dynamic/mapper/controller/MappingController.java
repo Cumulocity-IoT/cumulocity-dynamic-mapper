@@ -49,9 +49,9 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingVersion;
-import dynamic.mapper.model.MappingVersionCount;
-import dynamic.mapper.model.ValidationErrorResponse;
+import dynamic.mapper.model.version.MappingVersion;
+import dynamic.mapper.model.version.MappingVersionCount;
+import dynamic.mapper.model.validation.ValidationErrorResponse;
 import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.mapping.MappingValidationException;
 import jakarta.validation.Valid;
@@ -81,7 +81,7 @@ public class MappingController {
     /**
      * Single source of truth for the 422 body of a mapping-validation failure, for every
      * endpoint in this controller (create/update/publishDraft). Returns the individual
-     * {@link dynamic.mapper.model.ValidationError} codes rather than a flattened string so the
+     * {@link dynamic.mapper.model.validation.ValidationError} codes rather than a flattened string so the
      * frontend can translate and list each failing rule individually, instead of a single toast
      * built from raw enum names.
      */
@@ -256,7 +256,7 @@ public class MappingController {
         ),
         @ApiResponse(responseCode = "400", description = "Invalid mapping configuration", content = @Content),
         @ApiResponse(responseCode = "403", description = "Insufficient permissions to create mapping", content = @Content),
-        @ApiResponse(responseCode = "422", description = "Mapping validation failed (invalid topic structure, conflicting configuration)", content = @Content(mediaType = "application/json", schema = @Schema(implementation = dynamic.mapper.model.ValidationErrorResponse.class))),
+        @ApiResponse(responseCode = "422", description = "Mapping validation failed (invalid topic structure, conflicting configuration)", content = @Content(mediaType = "application/json", schema = @Schema(implementation = dynamic.mapper.model.validation.ValidationErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
@@ -341,7 +341,7 @@ public class MappingController {
         @ApiResponse(responseCode = "403", description = "Insufficient permissions to update mapping", content = @Content),
         @ApiResponse(responseCode = "404", description = "Mapping not found", content = @Content),
         @ApiResponse(responseCode = "406", description = "Active mappings cannot be updated", content = @Content),
-        @ApiResponse(responseCode = "422", description = "Mapping validation failed (invalid topic structure, conflicting configuration)", content = @Content(mediaType = "application/json", schema = @Schema(implementation = dynamic.mapper.model.ValidationErrorResponse.class))),
+        @ApiResponse(responseCode = "422", description = "Mapping validation failed (invalid topic structure, conflicting configuration)", content = @Content(mediaType = "application/json", schema = @Schema(implementation = dynamic.mapper.model.validation.ValidationErrorResponse.class))),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
@@ -521,7 +521,7 @@ public class MappingController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = MappingVersion.class))),
         @ApiResponse(responseCode = "404", description = "Mapping not found", content = @Content),
         @ApiResponse(responseCode = "409", description = "No draft to publish", content = @Content),
-        @ApiResponse(responseCode = "422", description = "Draft failed validation", content = @Content(mediaType = "application/json", schema = @Schema(implementation = dynamic.mapper.model.ValidationErrorResponse.class)))
+        @ApiResponse(responseCode = "422", description = "Draft failed validation", content = @Content(mediaType = "application/json", schema = @Schema(implementation = dynamic.mapper.model.validation.ValidationErrorResponse.class)))
     })
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @PostMapping(value = "/{id}/publish", produces = MediaType.APPLICATION_JSON_VALUE)

@@ -19,7 +19,9 @@
  *
  */
 
-package dynamic.mapper.model;
+package dynamic.mapper.model.status;
+
+import dynamic.mapper.model.Operation;
 
 import java.io.Serializable;
 import java.util.ArrayList;

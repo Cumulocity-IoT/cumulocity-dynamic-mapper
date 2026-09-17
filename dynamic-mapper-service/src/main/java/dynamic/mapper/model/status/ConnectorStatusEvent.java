@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.model;
+package dynamic.mapper.model.status;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;

@@ -21,7 +21,7 @@
 
 package dynamic.mapper.notification;
 
-import dynamic.mapper.model.Device;
+import dynamic.mapper.model.device.Device;
 
 import dynamic.mapper.model.API;
 

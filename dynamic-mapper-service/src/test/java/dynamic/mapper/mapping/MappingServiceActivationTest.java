@@ -25,12 +25,12 @@ import com.cumulocity.microservice.subscription.service.MicroserviceSubscription
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingVersion;
+import dynamic.mapper.model.version.MappingVersion;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TransformationType;
@@ -75,7 +75,7 @@ class MappingServiceActivationTest {
     @Mock private MappingResolverService resolverService;
     @Mock private DeploymentMapService deploymentMapService;
     @Mock private DeviceToClientMapService deviceToClientMapService;
-    @Mock private ConfigurationRegistry configurationRegistry;
+    @Mock private ServiceRegistry serviceRegistry;
     @Mock private MicroserviceSubscriptionsService subscriptionsService;
     @Mock private MappingValidator mappingValidator;
     @Mock private FlowStateStore flowStateStore;
@@ -87,12 +87,12 @@ class MappingServiceActivationTest {
     @BeforeEach
     void setUp() {
         MappingService real = new MappingService(inventoryApi, mappingRepository, cacheManager, statusService,
-                resolverService, deploymentMapService, deviceToClientMapService, configurationRegistry,
+                resolverService, deploymentMapService, deviceToClientMapService, serviceRegistry,
                 subscriptionsService, mappingValidator, flowStateStore, mappingVersionService);
         service = spy(real);
 
-        lenient().when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
-        lenient().when(configurationRegistry.getObjectMapper()).thenReturn(new ObjectMapper());
+        lenient().when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        lenient().when(serviceRegistry.getObjectMapper()).thenReturn(new ObjectMapper());
         lenient().when(cacheManager.removeMapping(any(), any())).thenReturn(Optional.empty());
         // updateMapping echoes back the mapping it was asked to persist.
         lenient().doAnswer(inv -> inv.getArgument(1)).when(service)
@@ -176,14 +176,14 @@ class MappingServiceActivationTest {
         when(mappingVersionService.getVersion(TENANT, IDENTIFIER, "2.0.0")).thenReturn(version(2, "V2", "{\"v\":2}"));
         // Persistence rejects the activation (e.g. validation) -> must propagate, cache untouched.
         doThrow(new MappingValidationException(java.util.List.of(
-                dynamic.mapper.model.ValidationError.Source_Template_Must_Be_Valid_JSON)))
+                dynamic.mapper.model.validation.ValidationError.Source_Template_Must_Be_Valid_JSON)))
                 .when(service).updateMapping(eq(TENANT), any(Mapping.class), anyBoolean(), anyBoolean());
 
         assertThrows(MappingValidationException.class, () -> service.setActivationMapping(TENANT, MO_ID, true, "2.0.0"));
 
         verify(cacheManager, never()).addMapping(any(), any());
         verify(statusService, never()).resetFailureCount(any(), any());
-        verify(c8yAgent).createLoggingEvent(any(), eq(dynamic.mapper.model.LoggingEventType.MAPPING_ACTIVATION_ERROR_EVENT_TYPE),
+        verify(c8yAgent).createLoggingEvent(any(), eq(dynamic.mapper.model.status.LoggingEventType.MAPPING_ACTIVATION_ERROR_EVENT_TYPE),
                 any(), eq(TENANT), any());
     }
 

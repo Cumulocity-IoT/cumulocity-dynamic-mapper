@@ -25,7 +25,7 @@ import dynamic.mapper.processor.util.CamelHeaders;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
 import dynamic.mapper.processor.processor.fixed.InternalCustomMeasurementOuter;
 import dynamic.mapper.mapping.MappingService;

@@ -43,10 +43,10 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorType;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.notification.websocket.Notification;
@@ -69,7 +69,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
     private ExecutorService virtualThreadPool;
     private NotificationSubscriber notificationSubscriber;
     private MappingService mappingService;
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
     private ProducerTemplate producerTemplate;
     private CamelContext camelContext;
     private final Timer outboundProcessingTimer;
@@ -77,16 +77,16 @@ public class CamelDispatcherOutbound implements NotificationCallback {
     /**
      * Constructor matching DispatcherInbound signature
      */
-    public CamelDispatcherOutbound(ConfigurationRegistry configurationRegistry,
+    public CamelDispatcherOutbound(ServiceRegistry serviceRegistry,
             AConnectorClient connectorClient) {
-        this.mappingService = configurationRegistry.getMappingService();
-        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
+        this.mappingService = serviceRegistry.getMappingService();
+        this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
         this.connectorClient = connectorClient;
-        this.configurationRegistry = configurationRegistry;
-        this.notificationSubscriber = configurationRegistry.getNotificationSubscriber();
+        this.serviceRegistry = serviceRegistry;
+        this.notificationSubscriber = serviceRegistry.getNotificationSubscriber();
 
         // Initialize Camel components
-        this.camelContext = configurationRegistry.getCamelContext();
+        this.camelContext = serviceRegistry.getCamelContext();
         this.producerTemplate = camelContext.createProducerTemplate();
         this.outboundProcessingTimer = Timer.builder("dynmapper_outbound_processing_time")
                 .tag("tenant", connectorClient.getTenant())
@@ -263,7 +263,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
     private ProcessingResultWrapper<?> processMessage(C8YMessage c8yMessage, Mapping testMapping, boolean testing) {
         Timer.Sample timer = Timer.start(Metrics.globalRegistry);
         String tenant = c8yMessage.getTenant();
-        ServiceConfiguration serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        ServiceConfiguration serviceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
 
         // Log incoming message if configured
         if (serviceConfiguration.getLogPayload()) {
@@ -410,7 +410,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         camelMessage.setHeader(CamelHeaders.MAPPINGS, resolvedMappings);
         camelMessage.setHeader(CamelHeaders.C8Y_MESSAGE, message);
         camelMessage.setHeader(CamelHeaders.SERVICE_CONFIGURATION,
-                configurationRegistry.getServiceConfiguration(message.getTenant()));
+                serviceRegistry.getServiceConfiguration(message.getTenant()));
 
         // Set payload information
         camelMessage.setHeader(CamelHeaders.PAYLOAD_BYTES, message.getPayload());

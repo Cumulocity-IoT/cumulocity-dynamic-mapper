@@ -42,8 +42,8 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.model.ConnectorStatus;
+import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.Direction;
 import java.util.concurrent.TimeoutException;
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -116,14 +116,14 @@ public class GooglePubSubClient extends AConnectorClient {
     /**
      * Full constructor with dependencies
      */
-    public GooglePubSubClient(ConfigurationRegistry configurationRegistry,
+    public GooglePubSubClient(ServiceRegistry serviceRegistry,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             CamelDispatcherInbound dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
         this();
-        wireFromRegistry(configurationRegistry, connectorRegistry, connectorConfiguration,
+        wireFromRegistry(serviceRegistry, connectorRegistry, connectorConfiguration,
                 dispatcher, additionalSubscriptionIdTest, tenant);
         initializeManagers();
     }

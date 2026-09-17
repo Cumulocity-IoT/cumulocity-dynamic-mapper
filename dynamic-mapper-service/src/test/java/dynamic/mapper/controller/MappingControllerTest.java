@@ -47,11 +47,11 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingVersion;
-import dynamic.mapper.model.MappingVersionCount;
-import dynamic.mapper.model.ValidationError;
-import dynamic.mapper.model.ValidationErrorResponse;
-import dynamic.mapper.model.ValidationIssue;
+import dynamic.mapper.model.version.MappingVersion;
+import dynamic.mapper.model.version.MappingVersionCount;
+import dynamic.mapper.model.validation.ValidationError;
+import dynamic.mapper.model.validation.ValidationErrorResponse;
+import dynamic.mapper.model.validation.ValidationIssue;
 import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.mapping.MappingValidationException;
 

@@ -10,7 +10,7 @@ import com.cumulocity.model.ID;
 import com.cumulocity.model.idtype.GId;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.ExternalId;
@@ -25,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 public abstract class CommonProcessor implements Processor {
 
     @Autowired
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
 
     @Autowired
     private C8YAgent c8yAgent;
@@ -149,7 +149,7 @@ public abstract class CommonProcessor implements Processor {
                     context,
                     log,
                     c8yAgent,
-                    configurationRegistry.getObjectMapper());
+                    serviceRegistry.getObjectMapper());
         }
 
         try {

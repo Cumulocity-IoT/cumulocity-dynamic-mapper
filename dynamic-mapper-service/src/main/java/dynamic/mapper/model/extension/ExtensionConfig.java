@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.model;
+package dynamic.mapper.model.extension;
 
 import lombok.*;
 import java.util.List;

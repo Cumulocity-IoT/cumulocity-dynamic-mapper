@@ -21,6 +21,8 @@
 
 package dynamic.mapper.model;
 
+import dynamic.mapper.model.device.Device;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;

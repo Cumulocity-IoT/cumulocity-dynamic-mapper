@@ -23,7 +23,7 @@ package dynamic.mapper.mapping.resolver;
 
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.ResolveException;
+import dynamic.mapper.model.validation.ResolveException;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.mapping.cache.MappingCacheManager;
 import dynamic.mapper.util.Utils;

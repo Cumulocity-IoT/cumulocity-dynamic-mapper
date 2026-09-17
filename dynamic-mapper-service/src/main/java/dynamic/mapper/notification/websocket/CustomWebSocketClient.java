@@ -30,7 +30,7 @@ import org.java_websocket.handshake.ServerHandshake;
 
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 
@@ -81,14 +81,14 @@ public class CustomWebSocketClient extends WebSocketClient {
      */
     private final Map<String, AtomicInteger> failureCountPerMessage = new ConcurrentHashMap<>();
 
-    public CustomWebSocketClient(String tenant, ConfigurationRegistry configurationRegistry, URI serverUri,
+    public CustomWebSocketClient(String tenant, ServiceRegistry serviceRegistry, URI serverUri,
             NotificationCallback callback, ConnectorId connectorId) {
         super(serverUri);
         this.callback = callback;
         this.connectorId = connectorId;
         this.tenant = tenant;
-        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
-        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
+        this.serviceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
     }
 
     @Override
