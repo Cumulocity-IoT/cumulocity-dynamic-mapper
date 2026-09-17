@@ -50,7 +50,6 @@ import com.cumulocity.sdk.client.option.TenantOptionApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.connector.core.client.ConnectorType;
-import dynamic.mapper.service.ConnectorConfigurationService;
 
 @ExtendWith(MockitoExtension.class)
 class ConnectorConfigurationServiceTest {

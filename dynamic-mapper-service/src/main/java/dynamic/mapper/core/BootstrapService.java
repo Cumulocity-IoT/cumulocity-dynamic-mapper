@@ -58,10 +58,9 @@ import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 
-import dynamic.mapper.service.ConnectorConfigurationService;
-import dynamic.mapper.service.ExtensionInboundRegistry;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.ServiceConfigurationService;
+import dynamic.mapper.configuration.ServiceConfigurationService;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 
@@ -88,7 +87,7 @@ public class BootstrapService {
 
     private final AIAgentService aiAgentService;
     private final ExtensionManager extensionManager;
-    private final dynamic.mapper.service.cache.FlowStateStore flowStateStore;
+    private final dynamic.mapper.processor.flow.FlowStateStore flowStateStore;
 
     public BootstrapService(
             ConnectorRegistry connectorRegistry,
@@ -102,7 +101,7 @@ public class BootstrapService {
             ExtensionInboundRegistry extensionInboundRegistry,
             AIAgentService aiAgentService,
             ExtensionManager extensionManager,
-            dynamic.mapper.service.cache.FlowStateStore flowStateStore,
+            dynamic.mapper.processor.flow.FlowStateStore flowStateStore,
             @Value("${APP.additionalSubscriptionIdTest:}") String additionalSubscriptionIdTest,
             @Value("#{new Integer('${APP.inboundExternalIdCacheSize}')}") Integer inboundExternalIdCacheSize,
             @Value("#{new Integer('${APP.outboundExternalIdCacheSize}')}") Integer outboundExternalIdCacheSize,

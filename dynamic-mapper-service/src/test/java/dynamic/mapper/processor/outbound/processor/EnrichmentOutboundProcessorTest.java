@@ -27,7 +27,7 @@ import static org.mockito.Mockito.*;
 import java.util.HashMap;
 import java.util.Map;
 
-import dynamic.mapper.service.cache.FlowStateStore;
+import dynamic.mapper.processor.flow.FlowStateStore;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.graalvm.polyglot.Engine;

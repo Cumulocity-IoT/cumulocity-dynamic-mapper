@@ -91,7 +91,6 @@ import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.runtime.ProcessingContext;
-import dynamic.mapper.service.ExtensionInboundRegistry;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Metrics;

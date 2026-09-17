@@ -38,7 +38,7 @@ import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.Message;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.model.TransformationType;
-import dynamic.mapper.service.ExtensionInboundRegistry;
+import dynamic.mapper.core.ExtensionInboundRegistry;
 import dynamic.mapper.service.MappingService;
 import lombok.extern.slf4j.Slf4j;
 

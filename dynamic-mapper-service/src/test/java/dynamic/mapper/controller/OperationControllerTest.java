@@ -61,10 +61,10 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Operation;
 import dynamic.mapper.model.ServiceOperation;
-import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.ServiceConfigurationService;
-import dynamic.mapper.service.cache.FlowStateStore;
+import dynamic.mapper.configuration.ServiceConfigurationService;
+import dynamic.mapper.processor.flow.FlowStateStore;
 import dynamic.mapper.service.deployment.DeploymentMapService;
 import dynamic.mapper.service.status.MappingStatusService;
 

@@ -28,7 +28,7 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.MapEntry;
 import dynamic.mapper.exception.OutboundMappingDisabledException;
 import dynamic.mapper.exception.DeviceNotFoundException;
-import dynamic.mapper.service.ServiceConfigurationService;
+import dynamic.mapper.configuration.ServiceConfigurationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.core.ConfigurationRegistry;

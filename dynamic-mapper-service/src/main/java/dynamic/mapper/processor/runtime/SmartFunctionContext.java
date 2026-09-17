@@ -34,7 +34,7 @@ import org.graalvm.polyglot.Value;
 
 import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
-import dynamic.mapper.service.cache.FlowStateStore;
+import dynamic.mapper.processor.flow.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 
 /**

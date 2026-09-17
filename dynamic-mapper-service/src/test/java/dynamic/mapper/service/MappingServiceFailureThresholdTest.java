@@ -33,7 +33,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingStatus;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TransformationType;
-import dynamic.mapper.service.cache.FlowStateStore;
+import dynamic.mapper.processor.flow.FlowStateStore;
 import dynamic.mapper.service.cache.MappingCacheManager;
 import dynamic.mapper.service.deployment.DeploymentMapService;
 import dynamic.mapper.service.resolver.MappingResolverService;

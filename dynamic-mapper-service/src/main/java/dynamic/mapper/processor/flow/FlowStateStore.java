@@ -18,7 +18,7 @@
  *  @authors Christof Strack, Stefan Witschel
  *
  */
-package dynamic.mapper.service.cache;
+package dynamic.mapper.processor.flow;
 
 import java.time.Duration;
 import java.time.Instant;

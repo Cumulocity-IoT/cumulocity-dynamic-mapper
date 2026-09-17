@@ -48,7 +48,7 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.model.DeploymentMapEntry;
-import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

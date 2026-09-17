@@ -21,6 +21,8 @@
 
 package dynamic.mapper.service;
 
+import dynamic.mapper.configuration.ServiceConfigurationService;
+
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;

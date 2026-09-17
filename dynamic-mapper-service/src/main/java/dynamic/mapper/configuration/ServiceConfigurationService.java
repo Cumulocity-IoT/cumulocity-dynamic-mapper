@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.service;
+package dynamic.mapper.configuration;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,9 +50,6 @@ import com.cumulocity.sdk.client.option.TenantOptionApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import dynamic.mapper.configuration.CodeTemplate;
-import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.util.Utils;
 import dynamic.mapper.model.Direction;
 import lombok.extern.slf4j.Slf4j;

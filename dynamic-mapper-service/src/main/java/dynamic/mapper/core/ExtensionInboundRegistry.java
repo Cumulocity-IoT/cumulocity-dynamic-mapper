@@ -1,4 +1,4 @@
-package dynamic.mapper.service;
+package dynamic.mapper.core;
 
 import java.util.Map;
 import java.util.Set;

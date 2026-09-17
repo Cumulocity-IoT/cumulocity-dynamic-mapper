@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.service;
+package dynamic.mapper.configuration;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +34,6 @@ import com.cumulocity.sdk.client.option.TenantOptionApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.util.Utils;

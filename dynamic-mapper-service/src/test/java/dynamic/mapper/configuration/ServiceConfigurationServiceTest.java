@@ -19,7 +19,7 @@
  *
  */
 
-package dynamic.mapper.service;
+package dynamic.mapper.configuration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -41,9 +41,6 @@ import com.cumulocity.microservice.subscription.service.MicroserviceSubscription
 import com.cumulocity.sdk.client.option.TenantOptionApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import dynamic.mapper.configuration.CodeTemplate;
-import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.model.Direction;
 
 /**

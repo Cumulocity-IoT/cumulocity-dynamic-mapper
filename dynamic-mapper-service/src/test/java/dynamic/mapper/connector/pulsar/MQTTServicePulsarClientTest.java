@@ -35,9 +35,9 @@ import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.ProcessingContext;
-import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.ServiceConfigurationService;
+import dynamic.mapper.configuration.ServiceConfigurationService;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.pulsar.client.api.*;

@@ -64,9 +64,9 @@ import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.LoggingEventType;
 import org.joda.time.DateTime;
-import dynamic.mapper.service.ConnectorConfigurationService;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.ServiceConfigurationService;
+import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.service.deployment.DeploymentMapService;
 import dynamic.mapper.service.status.MappingStatusService;
 import dynamic.mapper.model.Mapping;
@@ -99,7 +99,7 @@ public class OperationController {
     private final MappingStatusService mappingStatusService;
     private final IdentityFacade identityFacade;
     private final InventoryFacade inventoryFacade;
-    private final dynamic.mapper.service.cache.FlowStateStore flowStateStore;
+    private final dynamic.mapper.processor.flow.FlowStateStore flowStateStore;
     private final ExtensionManager extensionManager;
     private final ObjectMapper objectMapper;
 

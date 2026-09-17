@@ -49,7 +49,6 @@ import dynamic.mapper.model.ExtensionType;
 import dynamic.mapper.processor.extension.ExtensionsComponent;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
-import dynamic.mapper.service.ExtensionInboundRegistry;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

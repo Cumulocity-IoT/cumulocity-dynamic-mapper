@@ -48,7 +48,7 @@ import dynamic.mapper.processor.runtime.PooledGraalContext;
 import dynamic.mapper.processor.runtime.RoutingContext;
 import dynamic.mapper.processor.runtime.SmartFunctionContext;
 import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.cache.FlowStateStore;
+import dynamic.mapper.processor.flow.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 
 /**

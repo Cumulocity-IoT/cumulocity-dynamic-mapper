@@ -37,7 +37,7 @@ import dynamic.mapper.model.TransformationType;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import dynamic.mapper.service.cache.FlowStateStore;
+import dynamic.mapper.processor.flow.FlowStateStore;
 import dynamic.mapper.service.cache.MappingCacheManager;
 import dynamic.mapper.service.deployment.DeploymentMapService;
 import dynamic.mapper.service.resolver.MappingResolverService;

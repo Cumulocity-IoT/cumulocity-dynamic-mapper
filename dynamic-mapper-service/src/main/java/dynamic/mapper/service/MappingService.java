@@ -36,7 +36,7 @@ import dynamic.mapper.model.*;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
-import dynamic.mapper.service.cache.FlowStateStore;
+import dynamic.mapper.processor.flow.FlowStateStore;
 import dynamic.mapper.service.cache.MappingCacheManager;
 import dynamic.mapper.service.deployment.DeploymentMapService;
 import dynamic.mapper.service.resolver.MappingResolverService;
