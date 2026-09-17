@@ -198,6 +198,168 @@ describe('MappingStepperService', () => {
   });
 
   // -------------------------------------------------------------------------
+  // updateSubstitutionValidity
+  //
+  // Phase 2 of the stepper/unified-editor deduplication. This drives
+  // isSubstitutionValid$, which buildTemplateForm() mirrors into
+  // templateForm.setErrors — so a wrong answer here silently blocks or unblocks
+  // saving in both editors. The five OR-clauses are each covered below.
+  // -------------------------------------------------------------------------
+
+  describe('updateSubstitutionValidity', () => {
+    /** A substitution that targets _IDENTITY_.externalId counts as a device identifier. */
+    function withIdentifiers(count: number, direction = Direction.INBOUND): Mapping {
+      const subs = Array.from({ length: count }, (_, i) => (
+        direction === Direction.INBOUND
+          ? { pathSource: `s${i}`, pathTarget: '_IDENTITY_.externalId' }
+          : { pathSource: '_IDENTITY_.externalId', pathTarget: `t${i}` }
+      ));
+      return makeMapping({ direction, substitutions: subs as any });
+    }
+
+    function validityOf(mapping: Mapping, allowNoIdentifier = false, isBefore = false, showCode = false): boolean {
+      let seen: boolean | undefined;
+      const sub = service.isSubstitutionValid$.subscribe(v => (seen = v));
+      service.updateSubstitutionValidity(mapping, allowNoIdentifier, isBefore, showCode);
+      sub.unsubscribe();
+      return seen!;
+    }
+
+    it('publishes the device-identifier count', () => {
+      let count: number | undefined;
+      const sub = service.countDeviceIdentifiers$.subscribe(n => (count = n));
+      service.updateSubstitutionValidity(withIdentifiers(2), false, false, false);
+      sub.unsubscribe();
+      expect(count).toBe(2);
+    });
+
+    it('INBOUND is valid with exactly one identifier', () => {
+      expect(validityOf(withIdentifiers(1))).toBe(true);
+    });
+
+    it('INBOUND is invalid with none, and with more than one', () => {
+      expect(validityOf(withIdentifiers(0))).toBe(false);
+      expect(validityOf(withIdentifiers(2))).toBe(false);
+    });
+
+    it('OUTBOUND is valid with one or more identifiers, invalid with none', () => {
+      expect(validityOf(withIdentifiers(1, Direction.OUTBOUND))).toBe(true);
+      expect(validityOf(withIdentifiers(3, Direction.OUTBOUND))).toBe(true);
+      expect(validityOf(withIdentifiers(0, Direction.OUTBOUND))).toBe(false);
+    });
+
+    it('showCodeEditor short-circuits the identifier rules', () => {
+      // Code-based transformations resolve the device themselves, so the substitution
+      // count says nothing about validity.
+      expect(validityOf(withIdentifiers(0), false, false, true)).toBe(true);
+    });
+
+    it('allowNoDefinedIdentifier short-circuits the identifier rules', () => {
+      expect(validityOf(withIdentifiers(0), true, false, false)).toBe(true);
+    });
+
+    it('isBeforeSubstitutionStep short-circuits the identifier rules', () => {
+      // Before the user has reached the substitution step there is nothing to judge yet.
+      expect(validityOf(withIdentifiers(0), false, true, false)).toBe(true);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // selectExtensionName
+  //
+  // Picks which of an extension's entries the event dropdown offers. The filter
+  // is chosen from transformationType first, then falls back to the mapping's own
+  // extensionType — getting it wrong offers the user events that cannot work.
+  // -------------------------------------------------------------------------
+
+  describe('selectExtensionName', () => {
+    const inboundEntry = { eventName: 'in', extensionType: ExtensionType.EXTENSION_INBOUND } as any;
+    const outboundEntry = { eventName: 'out', extensionType: ExtensionType.EXTENSION_OUTBOUND } as any;
+
+    function extensionsWithBoth(): Map<string, Extension> {
+      const extension = {
+        extensionEntries: { in: inboundEntry, out: outboundEntry }
+      } as unknown as Extension;
+      return new Map([['ext', extension]]);
+    }
+
+    function eventsAfterSelecting(mapping: Mapping, extensions = extensionsWithBoth()): any[] {
+      let seen: any[] = [];
+      const sub = service.extensionEvents$.subscribe(e => (seen = e));
+      service.selectExtensionName('ext', extensions, mapping);
+      sub.unsubscribe();
+      return seen;
+    }
+
+    it('emits an empty list when the extension is unknown', () => {
+      expect(eventsAfterSelecting(makeMapping(), new Map())).toEqual([]);
+    });
+
+    it('EXTENSION_JAVA + INBOUND offers only inbound entries', () => {
+      const mapping = makeMapping({
+        transformationType: TransformationType.EXTENSION_JAVA, direction: Direction.INBOUND
+      });
+      expect(eventsAfterSelecting(mapping)).toEqual([inboundEntry]);
+    });
+
+    it('EXTENSION_JAVA + OUTBOUND offers only outbound entries', () => {
+      const mapping = makeMapping({
+        transformationType: TransformationType.EXTENSION_JAVA, direction: Direction.OUTBOUND
+      });
+      expect(eventsAfterSelecting(mapping)).toEqual([outboundEntry]);
+    });
+
+    it("falls back to the mapping's own extensionType for other transformation types", () => {
+      const mapping = makeMapping({
+        transformationType: TransformationType.DEFAULT,
+        direction: Direction.INBOUND,
+        extension: { extensionName: 'ext', extensionType: ExtensionType.EXTENSION_OUTBOUND } as any
+      });
+      // Direction is INBOUND, but the mapping pins an OUTBOUND extension type — the pin wins.
+      expect(eventsAfterSelecting(mapping)).toEqual([outboundEntry]);
+    });
+
+    it('offers every entry when neither rule determines a type', () => {
+      const mapping = makeMapping({ transformationType: TransformationType.DEFAULT });
+      expect(eventsAfterSelecting(mapping)).toEqual([inboundEntry, outboundEntry]);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // loadCodeTemplates
+  // -------------------------------------------------------------------------
+
+  describe('loadCodeTemplates', () => {
+    it('base64-decodes each template body', async () => {
+      mockSharedService.getCodeTemplates.and.resolveTo({
+        t1: { name: 'One', templateType: TemplateType.INBOUND_SMART_FUNCTION, code: btoa('function onMessage() {}'),
+              internal: false, readonly: false } as any
+      });
+
+      const result = await service.loadCodeTemplates();
+
+      expect(result.get('t1')!.code).toBe('function onMessage() {}');
+      expect(result.get('t1')!.id).toBe('t1');
+    });
+
+    it('keeps a template whose body is not decodable rather than failing the whole load', async () => {
+      mockSharedService.getCodeTemplates.and.resolveTo({
+        good: { name: 'Good', templateType: TemplateType.INBOUND_SMART_FUNCTION, code: btoa('ok'),
+                internal: false, readonly: false } as any,
+        bad: { name: 'Bad', templateType: TemplateType.INBOUND_SMART_FUNCTION, code: '!!!not-base64!!!',
+               internal: false, readonly: false } as any
+      });
+
+      const result = await service.loadCodeTemplates();
+
+      // One malformed template must not cost the user the rest of the list.
+      expect(result.size).toBe(2);
+      expect(result.get('good')!.code).toBe('ok');
+      expect(result.has('bad')).toBe(true);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // applyExtensionEventSelection
   // -------------------------------------------------------------------------
 

@@ -1,6 +1,8 @@
 # UI Cleanup — dynamic-mapper-ui
 
-**Status:** Steps 1–3 done; the suite is green (447 SUCCESS, 0 FAILED). Steps 4–5 not started.
+**Status:** Steps 1-3, 5 and the §7 follow-ups done; 461 SUCCESS, 0 FAILED.
+Step 4 is designed but not implemented — see
+[IMPLEMENTATION-PLAN-COMMIT-MAPPING.md](IMPLEMENTATION-PLAN-COMMIT-MAPPING.md).
 **Scope:** `dynamic-mapper-ui` only. No backend or API changes.
 **Companion to:** [restructure-java-package.md](restructure-java-package.md) (the backend equivalent).
 
@@ -108,14 +110,35 @@ Worth keeping as-is: the `step-*` prefix (`step-connector`, `step-property`, `st
 
 ---
 
-## 4. Test coverage
+## 4. Test coverage — targeted, not bulk
 
 | | With spec | Total | |
 |---|---|---|---|
 | Components | 17 | 84 | 20% |
 | Services | 4 | 19 | 21% |
 
-Not a defect to fix in one pass — a standing practice to adopt once §1 gives a green baseline.
+Writing specs for the other 67 components would be bulk with little return. The targeted version
+is `MappingStepperService`: 939 lines, and now the single home for logic extracted from **both**
+editors by dedup Phases 1-5 — so a defect there shows up in two places at once, and Phase 6 will
+move the save path there too.
+
+It had 13 of its 27 public methods under a `describe`. Added coverage for the three untested ones
+carrying real branching (447 -> 461 tests):
+
+- **`updateSubstitutionValidity`** (a Phase 2 extraction) — drives `isSubstitutionValid$`, which
+  `buildTemplateForm()` mirrors into `templateForm.setErrors`, so a wrong answer silently blocks or
+  unblocks saving in both editors. Each of the five OR-clauses is now pinned: INBOUND needs exactly
+  one device identifier, OUTBOUND one or more, and `showCodeEditor` / `allowNoDefinedIdentifier` /
+  `isBeforeSubstitutionStep` each short-circuit the count.
+- **`selectExtensionName`** — chooses which extension entries the event dropdown offers, from
+  `transformationType` first and the mapping's own `extensionType` as fallback. Getting it wrong
+  offers events that cannot work.
+- **`loadCodeTemplates`** — in particular that one template with an undecodable body does not cost
+  the user the rest of the list.
+
+Still untested and deliberately left: thin delegating wrappers (`refreshSubstitutionValidity`,
+`notifyMappingPropertyChanged`, `expandTemplates`), and `registerCompletionProvider` /
+`cleanup`, which are Monaco and teardown plumbing better covered by the editor's own specs.
 
 ---
 
@@ -139,8 +162,9 @@ refactored.
 1. ~~**Fix the failing specs.**~~ Done — see §1.
 2. ~~**Resolve `shared/mapping` ÷ `mapping/shared`.**~~ Done — merged, see §2.
 3. ~~**Normalise naming**~~ — done, see §3. `mapping-tree/` was *not* moved; see the correction there.
-4. **Phase 6 of the dedup plan.** Needs its own design for the tab-validation-redirect contract.
-5. **Coverage**, as practice rather than a sprint.
+4. **Phase 6 of the dedup plan.** Designed — see
+   [IMPLEMENTATION-PLAN-COMMIT-MAPPING.md](IMPLEMENTATION-PLAN-COMMIT-MAPPING.md). Not implemented.
+5. ~~**Coverage.**~~ Targeted pass done — see §4.
 
 ## 7. Follow-ups found while fixing the tests ✅ Done
 
