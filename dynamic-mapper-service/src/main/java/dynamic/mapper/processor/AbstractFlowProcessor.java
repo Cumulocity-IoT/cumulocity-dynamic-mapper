@@ -139,6 +139,24 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
             return;
         }
 
+        // ── Early-exit: the GraalVM context could not be built. AbstractEnrichmentProcessor
+        // already recorded the real cause on the context and returned, but the Camel route still
+        // reaches this processor. Continuing would dereference a null graalContext in
+        // processSmartMapping() and report a NullPointerException instead — burying the actual
+        // error, which is typically something like a system template naming a Java class that no
+        // longer exists.
+        if (context.getGraalContext() == null) {
+            if (!context.hasError()) {
+                // Defensive: never fail silently just because nobody recorded a reason.
+                context.addError(new ProcessingException(String.format(
+                        "Tenant %s - No GraalVM context available for Smart Function mapping %s",
+                        tenant, mapping.getName())));
+            }
+            log.info("{} - Skipping JS execution for mapping {}: GraalVM context setup failed earlier",
+                    tenant, mapping.getName());
+            return;
+        }
+
         org.graalvm.polyglot.Context graalCtx = context.getGraalContext();
         dynamic.mapper.processor.runtime.PooledGraalContext pooledGraalCtx = context.getPooledGraalContext();
         Runnable cancelAction = null;

@@ -52,6 +52,7 @@ import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.DataPrepContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.core.GraalVMContextService;
@@ -169,6 +170,43 @@ class FlowOutboundProcessorTest {
         payload.put("c8y_TemperatureMeasurement", tempMeasurement);
 
         return payload;
+    }
+
+    /**
+     * When AbstractEnrichmentProcessor fails to build the GraalVM context it records the real
+     * cause and returns, but the Camel route still reaches this processor. Without a guard it
+     * dereferenced a null graalContext, and its own catch block then recorded
+     * {@code Cannot invoke "Context.getBindings(String)" because "graalContext" is null} as a
+     * SECOND error — burying the actual diagnosis under a NullPointerException. Seen in the field
+     * when a system template named a Java class that had moved package.
+     *
+     * <p>The observable difference is the error count, not an exception: the processor catches
+     * its own NPE, so asserting "does not throw" would pass either way.
+     */
+    @Test
+    void testProcessSkipsWhenGraalVMContextSetupFailed() throws Exception {
+        processingContext.setGraalContext(null);
+        ProcessingException cause = new ProcessingException("Access to host class ... does not exist");
+        processingContext.addError(cause);
+
+        processor.process(exchange);
+
+        assertEquals(1, processingContext.getErrors().size(),
+                "The original diagnosis must be the only error; a follow-on NPE buries it");
+        assertSame(cause, processingContext.getErrors().iterator().next());
+    }
+
+    @Test
+    void testProcessRecordsAReasonWhenTheContextIsMissingWithoutAnError() throws Exception {
+        processingContext.setGraalContext(null);
+
+        processor.process(exchange);
+
+        // Never fail silently just because nobody recorded a reason.
+        assertEquals(1, processingContext.getErrors().size());
+        assertTrue(processingContext.getErrors().iterator().next().getMessage()
+                        .contains("No GraalVM context available"),
+                "Expected the guard's own reason, not a NullPointerException");
     }
 
     @Test
