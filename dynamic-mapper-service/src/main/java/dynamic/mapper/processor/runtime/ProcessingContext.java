@@ -23,7 +23,6 @@ package dynamic.mapper.processor.runtime;
 
 import dynamic.mapper.processor.model.ProcessingType;
 
-import dynamic.mapper.processor.model.ExternalId;
 
 import dynamic.mapper.processor.model.DataPrepContext;
 

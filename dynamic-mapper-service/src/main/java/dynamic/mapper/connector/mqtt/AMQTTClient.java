@@ -35,7 +35,6 @@ import dynamic.mapper.model.ConnectorStatus;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.net.ssl.TrustManagerFactory;

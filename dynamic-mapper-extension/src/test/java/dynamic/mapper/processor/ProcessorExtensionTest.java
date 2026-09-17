@@ -23,7 +23,6 @@ package dynamic.mapper.processor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.flow.JavaExtensionContextImpl;

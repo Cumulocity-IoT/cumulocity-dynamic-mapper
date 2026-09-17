@@ -27,9 +27,10 @@ import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.sdk.client.RestConnector;
 import com.dashjoin.jsonata.json.Json;
-import dynamic.mapper.configuration.ServiceConfiguration;import dynamic.mapper.model.*;
+import dynamic.mapper.configuration.ServiceConfiguration;
 
-import dynamic.mapper.configuration.ServiceConfigurationService;import lombok.extern.slf4j.Slf4j;
+import dynamic.mapper.configuration.ServiceConfigurationService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.core.io.Resource;

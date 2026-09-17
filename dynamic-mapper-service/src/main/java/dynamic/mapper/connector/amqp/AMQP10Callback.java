@@ -26,7 +26,6 @@ import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.core.ConfigurationRegistry;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import jakarta.jms.BytesMessage;
 import jakarta.jms.Destination;
 import jakarta.jms.JMSException;

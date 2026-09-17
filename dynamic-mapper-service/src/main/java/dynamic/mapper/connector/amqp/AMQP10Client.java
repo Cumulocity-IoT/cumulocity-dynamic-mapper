@@ -45,7 +45,6 @@ import jakarta.jms.MessageConsumer;
 import jakarta.jms.MessageProducer;
 import jakarta.jms.Session;
 import jakarta.jms.TextMessage;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.qpid.jms.JmsConnectionFactory;

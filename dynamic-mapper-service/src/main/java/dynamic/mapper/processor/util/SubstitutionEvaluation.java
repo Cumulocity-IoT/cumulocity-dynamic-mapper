@@ -1,8 +1,6 @@
 package dynamic.mapper.processor.util;
 
-import dynamic.mapper.processor.model.ExternalId;
 
-import dynamic.mapper.processor.model.ProcessingType;
 
 import dynamic.mapper.processor.model.SubstituteValue;
 

@@ -46,7 +46,6 @@ import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.util.APITopicUtil;
 import jakarta.ws.rs.NotSupportedException;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatusCode;

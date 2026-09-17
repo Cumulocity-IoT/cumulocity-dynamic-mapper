@@ -22,8 +22,6 @@
 package dynamic.mapper.explorer;
 
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
-import dynamic.mapper.explorer.ExplorerMessage;
-import dynamic.mapper.explorer.ExplorerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
