@@ -952,16 +952,17 @@ export class MappingStepperService {
         // UPDATE (the row already exists) unless a draft save is attempted and fails, and true
         // for CREATE/COPY only once the create call itself succeeds.
         let mappingPersisted: boolean;
+        let persisted: Mapping = mapping;
         try {
             if (editorMode === EditorMode.UPDATE) {
                 mappingPersisted = true;
                 if (contentChanged) {
                     // Edits are saved to the line's draft; the running configuration is unchanged
                     // until the draft is published as a version and that version is activated.
-                    await this.mappingService.saveDraft(mapping.id, mapping);
+                    persisted = await this.mappingService.saveDraft(mapping.id, mapping) ?? mapping;
                 }
             } else {
-                await this.mappingService.createMapping(mapping);
+                persisted = await this.mappingService.createMapping(mapping) ?? mapping;
                 mappingPersisted = true;
             }
         } catch (error) {
@@ -996,7 +997,7 @@ export class MappingStepperService {
 
         this.mappingService.refreshMappings(stepperConfiguration.direction);
 
-        return { status: 'saved', contentChanged, deploymentChanged };
+        return { status: 'saved', contentChanged, deploymentChanged, persisted };
     }
 
     encodeMappingForCommit(
@@ -1052,7 +1053,13 @@ export type CommitResult =
     | { status: 'rejected'; error: MappingValidationError }
     /** Anything else went wrong; the alert has already been raised. */
     | { status: 'failed'; message: string }
-    | { status: 'saved'; contentChanged: boolean; deploymentChanged: boolean };
+    /**
+     * `persisted` is what the server stored. A caller that stays open **must** adopt it before
+     * the next save: the server assigns a fresh `lastUpdate`, and re-sending the old one fails
+     * the optimistic-concurrency check with "modified concurrently". It is the request's own
+     * mapping when nothing was written (a connector-only change).
+     */
+    | { status: 'saved'; contentChanged: boolean; deploymentChanged: boolean; persisted: Mapping };
 
 export interface CommitMappingRequest {
     mapping: Mapping;

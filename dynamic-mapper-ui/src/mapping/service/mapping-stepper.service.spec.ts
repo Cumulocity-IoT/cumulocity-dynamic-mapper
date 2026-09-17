@@ -1038,6 +1038,29 @@ describe('MappingStepperService', () => {
         expect(mockMappingService.createMapping).toHaveBeenCalled();
       });
 
+      it('returns the server copy as `persisted`, so a caller that stays open can re-baseline', async () => {
+        const mapping = makeMapping({ lastUpdate: 1000 } as any);
+        const serverCopy = makeMapping({ lastUpdate: 2000 } as any);
+        mockMappingService.saveDraft.and.resolveTo(serverCopy);
+
+        const result = await service.commitMapping(makeRequest({
+          mapping,
+          initialContentSnapshot: captureMappingContentSnapshot(mapping, { was: 'different' }, {}, undefined)
+        }));
+
+        expect(expectSaved(result).persisted).toBe(serverCopy);
+      });
+
+      it('falls back to the request mapping when nothing was written', async () => {
+        const mapping = makeMapping();
+
+        const result = await service.commitMapping(makeRequest({ mapping }));
+
+        // Connector-only/no-op update: no save call, so there is no server copy to adopt.
+        expect(mockMappingService.saveDraft).not.toHaveBeenCalled();
+        expect(expectSaved(result).persisted).toBe(mapping);
+      });
+
       it('refreshes the grid for the mapping direction', async () => {
         await service.commitMapping(makeRequest({ stepperConfiguration: makeStepperConfig({ direction: Direction.OUTBOUND }) }));
 

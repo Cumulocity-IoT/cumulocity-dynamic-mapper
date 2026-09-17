@@ -505,6 +505,15 @@ describe('MappingUnifiedEditorComponent', () => {
       mockStepperService.commitMapping.and.resolveTo(result);
     }
 
+    /** A successful commit, carrying the server's copy as `persisted`. */
+    function saved(
+      contentChanged = true,
+      deploymentChanged = false,
+      persisted: Mapping = component.mapping
+    ): CommitResult {
+      return { status: 'saved', contentChanged, deploymentChanged, persisted };
+    }
+
     beforeEach(() => {
       component.mapping = buildMapping();
       component.stepperConfiguration = buildConfig({ allowTemplateExpansion: false });
@@ -516,10 +525,13 @@ describe('MappingUnifiedEditorComponent', () => {
         extensionName: new FormControl(''),
         eventName: new FormControl('')
       });
-      commitResolvesTo({ status: 'saved', contentChanged: true, deploymentChanged: false });
+      commitResolvesTo(saved());
     });
 
     it('passes the editor state, including both forms, to commitMapping', async () => {
+      // Read before the call: a successful commit re-baselines these, replacing the objects.
+      const snapshotAtCallTime = component['initialContentSnapshot'];
+
       await component.onCommitButton();
 
       expect(mockStepperService.commitMapping).toHaveBeenCalledWith(jasmine.objectContaining({
@@ -529,7 +541,7 @@ describe('MappingUnifiedEditorComponent', () => {
         sourceTemplate: { a: 1 },
         targetTemplate: { b: 2 },
         mappingCode: component.mappingCode,
-        initialContentSnapshot: component['initialContentSnapshot'],
+        initialContentSnapshot: snapshotAtCallTime,
         forms: jasmine.objectContaining({
           propertyFormly: component.propertyFormly,
           templateForm: component.templateForm,
@@ -546,20 +558,45 @@ describe('MappingUnifiedEditorComponent', () => {
       expect(mockStepperService.commitMapping.calls.mostRecent().args[0].forms?.validateExtensionSelection).toBe(true);
     });
 
-    it('alerts and navigates back to the grid on a successful save', async () => {
+    // Saving deliberately keeps the editor open so the user can carry on to the Testing tab.
+    // Leaving is Cancel's job.
+    it('alerts and stays in the editor on a successful save', async () => {
       await component.onCommitButton();
 
       expect(mockAlertService.success).toHaveBeenCalled();
-      expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/mappings/inbound');
+      expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
     });
 
-    it('navigates without an alert when an update changed nothing', async () => {
-      commitResolvesTo({ status: 'saved', contentChanged: false, deploymentChanged: false });
+    it('stays in the editor without an alert when an update changed nothing', async () => {
+      commitResolvesTo(saved(false, false));
 
       await component.onCommitButton();
 
       expect(mockAlertService.success).not.toHaveBeenCalled();
-      expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/mappings/inbound');
+      expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+    });
+
+    it('adopts the lastUpdate the server issued, so the next save is not a conflict', async () => {
+      component.mapping.lastUpdate = 1000;
+      commitResolvesTo(saved(true, false, { ...component.mapping, lastUpdate: 2000 } as Mapping));
+
+      await component.onCommitButton();
+
+      expect(component.mapping.lastUpdate).toBe(2000);
+    });
+
+    it('re-baselines so an immediate second save writes neither a draft nor the deployment', async () => {
+      await component.onCommitButton();
+      mockStepperService.commitMapping.calls.reset();
+
+      await component.onCommitButton();
+
+      const second = mockStepperService.commitMapping.calls.mostRecent().args[0];
+      // Same snapshot values the service compares against => contentChanged/deploymentChanged false.
+      expect(second.initialDeploymentConnectors).toBe(JSON.stringify(deploymentMapEntry.connectors));
+      expect(second.initialContentSnapshot).toEqual(
+        jasmine.objectContaining({ mappingJson: JSON.stringify(component.mapping) })
+      );
     });
 
     it('jumps to the tab that owns a blocked precondition, and stays put', async () => {

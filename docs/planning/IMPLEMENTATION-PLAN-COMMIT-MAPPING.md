@@ -168,6 +168,27 @@ its test is how the last round of failures went unnoticed:
 
 ---
 
+### Saving no longer leaves the unified editor
+
+Reported after Phase 6 landed: saving from the substitution tab drops you back to the grid, so you
+cannot go on to the Testing tab. Checked against history first — this was **not** a regression.
+The editor has had exactly one Save button, in a global footer outside the tab blocks, bound to
+`onCommitButton()` since the editor was introduced, and it has left the editor since `864fd163a`
+(May 2026, which only swapped `location.back()` for `navigateToGrid()`). Phase 6 preserved that.
+
+Changed anyway, deliberately: **a successful commit now keeps the unified editor open.** Leaving
+is Cancel's job. The stepper parent still closes its controlled child, which is right — it is a
+modal-ish flow, not a page.
+
+Staying open means the editor is showing stale baselines, so `rebaselineAfterSave()` adopts the
+server's copy. `CommitResult.saved` gained a `persisted: Mapping` for this. The load-bearing field
+is `lastUpdate`: the server issues a fresh token on every draft save, so an editor that keeps the
+old one fails its *next* save with "modified concurrently". Re-taking the content and connector
+snapshots is what stops that next save from writing a redundant draft or rewriting the deployment.
+
+`Cancel` keeps its label. It still means "leave without saving pending edits", and "Close" would
+imply those edits are safe.
+
 ### Smaller alignments that fell out of the merge
 
 Neither is a design decision, but both are behaviour changes worth knowing about when running the

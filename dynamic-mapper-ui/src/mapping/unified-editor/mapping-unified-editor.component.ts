@@ -566,12 +566,43 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     const message = commitSuccessMessage(result, this.mapping.name, this.stepperConfiguration.editorMode);
     if (message) this.alertService.success(message);
 
+    // Saving deliberately does NOT leave the editor: the user is typically mid-flow and still
+    // wants the Testing tab (or another round of edits) afterwards. Leaving is Cancel's job.
+    // Staying open means the editor is now showing stale baselines, so re-establish them.
+    this.rebaselineAfterSave(result.persisted);
+
     // Shared with the stepper's commit path (mapping.component.ts::onCommitMapping) so both
     // editors apply the same post-save check — an OUTBOUND mapping with no device subscribed
     // to receive it otherwise silently does nothing once activated.
     await this.subscriptionService.validateSubscriptionOutbound(this.stepperConfiguration.direction);
+  }
 
-    this.navigateToGrid();
+  /**
+   * Makes the still-open editor consistent with what the server just stored, so a second Save
+   * behaves like a first one.
+   *
+   * The `lastUpdate` adoption is the load-bearing part: it is the optimistic-concurrency token,
+   * the server issues a new one on every draft save, and re-sending the stale one makes the next
+   * save fail with "modified concurrently". Re-taking the two snapshots is what stops that second
+   * save from writing a draft, or rewriting the deployment, when nothing has changed since.
+   */
+  private rebaselineAfterSave(persisted: Mapping): void {
+    if (persisted) {
+      this.mapping.lastUpdate = persisted.lastUpdate;
+      this.mapping.version = persisted.version;
+      this.mapping.draftDirty = persisted.draftDirty;
+      // Defensive: the editor has no create flow today (it is reached only via /edit/:id), but if
+      // one is ever added, a second Save must update rather than create a duplicate.
+      if (persisted.id) this.mapping.id = persisted.id;
+    }
+
+    this.initialContentSnapshot = captureMappingContentSnapshot(
+      this.mapping,
+      this.sourceTemplate,
+      this.targetTemplate,
+      this.mappingCode
+    );
+    this.initialDeploymentConnectors = snapshotConnectors(this.deploymentMapEntry);
   }
 
   onCancel(): void {
