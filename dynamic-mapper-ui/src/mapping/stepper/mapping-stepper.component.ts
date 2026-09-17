@@ -64,7 +64,7 @@ import {
   updateTemplatesInEditors,
   validateProtectedFields
 } from '../../shared/mapping/util';
-import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, toTemplateType } from '../../configuration/shared/configuration.model';
+import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, tryToTemplateType } from '../../configuration/shared/configuration.model';
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
 import { AIPromptComponent } from '../prompt/ai-prompt.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
@@ -688,14 +688,24 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
 
   private updateCodeTemplateEntries(): void {
     const result = this.stepperService.computeCodeTemplateEntries(
-      this.codeTemplates, this.stepperConfiguration.direction, this.mapping?.transformationType
+      this.codeTemplates, this.stepperConfiguration.direction, this.mapping.transformationType
     );
     this.codeTemplateEntries = result.entries;
     this.codeTemplateItems = result.items;
   }
 
   async onCreateCodeTemplate(): Promise<void> {
-    const templateType = toTemplateType(this.stepperConfiguration.direction!, this.mapping!.transformationType);
+    // Reachable only because the "Create new code template" button renders inside the
+    // code-editor section, which is gated on a StepperConfiguration flag two hops away from
+    // the transformation type. Check here rather than rely on that: an unsupported
+    // combination should tell the user, not throw out of an event handler.
+    const templateType = tryToTemplateType(this.stepperConfiguration.direction!, this.mapping.transformationType);
+    if (!templateType) {
+      this.alertService.warning(
+        `Code templates are only available for Smart Function mappings, not ${this.mapping.transformationType}.`
+      );
+      return;
+    }
     const initialState = {
       action: 'CREATE',
       codeTemplate: { name: `New code template - ${templateType}`, templateType }

@@ -84,9 +84,26 @@ const TEMPLATE_TYPE_LOOKUP = new Map<string, TemplateType>([
   [`${Direction.OUTBOUND}_${TransformationType.SMART_FUNCTION}`, TemplateType.OUTBOUND_SMART_FUNCTION],
 ]);
 
+/**
+ * Non-throwing companion to {@link toTemplateType}. Code templates exist only for Smart
+ * Functions, so most transformation types have no TemplateType. Use this at call sites that
+ * can react to an unsupported combination — UI entry points reachable from a template
+ * condition, for instance — rather than crash on one.
+ */
+export function tryToTemplateType(
+  direction: Direction,
+  transformationType: TransformationType
+): TemplateType | undefined {
+  return TEMPLATE_TYPE_LOOKUP.get(`${direction}_${transformationType}`);
+}
+
+/**
+ * Throws when the combination has no TemplateType. Appropriate where reaching an unsupported
+ * combination is a programming error; prefer {@link tryToTemplateType} where it is merely
+ * possible user/config state.
+ */
 export function toTemplateType(direction: Direction, transformationType: TransformationType): TemplateType {
-  const key = `${direction}_${transformationType}`;
-  const templateType = TEMPLATE_TYPE_LOOKUP.get(key);
+  const templateType = tryToTemplateType(direction, transformationType);
   if (!templateType) {
     throw new Error(`No TemplateType mapping for direction='${direction}' transformationType='${transformationType}'`);
   }

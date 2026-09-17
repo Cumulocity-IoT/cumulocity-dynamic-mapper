@@ -142,25 +142,32 @@ refactored.
 4. **Phase 6 of the dedup plan.** Needs its own design for the tab-validation-redirect contract.
 5. **Coverage**, as practice rather than a sprint.
 
-## 7. Follow-ups found while fixing the tests
+## 7. Follow-ups found while fixing the tests ✅ Done
 
-Two production asymmetries surfaced during §1. Neither is reachable today, so neither was changed
-as part of the test fixes — but both are latent and should be fixed deliberately.
+Two production asymmetries surfaced during §1. Investigating each changed what the right fix was.
 
-**`onSelectCodeTemplate` does not guard `this.mapping`.**
-`mapping/unified-editor/mapping-unified-editor.component.ts` reads
-`this.mapping.transformationType` unguarded, while its sibling `updateCodeTemplateEntries` — three
-lines away, same class — uses `this.mapping?.transformationType`. One of the two is wrong. Until
-this is settled the tests have to construct a mapping to avoid the path rather than the component
-defending itself.
+**`this.mapping?.` was dead syntax, not a missing guard.**
+The apparent asymmetry — `onSelectCodeTemplate` reading `this.mapping.transformationType`
+unguarded while `updateCodeTemplateEntries` used `this.mapping?.` — resolves the other way round
+from how it reads. `mapping` is declared `mapping!: Mapping` (non-nullable) in both editors, the
+template dereferences `{{mapping.name}}` on its first line, and both `computeCodeFromTemplate` and
+`computeCodeTemplateEntries` declare `transformationType: TransformationType` as required. So the
+`?.` can never short-circuit under the declared types: it implied a nullability the code rules out.
+Removed in both editors so the precondition is stated once and consistently.
 
-**`onCreateCodeTemplate` can throw for non-Smart-Function mappings.**
-It calls `toTemplateType(direction, transformationType)`, which has entries only for
-`INBOUND_SMART_FUNCTION` / `OUTBOUND_SMART_FUNCTION` and throws otherwise. It is unreachable today
-only because the "Create new code template" button renders inside the `showCodeEditorSection`
-block. That is an incidental guarantee from a template condition, not an enforced one: any change
-that surfaces the button elsewhere turns a mis-selected transformation type into an uncaught
-throw. Either guard the call or make the precondition explicit.
+Left alone: `this.mapping?.extension?.extensionName`, where the meaningful guard is the second
+`?.` — `extension` genuinely is optional.
+
+**`onCreateCodeTemplate` no longer throws out of an event handler.**
+It called `toTemplateType(...)`, which throws for every transformation type except Smart Function.
+That was unreachable only because the "Create new code template" button renders inside
+`showCodeEditorSection` — and that flag comes from `StepperConfiguration.showCodeEditor`, two hops
+from the transformation type. An incidental guarantee, not an enforced one.
+
+Added `tryToTemplateType()` in `configuration/shared/configuration.model.ts` — a non-throwing
+companion returning `TemplateType | undefined`, with `toTemplateType()` now implemented on top of
+it and kept for call sites where an unsupported combination really is a programming error. Both
+editors' `onCreateCodeTemplate` use the safe variant and warn the user instead of crashing.
 
 ---
 
