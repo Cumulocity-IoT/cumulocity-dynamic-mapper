@@ -80,7 +80,7 @@ import { MappingConnectorComponent } from '../step-connector/mapping-connector.c
 import { MappingSubstitutionStepComponent } from '../step-transformation/mapping-transformation-step.component';
 import { MappingTemplateStepComponent } from '../step-template/mapping-template-step.component';
 import { PopoverModule } from 'ngx-bootstrap/popover';
-import { StepperViewModel } from '../stepper-mapping/stepper-view.model';
+import { StepperViewModel } from '../stepper/stepper-view.model';
 
 // Tab index constants
 const TAB_CONNECTOR = 0;

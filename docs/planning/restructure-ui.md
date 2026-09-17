@@ -1,6 +1,6 @@
 # UI Cleanup — dynamic-mapper-ui
 
-**Status:** Step 1 done — the suite is green (447 SUCCESS, 0 FAILED). Step 2 in progress; steps 3–5 not started.
+**Status:** Steps 1–3 done; the suite is green (447 SUCCESS, 0 FAILED). Steps 4–5 not started.
 **Scope:** `dynamic-mapper-ui` only. No backend or API changes.
 **Companion to:** [restructure-java-package.md](restructure-java-package.md) (the backend equivalent).
 
@@ -68,18 +68,43 @@ what it holds — the `.constants.ts` suffix is already used elsewhere in the co
 
 ---
 
-## 3. Folder and file naming
+## 3. Folder and file naming ✅ Done
 
-| Problem | Examples |
-|---------|----------|
-| Folder name disagrees with the files inside it | `mapping-tree/` holds `tree.component.ts`, `tree.service.ts`; `stepper-mapping/` holds `mapping-stepper.component.ts`; `mapping-create/` holds `mapping-type-drawer.component.ts` |
-| `util.ts` vs `utils.ts` | `util.ts` ×3, `utils.ts` ×2 (`mapping-tree/`, `shared/component/json-editor/`) |
-| Singular vs plural siblings | `versions/` among `subscription/`, `substitution/`, `validation/`, `renderer/` |
-| Placement | `mapping-tree/` is top-level while every other mapping concern is under `mapping/` — and only `dynamic-mapper.module.ts` registers it, so it does not appear to be shared outside mapping |
+| Fixed | |
+|-------|---|
+| `utils.ts` -> `util.ts` | `mapping-tree/`, `shared/component/json-editor/` — the repo already used `util.ts` in three other places |
+| `mapping-tree/mapping-tree.factory.ts` -> `tree.factory.ts` | its five siblings are all `tree.*`; this one file used a different prefix |
+| `mapping/stepper-mapping/` -> `mapping/stepper/` | the folder reversed its own file's words (`stepper-mapping` vs `mapping-stepper.component.ts`) and carried a redundant `-mapping` suffix inside `mapping/` |
 
-Worth keeping: the `step-*` prefix (`step-connector`, `step-property`, `step-template`,
-`step-testing`, `step-transformation`) is a good, consistent convention. `stepper-mapping/` is the
-one that breaks it.
+### Corrected: `mapping-tree/` stays top-level
+
+An earlier draft of this plan called `mapping-tree/` misplaced and proposed moving it under
+`mapping/`. **That was wrong.** Every top-level directory is an independently-registered Angular
+feature module, each with its own `*.module.ts` wired into `dynamic-mapper.module.ts`:
+
+```
+configuration/  connector/  extension/  introduction/
+mapping/  mapping-tree/  monitoring/  test-device/
+```
+
+`mapping-tree/tree.module.ts` is registered alongside the other seven. Moving it under `mapping/`
+would break that invariant, not restore one. Only its internal file prefix was inconsistent.
+
+### Deliberately not changed
+
+- **`mapping/mapping-create/`** — carries a redundant `mapping-` prefix inside `mapping/`, so by the
+  dominant convention it would be `create/`. Left alone: the folder names the *flow* (creating a
+  mapping) while its component names the *widget* (`mapping-type-drawer`), and `create/` on its own
+  is vaguer than what it replaces. A judgment call, not an oversight.
+- **`versions/` being plural** among `validation/`, `subscription/`, `substitution/` — it genuinely
+  holds several version-related components. Renaming would be churn.
+- **Module filenames not matching their folders** (`configuration/service-configuration.module.ts`,
+  `connector/connector-configuration.module.ts`, `introduction/doc.module.ts`,
+  `test-device/testing.module.ts`). A real inconsistency, but renaming registered NgModules for
+  cosmetics is a poor trade.
+
+Worth keeping as-is: the `step-*` prefix (`step-connector`, `step-property`, `step-template`,
+`step-testing`, `step-transformation`) is a good, consistent convention.
 
 ---
 
@@ -111,10 +136,9 @@ refactored.
 
 ## 6. Sequence
 
-1. **Fix the 26-failure spec.** Highest value, lowest risk, establishes a green baseline.
-2. **Resolve `shared/mapping` ÷ `mapping/shared`** and rename the constants file. Compiler-verified.
-3. **Normalise naming** — `utils.ts` → `util.ts`, align folder names with file prefixes, move
-   `mapping-tree/` under `mapping/tree/`. Mechanical.
+1. ~~**Fix the failing specs.**~~ Done — see §1.
+2. ~~**Resolve `shared/mapping` ÷ `mapping/shared`.**~~ Done — merged, see §2.
+3. ~~**Normalise naming**~~ — done, see §3. `mapping-tree/` was *not* moved; see the correction there.
 4. **Phase 6 of the dedup plan.** Needs its own design for the tab-validation-redirect contract.
 5. **Coverage**, as practice rather than a sprint.
 

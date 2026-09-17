@@ -54,7 +54,7 @@ import {
 } from 'vanilla-jsoneditor';
 
 import type { JSONPath } from 'immutable-json-patch'
-import { parseJSONPathCustom, stringifyJSONPathCustom } from './utils';
+import { parseJSONPathCustom, stringifyJSONPathCustom } from './util';
 
 export interface ContentChanges {
   previousContent: Content,

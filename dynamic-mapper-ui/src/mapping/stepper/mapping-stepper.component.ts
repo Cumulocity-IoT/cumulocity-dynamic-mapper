@@ -294,7 +294,7 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     this.destroy$.complete();
   }
 
-  /** Also bound directly to the Monaco editor's `(editorInit)` in the template — see stepper-mapping/mapping-stepper.component.html. */
+  /** Also bound directly to the Monaco editor's `(editorInit)` in the template — see stepper/mapping-stepper.component.html. */
   registerCompletionProvider(): Promise<void> {
     return this.stepperService.registerCompletionProvider(this.mapping.direction);
   }

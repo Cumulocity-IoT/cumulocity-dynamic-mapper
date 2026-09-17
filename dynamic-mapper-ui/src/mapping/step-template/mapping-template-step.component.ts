@@ -53,7 +53,7 @@ import {
   splitTopicExcludingSeparator,
   validateProtectedFields
 } from '../../shared/mapping/util';
-import { StepperViewModel } from '../stepper-mapping/stepper-view.model';
+import { StepperViewModel } from '../stepper/stepper-view.model';
 import { CommonModule } from '@angular/common';
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import { PROTECTED_TOKENS } from '../core/processor/processor.model';

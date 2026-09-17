@@ -95,7 +95,7 @@ import { EditorMode } from '../../shared/mapping/stepper.model';
 import { CONTEXT_DATA_KEY_NAME, isCodeOrExtensionTransformation } from '../../shared/mapping/util';
 import { MappingTokens } from '../core/processor/processor.constants';
 import { CommonModule } from '@angular/common';
-import { MappingStepperComponent } from '../stepper-mapping/mapping-stepper.component';
+import { MappingStepperComponent } from '../stepper/mapping-stepper.component';
 import { DeprecationNoticeModalComponent } from '../deprecation-notice/deprecation-notice-modal.component';
 import { DEPRECATION_NOTICE_VERSION } from '../../shared';
 @Component({
