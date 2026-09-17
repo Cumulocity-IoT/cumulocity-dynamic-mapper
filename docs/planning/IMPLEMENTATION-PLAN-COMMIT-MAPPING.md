@@ -1,6 +1,6 @@
 # Implementation Plan: one `commitMapping()` entry point
 
-**Status:** Design. Not started.
+**Status:** Implemented — step 1 of §3 (`commitMapping()` plus its test matrix) landed; call sites migrated in steps 2-4.
 **Scope:** Frontend only — `mapping/unified-editor/mapping-unified-editor.component.ts`,
 `mapping/grid/mapping.component.ts`, `mapping/service/mapping-stepper.service.ts`.
 **Supersedes:** §3.6 (Phase 6) of
@@ -47,9 +47,11 @@ reach Save with an earlier step invalid. Its parent instead decides whether to *
 A shared `commitMapping()` therefore cannot just return a boolean. It has to report **which
 precondition failed**, and let each caller react in its own idiom.
 
-Second asymmetry: the parent also calls
-`subscriptionService.validateSubscriptionOutbound(direction)` after a successful close. The
-unified editor does not. That belongs to the caller, not the shared path.
+Second asymmetry: both callers finish with
+`subscriptionService.validateSubscriptionOutbound(direction)`, but at different moments — the
+parent only after it decides to close the child. (An earlier draft of this section said the
+unified editor did not call it at all; it does, added when the two paths were reconciled as a
+point fix.) It stays in the callers, not the shared path.
 
 ---
 
@@ -101,26 +103,43 @@ this.subscriptionService.validateSubscriptionOutbound(direction);
 
 ### Where the alerts live
 
-Today both paths raise their own alerts, with wording that has already drifted (the parent says
-"Failed to save draft for X", the editor "Failed to save mapping X"). Put the **failure** alerts
-in the service, so one wording exists. Keep the **success** message in the caller: the unified
-editor composes it from `contentChanged` × `deploymentChanged`, and the parent does not — that is
-a genuine difference, and `CommitResult.saved` carries both flags so either can build it.
+Both paths raised their own alerts, with wording that had already drifted (the parent said
+"Failed to save draft for X", the editor "Failed to save mapping X"). The **failure** alerts moved
+into the service, so one wording exists.
+
+The plan originally kept the **success** message in each caller, on the grounds that only the
+unified editor composed it from `contentChanged` × `deploymentChanged`. That difference dissolved
+once the parent gained `deploymentChanged` (see §4), so the wording lives in one exported
+`commitSuccessMessage(result, name, editorMode)` instead. The parent gains the combined and
+connector-only variants it previously had no way to express.
 
 ---
 
 ## 3. Sequencing
 
-1. **Add `commitMapping()` alongside the existing code**, unused. Unit-test it directly against
-   the `CommitResult` matrix — every blocker, both save modes, deployment success and failure,
-   validation rejection. This is the step that makes the rest safe.
-2. **Move the unified editor onto it.** It has the richer failure handling, so it exercises the
-   whole contract. Its spec is green and covers `onCommitButton` today.
-3. **Move the stepper parent onto it**, deleting the `mappingPersisted` / `saveFailed` /
-   `validationError` flags in favour of the result status.
-4. **Delete the two inline sequences.**
+1. ~~**Add `commitMapping()` alongside the existing code**, unused, unit-tested against the
+   `CommitResult` matrix.~~ Done — 25 tests in `mapping-stepper.service.spec.ts` covering every
+   blocker, both save modes, deployment written/skipped/failed, both rejection paths, and a test
+   pinning that `lastUpdate` is echoed back unstamped.
+2. ~~**Move the unified editor onto it.**~~ Done. `onCommitButton()` went from ~110 lines to ~45,
+   all of them request assembly and result-to-UI mapping.
+3. ~~**Move the stepper parent onto it**~~ — done; `mappingPersisted` / `saveFailed` /
+   `validationError` are gone, replaced by the result status. This also moved the encode step off
+   the stepper *child*: it now emits a {@link CommitEditorState} and the grid commits it, so the
+   child no longer half-owns the sequence.
+4. ~~**Delete the two inline sequences.**~~ Done — no `*.component.ts` under `mapping/` calls
+   `saveDraft` / `createMapping` / `updateDefinedDeploymentMapEntry` any more, except the bulk
+   `import-modal`, which is a separate flow with no editor and no deployment.
 
-Stop after any step if behaviour diverges; each leaves the tree green.
+### Tests moved with the behaviour
+
+Following §1's lesson from [restructure-ui.md](restructure-ui.md) — behaviour that moves without
+its test is how the last round of failures went unnoticed:
+
+- the stepper child's two `encodeMappingForCommit` specs became one "emits its editor state" spec
+  plus one asserting it encodes and persists nothing itself;
+- the unified editor's persistence assertions were replaced by request-assembly and
+  result-mapping specs (including a table-driven check that each blocker lands on its tab).
 
 ---
 
@@ -133,10 +152,41 @@ Stop after any step if behaviour diverges; each leaves the tree green.
 - **`lastUpdate` must not be stamped.** Both paths carry a comment saying so — it is the
   optimistic-concurrency token echoed back unchanged on a draft save. The shared path must keep
   that property, and a test should pin it.
-- **Deployment is only persisted when the mapping exists.** The parent guards on
-  `mappingPersisted`; the editor guards on `deploymentChanged || mode !== UPDATE`. These are not
-  the same condition — reconcile deliberately rather than picking one, and write the chosen rule
-  down here when it is decided.
+- **Deployment is only persisted when the mapping exists.** The parent guarded on
+  `mappingPersisted`; the editor guarded on `deploymentChanged || mode !== UPDATE`.
+
+  **Resolved: `mappingPersisted && (deploymentChanged || mode !== UPDATE)`** — the conjunction,
+  which is the editor's condition with the parent's existence check made explicit. Working
+  through the cases, the two conditions already agree everywhere except one: an UPDATE where the
+  connectors were not touched. There the parent issued a deployment `PUT` anyway. That is not a
+  no-op — the backend live-reconciles subscriptions across *all* connectors on that call — so the
+  editor's condition is the correct one and the parent's write is dropped.
+
+  This is the one behavioural change in Phase 6. It required giving the stepper's parent the
+  connector baseline it never tracked (`snapshotConnectors()` at each of the three places it
+  assigns `deploymentMapEntry`); the editor already had it as `initialDeploymentConnectors`.
+
+---
+
+### Smaller alignments that fell out of the merge
+
+Neither is a design decision, but both are behaviour changes worth knowing about when running the
+§4 regression matrix:
+
+- **The grid list now refreshes after a failed save too.** The stepper parent already did this;
+  the unified editor did not. The shared path keeps the parent's behaviour.
+- **An UPDATE that changed nothing now refreshes the list anyway.** The editor previously
+  refreshed only when the content changed.
+
+### Found while doing this, not changed
+
+`grid/mapping.component.ts::updateMapping()` stamps `mapping.lastUpdate = Date.now()` on the grid
+row before cloning it into `mappingToUpdate`. It is harmless today only because that path routes to
+the unified editor, which loads its own copy through the `MappingEditData` resolver — so the
+stamped clone never reaches a save. It is exactly the hazard the "do NOT stamp lastUpdate" comments
+warn about, and it would start defeating the optimistic-concurrency check the moment update went
+back through the stepper. Left alone deliberately: it is a save-path behaviour change outside
+Phase 6's scope.
 
 ---
 

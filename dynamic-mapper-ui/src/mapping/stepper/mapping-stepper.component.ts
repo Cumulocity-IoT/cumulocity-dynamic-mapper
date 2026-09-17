@@ -69,7 +69,7 @@ import { ManageTemplateComponent } from '../../shared/component/code-template/ma
 import { AIPromptComponent } from '../prompt/ai-prompt.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { MappingStepTestingComponent } from '../step-testing/mapping-testing.component';
-import { MappingStepperService } from '../service/mapping-stepper.service';
+import { CommitEditorState, MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { CommonModule } from '@angular/common';
 import { MappingStepPropertiesComponent } from '../step-property/mapping-properties.component';
@@ -103,7 +103,7 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   @Input() stepperConfiguration!: StepperConfiguration;
   @Input() deploymentMapEntry!: DeploymentMapEntry;
   @Output() cancel = new EventEmitter<void>();
-  @Output() commit = new EventEmitter<{ mapping: Mapping; contentChanged: boolean }>();
+  @Output() commit = new EventEmitter<CommitEditorState>();
 
   // View model with computed properties for template simplification
   stepperViewModel!: StepperViewModel;
@@ -316,23 +316,18 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     this.stepperService.raiseAlert(alert);
   }
 
-  async onCommitButton(): Promise<void> {
-    const result = this.stepperService.encodeMappingForCommit(
-      this.mapping,
-      this.sourceTemplate,
-      this.targetTemplate,
-      this.mappingCode,
-      this.initialContentSnapshot,
-      this.stepperConfiguration.allowTemplateExpansion,
-      this.stepperConfiguration.editorMode
-    );
-
-    if ('error' in result) {
-      this.raiseAlert({ type: 'warning', text: result.error });
-      return;
-    }
-
-    this.commit.emit(result);
+  onCommitButton(): void {
+    // Encoding and persistence belong to the host: the stepper is a controlled child, and the
+    // grid decides from the CommitResult whether to close it. See
+    // docs/planning/IMPLEMENTATION-PLAN-COMMIT-MAPPING.md.
+    this.commit.emit({
+      mapping: this.mapping,
+      stepperConfiguration: this.stepperConfiguration,
+      sourceTemplate: this.sourceTemplate,
+      targetTemplate: this.targetTemplate,
+      mappingCode: this.mappingCode,
+      initialContentSnapshot: this.initialContentSnapshot
+    });
   }
 
   /**

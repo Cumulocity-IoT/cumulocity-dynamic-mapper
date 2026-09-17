@@ -1,8 +1,6 @@
 # UI Cleanup — dynamic-mapper-ui
 
-**Status:** Steps 1-3, 5 and the §7 follow-ups done; 461 SUCCESS, 0 FAILED.
-Step 4 is designed but not implemented — see
-[IMPLEMENTATION-PLAN-COMMIT-MAPPING.md](IMPLEMENTATION-PLAN-COMMIT-MAPPING.md).
+**Status:** All steps done; 489 SUCCESS, 0 FAILED.
 **Scope:** `dynamic-mapper-ui` only. No backend or API changes.
 **Companion to:** [restructure-java-package.md](restructure-java-package.md) (the backend equivalent).
 
@@ -146,11 +144,12 @@ Still untested and deliberately left: thin delegating wrappers (`refreshSubstitu
 
 The stepper / unified-editor duplication has its own document:
 [IMPLEMENTATION-PLAN-STEPPER-UNIFIED-EDITOR-DEDUP.md](IMPLEMENTATION-PLAN-STEPPER-UNIFIED-EDITOR-DEDUP.md).
-Phases 1–5 are implemented; **Phase 6 is outstanding** — folding the commit sequence into one shared
-`commitMapping(...)` entry point, which is the phase that makes that plan's §0 class of bug
-structurally impossible rather than prevented by review.
+Phases 1–6 are implemented. Phase 6 folded the commit sequence into one shared
+`commitMapping(...)` entry point, which is what makes that plan's §0 class of bug structurally
+impossible rather than prevented by review.
 
-That plan's §4 manual regression matrix is still marked **not yet executed**.
+That plan's §4 manual regression matrix is still marked **not yet executed** — it is the
+outstanding risk on this work, not a missing code change.
 
 Note the relationship to §1: the 26 failing tests are the spec for the component Phases 1–5 just
 refactored.
@@ -162,8 +161,11 @@ refactored.
 1. ~~**Fix the failing specs.**~~ Done — see §1.
 2. ~~**Resolve `shared/mapping` ÷ `mapping/shared`.**~~ Done — merged, see §2.
 3. ~~**Normalise naming**~~ — done, see §3. `mapping-tree/` was *not* moved; see the correction there.
-4. **Phase 6 of the dedup plan.** Designed — see
-   [IMPLEMENTATION-PLAN-COMMIT-MAPPING.md](IMPLEMENTATION-PLAN-COMMIT-MAPPING.md). Not implemented.
+4. ~~**Phase 6 of the dedup plan.**~~ Done — see
+   [IMPLEMENTATION-PLAN-COMMIT-MAPPING.md](IMPLEMENTATION-PLAN-COMMIT-MAPPING.md). One
+   `MappingStepperService.commitMapping()` now owns the save sequence for both editors; the one
+   behavioural change is that an UPDATE which touched no connectors no longer rewrites the
+   deployment. That plan's §4 manual regression matrix is **still not executed**.
 5. ~~**Coverage.**~~ Targeted pass done — see §4.
 
 ## 7. Follow-ups found while fixing the tests ✅ Done

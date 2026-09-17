@@ -23,7 +23,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormControl, FormGroup } from '@angular/forms';
 import { of, Subject } from 'rxjs';
 import { MappingStepperComponent } from './mapping-stepper.component';
-import { MappingStepperService, EditorSessionResult } from '../service/mapping-stepper.service';
+import { CommitEditorState, EditorSessionResult, MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { SharedService } from '../../shared';
 import { AlertService, BottomDrawerService } from '@c8y/ngx-components';
@@ -191,7 +191,8 @@ describe('MappingStepperComponent', () => {
         'createCodeTemplateAndRefresh',
         'initializeEditorSession',
         'registerCompletionProvider',
-        'encodeMappingForCommit'
+        'encodeMappingForCommit',
+      'commitMapping'
       ],
       {
         countDeviceIdentifiers$: of(0),
@@ -524,39 +525,37 @@ describe('MappingStepperComponent', () => {
       component.onCancelButton();
     });
 
-    it('delegates to encodeMappingForCommit and emits its result on success', (done) => {
+    // Encoding and persistence moved to MappingStepperService.commitMapping in Phase 6 — the
+    // stepper is a controlled child, and the grid parent decides from the CommitResult whether to
+    // close it. All this component still owns is handing over its editor state.
+    it('emits its editor state so the host can commit it', (done) => {
       component.sourceTemplate = { a: 1 };
       component.targetTemplate = { b: 2 };
       component.mappingCode = 'code';
       component['initialContentSnapshot'] = undefined;
-      mockStepperService.encodeMappingForCommit.and.returnValue({ mapping: component.mapping, contentChanged: true });
 
-      component.commit.subscribe((result: { mapping: Mapping; contentChanged: boolean }) => {
-        expect(mockStepperService.encodeMappingForCommit).toHaveBeenCalledWith(
-          component.mapping,
-          { a: 1 },
-          { b: 2 },
-          'code',
-          undefined,
-          component.stepperConfiguration.allowTemplateExpansion,
-          component.stepperConfiguration.editorMode
-        );
-        expect(result).toEqual({ mapping: component.mapping, contentChanged: true });
+      component.commit.subscribe((state: CommitEditorState) => {
+        expect(state).toEqual({
+          mapping: component.mapping,
+          stepperConfiguration: component.stepperConfiguration,
+          sourceTemplate: { a: 1 },
+          targetTemplate: { b: 2 },
+          mappingCode: 'code',
+          initialContentSnapshot: undefined
+        });
         done();
       });
 
       component.onCommitButton();
     });
 
-    it('raises an alert and does not emit commit when encodeMappingForCommit reports an error', () => {
-      mockStepperService.encodeMappingForCommit.and.returnValue({ error: 'Internal error in editor. Try again!' });
-      const commitSpy = jasmine.createSpy('commit');
-      component.commit.subscribe(commitSpy);
+    it('does not encode or persist anything itself', () => {
+      component.commit.subscribe(() => undefined);
 
       component.onCommitButton();
 
-      expect(mockStepperService.raiseAlert).toHaveBeenCalledWith({ type: 'warning', text: 'Internal error in editor. Try again!' });
-      expect(commitSpy).not.toHaveBeenCalled();
+      expect(mockStepperService.encodeMappingForCommit).not.toHaveBeenCalled();
+      expect(mockStepperService.commitMapping).not.toHaveBeenCalled();
     });
   });
 

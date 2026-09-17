@@ -23,7 +23,14 @@ import { FormControl, FormGroup } from '@angular/forms';
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 import { AlertService } from '@c8y/ngx-components';
-import { MappingStepperService } from './mapping-stepper.service';
+import {
+  CommitBlocker,
+  CommitMappingRequest,
+  CommitResult,
+  commitSuccessMessage,
+  MappingStepperService,
+  snapshotConnectors
+} from './mapping-stepper.service';
 import { MappingService } from '../core/mapping.service';
 import { ExtensionService } from '../../extension';
 import { AIAgentService } from '../core/ai-agent.service';
@@ -40,6 +47,8 @@ import {
 } from '../../shared';
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType } from '../../configuration/shared/configuration.model';
 import { captureMappingContentSnapshot } from '../../shared/mapping/util';
+import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
+import { DeploymentMapEntry } from '../../shared';
 
 /**
  * Unit tests for the Phase 3 "stateless-but-mutating" editing operations moved from
@@ -56,6 +65,7 @@ describe('MappingStepperService', () => {
   let mockAlertService: jasmine.SpyObj<AlertService>;
   let mockAIAgentService: jasmine.SpyObj<AIAgentService>;
   let mockExtensionService: jasmine.SpyObj<ExtensionService>;
+  let mockMappingService: jasmine.SpyObj<MappingService>;
 
   function makeMapping(overrides: Partial<Mapping> = {}): Mapping {
     return {
@@ -115,6 +125,16 @@ describe('MappingStepperService', () => {
     ], { state: [] });
     mockAIAgentService = jasmine.createSpyObj<AIAgentService>('AIAgentService', ['getAIAgents']);
     mockExtensionService = jasmine.createSpyObj<ExtensionService>('ExtensionService', ['getProcessorExtensions']);
+    mockMappingService = jasmine.createSpyObj<MappingService>('MappingService', [
+      'evaluateExpression',
+      'saveDraft',
+      'createMapping',
+      'updateDefinedDeploymentMapEntry',
+      'refreshMappings'
+    ]);
+    mockMappingService.saveDraft.and.resolveTo(undefined as any);
+    mockMappingService.createMapping.and.resolveTo(undefined as any);
+    mockMappingService.updateDefinedDeploymentMapEntry.and.resolveTo(undefined as any);
 
     mockSharedService.getFeatures.and.resolveTo({ userHasMappingAdminRole: true, userHasMappingCreateRole: true } as any);
     mockSharedService.getServiceConfiguration.and.resolveTo({} as any);
@@ -124,7 +144,7 @@ describe('MappingStepperService', () => {
     TestBed.configureTestingModule({
       providers: [
         MappingStepperService,
-        { provide: MappingService, useValue: jasmine.createSpyObj('MappingService', ['evaluateExpression']) },
+        { provide: MappingService, useValue: mockMappingService },
         { provide: SharedService, useValue: mockSharedService },
         { provide: ExtensionService, useValue: mockExtensionService },
         { provide: AIAgentService, useValue: mockAIAgentService },
@@ -856,4 +876,314 @@ describe('MappingStepperService', () => {
       expect('error' in result).toBe(false);
     });
   });
+
+  /**
+   * The CommitResult matrix for `commitMapping()` — the single commit path shared by the unified
+   * editor and the stepper's parent (docs/planning/IMPLEMENTATION-PLAN-COMMIT-MAPPING.md).
+   *
+   * These exist so the call sites can be moved onto it safely: the save path touches drafts,
+   * deployments and an optimistic-concurrency token, and has never had an executed regression run.
+   */
+  describe('commitMapping', () => {
+    const CONNECTORS = ['connector-a'];
+
+    function makeDeployment(connectors: string[] = CONNECTORS): DeploymentMapEntry {
+      return { identifier: 'test-identifier', connectors } as DeploymentMapEntry;
+    }
+
+    /** An UPDATE commit of an unmodified mapping: no content change, no connector change. */
+    function makeRequest(overrides: Partial<CommitMappingRequest> = {}): CommitMappingRequest {
+      const mapping = overrides.mapping ?? makeMapping();
+      const deploymentMapEntry = overrides.deploymentMapEntry ?? makeDeployment();
+      return {
+        mapping,
+        deploymentMapEntry,
+        initialDeploymentConnectors: snapshotConnectors(deploymentMapEntry),
+        stepperConfiguration: makeStepperConfig(),
+        sourceTemplate: {},
+        targetTemplate: {},
+        mappingCode: undefined,
+        initialContentSnapshot: captureMappingContentSnapshot(mapping, {}, {}, undefined),
+        ...overrides
+      };
+    }
+
+    function expectSaved(result: CommitResult): Extract<CommitResult, { status: 'saved' }> {
+      expect(result.status).toBe('saved');
+      return result as Extract<CommitResult, { status: 'saved' }>;
+    }
+
+    describe('preconditions block before anything is written', () => {
+      it('blocks on NO_CONNECTOR when the deployment selects none', async () => {
+        const result = await service.commitMapping(makeRequest({ deploymentMapEntry: makeDeployment([]) }));
+
+        expect(result).toEqual(jasmine.objectContaining({ status: 'blocked', blocker: CommitBlocker.NO_CONNECTOR }));
+        expect(mockMappingService.saveDraft).not.toHaveBeenCalled();
+        expect(mockMappingService.updateDefinedDeploymentMapEntry).not.toHaveBeenCalled();
+      });
+
+      it('blocks on MAPPING_TOPIC for INBOUND with a blank topic, and marks the control', async () => {
+        const propertyFormly = new FormGroup({ mappingTopic: new FormControl('') });
+        const result = await service.commitMapping(makeRequest({
+          mapping: makeMapping({ mappingTopic: '   ' }),
+          forms: { propertyFormly, templateForm: new FormGroup({}), validateExtensionSelection: false }
+        }));
+
+        expect(result).toEqual(jasmine.objectContaining({ status: 'blocked', blocker: CommitBlocker.MAPPING_TOPIC }));
+        expect(propertyFormly.get('mappingTopic')?.errors).toEqual({ required: true });
+        expect(propertyFormly.get('mappingTopic')?.touched).toBe(true);
+        expect(mockMappingService.saveDraft).not.toHaveBeenCalled();
+      });
+
+      it('does not apply the topic check to OUTBOUND', async () => {
+        const result = await service.commitMapping(makeRequest({
+          mapping: makeMapping({ mappingTopic: '', direction: Direction.OUTBOUND }),
+          stepperConfiguration: makeStepperConfig({ direction: Direction.OUTBOUND }),
+          forms: { propertyFormly: new FormGroup({}), templateForm: new FormGroup({}), validateExtensionSelection: false }
+        }));
+
+        expect(result.status).toBe('saved');
+      });
+
+      it('blocks on PROPERTY_FORM when the general-settings form is invalid', async () => {
+        const propertyFormly = new FormGroup({ other: new FormControl('', () => ({ bad: true })) });
+        const result = await service.commitMapping(makeRequest({
+          forms: { propertyFormly, templateForm: new FormGroup({}), validateExtensionSelection: false }
+        }));
+
+        expect(result).toEqual(jasmine.objectContaining({ status: 'blocked', blocker: CommitBlocker.PROPERTY_FORM }));
+        expect(propertyFormly.get('other')?.touched).toBe(true);
+      });
+
+      it('blocks on EXTENSION_SELECTION only when the selectors are rendered', async () => {
+        const templateForm = new FormGroup({
+          extensionName: new FormControl('', () => ({ required: true })),
+          eventName: new FormControl('')
+        });
+
+        const hidden = await service.commitMapping(makeRequest({
+          forms: { propertyFormly: new FormGroup({}), templateForm, validateExtensionSelection: false }
+        }));
+        expect(hidden.status).toBe('saved');
+
+        const shown = await service.commitMapping(makeRequest({
+          forms: { propertyFormly: new FormGroup({}), templateForm, validateExtensionSelection: true }
+        }));
+        expect(shown).toEqual(jasmine.objectContaining({ status: 'blocked', blocker: CommitBlocker.EXTENSION_SELECTION }));
+        expect(templateForm.get('extensionName')?.touched).toBe(true);
+        expect(templateForm.get('eventName')?.touched).toBe(true);
+      });
+
+      it('skips every form-backed precondition when the caller passes no forms (the stepper)', async () => {
+        // cdk-stepper already enforces linear completion, so an INBOUND mapping with no topic
+        // cannot be reached there — and must not be blocked here either.
+        const result = await service.commitMapping(makeRequest({ mapping: makeMapping({ mappingTopic: '' }) }));
+
+        expect(result.status).toBe('saved');
+      });
+
+      it('blocks on ENCODING when the mapping is substitutions-as-code without code', async () => {
+        const result = await service.commitMapping(makeRequest({
+          mapping: makeMapping({ transformationType: TransformationType.SMART_FUNCTION }),
+          mappingCode: undefined
+        }));
+
+        expect(result).toEqual(jasmine.objectContaining({ status: 'blocked', blocker: CommitBlocker.ENCODING }));
+        expect(mockMappingService.saveDraft).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('save modes', () => {
+      it('saves a draft on UPDATE when the content changed', async () => {
+        const mapping = makeMapping();
+        const result = await service.commitMapping(makeRequest({
+          mapping,
+          initialContentSnapshot: captureMappingContentSnapshot(mapping, { was: 'different' }, {}, undefined)
+        }));
+
+        expect(mockMappingService.saveDraft).toHaveBeenCalledWith(mapping.id, mapping);
+        expect(mockMappingService.createMapping).not.toHaveBeenCalled();
+        expect(expectSaved(result).contentChanged).toBe(true);
+      });
+
+      it('does not save a draft on UPDATE for a connector-only change', async () => {
+        const deploymentMapEntry = makeDeployment(['connector-b']);
+        const result = await service.commitMapping(makeRequest({
+          deploymentMapEntry,
+          initialDeploymentConnectors: snapshotConnectors(makeDeployment(['connector-a']))
+        }));
+
+        expect(mockMappingService.saveDraft).not.toHaveBeenCalled();
+        expect(mockMappingService.updateDefinedDeploymentMapEntry).toHaveBeenCalledWith(deploymentMapEntry);
+        const saved = expectSaved(result);
+        expect(saved.contentChanged).toBe(false);
+        expect(saved.deploymentChanged).toBe(true);
+      });
+
+      it('creates the mapping on CREATE, and always treats it as a content change', async () => {
+        const mapping = makeMapping();
+        const result = await service.commitMapping(makeRequest({
+          mapping,
+          stepperConfiguration: makeStepperConfig({ editorMode: EditorMode.CREATE })
+        }));
+
+        expect(mockMappingService.createMapping).toHaveBeenCalledWith(mapping);
+        expect(mockMappingService.saveDraft).not.toHaveBeenCalled();
+        expect(expectSaved(result).contentChanged).toBe(true);
+      });
+
+      it('creates the mapping on COPY', async () => {
+        await service.commitMapping(makeRequest({ stepperConfiguration: makeStepperConfig({ editorMode: EditorMode.COPY }) }));
+
+        expect(mockMappingService.createMapping).toHaveBeenCalled();
+      });
+
+      it('refreshes the grid for the mapping direction', async () => {
+        await service.commitMapping(makeRequest({ stepperConfiguration: makeStepperConfig({ direction: Direction.OUTBOUND }) }));
+
+        expect(mockMappingService.refreshMappings).toHaveBeenCalledWith(Direction.OUTBOUND);
+      });
+    });
+
+    describe('deployment persistence', () => {
+      it('writes the deployment when the connectors changed', async () => {
+        const deploymentMapEntry = makeDeployment(['connector-b']);
+        await service.commitMapping(makeRequest({
+          deploymentMapEntry,
+          initialDeploymentConnectors: snapshotConnectors(makeDeployment(['connector-a']))
+        }));
+
+        expect(mockMappingService.updateDefinedDeploymentMapEntry).toHaveBeenCalledWith(deploymentMapEntry);
+      });
+
+      it('writes the deployment on CREATE even though the connectors are unchanged', async () => {
+        await service.commitMapping(makeRequest({ stepperConfiguration: makeStepperConfig({ editorMode: EditorMode.CREATE }) }));
+
+        expect(mockMappingService.updateDefinedDeploymentMapEntry).toHaveBeenCalled();
+      });
+
+      it('skips the redundant write on UPDATE when the connectors are unchanged', async () => {
+        // The backend PUT reconciles subscriptions across all connectors live, so a no-op write
+        // is not free. This is the reconciliation recorded in §4 of the plan: the stepper parent
+        // used to write unconditionally here.
+        await service.commitMapping(makeRequest());
+
+        expect(mockMappingService.updateDefinedDeploymentMapEntry).not.toHaveBeenCalled();
+      });
+
+      it('does not write the deployment when the mapping itself failed to save', async () => {
+        mockMappingService.createMapping.and.rejectWith(new Error('boom'));
+
+        const result = await service.commitMapping(makeRequest({
+          stepperConfiguration: makeStepperConfig({ editorMode: EditorMode.CREATE })
+        }));
+
+        expect(result.status).toBe('failed');
+        expect(mockMappingService.updateDefinedDeploymentMapEntry).not.toHaveBeenCalled();
+      });
+
+      it('still reports saved when only the deployment write fails, but alerts the user', async () => {
+        mockMappingService.updateDefinedDeploymentMapEntry.and.rejectWith(new Error('no such connector'));
+
+        const result = await service.commitMapping(makeRequest({
+          deploymentMapEntry: makeDeployment(['connector-b']),
+          initialDeploymentConnectors: snapshotConnectors(makeDeployment(['connector-a']))
+        }));
+
+        expect(result.status).toBe('saved');
+        expect(mockAlertService.danger).toHaveBeenCalledWith(jasmine.stringContaining('no such connector'));
+      });
+    });
+
+    describe('failures', () => {
+      it('reports rejected, without an alert, when the server rejects the draft', async () => {
+        const error = new MappingValidationError('invalid', ['e1'], []);
+        mockMappingService.saveDraft.and.rejectWith(error);
+        const mapping = makeMapping();
+
+        const result = await service.commitMapping(makeRequest({
+          mapping,
+          initialContentSnapshot: captureMappingContentSnapshot(mapping, { was: 'different' }, {}, undefined)
+        }));
+
+        expect(result).toEqual({ status: 'rejected', error });
+        // The caller lists the problems in a drawer instead; a toast can only be dismissed.
+        expect(mockAlertService.danger).not.toHaveBeenCalled();
+        expect(mockMappingService.updateDefinedDeploymentMapEntry).not.toHaveBeenCalled();
+      });
+
+      it('reports rejected when the server rejects a create', async () => {
+        const error = new MappingValidationError('invalid', ['e1'], []);
+        mockMappingService.createMapping.and.rejectWith(error);
+
+        const result = await service.commitMapping(makeRequest({
+          stepperConfiguration: makeStepperConfig({ editorMode: EditorMode.CREATE })
+        }));
+
+        expect(result).toEqual({ status: 'rejected', error });
+      });
+
+      it('reports failed and alerts once for any other save error', async () => {
+        mockMappingService.saveDraft.and.rejectWith(new Error('network down'));
+        const mapping = makeMapping();
+
+        const result = await service.commitMapping(makeRequest({
+          mapping,
+          initialContentSnapshot: captureMappingContentSnapshot(mapping, { was: 'different' }, {}, undefined)
+        }));
+
+        expect(result.status).toBe('failed');
+        expect(mockAlertService.danger).toHaveBeenCalledTimes(1);
+        expect(mockAlertService.danger).toHaveBeenCalledWith(jasmine.stringContaining('network down'));
+      });
+
+      it('still refreshes the grid after a failed save', async () => {
+        mockMappingService.createMapping.and.rejectWith(new Error('boom'));
+
+        await service.commitMapping(makeRequest({ stepperConfiguration: makeStepperConfig({ editorMode: EditorMode.CREATE }) }));
+
+        expect(mockMappingService.refreshMappings).toHaveBeenCalled();
+      });
+    });
+
+    /**
+     * `lastUpdate` is the optimistic-concurrency token: MappingVersionService.saveDraft rejects a
+     * draft whose lastUpdate differs from the stored snapshot's. The client must echo back what it
+     * received — stamping Date.now() here would make every concurrent-edit check pass vacuously.
+     */
+    it('never stamps lastUpdate', async () => {
+      const mapping = makeMapping({ lastUpdate: 1234567890 } as any);
+      await service.commitMapping(makeRequest({
+        mapping,
+        initialContentSnapshot: captureMappingContentSnapshot(mapping, { was: 'different' }, {}, undefined)
+      }));
+
+      expect(mockMappingService.saveDraft).toHaveBeenCalled();
+      expect(mockMappingService.saveDraft.calls.mostRecent().args[1].lastUpdate).toBe(1234567890);
+    });
+  });
+
+  describe('commitSuccessMessage', () => {
+    const saved = (contentChanged: boolean, deploymentChanged: boolean) =>
+      ({ status: 'saved', contentChanged, deploymentChanged }) as Extract<CommitResult, { status: 'saved' }>;
+
+    it('announces a creation for every non-UPDATE mode', () => {
+      expect(commitSuccessMessage(saved(true, true), 'M', EditorMode.CREATE)).toContain('created successfully');
+      expect(commitSuccessMessage(saved(true, true), 'M', EditorMode.COPY)).toContain('created successfully');
+    });
+
+    it('distinguishes the three UPDATE outcomes', () => {
+      expect(commitSuccessMessage(saved(true, true), 'M', EditorMode.UPDATE))
+        .toContain('Saved draft and connector assignments');
+      expect(commitSuccessMessage(saved(true, false), 'M', EditorMode.UPDATE))
+        .toContain('Saved draft for M');
+      expect(commitSuccessMessage(saved(false, true), 'M', EditorMode.UPDATE))
+        .toContain('Connector assignments for M saved');
+    });
+
+    it('says nothing when an UPDATE changed nothing', () => {
+      expect(commitSuccessMessage(saved(false, false), 'M', EditorMode.UPDATE)).toBeUndefined();
+    });
+  });
+
 });

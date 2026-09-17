@@ -53,7 +53,6 @@ import { EditorMode } from '../../shared/mapping/stepper.model';
 import { MappingService } from '../core/mapping.service';
 import { SubscriptionService } from '../core/subscription.service';
 import { MappingEditData } from '../core/mapping-edit.resolver';
-import { gettext } from '@c8y/ngx-components/gettext';
 import {
   base64ToString,
   buildTestMapping,
@@ -72,7 +71,12 @@ import { MappingValidationError } from '../../shared/mapping/mapping-validation-
 import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { MappingStepTestingComponent } from '../step-testing/mapping-testing.component';
-import { MappingStepperService } from '../service/mapping-stepper.service';
+import {
+  CommitBlocker,
+  commitSuccessMessage,
+  MappingStepperService,
+  snapshotConnectors
+} from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { CommonModule } from '@angular/common';
 import { MappingStepPropertiesComponent } from '../step-property/mapping-properties.component';
@@ -88,6 +92,15 @@ const TAB_GENERAL_SETTINGS = 1;
 const TAB_SELECT_TEMPLATES = 2;
 const TAB_DEFINE_TRANSFORMATION = 3;
 const TAB_TEST_MAPPING = 4;
+
+/** Where a blocked commit sends the user. This is the only place that knows tabs exist —
+ * {@link MappingStepperService.commitMapping} reports the blocker and owns no navigation. */
+const TAB_FOR_BLOCKER: Partial<Record<CommitBlocker, number>> = {
+  [CommitBlocker.NO_CONNECTOR]: TAB_CONNECTOR,
+  [CommitBlocker.MAPPING_TOPIC]: TAB_GENERAL_SETTINGS,
+  [CommitBlocker.PROPERTY_FORM]: TAB_GENERAL_SETTINGS,
+  [CommitBlocker.EXTENSION_SELECTION]: TAB_SELECT_TEMPLATES
+};
 
 /**
  * Unified editor component that presents all 5 mapping configuration sections as tabs
@@ -245,7 +258,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.mapping = editData.mapping;
     this.stepperConfiguration = editData.stepperConfiguration;
     this.deploymentMapEntry = editData.deploymentMapEntry;
-    this.initialDeploymentConnectors = JSON.stringify(this.deploymentMapEntry?.connectors ?? []);
+    this.initialDeploymentConnectors = snapshotConnectors(this.deploymentMapEntry);
     // Initialize the Save-button gate: a mapping requires at least one selected connector
     this.isButtonDisabled$.next(isConnectorSelectionEmpty(this.deploymentMapEntry));
 
@@ -510,114 +523,48 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   }
 
   async onCommitButton(): Promise<void> {
-    // A mapping must be bound to at least one connector
-    if (isConnectorSelectionEmpty(this.deploymentMapEntry)) {
-      this.raiseAlert({ type: 'warning', text: gettext('Select at least one connector before saving.') });
-      this.activeTabIndex = TAB_CONNECTOR; // navigate to Connector tab
-      return;
-    }
-
-    // Validate General Settings form (e.g. mappingTopic required for INBOUND).
-    // Belt-and-suspenders: also check the value directly because Formly's group
-    // validator strips falsy-keyed errors, so propertyFormly.invalid may be stale.
-    if (this.stepperConfiguration.direction === Direction.INBOUND && !this.mapping.mappingTopic?.trim()) {
-      this.propertyFormly.get('mappingTopic')?.setErrors({ required: true });
-      this.propertyFormly.get('mappingTopic')?.markAsTouched();
-      this.activeTabIndex = TAB_GENERAL_SETTINGS;
-      return;
-    }
-    if (this.propertyFormly.invalid) {
-      this.propertyFormly.markAllAsTouched();
-      this.activeTabIndex = TAB_GENERAL_SETTINGS;
-      return;
-    }
-
-    // Only validate extensionName/eventName when the user-visible selectors are shown.
-    // showExtensionSelectors also covers showInternalExtensionNote (PROTOBUF_INTERNAL) where
-    // no selectors are rendered and the form controls are always null.
-    if (this.stepperViewModel.showExtensionSelectorsSource || this.stepperViewModel.showExtensionSelectorsTarget) {
-      const extensionName = this.templateForm.get('extensionName');
-      const eventName = this.templateForm.get('eventName');
-      extensionName?.markAsTouched();
-      eventName?.markAsTouched();
-      if (extensionName?.invalid || eventName?.invalid) {
-        this.activeTabIndex = TAB_SELECT_TEMPLATES;
-        return;
-      }
-    }
-
     // Sync any pending template edits before saving
     this.updateTemplatesInEditors();
 
-    // Connector-only changes must not create a draft — a draft only tracks content changes.
-    const deploymentChanged =
-      JSON.stringify(this.deploymentMapEntry?.connectors ?? []) !== this.initialDeploymentConnectors;
+    const result = await this.stepperService.commitMapping({
+      mapping: this.mapping,
+      deploymentMapEntry: this.deploymentMapEntry,
+      initialDeploymentConnectors: this.initialDeploymentConnectors,
+      stepperConfiguration: this.stepperConfiguration,
+      sourceTemplate: this.sourceTemplate,
+      targetTemplate: this.targetTemplate,
+      mappingCode: this.mappingCode,
+      initialContentSnapshot: this.initialContentSnapshot,
+      forms: {
+        propertyFormly: this.propertyFormly,
+        templateForm: this.templateForm,
+        // showExtensionSelectors also covers showInternalExtensionNote (PROTOBUF_INTERNAL), where
+        // no selectors are rendered and the form controls are always null.
+        validateExtensionSelection:
+          this.stepperViewModel.showExtensionSelectorsSource || this.stepperViewModel.showExtensionSelectorsTarget
+      }
+    });
 
-    const result = this.stepperService.encodeMappingForCommit(
-      this.mapping,
-      this.sourceTemplate,
-      this.targetTemplate,
-      this.mappingCode,
-      this.initialContentSnapshot,
-      this.stepperConfiguration.allowTemplateExpansion,
-      this.stepperConfiguration.editorMode
-    );
-
-    if ('error' in result) {
-      this.raiseAlert({ type: 'warning', text: result.error });
+    if (result.status === 'blocked') {
+      if (result.message) this.raiseAlert({ type: 'warning', text: result.message });
+      const tab = TAB_FOR_BLOCKER[result.blocker];
+      if (tab !== undefined) this.activeTabIndex = tab;
       return;
     }
 
-    const mappingContentChanged = result.contentChanged;
-
-    // Do NOT stamp lastUpdate here: for a draft save it is the optimistic-concurrency
-    // token that must be echoed back unchanged (the server assigns a fresh one on save).
-    try {
-      if (this.stepperConfiguration.editorMode === EditorMode.UPDATE) {
-        if (mappingContentChanged) {
-          // Edits are saved to the line's draft; the running configuration is unchanged
-          // until the draft is published as a version and that version is activated.
-          await this.mappingService.saveDraft(this.mapping.id, this.mapping);
-          this.mappingService.refreshMappings(this.stepperConfiguration.direction);
-        }
-      } else {
-        await this.mappingService.createMapping(this.mapping);
-        this.mappingService.refreshMappings(this.stepperConfiguration.direction);
-        this.alertService.success(gettext(`Mapping ${this.mapping.name} created successfully`));
-      }
-    } catch (error) {
-      // A validation rejection is actionable — show the problems in a drawer and offer to jump
-      // to the offending substitution, instead of a toast the user can only dismiss. The editor
-      // is already kept open by the early return below, so the edits survive.
-      if (error instanceof MappingValidationError) {
-        await this.showValidationIssues(error);
-        return;
-      }
-      this.alertService.danger(gettext(`Failed to save mapping ${this.mapping.name}: `) + error.message);
+    if (result.status === 'rejected') {
+      // A validation rejection is actionable — show the problems in a drawer and offer to jump to
+      // the offending substitution. Returning here keeps the editor open, so the edits survive.
+      await this.showValidationIssues(result.error);
       return;
     }
 
-    if (deploymentChanged || this.stepperConfiguration.editorMode !== EditorMode.UPDATE) {
-      try {
-        await this.mappingService.updateDefinedDeploymentMapEntry(this.deploymentMapEntry);
-      } catch (error) {
-        this.alertService.danger(gettext('Failed to update connector assignments: ') + error.message);
-      }
+    if (result.status === 'failed') {
+      return; // the alert has already been raised
     }
 
-    if (this.stepperConfiguration.editorMode === EditorMode.UPDATE) {
-      if (mappingContentChanged && deploymentChanged) {
-        this.alertService.success(
-          gettext(`Saved draft and connector assignments for ${this.mapping.name}. Publish and activate it (Versions) to apply the changes.`)
-        );
-      } else if (mappingContentChanged) {
-        this.alertService.success(
-          gettext(`Saved draft for ${this.mapping.name}. Publish and activate it (Versions) to apply the changes.`)
-        );
-      } else if (deploymentChanged) {
-        this.alertService.success(gettext(`Connector assignments for ${this.mapping.name} saved.`));
-      }
-    }
+    const message = commitSuccessMessage(result, this.mapping.name, this.stepperConfiguration.editorMode);
+    if (message) this.alertService.success(message);
 
     // Shared with the stepper's commit path (mapping.component.ts::onCommitMapping) so both
     // editors apply the same post-save check — an OUTBOUND mapping with no device subscribed

@@ -26,6 +26,7 @@ import { BehaviorSubject, debounceTime, distinctUntilChanged, map, Observable, s
 import { Alert, AlertService } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
 import {
+    DeploymentMapEntry,
     Direction,
     Extension,
     ExtensionEntry,
@@ -50,7 +51,8 @@ import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, toTe
 import { createCompletionProviderFlowFunction, EditorMode } from '../../shared/mapping/stepper.model';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { StepperViewModel, StepperViewModelFactory } from '../stepper/stepper-view.model';
-import { base64ToString, configurationToYaml, stringToBase64, expandC8YTemplate, expandExternalTemplate, hasEsmExport, hasMappingContentChanged, isCodeOrExtensionTransformation, MappingContentSnapshot, reduceSourceTemplate, splitTopicExcludingSeparator, stripTemplateMetadataTags, getTypeOf, yamlToConfiguration } from '../../shared/mapping/util';
+import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
+import { base64ToString, configurationToYaml, isConnectorSelectionEmpty, stringToBase64, expandC8YTemplate, expandExternalTemplate, hasEsmExport, hasMappingContentChanged, isCodeOrExtensionTransformation, MappingContentSnapshot, reduceSourceTemplate, splitTopicExcludingSeparator, stripTemplateMetadataTags, getTypeOf, yamlToConfiguration } from '../../shared/mapping/util';
 
 @Injectable()
 export class MappingStepperService {
@@ -869,6 +871,134 @@ export class MappingStepperService {
      * @param initialContentSnapshot the mapping's snapshot captured at load time (UPDATE mode
      * only) — see `captureMappingContentSnapshot`. `undefined` (CREATE/COPY) always persists.
      */
+
+    /**
+     * The single commit path for both editors.
+     *
+     * Owns the precondition checks, the encode step, the `saveDraft` vs `createMapping` branch,
+     * the deployment write and the mapping refresh. It owns no navigation: it reports *what
+     * happened* and each caller decides where to go — the unified editor maps a
+     * {@link CommitBlocker} onto a tab, the stepper's parent decides whether to close the
+     * controlled child.
+     *
+     * `lastUpdate` is deliberately never stamped here. On a draft save it is the
+     * optimistic-concurrency token that must be echoed back to the server unchanged; the server
+     * assigns a fresh one. Pinned by a test in `mapping-stepper.service.spec.ts`.
+     */
+    async commitMapping(request: CommitMappingRequest): Promise<CommitResult> {
+        const { mapping, deploymentMapEntry, stepperConfiguration, forms } = request;
+        const editorMode = stepperConfiguration.editorMode;
+
+        // A mapping must be bound to at least one connector. Both editors also disable the save
+        // button on this condition, so in practice this is a backstop.
+        if (isConnectorSelectionEmpty(deploymentMapEntry)) {
+            return {
+                status: 'blocked',
+                blocker: CommitBlocker.NO_CONNECTOR,
+                message: gettext('Select at least one connector before saving.')
+            };
+        }
+
+        // The form-backed preconditions only apply to the unified editor. The stepper passes no
+        // forms because cdk-stepper enforces linear completion, so the user cannot reach Save
+        // with an earlier step invalid.
+        if (forms) {
+            // Belt-and-suspenders: also check the value directly because Formly's group
+            // validator strips falsy-keyed errors, so propertyFormly.invalid may be stale.
+            if (stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim()) {
+                forms.propertyFormly.get('mappingTopic')?.setErrors({ required: true });
+                forms.propertyFormly.get('mappingTopic')?.markAsTouched();
+                return { status: 'blocked', blocker: CommitBlocker.MAPPING_TOPIC };
+            }
+            if (forms.propertyFormly.invalid) {
+                forms.propertyFormly.markAllAsTouched();
+                return { status: 'blocked', blocker: CommitBlocker.PROPERTY_FORM };
+            }
+
+            // Only validate extensionName/eventName when the user-visible selectors are shown.
+            // The caller's flag also covers showInternalExtensionNote (PROTOBUF_INTERNAL), where
+            // no selectors are rendered and the form controls are always null.
+            if (forms.validateExtensionSelection) {
+                const extensionName = forms.templateForm.get('extensionName');
+                const eventName = forms.templateForm.get('eventName');
+                extensionName?.markAsTouched();
+                eventName?.markAsTouched();
+                if (extensionName?.invalid || eventName?.invalid) {
+                    return { status: 'blocked', blocker: CommitBlocker.EXTENSION_SELECTION };
+                }
+            }
+        }
+
+        // Connector-only changes must not create a draft — a draft only tracks content changes —
+        // but the deployment still needs to be persisted.
+        const deploymentChanged =
+            snapshotConnectors(deploymentMapEntry) !== request.initialDeploymentConnectors;
+
+        const encoded = this.encodeMappingForCommit(
+            mapping,
+            request.sourceTemplate,
+            request.targetTemplate,
+            request.mappingCode,
+            request.initialContentSnapshot,
+            stepperConfiguration.allowTemplateExpansion,
+            editorMode
+        );
+        if ('error' in encoded) {
+            return { status: 'blocked', blocker: CommitBlocker.ENCODING, message: encoded.error };
+        }
+        const contentChanged = encoded.contentChanged;
+
+        // Tracks whether the mapping row is in a state a deployment can be attached to: true for
+        // UPDATE (the row already exists) unless a draft save is attempted and fails, and true
+        // for CREATE/COPY only once the create call itself succeeds.
+        let mappingPersisted: boolean;
+        try {
+            if (editorMode === EditorMode.UPDATE) {
+                mappingPersisted = true;
+                if (contentChanged) {
+                    // Edits are saved to the line's draft; the running configuration is unchanged
+                    // until the draft is published as a version and that version is activated.
+                    await this.mappingService.saveDraft(mapping.id, mapping);
+                }
+            } else {
+                await this.mappingService.createMapping(mapping);
+                mappingPersisted = true;
+            }
+        } catch (error) {
+            this.mappingService.refreshMappings(stepperConfiguration.direction);
+            // A validation rejection is actionable — the caller shows the problems in a drawer and
+            // offers to jump to the offending substitution, instead of a toast that can only be
+            // dismissed. Either way the caller keeps its editor open, so the edits survive.
+            if (error instanceof MappingValidationError) {
+                return { status: 'rejected', error };
+            }
+            const message = editorMode === EditorMode.UPDATE
+                ? gettext(`Failed to save draft for ${mapping.name}: `) + error.message
+                : gettext(`Failed to create mapping ${mapping.name}: `) + error.message;
+            this.alertService.danger(message);
+            return { status: 'failed', message };
+        }
+
+        // Only persist the deployment once the mapping itself exists, and only when there is
+        // something to write: the backend PUT reconciles subscriptions across all connectors
+        // live, so a redundant write is not free. See §4 of IMPLEMENTATION-PLAN-COMMIT-MAPPING.md
+        // for why this is the editor's condition rather than the stepper parent's.
+        if (mappingPersisted && (deploymentChanged || editorMode !== EditorMode.UPDATE)) {
+            try {
+                await this.mappingService.updateDefinedDeploymentMapEntry(deploymentMapEntry);
+            } catch (error) {
+                // Surfaced rather than swallowed: the deployment was not applied.
+                this.alertService.danger(
+                    gettext(`Failed to deploy mapping ${mapping.name} to connectors: `) + error.message
+                );
+            }
+        }
+
+        this.mappingService.refreshMappings(stepperConfiguration.direction);
+
+        return { status: 'saved', contentChanged, deploymentChanged };
+    }
+
     encodeMappingForCommit(
         mapping: Mapping,
         sourceTemplate: any,
@@ -903,6 +1033,85 @@ export class MappingStepperService {
         return { mapping, contentChanged };
     }
 
+}
+
+/** Which precondition stopped a commit before anything was written. */
+export enum CommitBlocker {
+    NO_CONNECTOR = 'NO_CONNECTOR',
+    MAPPING_TOPIC = 'MAPPING_TOPIC',
+    PROPERTY_FORM = 'PROPERTY_FORM',
+    EXTENSION_SELECTION = 'EXTENSION_SELECTION',
+    /** {@link MappingStepperService.encodeMappingForCommit} returned an error. */
+    ENCODING = 'ENCODING'
+}
+
+export type CommitResult =
+    /** Nothing was written; the caller points the user at the offending input. */
+    | { status: 'blocked'; blocker: CommitBlocker; message?: string }
+    /** The server rejected the mapping; the caller keeps its editor open and lists the problems. */
+    | { status: 'rejected'; error: MappingValidationError }
+    /** Anything else went wrong; the alert has already been raised. */
+    | { status: 'failed'; message: string }
+    | { status: 'saved'; contentChanged: boolean; deploymentChanged: boolean };
+
+export interface CommitMappingRequest {
+    mapping: Mapping;
+    deploymentMapEntry: DeploymentMapEntry;
+    /** {@link snapshotConnectors} taken when the editor opened, to detect connector-only changes. */
+    initialDeploymentConnectors: string;
+    stepperConfiguration: StepperConfiguration;
+    sourceTemplate: any;
+    targetTemplate: any;
+    mappingCode: string | undefined;
+    initialContentSnapshot: MappingContentSnapshot | undefined;
+    /**
+     * The forms whose validity gates a commit. Omitted by the stepper, whose cdk-stepper already
+     * enforces linear completion — passing none means those blockers cannot fire.
+     */
+    forms?: {
+        propertyFormly: FormGroup;
+        templateForm: FormGroup;
+        /** True when the extensionName/eventName selectors are actually rendered. */
+        validateExtensionSelection: boolean;
+    };
+}
+
+/**
+ * What an editor component hands its host so the host can commit: everything
+ * {@link MappingStepperService.commitMapping} needs except the deployment, which the host owns.
+ * Used by the stepper, whose save button lives in the child but whose persistence lives in the
+ * grid parent.
+ */
+export type CommitEditorState = Pick<
+    CommitMappingRequest,
+    'mapping' | 'stepperConfiguration' | 'sourceTemplate' | 'targetTemplate' | 'mappingCode' | 'initialContentSnapshot'
+>;
+
+/** The comparable form of a deployment's connector selection, so both editors detect a
+ * connector-only change the same way. */
+export function snapshotConnectors(deploymentMapEntry: DeploymentMapEntry | undefined): string {
+    return JSON.stringify(deploymentMapEntry?.connectors ?? []);
+}
+
+/** The success wording for a completed commit, shared so the two editors cannot drift apart. */
+export function commitSuccessMessage(
+    result: Extract<CommitResult, { status: 'saved' }>,
+    mappingName: string,
+    editorMode: EditorMode
+): string | undefined {
+    if (editorMode !== EditorMode.UPDATE) {
+        return gettext(`Mapping ${mappingName} created successfully`);
+    }
+    if (result.contentChanged && result.deploymentChanged) {
+        return gettext(`Saved draft and connector assignments for ${mappingName}. Publish and activate it (Versions) to apply the changes.`);
+    }
+    if (result.contentChanged) {
+        return gettext(`Saved draft for ${mappingName}. Publish and activate it (Versions) to apply the changes.`);
+    }
+    if (result.deploymentChanged) {
+        return gettext(`Connector assignments for ${mappingName} saved.`);
+    }
+    return undefined;
 }
 
 /** Callbacks {@link MappingStepperService.initializeEditorSession} needs into the caller's live

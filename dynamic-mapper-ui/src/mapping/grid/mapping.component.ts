@@ -96,6 +96,12 @@ import { CONTEXT_DATA_KEY_NAME, isCodeOrExtensionTransformation } from '../../sh
 import { MappingTokens } from '../core/processor/processor.constants';
 import { CommonModule } from '@angular/common';
 import { MappingStepperComponent } from '../stepper/mapping-stepper.component';
+import {
+  CommitEditorState,
+  commitSuccessMessage,
+  MappingStepperService,
+  snapshotConnectors
+} from '../service/mapping-stepper.service';
 import { DeprecationNoticeModalComponent } from '../deprecation-notice/deprecation-notice-modal.component';
 import { DEPRECATION_NOTICE_VERSION } from '../../shared';
 @Component({
@@ -105,6 +111,10 @@ import { DEPRECATION_NOTICE_VERSION } from '../../shared';
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, CommonModule, SharedModule, MappingStepperComponent],
+  // The grid owns the persistence half of the stepper's commit (the child owns the editing half),
+  // so it needs its own MappingStepperService — the child provides its own instance for its
+  // editing state, and commitMapping() keeps none.
+  providers: [MappingStepperService],
 })
 export class MappingComponent implements OnInit, OnDestroy {
   @ViewChild('mappingGrid') mappingGrid!: DataGridComponent;
@@ -124,6 +134,9 @@ export class MappingComponent implements OnInit, OnDestroy {
   stepperConfiguration: StepperConfiguration = {};
   titleMapping!: string;
   deploymentMapEntry!: DeploymentMapEntry;
+  /** {@link snapshotConnectors} as the editor opened, so a connector-only change is detectable
+   * and an unchanged deployment is not rewritten. */
+  private initialDeploymentConnectors = '';
 
   displayOptions: DisplayOptions = {
     bordered: true,
@@ -158,6 +171,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
   private readonly subscriptionService = inject(SubscriptionService);
   private readonly mappingService = inject(MappingService);
+  private readonly stepperService = inject(MappingStepperService);
   private readonly mappingBulkOpsService = inject(MappingBulkOperationsService);
   private readonly sharedService = inject(SharedService);
   private readonly alertService = inject(AlertService);
@@ -660,6 +674,7 @@ export class MappingComponent implements OnInit, OnDestroy {
 
     this.mappingToUpdate = mapping;
     this.deploymentMapEntry = { identifier: mapping.identifier, connectors: [] };
+    this.initialDeploymentConnectors = snapshotConnectors(this.deploymentMapEntry);
     this.showConfigMapping = true;
   }
 
@@ -690,6 +705,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       identifier: this.mappingToUpdate.identifier,
       connectors: deploymentMapEntry.connectors
     };
+    this.initialDeploymentConnectors = snapshotConnectors(this.deploymentMapEntry);
     this.router.navigate(['edit', mapping.identifier], { relativeTo: this.route });
   }
 
@@ -735,6 +751,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       identifier: this.mappingToUpdate.identifier,
       connectors: deploymentMapEntry.connectors
     };
+    this.initialDeploymentConnectors = snapshotConnectors(this.deploymentMapEntry);
     if (mapping.direction === Direction.OUTBOUND && deploymentMapEntry.connectors.length > 0) {
       this.stepperConfiguration = { ...this.stepperConfiguration, allowTestSending: true };
     }
@@ -778,89 +795,36 @@ export class MappingComponent implements OnInit, OnDestroy {
     }
   }
 
-  async onCommitMapping({ mapping, contentChanged }: { mapping: Mapping; contentChanged: boolean }) {
-    // Do NOT stamp lastUpdate here: for a draft save it is the optimistic-concurrency
-    // token that must be echoed back unchanged (the server assigns a fresh one on save).
-    // mappingPersisted tracks whether the mapping row is in a state a deployment can be attached
-    // to — true for UPDATE (the row already exists) unless a draft save is attempted and fails,
-    // and true for CREATE/COPY only once the create call itself succeeds.
-    let mappingPersisted = false;
-    // Tracked separately from mappingPersisted: a save that failed must keep the editor open so
-    // the edits are not thrown away, and a validation rejection is shown as an actionable list.
-    let saveFailed = false;
-    let validationError: MappingValidationError | null = null;
-    if (this.stepperConfiguration.editorMode == EditorMode.UPDATE) {
-      mappingPersisted = true;
-      // Connector-only changes (contentChanged === false) must not create a draft — a draft
-      // only tracks content changes — but the deployment (connector assignment) below still
-      // needs to be persisted either way.
-      if (contentChanged) {
-        // Edits are saved to the line's draft (D-8); the running configuration is unchanged
-        // until the draft is published as a version and that version is activated.
-        try {
-          await this.mappingService.saveDraft(mapping.id, mapping);
-          this.alertService.success(
-            gettext(`Saved draft for ${mapping.name}. Publish and activate it (Versions) to apply the changes.`)
-          );
-        } catch (error) {
-          mappingPersisted = false;
-          saveFailed = true;
-          if (error instanceof MappingValidationError) {
-            validationError = error;
-          } else {
-            this.alertService.danger(
-              gettext(`Failed to save draft for ${mapping.name}: `) + error.message
-            );
-          }
-        }
-      }
-    } else if (
-      this.stepperConfiguration.editorMode == EditorMode.CREATE ||
-      this.stepperConfiguration.editorMode == EditorMode.COPY
-    ) {
-      // new mapping
-      // console.log('Push new mapping:', mapping);
-      try {
-        await this.mappingService.createMapping(mapping);
-        mappingPersisted = true;
-        this.alertService.success(gettext(`Mapping ${mapping.name} created successfully`));
-      } catch (error) {
-        saveFailed = true;
-        if (error instanceof MappingValidationError) {
-          validationError = error;
-        } else {
-          this.alertService.danger(
-            gettext(`Failed to create mapping ${mapping.name}: `) + error.message
-          );
-        }
-      }
-    }
+  async onCommitMapping(editorState: CommitEditorState): Promise<void> {
+    const result = await this.stepperService.commitMapping({
+      ...editorState,
+      deploymentMapEntry: this.deploymentMapEntry,
+      initialDeploymentConnectors: this.initialDeploymentConnectors
+      // No `forms`: cdk-stepper enforces linear completion, so the user cannot reach Save with an
+      // earlier step invalid. Those blockers are the unified editor's concern.
+    });
 
-    // Only persist the deployment once the mapping itself exists; updating the deployment for a
-    // mapping that failed to save would target a non-existent mapping. The backend validates the
-    // connector identifiers and reconciles subscriptions live, so a failure here means the
-    // deployment was not applied and must be surfaced rather than silently swallowed.
-    if (mappingPersisted) {
-      try {
-        await this.mappingService.updateDefinedDeploymentMapEntry(
-          this.deploymentMapEntry
-        );
-      } catch (error) {
-        this.alertService.danger(
-          gettext(`Failed to deploy mapping ${mapping.name} to connectors: `) + error.message
-        );
-      }
+    if (result.status === 'blocked') {
+      if (result.message) this.alertService.warning(result.message);
+      return;
     }
-    this.mappingService.refreshMappings(this.stepperConfiguration.direction);
 
     // Closing the editor on a failed save discarded the user's edits along with it, leaving them
     // nothing to correct. Keep it open so the reported problems can actually be fixed and re-saved.
-    if (saveFailed) {
-      if (validationError) {
-        await this.showValidationIssues(mapping, validationError);
-      }
+    if (result.status === 'rejected') {
+      await this.showValidationIssues(editorState.mapping, result.error);
       return;
     }
+    if (result.status === 'failed') {
+      return; // the alert has already been raised
+    }
+
+    const message = commitSuccessMessage(
+      result,
+      editorState.mapping.name,
+      this.stepperConfiguration.editorMode
+    );
+    if (message) this.alertService.success(message);
 
     this.showConfigMapping = false;
 
