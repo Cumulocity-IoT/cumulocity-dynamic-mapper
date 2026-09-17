@@ -446,14 +446,30 @@ public class GraalVMContextService {
 
             String identifier = Mapping.SMART_FUNCTION_NAME + "_" + mappingIdentifier;
             Value onMessageFunction;
+            Value exports = null;
 
             if (supportESM) {
                 Source source = Source.newBuilder("js", decodedCode, identifier + ".mjs")
                         .cached(true)
                         .buildLiteral();
                 recordCompilation(tenant, source.getName(), source.getCharacters().toString());
-                Value exports = ctx.eval(source);
+                exports = ctx.eval(source);
                 onMessageFunction = exports.getMember(Mapping.SMART_FUNCTION_NAME);
+
+                // `export default function onMessage(...)` exposes the function under the member
+                // name `default`, not `onMessage`, so the named lookup above misses it. The UI's
+                // hasEsmExport() explicitly accepts that form — it will not append an
+                // `export { onMessage };` when it sees one — so code the editor calls valid would
+                // otherwise fail here with "Function 'onMessage' not found". The non-ESM branch
+                // has never had this problem: JavaScriptModuleStripper removes the `export
+                // default` prefix and leaves a plain function declaration behind.
+                if ((onMessageFunction == null || onMessageFunction.isNull())
+                        && exports.hasMember("default")) {
+                    Value defaultExport = exports.getMember("default");
+                    if (defaultExport != null && defaultExport.canExecute()) {
+                        onMessageFunction = defaultExport;
+                    }
+                }
             } else {
                 decodedCode = JavaScriptModuleStripper.toPlainScript(decodedCode);
                 String wrappedCode = "(function() {\n"
@@ -469,10 +485,26 @@ public class GraalVMContextService {
             }
 
             if (onMessageFunction == null || onMessageFunction.isNull()) {
+                // Name what the code DID export — without it this message says only that
+                // something is missing, leaving the author to guess between a typo, a missing
+                // export and the wrong export shape.
+                String exported = "";
+                if (exports != null) {
+                    try {
+                        exported = String.join(", ", exports.getMemberKeys());
+                    } catch (Exception ignored) {
+                        // Diagnostics only — never let this mask the real failure.
+                    }
+                }
                 ctx.close();
                 throw new IllegalStateException(String.format(
-                        "Function '%s' not found in mapping code for [%s]",
-                        Mapping.SMART_FUNCTION_NAME, mappingIdentifier));
+                        "Function '%s' not found in mapping code for [%s]%s",
+                        Mapping.SMART_FUNCTION_NAME, mappingIdentifier,
+                        exported.isEmpty()
+                                ? supportESM
+                                        ? " - the code exports nothing; add 'export { onMessage };'"
+                                        : " - define 'function onMessage(msg, context)'"
+                                : " - exports found: [" + exported + "]"));
             }
 
             PooledGraalContext newPooled = new PooledGraalContext(ctx, onMessageFunction, engine);
