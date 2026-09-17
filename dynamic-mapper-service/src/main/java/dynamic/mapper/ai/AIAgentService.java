@@ -233,42 +233,6 @@ public class AIAgentService {
         return null;
     }
 
-    public ResponseEntity<String> createMCPServer(MCPServer mcpServer) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization",
-                contextService.getContext().toCumulocityCredentials().getAuthenticationString());
-        headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
-        String tenant = contextService.getContext().toCumulocityCredentials().getTenantId();
-        ResponseEntity<String> response = null;
-        try {
-            String serverUrl = clientProperties.getBaseURL() + AI_AGENT_MCP_SERVER_PATH;
-            RestTemplate restTemplate = new RestTemplate();
-            HttpEntity<MCPServer> requestEntity = new HttpEntity<>(mcpServer, headers);
-            response = restTemplate.exchange(serverUrl, HttpMethod.POST, requestEntity, String.class);
-        } catch (Exception e) {
-            log.error("{} - MCPServer creation failed", tenant, e);
-            throw e;
-        }
-        return response;
-    }
-
-    public ResponseEntity<MCPServers> getMCPServer() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization",
-                contextService.getContext().toCumulocityCredentials().getAuthenticationString());
-        headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
-        String tenant = contextService.getContext().toCumulocityCredentials().getTenantId();
-        try {
-            String serverUrl = clientProperties.getBaseURL() + AI_AGENT_MCP_SERVER_PATH;
-            RestTemplate restTemplate = new RestTemplate();
-            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
-            return restTemplate.exchange(serverUrl, HttpMethod.GET, requestEntity, MCPServers.class);
-        } catch (Exception e) {
-            log.error("{} - MCPServer creation failed", tenant, e);
-        }
-        return null;
-    }
-
     /**
      * Test a JSONata expression against a JSON string.
      * 
