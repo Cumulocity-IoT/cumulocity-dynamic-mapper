@@ -36,6 +36,9 @@ the mappings the tenant configured.
 
 ## Implementation
 
+> For a single end-to-end picture of the processor chain described below, see
+> [inbound-flow-diagram.md](inbound-flow-diagram.md).
+
 ### Where it runs
 
 | Stage | Class | Role |

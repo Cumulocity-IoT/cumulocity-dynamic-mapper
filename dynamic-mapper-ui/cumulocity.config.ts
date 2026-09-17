@@ -34,6 +34,22 @@ export default {
         to: 'README.md'
       },
       {
+        from: '../resources/image-optimized/Dynamic_Mapper_Configuration_Configuration.png',
+        to: 'image/Dynamic_Mapper_Configuration_Configuration.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Configuration_ProcessorExtension.png',
+        to: 'image/Dynamic_Mapper_Configuration_ProcessorExtension.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Configuration_ProcessorExtension_Upload.png',
+        to: 'image/Dynamic_Mapper_Configuration_ProcessorExtension_Upload.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Monitoring_TestDevices.png',
+        to: 'image/Dynamic_Mapper_Monitoring_TestDevices.png'
+      },
+      {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Subscription_Outbound_Resync.png',
         to: 'image/Dynamic_Mapper_Mapping_Subscription_Outbound_Resync.png'
       },
@@ -58,16 +74,8 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png',
-        to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png'
-      },
-      {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png'
-      },
-      {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png',
-        to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Subscription_Outbound.png',

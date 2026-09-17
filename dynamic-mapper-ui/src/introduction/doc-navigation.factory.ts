@@ -189,6 +189,14 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 602,
       preventDuplicates: true
     }),
+    serviceConfigurationNode: new NavigatorNode({
+      parent: gettext('Home'),
+      icon: 'cog',
+      label: gettext('Service configuration'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/service-configuration',
+      priority: 601,
+      preventDuplicates: true
+    }),
     reliabilitySettingsNode: new NavigatorNode({
       parent: gettext('Home'),
       icon: 'shield',

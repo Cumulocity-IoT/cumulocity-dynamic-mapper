@@ -160,11 +160,11 @@ is not possible for JSON arrays.
 
 Now you start adding a mapping by clicking [Inbound](/c8y-pkg-dynamic-mapper/node1/mappings/inbound) **Add
 Mapping**.
-The following two screenshots show the selection of the **Payload Type** and **Transformation Type**.
+The dialog asks for the **Payload Format** and the **Transformation Type** together. With **Expert Mode**
+enabled it also offers the **Smart Function Source** — either generating the function with the AI agent when you
+reach the Transformation step, or starting from an existing code template.
 
-![Payload type](../../../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png "Screenshot showing available payload types.")
-
-![Transformation type](../../../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png "Screenshot showing available transformation types.")
+![Select payload format and transformation type](../../../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal.png "The Add Mapping dialog: selecting the payload format, the transformation type and, in Expert Mode, the Smart Function source.")
 
 #### Payload Types in Detail {#payload-types-detail}
 
@@ -338,6 +338,28 @@ transformation without waiting for a real device message:
   afterwards.
 
 ![Send test message](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_SendTestMessage.png "Sending a transformed test message to a test device in Cumulocity.")
+
+#### Managing test devices {#test-devices}
+
+Every time you use **Send Test Message** with **Create test device** enabled, the mapper creates a real managed
+object in inventory tagged with the fragment `d11r_testDevice`. Over a few testing sessions these accumulate, so
+the mapper keeps them in one place: **Monitoring → Test device**.
+
+![Test devices](../../../resources/image/Dynamic_Mapper_Monitoring_TestDevices.png "The Test device page under Monitoring, listing the devices created by Send Test Message.")
+
+The page lists only devices carrying that fragment — never your production devices — with their **ID**, **Name**,
+**Date Created** and **Type**. ID, Name and Type are filterable and sortable, so you can narrow a long list down
+to the run you care about. The ID links through to the device in the standard Device Management app if you want
+to inspect the measurements, events or alarms your mapping actually produced.
+
+To clean up, delete a single device from its row menu, or tick several rows and delete them in one action. This
+is ordinary inventory deletion — the device and its data are removed from the tenant.
+
+:::info
+Test devices are real devices. They count towards your tenant's device inventory, and any mapping whose topic
+filter matches will process messages for them just like any other device. Deleting them when a test round is
+finished keeps both your inventory and your monitoring statistics clean.
+:::
 
 ### SparkPlug B {#sparkplugb}
 
