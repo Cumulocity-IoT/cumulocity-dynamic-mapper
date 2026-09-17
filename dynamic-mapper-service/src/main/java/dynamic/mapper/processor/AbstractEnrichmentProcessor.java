@@ -40,6 +40,7 @@ import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.status.MappingStatus;
@@ -193,21 +194,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 .engine(graalEngine)
                 .option("js.text-encoding", "true")
                 .allowHostAccess(serviceRegistry.getGraalVMContextService().getHostAccess())
-                .allowHostClassLookup(className ->
-                // Allow only the specific SubstitutionContext class
-                className.equals("dynamic.mapper.processor.runtime.SubstitutionContext")
-                        || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
-                        || className.equals("dynamic.mapper.processor.model.SubstituteValue")
-                        || className.equals("dynamic.mapper.processor.model.SubstituteValue$TYPE")
-                        || className.equals("dynamic.mapper.model.RepairStrategy")
-                        || className.equals("java.nio.charset.StandardCharsets")
-                        || className.equals("java.lang.String")
-                        || className.equals("java.util.Base64")
-                        // Allow base collection classes needed for return values
-                        || className.equals("java.util.ArrayList")
-                        || className.equals("java.util.Arrays")
-                        || className.equals("java.util.HashMap")
-                        || className.equals("java.util.HashSet"));
+                .allowHostClassLookup(GraalVMContextService::isAllowedHostClass);
 
         if (supportESM) {
             builder.allowExperimentalOptions(true)

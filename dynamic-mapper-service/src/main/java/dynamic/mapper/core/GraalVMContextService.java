@@ -921,14 +921,20 @@ public class GraalVMContextService {
     }
 
     /**
-     * Host-class allow-list shared by all GraalVM context builders in this service.
-     * Kept in one place so that {@link #createGraalsResources} and
-     * {@link #warmupMappingCodes} stay consistent. Package-private so
-     * {@code GraalVMTemplateHostClassTest} can check the shipped templates against it —
-     * a template naming a class that moved package fails only at runtime, as happened when
-     * {@code RepairStrategy} moved out of {@code processor.model}.
+     * The host-class allow-list for every GraalVM context this service builds — a security
+     * boundary, so it is deliberately narrow and lives in exactly one place. All four
+     * {@code allowHostClassLookup} call sites reference it: {@link #createGraalsResources},
+     * {@link #warmupMappingCodes}, the pooled-context builder, and
+     * {@code AbstractEnrichmentProcessor.createGraalContext}. Do not inline a copy — an earlier
+     * duplicate in that last one had to be kept in step by review.
+     *
+     * <p>Public so both that processor (a different package) and
+     * {@code GraalVMTemplateHostClassTest} can reach it. The test matters because the shipped
+     * templates name these classes as strings via {@code Java.type(...)}: a class that moves
+     * package compiles clean and fails only at runtime, as happened when {@code RepairStrategy}
+     * moved out of {@code processor.model}.
      */
-    static boolean isAllowedHostClass(String className) {
+    public static boolean isAllowedHostClass(String className) {
         return className.equals("dynamic.mapper.processor.runtime.SubstitutionContext")
                 || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
                 || className.equals("dynamic.mapper.processor.model.SubstituteValue")

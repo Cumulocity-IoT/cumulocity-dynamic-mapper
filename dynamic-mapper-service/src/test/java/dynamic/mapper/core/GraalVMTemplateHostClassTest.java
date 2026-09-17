@@ -26,6 +26,8 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -126,8 +128,6 @@ class GraalVMTemplateHostClassTest {
 
         List<String> missing = new ArrayList<>();
         for (String className : allowed) {
-            // Guards the mirror of this list in AbstractEnrichmentProcessor.createGraalContext too:
-            // if this fails, both copies need the same edit.
             assertTrue(GraalVMContextService.isAllowedHostClass(className),
                     className + " is expected on the allow-list but was rejected");
             try {
@@ -137,6 +137,24 @@ class GraalVMTemplateHostClassTest {
             }
         }
         assertTrue(missing.isEmpty(), "Allow-listed classes that no longer exist: " + missing);
+    }
+
+    /**
+     * There is exactly one allow-list. It used to be duplicated as an inline lambda in
+     * {@code AbstractEnrichmentProcessor.createGraalContext}, kept in step only by review; this
+     * fails if a copy comes back.
+     */
+    @Test
+    void theAllowListIsNotDuplicatedInTheProcessor() throws IOException {
+        Path processor = Path.of("src/main/java/dynamic/mapper/processor/AbstractEnrichmentProcessor.java");
+        assertTrue(Files.exists(processor), processor + " not found — did the class move?");
+        String source = Files.readString(processor);
+
+        assertTrue(source.contains("allowHostClassLookup(GraalVMContextService::isAllowedHostClass)"),
+                "AbstractEnrichmentProcessor must delegate to the single allow-list");
+        assertFalse(source.contains("dynamic.mapper.processor.runtime.SubstitutionContext\""),
+                "AbstractEnrichmentProcessor names allow-listed classes itself again — "
+                        + "delegate to GraalVMContextService.isAllowedHostClass instead");
     }
 
     @Test
