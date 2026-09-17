@@ -28,11 +28,11 @@ import { gettext } from '@c8y/ngx-components/gettext';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BehaviorSubject } from 'rxjs';
-import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
+import { base64ToString, stringToBase64 } from '../../shared/mapping/util';
 import { ConfirmationModalComponent, Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
 import { SharedService } from '../../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
-import { createCompletionProviderFlowFunction } from '../../mapping/shared/stepper.model';
+import { createCompletionProviderFlowFunction } from '../../shared/mapping/stepper.model';
 
 interface CodeTemplateEntry {
   key: string;

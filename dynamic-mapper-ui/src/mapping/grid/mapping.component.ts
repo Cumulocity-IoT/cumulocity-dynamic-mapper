@@ -81,7 +81,7 @@ import { ExplorerMappingHandoffService } from '../core/explorer-mapping-handoff.
 import { SubscriptionService } from '../core/subscription.service';
 import { ImportMappingsComponent } from '../import/import-modal.component';
 import { MappingVersionDrawerComponent } from '../versions/mapping-version-drawer.component';
-import { MappingValidationError } from '../shared/mapping-validation-error';
+import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
@@ -90,9 +90,9 @@ import { MappingStatusActivationRendererComponent } from '../renderer/status-act
 import { StatusRendererComponent } from '../renderer/status.renderer.component';
 import {
   PayloadWrapper
-} from '../shared/mapping.model';
-import { EditorMode } from '../shared/stepper.model';
-import { CONTEXT_DATA_KEY_NAME, isCodeOrExtensionTransformation } from '../shared/util';
+} from '../../shared/mapping/mapping.model';
+import { EditorMode } from '../../shared/mapping/stepper.model';
+import { CONTEXT_DATA_KEY_NAME, isCodeOrExtensionTransformation } from '../../shared/mapping/util';
 import { MappingTokens } from '../core/processor/processor.constants';
 import { CommonModule } from '@angular/common';
 import { MappingStepperComponent } from '../stepper-mapping/mapping-stepper.component';
@@ -101,7 +101,7 @@ import { DEPRECATION_NOTICE_VERSION } from '../../shared';
 @Component({
   selector: 'd11r-mapping-mapping-grid',
   templateUrl: 'mapping.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
+  styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, CommonModule, SharedModule, MappingStepperComponent],

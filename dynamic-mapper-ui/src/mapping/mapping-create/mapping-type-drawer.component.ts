@@ -39,7 +39,7 @@ import {
 } from '../../shared';
 import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/code-editor-drawer.component';
 import { CodeTemplate, ServiceConfiguration } from '../../configuration';
-import { base64ToString, stringToBase64, stripTemplateMetadataTags } from '../shared/util';
+import { base64ToString, stringToBase64, stripTemplateMetadataTags } from '../../shared/mapping/util';
 import { ExtensionService } from '../../extension';
 import { AIAgentService, resolveRequiredAgentName } from '../core/ai-agent.service';
 

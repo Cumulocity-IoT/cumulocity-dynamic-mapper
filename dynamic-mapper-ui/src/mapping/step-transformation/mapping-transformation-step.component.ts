@@ -24,13 +24,13 @@ import {
   RepairStrategy,
   ALERT_INFO_TIMEOUT
 } from '../../shared';
-import { EditorMode, SubstitutionModel } from '../shared/stepper.model';
+import { EditorMode, SubstitutionModel } from '../../shared/mapping/stepper.model';
 import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
 import { AIPromptComponent } from '../prompt/ai-prompt.component';
-import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
+import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
-import { isExpression } from '../shared/util';
+import { isExpression } from '../../shared/mapping/util';
 import { CommonModule } from '@angular/common';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
@@ -38,7 +38,7 @@ import { CollapseModule } from 'ngx-bootstrap/collapse';
 @Component({
   selector: 'd11r-mapping-transformation-step',
   templateUrl: './mapping-transformation-step.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
+  styleUrls: ['../../shared/mapping/mapping.style.css'],
   standalone: true,
   imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, JsonEditorComponent, SubstitutionRendererComponent]
 })

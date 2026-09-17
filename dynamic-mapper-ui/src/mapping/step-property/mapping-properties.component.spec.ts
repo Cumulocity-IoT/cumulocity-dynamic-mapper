@@ -29,7 +29,7 @@ import { ConnectorConfigurationService } from '../../shared/service/connector-co
 import { MappingService } from '../core/mapping.service';
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import { FormatStringPipe } from '../../shared/misc/format-string.pipe';
-import { EditorMode } from '../shared/stepper.model';
+import { EditorMode } from '../../shared/mapping/stepper.model';
 
 // ---------------------------------------------------------------------------
 // Helpers

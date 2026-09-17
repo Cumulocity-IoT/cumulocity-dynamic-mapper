@@ -27,7 +27,7 @@ import { MappingStepperService } from './mapping-stepper.service';
 import { MappingService } from '../core/mapping.service';
 import { ExtensionService } from '../../extension';
 import { AIAgentService } from '../core/ai-agent.service';
-import { EditorMode } from '../shared/stepper.model';
+import { EditorMode } from '../../shared/mapping/stepper.model';
 import {
   Direction,
   Extension,
@@ -39,7 +39,7 @@ import {
   TransformationType
 } from '../../shared';
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType } from '../../configuration/shared/configuration.model';
-import { captureMappingContentSnapshot } from '../shared/util';
+import { captureMappingContentSnapshot } from '../../shared/mapping/util';
 
 /**
  * Unit tests for the Phase 3 "stateless-but-mutating" editing operations moved from
@@ -361,6 +361,10 @@ describe('MappingStepperService', () => {
   // createCodeTemplateAndRefresh
   // -------------------------------------------------------------------------
 
+  // Code templates only exist for Smart Functions: toTemplateType() has entries for
+  // INBOUND/OUTBOUND + SMART_FUNCTION only and throws otherwise. The UI reflects that —
+  // "Create new code template" lives inside the code-editor section, which is rendered
+  // only for code-based transformations. So DEFAULT is not a reachable input here.
   describe('createCodeTemplateAndRefresh', () => {
     it('creates the template, refetches the map, and shows a success alert on 2xx', async () => {
       mockSharedService.createCodeTemplate.and.resolveTo({ status: 201 } as any);
@@ -368,7 +372,7 @@ describe('MappingStepperService', () => {
       mockSharedService.getCodeTemplates.and.resolveTo(refreshedMap);
 
       const result = await service.createCodeTemplateAndRefresh(
-        'My template', 'desc', 'code', Direction.INBOUND, TransformationType.DEFAULT
+        'My template', 'desc', 'code', Direction.INBOUND, TransformationType.SMART_FUNCTION
       );
 
       expect(result).toBe(refreshedMap);
@@ -381,7 +385,7 @@ describe('MappingStepperService', () => {
       mockSharedService.getCodeTemplates.and.resolveTo({} as CodeTemplateMap);
 
       await service.createCodeTemplateAndRefresh(
-        'My template', 'desc', 'code', Direction.INBOUND, TransformationType.DEFAULT
+        'My template', 'desc', 'code', Direction.INBOUND, TransformationType.SMART_FUNCTION
       );
 
       expect(mockAlertService.danger).toHaveBeenCalled();
@@ -417,6 +421,23 @@ describe('MappingStepperService', () => {
       const result = await service.initializeEditorSession(mapping, makeStepperConfig(), new Subject(), callbacks());
       expect(result.sourceSystem).toBe('Broker');
       expect(result.targetSystem).toBe('Cumulocity');
+    });
+
+    // Moved here from mapping-stepper.component.spec.ts: the subscription that mirrors
+    // isSubstitutionValid$ into the template form lives in buildTemplateForm() since the
+    // stepper/unified-editor deduplication, so the component spec (which mocks this
+    // service) could never exercise it.
+    it('mirrors the substitution validity stream into the template form errors', async () => {
+      const mapping = makeMapping({ direction: Direction.INBOUND });
+      const { templateForm } = await service.initializeEditorSession(
+        mapping, makeStepperConfig(), new Subject(), callbacks()
+      );
+
+      service.isSubstitutionValid$.next(false);
+      expect(templateForm.errors).toEqual({ incorrect: true });
+
+      service.isSubstitutionValid$.next(true);
+      expect(templateForm.errors).toBeNull();
     });
 
     it('sets source/target systems from direction (OUTBOUND)', async () => {
@@ -605,11 +626,13 @@ describe('MappingStepperService', () => {
 
     it('reduces (compacts) source/target templates when template expansion is allowed', () => {
       const mapping = makeMapping();
+      // reduceSourceTemplate deletes the expansion tokens at the TOP level of the template,
+      // so the fixture has to put them there — nested occurrences are left alone by design.
       service.encodeMappingForCommit(
-        mapping, { a: { _TOPIC_LEVEL_: '1' } }, { b: 2 }, undefined, undefined, true, EditorMode.CREATE
+        mapping, { a: 1, _TOPIC_LEVEL_: ['x'], _IDENTITY_: {} }, { b: 2 }, undefined, undefined, true, EditorMode.CREATE
       );
-      // reduceSourceTemplate strips expansion metadata — result differs from a plain JSON.stringify
-      expect(mapping.sourceTemplate).not.toBe(JSON.stringify({ a: { _TOPIC_LEVEL_: '1' } }));
+      expect(mapping.sourceTemplate).toBe(JSON.stringify({ a: 1 }));
+      expect(mapping.targetTemplate).toBe(JSON.stringify({ b: 2 }));
     });
 
     it('encodes mappingCode to base64 (stripped of metadata tags) when provided', () => {

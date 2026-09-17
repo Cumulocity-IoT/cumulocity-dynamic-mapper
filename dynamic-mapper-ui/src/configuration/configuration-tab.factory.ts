@@ -23,7 +23,7 @@ import { Injectable } from '@angular/core';
 import { TabFactory, Tab } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 import { SharedService } from '../shared/service/shared.service';
-import { NODE3} from '../shared/mapping/util';
+import { NODE3} from '../shared/mapping/mapping.constants';
 
 @Injectable()
 export class ConfigurationTabFactory implements TabFactory {

@@ -32,12 +32,12 @@ import {
   Direction,
   StepperConfiguration
 } from '../../shared';
-import { EditorMode } from '../shared/stepper.model';
+import { EditorMode } from '../../shared/mapping/stepper.model';
 
 @Component({
   selector: 'd11r-mapping-connector',
   templateUrl: 'mapping-connector.component.html',
-  styleUrls: ['../shared/mapping.style.css', './mapping-connector.style.css'],
+  styleUrls: ['../../shared/mapping/mapping.style.css', './mapping-connector.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [ConnectorGridComponent]

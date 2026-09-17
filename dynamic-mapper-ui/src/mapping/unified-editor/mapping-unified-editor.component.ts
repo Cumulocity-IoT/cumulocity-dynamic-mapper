@@ -49,7 +49,7 @@ import {
   MappingTypeLabels,
   MappingType
 } from '../../shared';
-import { EditorMode } from '../shared/stepper.model';
+import { EditorMode } from '../../shared/mapping/stepper.model';
 import { MappingService } from '../core/mapping.service';
 import { SubscriptionService } from '../core/subscription.service';
 import { MappingEditData } from '../core/mapping-edit.resolver';
@@ -64,13 +64,13 @@ import {
   stripTemplateMetadataTags,
   updateTemplatesInEditors,
   validateProtectedFields
-} from '../shared/util';
+} from '../../shared/mapping/util';
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, toTemplateType } from '../../configuration/shared/configuration.model';
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
 import { AIPromptComponent } from '../prompt/ai-prompt.component';
-import { MappingValidationError } from '../shared/mapping-validation-error';
+import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
-import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
+import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { MappingStepTestingComponent } from '../step-testing/mapping-testing.component';
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
@@ -96,7 +96,7 @@ const TAB_TEST_MAPPING = 4;
 @Component({
   selector: 'd11r-mapping-unified-editor',
   templateUrl: 'mapping-unified-editor.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
+  styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   providers: [MappingStepperService, SubstitutionManagementService],

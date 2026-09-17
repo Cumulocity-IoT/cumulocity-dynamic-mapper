@@ -50,7 +50,7 @@ import {
   isSubstitutionsAsCode,
   TransformationType
 } from '../../shared';
-import { EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../shared/stepper.model';
+import { EditorMode, STEP_DEFINE_SUBSTITUTIONS, STEP_GENERAL_SETTINGS, STEP_SELECT_TEMPLATES, STEP_TEST_MAPPING } from '../../shared/mapping/stepper.model';
 import {
   base64ToString,
   buildTestMapping,
@@ -63,11 +63,11 @@ import {
   tryGetLiveEditorContent,
   updateTemplatesInEditors,
   validateProtectedFields
-} from '../shared/util';
+} from '../../shared/mapping/util';
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, toTemplateType } from '../../configuration/shared/configuration.model';
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
 import { AIPromptComponent } from '../prompt/ai-prompt.component';
-import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
+import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { MappingStepTestingComponent } from '../step-testing/mapping-testing.component';
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
@@ -92,7 +92,7 @@ interface StepperStepChange {
   selector: 'd11r-mapping-stepper',
   host: { class: 'flex-grow d-col fit-h' },
   templateUrl: 'mapping-stepper.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
+  styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   providers: [MappingStepperService, SubstitutionManagementService],

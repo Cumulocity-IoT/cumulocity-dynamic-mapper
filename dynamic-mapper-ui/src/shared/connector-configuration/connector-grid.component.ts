@@ -29,7 +29,7 @@ import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.c
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { LoggingEventType } from '../connector-details/connector-log.model';
 import { DeploymentMapEntry, Direction, Feature } from '../mapping/mapping.model';
-import { createCustomUuid } from '../mapping/util';
+import { createCustomUuid } from '../mapping/mapping.constants';
 import { applyConnectorConfigurationChange, awaitDrawerResult, ConnectorConfiguration, ConnectorConfigurationApiPayload, ConnectorSpecification, ConnectorType, PollingInterval, prepareConnectorConfigurationForApi } from './connector.model';
 import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
 import { ActionVisibilityRule } from './types';

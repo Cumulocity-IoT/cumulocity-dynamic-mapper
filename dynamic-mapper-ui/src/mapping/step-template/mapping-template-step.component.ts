@@ -52,7 +52,7 @@ import {
   isCodeOrExtensionTransformation,
   splitTopicExcludingSeparator,
   validateProtectedFields
-} from '../shared/util';
+} from '../../shared/mapping/util';
 import { StepperViewModel } from '../stepper-mapping/stepper-view.model';
 import { CommonModule } from '@angular/common';
 import { MappingStepperService } from '../service/mapping-stepper.service';
@@ -62,7 +62,7 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
 @Component({
   selector: 'd11r-mapping-template-step',
   templateUrl: './mapping-template-step.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
+  styleUrls: ['../../shared/mapping/mapping.style.css'],
   standalone: true,
   imports: [CoreModule, CommonModule, PopoverModule,JsonEditorComponent]
 })

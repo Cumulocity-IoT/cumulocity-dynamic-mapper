@@ -53,8 +53,8 @@ import {
 import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
 import { MappingService } from '../core/mapping.service';
 import { MappingStepperService } from '../service/mapping-stepper.service';
-import { EditorMode } from '../shared/stepper.model';
-import { deriveSampleTopicFromTopic, getTypeOf, topicsHaveSameStructure } from '../shared/util';
+import { EditorMode } from '../../shared/mapping/stepper.model';
+import { deriveSampleTopicFromTopic, getTypeOf, topicsHaveSameStructure } from '../../shared/mapping/util';
 
 interface FilterExpressionModel {
   filterExpression: {
@@ -67,7 +67,7 @@ interface FilterExpressionModel {
 @Component({
   selector: 'd11r-mapping-properties',
   templateUrl: 'mapping-properties.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
+  styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, PopoverModule]

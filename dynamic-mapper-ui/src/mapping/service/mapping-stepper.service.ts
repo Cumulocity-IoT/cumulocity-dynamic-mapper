@@ -47,10 +47,10 @@ import { SharedService } from '../../shared';
 import { ExtensionService } from '../../extension';
 import { AIAgentService, resolveRequiredAgentName } from '../core/ai-agent.service';
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, toTemplateType } from '../../configuration/shared/configuration.model';
-import { createCompletionProviderFlowFunction, EditorMode } from '../shared/stepper.model';
-import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
+import { createCompletionProviderFlowFunction, EditorMode } from '../../shared/mapping/stepper.model';
+import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { StepperViewModel, StepperViewModelFactory } from '../stepper-mapping/stepper-view.model';
-import { base64ToString, configurationToYaml, stringToBase64, expandC8YTemplate, expandExternalTemplate, hasEsmExport, hasMappingContentChanged, isCodeOrExtensionTransformation, MappingContentSnapshot, reduceSourceTemplate, splitTopicExcludingSeparator, stripTemplateMetadataTags, getTypeOf, yamlToConfiguration } from '../shared/util';
+import { base64ToString, configurationToYaml, stringToBase64, expandC8YTemplate, expandExternalTemplate, hasEsmExport, hasMappingContentChanged, isCodeOrExtensionTransformation, MappingContentSnapshot, reduceSourceTemplate, splitTopicExcludingSeparator, stripTemplateMetadataTags, getTypeOf, yamlToConfiguration } from '../../shared/mapping/util';
 
 @Injectable()
 export class MappingStepperService {

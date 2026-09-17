@@ -39,7 +39,7 @@ import { HttpStatusCode } from '@angular/common/http';
 @Component({
   selector: 'd11r-cache-grid',
   templateUrl: 'cache-statistic.component.html',
-  styleUrls: ['../../mapping/shared/mapping.style.css'],
+  styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, CommonModule, KpListComponent]

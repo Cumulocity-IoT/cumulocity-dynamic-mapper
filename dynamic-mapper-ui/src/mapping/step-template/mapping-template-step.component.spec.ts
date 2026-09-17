@@ -35,7 +35,7 @@ import {
   Qos,
   ContentChanges
 } from '../../shared';
-import { EditorMode } from '../shared/stepper.model';
+import { EditorMode } from '../../shared/mapping/stepper.model';
 
 /**
  * Unit tests for {@link MappingTemplateStepComponent}.
@@ -152,6 +152,10 @@ describe('MappingTemplateStepComponent', () => {
 
     it('flags an invalid change and warns when a protected field is altered (with expansion on)', () => {
       component.stepperConfiguration = buildConfig({ allowTemplateExpansion: true });
+      // The protected-field check is deliberately skipped while metadata is hidden from the
+      // editor (their absence would otherwise look like a deletion), so this test has to make
+      // the metadata visible to exercise it.
+      component.showSourceMetadata = true;
       const changes: ContentChanges = {
         previousContent: { json: { _IDENTITY_: { externalId: 'x' }, v: 1 } } as Content,
         updatedContent: { json: { v: 1 } } as Content // _IDENTITY_ removed

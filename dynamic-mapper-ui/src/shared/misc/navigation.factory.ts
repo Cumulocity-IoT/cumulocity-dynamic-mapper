@@ -28,7 +28,7 @@ import {
   NavigatorNodeFactory
 } from '@c8y/ngx-components';
 import { SharedService } from '../service/shared.service';
-import { NODE1, NODE2, NODE3 } from '../mapping/util';
+import { NODE1, NODE2, NODE3 } from '../mapping/mapping.constants';
 import { Router } from '@angular/router';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { ConnectorConfiguration, ConnectorType } from '..';

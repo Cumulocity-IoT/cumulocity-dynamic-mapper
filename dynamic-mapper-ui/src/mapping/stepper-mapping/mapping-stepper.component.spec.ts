@@ -45,8 +45,8 @@ import {
   STEP_SELECT_TEMPLATES,
   STEP_DEFINE_SUBSTITUTIONS,
   STEP_TEST_MAPPING
-} from '../shared/stepper.model';
-import { configurationToYaml, yamlToConfiguration } from '../shared/util';
+} from '../../shared/mapping/stepper.model';
+import { configurationToYaml, yamlToConfiguration } from '../../shared/mapping/util';
 
 /**
  * Unit tests for {@link MappingStepperComponent}.
@@ -612,17 +612,10 @@ describe('MappingStepperComponent', () => {
     });
   });
 
-  describe('Substitution validity subscription', () => {
-    it('mirrors the service validity stream into the template form errors', async () => {
-      await component.ngOnInit();
-
-      isSubstitutionValid$.next(false);
-      expect(component.templateForm.errors).toEqual({ incorrect: true });
-
-      isSubstitutionValid$.next(true);
-      expect(component.templateForm.errors).toBeNull();
-    });
-  });
+  // The isSubstitutionValid$ -> templateForm.setErrors subscription moved into
+  // MappingStepperService.buildTemplateForm() with the stepper/unified-editor
+  // deduplication. This spec mocks that service, so the behaviour can only be covered
+  // at the service layer — see mapping-stepper.service.spec.ts.
 
   describe('Lifecycle', () => {
     it('tears down subscriptions and the stepper service on destroy', async () => {

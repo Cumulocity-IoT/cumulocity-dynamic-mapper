@@ -53,7 +53,7 @@ interface MonitoringComponentState {
 @Component({
   selector: 'd11r-mapping-monitoring-grid',
   templateUrl: 'monitoring.component.html',
-  styleUrls: ['../../mapping/shared/mapping.style.css'],
+  styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, CommonModule]

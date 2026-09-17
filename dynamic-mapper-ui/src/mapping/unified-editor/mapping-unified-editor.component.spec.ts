@@ -27,6 +27,7 @@ import { AlertService, BottomDrawerService } from '@c8y/ngx-components';
 import { GlobalContextService } from '@c8y/ngx-components/global-context';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { of, Subject } from 'rxjs';
+import { SubscriptionService } from '../core/subscription.service';
 import { MappingUnifiedEditorComponent } from './mapping-unified-editor.component';
 import { MappingStepperService, EditorSessionResult } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
@@ -43,8 +44,8 @@ import {
   Feature,
   Qos
 } from '../../shared';
-import { EditorMode } from '../shared/stepper.model';
-import { configurationToYaml, yamlToConfiguration } from '../shared/util';
+import { EditorMode } from '../../shared/mapping/stepper.model';
+import { configurationToYaml, yamlToConfiguration } from '../../shared/mapping/util';
 
 // Tab indices (mirrors the private constants in the component under test)
 const TAB_GENERAL_SETTINGS = 1;
@@ -72,6 +73,7 @@ describe('MappingUnifiedEditorComponent', () => {
   let mockMappingService: jasmine.SpyObj<MappingService>;
   let mockRouter: jasmine.SpyObj<Router>;
   let mockGlobalContextService: jasmine.SpyObj<GlobalContextService>;
+  let mockSubscriptionService: jasmine.SpyObj<SubscriptionService>;
   let activatedRoute: { snapshot: { data: Record<string, any> } };
 
   let isButtonDisabled$: Subject<boolean>;
@@ -232,6 +234,8 @@ describe('MappingUnifiedEditorComponent', () => {
     ]);
     mockRouter = jasmine.createSpyObj('Router', ['navigateByUrl'], { url: '/mappings/inbound/edit/42' });
     mockGlobalContextService = jasmine.createSpyObj('GlobalContextService', ['register', 'unregister']);
+    mockSubscriptionService = jasmine.createSpyObj('SubscriptionService', ['validateSubscriptionOutbound']);
+    mockSubscriptionService.validateSubscriptionOutbound.and.returnValue(Promise.resolve(undefined as any));
     activatedRoute = {
       snapshot: {
         data: {
@@ -276,7 +280,11 @@ describe('MappingUnifiedEditorComponent', () => {
         { provide: Router, useValue: mockRouter },
         { provide: ActivatedRoute, useValue: activatedRoute },
         { provide: Location, useValue: jasmine.createSpyObj('Location', ['back', 'path']) },
-        { provide: GlobalContextService, useValue: mockGlobalContextService }
+        { provide: GlobalContextService, useValue: mockGlobalContextService },
+        // The component injects SubscriptionService, whose real constructor takes a
+        // FetchClient the test injector cannot provide (NG0201). It is only used for
+        // validateSubscriptionOutbound(), so a spy is enough.
+        { provide: SubscriptionService, useValue: mockSubscriptionService }
       ]
     }).compileComponents();
 
@@ -422,6 +430,7 @@ describe('MappingUnifiedEditorComponent', () => {
   // result.
   describe('Code template selection', () => {
     it('applies the code computed by the service', () => {
+      component.mapping = buildMapping();
       mockStepperService.computeCodeFromTemplate.and.returnValue('function onMessage() { /* with export */ }');
 
       component.onSelectCodeTemplate();
@@ -433,6 +442,7 @@ describe('MappingUnifiedEditorComponent', () => {
     });
 
     it('leaves mappingCode untouched when the service reports no template selected', () => {
+      component.mapping = buildMapping();
       component.mappingCode = 'untouched';
       mockStepperService.computeCodeFromTemplate.and.returnValue(undefined);
 

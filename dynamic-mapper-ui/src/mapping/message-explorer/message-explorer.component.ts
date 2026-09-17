@@ -66,7 +66,7 @@ import {
 @Component({
   selector: 'd11r-message-explorer',
   templateUrl: './message-explorer.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
+  styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, CommonModule, ReactiveFormsModule]

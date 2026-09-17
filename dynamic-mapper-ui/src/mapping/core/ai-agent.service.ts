@@ -27,7 +27,7 @@ import {
   PATH_AGENT_ENDPOINT,
   TransformationType,
 } from '../../shared';
-import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
+import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { ServiceConfiguration } from '../../configuration';
 
 /**
