@@ -287,4 +287,114 @@ class ServiceConfigurationServiceTest {
         assertFalse(secondCallAdded, "re-running against an already-populated map must not add duplicates");
         assertEquals(countAfterFirst, countAfterSecond);
     }
+
+    // -------------------------------------------------------------------------
+    // refreshSystemTemplate
+    // -------------------------------------------------------------------------
+
+    private ServiceConfiguration configWith(Map<String, CodeTemplate> templates) {
+        ServiceConfiguration config = new ServiceConfiguration();
+        config.setCodeTemplates(templates);
+        return config;
+    }
+
+    private CodeTemplate storedTemplate(TemplateType type, String code, boolean internal, boolean readonly) {
+        CodeTemplate t = new CodeTemplate();
+        t.id = type.name();
+        t.name = type.name();
+        t.templateType = type;
+        t.code = encode(code);
+        t.internal = internal;
+        t.readonly = readonly;
+        t.defaultTemplate = true;
+        return t;
+    }
+
+    /**
+     * The whole point: an upgraded tenant must pick up a corrected SYSTEM template without anyone
+     * clicking "Init system code templates". Before this, addMissingInternalTemplates() only added
+     * templates absent by @name, so a stored copy naming a Java class that had moved package kept
+     * breaking every Smart Function mapping in the tenant.
+     */
+    @Test
+    void refreshSystemTemplateReplacesAStaleStoredCopy() {
+        Map<String, CodeTemplate> templates = new java.util.HashMap<>();
+        templates.put(TemplateType.SYSTEM.name(),
+                storedTemplate(TemplateType.SYSTEM,
+                        "const RepairStrategy = Java.type('dynamic.mapper.processor.model.RepairStrategy');",
+                        true, true));
+        ServiceConfiguration config = configWith(templates);
+
+        assertTrue(service.refreshSystemTemplate(config), "a stale template must report a change");
+
+        String refreshed = decode(config.getCodeTemplates().get(TemplateType.SYSTEM.name()).code);
+        assertTrue(refreshed.contains("Java.type('dynamic.mapper.model.RepairStrategy')"),
+                "expected the packaged template's class name, got: " + refreshed);
+        assertFalse(refreshed.contains("dynamic.mapper.processor.model.RepairStrategy"),
+                "the stale class name must be gone");
+    }
+
+    /**
+     * SHARED is @internal false / @readonly false — it is where customer code lives, and the one
+     * thing this must never overwrite.
+     */
+    @Test
+    void refreshSystemTemplateLeavesSharedCodeAlone() {
+        String customerCode = "// my very important shared helper\nfunction mine() { return 42; }";
+        Map<String, CodeTemplate> templates = new java.util.HashMap<>();
+        templates.put(TemplateType.SYSTEM.name(),
+                storedTemplate(TemplateType.SYSTEM, "stale", true, true));
+        templates.put(TemplateType.SHARED.name(),
+                storedTemplate(TemplateType.SHARED, customerCode, false, false));
+        ServiceConfiguration config = configWith(templates);
+
+        service.refreshSystemTemplate(config);
+
+        assertEquals(customerCode,
+                decode(config.getCodeTemplates().get(TemplateType.SHARED.name()).code),
+                "SHARED holds customer code and must survive untouched");
+    }
+
+    @Test
+    void refreshSystemTemplateReportsNoChangeWhenAlreadyCurrent() {
+        Map<String, CodeTemplate> templates = new java.util.HashMap<>();
+        templates.put(TemplateType.SYSTEM.name(), storedTemplate(TemplateType.SYSTEM, "stale", true, true));
+        ServiceConfiguration config = configWith(templates);
+
+        assertTrue(service.refreshSystemTemplate(config));
+        // Second run has nothing to do — the caller must not persist the configuration again.
+        assertFalse(service.refreshSystemTemplate(config), "an up-to-date template must report no change");
+    }
+
+    @Test
+    void refreshSystemTemplateInstallsTheTemplateWhenNoneIsStored() {
+        ServiceConfiguration config = configWith(new java.util.HashMap<>());
+
+        assertTrue(service.refreshSystemTemplate(config));
+        assertNotNull(config.getCodeTemplates().get(TemplateType.SYSTEM.name()));
+    }
+
+    @Test
+    void refreshSystemTemplateToleratesAConfigurationWithoutTemplates() {
+        ServiceConfiguration config = configWith(null);
+
+        assertFalse(service.refreshSystemTemplate(config));
+    }
+
+    @Test
+    void refreshSystemTemplateDoesNotTouchOtherInternalTemplates() {
+        // The per-transformation sample templates are starting points users copy from; only the
+        // SYSTEM preamble is refreshed here.
+        Map<String, CodeTemplate> templates = new java.util.HashMap<>();
+        templates.put(TemplateType.SYSTEM.name(), storedTemplate(TemplateType.SYSTEM, "stale", true, true));
+        templates.put(TemplateType.INBOUND_SMART_FUNCTION.name(),
+                storedTemplate(TemplateType.INBOUND_SMART_FUNCTION, "sample inbound", true, true));
+        ServiceConfiguration config = configWith(templates);
+
+        service.refreshSystemTemplate(config);
+
+        assertEquals("sample inbound",
+                decode(config.getCodeTemplates().get(TemplateType.INBOUND_SMART_FUNCTION.name()).code));
+    }
+
 }

@@ -31,6 +31,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -192,6 +193,78 @@ public class ServiceConfigurationService {
             }
         }
         return anyAdded;
+    }
+
+    /**
+     * Re-loads the SYSTEM code template from the classpath on every startup, replacing whatever
+     * the tenant has stored.
+     *
+     * <p>SYSTEM is framework-owned: it declares {@code @internal true} / {@code @readonly true}
+     * and holds nothing but the {@code Java.type(...)} bindings and polyfills the runtime needs.
+     * It is not a place for customer code — that is what SHARED
+     * ({@code @internal false} / {@code @readonly false}) is for, and SHARED is never touched
+     * here.
+     *
+     * <p>Without this, a template that names a Java class which has since moved package keeps
+     * failing after an upgrade, because {@link #addMissingInternalTemplates} only adds templates
+     * that are absent by {@code @name} and never overwrites one already stored. The symptom is
+     * every Smart Function mapping in the tenant dying at activation with
+     * {@code Access to host class ... is not allowed or does not exist}, fixable only by manually
+     * running "Init system code templates". Shipping the fix should be enough.
+     *
+     * @return {@code true} when the stored template differed and was replaced (caller should
+     *         persist the configuration)
+     */
+    public boolean refreshSystemTemplate(ServiceConfiguration configuration) {
+        Map<String, CodeTemplate> codeTemplates = configuration.getCodeTemplates();
+        if (codeTemplates == null) {
+            return false;
+        }
+
+        String systemId = TemplateType.SYSTEM.name();
+        CodeTemplate stored = codeTemplates.get(systemId);
+
+        Resource resource;
+        try {
+            Resource[] resources = new PathMatchingResourcePatternResolver()
+                    .getResources("classpath:templates/template-SYSTEM.js");
+            if (resources.length == 0) {
+                log.error("Packaged system template not found on the classpath; keeping the stored one");
+                return false;
+            }
+            resource = resources[0];
+        } catch (IOException e) {
+            log.error("Failed to read the packaged system template; keeping the stored one", e);
+            return false;
+        }
+
+        // Load into a scratch map so a failure cannot leave the tenant without a SYSTEM template.
+        Map<String, CodeTemplate> loaded = new HashMap<>();
+        Map<TemplateType, Boolean> defaultTemplateRegistered = new EnumMap<>(TemplateType.class);
+        for (TemplateType type : TemplateType.values()) {
+            defaultTemplateRegistered.put(type, false);
+        }
+        try {
+            loadTemplate(resource, loaded, defaultTemplateRegistered);
+        } catch (Exception e) {
+            log.error("Failed to parse the packaged system template; keeping the stored one", e);
+            return false;
+        }
+
+        CodeTemplate packaged = loaded.get(systemId);
+        if (packaged == null) {
+            log.error("Packaged system template did not register under '{}'; keeping the stored one", systemId);
+            return false;
+        }
+
+        if (stored != null && Objects.equals(stored.code, packaged.code)) {
+            return false;
+        }
+
+        codeTemplates.put(systemId, packaged);
+        log.info("Refreshed the SYSTEM code template from the packaged version{}",
+                stored == null ? " (none was stored)" : " (stored copy was out of date)");
+        return true;
     }
 
     private void loadTemplate(Resource resource, Map<String, CodeTemplate> codeTemplates,

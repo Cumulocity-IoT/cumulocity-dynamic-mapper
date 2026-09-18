@@ -13,8 +13,8 @@
   },
   "isolation": "MULTI_TENANT",
   "resources": {
-    "cpu": "8",
-    "memory": "8G"
+    "cpu": "0.5",
+    "memory": "2G"
   },
   "requiredRoles": [
     "ROLE_INVENTORY_READ",
@@ -72,9 +72,5 @@
       "type": "sse",
       "sendAuthentication": true
     }
-  ],
-  "openApiSpec": "api-docs",
-  "icon": {
-    "class": "c8y-icon-dynamic-mapper"
-  }
+  ]
 }

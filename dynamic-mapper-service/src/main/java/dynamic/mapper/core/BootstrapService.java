@@ -422,6 +422,13 @@ public class BootstrapService {
             if (serviceConfigurationService.addMissingInternalTemplates(serviceConfig)) {
                 requiresSave = true;
             }
+            // ...and always re-load the framework-owned SYSTEM template. It is @internal/@readonly
+            // and holds only the Java.type bindings the runtime needs, so the packaged copy is
+            // authoritative. Customer code lives in SHARED, which is never touched here. This runs
+            // before createGraalsResources() below, so the refreshed code is what gets compiled.
+            if (serviceConfigurationService.refreshSystemTemplate(serviceConfig)) {
+                requiresSave = true;
+            }
         }
 
         if (requiresSave) {
