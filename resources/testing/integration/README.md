@@ -486,6 +486,20 @@ array) and drives the interactive menu. The categories below mirror it:
   published message is dropped by the broker.
 - Enable debug on mapping (`debug: true`) and check microservice logs
 
+### "type-based subscription exists: 0 is not > 0"
+
+- `dm_set_type_subscriptions` now verifies the write by reading it back, so a type filter
+  that never lands fails at step 1 instead of looking like broken device discovery. If it
+  aborts there, compare the two diagnostics it prints: the mapper's
+  `GET /subscription/type` answer and the raw C8Y management subscription.
+- A mapper response of `{}` means the tenant's `DynamicMapperManagementSubscription`
+  (context `tenant`) exists **without** a `typeFilter` — the PUT's replacement had not
+  become visible yet, or never happened.
+- Assert membership with `dm_assert_type_subscription_present <label> <type> [timeout]`,
+  which polls. A single read right after the PUT can still see the pre-delete state.
+- In a cleanup path use `_DM_TYPE_SUB_VERIFY=false` so a failed clear warns instead of
+  aborting the trap.
+
 ### "MQTT connector not CONNECTED"
 - Verify MQTT broker is reachable: `nc -zv broker.hivemq.com 1883`
 - Check connector logs: `c8y microservices logs dynamic-mapper | grep -i mqtt`

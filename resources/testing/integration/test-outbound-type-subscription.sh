@@ -43,7 +43,8 @@ cleanup() {
          else [] end)
         | map(select(. != $t))
     ' 2>/dev/null || echo '[]')
-    dm_set_type_subscriptions MEASUREMENT "${_remaining:-[]}"
+    # Never abort inside the trap: a clear that does not read back only warns here.
+    _DM_TYPE_SUB_VERIFY=false dm_set_type_subscriptions MEASUREMENT "${_remaining:-[]}"
     echo "Cleanup done."
 }
 
@@ -58,16 +59,9 @@ dm_banner "$TEST_TITLE"
 
 # Step 1: Add dynamic type subscription
 dm_step 1 "Add dynamic type subscription for '$DEVICE_TYPE'"
+# Verified read-after-write: aborts here if the type filter never lands, rather than
+# letting the run continue and fail at step 5 as if discovery were broken.
 dm_set_type_subscriptions MEASUREMENT "[\"${DEVICE_TYPE}\"]"
-dm_api GET /subscription/type | jq -r '
-    if type == "array" then
-        (.[0] // {} | .types // [])
-    elif type == "object" then
-        (.types // [])
-    else
-        []
-    end
-' || true
 
 # Step 2: Create device with type
 dm_step 2 "Create device with type '$DEVICE_TYPE'"
@@ -84,25 +78,10 @@ dm_send_measurement "$DEVICE_ID" "18.3"
 
 # Step 5: Verify notification subscription exists
 dm_step 5 "Verify notification subscription exists for device $DEVICE_ID"
-dm_wait 2 "allowing subscription propagation"
-TYPE_SUB_JSON=$(dm_api GET /subscription/type)
-TYPE_MATCH=$(printf '%s' "$TYPE_SUB_JSON" | jq -s -r --arg t "$DEVICE_TYPE" '
-    [ .[]
-      | if type == "array" then .[]
-        elif type == "object" and (.types? != null) then .types[]
-        elif type == "string" then .
-        else empty
-        end
-      | tostring
-    ]
-    | if (index($t) != null) then 1 else 0 end
-' 2>/dev/null || printf '0')
-dm_assert_gt "type-based subscription exists" "${TYPE_MATCH:-0}" "0"
-
-if [ "${TYPE_MATCH:-0}" -eq 0 ]; then
-    dm_warn "Type subscription '$DEVICE_TYPE' not found in mapper API response"
-    printf '%s' "$TYPE_SUB_JSON" | jq -s '.' || true
-fi
+# Polls rather than sampling once: the previous single read 2s after the measurement
+# turned a filter that had not propagated yet into a bare "0 is not > 0". On failure the
+# assertion dumps both the mapper's answer and the raw C8Y management subscription.
+dm_assert_type_subscription_present "type-based subscription exists" "$DEVICE_TYPE" 20
 
 dm_print_summary
 dm_done "$TEST_TITLE"

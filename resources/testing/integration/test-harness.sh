@@ -63,9 +63,12 @@
 #   dm_delete_static_subscription <device_id> <subscription_name>
 #   dm_create_static_subscription_resolve_name <api> <device_id> <device_name> [wait]
 #     → sets _DM_LAST_SUBSCRIPTION_NAME and prints it
-#   dm_set_type_subscriptions     <api> <types_json_array>
+#   dm_set_type_subscriptions     <api> <types_json_array>   (verified read-after-write)
 #     e.g. dm_set_type_subscriptions MEASUREMENT '["auto-type"]'
 #          dm_set_type_subscriptions MEASUREMENT '[]'   # clear
+#     _DM_TYPE_SUB_VERIFY=false downgrades the verification to a warning (cleanup paths)
+#   dm_wait_for_type_subscription      <type> [timeout] [interval]
+#   dm_assert_type_subscription_present <label> <type> [timeout]
 #
 # Waiting
 #   dm_wait             <seconds> <reason>
@@ -679,14 +682,102 @@ dm_delete_static_subscription() {  # <device_id> <subscription_name>
     dm_info "Deleted static subscription for device $_id (name=$_name)"
 }
 
+# Read the configured type subscriptions as a sorted, compact JSON array.
+#
+# GET /subscription/type has three shapes in the wild: the documented object
+# ({"types":[...]}), a bare array, and a plain string. It also answers {} when the
+# tenant's management subscription exists but carries no type filter — the state that
+# made "0 is not > 0" look like a discovery failure rather than a filter that had not
+# landed yet. All of them normalise to an array here.
+_dm_type_subscription_types_json() {
+    dm_api GET /subscription/type | jq -cs '
+        [ .[]
+          | if type == "array" then .[]
+            elif type == "object" and (.types? != null) then .types[]
+            elif type == "string" then .
+            else empty
+            end
+          | tostring
+        ] | sort' 2>/dev/null || printf '[]'
+}
+
+# Print what the mapper and C8Y each think the type subscription is.
+_dm_dump_type_subscription_diagnostics() {  # <reason>
+    local _raw _nsr
+    dm_warn "Type subscription: $1"
+    _raw=$(dm_api GET /subscription/type | jq -cs '.' 2>/dev/null || printf '[]')
+    dm_warn "Mapper GET /subscription/type: ${_raw}"
+    _nsr=$(c8y api --method GET \
+            --url "/notification2/subscriptions?subscription=DynamicMapperManagementSubscription&context=tenant" \
+            --force --raw </dev/null 2>/dev/null \
+        | jq -c '[.subscriptions[]? | {id, context, subscription, subscriptionFilter}]' 2>/dev/null || printf '[]')
+    dm_warn "C8Y notification2 management subscription: ${_nsr}"
+}
+
 # Overwrite the type-subscription list for a given C8Y API.
 # Pass '[]' to clear all type subscriptions.
 # Example: dm_set_type_subscriptions MEASUREMENT '["auto-type"]'
+#
+# The PUT is verified by reading the list back, because the write is not immediately
+# visible: the mapper deletes the existing management subscription and creates a new one
+# carrying the type filter, and a GET issued right after can still answer with the
+# pre-delete state. Polling here means a filter that never landed fails at the point of
+# cause instead of surfacing later as "no subscription for the device".
+#
+# Set _DM_TYPE_SUB_VERIFY=false to warn instead of aborting — for cleanup paths, which
+# must not die half-way through a trap.
 dm_set_type_subscriptions() {   # <api> <types_json_array>
     local _api=$1 _types=$2
     dm_api_must PUT /subscription/type \
         "{\"api\": \"${_api}\", \"types\": ${_types}}" >/dev/null
     dm_info "Set type subscriptions (api=${_api}): ${_types}"
+
+    local _want _got _elapsed=0 _timeout=15
+    _want=$(printf '%s' "$_types" | jq -c 'map(tostring) | sort' 2>/dev/null || printf '[]')
+    while [ "$_elapsed" -lt "$_timeout" ]; do
+        _got=$(_dm_type_subscription_types_json)
+        if [ "$_got" = "$_want" ]; then
+            dm_success "Type subscriptions confirmed: ${_got}"
+            return 0
+        fi
+        sleep 2
+        _elapsed=$((_elapsed + 2))
+    done
+
+    if [ "${_DM_TYPE_SUB_VERIFY:-true}" = "false" ]; then
+        dm_warn "Type subscriptions did not read back as ${_want} (got ${_got:-[]}) — ignored on this path"
+        return 0
+    fi
+    _dm_dump_type_subscription_diagnostics "PUT ${_want} did not stick within ${_timeout}s (read back ${_got:-[]})"
+    dm_error "Type subscription list did not take effect: expected ${_want}, got ${_got:-[]}"
+}
+
+# Wait until <type> appears in the configured type subscriptions. Returns 1 on timeout.
+dm_wait_for_type_subscription() {   # <type> [timeout=20] [interval=2]
+    local _type=$1 _timeout=${2:-20} _interval=${3:-2}
+    local _elapsed=0 _types
+    while [ "$_elapsed" -lt "$_timeout" ]; do
+        _types=$(_dm_type_subscription_types_json)
+        if printf '%s' "$_types" | jq -e --arg t "$_type" 'index($t) != null' >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep "$_interval"
+        _elapsed=$((_elapsed + _interval))
+    done
+    return 1
+}
+
+# Counted assertion: <type> is among the configured type subscriptions.
+dm_assert_type_subscription_present() {   # <label> <type> [timeout=20]
+    local _label=$1 _type=$2 _timeout=${3:-20}
+    if dm_wait_for_type_subscription "$_type" "$_timeout"; then
+        _DM_PASS_COUNT=$((_DM_PASS_COUNT + 1))
+        dm_success "[$_label] type '$_type' is subscribed"
+    else
+        _DM_FAIL_COUNT=$((_DM_FAIL_COUNT + 1))
+        dm_fail "[$_label] type '$_type' not subscribed after ${_timeout}s"
+        _dm_dump_type_subscription_diagnostics "type '${_type}' missing after ${_timeout}s"
+    fi
 }
 
 # ── Wait helpers ───────────────────────────────────────────────────────────────
