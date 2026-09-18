@@ -24,7 +24,7 @@ export * from './component/formly/input.type.component';
 export * from './component/formly/textarea.type.component';
 export * from './component/renderer/label-tagged.renderer.component';
 export * from './component/renderer/label.renderer.component';
-export * from './confirmation/confirmation-modal.component';
+export * from './component/confirmation/confirmation-modal.component';
 export * from './connector-configuration/connector-grid.component';
 export * from './connector-configuration/connector.model';
 export * from './connector-details/connector-details.component';

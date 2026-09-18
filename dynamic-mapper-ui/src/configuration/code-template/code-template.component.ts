@@ -47,7 +47,7 @@ interface CodeTemplateEntry {
 @Component({
   selector: 'd11r-shared-code',
   templateUrl: 'code-template.component.html',
-  styleUrls: ['./code-template.component.css'],
+  styleUrls: ['./code-template.component.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, CommonModule, PopoverModule, EditorComponent, FormsModule]

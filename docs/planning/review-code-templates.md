@@ -100,18 +100,73 @@ incorrectly.
 
 ---
 
-## 4. Deliberately not changed
+## 4. Folder structure and naming
+
+Omitted from the first pass of this review; added after the fact.
+
+### Healthy
+
+- **Tab factories follow one convention.** `<thing>-tab.factory.ts` at the feature root:
+  `configuration/code-template-tab.factory.ts` alongside `configuration/configuration-tab.factory.ts`,
+  matching `mapping/mapping-tab.factory.ts` and `monitoring/*-tab.factory.ts`. The factory sitting
+  beside the folder it registers, rather than inside it, is consistent across all seven.
+- **`shared/component/code-template/` is placed correctly.** `ManageTemplateComponent` (the
+  name/describe modal) is used by both `configuration/code-template/` and the mapping editors, so
+  it belongs in `shared/`, not in the configuration feature.
+- **The feature splits cleanly by role**: the screen in `configuration/code-template/`, the
+  cross-feature model in `configuration/shared/configuration.model.ts`, the reusable modal in
+  `shared/component/`, the consumer logic in `MappingStepperService`.
+
+### Fixed
+
+- **`shared/confirmation/` → `shared/component/confirmation/`.** Every other shared component
+  topic (`code-explorer`, `code-template`, `formly`, `json-editor`, `renderer`, `select`) lives
+  under `shared/component/`; this one sat beside it. It is used by the code-template screen's
+  "Init system code templates" confirmation, among others. Three import sites plus the barrel.
+- **`code-template.component.css` → `code-template.component.style.css`.** Its two siblings in
+  `configuration/` (`service-configuration`, `import-service-configuration-modal`) both use
+  `.component.style.css`. Repo-wide the suffix is split 8/7, so this is local consistency only,
+  not a repo convention.
+
+### Left alone, with reasons
+
+- **`shared/component/code-template/manage-template.component.ts`** — the file name does not repeat
+  its folder. That is the same shape as `shared/component/renderer/label.renderer.component.ts`: a
+  topic folder holding a specific component. Not an inconsistency.
+- **`configuration/shared/configuration.model.ts`** — a folder holding one file whose name repeats
+  its parent. It is the deliberate cross-feature import target (`configuration/index.ts` re-exports
+  it, and `MappingStepperService` imports from it), so `shared/` is carrying meaning here rather
+  than being filler. Twelve importing files; churn without benefit.
+- **The `.component.css` / `.component.style.css` split repo-wide** — genuinely 8 vs 7, no dominant
+  convention to normalise toward. Picking one would be a 15-file rename decided by a coin toss.
+
+### Adjacent findings, out of scope for this review
+
+Noted rather than changed, since they belong to the mapping stepper rather than code templates:
+
+- `mapping/step-template/mapping-template-step.component.ts` and
+  `mapping/step-transformation/mapping-transformation-step.component.ts` carry a `-step` suffix
+  their folder already states. Their three siblings (`step-connector`, `step-property`,
+  `step-testing`) do not, so the dominant convention is to drop it.
+- `mapping/step-property/` is singular while its component is `mapping-properties.component.ts`.
+- `shared/component/json-editor/jsoneditor.component.ts` hyphenates differently from its own
+  folder and from every other `json-editor` reference in the repo.
+
+---
+
+## 5. Deliberately not changed
 
 - **The `internal`/`readonly` pair.** Collapsing them is a persisted-model change needing a
   migration; the review's job was to make the existing contract hold.
 - **`TemplateType`'s deprecated constants.** They still deserialize existing tenant data.
-- **`direction`.** Same reason — persisted.
+- ~~**`direction`.**~~ Superseded — see §6, which made it a derived getter rather than a stored
+  field, closing the `@templateType`/`@direction` overlap noted in §3.
 - **`updateCodeTemplate` remains an upsert.** PUT-creates is defensible for a keyed resource and
   something may rely on it; the behaviour is now documented rather than silently true.
 
 ---
 
-## 5. Follow-up: `direction` made derived
+## 6. Follow-up: `direction` made derived
 
 The overlap between `@templateType` and `@direction` noted in §3 is now closed. The two could
 disagree, and nothing read `direction` anyway — the UI derives `templateType` from

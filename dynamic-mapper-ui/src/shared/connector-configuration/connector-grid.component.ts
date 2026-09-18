@@ -25,7 +25,7 @@ import { filter, map, switchMap, take, takeUntil } from 'rxjs/operators';
 import { cloneDeep } from 'lodash';
 import { saveAs } from 'file-saver';
 
-import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
+import { ConfirmationModalComponent } from '../component/confirmation/confirmation-modal.component';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { LoggingEventType } from '../connector-details/connector-log.model';
 import { DeploymentMapEntry, Direction, Feature } from '../mapping/mapping.model';
