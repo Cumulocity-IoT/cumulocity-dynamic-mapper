@@ -5,7 +5,6 @@
  *              SparkPlug B protobuf binary by the mapper before publishing.
  * @templateType OUTBOUND_SMART_FUNCTION
  * @mappingType SPARKPLUGB
- * @defaultTemplate true
  * @internal true
  * @readonly true
  *

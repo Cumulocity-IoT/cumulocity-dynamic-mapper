@@ -84,11 +84,8 @@ integrity gap on a surface where the blast radius is the whole tenant.
 
 ## 3. Design observations (no code change)
 
-**`direction` is redundant.** `CodeTemplate.direction` is derivable from `templateType`
-(`INBOUND_*`/`OUTBOUND_*`), and `loadTemplate()` already derives it that way when the annotation is
-absent. `buildSystemSection()` does not even emit `@direction` any more, though the migration code
-still strips it — the source notes it is "redundant — derivable from @templateType prefix". It is
-kept because removing a persisted field needs a migration, not because it carries information.
+**`direction` is redundant.** *(Resolved — see §5.)* `CodeTemplate.direction` is derivable from
+`templateType`, and it is now derived rather than declared.
 
 **`TemplateType` mixes a role and a direction.** `SYSTEM` and `SHARED` describe *what a template
 is for*; `INBOUND_SMART_FUNCTION` encodes *direction × transformation type*. Hence
@@ -111,3 +108,34 @@ incorrectly.
 - **`direction`.** Same reason — persisted.
 - **`updateCodeTemplate` remains an upsert.** PUT-creates is defensible for a keyed resource and
   something may rely on it; the behaviour is now documented rather than silently true.
+
+---
+
+## 5. Follow-up: `direction` made derived
+
+The overlap between `@templateType` and `@direction` noted in §3 is now closed. The two could
+disagree, and nothing read `direction` anyway — the UI derives `templateType` from
+`(direction, transformationType)` via `TEMPLATE_TYPE_LOOKUP`, and filters on `templateType` alone.
+
+- `TemplateType` carries its own `Direction`, replacing the `startsWith("INBOUND")` prefix parse in
+  `loadTemplate()`. The prefix parse was a latent trap: a future `INBOUND_FOO` would have inherited
+  a direction by naming coincidence.
+- `SHARED` and `SYSTEM` report `null`, not `Direction.UNSPECIFIED` — the value tenants already have
+  stored for them, so no payload changes.
+- `CodeTemplate.direction` is no longer a stored field. It is a derived getter serialized as
+  `READ_ONLY`, so the wire shape is unchanged for readers while a PUT can no longer put the two out
+  of step.
+- `@direction` and `@defaultTemplate false` are gone from the shipped headers. Neither was ever
+  emitted by `buildSystemSection()`, so both were already being stripped on load — removing them
+  changes nothing at runtime. `@direction` stays in `SYSTEM_ANNOTATIONS` purely so legacy stored
+  headers still get the line removed on their next rectify.
+- A missing `@internal`/`@readonly` now warns instead of defaulting silently to `false`. That
+  default is what let two templates ship as non-internal, escape the `initCodeTemplates()` purge,
+  and accumulate a duplicate per "Init system code templates" click.
+
+Not breaking: no tenant migration is required and every serialized payload is byte-identical to
+before.
+
+On §3's "two booleans, three states" — all 18 shipped templates do set `internal` and `readonly`
+to the same value, so the pair is de-facto redundant today. Collapsing it into an `origin` field
+still needs a persisted-model migration, so it stays as-is.

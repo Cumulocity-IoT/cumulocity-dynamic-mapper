@@ -43,6 +43,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.model.Direction;
 
+
 /**
  * Covers the JSDoc header handling in {@link ServiceConfigurationService}
  * (previously untested): new-header creation, legacy-to-two-section
@@ -79,7 +80,6 @@ class ServiceConfigurationServiceTest {
         t.name = "My Template";
         t.description = "A description";
         t.templateType = TemplateType.INBOUND_SMART_FUNCTION;
-        t.direction = Direction.INBOUND;
         t.code = encode(code);
         t.internal = false;
         t.readonly = false;
@@ -218,6 +218,104 @@ class ServiceConfigurationServiceTest {
         assertTrue(result.contains("payload field \"@internal\" flags system-only devices"), result);
     }
 
+    @Test
+    void rectifyHeaderInCodeTemplate_keepsAWrappedDescriptionWhole() {
+        // The shipped templates wrap long descriptions over several indented lines. Parsing only
+        // the first line dropped the rest of the sentence into the free-form area on the next
+        // save, where it read as orphaned prose below the auto-generated marker.
+        String legacy = "/**\n" +
+                " * @name Forward payload to tenant microservice (inbound)\n" +
+                " * @description Demonstrates custom routing: forwards the incoming device payload to a\n" +
+                " *              tenant-local microservice via cumulocityType: \"custom\", in addition to\n" +
+                " *              creating a standard Cumulocity measurement.\n" +
+                " * @templateType INBOUND_SMART_FUNCTION\n" +
+                " *\n" +
+                " * Sample payload\n" +
+                " */\n\n" +
+                "function onMessage(msg, context) { return []; }\n";
+        CodeTemplate t = template(legacy);
+        t.description = service.extractAnnotation(legacy, "@description");
+
+        assertEquals("Demonstrates custom routing: forwards the incoming device payload to a tenant-local"
+                + " microservice via cumulocityType: \"custom\", in addition to creating a standard"
+                + " Cumulocity measurement.", t.description);
+
+        service.rectifyHeaderInCodeTemplate(t);
+
+        String result = decode(t.code);
+        int markerIdx = result.indexOf("--- metadata above is auto-generated");
+        // The whole description survives in the regenerated system section above the marker...
+        assertEquals(t.description, service.extractAnnotation(result, "@description"), result);
+        // ...and no part of it is left stranded below it as orphaned prose
+        String belowMarker = result.substring(markerIdx);
+        assertFalse(belowMarker.contains("tenant-local"), belowMarker);
+        assertFalse(belowMarker.contains("Cumulocity measurement."), belowMarker);
+        assertTrue(belowMarker.contains("Sample payload"), belowMarker);
+    }
+
+    @Test
+    void rectifyHeaderInCodeTemplate_isIdempotent_forAWrappedDescription() {
+        CodeTemplate t = template("function onMessage(msg, context) { return []; }\n");
+        t.description = "Demonstrates custom routing: forwards the incoming device payload to a tenant-local"
+                + " microservice via cumulocityType: \"custom\", in addition to creating a standard"
+                + " Cumulocity measurement.";
+
+        service.rectifyHeaderInCodeTemplate(t);
+        String firstPass = decode(t.code);
+        // Re-reading the rendered header must yield the description it was rendered from
+        assertEquals(t.description, service.extractAnnotation(firstPass, "@description"));
+
+        service.rectifyHeaderInCodeTemplate(t);
+        assertEquals(firstPass, decode(t.code));
+    }
+
+    @Test
+    void rectifyHeaderInCodeTemplate_keepsFreeFormDocsWrittenDirectlyUnderAnAnnotation() {
+        // Only *indented* lines continue an annotation, so documentation that starts at the
+        // normal " * " column is never swallowed into the description.
+        String legacy = "/**\n" +
+                " * @description Short description\n" +
+                " * Sample payload\n" +
+                " * { \"foo\": \"bar\" }\n" +
+                " */\n\n" +
+                "function onMessage(msg, context) { return []; }\n";
+        assertEquals("Short description", service.extractAnnotation(legacy, "@description"));
+
+        CodeTemplate t = template(legacy);
+        service.rectifyHeaderInCodeTemplate(t);
+
+        String result = decode(t.code);
+        int markerIdx = result.indexOf("--- metadata above is auto-generated");
+        assertTrue(result.indexOf("Sample payload") > markerIdx, result);
+    }
+
+    @Test
+    void shippedTemplates_allDeclareTheirSystemMetadata() {
+        ServiceConfiguration configuration = new ServiceConfiguration();
+        service.initCodeTemplates(configuration, false);
+
+        // Exactly one default per type: a second one would only get the type's id if the
+        // classpath happened to enumerate it first.
+        Map<TemplateType, Long> defaultsPerType = configuration.getCodeTemplates().values().stream()
+                .filter(t -> t.defaultTemplate)
+                .collect(java.util.stream.Collectors.groupingBy(t -> t.templateType,
+                        java.util.stream.Collectors.counting()));
+        defaultsPerType.forEach((type, count) ->
+                assertEquals(1L, count, "more than one @defaultTemplate for " + type));
+
+        for (CodeTemplate t : configuration.getCodeTemplates().values()) {
+            assertNotNull(t.templateType, t.name);
+            assertFalse(t.description == null || t.description.isEmpty(), "missing @description: " + t.name);
+            // SHARED is the one template customers own; everything else ships framework-managed,
+            // and a non-internal shipped template is re-added under a fresh id on every
+            // "Reset System Templates" because the purge only drops internal ones.
+            if (t.templateType != TemplateType.SHARED) {
+                assertTrue(t.internal, "shipped template must be @internal true: " + t.name);
+                assertTrue(t.readonly, "shipped template must be @readonly true: " + t.name);
+            }
+        }
+    }
+
     private static int countOccurrences(String haystack, String needle) {
         int count = 0;
         int idx = 0;
@@ -244,9 +342,8 @@ class ServiceConfigurationServiceTest {
         CodeTemplate shared = templates.get(TemplateType.SHARED.name());
         assertEquals("SHARED", shared.templateType.name());
         assertTrue(shared.defaultTemplate);
-        // SHARED/SYSTEM don't carry an INBOUND_/OUTBOUND_ prefix, so direction
-        // cannot be derived and stays unset.
-        assertNull(shared.direction);
+        // SHARED applies to both directions, so its derived direction stays unset.
+        assertNull(shared.getDirection());
 
         boolean hasInboundSmartFunctionDefault = templates.values().stream()
                 .anyMatch(t -> t.templateType == TemplateType.INBOUND_SMART_FUNCTION && t.defaultTemplate);
@@ -271,6 +368,35 @@ class ServiceConfigurationServiceTest {
         assertTrue(afterReset.containsKey("custom01"), "user-created template must survive a system reset");
         assertTrue(afterReset.containsKey(TemplateType.SHARED.name()));
         assertTrue(afterReset.containsKey(TemplateType.SYSTEM.name()));
+    }
+
+    @Test
+    void addMissingInternalTemplates_addsATemplateWhoseNameIsTakenByAnotherTemplateType() {
+        // The inbound and the outbound default both ship as "Default template for Smart Function".
+        // Matching stored templates by @name alone meant the second one was never added to a
+        // tenant that already had the first.
+        ServiceConfiguration configuration = new ServiceConfiguration();
+        service.initCodeTemplates(configuration, false);
+        Map<String, CodeTemplate> templates = configuration.getCodeTemplates();
+
+        long inboundDefaults = templates.values().stream()
+                .filter(t -> t.templateType == TemplateType.INBOUND_SMART_FUNCTION && t.defaultTemplate)
+                .count();
+        long outboundDefaults = templates.values().stream()
+                .filter(t -> t.templateType == TemplateType.OUTBOUND_SMART_FUNCTION && t.defaultTemplate)
+                .count();
+        assertEquals(1, inboundDefaults);
+        assertEquals(1, outboundDefaults);
+
+        // Simulate the upgraded tenant: only the inbound default is stored
+        templates.entrySet().removeIf(e -> e.getValue().templateType != TemplateType.INBOUND_SMART_FUNCTION
+                || !e.getValue().defaultTemplate);
+
+        service.addMissingInternalTemplates(configuration);
+
+        assertEquals(1, configuration.getCodeTemplates().values().stream()
+                .filter(t -> t.templateType == TemplateType.OUTBOUND_SMART_FUNCTION && t.defaultTemplate)
+                .count(), "the outbound default must be added despite sharing the inbound's name");
     }
 
     @Test
@@ -395,6 +521,54 @@ class ServiceConfigurationServiceTest {
 
         assertEquals("sample inbound",
                 decode(config.getCodeTemplates().get(TemplateType.INBOUND_SMART_FUNCTION.name()).code));
+    }
+
+    // ── direction is derived from templateType ───────────────────────────
+
+    @Test
+    void directionIsDerivedFromTemplateTypeForEveryShippedTemplate() {
+        ServiceConfiguration configuration = new ServiceConfiguration();
+        service.initCodeTemplates(configuration, false);
+
+        for (CodeTemplate t : configuration.getCodeTemplates().values()) {
+            assertEquals(t.templateType.getDirection(), t.getDirection(),
+                    "direction of " + t.name + " must follow its templateType");
+        }
+    }
+
+    @Test
+    void aDeclaredDirectionInTheHeaderIsIgnoredAndStripped() {
+        // Three shipped templates used to carry "@direction"; it is no longer parsed, and the
+        // rectified header must not carry it forward either.
+        CodeTemplate t = template("function onMessage(msg, context) {\n  return [];\n}\n");
+        t.code = encode("/**\n * @name My Template\n * @templateType INBOUND_SMART_FUNCTION\n"
+                + " * @direction OUTBOUND\n */\nfunction onMessage(msg, context) {\n  return [];\n}\n");
+
+        service.rectifyHeaderInCodeTemplate(t);
+
+        assertFalse(decode(t.code).contains("@direction"), "@direction must be stripped on rectify");
+        assertEquals(Direction.INBOUND, t.getDirection(), "direction follows templateType, not the header");
+    }
+
+    @Test
+    void directionCannotBeSetThroughTheApi() throws Exception {
+        // A PUT carrying a direction that contradicts templateType must not be able to store it.
+        String json = "{\"id\":\"abc12345\",\"name\":\"My Template\",\"description\":\"d\","
+                + "\"templateType\":\"INBOUND_SMART_FUNCTION\",\"direction\":\"OUTBOUND\","
+                + "\"code\":\"\",\"internal\":false,\"readonly\":false,\"defaultTemplate\":false}";
+
+        CodeTemplate parsed = new ObjectMapper().readValue(json, CodeTemplate.class);
+
+        assertEquals(Direction.INBOUND, parsed.getDirection());
+    }
+
+    @Test
+    void directionIsStillSerialized() throws Exception {
+        CodeTemplate t = template("function onMessage(msg, context) {\n  return [];\n}\n");
+
+        String json = new ObjectMapper().writeValueAsString(t);
+
+        assertTrue(json.contains("\"direction\":\"INBOUND\""), "clients still read direction: " + json);
     }
 
 }

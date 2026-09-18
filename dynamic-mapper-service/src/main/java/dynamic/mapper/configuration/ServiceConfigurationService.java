@@ -52,7 +52,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.util.Utils;
-import dynamic.mapper.model.Direction;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -141,10 +140,12 @@ public class ServiceConfigurationService {
             configuration.setCodeTemplates(codeTemplates);
         }
 
-        // Index existing template names for O(1) duplicate check, regardless of origin,
-        // because templates are matched by @name.
-        Set<String> existingNames = codeTemplates.values().stream()
-                .map(t -> t.name != null ? t.name.toLowerCase() : "")
+        // Index existing templates for an O(1) duplicate check, regardless of origin.
+        // The key is @templateType + @name, not @name alone: the inbound and the outbound
+        // default both ship as "Default template for Smart Function", and matching on the
+        // name alone meant a tenant that had one of them never received the other.
+        Set<String> existingTemplates = codeTemplates.values().stream()
+                .map(t -> templateKey(t.templateType != null ? t.templateType.name() : "", t.name))
                 .collect(Collectors.toSet());
 
         // Track which templateTypes already have a default registered
@@ -177,8 +178,9 @@ public class ServiceConfigurationService {
                 int headerEnd = findJSDocHeaderEnd(content);
                 String header = (headerEnd != -1) ? content.substring(0, headerEnd) : content;
                 String name = extractAnnotation(header, "@name");
+                String templateType = extractAnnotation(header, "@templateType");
 
-                if (name != null && existingNames.contains(name.toLowerCase())) {
+                if (existingTemplates.contains(templateKey(templateType, name))) {
                     continue; // Already stored — skip
                 }
 
@@ -193,6 +195,11 @@ public class ServiceConfigurationService {
             }
         }
         return anyAdded;
+    }
+
+    /** Identity of a code template for duplicate detection: its type plus its case-folded name. */
+    private static String templateKey(String templateType, String name) {
+        return templateType + "|" + (name != null ? name.toLowerCase() : "");
     }
 
     /**
@@ -285,7 +292,6 @@ public class ServiceConfigurationService {
 
         String name = extractAnnotation(header, "@name");
         String description = extractAnnotation(header, "@description");
-        boolean internal = Boolean.parseBoolean(extractAnnotation(header, "@internal"));
         String templateTypeStr = extractAnnotation(header, "@templateType");
 
         TemplateType templateType;
@@ -296,33 +302,24 @@ public class ServiceConfigurationService {
             return;
         }
 
-        // Derive direction from @direction annotation; fall back to templateType prefix
-        String directionAsString = extractAnnotation(header, "@direction");
-        Direction direction = null;
-        if (directionAsString != null && !directionAsString.isEmpty()) {
-            try {
-                direction = Direction.valueOf(directionAsString);
-            } catch (IllegalArgumentException e) {
-                log.debug("Could not parse @direction '{}' in file {}; deriving from templateType", directionAsString, fileName);
-            }
-        }
-        if (direction == null) {
-            // Derive from templateType prefix: INBOUND_* → INBOUND, OUTBOUND_* → OUTBOUND
-            if (templateTypeStr.startsWith("INBOUND")) {
-                direction = Direction.INBOUND;
-            } else if (templateTypeStr.startsWith("OUTBOUND")) {
-                direction = Direction.OUTBOUND;
-            }
-        }
-
         boolean defaultTemplate = Boolean.parseBoolean(extractAnnotation(header, "@defaultTemplate"));
-        boolean readonly = Boolean.parseBoolean(extractAnnotation(header, "@readonly"));
+        // @internal/@readonly decide whether "Init system code templates" may replace a stored
+        // template. Absent, they parse to false, which silently turns a shipped template into an
+        // editable tenant copy that no reset can ever clear -- so say so rather than default quietly.
+        boolean internal = parseRequiredFlag(header, "@internal", fileName, name);
+        boolean readonly = parseRequiredFlag(header, "@readonly", fileName, name);
 
         String templateId;
         if (defaultTemplate && !defaultTemplateRegistered.get(templateType)) {
             templateId = templateType.name();
             defaultTemplateRegistered.put(templateType, true);
         } else {
+            if (defaultTemplate) {
+                // Only one template per type can own the type's id, and which one wins would
+                // come down to classpath enumeration order — so say so instead of picking silently.
+                log.warn("Template '{}' declares @defaultTemplate true but {} already has a default;"
+                        + " loading it as an ordinary template", name, templateType);
+            }
             templateId = createCustomUuid();
         }
 
@@ -332,7 +329,7 @@ public class ServiceConfigurationService {
         }
 
         CodeTemplate template = new CodeTemplate(
-                templateId, name, description, templateType, direction,
+                templateId, name, description, templateType,
                 encode(content), internal, readonly, defaultTemplate);
 
         // Migrate header to two-section format on load so the divider is always present
@@ -344,6 +341,19 @@ public class ServiceConfigurationService {
     }
 
     /**
+     * Parses a boolean flag that every packaged template is expected to declare, warning when it
+     * is missing instead of defaulting to {@code false} without a trace.
+     */
+    private boolean parseRequiredFlag(String header, String annotation, String fileName, String name) {
+        String raw = extractAnnotation(header, annotation);
+        if (raw == null || raw.isEmpty()) {
+            log.warn("Template '{}' in file {} does not declare {}; assuming false", name, fileName, annotation);
+            return false;
+        }
+        return Boolean.parseBoolean(raw);
+    }
+
+    /**
      * Extracts annotation value from the file content.
      *
      * <p>Matches only occurrences anchored at the start of a JSDoc comment line
@@ -352,18 +362,68 @@ public class ServiceConfigurationService {
      * (below the {@link #SYSTEM_SECTION_MARKER}) could be mistaken for the real
      * system annotation.
      *
+     * <p>Package-private so the header round-trip (render → parse) can be tested directly.
+     *
      * @param content    The content of the template file
      * @param annotation The annotation name to extract (e.g. {@code "@name"})
      * @return The value of the annotation or empty string if not found
      */
-    private String extractAnnotation(String content, String annotation) {
+    String extractAnnotation(String content, String annotation) {
         if (content == null) {
             return "";
         }
         Pattern pattern = Pattern.compile(
-                "(?m)^[ \\t]*\\*[ \\t]*" + Pattern.quote(annotation) + "\\b[ \\t:]*(.*)$");
-        Matcher matcher = pattern.matcher(content);
-        return matcher.find() ? matcher.group(1).trim() : "";
+                "^[ \\t]*\\*[ \\t]*" + Pattern.quote(annotation) + "\\b[ \\t:]*(.*)$");
+        String[] lines = content.split("\n", -1);
+        for (int i = 0; i < lines.length; i++) {
+            Matcher matcher = pattern.matcher(lines[i]);
+            if (!matcher.matches()) {
+                continue;
+            }
+            StringBuilder value = new StringBuilder(matcher.group(1).trim());
+            // Long values (in practice @description) are wrapped over several lines; without
+            // this the value was truncated at the first line and the rest of the sentence was
+            // left behind in the header, where the next save relocated it below the
+            // auto-generated marker as orphaned prose.
+            for (int j = i + 1; j < lines.length; j++) {
+                String continuation = annotationContinuation(lines[j]);
+                if (continuation == null) {
+                    break;
+                }
+                if (value.length() > 0) {
+                    value.append(' ');
+                }
+                value.append(continuation);
+            }
+            return value.toString().trim();
+        }
+        return "";
+    }
+
+    /**
+     * Matches a JSDoc line that continues the annotation started on the previous line: a comment
+     * line whose text is indented past the single space that normal doc lines use, and that does
+     * not open a new tag. This is how {@link #renderDescription} writes wrapped values and how
+     * the shipped templates are hand-written.
+     *
+     * <p>Requiring the extra indentation is what keeps free-form documentation out of the value:
+     * a line like {@code " * Sample payload"} written straight under an annotation ends it.
+     */
+    private static final Pattern ANNOTATION_CONTINUATION =
+            Pattern.compile("^[ \\t]*\\*[ \\t]{2,}(?!@)(\\S.*?)[ \\t]*$");
+
+    /**
+     * @return the continuation text of {@code line}, or {@code null} when the line ends the
+     *         annotation (a blank {@code *} line, a new {@code @tag}, the section marker, the
+     *         closing {@code *}{@code /} or an unindented doc line).
+     */
+    private String annotationContinuation(String line) {
+        Matcher matcher = ANNOTATION_CONTINUATION.matcher(line);
+        if (!matcher.matches()) {
+            return null;
+        }
+        String text = matcher.group(1);
+        return text.startsWith("---") ? null : text;
     }
 
     public String validateAndConvert(Resource resource) {
@@ -641,7 +701,8 @@ public class ServiceConfigurationService {
 
     private static final Set<String> SYSTEM_ANNOTATIONS =
             Set.of("@name", "@description", "@templateType", "@direction", "@defaultTemplate", "@internal", "@readonly");
-    // Note: @direction is included for migration stripping (redundant — derivable from @templateType prefix)
+    // Note: @direction is no longer parsed or emitted -- it is listed only so that legacy headers
+    // still carrying it have the line stripped on the next rectify. See TemplateType#getDirection.
 
     /**
      * Migrates a legacy single-section header (all annotations mixed with free-form
@@ -653,17 +714,37 @@ public class ServiceConfigurationService {
         // Split the raw header into individual lines
         String[] lines = header.split("\n", -1);
         List<String> freeFormLines = new ArrayList<>();
+        boolean inSystemAnnotation = false;
         for (String line : lines) {
             String trimmed = line.trim();
-            // Skip the JSDoc opener/closer, blank comment lines, and system annotations
-            if (trimmed.equals("/**") || trimmed.equals("*/") || trimmed.equals("*")) {
+            // Skip the JSDoc opener/closer and system annotations
+            if (trimmed.equals("/**") || trimmed.equals("*/")) {
+                inSystemAnnotation = false;
+                continue;
+            }
+            if (trimmed.equals("*")) {
+                inSystemAnnotation = false;
+                // Keep blank lines *inside* the free-form block — they separate its paragraphs.
+                // Leading ones are dropped here, trailing ones below.
+                if (!freeFormLines.isEmpty()) {
+                    freeFormLines.add(line);
+                }
                 continue;
             }
             boolean isSystemAnnotation = SYSTEM_ANNOTATIONS.stream()
                     .anyMatch(ann -> trimmed.startsWith("* " + ann) || trimmed.equals("*" + ann));
-            if (!isSystemAnnotation) {
-                freeFormLines.add(line);
+            if (isSystemAnnotation) {
+                inSystemAnnotation = true;
+                continue;
             }
+            // A wrapped system annotation keeps its continuation lines: they belong to the value
+            // that has just been regenerated from the POJO, so carrying them over would duplicate
+            // half a sentence as free-form documentation.
+            if (inSystemAnnotation && annotationContinuation(line) != null) {
+                continue;
+            }
+            inSystemAnnotation = false;
+            freeFormLines.add(line);
         }
 
         // Strip trailing blank comment lines from the free-form block
@@ -698,17 +779,51 @@ public class ServiceConfigurationService {
     private String buildSystemSection(CodeTemplate codeTemplate) {
         String name = (codeTemplate.name != null && !codeTemplate.name.isEmpty())
                 ? codeTemplate.name : codeTemplate.id;
-        String description = codeTemplate.description != null ? codeTemplate.description : "";
         StringBuilder sb = new StringBuilder();
         sb.append("/**\n");
         sb.append(" * @name ").append(name).append("\n");
-        sb.append(" * @description ").append(description).append("\n");
+        sb.append(renderDescription(codeTemplate.description)).append("\n");
         sb.append(" * @templateType ").append(codeTemplate.templateType.name()).append("\n");
         sb.append(" * @defaultTemplate ").append(codeTemplate.defaultTemplate).append("\n");
         sb.append(" * @internal ").append(codeTemplate.internal).append("\n");
         sb.append(" * @readonly ").append(codeTemplate.readonly).append("\n");
         sb.append(SYSTEM_SECTION_MARKER);
         return sb.toString();
+    }
+
+    /** Indentation of a wrapped {@code @description} line, aligned under the tag's value. */
+    private static final String DESCRIPTION_CONTINUATION_INDENT = " *              ";
+
+    /** Column at which a long {@code @description} is wrapped onto a continuation line. */
+    private static final int DESCRIPTION_WRAP_WIDTH = 100;
+
+    /**
+     * Renders the {@code @description} line(s), wrapping a long description over continuation
+     * lines that {@link #extractAnnotation} reads back as one value. Any newline the description
+     * carries is folded into a space first, so a multi-line value can never break out of the
+     * JSDoc block.
+     */
+    private String renderDescription(String description) {
+        String text = description == null ? "" : description.trim().replaceAll("\\s+", " ");
+        if (text.isEmpty()) {
+            return " * @description";
+        }
+        StringBuilder rendered = new StringBuilder();
+        StringBuilder line = new StringBuilder(" * @description");
+        for (String word : text.split(" ")) {
+            boolean lineIsEmpty = line.length() <= DESCRIPTION_CONTINUATION_INDENT.length();
+            if (!lineIsEmpty && line.length() + 1 + word.length() > DESCRIPTION_WRAP_WIDTH) {
+                rendered.append(line).append("\n");
+                line = new StringBuilder(DESCRIPTION_CONTINUATION_INDENT);
+                line.append(word);
+                continue;
+            }
+            if (line.charAt(line.length() - 1) != ' ') {
+                line.append(' ');
+            }
+            line.append(word);
+        }
+        return rendered.append(line).toString();
     }
 
     /**

@@ -5,7 +5,8 @@
  *              The targetPath must start with /service/ and point to a microservice
  *              that is subscribed to the same Cumulocity tenant.
  * @templateType OUTBOUND_SMART_FUNCTION
- * @direction OUTBOUND
+ * @internal true
+ * @readonly true
  *
  * Sample Cumulocity operation payload (source):
  * {
@@ -20,7 +21,7 @@ function onMessage(msg, context) {
     var command = payload["c8y_Command"] && payload["c8y_Command"]["text"];
 
     // Forward the operation to a custom command-handler microservice via HTTP POST.
-    // targetPath must start w ith /service/ and the microservice must be subscribed to
+    // targetPath must start with /service/ and the microservice must be subscribed to
     // this tenant.  No device identity resolution is performed for custom routing.
     return {
         cumulocityType: "custom",

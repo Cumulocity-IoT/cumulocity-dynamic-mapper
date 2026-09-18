@@ -328,7 +328,6 @@ export class MappingStepperService {
             name,
             description,
             templateType,
-            direction,
             code: encodedCode,
             internal: false,
             readonly: false,

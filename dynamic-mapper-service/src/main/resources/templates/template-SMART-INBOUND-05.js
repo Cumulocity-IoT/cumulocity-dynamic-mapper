@@ -1,21 +1,32 @@
 /**
  * @name Sample parsing payload as CSV
- * @description Create measurement parsing payload as CSV
+ * @description Parses a multiline CSV payload and creates one measurement per data line. Requires a
+ *              mapping that delivers the raw text, so the CSV arrives as a string in payload.payload.
  * @templateType INBOUND_SMART_FUNCTION
- * @defaultTemplate false
  * @internal true
  * @readonly true
- * 
-*/
-
-/*
-Parse multiline CSV payload and create measurements
-
-351144440855493
-01/12/2025 15:49:38,0,+021.63,+00002045,+000139.3,-088.7,+000.2,00
-01/12/2025 15:54:38,0,+021.63,+00002041,+000139.3,-088.7,+000.3,00
-01/12/2025 15:59:38,0,+021.63,+00002042,+000139.3,-088.7,+000.2,00
-*/
+ *
+ * Sample payload (topic 'testCSV/351144440855493')
+ * {
+ *     "payload": "351144440855493\n01/12/2025 15:49:38,0,+021.63,+00002045,+000139.3,-088.7,+000.2,00\n..."
+ * }
+ *
+ * which is the CSV below, as received from the device:
+ *
+ *   351144440855493
+ *   01/12/2025 15:49:38,0,+021.63,+00002045,+000139.3,-088.7,+000.2,00
+ *   01/12/2025 15:54:38,0,+021.63,+00002041,+000139.3,-088.7,+000.3,00
+ *   01/12/2025 15:59:38,0,+021.63,+00002042,+000139.3,-088.7,+000.2,00
+ *
+ * Line 1 carries the device identifier, every following line is one reading:
+ *   field 0    timestamp, MM/dd/yyyy HH:mm:ss
+ *   fields 2-6 the five values mapped to c8y_CustomMeasurement.Value1..Value5
+ *   fields 1,7 unused
+ * Lines with fewer than 8 fields, an unparsable timestamp or a non-numeric value are skipped.
+ *
+ * The device identifier is taken from topic level 1 (payload._TOPIC_LEVEL_[1]) when the mapping
+ * defines one, and falls back to the first CSV line. It is resolved as a c8y_Serial external id.
+ */
 
 function onMessage(msg, context) {
     const payload = msg.payload;

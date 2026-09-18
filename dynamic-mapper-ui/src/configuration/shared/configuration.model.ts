@@ -68,7 +68,11 @@ export interface CodeTemplate {
   name: string;
   description?: string;
   templateType: TemplateType;
-  direction?: Direction;
+  /**
+   * Derived server-side from `templateType` and sent read-only — a value set here is ignored on
+   * write. Use {@link toTemplateType} to go the other way, from a direction to a template type.
+   */
+  readonly direction?: Direction;
   code: string;
   internal: boolean;
   readonly: boolean;
