@@ -44,9 +44,9 @@ import {
   isSubstitutionsAsCode,
   ALERT_INFO_TIMEOUT
 } from '../../shared/';
-import { DynamicMapperRequest, TestResult, TestContext, MappingTokens } from '../core/processor/processor.model';
+import { DynamicMapperRequest, TestResult, TestContext, MappingTokens } from '../../shared/mapping/processor/processor.model';
 import { TestingService } from '../core/testing.service';
-import { patchC8YTemplateForTesting, sortObjectKeys } from '../shared/util';
+import { patchC8YTemplateForTesting, sortObjectKeys } from '../../shared/mapping/util';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { CommonModule } from '@angular/common';
@@ -61,7 +61,7 @@ interface TestingModel {
 @Component({
   selector: 'd11r-mapping-testing',
   templateUrl: 'mapping-testing.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
+  styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, JsonEditorComponent]

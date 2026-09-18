@@ -22,7 +22,7 @@ import { NgModule } from '@angular/core';
 import { hookNavigator, hookRoute, hookTab } from '@c8y/ngx-components';
 import { MonitoringComponent } from './statistic/monitoring.component';
 import { MonitoringChartComponent } from './chart/chart.component';
-import { featureResolver, NODE2 } from '../shared/mapping/util';
+import { featureResolver, NODE2 } from '../shared/mapping/mapping.constants';
 import { MappingServiceEventComponent } from './event/mapping-service-event.component';
 import { MonitoringNavigationFactory } from './monitoring-navigation.factory';
 import { StatisticTabFactory } from './statistic-tab.factory';

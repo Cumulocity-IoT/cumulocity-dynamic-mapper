@@ -58,10 +58,10 @@ Grounding facts that constrain the design:
   deployment map and for external references.
 - Mappings persist as Cumulocity inventory managed objects of type
   `d11r_mapping`, managed by
-  [MappingService.java](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/MappingService.java)
+  [MappingService.java](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java)
   (`createMapping`, `updateMapping`, `getMapping`, `deleteMapping`).
 - Activation is a single boolean `active` (line 149), toggled via
-  `setActivationMapping(...)` ([MappingService.java:340](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/MappingService.java#L340))
+  `setActivationMapping(...)` ([MappingService.java:340](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java#L340))
   and the `ACTIVATE_MAPPING` operation.
 - An **active mapping cannot be updated or deleted** until deactivated
   (enforced in `MappingRepository.prepareForUpdate` / `prepareForDelete`).

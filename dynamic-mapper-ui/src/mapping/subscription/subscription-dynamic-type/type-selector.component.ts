@@ -30,7 +30,7 @@ import { CoreModule } from '@c8y/ngx-components';
   selector: 'd11r-type-selector',
   host: { class: 'flex-grow d-col fit-h' },
   templateUrl: 'type-selector.component.html',
-  styleUrls: ['../../shared/mapping.style.css'],
+  styleUrls: ['../../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports:[CoreModule]

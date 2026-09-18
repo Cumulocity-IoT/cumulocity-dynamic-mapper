@@ -1,16 +1,30 @@
 # Backend Critical Conventions
 
-## Thread Safety — ProcessingContext sub-contexts
+## Thread Safety — ProcessingContext and its projections
 
-`ProcessingContext` is the per-message state. It is decomposed into focused sub-contexts, each with its own thread-safety guarantee:
+`ProcessingContext` is the per-message state and the **single mutable owner** of that state.
+It is not decomposed: thread safety comes from its own fields, not from wrapper objects.
 
-| Context class | Role | Thread-safety rule |
-|--------------|------|-------------------|
-| `RoutingContext` | topic, tenant, qos, api, clientId | Immutable — safe to share |
-| `PayloadContext<T>` | raw + deserialized payload | Immutable — safe to share |
-| `DeviceContext` | sourceId, externalId, device info | Copy-on-write |
-| `ProcessingState` | flags, cache | `ConcurrentHashMap` / `AtomicBoolean` |
-| `OutputCollector` | collected C8Y requests, errors, logs | `CopyOnWriteArrayList` |
+The parallel-request route (`direct:processRequestsInParallel`) runs `SendInboundProcessor`
+concurrently across virtual threads **against the same `ProcessingContext`**, and each leg may
+call `addError()`. That is safe because the mutable fields are concurrent collections:
+
+| Field | Type |
+|-------|------|
+| `requests`, `errors`, `warnings`, `logs` | `CopyOnWriteArrayList` |
+| `processingCache` | `ConcurrentSkipListMap` |
+
+On top of this, `ProcessingContext` exposes two **read-only projections** used to narrow method
+signatures. They are immutable snapshots with no sync-back, so they cannot be used to mutate state:
+
+| Projection | Getter | Fields |
+|------------|--------|--------|
+| `RoutingContext` | `getRoutingContext()` | topic, clientId, api, qos, resolvedPublishTopic, tenant |
+| `DeviceContext` | `getDeviceContext()` | sourceId, externalId, deviceName, deviceType, deviceFragments, deviceGroups, alarms |
+
+`OutputCollector` is a separate standalone accumulator. Construct it directly with
+`new OutputCollector()`, pass it down, and merge results up — do **not** expect it to be
+attached to a `ProcessingContext`.
 
 `ProcessingContext` itself implements `AutoCloseable` and owns the GraalVM polyglot context
 lifecycle for Smart Function execution directly — there is no separate `ExecutionContext` class.
@@ -18,14 +32,22 @@ lifecycle for Smart Function execution directly — there is no separate `Execut
 > **Always** use `try-with-resources` on `ProcessingContext` (or ensure `close()` is called) to prevent GraalVM memory leaks.
 
 **Rules:**
-- For parallel processing, **always** use focused contexts; never mutate `ProcessingContext` directly.
-- Prefer focused context parameters over the full `ProcessingContext` in method signatures — makes dependencies explicit and improves testability.
+- Mutate state **directly on `ProcessingContext`** (`setIgnoreFurtherProcessing(...)`,
+  `getProcessingCache()`, `addError(...)`). Its fields are already concurrent. Do not introduce
+  copy-out/copy-back wrappers — a wrapper that replaces a collection wholesale on sync-back
+  reintroduces lost updates on exactly the path that is currently safe.
+- Pass a **read-only projection** when a method only reads routing or device data — it makes
+  dependencies explicit and improves testability.
 
 ```java
-// Extract focused contexts and pass only what a method needs
+// Pass the narrow projection when a method only needs routing data
 RoutingContext routing = context.getRoutingContext();
-OutputCollector output  = context.getOutputCollector();
-processMessage(routing, output);
+processMessage(routing, context);
+
+// Accumulate into a fresh collector, then merge up
+OutputCollector output = new OutputCollector();
+collectInto(output);
+context.getRequests().addAll(output.getRequests());
 ```
 
 ## Adding a New Connector

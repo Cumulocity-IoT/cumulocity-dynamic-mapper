@@ -35,19 +35,19 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.IdentityResolutionService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.RepairStrategy;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 import com.cumulocity.model.ID;
@@ -61,14 +61,14 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
 
     private final MappingService mappingService;
 
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
     private final IdentityResolutionService identityResolutionService;
 
     public SubstitutionResultInboundProcessor(C8YAgent c8yAgent, MappingService mappingService,
-            ConfigurationRegistry configurationRegistry, IdentityResolutionService identityResolutionService) {
+            ServiceRegistry serviceRegistry, IdentityResolutionService identityResolutionService) {
         this.c8yAgent = c8yAgent;
         this.mappingService = mappingService;
-        this.configurationRegistry = configurationRegistry;
+        this.serviceRegistry = serviceRegistry;
         this.identityResolutionService = identityResolutionService;
     }
 
@@ -224,7 +224,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 // cache the mapping of device to client ID
                 if (context.getClientId() != null
                         && context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled()) {
-                    configurationRegistry.addOrUpdateClientRelation(tenant,
+                    serviceRegistry.addOrUpdateClientRelation(tenant,
                             context.getClientId(),
                             sourceId.getValue().toString());
                 }
@@ -240,7 +240,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
             // DO NOT REMOVE DeviceIsolationMQTTService feature
             // cache the mapping of device to client ID
             if (context.getClientId() != null && context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled()) {
-                configurationRegistry.addOrUpdateClientRelation(tenant,
+                serviceRegistry.addOrUpdateClientRelation(tenant,
                         context.getClientId(),
                         sourceId.getValue().toString());
             }

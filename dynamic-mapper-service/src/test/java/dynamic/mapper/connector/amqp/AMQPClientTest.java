@@ -48,16 +48,16 @@ import dynamic.mapper.connector.core.client.Certificate;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.service.ConnectorConfigurationService;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.ServiceConfigurationService;
+import dynamic.mapper.model.DynamicMapperRequest;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.configuration.ServiceConfigurationService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -66,7 +66,7 @@ import lombok.extern.slf4j.Slf4j;
 class AMQPClientTest {
 
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
     @Mock
     private ConnectorRegistry connectorRegistry;
     @Mock
@@ -103,16 +103,16 @@ class AMQPClientTest {
         objectMapper = new ObjectMapper();
 
         // Setup configuration registry
-        when(configurationRegistry.getMappingService()).thenReturn(mappingService);
-        when(configurationRegistry.getServiceConfigurationService()).thenReturn(serviceConfigurationService);
-        when(configurationRegistry.getConnectorConfigurationService())
+        when(serviceRegistry.getMappingService()).thenReturn(mappingService);
+        when(serviceRegistry.getServiceConfigurationService()).thenReturn(serviceConfigurationService);
+        when(serviceRegistry.getConnectorConfigurationService())
                 .thenReturn(connectorConfigurationService);
-        when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
-        when(configurationRegistry.getVirtualThreadPool())
+        when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        when(serviceRegistry.getVirtualThreadPool())
                 .thenReturn(java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor());
-        when(configurationRegistry.getObjectMapper()).thenReturn(objectMapper);
-        when(configurationRegistry.getServiceConfiguration(anyString())).thenReturn(serviceConfiguration);
-        when(configurationRegistry.getConnectorRegistry()).thenReturn(connectorRegistry);
+        when(serviceRegistry.getObjectMapper()).thenReturn(objectMapper);
+        when(serviceRegistry.getServiceConfiguration(anyString())).thenReturn(serviceConfiguration);
+        when(serviceRegistry.getConnectorRegistry()).thenReturn(connectorRegistry);
 
         // Setup connector configuration
         when(connectorConfiguration.getName()).thenReturn(TEST_CONNECTOR_NAME);
@@ -218,7 +218,7 @@ class AMQPClientTest {
     void testFullConstructor() {
         // When
         amqpClient = new AMQPClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -239,7 +239,7 @@ class AMQPClientTest {
     void testInitializeSuccess() {
         // Given
         amqpClient = new AMQPClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -268,7 +268,7 @@ class AMQPClientTest {
         when(connectorConfiguration.getProperties()).thenReturn(properties);
 
         amqpClient = new AMQPClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -324,7 +324,7 @@ class AMQPClientTest {
                 eq(TEST_CONNECTOR_NAME))).thenReturn(mockCert);
 
         amqpClient = new AMQPClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -352,7 +352,7 @@ class AMQPClientTest {
     void testSupportsWildcardInTopic() {
         // Given
         amqpClient = new AMQPClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -387,7 +387,7 @@ class AMQPClientTest {
     void testIsConfigValidWithValidConfig() {
         // Given
         amqpClient = new AMQPClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -431,7 +431,7 @@ class AMQPClientTest {
         when(invalidConfig.getProperties()).thenReturn(properties);
 
         amqpClient = new AMQPClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -451,7 +451,7 @@ class AMQPClientTest {
     void testPublishMEAO() throws Exception {
         // Given
         amqpClient = new AMQPClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -483,7 +483,7 @@ class AMQPClientTest {
     void testPublishMEAOWhenNotConnected() throws Exception {
         // Given
         amqpClient = new AMQPClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -552,7 +552,7 @@ class AMQPClientTest {
     void testDisconnect() throws Exception {
         // Given
         amqpClient = new AMQPClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -591,7 +591,7 @@ class AMQPClientTest {
     void testGetters() {
         // Given
         amqpClient = new AMQPClient(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,

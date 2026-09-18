@@ -30,15 +30,14 @@ import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.model.ConnectorStatus;
+import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.model.DynamicMapperRequest;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.connector.mqtt.SparkplugCertificateManager;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pulsar.client.api.*;
@@ -96,14 +95,14 @@ public class PulsarConnectorClient extends AConnectorClient {
     /**
      * Full constructor with dependencies
      */
-    public PulsarConnectorClient(ConfigurationRegistry configurationRegistry,
+    public PulsarConnectorClient(ServiceRegistry serviceRegistry,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             CamelDispatcherInbound dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
         this();
-        wireFromRegistry(configurationRegistry, connectorRegistry, connectorConfiguration,
+        wireFromRegistry(serviceRegistry, connectorRegistry, connectorConfiguration,
                 dispatcher, additionalSubscriptionIdTest, tenant);
         initializeManagers();
     }
@@ -151,7 +150,7 @@ public class PulsarConnectorClient extends AConnectorClient {
             // Create callback
             pulsarCallback = new PulsarCallback(
                     tenant,
-                    configurationRegistry,
+                    serviceRegistry,
                     dispatcher,
                     connectorIdentifier,
                     connectorName);

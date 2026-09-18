@@ -49,24 +49,24 @@ of a guess.
 
 | Endpoint | Class | Description |
 |---|---|---|
-| `POST /explorer/session` | [`ExplorerController.startSession()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/ExplorerController.java#L101-L146) | Creates a session; returns `sessionId` (and an optional `subscriptionWarning`, inbound only). |
-| `DELETE /explorer/session/{sessionId}` | [`ExplorerController.stopSession()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/ExplorerController.java#L154-L165) | Stops the session and unregisters its listener(s)/subscription(s). |
-| `GET /explorer/session/{sessionId}/messages` | [`ExplorerController.getMessages()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/ExplorerController.java#L175-L185) | Returns the buffered messages (oldest first) and resets the idle timer. |
-| `DELETE /explorer/session/{sessionId}/messages` | [`ExplorerController.clearMessages()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/ExplorerController.java#L193-L203) | Empties the buffer without stopping the session. |
+| `POST /explorer/session` | [`ExplorerController.startSession()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/ExplorerController.java#L101-L146) | Creates a session; returns `sessionId` (and an optional `subscriptionWarning`, inbound only). |
+| `DELETE /explorer/session/{sessionId}` | [`ExplorerController.stopSession()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/ExplorerController.java#L154-L165) | Stops the session and unregisters its listener(s)/subscription(s). |
+| `GET /explorer/session/{sessionId}/messages` | [`ExplorerController.getMessages()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/ExplorerController.java#L175-L185) | Returns the buffered messages (oldest first) and resets the idle timer. |
+| `DELETE /explorer/session/{sessionId}/messages` | [`ExplorerController.clearMessages()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/ExplorerController.java#L193-L203) | Empties the buffer without stopping the session. |
 
 All four return `404` when the session no longer exists (expired or already stopped); the
 frontend's [`MessageExplorerService`](../../dynamic-mapper-ui/src/mapping/message-explorer/message-explorer.service.ts)
 turns a `404` into a `SessionExpiredError` rather than a generic HTTP failure.
 
 `StartSessionRequest` validation happens in the controller, before
-[`ExplorerService.startSession()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/ExplorerService.java#L144-L333)
+[`ExplorerService.startSession()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/ExplorerService.java#L144-L333)
 is called at all:
 
 - INBOUND requires `connectorIdentifier` (`ExplorerController.java:107`).
 - OUTBOUND requires `sourceId` or `deviceType` (`ExplorerController.java:113`) — without
   either, no Notification 2.0 subscription would be created.
 
-### Session model and lifecycle — [`ExplorerService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/ExplorerService.java)
+### Session model and lifecycle — [`ExplorerService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/ExplorerService.java)
 
 Sessions live entirely in memory, keyed `tenant → sessionId → ExplorerSession`. Each session
 owns a bounded `ConcurrentLinkedDeque<ExplorerMessage>` (trimmed to `maxMessages` on every

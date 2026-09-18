@@ -1,0 +1,747 @@
+/*
+ * Copyright (c) 2025 Cumulocity GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * @authors Christof Strack
+ */
+
+import { FormControl, FormGroup } from '@angular/forms';
+import {
+  deriveSampleTopicFromTopic,
+  isFilterOutboundUnique,
+  isMappingTopicUnique,
+  isWildcardTopic,
+  normalizeTopic,
+  splitTopicExcludingSeparator,
+  splitTopicIncludingSeparator,
+  checkTopicsInboundAreValid,
+  stripTemplateMetadataTags,
+  translateValidationErrorCode,
+  buildBackendErrorMessage,
+  configurationToYaml,
+  yamlToConfiguration,
+  buildTestMapping,
+  isConnectorSelectionEmpty,
+  tryGetLiveEditorContent,
+  updateTemplatesInEditors,
+  TemplateEditorRef
+} from './util';
+import { Direction, Mapping, MappingType, RepairStrategy, TransformationType } from '../../shared';
+import { MappingValidationError, toBackendError } from './mapping-validation-error';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function makeMapping(overrides: Partial<Mapping> = {}): Mapping {
+  return {
+    id: 'test-id',
+    identifier: 'test-identifier',
+    name: 'Test',
+    direction: Direction.INBOUND,
+    targetAPI: 'MEASUREMENT',
+    mappingType: MappingType.JSON,
+    transformationType: TransformationType.DEFAULT,
+    substitutions: [],
+    sourceTemplate: '{}',
+    targetTemplate: '{}',
+    mappingTopic: 'test/topic',
+    mappingTopicSample: 'test/topic/sample',
+    active: true,
+    debug: false,
+    tested: false,
+    filterMapping: '',
+    createNonExistingDevice: false,
+    updateExistingDevice: false,
+    useExternalId: false,
+    externalIdType: '',
+    qos: undefined,
+    ...overrides
+  } as Mapping;
+}
+
+// ---------------------------------------------------------------------------
+// splitTopicExcludingSeparator
+// ---------------------------------------------------------------------------
+
+describe('splitTopicExcludingSeparator', () => {
+  it('should return undefined for undefined input', () => {
+    expect(splitTopicExcludingSeparator(undefined, false)).toBeUndefined();
+  });
+
+  it('should split a simple topic without leading slash', () => {
+    expect(splitTopicExcludingSeparator('a/b/c', false)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('should keep leading slash as first segment when cutOffLeadingSlash is false', () => {
+    expect(splitTopicExcludingSeparator('/a/b', false)).toEqual(['/', 'a', 'b']);
+  });
+
+  it('should remove leading slash when cutOffLeadingSlash is true', () => {
+    expect(splitTopicExcludingSeparator('/a/b', true)).toEqual(['a', 'b']);
+  });
+
+  it('should remove trailing slash', () => {
+    expect(splitTopicExcludingSeparator('a/b/', false)).toEqual(['a', 'b']);
+  });
+
+  it('should handle single-segment topic', () => {
+    expect(splitTopicExcludingSeparator('single', false)).toEqual(['single']);
+  });
+
+  it('should handle wildcards in topics', () => {
+    expect(splitTopicExcludingSeparator('a/+/c', false)).toEqual(['a', '+', 'c']);
+    expect(splitTopicExcludingSeparator('a/#', false)).toEqual(['a', '#']);
+  });
+
+  it('should trim leading/trailing whitespace', () => {
+    expect(splitTopicExcludingSeparator('  a/b  ', false)).toEqual(['a', 'b']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// splitTopicIncludingSeparator
+// ---------------------------------------------------------------------------
+
+describe('splitTopicIncludingSeparator', () => {
+  it('should split keeping separators as tokens', () => {
+    const result = splitTopicIncludingSeparator('a/b/c');
+    expect(result).toEqual(['a', '/', 'b', '/', 'c']);
+  });
+
+  it('should handle single segment', () => {
+    const result = splitTopicIncludingSeparator('single');
+    expect(result).toEqual(['single']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// normalizeTopic
+// ---------------------------------------------------------------------------
+
+describe('normalizeTopic', () => {
+  it('should return empty string for undefined input', () => {
+    expect(normalizeTopic(undefined)).toBe('');
+  });
+
+  it('should trim leading/trailing whitespace', () => {
+    expect(normalizeTopic('  a/b  ')).toBe('a/b');
+  });
+
+  it('should reduce multiple leading slashes to one', () => {
+    expect(normalizeTopic('//a/b')).toBe('/a/b');
+  });
+
+  it('should reduce multiple trailing slashes to one', () => {
+    expect(normalizeTopic('a/b//')).toBe('a/b/');
+  });
+
+  it('should remove trailing slash after #', () => {
+    expect(normalizeTopic('a/b/#/')).toBe('a/b/#');
+  });
+
+  it('should leave a normal topic unchanged', () => {
+    expect(normalizeTopic('a/b/c')).toBe('a/b/c');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// deriveSampleTopicFromTopic
+// ---------------------------------------------------------------------------
+
+describe('deriveSampleTopicFromTopic', () => {
+  it('should return empty string for undefined input', () => {
+    expect(deriveSampleTopicFromTopic(undefined)).toBe('');
+  });
+
+  it('should replace trailing # with +', () => {
+    expect(deriveSampleTopicFromTopic('a/b/#')).toBe('a/b/+');
+  });
+
+  it('should leave topic without # unchanged', () => {
+    expect(deriveSampleTopicFromTopic('a/b/c')).toBe('a/b/c');
+  });
+
+  it('should replace multiple trailing # signs with +', () => {
+    expect(deriveSampleTopicFromTopic('a/b/###')).toBe('a/b/+');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isWildcardTopic
+// ---------------------------------------------------------------------------
+
+describe('isWildcardTopic', () => {
+  it('should return true for topic with # wildcard', () => {
+    expect(isWildcardTopic('a/b/#')).toBe(true);
+  });
+
+  it('should return true for topic with + wildcard', () => {
+    expect(isWildcardTopic('a/+/c')).toBe(true);
+  });
+
+  it('should return false for topic without wildcards', () => {
+    expect(isWildcardTopic('a/b/c')).toBe(false);
+  });
+
+  it('should return false for empty string', () => {
+    expect(isWildcardTopic('')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isMappingTopicUnique
+// ---------------------------------------------------------------------------
+
+describe('isMappingTopicUnique', () => {
+  it('should return true when there are no other mappings', () => {
+    const mapping = makeMapping({ mappingTopic: 'a/b/c' });
+    expect(isMappingTopicUnique(mapping, [])).toBe(true);
+  });
+
+  it('should return true when topic does not overlap with others', () => {
+    const mapping = makeMapping({ id: '1', mappingTopic: 'a/b/c' });
+    const others = [makeMapping({ id: '2', mappingTopic: 'x/y/z' })];
+    expect(isMappingTopicUnique(mapping, others)).toBe(true);
+  });
+
+  it('should return true when the only overlap is with itself', () => {
+    const mapping = makeMapping({ id: '1', mappingTopic: 'a/b' });
+    const others = [makeMapping({ id: '1', mappingTopic: 'a/b' })];
+    expect(isMappingTopicUnique(mapping, others)).toBe(true);
+  });
+
+  it('should return false when another mapping has a prefix overlap', () => {
+    const mapping = makeMapping({ id: '1', mappingTopic: 'a/b' });
+    const others = [makeMapping({ id: '2', mappingTopic: 'a/b/c' })];
+    expect(isMappingTopicUnique(mapping, others)).toBe(false);
+  });
+
+  it('should return false when this mapping is a prefix of another', () => {
+    const mapping = makeMapping({ id: '1', mappingTopic: 'a/b/c' });
+    const others = [makeMapping({ id: '2', mappingTopic: 'a/b' })];
+    expect(isMappingTopicUnique(mapping, others)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isFilterOutboundUnique
+// ---------------------------------------------------------------------------
+
+describe('isFilterOutboundUnique', () => {
+  it('should return true when there are no other mappings', () => {
+    const mapping = makeMapping({ filterMapping: 'filter1' });
+    expect(isFilterOutboundUnique(mapping, [])).toBe(true);
+  });
+
+  it('should return true when filter does not match any other mapping', () => {
+    const mapping = makeMapping({ id: '1', filterMapping: 'filterA' });
+    const others = [makeMapping({ id: '2', filterMapping: 'filterB' })];
+    expect(isFilterOutboundUnique(mapping, others)).toBe(true);
+  });
+
+  it('should return true when matching mapping is itself', () => {
+    const mapping = makeMapping({ id: '1', filterMapping: 'filterA' });
+    const others = [makeMapping({ id: '1', filterMapping: 'filterA' })];
+    expect(isFilterOutboundUnique(mapping, others)).toBe(true);
+  });
+
+  it('should return false when another mapping has the same filter', () => {
+    const mapping = makeMapping({ id: '1', filterMapping: 'filterA' });
+    const others = [makeMapping({ id: '2', filterMapping: 'filterA' })];
+    expect(isFilterOutboundUnique(mapping, others)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// checkTopicsInboundAreValid (form validator)
+// ---------------------------------------------------------------------------
+
+describe('checkTopicsInboundAreValid', () => {
+  function makeControl(mappingTopic: string, mappingTopicSample: string): FormGroup {
+    return new FormGroup({
+      mappingTopic: new FormControl(mappingTopic),
+      mappingTopicSample: new FormControl(mappingTopicSample)
+    });
+  }
+
+  it('should return null and mark mappingTopic invalid when mappingTopic is empty', () => {
+    const control = makeControl('', 'a/b/c');
+    const result = checkTopicsInboundAreValid(control);
+    expect(result).toBeNull();
+    expect(control.get('mappingTopic').errors).toEqual({ required: true });
+  });
+
+  it('should return null and mark mappingTopicSample invalid when mappingTopicSample is empty', () => {
+    const control = makeControl('a/b/c', '');
+    const result = checkTopicsInboundAreValid(control);
+    expect(result).toBeNull();
+    expect(control.get('mappingTopicSample').errors).toEqual({ required: true });
+  });
+
+  it('should return null for matching topic and sample', () => {
+    const result = checkTopicsInboundAreValid(makeControl('a/b/c', 'a/b/c'));
+    expect(result).toBeNull();
+  });
+
+  it('should return null when mapping topic uses + wildcard matching sample segment', () => {
+    const result = checkTopicsInboundAreValid(makeControl('a/+/c', 'a/device1/c'));
+    expect(result).toBeNull();
+  });
+
+  it('should return null when mapping topic uses # at end', () => {
+    const result = checkTopicsInboundAreValid(makeControl('a/b/#', 'a/b/anything'));
+    expect(result).toBeNull();
+  });
+
+  it('should return null when # matches a sample with more levels than the topic', () => {
+    const result = checkTopicsInboundAreValid(
+      makeControl('fridgeNew/#', 'fridgeNew/east/sensor-ny-99')
+    );
+    expect(result).toBeNull();
+  });
+
+  it('should return null when # matches the bare parent topic (zero extra levels)', () => {
+    const result = checkTopicsInboundAreValid(makeControl('fridgeNew/#', 'fridgeNew'));
+    expect(result).toBeNull();
+  });
+
+  it('should return error when sample has fewer levels than the fixed prefix before #', () => {
+    const result = checkTopicsInboundAreValid(makeControl('a/b/#', 'a'));
+    expect(result).not.toBeNull();
+    expect(
+      result['MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name']
+    ).toBeDefined();
+  });
+
+  it('should return error when # topic and sample have mismatching static prefix', () => {
+    const result = checkTopicsInboundAreValid(makeControl('a/b/#', 'a/c/d'));
+    expect(result).not.toBeNull();
+    expect(
+      result['MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name']
+    ).toBeDefined();
+  });
+
+  it('should return error when mapping topic and sample have different number of levels', () => {
+    const result = checkTopicsInboundAreValid(makeControl('a/b', 'a/b/c'));
+    expect(result).not.toBeNull();
+    expect(
+      result['MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name']
+    ).toBeDefined();
+  });
+
+  it('should return error when # appears more than once in mapping topic', () => {
+    const result = checkTopicsInboundAreValid(makeControl('a/#/#', 'a/b/c'));
+    expect(result).not.toBeNull();
+  });
+
+  it('should return error when mapping topic and sample have different static segments', () => {
+    const result = checkTopicsInboundAreValid(makeControl('a/b/c', 'a/b/d'));
+    expect(result).not.toBeNull();
+    expect(
+      result['MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name']
+    ).toBeDefined();
+  });
+
+  it('should also propagate the error onto the mappingTopic control so field-level rendering shows it', () => {
+    // Previously only the two `required` checks set errors on the individual control;
+    // every other violation (like this one) was returned at the group level only, so
+    // Formly's per-field error rendering (which reads the control's own .errors) never
+    // showed anything even though the form was correctly marked invalid.
+    const control = makeControl('a/b/c', 'a/b/d');
+    checkTopicsInboundAreValid(control);
+    expect(control.get('mappingTopic').errors).toEqual(
+      jasmine.objectContaining({
+        MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name: jasmine.anything()
+      })
+    );
+  });
+
+  it('should clear the mappingTopic control error once the topics become valid again', () => {
+    const control = makeControl('a/b/c', 'a/b/d');
+    checkTopicsInboundAreValid(control);
+    expect(control.get('mappingTopic').errors).not.toBeNull();
+
+    control.get('mappingTopicSample').setValue('a/b/c');
+    checkTopicsInboundAreValid(control);
+    expect(control.get('mappingTopic').errors).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// stripTemplateMetadataTags
+// ---------------------------------------------------------------------------
+
+describe('stripTemplateMetadataTags', () => {
+  it('should return falsy input unchanged', () => {
+    expect(stripTemplateMetadataTags('')).toBe('');
+    expect(stripTemplateMetadataTags(undefined)).toBeUndefined();
+  });
+
+  it('should strip the whole auto-generated system section up to and including the marker', () => {
+    const code =
+      '/**\n' +
+      ' * @name My Template\n' +
+      ' * @description A description\n' +
+      ' * @templateType INBOUND_SMART_FUNCTION\n' +
+      ' * @defaultTemplate true\n' +
+      ' * @internal true\n' +
+      ' * @readonly true\n' +
+      ' * --- metadata above is auto-generated, add your documentation below ---\n' +
+      ' */\n\n' +
+      'function onMessage(msg, context) { return []; }\n';
+
+    const result = stripTemplateMetadataTags(code);
+
+    expect(result).not.toContain('@name');
+    expect(result).not.toContain('@description');
+    expect(result).not.toContain('@templateType');
+    expect(result).not.toContain('@defaultTemplate');
+    expect(result).not.toContain('@internal');
+    expect(result).not.toContain('@readonly');
+    expect(result).not.toContain('metadata above is auto-generated');
+    expect(result).toContain('function onMessage(msg, context) { return []; }');
+  });
+
+  it('should preserve free-form documentation written below the marker', () => {
+    const code =
+      '/**\n' +
+      ' * @name My Template\n' +
+      ' * @templateType INBOUND_SMART_FUNCTION\n' +
+      ' * --- metadata above is auto-generated, add your documentation below ---\n' +
+      ' * Sample payload\n' +
+      ' * { "foo": "bar" }\n' +
+      ' */\n\n' +
+      'function onMessage(msg, context) { return []; }\n';
+
+    const result = stripTemplateMetadataTags(code);
+
+    expect(result).not.toContain('@name');
+    expect(result).not.toContain('@templateType');
+    expect(result).toContain('Sample payload');
+    expect(result).toContain('{ "foo": "bar" }');
+    expect(result).toContain('function onMessage(msg, context) { return []; }');
+  });
+
+  /**
+   * Regression: the system section owns the block's `/**` opener, so cutting up to the marker line
+   * deleted it and left the author's sample payload as a dangling `* ... *\/`. Every default
+   * Smart Function template ships documentation below the marker, so creating a mapping from one
+   * produced code that would not parse.
+   */
+  it('should keep the documentation block valid JavaScript, not just present', () => {
+    const code =
+      '/**\n' +
+      ' * @name Default template for Smart Function\n' +
+      ' * @templateType OUTBOUND_SMART_FUNCTION\n' +
+      ' * @readonly true\n' +
+      ' * --- metadata above is auto-generated, add your documentation below ---\n' +
+      ' *\n' +
+      ' * Sample Cumulocity measurement payload (source)\n' +
+      ' * { "time": "2025-01-01T12:00:00.000Z" }\n' +
+      '*/\n\n' +
+      'function onMessage(msg, context) { return []; }\n';
+
+    const result = stripTemplateMetadataTags(code);
+
+    expect(result.startsWith('/**')).toBe(true);
+    expect(result).toContain('Sample Cumulocity measurement payload');
+    // Balanced delimiters, and no orphaned continuation line before the opener.
+    expect((result.match(/\/\*\*/g) ?? []).length).toBe(1);
+    expect((result.match(/\*\//g) ?? []).length).toBe(1);
+    expect(() => new Function(result)).not.toThrow();
+  });
+
+  it('should drop the block entirely when the author wrote no documentation below the marker', () => {
+    const code =
+      '/**\n' +
+      ' * @name My Template\n' +
+      ' * --- metadata above is auto-generated, add your documentation below ---\n' +
+      ' */\n\n' +
+      'function onMessage(msg, context) { return []; }\n';
+
+    const result = stripTemplateMetadataTags(code);
+
+    // Nothing worth keeping, so no empty `/** */` is left behind.
+    expect(result).not.toContain('/**');
+    expect(result).not.toContain('*/');
+    expect(result.trim()).toBe('function onMessage(msg, context) { return []; }');
+    expect(() => new Function(result)).not.toThrow();
+  });
+
+  it('should keep code that precedes the header intact', () => {
+    const code =
+      'const before = 1;\n' +
+      '/**\n' +
+      ' * @name My Template\n' +
+      ' * --- metadata above is auto-generated, add your documentation below ---\n' +
+      ' * Docs\n' +
+      ' */\n' +
+      'const after = 2;\n';
+
+    const result = stripTemplateMetadataTags(code);
+
+    expect(result).toContain('const before = 1;');
+    expect(result).toContain('const after = 2;');
+    expect(result).toContain('Docs');
+    expect(() => new Function(result)).not.toThrow();
+  });
+
+  it('should fall back to stripping individual system tags when no marker is present (legacy templates)', () => {
+    const code =
+      '/**\n' +
+      ' * @name Legacy Template\n' +
+      ' * @description Legacy description\n' +
+      ' * @templateType INBOUND_SMART_FUNCTION\n' +
+      ' * @defaultTemplate true\n' +
+      ' * @internal true\n' +
+      ' * @readonly true\n' +
+      ' */\n\n' +
+      'function onMessage(msg, context) { return []; }\n';
+
+    const result = stripTemplateMetadataTags(code);
+
+    expect(result).not.toContain('@defaultTemplate');
+    expect(result).not.toContain('@internal');
+    expect(result).not.toContain('@readonly');
+    expect(result).not.toContain('@name');
+    expect(result).not.toContain('@description');
+    expect(result).not.toContain('@templateType');
+    expect(result).toContain('function onMessage(msg, context) { return []; }');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// translateValidationErrorCode / buildBackendErrorMessage
+// ---------------------------------------------------------------------------
+
+describe('translateValidationErrorCode', () => {
+  it('should translate a known backend error code to its friendly message', () => {
+    expect(translateValidationErrorCode('Only_One_Multi_Level_Wildcard')).toBe(
+      'Only one MultiLevel wildcard "#" is allowed.'
+    );
+  });
+
+  it('should fall back to a de-slugified version of an unknown code', () => {
+    expect(translateValidationErrorCode('Some_Future_Error_Code')).toBe('Some Future Error Code');
+  });
+});
+
+describe('buildBackendErrorMessage', () => {
+  it('should translate and join every code in a structured error response', () => {
+    const body = {
+      message: 'Mapping validation failed',
+      errors: ['Only_One_Multi_Level_Wildcard', 'Source_Template_Must_Be_Valid_JSON']
+    };
+
+    const result = buildBackendErrorMessage(body, 'fallback');
+
+    expect(result).toBe(
+      'Only one MultiLevel wildcard "#" is allowed.; SourceTemplate must be valid JSON.'
+    );
+  });
+
+  it('should fall back to body.message when there is no errors array', () => {
+    expect(buildBackendErrorMessage({ message: 'Something else failed' }, 'fallback')).toBe(
+      'Something else failed'
+    );
+  });
+
+  it('should fall back to the provided fallback when the body has neither', () => {
+    expect(buildBackendErrorMessage({}, 'fallback text')).toBe('fallback text');
+    expect(buildBackendErrorMessage(undefined, 'fallback text')).toBe('fallback text');
+  });
+
+  it('should ignore an empty errors array and fall back to message', () => {
+    expect(buildBackendErrorMessage({ message: 'msg', errors: [] }, 'fallback')).toBe('msg');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// toBackendError
+// The structured 422 body used to be flattened into a bare Error, leaving the editor unable to
+// do anything but show a toast. These cover that the detail now survives, without changing the
+// message any existing handler reads.
+// ---------------------------------------------------------------------------
+
+describe('toBackendError', () => {
+  it('should produce a MappingValidationError carrying errors and details', () => {
+    const body = {
+      message: 'Mapping validation failed',
+      errors: ['Substitution_Source_Expression_Must_Be_Valid_JSONata'],
+      details: [
+        {
+          code: 'Substitution_Source_Expression_Must_Be_Valid_JSONata',
+          field: 'substitutions[2].pathSource',
+          index: 2,
+          value: 'temperature +',
+          reason: 'Expected end of expression'
+        }
+      ]
+    };
+
+    const error = toBackendError(body, 'some message');
+
+    expect(error instanceof MappingValidationError).toBe(true);
+    const validationError = error as MappingValidationError;
+    expect(validationError.message).toBe('some message');
+    expect(validationError.errors).toEqual(['Substitution_Source_Expression_Must_Be_Valid_JSONata']);
+    expect(validationError.details[0].index).toBe(2);
+    expect(validationError.details[0].reason).toBe('Expected end of expression');
+    expect(validationError.hasActionableDetail).toBe(true);
+  });
+
+  it('should still be a MappingValidationError when only codes are returned', () => {
+    const error = toBackendError(
+      { message: 'Mapping validation failed', errors: ['Only_One_Multi_Level_Wildcard'] },
+      'some message'
+    );
+
+    expect(error instanceof MappingValidationError).toBe(true);
+    // Nothing to jump to, so the drawer offers no "Go to problem" for it.
+    expect((error as MappingValidationError).hasActionableDetail).toBe(false);
+  });
+
+  it('should produce a plain Error for a non-validation failure', () => {
+    const error = toBackendError({ message: 'Internal server error' }, 'some message');
+
+    expect(error instanceof MappingValidationError).toBe(false);
+    expect(error.message).toBe('some message');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// configurationToYaml / yamlToConfiguration
+// Shared by MappingStepperComponent and MappingUnifiedEditorComponent, previously duplicated in
+// each (see docs/planning/IMPLEMENTATION-PLAN-STEPPER-UNIFIED-EDITOR-DEDUP.md, Phase 1).
+// ---------------------------------------------------------------------------
+
+describe('configurationToYaml / yamlToConfiguration', () => {
+  it('round-trips a configuration object through YAML', () => {
+    const yaml = configurationToYaml({ host: 'localhost', port: 1883 });
+    expect(yaml).toContain('host: localhost');
+    expect(yaml).toContain('port: 1883');
+    expect(yamlToConfiguration(yaml)).toEqual({ host: 'localhost', port: 1883 });
+  });
+
+  it('returns an empty string for an undefined configuration', () => {
+    expect(configurationToYaml(undefined)).toBe('');
+  });
+
+  it('returns undefined for blank YAML', () => {
+    expect(yamlToConfiguration('   ')).toBeUndefined();
+    expect(yamlToConfiguration('')).toBeUndefined();
+  });
+
+  it('returns undefined for YAML that is not an object (scalar)', () => {
+    expect(yamlToConfiguration('just-a-scalar')).toBeUndefined();
+  });
+
+  it('returns undefined for invalid YAML instead of throwing', () => {
+    expect(yamlToConfiguration('key: : : bad')).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildTestMapping
+// ---------------------------------------------------------------------------
+
+describe('buildTestMapping', () => {
+  it('stringifies the source/target templates onto a clone, leaving the original untouched', () => {
+    const mapping = makeMapping({ sourceTemplate: '{}', targetTemplate: '{}' });
+    const result = buildTestMapping(mapping, { a: 1 }, { b: 2 }, undefined, false);
+
+    expect(result).not.toBe(mapping);
+    expect(result.sourceTemplate).toBe(JSON.stringify({ a: 1 }));
+    expect(result.targetTemplate).toBe(JSON.stringify({ b: 2 }));
+    expect(mapping.sourceTemplate).toBe('{}');
+  });
+
+  it('encodes mappingCode as base64 only when includeCode is true and code is present', () => {
+    const mapping = makeMapping();
+    const withCode = buildTestMapping(mapping, {}, {}, 'export const x = 1;', true);
+    expect(withCode.code).toBeDefined();
+
+    const withoutInclude = buildTestMapping(mapping, {}, {}, 'export const x = 1;', false);
+    expect(withoutInclude.code).toBeUndefined();
+
+    const noCode = buildTestMapping(mapping, {}, {}, undefined, true);
+    expect(noCode.code).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isConnectorSelectionEmpty
+// ---------------------------------------------------------------------------
+
+describe('isConnectorSelectionEmpty', () => {
+  it('is true for undefined, missing connectors, or an empty array', () => {
+    expect(isConnectorSelectionEmpty(undefined)).toBe(true);
+    expect(isConnectorSelectionEmpty({ identifier: 'x', connectors: undefined as any })).toBe(true);
+    expect(isConnectorSelectionEmpty({ identifier: 'x', connectors: [] })).toBe(true);
+  });
+
+  it('is false when at least one connector is selected', () => {
+    expect(isConnectorSelectionEmpty({ identifier: 'x', connectors: ['c1'] })).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// tryGetLiveEditorContent / updateTemplatesInEditors
+// ---------------------------------------------------------------------------
+
+describe('tryGetLiveEditorContent', () => {
+  it('returns undefined for a missing editor', () => {
+    expect(tryGetLiveEditorContent(undefined)).toBeUndefined();
+  });
+
+  it('returns the editor\'s live content', () => {
+    const editor = { get: () => ({ a: 1 }) } as any;
+    expect(tryGetLiveEditorContent(editor)).toEqual({ a: 1 });
+  });
+
+  it('falls back to undefined instead of throwing when .get() errors', () => {
+    const editor = { get: () => { throw new Error('boom'); } } as any;
+    expect(tryGetLiveEditorContent(editor)).toBeUndefined();
+  });
+});
+
+describe('updateTemplatesInEditors', () => {
+  it('prefers live editor content over the change-mirror and the current value', () => {
+    const templateStepRef: TemplateEditorRef = {
+      editorSourceStepTemplate: { get: () => ({ live: 'source' }) } as any,
+      editorTargetStepTemplate: { get: () => ({ live: 'target' }) } as any,
+      sourceTemplateUpdated: { mirror: 'source' },
+      targetTemplateUpdated: { mirror: 'target' }
+    };
+    const result = updateTemplatesInEditors(templateStepRef, { current: 'source' }, { current: 'target' });
+    expect(result).toEqual({ sourceTemplate: { live: 'source' }, targetTemplate: { live: 'target' } });
+  });
+
+  it('falls back to the change-mirror when live content is unavailable', () => {
+    const templateStepRef: TemplateEditorRef = {
+      sourceTemplateUpdated: { mirror: 'source' },
+      targetTemplateUpdated: { mirror: 'target' }
+    };
+    const result = updateTemplatesInEditors(templateStepRef, { current: 'source' }, { current: 'target' });
+    expect(result).toEqual({ sourceTemplate: { mirror: 'source' }, targetTemplate: { mirror: 'target' } });
+  });
+
+  it('falls back to the current value when neither live content nor a mirror is available', () => {
+    const result = updateTemplatesInEditors(undefined, { current: 'source' }, { current: 'target' });
+    expect(result).toEqual({ sourceTemplate: { current: 'source' }, targetTemplate: { current: 'target' } });
+  });
+});

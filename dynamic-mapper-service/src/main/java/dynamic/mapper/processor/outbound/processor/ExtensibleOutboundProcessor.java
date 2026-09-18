@@ -26,9 +26,9 @@ import dynamic.mapper.processor.util.CamelHeaders;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.model.ExtensionEntry;
+import dynamic.mapper.model.extension.ExtensionEntry;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.AbstractExtensibleProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
@@ -36,10 +36,10 @@ import dynamic.mapper.processor.flow.JavaExtensionContextImpl;
 import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.Message;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.TransformationType;
-import dynamic.mapper.service.ExtensionInboundRegistry;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.TransformationType;
+import dynamic.mapper.core.ExtensionInboundRegistry;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**

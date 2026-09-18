@@ -33,20 +33,20 @@ import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
-import dynamic.mapper.model.ConnectorStatus;
-import dynamic.mapper.model.ConnectorStatusEvent;
-import dynamic.mapper.model.ConnectorStatusHistory;
+import dynamic.mapper.model.status.ConnectorStatus;
+import dynamic.mapper.model.status.ConnectorStatusEvent;
+import dynamic.mapper.model.status.ConnectorStatusHistory;
 import dynamic.mapper.model.DeploymentMapEntry;
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.model.LoggingEventType;
+import dynamic.mapper.model.status.LoggingEventType;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.service.ConnectorConfigurationService;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.ServiceConfigurationService;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.util.CumulocityErrors;
 import lombok.Getter;
 import lombok.Setter;
@@ -145,7 +145,7 @@ public abstract class AConnectorClient {
 
     // Dependencies
     @Getter
-    protected ConfigurationRegistry configurationRegistry;
+    protected ServiceRegistry serviceRegistry;
     @Getter
     protected ConnectorRegistry connectorRegistry;
     @Getter
@@ -532,13 +532,13 @@ public abstract class AConnectorClient {
      * Callers must invoke this after {@code this.connectorType} is set (i.e. after the no-arg
      * constructor delegate) and before {@link #initializeManagers()}.
      */
-    protected void wireFromRegistry(ConfigurationRegistry configurationRegistry,
+    protected void wireFromRegistry(ServiceRegistry serviceRegistry,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             GenericMessageCallback dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
-        this.configurationRegistry = configurationRegistry;
+        this.serviceRegistry = serviceRegistry;
         this.connectorRegistry = connectorRegistry;
         this.connectorConfiguration = connectorConfiguration;
         this.connectorName = connectorConfiguration.getName();
@@ -550,13 +550,13 @@ public abstract class AConnectorClient {
         this.tenant = tenant;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
 
-        this.mappingService = configurationRegistry.getMappingService();
-        this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
-        this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
-        this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
-        this.objectMapper = configurationRegistry.getObjectMapper();
-        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        this.mappingService = serviceRegistry.getMappingService();
+        this.serviceConfigurationService = serviceRegistry.getServiceConfigurationService();
+        this.connectorConfigurationService = serviceRegistry.getConnectorConfigurationService();
+        this.c8yAgent = serviceRegistry.getC8yAgent();
+        this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
+        this.objectMapper = serviceRegistry.getObjectMapper();
+        this.serviceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
     }
 
@@ -731,7 +731,7 @@ public abstract class AConnectorClient {
      * Called by {@link dynamic.mapper.connector.mqtt.AMQTTClient#connect()} when
      * {@code cleanSession=false} so that mapping resolution is ready before the TCP
      * connection is established.  When the broker immediately delivers queued messages
-     * upon reconnect, the {@link dynamic.mapper.service.MappingService} can resolve them
+     * upon reconnect, the {@link dynamic.mapper.mapping.MappingService} can resolve them
      * to their mappings even before {@link #initializeSubscriptionsAfterConnect()} runs.
      */
     public void prepareForPersistentSessionReconnect() {
@@ -1351,7 +1351,7 @@ public abstract class AConnectorClient {
         connectorConfiguration.copyPredefinedValues(getConnectorSpecification());
 
         serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-        configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
+        serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
     }
 
     /**

@@ -19,8 +19,8 @@
  */
 import { Component, inject, Input, OnInit, ViewEncapsulation } from '@angular/core';
 import { BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
-import { ValidationIssue } from '../shared/mapping-validation-error';
-import { translateValidationErrorCode } from '../shared/util';
+import { ValidationIssue } from '../../shared/mapping/mapping-validation-error';
+import { translateValidationErrorCode } from '../../shared/mapping/util';
 
 /** What the drawer resolves with: either take the user to a problem, or just close. */
 export type ValidationDrawerResult =

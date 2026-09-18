@@ -41,7 +41,7 @@ specific reason, rather than failing later on every message.
 
 | Layer | Class / function | When | Notes |
 |---|---|---|---|
-| Backend (authoritative) | [`MappingValidator`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/MappingValidator.java) | `POST /mapping`, `PUT /mapping/{id}` (via `MappingService.createMapping`/`updateMapping`), and `publishDraft` (via `MappingVersionService`) | Returns a `List<ValidationError>`; a non-empty list is thrown as `MappingValidationException` → HTTP **422 Unprocessable Entity**. `PUT /mapping/{id}/draft` (saving a draft) skips this — drafts may be incomplete. |
+| Backend (authoritative) | [`MappingValidator`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingValidator.java) | `POST /mapping`, `PUT /mapping/{id}` (via `MappingService.createMapping`/`updateMapping`), and `publishDraft` (via `MappingVersionService`) | Returns a `List<ValidationError>`; a non-empty list is thrown as `MappingValidationException` → HTTP **422 Unprocessable Entity**. `PUT /mapping/{id}/draft` (saving a draft) skips this — drafts may be incomplete. |
 | Backend (structural) | Bean Validation (`@NotNull`) on [`Mapping.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/Mapping.java) | Same create/update endpoints, via `@Valid` | Only checks required fields are non-null (`id`, `identifier`, `name`, `targetAPI`, `direction`, `sourceTemplate`, `targetTemplate`, `transformationType`, `substitutions`, `active`, `debug`, `useExternalId`, `maxFailureCount`, `qos`, `lastUpdate`). Failures → HTTP 400. No format/business rules here. |
 | Frontend (live UX) | `checkTopicsInboundAreValid` / `checkTopicsOutboundAreValid` in [`dynamic-mapper-ui/src/mapping/shared/util.ts`](../../dynamic-mapper-ui/src/mapping/shared/util.ts) | Reactive form group validators on the mapping stepper's topic step | Mirrors the backend's topic/wildcard/consistency rules only (not substitutions, JSON templates, extensions, or the uniqueness checks) so the user gets inline feedback before submitting. The backend re-checks everything regardless — the frontend check is UX only, not a security boundary. |
 
@@ -72,7 +72,7 @@ a parallel list of details:
 ```
 
 `ValidationError` stays a payload-free vocabulary of machine-readable codes; the context lives in
-[`ValidationIssue`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/ValidationIssue.java),
+[`ValidationIssue`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/validation/ValidationIssue.java),
 so a rule can gain detail without changing what its code means. `details` is **additive**:
 `errors` keeps exactly the contents and ordering it always had, every entry in `errors` has a
 matching entry in `details` (rules with no context simply leave the extra fields unset), and

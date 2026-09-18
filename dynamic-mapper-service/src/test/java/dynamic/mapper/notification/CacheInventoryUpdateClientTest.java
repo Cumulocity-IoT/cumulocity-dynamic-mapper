@@ -32,7 +32,7 @@ import static org.mockito.Mockito.when;
 
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.notification.websocket.Notification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,11 +59,11 @@ class CacheInventoryUpdateClientTest {
         c8yAgent = mock(C8YAgent.class);
         notificationSubscriber = mock(NotificationSubscriber.class);
 
-        ConfigurationRegistry configurationRegistry = mock(ConfigurationRegistry.class);
-        when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
-        when(configurationRegistry.getNotificationSubscriber()).thenReturn(notificationSubscriber);
+        ServiceRegistry serviceRegistry = mock(ServiceRegistry.class);
+        when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        when(serviceRegistry.getNotificationSubscriber()).thenReturn(notificationSubscriber);
 
-        client = new CacheInventoryUpdateClient(configurationRegistry, TENANT);
+        client = new CacheInventoryUpdateClient(serviceRegistry, TENANT);
     }
 
     @Test

@@ -66,7 +66,7 @@ import com.cumulocity.rest.representation.reliable.notification.NotificationSubs
 
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.notification.websocket.CustomWebSocketClient;
 
 /**
@@ -104,7 +104,7 @@ class NotificationConnectionManagerTest {
     @Mock
     private SubscriptionQueryService queryService;
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
     @Mock
     private C8YAgent c8yAgent;
 
@@ -112,10 +112,10 @@ class NotificationConnectionManagerTest {
 
     @BeforeEach
     void setUp() {
-        // C8YAgent is reached via configurationRegistry.getC8yAgent() in several paths
+        // C8YAgent is reached via serviceRegistry.getC8yAgent() in several paths
         // (connect(), disconnect()). Make it always available; stubs are lenient so
         // unused paths don't trigger UnnecessaryStubbingException.
-        lenient().when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        lenient().when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
 
         manager = new NotificationConnectionManager(
                 subscriptionsService,
@@ -123,7 +123,7 @@ class NotificationConnectionManagerTest {
                 mqttPushManager,
                 connectorRegistry,
                 queryService,
-                configurationRegistry);
+                serviceRegistry);
     }
 
     @AfterEach

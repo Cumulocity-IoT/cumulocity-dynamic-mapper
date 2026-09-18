@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.deserializer.BytePayloadDeserializer;
 import dynamic.mapper.processor.inbound.deserializer.FlatFilePayloadDeserializer;
@@ -20,9 +20,9 @@ import dynamic.mapper.processor.inbound.deserializer.HexPayloadDeserializer;
 import dynamic.mapper.processor.inbound.deserializer.JSONPayloadDeserializer;
 import dynamic.mapper.processor.inbound.deserializer.PayloadDeserializer;
 import dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

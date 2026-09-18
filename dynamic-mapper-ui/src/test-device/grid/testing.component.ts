@@ -37,7 +37,7 @@ import { Feature } from '../../shared';
 @Component({
   selector: 'd11r-mapping-testing-grid',
   templateUrl: 'testing.component.html',
-  styleUrls: ['../../mapping/shared/mapping.style.css'],
+  styleUrls: ['../../shared/mapping/mapping.style.css'],
   standalone: true,
   imports: [CoreModule]
 })

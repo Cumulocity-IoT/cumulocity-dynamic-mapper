@@ -35,7 +35,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.outbound.processor.ExtensibleResultOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.FlowOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.FlowResultOutboundProcessor;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.outbound.processor.DeserializationOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.ExtensibleOutboundProcessor;
 import dynamic.mapper.processor.outbound.processor.JSONataOutboundProcessor;

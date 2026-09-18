@@ -38,8 +38,8 @@ import { BehaviorSubject, firstValueFrom, Subject, takeUntil } from 'rxjs';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Direction, Feature, Mapping } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { NumberRendererComponent } from '../../monitoring/renderer/number.renderer.component';
-import { NameRendererComponent } from '../renderer/name.renderer.component';
+import { NumberRendererComponent } from '../../shared/component/renderer/number.renderer.component';
+import { NameRendererComponent } from '../../shared/component/renderer/name.renderer.component';
 import { VersionBadgeRendererComponent } from '../renderer/version-badge.renderer.component';
 import { DraftBadgeRendererComponent } from '../renderer/draft-badge.renderer.component';
 import { MappingVersionDrawerComponent } from './mapping-version-drawer.component';
@@ -58,7 +58,7 @@ interface VersionCountRow {
 @Component({
   selector: 'd11r-mapping-versions-count',
   templateUrl: './mapping-versions-count.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
+  styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, CommonModule]

@@ -59,8 +59,8 @@ import {
   EventRealtimeService,
   RealtimeSubjectService
 } from '@c8y/ngx-components';
-import { buildBackendErrorMessage } from '../shared/util';
-import { toBackendError } from '../shared/mapping-validation-error';
+import { buildBackendErrorMessage } from '../../shared/mapping/util';
+import { toBackendError } from '../../shared/mapping/mapping-validation-error';
 
 @Injectable({
   providedIn: 'root'

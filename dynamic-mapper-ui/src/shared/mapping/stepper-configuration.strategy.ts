@@ -19,7 +19,7 @@
  */
 
 import { Direction, MappingType, StepperConfiguration, TransformationType } from './mapping.model';
-import { EditorMode } from '../../mapping/shared/stepper.model';
+import { EditorMode } from './stepper.model';
 
 export interface StepperConfigurationContext {
   mappingType: MappingType;

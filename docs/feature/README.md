@@ -27,6 +27,7 @@ decided against rather than forgotten.
 | Page | Covers |
 |---|---|
 | [mapping-processing-inbound.md](mapping-processing-inbound.md) | Broker → Cumulocity pipeline |
+| [inbound-flow-diagram.md](inbound-flow-diagram.md) | Supporting diagram: the inbound Camel processor chain end to end |
 | [mapping-processing-outbound.md](mapping-processing-outbound.md) | Cumulocity → broker pipeline |
 | [mapping-validation.md](mapping-validation.md) | The rules a mapping is checked against |
 | [mapping-versioning.md](mapping-versioning.md) | Drafts, publishing, rollback, retention |

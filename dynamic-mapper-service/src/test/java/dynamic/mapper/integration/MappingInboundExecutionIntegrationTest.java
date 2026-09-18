@@ -62,13 +62,13 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.processor.model.MappingType;
+import dynamic.mapper.model.status.MappingStatus;
+import dynamic.mapper.model.MappingType;
 import dynamic.mapper.processor.inbound.processor.JSONataInboundProcessor;
 import dynamic.mapper.processor.inbound.processor.SubstitutionResultInboundProcessor;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -120,7 +120,7 @@ class MappingInboundExecutionIntegrationTest {
 
         // Create processors
         jsonataProcessor = new JSONataInboundProcessor(mappingService);
-        // configurationRegistry is not exercised by these tests (no inventory-filter mappings)
+        // serviceRegistry is not exercised by these tests (no inventory-filter mappings)
         substitutionProcessor = new SubstitutionResultInboundProcessor(c8yAgent, mappingService, null, null);
 
         // Setup common mocks

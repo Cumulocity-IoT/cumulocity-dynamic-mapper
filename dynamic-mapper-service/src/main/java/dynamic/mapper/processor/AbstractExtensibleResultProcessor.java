@@ -31,11 +31,10 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.DeviceMessage;
-import dynamic.mapper.processor.model.OutputCollector;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingState;
-import dynamic.mapper.processor.model.RoutingContext;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.processor.runtime.OutputCollector;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.RoutingContext;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -56,7 +55,7 @@ import lombok.extern.slf4j.Slf4j;
  *
  * @see CumulocityObject
  * @see DeviceMessage
- * @see dynamic.mapper.processor.model.DynamicMapperRequest
+ * @see dynamic.mapper.model.DynamicMapperRequest
  */
 @Slf4j
 public abstract class AbstractExtensibleResultProcessor extends CommonProcessor {
@@ -84,22 +83,15 @@ public abstract class AbstractExtensibleResultProcessor extends CommonProcessor 
 
         // Extract focused contexts at entry point
         RoutingContext routing = context.getRoutingContext();
-        ProcessingState state = context.getProcessingState();
         OutputCollector output = new OutputCollector();
 
         String tenant = routing.getTenant();
         Mapping mapping = context.getMapping();
 
         try {
-            processExtensionResults(routing, state, output, context);
-            postProcessExtensionResults(state, output, context);
+            processExtensionResults(routing, output, context);
+            postProcessExtensionResults(output, context);
 
-            // Sync back to context for backward compatibility. Without syncFromState(),
-            // state.setIgnoreFurtherProcessing(true) calls made above (e.g. empty extension
-            // result, no requests generated, inventory filter failed) would be silently
-            // discarded and the route's shouldIgnoreFurtherProcessing() check right after
-            // this processor would never see them.
-            context.syncFromState(state);
             syncOutputToContext(output, context);
         } catch (Exception e) {
             handleProcessingError(e, context, tenant, mapping);
@@ -107,16 +99,22 @@ public abstract class AbstractExtensibleResultProcessor extends CommonProcessor 
     }
 
     /**
-     * Sync OutputCollector contents back to ProcessingContext for backward compatibility.
-     * Can be removed once all callers migrate to reading from OutputCollector directly.
+     * Merges everything accumulated in a local {@link OutputCollector} back into the
+     * {@link ProcessingContext}, which is the single mutable owner of this state.
+     *
+     * <p>All four channels must be copied. Earlier revisions merged only {@code requests}
+     * and {@code warnings}, so any {@code errors} or {@code logs} an extension added to the
+     * collector were silently dropped before the route could observe them.
+     *
+     * <p>Appends rather than replaces: the context's collections are concurrent
+     * ({@code CopyOnWriteArrayList}) and may already hold entries from earlier pipeline
+     * steps, so overwriting them would lose those.
      */
     private void syncOutputToContext(OutputCollector output, ProcessingContext<?> context) {
-        if (!output.getRequests().isEmpty()) {
-            context.getRequests().addAll(output.getRequests());
-        }
-        if (!output.getWarnings().isEmpty()) {
-            context.getWarnings().addAll(output.getWarnings());
-        }
+        context.getRequests().addAll(output.getRequests());
+        context.getErrors().addAll(output.getErrors());
+        context.getWarnings().addAll(output.getWarnings());
+        context.getLogs().addAll(output.getLogs());
     }
 
     /**
@@ -124,14 +122,12 @@ public abstract class AbstractExtensibleResultProcessor extends CommonProcessor 
      * Subclasses must implement this to handle their specific result types.
      *
      * @param routing Immutable routing information
-     * @param state Thread-safe mutable state
      * @param output Thread-safe output collector
      * @param context Legacy context for any remaining needs
      * @throws ProcessingException if processing fails
      */
     protected abstract void processExtensionResults(
             RoutingContext routing,
-            ProcessingState state,
             OutputCollector output,
             ProcessingContext<?> context) throws ProcessingException;
 
@@ -139,12 +135,11 @@ public abstract class AbstractExtensibleResultProcessor extends CommonProcessor 
      * NEW: Hook for subclass-specific post-processing using focused contexts.
      * Default implementation does nothing.
      *
-     * @param state Thread-safe mutable state
      * @param output Thread-safe output collector
      * @param context Legacy context for any remaining needs
      * @throws ProcessingException if post-processing fails
      */
-    protected void postProcessExtensionResults(ProcessingState state, OutputCollector output,
+    protected void postProcessExtensionResults(OutputCollector output,
                                               ProcessingContext<?> context) throws ProcessingException {
         // Default: no post-processing
     }

@@ -58,7 +58,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { Device, NotificationSubscriptionResponse } from '../shared/mapping.model';
+import { Device, NotificationSubscriptionResponse } from '../../shared/mapping/mapping.model';
 import { SubscriptionService } from '../core/subscription.service';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { PopoverModule } from 'ngx-bootstrap/popover';
@@ -72,7 +72,7 @@ import { ConfirmationModalService } from '../../shared/service/confirmation-moda
 @Component({
   selector: 'd11r-mapping-subscription-grid',
   templateUrl: 'subscription.component.html',
-  styleUrls: ['../shared/mapping.style.css'],
+  styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, CommonModule, SharedModule, PopoverModule, DeviceSelectorTreeComponent, DeviceSelectorTableComponent, GroupSelectorComponent, TypeSelectorComponent, TypeResyncComponent],

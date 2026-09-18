@@ -27,8 +27,15 @@ import { AlertService, BottomDrawerService } from '@c8y/ngx-components';
 import { GlobalContextService } from '@c8y/ngx-components/global-context';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { of, Subject } from 'rxjs';
+import { SubscriptionService } from '../core/subscription.service';
 import { MappingUnifiedEditorComponent } from './mapping-unified-editor.component';
-import { MappingStepperService, EditorSessionResult } from '../service/mapping-stepper.service';
+import {
+  CommitBlocker,
+  CommitResult,
+  EditorSessionResult,
+  MappingStepperService
+} from '../service/mapping-stepper.service';
+import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { MappingService } from '../core/mapping.service';
 import { SharedService } from '../../shared';
@@ -43,10 +50,11 @@ import {
   Feature,
   Qos
 } from '../../shared';
-import { EditorMode } from '../shared/stepper.model';
-import { configurationToYaml, yamlToConfiguration } from '../shared/util';
+import { EditorMode } from '../../shared/mapping/stepper.model';
+import { captureMappingContentSnapshot, configurationToYaml, yamlToConfiguration } from '../../shared/mapping/util';
 
 // Tab indices (mirrors the private constants in the component under test)
+const TAB_CONNECTOR = 0;
 const TAB_GENERAL_SETTINGS = 1;
 const TAB_SELECT_TEMPLATES = 2;
 const TAB_DEFINE_TRANSFORMATION = 3;
@@ -72,6 +80,7 @@ describe('MappingUnifiedEditorComponent', () => {
   let mockMappingService: jasmine.SpyObj<MappingService>;
   let mockRouter: jasmine.SpyObj<Router>;
   let mockGlobalContextService: jasmine.SpyObj<GlobalContextService>;
+  let mockSubscriptionService: jasmine.SpyObj<SubscriptionService>;
   let activatedRoute: { snapshot: { data: Record<string, any> } };
 
   let isButtonDisabled$: Subject<boolean>;
@@ -194,7 +203,8 @@ describe('MappingUnifiedEditorComponent', () => {
         'createCodeTemplateAndRefresh',
         'initializeEditorSession',
         'registerCompletionProvider',
-        'encodeMappingForCommit'
+        'encodeMappingForCommit',
+        'commitMapping'
       ],
       {
         countDeviceIdentifiers$: of(0),
@@ -232,6 +242,8 @@ describe('MappingUnifiedEditorComponent', () => {
     ]);
     mockRouter = jasmine.createSpyObj('Router', ['navigateByUrl'], { url: '/mappings/inbound/edit/42' });
     mockGlobalContextService = jasmine.createSpyObj('GlobalContextService', ['register', 'unregister']);
+    mockSubscriptionService = jasmine.createSpyObj('SubscriptionService', ['validateSubscriptionOutbound']);
+    mockSubscriptionService.validateSubscriptionOutbound.and.returnValue(Promise.resolve(undefined as any));
     activatedRoute = {
       snapshot: {
         data: {
@@ -276,7 +288,11 @@ describe('MappingUnifiedEditorComponent', () => {
         { provide: Router, useValue: mockRouter },
         { provide: ActivatedRoute, useValue: activatedRoute },
         { provide: Location, useValue: jasmine.createSpyObj('Location', ['back', 'path']) },
-        { provide: GlobalContextService, useValue: mockGlobalContextService }
+        { provide: GlobalContextService, useValue: mockGlobalContextService },
+        // The component injects SubscriptionService, whose real constructor takes a
+        // FetchClient the test injector cannot provide (NG0201). It is only used for
+        // validateSubscriptionOutbound(), so a spy is enough.
+        { provide: SubscriptionService, useValue: mockSubscriptionService }
       ]
     }).compileComponents();
 
@@ -422,6 +438,7 @@ describe('MappingUnifiedEditorComponent', () => {
   // result.
   describe('Code template selection', () => {
     it('applies the code computed by the service', () => {
+      component.mapping = buildMapping();
       mockStepperService.computeCodeFromTemplate.and.returnValue('function onMessage() { /* with export */ }');
 
       component.onSelectCodeTemplate();
@@ -433,6 +450,7 @@ describe('MappingUnifiedEditorComponent', () => {
     });
 
     it('leaves mappingCode untouched when the service reports no template selected', () => {
+      component.mapping = buildMapping();
       component.mappingCode = 'untouched';
       mockStepperService.computeCodeFromTemplate.and.returnValue(undefined);
 
@@ -475,84 +493,250 @@ describe('MappingUnifiedEditorComponent', () => {
     });
   });
 
-  // The real encoding logic (JSON-stringify/reduce, base64 code encoding, content-change
-  // detection, substitutions-as-code guard) moved to MappingStepperService.encodeMappingForCommit
-  // (Phase 5) and is unit tested directly there (mapping-stepper.service.spec.ts). The stub below
-  // mimics just enough of it (template stringification + always-changed) for these tests, which
-  // exercise the unified editor's OWN validation/persistence logic around that call.
+  /**
+   * The persistence sequence itself (encode, saveDraft vs createMapping, deployment write,
+   * refresh) moved to {@link MappingStepperService.commitMapping} in Phase 6 and is unit tested
+   * there against the full CommitResult matrix (mapping-stepper.service.spec.ts). What remains
+   * here is the unified editor's OWN responsibility: assembling the request, and turning each
+   * result status into navigation, an alert, or a tab.
+   */
   describe('onCommitButton', () => {
+    function commitResolvesTo(result: CommitResult): void {
+      mockStepperService.commitMapping.and.resolveTo(result);
+    }
+
+    /** A successful commit, carrying the server's copy as `persisted`. */
+    function saved(
+      contentChanged = true,
+      deploymentChanged = false,
+      persisted: Mapping = component.mapping
+    ): CommitResult {
+      return { status: 'saved', contentChanged, deploymentChanged, persisted };
+    }
+
     beforeEach(() => {
       component.mapping = buildMapping();
       component.stepperConfiguration = buildConfig({ allowTemplateExpansion: false });
       component.deploymentMapEntry = deploymentMapEntry;
       component.sourceTemplate = { a: 1 };
       component.targetTemplate = { b: 2 };
-      component.stepperViewModel = { showExtensionSelectors: false } as any;
+      component.stepperViewModel = { showExtensionSelectorsSource: false, showExtensionSelectorsTarget: false } as any;
       component.templateForm = new FormGroup({
         extensionName: new FormControl(''),
         eventName: new FormControl('')
       });
-      mockStepperService.encodeMappingForCommit.and.callFake((mapping: Mapping, sourceTemplate: any, targetTemplate: any) => {
-        mapping.sourceTemplate = JSON.stringify(sourceTemplate);
-        mapping.targetTemplate = JSON.stringify(targetTemplate);
-        return { mapping, contentChanged: true };
-      });
+      commitResolvesTo(saved());
     });
 
-    it('persists a draft and deployment, then navigates back to the grid', async () => {
+    it('passes the editor state, including both forms, to commitMapping', async () => {
+      // Read before the call: a successful commit re-baselines these, replacing the objects.
+      const snapshotAtCallTime = component['initialContentSnapshot'];
+
       await component.onCommitButton();
 
-      expect(mockMappingService.saveDraft).toHaveBeenCalledWith(component.mapping.id, component.mapping);
-      expect(mockMappingService.updateDefinedDeploymentMapEntry).toHaveBeenCalledWith(deploymentMapEntry);
+      expect(mockStepperService.commitMapping).toHaveBeenCalledWith(jasmine.objectContaining({
+        mapping: component.mapping,
+        deploymentMapEntry,
+        stepperConfiguration: component.stepperConfiguration,
+        sourceTemplate: { a: 1 },
+        targetTemplate: { b: 2 },
+        mappingCode: component.mappingCode,
+        initialContentSnapshot: snapshotAtCallTime,
+        forms: jasmine.objectContaining({
+          propertyFormly: component.propertyFormly,
+          templateForm: component.templateForm,
+          validateExtensionSelection: false
+        })
+      }));
+    });
+
+    it('asks commitMapping to validate the extension selection when a selector is rendered', async () => {
+      component.stepperViewModel = { showExtensionSelectorsSource: true, showExtensionSelectorsTarget: false } as any;
+
+      await component.onCommitButton();
+
+      expect(mockStepperService.commitMapping.calls.mostRecent().args[0].forms?.validateExtensionSelection).toBe(true);
+    });
+
+    // Saving deliberately keeps the editor open so the user can carry on to the Testing tab.
+    // Leaving is Cancel's job.
+    it('alerts and stays in the editor on a successful save', async () => {
+      await component.onCommitButton();
+
       expect(mockAlertService.success).toHaveBeenCalled();
-      expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/mappings/inbound');
+      expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
     });
 
-    it('delegates encoding to encodeMappingForCommit and persists its result', async () => {
+    it('stays in the editor without an alert when an update changed nothing', async () => {
+      commitResolvesTo(saved(false, false));
+
       await component.onCommitButton();
 
-      expect(mockStepperService.encodeMappingForCommit).toHaveBeenCalledWith(
-        component.mapping,
-        { a: 1 },
-        { b: 2 },
-        component.mappingCode,
-        component['initialContentSnapshot'],
-        false,
-        component.stepperConfiguration.editorMode
-      );
-      expect(component.mapping.sourceTemplate).toBe(JSON.stringify({ a: 1 }));
-      expect(component.mapping.targetTemplate).toBe(JSON.stringify({ b: 2 }));
+      expect(mockAlertService.success).not.toHaveBeenCalled();
+      expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
     });
 
-    it('raises an alert and does not persist when encodeMappingForCommit reports an error', async () => {
-      mockStepperService.encodeMappingForCommit.and.returnValue({ error: 'Internal error in editor. Try again!' });
+    it('adopts the lastUpdate the server issued, so the next save is not a conflict', async () => {
+      component.mapping.lastUpdate = 1000;
+      commitResolvesTo(saved(true, false, { ...component.mapping, lastUpdate: 2000 } as Mapping));
+
+      await component.onCommitButton();
+
+      expect(component.mapping.lastUpdate).toBe(2000);
+    });
+
+    it('re-baselines so an immediate second save writes neither a draft nor the deployment', async () => {
+      await component.onCommitButton();
+      mockStepperService.commitMapping.calls.reset();
+
+      await component.onCommitButton();
+
+      const second = mockStepperService.commitMapping.calls.mostRecent().args[0];
+      // Same snapshot values the service compares against => contentChanged/deploymentChanged false.
+      expect(second.initialDeploymentConnectors).toBe(JSON.stringify(deploymentMapEntry.connectors));
+      expect(second.initialContentSnapshot).toEqual(
+        jasmine.objectContaining({ mappingJson: JSON.stringify(component.mapping) })
+      );
+    });
+
+    it('jumps to the tab that owns a blocked precondition, and stays put', async () => {
+      const cases: [CommitBlocker, number][] = [
+        [CommitBlocker.NO_CONNECTOR, TAB_CONNECTOR],
+        [CommitBlocker.MAPPING_TOPIC, TAB_GENERAL_SETTINGS],
+        [CommitBlocker.PROPERTY_FORM, TAB_GENERAL_SETTINGS],
+        [CommitBlocker.EXTENSION_SELECTION, TAB_SELECT_TEMPLATES]
+      ];
+
+      for (const [blocker, tab] of cases) {
+        component.activeTabIndex = TAB_TEST_MAPPING;
+        commitResolvesTo({ status: 'blocked', blocker });
+
+        await component.onCommitButton();
+
+        expect(component.activeTabIndex).withContext(blocker).toBe(tab);
+      }
+      expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+    });
+
+    it('raises the blocker message as a warning when one is supplied', async () => {
+      commitResolvesTo({ status: 'blocked', blocker: CommitBlocker.ENCODING, message: 'Internal error in editor. Try again!' });
 
       await component.onCommitButton();
 
       expect(mockStepperService.raiseAlert).toHaveBeenCalledWith({ type: 'warning', text: 'Internal error in editor. Try again!' });
-      expect(mockMappingService.saveDraft).not.toHaveBeenCalled();
-    });
-
-    it('shows a danger alert and does not navigate when the save fails', async () => {
-      mockMappingService.saveDraft.and.returnValue(Promise.reject(new Error('boom')));
-
-      await component.onCommitButton();
-
-      expect(mockAlertService.danger).toHaveBeenCalled();
+      // ENCODING has no tab of its own — the editor stays where it is.
       expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
     });
 
-    it('blocks the commit and jumps to the Templates tab when a required extension is missing', async () => {
-      component.stepperViewModel = { showExtensionSelectorsSource: true, showExtensionSelectorsTarget: false } as any;
-      component.templateForm = new FormGroup({
-        extensionName: new FormControl('', Validators.required),
-        eventName: new FormControl('', Validators.required)
+    it('opens the validation drawer and stays open on a rejected save', async () => {
+      const error = new MappingValidationError('invalid', ['e1'], []);
+      commitResolvesTo({ status: 'rejected', error });
+      mockBottomDrawerService.openDrawer.and.returnValue({
+        instance: { result: Promise.resolve({ action: 'close' }) }
+      } as any);
+
+      await component.onCommitButton();
+
+      expect(mockBottomDrawerService.openDrawer).toHaveBeenCalled();
+      expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+    });
+
+    it('stays open and raises no further alert on a failed save', async () => {
+      commitResolvesTo({ status: 'failed', message: 'boom' });
+
+      await component.onCommitButton();
+
+      expect(mockAlertService.danger).not.toHaveBeenCalled();
+      expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+    });
+  });
+
+
+  /**
+   * The editor is a routed page, so Close, the browser Back button and a nav-bar click are all the
+   * same departure — all of them go through `unsavedChangesGuard`, which calls this. It is the
+   * UI's only unsaved-changes protection.
+   */
+  describe('confirmLeaveWithUnsavedChanges', () => {
+    function showReturns(answer: boolean | undefined): Subject<boolean> {
+      const closeSubject = new Subject<boolean>();
+      mockBsModalService.show.and.returnValue({ content: { closeSubject } } as any);
+      if (answer !== undefined) {
+        // Answer on the next tick, after the guard has subscribed.
+        setTimeout(() => { closeSubject.next(answer); closeSubject.complete(); });
+      }
+      return closeSubject;
+    }
+
+    beforeEach(() => {
+      component.mapping = buildMapping();
+      component.stepperConfiguration = buildConfig();
+      component.deploymentMapEntry = deploymentMapEntry;
+      component.sourceTemplate = { a: 1 };
+      component.targetTemplate = { b: 2 };
+      component.stepperViewModel = { showExtensionSelectorsSource: false, showExtensionSelectorsTarget: false } as any;
+      component.templateForm = new FormGroup({});
+      component['initialDeploymentConnectors'] = JSON.stringify(deploymentMapEntry.connectors);
+      component['initialContentSnapshot'] = captureMappingContentSnapshot(
+        component.mapping, component.sourceTemplate, component.targetTemplate, component.mappingCode
+      );
+    });
+
+    it('leaves immediately when nothing has changed', async () => {
+      await expectAsync(component.confirmLeaveWithUnsavedChanges()).toBeResolvedTo(true);
+      expect(mockBsModalService.show).not.toHaveBeenCalled();
+    });
+
+    it('leaves immediately in read-only mode', async () => {
+      component.stepperConfiguration = buildConfig({ editorMode: EditorMode.READ_ONLY });
+      component.mapping.name = 'edited somehow';
+
+      await expectAsync(component.confirmLeaveWithUnsavedChanges()).toBeResolvedTo(true);
+      expect(mockBsModalService.show).not.toHaveBeenCalled();
+    });
+
+    it('asks before discarding edited mapping content', async () => {
+      component.mapping.name = 'edited';
+      showReturns(true);
+
+      await expectAsync(component.confirmLeaveWithUnsavedChanges()).toBeResolvedTo(true);
+      expect(mockBsModalService.show).toHaveBeenCalled();
+    });
+
+    it('asks when only the connector selection changed', async () => {
+      component.deploymentMapEntry = { identifier: '42', connectors: ['c1', 'c2'] };
+      showReturns(true);
+
+      await expectAsync(component.confirmLeaveWithUnsavedChanges()).toBeResolvedTo(true);
+    });
+
+    it('keeps the user in the editor when they decline', async () => {
+      component.mapping.name = 'edited';
+      showReturns(false);
+
+      await expectAsync(component.confirmLeaveWithUnsavedChanges()).toBeResolvedTo(false);
+    });
+
+    it('keeps the user in the editor if the modal is destroyed without answering', async () => {
+      // ConfirmationModalComponent.ngOnDestroy completes closeSubject without emitting; a bare
+      // firstValueFrom would reject with EmptyError and break the navigation outright.
+      component.mapping.name = 'edited';
+      const closeSubject = showReturns(undefined);
+      setTimeout(() => closeSubject.complete());
+
+      await expectAsync(component.confirmLeaveWithUnsavedChanges()).toBeResolvedTo(false);
+    });
+
+    it('does not ask again after a successful save', async () => {
+      component.mapping.name = 'edited';
+      mockStepperService.commitMapping.and.resolveTo({
+        status: 'saved', contentChanged: true, deploymentChanged: false, persisted: component.mapping
       });
 
       await component.onCommitButton();
 
-      expect(component.activeTabIndex).toBe(TAB_SELECT_TEMPLATES);
-      expect(mockMappingService.saveDraft).not.toHaveBeenCalled();
+      await expectAsync(component.confirmLeaveWithUnsavedChanges()).toBeResolvedTo(true);
+      expect(mockBsModalService.show).not.toHaveBeenCalled();
     });
   });
 

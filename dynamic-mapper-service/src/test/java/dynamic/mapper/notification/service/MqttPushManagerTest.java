@@ -46,7 +46,7 @@ import com.hivemq.client.mqtt.MqttClientState;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
 
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 
 /**
  * Unit tests for {@link MqttPushManager}.
@@ -74,7 +74,7 @@ class MqttPushManagerTest {
     private MicroserviceSubscriptionsService subscriptionsService;
 
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
 
     private MqttPushManager pushManager;
 
@@ -83,7 +83,7 @@ class MqttPushManagerTest {
 
     @BeforeEach
     void setUp() {
-        pushManager = new MqttPushManager(subscriptionsService, configurationRegistry);
+        pushManager = new MqttPushManager(subscriptionsService, serviceRegistry);
     }
 
     // === Reflection helpers ===

@@ -35,7 +35,7 @@ import dynamic.mapper.core.cache.InboundExternalIdCache;
 import dynamic.mapper.core.cache.InventoryCache;
 import dynamic.mapper.core.cache.OutboundExternalIdCache;
 import dynamic.mapper.core.cache.OutboundIdKey;
-import dynamic.mapper.model.LoggingEventType;
+import dynamic.mapper.model.status.LoggingEventType;
 import dynamic.mapper.notification.NotificationSubscriber;
 import lombok.extern.slf4j.Slf4j;
 
@@ -91,10 +91,6 @@ public class CacheManager {
         return removed;
     }
 
-    public Integer getInboundExternalIdCacheSize(String tenant) {
-        return (inboundExternalIdCaches.get(tenant) != null
-                ? inboundExternalIdCaches.get(tenant).getCacheSize() : 0);
-    }
 
     public OutboundExternalIdCache getOutboundExternalIdCache(String tenant) {
         return outboundExternalIdCaches.get(tenant);
@@ -109,10 +105,6 @@ public class CacheManager {
         return removed;
     }
 
-    public Integer getOutboundExternalIdCacheSize(String tenant) {
-        return (outboundExternalIdCaches.get(tenant) != null
-                ? outboundExternalIdCaches.get(tenant).getCacheSize() : 0);
-    }
 
     public InventoryCache removeInventoryCache(String tenant) {
         InventoryCache removed = inventoryCaches.remove(tenant);

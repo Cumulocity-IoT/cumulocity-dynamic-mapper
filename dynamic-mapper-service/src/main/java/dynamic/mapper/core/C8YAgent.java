@@ -84,14 +84,13 @@ import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.BinaryInfo;
-import dynamic.mapper.model.ConnectorStatus;
-import dynamic.mapper.model.LoggingEventType;
+import dynamic.mapper.model.status.ConnectorStatus;
+import dynamic.mapper.model.status.LoggingEventType;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
+import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalId;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.service.ExtensionInboundRegistry;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Metrics;
@@ -404,7 +403,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
      *         callers treat a missing id as "start a fresh session on the next transition").
      */
     public GId createConnectorStatusEvent(String message, String severity, DateTime eventTime, String tenant,
-            Map<String, String> properties, dynamic.mapper.model.ConnectorStatusHistory session) {
+            Map<String, String> properties, dynamic.mapper.model.status.ConnectorStatusHistory session) {
         MapperServiceRepresentation source = mapperConfiguration.getMapperServiceRepresentation(tenant);
         return subscriptionsService.callForTenant(tenant, () -> {
             MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
@@ -441,7 +440,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
      * "history of changes" via repeated PUTs to the same operation id.
      */
     public void updateConnectorStatusEvent(GId eventId, String message, String severity, DateTime eventTime,
-            String tenant, Map<String, String> properties, dynamic.mapper.model.ConnectorStatusHistory session) {
+            String tenant, Map<String, String> properties, dynamic.mapper.model.status.ConnectorStatusHistory session) {
         subscriptionsService.runForTenant(tenant, () -> {
             MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
             contextService.runWithinContext(context, () -> {
@@ -465,7 +464,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     private void applyConnectorStatusFragments(EventRepresentation er, String message, String severity,
-            Map<String, String> properties, dynamic.mapper.model.ConnectorStatusHistory session) {
+            Map<String, String> properties, dynamic.mapper.model.status.ConnectorStatusHistory session) {
         er.setText(message);
         if (properties != null) {
             er.setProperty(LoggingEventType.CONNECTOR_EVENT_TYPE.getComponent(), properties);
@@ -641,7 +640,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
         // Check for cancellation BEFORE starting any C8Y API calls
         // This prevents unnecessary HTTP requests when the processing has already timed out
-        dynamic.mapper.processor.model.ProcessingResultWrapper<?> wrapper = context.getProcessingResultWrapper();
+        dynamic.mapper.processor.runtime.ProcessingResultWrapper<?> wrapper = context.getProcessingResultWrapper();
         if (wrapper != null && wrapper.getCancellationRequested().get()) {
             log.info("{} - Cancellation detected in createMEAO before API call, aborting C8Y request for API: {}",
                     tenant, targetAPI);
@@ -854,7 +853,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     // Remove device from Cache
                     if (s.getHttpStatus() == 422) {
                         ID identity = new ID(currentRequest.getExternalId(), currentRequest.getExternalId());
-                        this.removeDeviceFromInboundExternalIdCache(tenant, identity);
+                        cacheManager.removeDeviceFromInboundExternalIdCache(tenant, identity);
                     }
                 }
                 return rt;
@@ -1204,33 +1203,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return clonedContext;
     }
 
-    public void initializeInboundExternalIdCache(String tenant, int size) {
-        cacheManager.initializeInboundExternalIdCache(tenant, size);
-    }
 
-    public void initializeOutboundExternalIdCache(String tenant, int size) {
-        cacheManager.initializeOutboundExternalIdCache(tenant, size);
-    }
 
-    public void initializeInventoryCache(String tenant, int size) {
-        cacheManager.initializeInventoryCache(tenant, size);
-    }
 
-    public InboundExternalIdCache removeInboundExternalIdCache(String tenant) {
-        return cacheManager.removeInboundExternalIdCache(tenant);
-    }
 
-    public OutboundExternalIdCache removeOutboundExternalIdCache(String tenant) {
-        return cacheManager.removeOutboundExternalIdCache(tenant);
-    }
 
-    public Integer getInboundExternalIdCacheSize(String tenant) {
-        return cacheManager.getInboundExternalIdCacheSize(tenant);
-    }
 
-    public Integer getOutboundExternalIdCacheSize(String tenant) {
-        return cacheManager.getOutboundExternalIdCacheSize(tenant);
-    }
 
     /**
      * Drops the cached {@code RestConnector} for a tenant.
@@ -1243,41 +1221,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         processingModeService.clearConnectorCache(tenant);
     }
 
-    public InventoryCache removeInventoryCache(String tenant) {
-        return cacheManager.removeInventoryCache(tenant);
-    }
 
-    public InventoryCache getInventoryCache(String tenant) {
-        return cacheManager.getInventoryCache(tenant);
-    }
 
-    public void clearInboundExternalIdCache(String tenant, boolean recreate, int inboundExternalIdCacheSize) {
-        cacheManager.clearInboundExternalIdCache(tenant, recreate, inboundExternalIdCacheSize);
-    }
 
-    public void removeDeviceFromInboundExternalIdCache(String tenant, ID identity) {
-        cacheManager.removeDeviceFromInboundExternalIdCache(tenant, identity);
-    }
 
-    public int getSizeInboundExternalIdCache(String tenant) {
-        return cacheManager.getSizeInboundExternalIdCache(tenant);
-    }
 
-    public void clearOutboundExternalIdCache(String tenant, boolean recreate, int outboundExternalIdCacheSize) {
-        cacheManager.clearOutboundExternalIdCache(tenant, recreate, outboundExternalIdCacheSize);
-    }
 
-    public int getSizeOutboundExternalIdCache(String tenant) {
-        return cacheManager.getSizeOutboundExternalIdCache(tenant);
-    }
 
-    public void clearInventoryCache(String tenant, boolean recreate, int inventoryCacheSize) {
-        cacheManager.clearInventoryCache(tenant, recreate, inventoryCacheSize);
-    }
 
-    public int getSizeInventoryCache(String tenant) {
-        return cacheManager.getSizeInventoryCache(tenant);
-    }
 
     public Map<String, Object> getMOFromInventoryCacheByExternalId(String tenant, ExternalId externalId,
             Boolean testing) {

@@ -27,7 +27,7 @@ import static org.mockito.Mockito.*;
 import java.util.HashMap;
 import java.util.Map;
 
-import dynamic.mapper.service.cache.FlowStateStore;
+import dynamic.mapper.processor.flow.FlowStateStore;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.graalvm.polyglot.Engine;
@@ -42,20 +42,20 @@ import org.mockito.quality.Strictness;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.C8YMessage;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.RepairStrategy;
-import dynamic.mapper.processor.model.TransformationType;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.RepairStrategy;
+import dynamic.mapper.model.TransformationType;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -64,7 +64,7 @@ import lombok.extern.slf4j.Slf4j;
 class EnrichmentOutboundProcessorTest {
 
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
 
     @Mock
     private MappingService mappingService;
@@ -97,13 +97,7 @@ class EnrichmentOutboundProcessorTest {
     private HostAccess hostAccess;
 
     @Mock
-    private dynamic.mapper.processor.model.RoutingContext routingContext;
-
-    @Mock
-    private dynamic.mapper.processor.model.PayloadContext<Object> payloadContext;
-
-    @Mock
-    private dynamic.mapper.processor.model.ProcessingState processingState;
+    private dynamic.mapper.processor.runtime.RoutingContext routingContext;
 
     private EnrichmentOutboundProcessor processor;
 
@@ -125,7 +119,7 @@ class EnrichmentOutboundProcessorTest {
         mappingStatus = createMappingStatus();
 
         // Create the processor
-        processor = new EnrichmentOutboundProcessor(configurationRegistry, mappingService, c8yAgent, flowStateStore);
+        processor = new EnrichmentOutboundProcessor(serviceRegistry, mappingService, c8yAgent, flowStateStore);
 
         // Setup basic exchange and message mocks
         when(exchange.getIn()).thenReturn(message);
@@ -143,10 +137,7 @@ class EnrichmentOutboundProcessorTest {
 
         // Setup focused context mocks
         when(processingContext.getRoutingContext()).thenReturn(routingContext);
-        when(processingContext.getPayloadContext()).thenReturn(payloadContext);
-        when(processingContext.getProcessingState()).thenReturn(processingState);
         when(routingContext.getTenant()).thenReturn(TEST_TENANT);
-        when(payloadContext.getDeserializedPayload()).thenReturn("test payload");
 
         // Setup mapping status mocks
         when(mappingService.getMappingStatus(anyString(), any(Mapping.class))).thenReturn(mappingStatus);
@@ -156,7 +147,7 @@ class EnrichmentOutboundProcessorTest {
         when(serviceConfiguration.getCodeTemplates()).thenReturn(createCodeTemplates());
 
         // Setup configuration registry defaults
-        when(configurationRegistry.getGraalVMContextService()).thenReturn(graalVMContextService);
+        when(serviceRegistry.getGraalVMContextService()).thenReturn(graalVMContextService);
         when(graalVMContextService.peekGraalEngine(anyString())).thenReturn(graalEngine);
         when(graalVMContextService.getHostAccess()).thenReturn(hostAccess);
     }

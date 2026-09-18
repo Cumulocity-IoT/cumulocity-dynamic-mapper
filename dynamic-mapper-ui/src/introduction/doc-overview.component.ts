@@ -28,7 +28,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { SharedService } from '../shared/service/shared.service';
-import { CodeTemplate, CodeTemplateMap } from '../configuration/shared/configuration.model';
+import { CodeTemplate, CodeTemplateMap } from '../shared/configuration/configuration.model';
 import { CodeEditorDrawerComponent } from '../shared/component/code-explorer/code-editor-drawer.component';
 import { DocMarkdownService } from './doc-markdown.service';
 

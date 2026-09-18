@@ -28,8 +28,8 @@ stepper.
 flowchart TD
     s1["1. Implement ProcessorExtensionInbound&lt;byte[]&gt;<br/>(or ProcessorExtensionOutbound&lt;O&gt; for C8Y to broker)"]
     s2["2. Register the class in<br/>extension-external.yaml<br/>eventName, className, description, version,<br/>optional default parameter map"]
-    s3["3. Package extension-external.yaml + compiled classes<br/>into a zip archive"]
-    s4["4. Upload the zip:<br/>Configuration &rarr; Processor Extension &rarr; Add Extension<br/>(the microservice loads it dynamically, per tenant)"]
+    s3["3. Package extension-external.yaml + compiled classes<br/>into a jar archive"]
+    s4["4. Upload the jar:<br/>Configuration &rarr; Processor extension &rarr; Add extension<br/>(the microservice loads it dynamically, per tenant)"]
     s5["5. Create a mapping with transformation type Extension Java,<br/>select the extension and its eventName;<br/>optionally override the parameter map for this mapping"]
     s6["Mapping is active:<br/>onMessage(...) runs on every matching broker message,<br/>context.getConfigAsMap() exposes tenant/topic/parameter,<br/>and its CumulocityObject results are sent to Cumulocity"]
 
@@ -42,6 +42,35 @@ When creating a mapping, you can select from installed Java Extensions that defi
 mapping stepper displays all available extensions along with their associated templates:
 
 ![Java Extension in Mapping Stepper](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ProcessorExtension.png "Screenshot showing step 4 / tab Transformation of the mapping stepper with Java Extension templates. The dropdown displays available extensions for payload parsing, including various custom extensions like CustomEvent, CustomMeasurement, and MeasurementWithImplicitDevice. Each extension provides pre-configured templates for both source and target payloads.")
+
+##### Uploading a Java Extension
+
+A Java Extension is packaged as a single `*.jar` and uploaded through the UI — no redeployment of the
+microservice is required. Build the jar first — the **End-to-end overview** above shows where this step sits — then:
+
+1. Go to **Configuration → Processor extension**. The page lists every extension currently known to the service,
+   each card showing whether it is **External** (uploaded by you) or **Internal** (shipped with the service), and
+   how many processors it contributed under **Loaded**.
+
+![Processor extension page](../../../resources/image/Dynamic_Mapper_Configuration_ProcessorExtension.png "The Processor extension page listing the external and internal extensions with the number of loaded processors on each card.")
+
+2. Choose **Add extension**. In the **Add Processor Extension** dialog, drop your jar onto the upload area or
+   click it to pick the file, then confirm with **Done**.
+
+![Add processor extension](../../../resources/image/Dynamic_Mapper_Configuration_ProcessorExtension_Upload.png "The Add Processor Extension dialog with the area for uploading a *.jar file.")
+
+3. The service loads the jar and registers every `ProcessorExtensionInbound` / `ProcessorExtensionOutbound`
+   implementation declared in its `extension-external.yaml`. Use **Reload** if the card does not yet show your
+   extension — loading happens asynchronously, and the banner reports progress while it runs.
+
+:::info
+The jar must contain an `extension-external.yaml` naming each processor and its implementation class. An
+extension whose descriptor is missing or malformed uploads successfully but contributes **0 Loaded** processors —
+if you see that, check the descriptor before looking anywhere else.
+:::
+
+Once loaded, the extension's processors become selectable in the mapping wizard as described above, and the jar
+survives microservice restarts — it is stored in the tenant, not on the container's filesystem.
 
 ##### Managing Installed Java Extensions
 
@@ -114,8 +143,8 @@ extensions:
     version: "2.0"
 ```
 
-Package the configuration file **extension-external.yaml** and the compiled extension class into a zip archive, then
-upload it as described in **Managing Installed Java Extensions**.
+Package the configuration file **extension-external.yaml** and the compiled extension class into a `*.jar`, then
+upload it as described in **Uploading a Java Extension** above.
 
 ##### Extension Parameters
 

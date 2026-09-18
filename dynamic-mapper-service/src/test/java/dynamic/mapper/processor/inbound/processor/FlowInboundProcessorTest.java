@@ -48,20 +48,20 @@ import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.CumulocityType;
-import dynamic.mapper.processor.model.SmartFunctionContext;
+import dynamic.mapper.processor.runtime.SmartFunctionContext;
 import dynamic.mapper.processor.model.MappingAction;
-import dynamic.mapper.processor.model.MappingType;
+import dynamic.mapper.model.MappingType;
 import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.DataPrepContext;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.core.GraalVMContextService;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

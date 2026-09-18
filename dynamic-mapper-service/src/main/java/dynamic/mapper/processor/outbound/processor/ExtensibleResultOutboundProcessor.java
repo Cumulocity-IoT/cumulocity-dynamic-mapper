@@ -28,16 +28,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.AbstractExtensibleResultProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DeviceMessage;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
-import dynamic.mapper.processor.model.OutputCollector;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingState;
-import dynamic.mapper.processor.model.RoutingContext;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.model.DynamicMapperRequest;
+import dynamic.mapper.processor.runtime.OutputCollector;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.RoutingContext;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -72,7 +71,6 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
     @Override
     protected void processExtensionResults(
             RoutingContext routing,
-            ProcessingState state,
             OutputCollector output,
             ProcessingContext<?> context) throws ProcessingException {
         // Extension results are stored in context by ExtensibleOutboundProcessor
@@ -81,13 +79,13 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
 
         if (extensionResult == null) {
             log.debug("{} - No extension result available, skipping extension result processing", tenant);
-            state.setIgnoreFurtherProcessing(true);
+            context.setIgnoreFurtherProcessing(true);
             return;
         }
 
         if (!(extensionResult instanceof DeviceMessage[])) {
             log.warn("{} - Extension result is not DeviceMessage[], skipping", tenant);
-            state.setIgnoreFurtherProcessing(true);
+            context.setIgnoreFurtherProcessing(true);
             return;
         }
 
@@ -95,7 +93,7 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
 
         if (results.length == 0) {
             log.info("{} - Extension result is empty, skipping processing", tenant);
-            state.setIgnoreFurtherProcessing(true);
+            context.setIgnoreFurtherProcessing(true);
             return;
         }
 
@@ -114,7 +112,7 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
 
         if (output.getRequests().isEmpty()) {
             log.info("{} - No requests generated from extension result", tenant);
-            state.setIgnoreFurtherProcessing(true);
+            context.setIgnoreFurtherProcessing(true);
         } else {
             log.info("{} - Generated {} requests from extension result", tenant, output.getRequests().size());
         }

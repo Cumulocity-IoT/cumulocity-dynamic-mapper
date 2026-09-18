@@ -21,8 +21,8 @@ import { NgModule } from '@angular/core';
 import { hookNavigator, hookRoute } from '@c8y/ngx-components';
 import { MappingTreeComponent } from './tree.component';
 import { NODE2 } from '../shared';
-import { treeResolver } from './utils';
-import { MappingTreeNavigationFactory } from './mapping-tree.factory';
+import { treeResolver } from './util';
+import { MappingTreeNavigationFactory } from './tree.factory';
 
 @NgModule({
   providers: [

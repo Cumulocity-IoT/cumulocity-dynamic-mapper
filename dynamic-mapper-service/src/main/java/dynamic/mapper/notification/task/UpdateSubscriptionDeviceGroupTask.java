@@ -23,7 +23,7 @@ package dynamic.mapper.notification.task;
 
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.notification.GroupCacheManager;
 import dynamic.mapper.notification.GroupCacheManager.CachedGroup;
 import dynamic.mapper.notification.Utils;
@@ -43,15 +43,15 @@ import java.util.concurrent.Future;
 public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionUpdateResult> {
 
     private final C8YMessage c8yMessage;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
     private final GroupCacheManager groupCacheManager;
 
     public UpdateSubscriptionDeviceGroupTask(
-            ConfigurationRegistry configurationRegistry,
+            ServiceRegistry serviceRegistry,
             C8YMessage c8yMessage,
             GroupCacheManager groupCacheManager) {
         this.c8yMessage = c8yMessage;
-        this.configurationRegistry = configurationRegistry;
+        this.serviceRegistry = serviceRegistry;
         this.groupCacheManager = groupCacheManager;
     }
 
@@ -150,7 +150,7 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
 
         // Best-effort: restore the group MO so future addGroup() calls have the full object
         try {
-            ManagedObjectRepresentation groupMO = configurationRegistry.getC8yAgent()
+            ManagedObjectRepresentation groupMO = serviceRegistry.getC8yAgent()
                     .getManagedObjectForId(tenant, groupId, false);
             if (groupMO != null) {
                 groupCacheManager.addGroup(groupMO);
@@ -255,7 +255,7 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
         // Process additions
         for (String childId : toAdd) {
             try {
-                ManagedObjectRepresentation childMO = configurationRegistry.getC8yAgent()
+                ManagedObjectRepresentation childMO = serviceRegistry.getC8yAgent()
                         .getManagedObjectForId(tenant, childId, false);
 
                 if (childMO == null) {
@@ -264,14 +264,14 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                     continue;
                 }
 
-                Future<NotificationSubscriptionRepresentation> future = configurationRegistry
+                Future<NotificationSubscriptionRepresentation> future = serviceRegistry
                         .getNotificationSubscriber()
                         .subscribeDeviceAndConnect(tenant, childMO, c8yMessage.getApi(), Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
 
                 // Pre-populate inventory cache for this device to ensure inventory filters work correctly
                 log.debug("{} - Pre-populating inventory cache for child device {} in group {}",
                         tenant, childId, groupId);
-                configurationRegistry.getC8yAgent().getMOFromInventoryCache(tenant, childId, false);
+                serviceRegistry.getC8yAgent().getMOFromInventoryCache(tenant, childId, false);
 
                 resultBuilder.addSubscription(childId, future);
                 log.debug("{} - Subscribed child device {} to group {}", tenant, childId, groupId);
@@ -285,13 +285,13 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
         // Process removals
         for (String childId : toRemove) {
             try {
-                ManagedObjectRepresentation childMO = configurationRegistry.getC8yAgent()
+                ManagedObjectRepresentation childMO = serviceRegistry.getC8yAgent()
                         .getManagedObjectForId(tenant, childId, false);
 
                 if (childMO == null) {
                     log.warn("{} - Child device {} not found for unsubscription, deleting stale subscriptions",
                             tenant, childId);
-                    int deleted = configurationRegistry.getNotificationSubscriber()
+                    int deleted = serviceRegistry.getNotificationSubscriber()
                             .deleteSubscriptionsForDevice(tenant, childId, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
                     if (deleted > 0) {
                         log.info("{} - Deleted {} stale subscription(s) for non-existent device {}",
@@ -303,7 +303,7 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                     continue;
                 }
 
-                configurationRegistry.getNotificationSubscriber()
+                serviceRegistry.getNotificationSubscriber()
                         .unsubscribeDeviceAndDisconnect(tenant, childMO, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
 
                 resultBuilder.addUnsubscription(childId);

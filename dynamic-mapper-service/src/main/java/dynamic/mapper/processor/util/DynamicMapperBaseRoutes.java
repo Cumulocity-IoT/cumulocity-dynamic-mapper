@@ -27,10 +27,10 @@ import org.springframework.stereotype.Component;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
+import dynamic.mapper.model.TransformationType;
 
 @Component
 public abstract class DynamicMapperBaseRoutes extends RouteBuilder {

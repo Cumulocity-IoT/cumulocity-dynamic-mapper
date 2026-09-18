@@ -21,7 +21,7 @@
 import { inject, Injectable } from '@angular/core';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { firstValueFrom } from 'rxjs';
-import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
+import { ConfirmationModalComponent } from '../component/confirmation/confirmation-modal.component';
 
 /**
  * Configuration options for a confirmation dialog

@@ -29,8 +29,8 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
-import dynamic.mapper.processor.model.PooledGraalContext;
-import dynamic.mapper.service.cache.FlowStateStore;
+import dynamic.mapper.processor.runtime.PooledGraalContext;
+import dynamic.mapper.processor.flow.FlowStateStore;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.graalvm.polyglot.Context;
@@ -49,18 +49,18 @@ import org.mockito.quality.Strictness;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.configuration.CodeTemplate;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.TransformationType;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.TransformationType;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -75,7 +75,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 class AbstractEnrichmentProcessorTest {
 
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
 
     @Mock
     private MappingService mappingService;
@@ -121,10 +121,10 @@ class AbstractEnrichmentProcessorTest {
         private Exception lastError;
 
         public TestableAbstractEnrichmentProcessor(
-                ConfigurationRegistry configurationRegistry,
+                ServiceRegistry serviceRegistry,
                 MappingService mappingService,
                 FlowStateStore flowStateStore) {
-            super(configurationRegistry, mappingService, flowStateStore);
+            super(serviceRegistry, mappingService, flowStateStore);
         }
 
         @Override
@@ -164,7 +164,7 @@ class AbstractEnrichmentProcessorTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        processor = new TestableAbstractEnrichmentProcessor(configurationRegistry, mappingService, flowStateStore);
+        processor = new TestableAbstractEnrichmentProcessor(serviceRegistry, mappingService, flowStateStore);
 
         // Create real GraalVM engine (not mocked)
         graalEngine = Engine.newBuilder()
@@ -203,7 +203,7 @@ class AbstractEnrichmentProcessorTest {
         when(serviceConfiguration.getCodeTemplates()).thenReturn(codeTemplates);
 
         // Setup GraalVM engine and host access — use peekGraalEngine (pool path)
-        when(configurationRegistry.getGraalVMContextService()).thenReturn(graalVMContextService);
+        when(serviceRegistry.getGraalVMContextService()).thenReturn(graalVMContextService);
         when(graalVMContextService.peekGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
         when(graalVMContextService.getHostAccess()).thenReturn(HostAccess.ALL);
         when(graalVMContextService.getGraalsSourceShared(TEST_TENANT)).thenReturn(null);
@@ -221,7 +221,7 @@ class AbstractEnrichmentProcessorTest {
                 anyString(), anyString(), any(), anyBoolean(), any(), any(), anyString(), anyString()))
                 .thenReturn(pooledContext);
 
-        when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
     }
 
     @AfterEach
@@ -388,7 +388,7 @@ class AbstractEnrichmentProcessorTest {
     void testProcessHandlesEnrichmentError() throws Exception {
         // Given - Create processor that throws during enrichPayload
         TestableAbstractEnrichmentProcessor errorProcessor = new TestableAbstractEnrichmentProcessor(
-                configurationRegistry, mappingService, flowStateStore) {
+                serviceRegistry, mappingService, flowStateStore) {
             @Override
             protected void enrichPayload(ProcessingContext<?> context) {
                 throw new RuntimeException("Enrichment failed");
@@ -578,7 +578,7 @@ class AbstractEnrichmentProcessorTest {
     void testPerformPreEnrichmentSetupDefaultImplementation() {
         // Given - Create instance that uses default implementation
         AbstractEnrichmentProcessor defaultProcessor = new AbstractEnrichmentProcessor(
-                configurationRegistry, mappingService, flowStateStore) {
+                serviceRegistry, mappingService, flowStateStore) {
             @Override
             protected void enrichPayload(ProcessingContext<?> context) {
             }

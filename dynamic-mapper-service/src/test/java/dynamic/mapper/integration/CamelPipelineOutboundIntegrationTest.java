@@ -51,18 +51,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.client.AConnectorClient;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.notification.websocket.Notification;
 import dynamic.mapper.processor.util.APITopicUtil;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
+import dynamic.mapper.model.TransformationType;
 import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -88,7 +88,7 @@ import lombok.extern.slf4j.Slf4j;
 class CamelPipelineOutboundIntegrationTest {
 
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
 
     @Mock
     private MappingService mappingService;
@@ -125,12 +125,12 @@ class CamelPipelineOutboundIntegrationTest {
         camelContext = new DefaultCamelContext();
         virtualThreadPool = Executors.newVirtualThreadPerTaskExecutor();
 
-        // Setup ConfigurationRegistry mocks
-        when(configurationRegistry.getCamelContext()).thenReturn(camelContext);
-        when(configurationRegistry.getVirtualThreadPool()).thenReturn(virtualThreadPool);
-        when(configurationRegistry.getMappingService()).thenReturn(mappingService);
-        when(configurationRegistry.getServiceConfiguration(TEST_TENANT)).thenReturn(serviceConfiguration);
-        when(configurationRegistry.getNotificationSubscriber()).thenReturn(notificationSubscriber);
+        // Setup ServiceRegistry mocks
+        when(serviceRegistry.getCamelContext()).thenReturn(camelContext);
+        when(serviceRegistry.getVirtualThreadPool()).thenReturn(virtualThreadPool);
+        when(serviceRegistry.getMappingService()).thenReturn(mappingService);
+        when(serviceRegistry.getServiceConfiguration(TEST_TENANT)).thenReturn(serviceConfiguration);
+        when(serviceRegistry.getNotificationSubscriber()).thenReturn(notificationSubscriber);
 
         // Setup ServiceConfiguration mocks
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
@@ -144,7 +144,7 @@ class CamelPipelineOutboundIntegrationTest {
         when(connectorClient.isConnected()).thenReturn(true);
 
         // Create dispatcher
-        dispatcher = new CamelDispatcherOutbound(configurationRegistry, connectorClient);
+        dispatcher = new CamelDispatcherOutbound(serviceRegistry, connectorClient);
 
         log.info("✅ Camel outbound pipeline test setup completed");
     }

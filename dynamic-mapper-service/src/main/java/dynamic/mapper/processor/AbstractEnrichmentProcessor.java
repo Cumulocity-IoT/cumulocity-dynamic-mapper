@@ -29,7 +29,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.model.TransformationType;
 
 import org.apache.camel.Exchange;
 import org.graalvm.polyglot.Context;
@@ -39,16 +39,17 @@ import org.graalvm.polyglot.Source;
 import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.PooledGraalContext;
-import dynamic.mapper.processor.model.RoutingContext;
-import dynamic.mapper.processor.model.SmartFunctionContext;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.cache.FlowStateStore;
+import dynamic.mapper.model.status.MappingStatus;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.PooledGraalContext;
+import dynamic.mapper.processor.runtime.RoutingContext;
+import dynamic.mapper.processor.runtime.SmartFunctionContext;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.processor.flow.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -59,15 +60,15 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
 
-    protected final ConfigurationRegistry configurationRegistry;
+    protected final ServiceRegistry serviceRegistry;
     protected final MappingService mappingService;
     protected final FlowStateStore flowStateStore;
 
     protected AbstractEnrichmentProcessor(
-            ConfigurationRegistry configurationRegistry,
+            ServiceRegistry serviceRegistry,
             MappingService mappingService,
             FlowStateStore flowStateStore) {
-        this.configurationRegistry = configurationRegistry;
+        this.serviceRegistry = serviceRegistry;
         this.mappingService = mappingService;
         this.flowStateStore = flowStateStore;
     }
@@ -113,7 +114,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                             mapping.getName()));
                     }
                 }
-                var graalVMContextService = configurationRegistry.getGraalVMContextService();
+                var graalVMContextService = serviceRegistry.getGraalVMContextService();
                 // peekGraalEngine does rotation checks without incrementing the engine counter;
                 // borrowOrCreateContext handles the counter at borrow time.
                 var graalEngine = graalVMContextService.peekGraalEngine(tenant);
@@ -155,7 +156,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 context.setFlowState(new HashMap<String, Object>());
                 Map<String, Object> initialState = flowStateStore.loadState(tenant, mapping.getIdentifier());
                 context.setFlowContext(new SmartFunctionContext(pooledCtx.getGraalContext(), tenant,
-                        (InventoryEnrichmentClient) configurationRegistry.getC8yAgent(),
+                        (InventoryEnrichmentClient) serviceRegistry.getC8yAgent(),
                         context.isTesting(), flowStateStore, mapping.getIdentifier(), initialState));
 
                 // engineReleaseAction returns the borrowed context to the pool (or closes it if
@@ -192,22 +193,8 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         Context.Builder builder = Context.newBuilder("js")
                 .engine(graalEngine)
                 .option("js.text-encoding", "true")
-                .allowHostAccess(configurationRegistry.getGraalVMContextService().getHostAccess())
-                .allowHostClassLookup(className ->
-                // Allow only the specific SubstitutionContext class
-                className.equals("dynamic.mapper.processor.model.SubstitutionContext")
-                        || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
-                        || className.equals("dynamic.mapper.processor.model.SubstituteValue")
-                        || className.equals("dynamic.mapper.processor.model.SubstituteValue$TYPE")
-                        || className.equals("dynamic.mapper.processor.model.RepairStrategy")
-                        || className.equals("java.nio.charset.StandardCharsets")
-                        || className.equals("java.lang.String")
-                        || className.equals("java.util.Base64")
-                        // Allow base collection classes needed for return values
-                        || className.equals("java.util.ArrayList")
-                        || className.equals("java.util.Arrays")
-                        || className.equals("java.util.HashMap")
-                        || className.equals("java.util.HashSet"));
+                .allowHostAccess(serviceRegistry.getGraalVMContextService().getHostAccess())
+                .allowHostClassLookup(GraalVMContextService::isAllowedHostClass);
 
         if (supportESM) {
             builder.allowExperimentalOptions(true)

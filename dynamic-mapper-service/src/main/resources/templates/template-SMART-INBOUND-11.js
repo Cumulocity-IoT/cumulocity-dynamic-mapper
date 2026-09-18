@@ -3,7 +3,6 @@
  * @description Tracks message count and running average temperature per device, using the MQTT
  *              client ID from context (not the payload) as the device identifier.
  * @templateType INBOUND_SMART_FUNCTION
- * @defaultTemplate false
  * @internal true
  * @readonly true
  * @since 6.2

@@ -21,21 +21,48 @@
 
 package dynamic.mapper.configuration;
 
+import dynamic.mapper.model.Direction;
+
+/**
+ * Identity of a code template: what it is used for and, implicitly, which way the data flows.
+ *
+ * <p>The direction is a property of the type, not something a template declares for itself.
+ * Templates used to carry a separate {@code @direction} annotation, which could disagree with
+ * {@code @templateType} and was never read by anything; {@link #getDirection()} is now the single
+ * source of truth. {@code SHARED} and {@code SYSTEM} apply to both directions and report
+ * {@code null} rather than {@link Direction#UNSPECIFIED}, matching the value tenants already have
+ * stored for them.
+ */
 public enum TemplateType {
     /** @deprecated No longer in use. */
     @Deprecated(since = "6.3", forRemoval = false)
-    INBOUND,
+    INBOUND(Direction.INBOUND),
     /** @deprecated No longer in use. */
     @Deprecated(since = "6.3", forRemoval = false)
-    OUTBOUND,
+    OUTBOUND(Direction.OUTBOUND),
     /** @deprecated Substitution As Code is no longer supported. Kept for deserialization of existing tenant data. */
     @Deprecated(since = "6.3", forRemoval = true)
-    INBOUND_SUBSTITUTION_AS_CODE,
+    INBOUND_SUBSTITUTION_AS_CODE(Direction.INBOUND),
     /** @deprecated Substitution As Code is no longer supported. Kept for deserialization of existing tenant data. */
     @Deprecated(since = "6.3", forRemoval = true)
-    OUTBOUND_SUBSTITUTION_AS_CODE,
-    INBOUND_SMART_FUNCTION,
-    OUTBOUND_SMART_FUNCTION,
-    SHARED,
-    SYSTEM,
+    OUTBOUND_SUBSTITUTION_AS_CODE(Direction.OUTBOUND),
+    INBOUND_SMART_FUNCTION(Direction.INBOUND),
+    OUTBOUND_SMART_FUNCTION(Direction.OUTBOUND),
+    SHARED(null),
+    SYSTEM(null),
+    ;
+
+    private final Direction direction;
+
+    TemplateType(Direction direction) {
+        this.direction = direction;
+    }
+
+    /**
+     * The direction this template type applies to, or {@code null} for the direction-agnostic
+     * types ({@code SHARED}, {@code SYSTEM}).
+     */
+    public Direction getDirection() {
+        return direction;
+    }
 }

@@ -25,7 +25,7 @@ import com.hivemq.client.mqtt.mqtt5.message.publish.Mqtt5Publish;
 
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -35,10 +35,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class MQTT5Callback extends AbstractMqttCallback<Mqtt5Publish> {
 
-    MQTT5Callback(String tenant, ConfigurationRegistry configurationRegistry,
+    MQTT5Callback(String tenant, ServiceRegistry serviceRegistry,
             GenericMessageCallback callback, String connectorIdentifier, String connectorName,
             Runnable reconnectTrigger) {
-        super(tenant, configurationRegistry, callback, connectorIdentifier, connectorName, reconnectTrigger);
+        super(tenant, serviceRegistry, callback, connectorIdentifier, connectorName, reconnectTrigger);
     }
 
     @Override

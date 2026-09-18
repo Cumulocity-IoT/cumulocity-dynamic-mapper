@@ -51,12 +51,12 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.processor.model.DataPrepContext;
-import dynamic.mapper.processor.model.SmartFunctionContext;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.OutputCollector;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.SmartFunctionContext;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.OutputCollector;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.core.GraalVMContextService;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -325,7 +325,7 @@ class AbstractFlowProcessorTest {
 
     @Test
     void testLoadSharedCodeWithValidCode() {
-        // Given - Create cached Source object (simulating ConfigurationRegistry behavior)
+        // Given - Create cached Source object (simulating ServiceRegistry behavior)
         String sharedJsCode = "var sharedValue = 'shared';";
         Source sharedSource = Source.newBuilder("js", sharedJsCode, "sharedCode.js")
                 .cached(true)

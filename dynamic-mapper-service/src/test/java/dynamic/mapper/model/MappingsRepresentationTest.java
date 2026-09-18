@@ -21,9 +21,12 @@
 
 package dynamic.mapper.model;
 
+import dynamic.mapper.model.device.Device;
+import dynamic.mapper.model.validation.ValidationError;
+
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
-import dynamic.mapper.service.MappingRepository;
-import dynamic.mapper.service.MappingValidator;
+import dynamic.mapper.mapping.MappingRepository;
+import dynamic.mapper.mapping.MappingValidator;
 import dynamic.util.LogLevelExtension;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -295,7 +298,7 @@ public class MappingsRepresentationTest {
         Mapping validMapping = Mapping.builder()
                 .sourceTemplate("{\"temperature\": 25.5}")
                 .targetTemplate("{\"type\": \"measurement\"}")
-                .mappingType(dynamic.mapper.processor.model.MappingType.JSON)
+                .mappingType(dynamic.mapper.model.MappingType.JSON)
                 .build();
 
         List<ValidationError> errors1 = mappingValidator.validateJSONTemplates(validMapping);
@@ -304,7 +307,7 @@ public class MappingsRepresentationTest {
         Mapping invalidSourceMapping = Mapping.builder()
                 .sourceTemplate("{invalid json")
                 .targetTemplate("{\"type\": \"measurement\"}")
-                .mappingType(dynamic.mapper.processor.model.MappingType.JSON)
+                .mappingType(dynamic.mapper.model.MappingType.JSON)
                 .build();
 
         List<ValidationError> errors2 = mappingValidator.validateJSONTemplates(invalidSourceMapping);
@@ -315,7 +318,7 @@ public class MappingsRepresentationTest {
         Mapping invalidTargetMapping = Mapping.builder()
                 .sourceTemplate("{\"temperature\": 25.5}")
                 .targetTemplate("{this is not json at all!@#$") // Completely malformed
-                .mappingType(dynamic.mapper.processor.model.MappingType.JSON)
+                .mappingType(dynamic.mapper.model.MappingType.JSON)
                 .build();
 
         List<ValidationError> errors3 = mappingValidator.validateJSONTemplates(invalidTargetMapping);
@@ -346,8 +349,8 @@ void testValidateSubstitutions() {
             .targetAPI(API.EVENT)
             .useExternalId(false)
             .externalIdType("")
-            .mappingType(dynamic.mapper.processor.model.MappingType.JSON)
-            .transformationType(dynamic.mapper.processor.model.TransformationType.DEFAULT)
+            .mappingType(dynamic.mapper.model.MappingType.JSON)
+            .transformationType(dynamic.mapper.model.TransformationType.DEFAULT)
             .active(false)
             .debug(false)
             .qos(Qos.AT_MOST_ONCE)
@@ -371,8 +374,8 @@ void testValidateSubstitutions() {
             .targetAPI(API.EVENT)
             .useExternalId(false)
             .externalIdType("")
-            .mappingType(dynamic.mapper.processor.model.MappingType.JSON)
-            .transformationType(dynamic.mapper.processor.model.TransformationType.DEFAULT)
+            .mappingType(dynamic.mapper.model.MappingType.JSON)
+            .transformationType(dynamic.mapper.model.TransformationType.DEFAULT)
             .active(false)
             .debug(false)
             .qos(Qos.AT_MOST_ONCE)
@@ -401,8 +404,8 @@ void testValidateSubstitutions() {
             .targetAPI(API.EVENT)
             .useExternalId(false)
             .externalIdType("")
-            .mappingType(dynamic.mapper.processor.model.MappingType.JSON)
-            .transformationType(dynamic.mapper.processor.model.TransformationType.DEFAULT)
+            .mappingType(dynamic.mapper.model.MappingType.JSON)
+            .transformationType(dynamic.mapper.model.TransformationType.DEFAULT)
             .active(false)
             .debug(false)
             .qos(Qos.AT_MOST_ONCE)
@@ -434,8 +437,8 @@ void testValidateSubstitutionsOutbound() {
             .targetAPI(API.EVENT)
             .useExternalId(true)
             .externalIdType("c8y_Serial")
-            .mappingType(dynamic.mapper.processor.model.MappingType.JSON)
-            .transformationType(dynamic.mapper.processor.model.TransformationType.DEFAULT)
+            .mappingType(dynamic.mapper.model.MappingType.JSON)
+            .transformationType(dynamic.mapper.model.TransformationType.DEFAULT)
             .active(false)
             .debug(false)
             .qos(Qos.AT_MOST_ONCE)
@@ -464,8 +467,8 @@ void testValidateSubstitutionsOutbound() {
             .targetAPI(API.EVENT)
             .useExternalId(true)
             .externalIdType("c8y_Serial")
-            .mappingType(dynamic.mapper.processor.model.MappingType.JSON)
-            .transformationType(dynamic.mapper.processor.model.TransformationType.DEFAULT)
+            .mappingType(dynamic.mapper.model.MappingType.JSON)
+            .transformationType(dynamic.mapper.model.TransformationType.DEFAULT)
             .active(false)
             .debug(false)
             .qos(Qos.AT_MOST_ONCE)
@@ -494,8 +497,8 @@ void testValidateSubstitutionsOutbound() {
             .targetAPI(API.EVENT)
             .useExternalId(true)
             .externalIdType("c8y_Serial")
-            .mappingType(dynamic.mapper.processor.model.MappingType.JSON)
-            .transformationType(dynamic.mapper.processor.model.TransformationType.DEFAULT)
+            .mappingType(dynamic.mapper.model.MappingType.JSON)
+            .transformationType(dynamic.mapper.model.TransformationType.DEFAULT)
             .active(false)
             .debug(false)
             .qos(Qos.AT_MOST_ONCE)

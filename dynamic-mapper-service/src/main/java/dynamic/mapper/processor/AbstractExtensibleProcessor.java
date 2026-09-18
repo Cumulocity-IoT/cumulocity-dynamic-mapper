@@ -27,14 +27,14 @@ import java.util.Map;
 
 import org.apache.camel.Exchange;
 
-import dynamic.mapper.model.Extension;
-import dynamic.mapper.model.ExtensionEntry;
+import dynamic.mapper.model.extension.Extension;
+import dynamic.mapper.model.extension.ExtensionEntry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.RoutingContext;
-import dynamic.mapper.service.ExtensionInboundRegistry;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.RoutingContext;
+import dynamic.mapper.core.ExtensionInboundRegistry;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**

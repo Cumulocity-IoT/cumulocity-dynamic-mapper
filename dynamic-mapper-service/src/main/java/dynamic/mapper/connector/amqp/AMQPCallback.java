@@ -25,8 +25,8 @@ import com.rabbitmq.client.*;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
-import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -50,7 +50,7 @@ public class AMQPCallback extends DefaultConsumer {
      * Constructor
      */
     public AMQPCallback(String tenant,
-            ConfigurationRegistry configurationRegistry,
+            ServiceRegistry serviceRegistry,
             GenericMessageCallback callback,
             String connectorIdentifier,
             String connectorName) {
@@ -59,8 +59,8 @@ public class AMQPCallback extends DefaultConsumer {
         this.tenant = tenant;
         this.connectorIdentifier = connectorIdentifier;
         this.connectorName = connectorName;
-        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
-        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
+        this.serviceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
+        this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
     }
 
     @Override

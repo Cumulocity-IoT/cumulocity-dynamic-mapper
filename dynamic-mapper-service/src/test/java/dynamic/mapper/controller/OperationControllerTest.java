@@ -53,7 +53,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.BootstrapService;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.CacheManager;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.ExtensionManager;
 import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
@@ -61,12 +62,12 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Operation;
 import dynamic.mapper.model.ServiceOperation;
-import dynamic.mapper.service.ConnectorConfigurationService;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.ServiceConfigurationService;
-import dynamic.mapper.service.cache.FlowStateStore;
-import dynamic.mapper.service.deployment.DeploymentMapService;
-import dynamic.mapper.service.status.MappingStatusService;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.configuration.ServiceConfigurationService;
+import dynamic.mapper.processor.flow.FlowStateStore;
+import dynamic.mapper.mapping.deployment.DeploymentMapService;
+import dynamic.mapper.mapping.status.MappingStatusService;
 
 /**
  * Unit tests for {@link OperationController}'s {@code ACTIVATE_MAPPING} handling
@@ -87,11 +88,12 @@ class OperationControllerTest {
     @Mock private BootstrapService bootstrapService;
     @Mock private C8YAgent c8YAgent;
     @Mock private ContextService<UserCredentials> contextService;
-    @Mock private ConfigurationRegistry configurationRegistry;
+    @Mock private ServiceRegistry serviceRegistry;
     @Mock private DeploymentMapService deploymentMapService;
     @Mock private MappingStatusService mappingStatusService;
     @Mock private IdentityFacade identityFacade;
     @Mock private InventoryFacade inventoryFacade;
+    @Mock private CacheManager cacheManager;
     @Mock private FlowStateStore flowStateStore;
     @Mock private ExtensionManager extensionManager;
     @Mock private ObjectMapper objectMapper;
@@ -101,8 +103,8 @@ class OperationControllerTest {
     @BeforeEach
     void setUp() throws Exception {
         controller = new OperationController(connectorRegistry, mappingService, connectorConfigurationService,
-                serviceConfigurationService, bootstrapService, c8YAgent, contextService, configurationRegistry,
-                deploymentMapService, mappingStatusService, identityFacade, inventoryFacade, flowStateStore,
+                serviceConfigurationService, bootstrapService, c8YAgent, contextService, serviceRegistry,
+                cacheManager, deploymentMapService, mappingStatusService, identityFacade, inventoryFacade, flowStateStore,
                 extensionManager, objectMapper);
 
         UserCredentials creds = mock(UserCredentials.class);

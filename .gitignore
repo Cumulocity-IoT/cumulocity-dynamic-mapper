@@ -56,14 +56,27 @@ dynamic-mapper-ui/node_modules_tmp/
 setEnv.sh
 setup-env.sh
 .claude/settings.json
-resources/test-env/amqp/setup.sh
 dynamic-mapper-service/src/main/resources/application-dev.properties
-resources/test-env/hivemq/keystore.jks
-resources/test-env/hivemq/hivemq-conf/keystore.jks
 CLAUDE.md
 .vscode/mcp.json
 attic
-resources/script/test/tmp
 resources/image-optimized/
-resources/script/backend/backend_test.argfile
-resources/script/backend/start.md
+
+# Key material and keystores. Pattern-based on purpose: these previously used exact
+# paths, and a folder rename silently disarmed them, leaving a private key untracked
+# but stageable by `git add -A`. Nothing matching these is tracked today.
+*.key
+*.pem
+*.jks
+*.p12
+*.pfx
+*.keystore
+*.truststore
+
+# Scratch output written by the integration tests (x509 certs, upload markers).
+tmp/
+
+# Local, machine-specific developer files.
+resources/testing/environments/amqp/setup.sh
+resources/testing/reliability/backend_test.argfile
+resources/testing/reliability/start.md

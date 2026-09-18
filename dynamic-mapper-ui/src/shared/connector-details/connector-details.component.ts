@@ -33,7 +33,7 @@ import {
   SharedService,
   ConnectorType
 } from '..';
-import { ServiceConfiguration } from '../../configuration';
+import { ServiceConfiguration } from '../configuration/configuration.model';
 import { ConnectorLogService } from '../service/connector-log.service';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { ActivatedRoute } from '@angular/router';

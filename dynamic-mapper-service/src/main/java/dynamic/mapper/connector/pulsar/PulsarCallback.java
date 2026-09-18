@@ -33,9 +33,9 @@ import org.apache.pulsar.client.api.PulsarClientException;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
-import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import lombok.extern.slf4j.Slf4j;
 
@@ -48,9 +48,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class PulsarCallback extends AbstractPulsarCallback {
 
-    public PulsarCallback(String tenant, ConfigurationRegistry configurationRegistry,
+    public PulsarCallback(String tenant, ServiceRegistry serviceRegistry,
             GenericMessageCallback callback, String connectorIdentifier, String connectorName) {
-        super(tenant, configurationRegistry, callback, connectorIdentifier, connectorName);
+        super(tenant, serviceRegistry, callback, connectorIdentifier, connectorName);
     }
 
     @Override

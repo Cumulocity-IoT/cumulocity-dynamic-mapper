@@ -28,10 +28,10 @@ import com.cumulocity.rest.representation.reliable.notification.*;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.messaging.notifications.*;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
-import dynamic.mapper.model.LoggingEventType;
-import dynamic.mapper.model.NotificationSubscriptionResponse;
+import dynamic.mapper.model.status.LoggingEventType;
+import dynamic.mapper.notification.NotificationSubscriptionResponse;
 import dynamic.mapper.notification.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.joda.time.DateTime;
@@ -55,20 +55,20 @@ public class SubscriptionManager {
     private final NotificationConnectionManager connectionManager;
     private final MqttPushManager mqttPushManager;
     private final ExecutorService virtualThreadPool;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
 
     public SubscriptionManager(NotificationSubscriptionApi subscriptionAPI,
                                 MicroserviceSubscriptionsService subscriptionsService,
                                 NotificationConnectionManager connectionManager,
                                 MqttPushManager mqttPushManager,
                                 @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool,
-                                @Lazy ConfigurationRegistry configurationRegistry) {
+                                @Lazy ServiceRegistry serviceRegistry) {
         this.subscriptionAPI = subscriptionAPI;
         this.subscriptionsService = subscriptionsService;
         this.connectionManager = connectionManager;
         this.mqttPushManager = mqttPushManager;
         this.virtualThreadPool = virtualThreadPool;
-        this.configurationRegistry = configurationRegistry;
+        this.serviceRegistry = serviceRegistry;
     }
 
     // H1+H2: use ConcurrentHashMap.newKeySet() so each add() is atomic (no separate contains)
@@ -481,7 +481,7 @@ public class SubscriptionManager {
      */
     private void backfillDevicesForType(String tenant, String type) {
         virtualThreadPool.submit(() -> {
-            C8YAgent c8yAgent = configurationRegistry.getC8yAgent();
+            C8YAgent c8yAgent = serviceRegistry.getC8yAgent();
             Map<String, String> startProps = new HashMap<>();
             startProps.put("type", type);
             c8yAgent.createLoggingEvent("Resync started for type: " + type,
@@ -787,7 +787,7 @@ public class SubscriptionManager {
                     "deviceId", deviceId,
                     "removedSubscription", removedSubscription,
                     "keptSubscription", keptSubscription);
-            configurationRegistry.getC8yAgent().createLoggingEvent(
+            serviceRegistry.getC8yAgent().createLoggingEvent(
                     message,
                     LoggingEventType.SUBSCRIPTION_DEDUPLICATION_EVENT_TYPE,
                     DateTime.now(),

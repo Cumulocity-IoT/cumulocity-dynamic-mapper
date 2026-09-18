@@ -13,22 +13,21 @@ import com.cumulocity.sdk.client.ProcessingMode;
 
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.AbstractFlowResultProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.CumulocityType;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
+import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.ExternalIdInfo;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingState;
-import dynamic.mapper.processor.model.RoutingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.RoutingContext;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.processor.util.APITopicUtil;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.IdentityResolutionService;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -80,13 +79,12 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
     protected void processMessage(
             Object message,
             RoutingContext routing,
-            ProcessingState state,
             ProcessingContext<?> context) throws ProcessingException {
         String tenant = routing.getTenant();
         Mapping mapping = context.getMapping();
 
         if (message instanceof CumulocityObject) {
-            processCumulocityObject((CumulocityObject) message, routing, state, context, tenant, mapping);
+            processCumulocityObject((CumulocityObject) message, routing, context, tenant, mapping);
         } else {
             log.debug("{} - Message is not a CumulocityObject, skipping: {}", tenant,
                     message.getClass().getSimpleName());
@@ -94,8 +92,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
     }
 
     @Override
-    protected void postProcessFlowResults(ProcessingState state,
-                                         ProcessingContext<?> context) throws ProcessingException {
+    protected void postProcessFlowResults(                                         ProcessingContext<?> context) throws ProcessingException {
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
 
@@ -110,7 +107,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                             tenant, mapping.getName(), mapping.getIdentifier(),
                             mapping.getFilterInventory(), context.getSourceId(), filterInventory);
                 }
-                state.setIgnoreFurtherProcessing(true);
+                context.setIgnoreFurtherProcessing(true);
             }
         }
     }
@@ -139,7 +136,6 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
     private void processCumulocityObject(
             CumulocityObject cumulocityMessage,
             RoutingContext routing,
-            ProcessingState state,
             ProcessingContext<?> context,
             String tenant,
             Mapping mapping) throws ProcessingException {

@@ -19,7 +19,7 @@
  */
 import { Injectable } from '@angular/core';
 import { MappingType, TransformationType } from '../../shared';
-import { CodeTemplate } from '../../configuration/shared/configuration.model';
+import { CodeTemplate } from '../../shared/configuration/configuration.model';
 
 /** Data captured in the Message Explorer's "Create mapping" flow, to be applied to the fresh
  *  mapping once the user lands on the mapping grid. */

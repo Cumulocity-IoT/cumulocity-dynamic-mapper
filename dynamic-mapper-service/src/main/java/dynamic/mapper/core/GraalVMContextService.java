@@ -44,7 +44,7 @@ import org.springframework.stereotype.Component;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.model.PooledGraalContext;
+import dynamic.mapper.processor.runtime.PooledGraalContext;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import lombok.extern.slf4j.Slf4j;
 
@@ -113,7 +113,7 @@ import lombok.extern.slf4j.Slf4j;
  *       the tenant lookup map. No new Contexts are created against it.</li>
  *   <li>Drain: existing in-flight Contexts continue to run to completion. Each Context's
  *       {@code close()} triggers the {@code engineReleaseAction} callback set on
- *       {@link dynamic.mapper.processor.model.ProcessingContext}, which calls
+ *       {@link dynamic.mapper.processor.runtime.ProcessingContext}, which calls
  *       {@link #releaseEngine(Engine)}.</li>
  *   <li>Close: when the active-context counter reaches zero and the Engine is still in
  *       {@code retiredEngines}, {@link Engine#close()} is called and the Engine is removed
@@ -446,14 +446,30 @@ public class GraalVMContextService {
 
             String identifier = Mapping.SMART_FUNCTION_NAME + "_" + mappingIdentifier;
             Value onMessageFunction;
+            Value exports = null;
 
             if (supportESM) {
                 Source source = Source.newBuilder("js", decodedCode, identifier + ".mjs")
                         .cached(true)
                         .buildLiteral();
                 recordCompilation(tenant, source.getName(), source.getCharacters().toString());
-                Value exports = ctx.eval(source);
+                exports = ctx.eval(source);
                 onMessageFunction = exports.getMember(Mapping.SMART_FUNCTION_NAME);
+
+                // `export default function onMessage(...)` exposes the function under the member
+                // name `default`, not `onMessage`, so the named lookup above misses it. The UI's
+                // hasEsmExport() explicitly accepts that form — it will not append an
+                // `export { onMessage };` when it sees one — so code the editor calls valid would
+                // otherwise fail here with "Function 'onMessage' not found". The non-ESM branch
+                // has never had this problem: JavaScriptModuleStripper removes the `export
+                // default` prefix and leaves a plain function declaration behind.
+                if ((onMessageFunction == null || onMessageFunction.isNull())
+                        && exports.hasMember("default")) {
+                    Value defaultExport = exports.getMember("default");
+                    if (defaultExport != null && defaultExport.canExecute()) {
+                        onMessageFunction = defaultExport;
+                    }
+                }
             } else {
                 decodedCode = JavaScriptModuleStripper.toPlainScript(decodedCode);
                 String wrappedCode = "(function() {\n"
@@ -469,10 +485,26 @@ public class GraalVMContextService {
             }
 
             if (onMessageFunction == null || onMessageFunction.isNull()) {
+                // Name what the code DID export — without it this message says only that
+                // something is missing, leaving the author to guess between a typo, a missing
+                // export and the wrong export shape.
+                String exported = "";
+                if (exports != null) {
+                    try {
+                        exported = String.join(", ", exports.getMemberKeys());
+                    } catch (Exception ignored) {
+                        // Diagnostics only — never let this mask the real failure.
+                    }
+                }
                 ctx.close();
                 throw new IllegalStateException(String.format(
-                        "Function '%s' not found in mapping code for [%s]",
-                        Mapping.SMART_FUNCTION_NAME, mappingIdentifier));
+                        "Function '%s' not found in mapping code for [%s]%s",
+                        Mapping.SMART_FUNCTION_NAME, mappingIdentifier,
+                        exported.isEmpty()
+                                ? supportESM
+                                        ? " - the code exports nothing; add 'export { onMessage };'"
+                                        : " - define 'function onMessage(msg, context)'"
+                                : " - exports found: [" + exported + "]"));
             }
 
             PooledGraalContext newPooled = new PooledGraalContext(ctx, onMessageFunction, engine);
@@ -738,7 +770,7 @@ public class GraalVMContextService {
      * retired engine's active count drops to zero it is explicitly closed so the JVM
      * can reclaim its Metaspace rather than waiting for GC.
      *
-     * <p>Called from {@link dynamic.mapper.processor.model.ProcessingContext#close()}
+     * <p>Called from {@link dynamic.mapper.processor.runtime.ProcessingContext#close()}
      * via a callback set by {@link dynamic.mapper.processor.AbstractEnrichmentProcessor}.
      *
      * @param engine the Engine that backed the just-closed Context
@@ -921,16 +953,25 @@ public class GraalVMContextService {
     }
 
     /**
-     * Host-class allow-list shared by all GraalVM context builders in this service.
-     * Kept in one place so that {@link #createGraalsResources} and
-     * {@link #warmupMappingCodes} stay consistent.
+     * The host-class allow-list for every GraalVM context this service builds — a security
+     * boundary, so it is deliberately narrow and lives in exactly one place. All four
+     * {@code allowHostClassLookup} call sites reference it: {@link #createGraalsResources},
+     * {@link #warmupMappingCodes}, the pooled-context builder, and
+     * {@code AbstractEnrichmentProcessor.createGraalContext}. Do not inline a copy — an earlier
+     * duplicate in that last one had to be kept in step by review.
+     *
+     * <p>Public so both that processor (a different package) and
+     * {@code GraalVMTemplateHostClassTest} can reach it. The test matters because the shipped
+     * templates name these classes as strings via {@code Java.type(...)}: a class that moves
+     * package compiles clean and fails only at runtime, as happened when {@code RepairStrategy}
+     * moved out of {@code processor.model}.
      */
-    private static boolean isAllowedHostClass(String className) {
-        return className.equals("dynamic.mapper.processor.model.SubstitutionContext")
+    public static boolean isAllowedHostClass(String className) {
+        return className.equals("dynamic.mapper.processor.runtime.SubstitutionContext")
                 || className.equals("dynamic.mapper.processor.model.SubstitutionResult")
                 || className.equals("dynamic.mapper.processor.model.SubstituteValue")
                 || className.equals("dynamic.mapper.processor.model.SubstituteValue$TYPE")
-                || className.equals("dynamic.mapper.processor.model.RepairStrategy")
+                || className.equals("dynamic.mapper.model.RepairStrategy")
                 || className.equals("java.nio.charset.StandardCharsets")
                 || className.equals("java.util.Base64")
                 || className.equals("java.lang.String")

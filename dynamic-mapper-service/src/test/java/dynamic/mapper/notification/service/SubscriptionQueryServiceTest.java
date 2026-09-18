@@ -29,7 +29,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
@@ -62,8 +61,8 @@ import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptio
 import com.cumulocity.sdk.client.messaging.notifications.PagedNotificationSubscriptionCollectionRepresentation;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.model.NotificationSubscriptionResponse;
+import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.notification.NotificationSubscriptionResponse;
 import dynamic.mapper.notification.Utils;
 
 /**
@@ -93,7 +92,7 @@ class SubscriptionQueryServiceTest {
     private MicroserviceSubscriptionsService subscriptionsService;
 
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
 
     @Mock
     private ExecutorService virtualThreadPool;
@@ -115,7 +114,7 @@ class SubscriptionQueryServiceTest {
     @BeforeEach
     void setUp() {
         queryService = new SubscriptionQueryService(
-                subscriptionAPI, subscriptionsService, configurationRegistry, virtualThreadPool);
+                subscriptionAPI, subscriptionsService, serviceRegistry, virtualThreadPool);
 
         // runForTenant(tenant, Runnable) -> invoke the runnable inline so the read
         // logic executes on the calling thread within the test.
@@ -159,7 +158,7 @@ class SubscriptionQueryServiceTest {
         when(pagedCollection.allPages()).thenReturn(Collections.singletonList(nsr));
 
         // The device MO no longer exists.
-        when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
         when(c8yAgent.getManagedObjectForId(eq(TEST_TENANT), eq(DEVICE_ID), anyBoolean(), anyBoolean()))
                 .thenReturn(null);
 
@@ -194,7 +193,7 @@ class SubscriptionQueryServiceTest {
         mor.setName("Device One");
         mor.setType("c8y_Device");
 
-        when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
         when(c8yAgent.getManagedObjectForId(eq(TEST_TENANT), eq(DEVICE_ID), anyBoolean(), anyBoolean()))
                 .thenReturn(mor);
 
@@ -244,7 +243,7 @@ class SubscriptionQueryServiceTest {
         morId.setValue("d2");
         mor.setId(morId);
         mor.setName("Device Two");
-        when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
         when(c8yAgent.getManagedObjectForId(eq(TEST_TENANT), eq("d2"), anyBoolean(), anyBoolean()))
                 .thenReturn(mor);
 
@@ -254,7 +253,7 @@ class SubscriptionQueryServiceTest {
 
         // Assert: only the "mo" context device is returned.
         assertNotNull(response);
-        List<dynamic.mapper.model.Device> devices = response.getDevices();
+        List<dynamic.mapper.model.device.Device> devices = response.getDevices();
         assertNotNull(devices);
         assertEquals(1, devices.size());
         assertEquals("d2", devices.get(0).getId());
@@ -303,7 +302,7 @@ class SubscriptionQueryServiceTest {
         morId.setValue(deviceId);
         mor.setId(morId);
         mor.setName(name);
-        when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
         when(c8yAgent.getManagedObjectForId(eq(TEST_TENANT), eq(deviceId), anyBoolean(), anyBoolean()))
                 .thenReturn(mor);
     }

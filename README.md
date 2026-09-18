@@ -86,23 +86,21 @@ npm test
 
 ### Load Test
 
-- JMeter profile: [resources/script/performance/jmeter_test_01.jmx](resources/script/performance/jmeter_test_01.jmx)
+- JMeter profile: [resources/testing/performance/jmeter/jmeter_test_01.jmx](resources/testing/performance/jmeter/jmeter_test_01.jmx)
 - MQTT JMeter extension: [emqx/mqtt-jmeter](https://github.com/emqx/mqtt-jmeter)
+- Python MQTT load generators: [resources/testing/performance/mqtt/](resources/testing/performance/mqtt/)
+- See [resources/testing/performance/README.md](resources/testing/performance/README.md) for how to run them.
 
 ### Sample Mappings
 
-- Import script: [resources/script/mapping/import_mappings_01.py](resources/script/mapping/import_mappings_01.py)
-- Example command:
+Import and export mappings from the **Inbound Mappings** / **Outbound Mappings** table in the UI, individually
+or all at once — there is no longer a standalone import script. Ready-made sets to start from:
 
-```bash
-python3 resources/script/mapping/import_mappings_01.py \
-  -p <YOUR_PASSWORD> \
-  -U <YOUR_TENANT> \
-  -u <YOUR_USER> \
-  -f resources/script/mapping/sampleMapping/sampleMappings_02.json
-```
-
-- Mapping examples: [resources/samples/SampleMappings_19.xlsx](resources/samples/SampleMappings_19.xlsx)
+- [resources/samples/mappings-INBOUND.json](resources/samples/mappings-INBOUND.json)
+- [resources/samples/mappings-OUTBOUND.json](resources/samples/mappings-OUTBOUND.json)
+- Documented overview: [resources/samples/SampleMappings_21.xlsx](resources/samples/SampleMappings_21.xlsx)
+  (also as PDF, [inbound](resources/samples/SampleMappings_INBOUND_21.pdf) /
+  [outbound](resources/samples/SampleMappings_OUTBOUND_21.pdf))
 
 ## Security Notes for Code-Based Mappings (JavaScript)
 

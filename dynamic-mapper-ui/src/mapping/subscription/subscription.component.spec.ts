@@ -28,7 +28,7 @@ import { SubscriptionService } from '../core/subscription.service';
 import { SharedService } from '../../shared';
 import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
 import { Feature } from '../../shared';
-import { Device, NotificationSubscriptionResponse } from '../shared/mapping.model';
+import { Device, NotificationSubscriptionResponse } from '../../shared/mapping/mapping.model';
 import { IIdentified } from '@c8y/client';
 
 describe('MappingSubscriptionComponent', () => {

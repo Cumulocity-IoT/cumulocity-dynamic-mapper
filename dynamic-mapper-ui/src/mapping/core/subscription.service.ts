@@ -33,7 +33,7 @@ import {
   NotificationSubscriptionRequest,
   NotificationSubscriptionResponse,
   SubscriptionStatus
-} from '../shared/mapping.model';
+} from '../../shared/mapping/mapping.model';
 
 // Custom error types for better error handling
 export class SubscriptionError extends Error {

@@ -44,8 +44,13 @@ Please assign the roles to the users that should be able to use the dynamic mapp
 
 In your Enterprise Tenant or Tenant navigate to "Administration" App, go to "Ecosystem" -> "Microservices" and click on "Add Microservice" on the top right.
 
-Select the `dynamic-mapper-service-*.zip`.
-Make sure that you subscribe the microservice to your tenant when prompted
+The **Add microservice** dialog opens. Drop the `dynamic-mapper-service-*.zip` onto the upload area, or click it
+to browse for the file — note that the microservice is uploaded as a **`*.zip`**, unlike a processor extension,
+which is a `*.jar`.
+
+<img src="../resources/image/Dynamic_Mapper_Installation_Upload_Microservice.png" style="width: 40%;" />
+
+Make sure that you subscribe the microservice to your tenant when prompted.
 
 ### Web app
 

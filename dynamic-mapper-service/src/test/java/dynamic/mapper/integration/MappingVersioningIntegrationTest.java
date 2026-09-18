@@ -31,28 +31,28 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingVersion;
-import dynamic.mapper.model.MappingVersionRepresentation;
+import dynamic.mapper.model.version.MappingVersion;
+import dynamic.mapper.model.version.MappingVersionRepresentation;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.model.SemVer;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.TransformationType;
-import dynamic.mapper.service.DeviceToClientMapService;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.MappingValidator;
-import dynamic.mapper.service.MappingVersionRepository;
-import dynamic.mapper.service.MappingVersionService;
-import dynamic.mapper.service.ServiceConfigurationService;
-import dynamic.mapper.service.cache.FlowStateStore;
-import dynamic.mapper.service.cache.MappingCacheManager;
-import dynamic.mapper.service.deployment.DeploymentMapService;
-import dynamic.mapper.service.resolver.MappingResolverService;
-import dynamic.mapper.service.status.MappingStatusService;
+import dynamic.mapper.model.version.SemVer;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.model.TransformationType;
+import dynamic.mapper.mapping.DeviceToClientMapService;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.mapping.MappingValidator;
+import dynamic.mapper.mapping.MappingVersionRepository;
+import dynamic.mapper.mapping.MappingVersionService;
+import dynamic.mapper.configuration.ServiceConfigurationService;
+import dynamic.mapper.processor.flow.FlowStateStore;
+import dynamic.mapper.mapping.cache.MappingCacheManager;
+import dynamic.mapper.mapping.deployment.DeploymentMapService;
+import dynamic.mapper.mapping.resolver.MappingResolverService;
+import dynamic.mapper.mapping.status.MappingStatusService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -100,11 +100,11 @@ class MappingVersioningIntegrationTest {
     @Mock private MappingValidator mappingValidator;
     @Mock private MicroserviceSubscriptionsService subscriptionsService;
     @Mock private ContextService<UserCredentials> contextService;
-    @Mock private ConfigurationRegistry configurationRegistry;
+    @Mock private ServiceRegistry serviceRegistry;
     @Mock private C8YAgent c8yAgent;
 
     // MappingService peripheral collaborators (no-op for these scenarios)
-    @Mock private dynamic.mapper.service.MappingRepository mappingRepository;
+    @Mock private dynamic.mapper.mapping.MappingRepository mappingRepository;
     @Mock private MappingCacheManager cacheManager;
     @Mock private MappingStatusService statusService;
     @Mock private MappingResolverService resolverService;
@@ -126,10 +126,10 @@ class MappingVersioningIntegrationTest {
     void setUp() {
         mappingVersionService = new MappingVersionService(inventoryApi, versionRepository,
                 serviceConfigurationService, mappingValidator, subscriptionsService, contextService,
-                configurationRegistry);
+                serviceRegistry);
 
         MappingService real = new MappingService(inventoryApi, mappingRepository, cacheManager, statusService,
-                resolverService, deploymentMapService, deviceToClientMapService, configurationRegistry,
+                resolverService, deploymentMapService, deviceToClientMapService, serviceRegistry,
                 subscriptionsService, mappingValidator, flowStateStore, mappingVersionService);
         mappingService = spy(real);
 
@@ -144,8 +144,8 @@ class MappingVersioningIntegrationTest {
             return null;
         }).when(subscriptionsService).runForTenant(eq(TENANT), any());
 
-        lenient().when(configurationRegistry.getObjectMapper()).thenReturn(om);
-        lenient().when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        lenient().when(serviceRegistry.getObjectMapper()).thenReturn(om);
+        lenient().when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
         lenient().when(mappingValidator.validate(eq(TENANT), any(), any())).thenReturn(Collections.emptyList());
         lenient().when(serviceConfigurationService.getServiceConfiguration(TENANT)).thenReturn(config);
         lenient().when(cacheManager.removeMapping(any(), any())).thenReturn(Optional.empty());

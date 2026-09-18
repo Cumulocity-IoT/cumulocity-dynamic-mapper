@@ -39,12 +39,12 @@ import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.model.ConnectorStatus;
+import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.model.DynamicMapperRequest;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
@@ -73,13 +73,13 @@ public class MQTT3Client extends AMQTTClient {
     /**
      * Full constructor with dependencies
      */
-    public MQTT3Client(ConfigurationRegistry configurationRegistry,
+    public MQTT3Client(ServiceRegistry serviceRegistry,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             CamelDispatcherInbound dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
-        super(configurationRegistry, connectorRegistry, connectorConfiguration,
+        super(serviceRegistry, connectorRegistry, connectorConfiguration,
                 dispatcher, additionalSubscriptionIdTest, tenant);
         this.connectorSpecification = createConnectorSpecification();
     }
@@ -192,7 +192,7 @@ public class MQTT3Client extends AMQTTClient {
         String clientId = (String) connectorConfiguration.getProperties().get("clientId");
         mqttCallback = new MQTT3Callback(
                 tenant,
-                configurationRegistry,
+                serviceRegistry,
                 dispatcher,
                 connectorIdentifier,
                 connectorName,

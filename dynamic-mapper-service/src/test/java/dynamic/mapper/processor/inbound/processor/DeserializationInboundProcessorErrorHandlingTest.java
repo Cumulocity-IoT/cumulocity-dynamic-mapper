@@ -42,10 +42,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.inbound.deserializer.PayloadDeserializer;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

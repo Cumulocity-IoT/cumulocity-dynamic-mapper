@@ -31,7 +31,7 @@ import { BehaviorSubject, from, map, Subject, takeUntil } from 'rxjs';
 import packageJson from '../../package.json';
 import { AIAgentService } from '../mapping/core/ai-agent.service';
 import { Feature, Operation, SharedService } from '../shared';
-import { ServiceConfiguration } from './shared/configuration.model';
+import { ServiceConfiguration } from '../shared/configuration/configuration.model';
 import { ImportServiceConfigurationComponent } from './import/import-service-configuration-modal.component';
 
 @Component({

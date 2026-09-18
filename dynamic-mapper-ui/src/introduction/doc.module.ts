@@ -30,7 +30,7 @@ const OVERVIEW_SECTIONS = [
   'overview', 'getting-started', 'managing-connectors', 'define-mapping',
   'sparkplugb', 'define-subscription-for-outbound', 'transformation-types',
   'flow-state', 'code-templates', 'metadata',
-  'reliability-settings', 'access-control', 'monitoring', 'message-explorer', 'troubleshooting'
+  'service-configuration', 'reliability-settings', 'access-control', 'monitoring', 'message-explorer', 'troubleshooting'
 ];
 
 @NgModule({

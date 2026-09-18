@@ -32,11 +32,11 @@ import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
 import { AIMessage, ClientAgentDefinition, Suggestion } from '@c8y/ngx-components/ai';
 import { toClientAgentDefinition } from '../core/ai-agent.service';
 import { MappingService } from '../core/mapping.service';
-import { MappingTokens } from '../core/processor/processor.model';
-import { AgentObjectDefinition, AgentTextDefinition } from '../shared/ai-prompt.model';
+import { MappingTokens } from '../../shared/mapping/processor/processor.model';
+import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { ServiceConfiguration } from '../../configuration';
-import { base64ToBytes } from '../shared/util';
-import { EditorMode } from '../shared/stepper.model';
+import { base64ToBytes } from '../../shared/mapping/util';
+import { EditorMode } from '../../shared/mapping/stepper.model';
 
 
 @Component({

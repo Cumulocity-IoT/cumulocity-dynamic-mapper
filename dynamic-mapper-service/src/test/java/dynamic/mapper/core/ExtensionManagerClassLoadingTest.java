@@ -36,15 +36,15 @@ import org.junit.jupiter.api.Test;
 
 import dynamic.mapper.configuration.ExtensionConfiguration;
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.model.Extension;
-import dynamic.mapper.model.ExtensionEntry;
-import dynamic.mapper.model.ExtensionStatus;
-import dynamic.mapper.model.ExtensionType;
+import dynamic.mapper.model.extension.Extension;
+import dynamic.mapper.model.extension.ExtensionEntry;
+import dynamic.mapper.model.extension.ExtensionStatus;
+import dynamic.mapper.model.extension.ExtensionType;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.Message;
-import dynamic.mapper.service.ExtensionInboundRegistry;
+import dynamic.mapper.core.ExtensionInboundRegistry;
 
 class ExtensionManagerClassLoadingTest {
 

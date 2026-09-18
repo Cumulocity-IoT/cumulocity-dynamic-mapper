@@ -50,16 +50,16 @@ import dynamic.mapper.connector.core.client.Certificate;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.service.ConnectorConfigurationService;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.ServiceConfigurationService;
+import dynamic.mapper.model.DynamicMapperRequest;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.configuration.ServiceConfigurationService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -68,7 +68,7 @@ import lombok.extern.slf4j.Slf4j;
 class MQTT3ClientTest {
 
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
     @Mock
     private ConnectorRegistry connectorRegistry;
     @Mock
@@ -108,16 +108,16 @@ class MQTT3ClientTest {
         objectMapper = new ObjectMapper();
 
         // Setup configuration registry
-        when(configurationRegistry.getMappingService()).thenReturn(mappingService);
-        when(configurationRegistry.getServiceConfigurationService()).thenReturn(serviceConfigurationService);
-        when(configurationRegistry.getConnectorConfigurationService())
+        when(serviceRegistry.getMappingService()).thenReturn(mappingService);
+        when(serviceRegistry.getServiceConfigurationService()).thenReturn(serviceConfigurationService);
+        when(serviceRegistry.getConnectorConfigurationService())
                 .thenReturn(connectorConfigurationService);
-        when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
-        when(configurationRegistry.getVirtualThreadPool())
+        when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        when(serviceRegistry.getVirtualThreadPool())
                 .thenReturn(java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor());
-        when(configurationRegistry.getObjectMapper()).thenReturn(objectMapper);
-        when(configurationRegistry.getServiceConfiguration(anyString())).thenReturn(serviceConfiguration);
-        when(configurationRegistry.getConnectorRegistry()).thenReturn(connectorRegistry);
+        when(serviceRegistry.getObjectMapper()).thenReturn(objectMapper);
+        when(serviceRegistry.getServiceConfiguration(anyString())).thenReturn(serviceConfiguration);
+        when(serviceRegistry.getConnectorRegistry()).thenReturn(connectorRegistry);
 
         // Setup connector configuration COMPLETELY before any test
         when(connectorConfiguration.getName()).thenReturn(TEST_CONNECTOR_NAME);
@@ -202,7 +202,7 @@ class MQTT3ClientTest {
     void testFullConstructor() {
         // When
         mqtt3Client = new MQTT3Client(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -223,7 +223,7 @@ class MQTT3ClientTest {
     void testInitializeSuccess() {
         // Given
         mqtt3Client = new MQTT3Client(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -283,7 +283,7 @@ class MQTT3ClientTest {
                 eq(TEST_CONNECTOR_NAME))).thenReturn(mockCert);
 
         mqtt3Client = new MQTT3Client(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -322,7 +322,7 @@ class MQTT3ClientTest {
         when(c8yAgent.loadCertificateByName(any(), any(), any(), any())).thenReturn(null);
 
         mqtt3Client = new MQTT3Client(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -349,7 +349,7 @@ class MQTT3ClientTest {
         when(connectorConfiguration.getProperties()).thenReturn(properties);
 
         mqtt3Client = new MQTT3Client(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -376,7 +376,7 @@ class MQTT3ClientTest {
         when(connectorConfiguration.getProperties()).thenReturn(properties);
 
         mqtt3Client = new MQTT3Client(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -396,7 +396,7 @@ class MQTT3ClientTest {
     void testSupportsWildcardInTopic() {
         // Given
         mqtt3Client = new MQTT3Client(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -431,7 +431,7 @@ class MQTT3ClientTest {
     void testIsConfigValidWithValidConfig() {
         // Given
         mqtt3Client = new MQTT3Client(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -475,7 +475,7 @@ class MQTT3ClientTest {
         when(invalidConfig.getProperties()).thenReturn(properties);
 
         mqtt3Client = new MQTT3Client(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -495,7 +495,7 @@ class MQTT3ClientTest {
     void testPublishMEAO() throws Exception {
         // Given
         mqtt3Client = new MQTT3Client(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -526,7 +526,7 @@ class MQTT3ClientTest {
     void testPublishMEAOWhenNotConnected() throws Exception {
         // Given
         mqtt3Client = new MQTT3Client(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -580,7 +580,7 @@ class MQTT3ClientTest {
     void testQosAdjustment() throws Exception {
         // Given
         mqtt3Client = new MQTT3Client(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -603,7 +603,7 @@ class MQTT3ClientTest {
     void testDisconnect() throws Exception {
         // Given
         mqtt3Client = new MQTT3Client(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -630,7 +630,7 @@ class MQTT3ClientTest {
     void testDisconnectWhenAlreadyDisconnected() throws Exception {
         // Given
         mqtt3Client = new MQTT3Client(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -652,7 +652,7 @@ class MQTT3ClientTest {
     void testClose() throws Exception {
         // Given
         mqtt3Client = new MQTT3Client(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,
@@ -690,7 +690,7 @@ class MQTT3ClientTest {
     void testGetters() {
         // Given
         mqtt3Client = new MQTT3Client(
-                configurationRegistry,
+                serviceRegistry,
                 connectorRegistry,
                 connectorConfiguration,
                 dispatcher,

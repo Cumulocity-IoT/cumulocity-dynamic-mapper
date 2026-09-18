@@ -44,10 +44,10 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.flow.JavaScriptConsole;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import dynamic.mapper.processor.model.DataPrepContext;
-import dynamic.mapper.processor.model.OutputCollector;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.OutputCollector;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.core.GraalVMContextService;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -126,9 +126,9 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
         // Register a GraalVM cancel action on the wrapper (if present) so that a
         // TimeoutException in the MQTT callback can forcibly stop JS execution via
         // Context.close(cancelIfExecuting=true) — plain thread interruption is ignored by GraalVM.
-        dynamic.mapper.processor.model.ProcessingResultWrapper<?> wrapper =
+        dynamic.mapper.processor.runtime.ProcessingResultWrapper<?> wrapper =
                 exchange.getIn().getHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER,
-                        dynamic.mapper.processor.model.ProcessingResultWrapper.class);
+                        dynamic.mapper.processor.runtime.ProcessingResultWrapper.class);
 
         // ── Early-exit: cancellation was requested before this processor was even reached.
         // This happens when the MQTT timeout fires before the Camel route reaches the
@@ -139,8 +139,26 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
             return;
         }
 
+        // ── Early-exit: the GraalVM context could not be built. AbstractEnrichmentProcessor
+        // already recorded the real cause on the context and returned, but the Camel route still
+        // reaches this processor. Continuing would dereference a null graalContext in
+        // processSmartMapping() and report a NullPointerException instead — burying the actual
+        // error, which is typically something like a system template naming a Java class that no
+        // longer exists.
+        if (context.getGraalContext() == null) {
+            if (!context.hasError()) {
+                // Defensive: never fail silently just because nobody recorded a reason.
+                context.addError(new ProcessingException(String.format(
+                        "Tenant %s - No GraalVM context available for Smart Function mapping %s",
+                        tenant, mapping.getName())));
+            }
+            log.info("{} - Skipping JS execution for mapping {}: GraalVM context setup failed earlier",
+                    tenant, mapping.getName());
+            return;
+        }
+
         org.graalvm.polyglot.Context graalCtx = context.getGraalContext();
-        dynamic.mapper.processor.model.PooledGraalContext pooledGraalCtx = context.getPooledGraalContext();
+        dynamic.mapper.processor.runtime.PooledGraalContext pooledGraalCtx = context.getPooledGraalContext();
         Runnable cancelAction = null;
         if (wrapper != null && (graalCtx != null || pooledGraalCtx != null)) {
             // Capture context identity for diagnostics
@@ -149,7 +167,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
             log.debug("{} - Registering GraalVM cancel action for context: {} ({})", tenant, contextId,
                     pooledGraalCtx != null ? "pooled" : "direct");
 
-            final dynamic.mapper.processor.model.PooledGraalContext pooledRef = pooledGraalCtx;
+            final dynamic.mapper.processor.runtime.PooledGraalContext pooledRef = pooledGraalCtx;
             final org.graalvm.polyglot.Context directRef = graalCtx;
             cancelAction = () -> {
                 log.debug("{} - GraalVM cancel action INVOKED on thread {}, killing context {}",
@@ -267,7 +285,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                   // Inject a cancellation checker object so JavaScript code can periodically check
                   // if processing has been cancelled and exit early.
                   // The ProcessingResultWrapper updates the cancellationRequested flag on timeout.
-                  dynamic.mapper.processor.model.ProcessingResultWrapper<?> wrapper =
+                  dynamic.mapper.processor.runtime.ProcessingResultWrapper<?> wrapper =
                           context.getProcessingResultWrapper();
                   if (wrapper != null) {
                       // Create a helper object that JS can call to check if it's been cancelled
@@ -288,7 +306,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                       log.debug("{} - No ProcessingResultWrapper available, cancellation helper not injected", tenant);
                   }
 
-                 dynamic.mapper.processor.model.PooledGraalContext pooledCtx = context.getPooledGraalContext();
+                 dynamic.mapper.processor.runtime.PooledGraalContext pooledCtx = context.getPooledGraalContext();
                  if (pooledCtx != null) {
                      // Fast path: shared/system code and mapping function are pre-loaded in the
                      // pooled context — no eval() calls needed per message.
@@ -364,7 +382,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                  // Last chance to abort before handing control to JavaScript.
                  // Between registering the cancel action above and reaching this line,
                  // the timeout thread may have fired and set cancellationRequested.
-                 dynamic.mapper.processor.model.ProcessingResultWrapper<?> wrapperCheck =
+                 dynamic.mapper.processor.runtime.ProcessingResultWrapper<?> wrapperCheck =
                          context.getProcessingResultWrapper();
                  if (wrapperCheck != null && wrapperCheck.getCancellationRequested().get()) {
                      log.warn("{} - Cancellation requested just before JS execute(), skipping for mapping: {}",
@@ -384,10 +402,10 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                  final java.util.concurrent.atomic.AtomicBoolean executionWindowClosed =
                          new java.util.concurrent.atomic.AtomicBoolean(false);
                  if (maxCPUTimeMS > 0) {
-                     final dynamic.mapper.processor.model.PooledGraalContext pooledCtxRef =
+                     final dynamic.mapper.processor.runtime.PooledGraalContext pooledCtxRef =
                              context.getPooledGraalContext();
                      final Context graalCtxRef = graalContext;
-                     final dynamic.mapper.processor.model.ProcessingResultWrapper<?> wrapperRef =
+                     final dynamic.mapper.processor.runtime.ProcessingResultWrapper<?> wrapperRef =
                              context.getProcessingResultWrapper();
                      cpuTimeoutFuture = JS_TIMEOUT_SCHEDULER.schedule(() -> {
                          if (!executionWindowClosed.compareAndSet(false, true)) return;

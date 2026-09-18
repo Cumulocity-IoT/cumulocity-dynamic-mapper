@@ -21,6 +21,9 @@
 
 package dynamic.mapper.model;
 
+import dynamic.mapper.model.status.ConnectorStatusEvent;
+import dynamic.mapper.model.status.MappingStatus;
+
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;

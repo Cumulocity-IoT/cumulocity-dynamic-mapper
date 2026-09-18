@@ -34,20 +34,20 @@ import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.AbstractEnrichmentProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.flow.JavaExtensionContextImpl;
 import dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.SmartFunctionContext;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.SmartFunctionContext;
 import dynamic.mapper.processor.model.DataPrepContext;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.TransformationType;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.cache.FlowStateStore;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.TransformationType;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.processor.flow.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -72,11 +72,11 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
     private final C8YAgent c8yAgent;
 
     public EnrichmentOutboundProcessor(
-            ConfigurationRegistry configurationRegistry,
+            ServiceRegistry serviceRegistry,
             MappingService mappingService,
             C8YAgent c8yAgent,
             FlowStateStore flowStateStore) {
-        super(configurationRegistry, mappingService, flowStateStore);
+        super(serviceRegistry, mappingService, flowStateStore);
         this.c8yAgent = c8yAgent;
     }
 

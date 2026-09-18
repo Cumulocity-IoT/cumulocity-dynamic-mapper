@@ -20,7 +20,7 @@
 import { ApplicationRef, Component, NgZone, OnDestroy, ViewEncapsulation } from '@angular/core';
 import { AlertService, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { ServiceConfiguration } from '../shared/configuration.model';
+import { ServiceConfiguration } from '../../shared/configuration/configuration.model';
 import { SharedService } from '../../shared';
 
 /**

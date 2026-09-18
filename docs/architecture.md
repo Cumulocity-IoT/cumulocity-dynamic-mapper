@@ -46,7 +46,7 @@ Handles received messages and maps them to Cumulocity domain objects. Supports m
 Key classes:
 - `processor/inbound/CamelDispatcherInbound.java` — Apache Camel entry point for Broker → C8Y
 - `processor/outbound/CamelDispatcherOutbound.java` — entry point for C8Y → Broker
-- `processor/model/ProcessingContext.java` — per-message processing state
+- `processor/runtime/ProcessingContext.java` — per-message processing state
 
 ### C8Y Client
 
