@@ -79,6 +79,43 @@ export interface CodeTemplateMap {
   [key: string]: CodeTemplate;
 }
 
+/** Placeholder body shown when a template's stored code is not decodable. */
+export const UNDECODABLE_TEMPLATE_CODE = '// Code Template not valid!';
+
+/**
+ * Decodes one stored template's base64 body, preserving every other field.
+ *
+ * Both consumers previously rebuilt the object field-by-field, which silently dropped
+ * `direction` and hard-coded `defaultTemplate: false`. Because the editor PUTs the decoded object
+ * straight back, saving a default template cleared its own `defaultTemplate` flag — and the
+ * backend reasons about that flag when deciding whether a newly shipped template of the same type
+ * still needs installing. Spreading the source keeps new fields working by default too.
+ */
+export function decodeCodeTemplate(
+  key: string,
+  template: CodeTemplate,
+  decode: (code: string) => string
+): CodeTemplate {
+  try {
+    return { ...template, id: key, code: decode(template.code) };
+  } catch (error) {
+    console.error(`Failed to decode code template [${key}]:`, error);
+    return { ...template, id: key, code: UNDECODABLE_TEMPLATE_CODE };
+  }
+}
+
+/** Decodes a whole {@link CodeTemplateMap} into a Map keyed by template id. */
+export function decodeCodeTemplates(
+  codeTemplates: CodeTemplateMap,
+  decode: (code: string) => string
+): Map<string, CodeTemplate> {
+  const decoded = new Map<string, CodeTemplate>();
+  Object.entries(codeTemplates ?? {}).forEach(([key, template]) => {
+    decoded.set(key, decodeCodeTemplate(key, template, decode));
+  });
+  return decoded;
+}
+
 const TEMPLATE_TYPE_LOOKUP = new Map<string, TemplateType>([
   [`${Direction.INBOUND}_${TransformationType.SMART_FUNCTION}`, TemplateType.INBOUND_SMART_FUNCTION],
   [`${Direction.OUTBOUND}_${TransformationType.SMART_FUNCTION}`, TemplateType.OUTBOUND_SMART_FUNCTION],

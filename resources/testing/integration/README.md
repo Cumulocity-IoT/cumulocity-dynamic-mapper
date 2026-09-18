@@ -157,9 +157,24 @@ dm_create_mapping "$MAPPING_JSON"
 MAPPING_ID="$_DM_LAST_MAPPING_ID"
 dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"  # <-- Required!
 dm_activate_mapping "$MAPPING_ID"
+dm_assert_mqtt_topics_active "$MAPPING_ID"         # <-- Verifies THIS topic is subscribed
 ```
 
 Without explicit deployment via `dm_deploy_mapping_to_mqtt_connector()`, the inbound mapping will not receive messages.
+
+**Always pass the mapping id to `dm_assert_mqtt_topics_active`.** It then resolves the
+mapping's `mappingTopic` and requires *that* topic to appear in
+`GET /monitoring/subscription/{connector}` with a count > 0. Called without an id it
+only checks that *some* topic is subscribed — which any unrelated active mapping in the
+tenant satisfies, so a test could publish into a topic the connector had never
+subscribed and fail 20s later on its result assertion instead.
+
+`dm_mqtt_publish` re-checks that the connector is `CONNECTED` immediately before
+publishing (polling up to 15s for a reconnect) and publishes at **QoS 1** by default, so
+the broker acknowledges the message. A connector that was connected at activation time
+can still have dropped by the time the payload goes out — the broker then silently
+discards it. Set `_DM_MQTT_SKIP_CONNECTOR_CHECK=true` for a publish that must not abort
+the run.
 
 ### MQTT Broker Configuration
 
@@ -465,6 +480,10 @@ array) and drives the interactive menu. The categories below mirror it:
 ### "Measurement count is 0"
 - Verify mapping is deployed: `c8y api --url "service/dynamic-mapper/mapping-stats?mappingId=${MAPPING_ID}" | jq '.messagedDelivered'`
 - Check connector status: `dm_verify_mqtt_connector_ready`
+- Confirm the topic is really subscribed: `dm_assert_mqtt_topics_active "$MAPPING_ID"` —
+  and check the microservice log for a `Connection state changed` line around the
+  publish. A connector that reconnects during the test loses its subscriptions, and the
+  published message is dropped by the broker.
 - Enable debug on mapping (`debug: true`) and check microservice logs
 
 ### "MQTT connector not CONNECTED"

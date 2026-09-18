@@ -80,7 +80,7 @@ dm_create_mapping "$MAPPING_JSON"
 MAPPING_ID="$_DM_LAST_MAPPING_ID"
 dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
-dm_assert_mqtt_topics_active
+dm_assert_mqtt_topics_active "$MAPPING_ID"
 
 dm_step "Publishing MQTT message ..."
 dm_mqtt_publish "dmtest/event/${EXT_ID}" '{"msg_type":"c8y_TestEvent","txt":"hello JSONata","td":"2025-01-01T00:00:00Z"}'

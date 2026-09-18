@@ -90,6 +90,9 @@ dm_create_mapping "$MAPPING_JSON"
 MAPPING_ID="$_DM_LAST_MAPPING_ID"
 dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
+# Verify the connector really subscribed THIS mapping's topic before publishing —
+# without the mapping id this only checks that some topic is subscribed.
+dm_assert_mqtt_topics_active "$MAPPING_ID"
 
 dm_step 3 "Recording baseline metrics"
 TEST_START=$(dm_now -10)

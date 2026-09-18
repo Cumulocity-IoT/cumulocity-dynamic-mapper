@@ -47,7 +47,7 @@ import { MappingService } from '../core/mapping.service';
 import { SharedService } from '../../shared';
 import { ExtensionService } from '../../extension';
 import { AIAgentService, resolveRequiredAgentName } from '../core/ai-agent.service';
-import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, toTemplateType } from '../../configuration/shared/configuration.model';
+import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, decodeCodeTemplates, toTemplateType } from '../../configuration/shared/configuration.model';
 import { createCompletionProviderFlowFunction, EditorMode } from '../../shared/mapping/stepper.model';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { StepperViewModel, StepperViewModelFactory } from '../stepper/stepper-view.model';
@@ -313,35 +313,9 @@ export class MappingStepperService {
     }
 
     async loadCodeTemplates(): Promise<Map<string, CodeTemplate>> {
-        const codeTemplates = await this.sharedService.getCodeTemplates();
-        const codeTemplatesDecoded = new Map<string, CodeTemplate>();
-
-        Object.entries(codeTemplates).forEach(([key, template]) => {
-            try {
-                const decodedCode = base64ToString(template.code);
-                codeTemplatesDecoded.set(key, {
-                    id: key,
-                    name: template.name,
-                    templateType: template.templateType,
-                    code: decodedCode,
-                    internal: template.internal,
-                    readonly: template.readonly,
-                    defaultTemplate: false
-                });
-            } catch (error) {
-                codeTemplatesDecoded.set(key, {
-                    id: key,
-                    name: template.name,
-                    templateType: template.templateType,
-                    code: "// Code Template not valid!",
-                    internal: template.internal,
-                    readonly: template.readonly,
-                    defaultTemplate: false
-                });
-            }
-        });
-
-        return codeTemplatesDecoded;
+        // Shared with the Code Templates screen so both decode identically — this used to be a
+        // second hand-rolled copy that dropped `direction` and forced `defaultTemplate: false`.
+        return decodeCodeTemplates(await this.sharedService.getCodeTemplates(), base64ToString);
     }
 
     async createCodeTemplate(name: string, description: string, code: string, direction: Direction, transformationType: TransformationType): Promise<any> {

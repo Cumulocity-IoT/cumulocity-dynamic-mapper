@@ -168,7 +168,7 @@ dm_success "Mapping created: $MAPPING_ID"
 dm_step 5 "Deploying and activating mapping"
 dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
-dm_assert_mqtt_topics_active
+dm_assert_mqtt_topics_active "$MAPPING_ID"
 dm_success "Mapping deployed and activated"
 
 dm_step 6 "Publishing voltage sensor reading via MQTT"

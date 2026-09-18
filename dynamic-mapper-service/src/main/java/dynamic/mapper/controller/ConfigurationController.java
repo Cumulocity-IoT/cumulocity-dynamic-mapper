@@ -626,14 +626,21 @@ public class ConfigurationController {
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
             }
         }
-        CodeTemplate result;
-        try {
-            result = codeTemplates.get(id);
-            if (result.internal) {
-                throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE,
-                        "Deletion of internal templates not allowed");
-            }
+        // Checked before the try: both of these are documented outcomes, and the blanket
+        // catch(Exception) below would otherwise turn them into a 500 — the NPE on a missing
+        // template made the 404 branch at the end of this method unreachable, and the 406 was
+        // swallowed because ResponseStatusException is itself a RuntimeException.
+        CodeTemplate result = codeTemplates.get(id);
+        if (result == null) {
+            log.warn("{} - Code template with ID [{}] not found", tenant, id);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        if (result.internal) {
+            throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE,
+                    "Deletion of internal templates not allowed");
+        }
 
+        try {
             result = codeTemplates.remove(id);
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
 
@@ -651,14 +658,7 @@ public class ConfigurationController {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
         serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-        if (result == null) {
-            // Template not found - return 404 Not Found
-            log.warn("{} - Code template with ID [{}] not found", tenant, id);
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        } else {
-            // Template exists - return it with 200 OK
-            return new ResponseEntity<>(result, HttpStatus.OK);
-        }
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @Operation(summary = "Get all code templates", description = "Returns all code templates for the current tenant including both system and custom templates.")
@@ -677,12 +677,18 @@ public class ConfigurationController {
     }
 
     @Operation(summary = "Update code template", description = """
-            Updates the code template for the given ID with new JavaScript code.
+            Updates the code template for the given ID with new JavaScript code. Creates it when no
+            template is stored under that ID.
+
+            **Note:** Read-only templates (e.g. `SYSTEM`) cannot be modified. `SYSTEM` is
+            framework-owned and re-loaded from the shipped version on every startup.
 
             **Security:** Requires `ROLE_DYNAMIC_MAPPER_ADMIN`
             """)
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Code template updated successfully", content = @Content),
+            @ApiResponse(responseCode = "400", description = "Path ID and body ID do not match", content = @Content),
+            @ApiResponse(responseCode = "406", description = "Modification of read-only templates is not allowed", content = @Content),
             @ApiResponse(responseCode = "403", description = "Insufficient permissions", content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
@@ -699,7 +705,19 @@ public class ConfigurationController {
         String tenant = contextService.getContext().getTenant();
         try {
             ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-            Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
+            Map<String, CodeTemplate> codeTemplates = getCodeTemplates(tenant, serviceConfiguration);
+
+            // A read-only template is framework-owned (SYSTEM holds the Java bindings the runtime
+            // needs). The UI disables its save button, but that was the ONLY thing stopping an
+            // overwrite — a direct API call could replace SYSTEM and break every Smart Function
+            // mapping in the tenant. SYSTEM is additionally re-loaded from the classpath on every
+            // startup, so such an edit would be silently reverted anyway; refusing it is clearer.
+            CodeTemplate existing = codeTemplates.get(id);
+            if (existing != null && existing.readonly) {
+                throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE,
+                        String.format("Template '%s' is read-only and cannot be modified", id));
+            }
+
             serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate);
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
@@ -715,6 +733,10 @@ public class ConfigurationController {
             }
 
             log.debug("{} - Updated code template", tenant);
+        } catch (ResponseStatusException ex) {
+            // A deliberate status (e.g. the read-only refusal above) must not be flattened to 500.
+            log.warn("{} - Error updating code template [{}]: {}", tenant, id, ex.getReason());
+            throw ex;
         } catch (Exception ex) {
             log.error("{} - Error updating code template [{}]", tenant, id, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());

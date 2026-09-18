@@ -31,7 +31,7 @@ import { BehaviorSubject } from 'rxjs';
 import { base64ToString, stringToBase64 } from '../../shared/mapping/util';
 import { ConfirmationModalComponent, Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
 import { SharedService } from '../../shared/service/shared.service';
-import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
+import { CodeTemplate, CodeTemplateMap, TemplateType, decodeCodeTemplates } from '../shared/configuration.model';
 import { createCompletionProviderFlowFunction } from '../../shared/mapping/stepper.model';
 
 interface CodeTemplateEntry {
@@ -55,7 +55,7 @@ interface CodeTemplateEntry {
 export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild(EditorComponent, { static: false }) codeEditor!: EditorComponent;
 
-  codeTemplateDecoded!: CodeTemplate;
+  codeTemplateDecoded?: CodeTemplate;
   codeTemplatesDecoded: Map<string, CodeTemplate> = new Map<string, CodeTemplate>();
   codeTemplates!: CodeTemplateMap;
   template!: string;
@@ -186,33 +186,9 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private decodeCodeTemplates(): void {
-    Object.entries(this.codeTemplates).forEach(([key, template]) => {
-      try {
-        const decodedCode = base64ToString(template.code);
-        this.codeTemplatesDecoded.set(key, {
-          id: key,
-          name: template.name,
-          description: template.description,
-          templateType: template.templateType,
-          code: decodedCode,
-          internal: template.internal,
-          readonly: template.readonly,
-          defaultTemplate: false
-        });
-      } catch (error) {
-        console.error(`Failed to decode code template [${key}]:`, error);
-        this.codeTemplatesDecoded.set(key, {
-          id: key,
-          name: template.name,
-          description: template.description ?? '',
-          templateType: template.templateType,
-          code: '// Code Template not valid!',
-          internal: template.internal,
-          readonly: template.readonly,
-          defaultTemplate: false
-        });
-      }
-    });
+    // Rebuilt each time: a template deleted since the last refresh must not linger here and stay
+    // selectable.
+    this.codeTemplatesDecoded = decodeCodeTemplates(this.codeTemplates, base64ToString);
   }
 
   async onInitSystemCodeTemplate() {
@@ -336,12 +312,14 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onValueCodeChange(value: string) {
-    // console.log("code changed", value);
+    if (!this.codeTemplateDecoded) return;
     this.codeTemplateDecoded.code = value;
   }
 
   onSelectCodeTemplate(): void {
-    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template)!;
+    // May legitimately miss: the selected key can have been deleted, or the tab's default set can
+    // exclude it. Everything downstream already guards on a falsy codeTemplateDecoded.
+    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template);
     this.editorOptions = { ...this.editorOptions, readOnly: !!this.codeTemplateDecoded?.readonly };
   }
 

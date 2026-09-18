@@ -224,7 +224,7 @@ dm_success "Mapping created: $MAPPING_ID"
 dm_step 3 "Deploying and activating mapping"
 dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
-dm_assert_mqtt_topics_active
+dm_assert_mqtt_topics_active "$MAPPING_ID"
 if [ "${_DM_MQTT_SVC_MODE:-false}" = "true" ]; then
     # In c8y-mqtt-service mode each simulated device needs its own X.509 cert so
     # the MQTT Service exposes the correct client ID to context.getClientId().

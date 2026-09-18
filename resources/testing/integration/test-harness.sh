@@ -21,6 +21,7 @@
 #   dm_validate_tools                   — verify all required tools are installed
 #   dm_test_setup_and_validate          — complete setup validation (session, tools, service, mqtt)
 #   dm_verify_mqtt_connector_ready      — check MQTT connector is CONNECTED
+#   dm_assert_mqtt_topics_active [mapping_id] — the mapping's own topic is subscribed
 #   dm_get_support_esm                  — fetch supportESM from service configuration
 #   dm_wrap_onmessage_code              — append export { onMessage } only when supportESM=true
 #
@@ -81,7 +82,7 @@
 #   dm_assert_connector_status      <label> <connectorIdentifier> <expected_status>
 #
 # MQTT Publish/Subscribe
-#   dm_mqtt_publish                 <topic> <payload> [qos=0]
+#   dm_mqtt_publish                 <topic> <payload> [qos=1]
 #   dm_mqtt_subscribe_one           <topic> [timeout_secs=10]
 #   dm_mqtt_probe_subscription      <topic> [timeout_secs=10]
 #
@@ -1053,10 +1054,17 @@ dm_deploy_mapping_to_mqtt_connector() {  # <mapping_id>
     dm_deploy_mapping_to_connector "$1" "${_DM_MQTT_CONNECTOR_ID}"
 }
 
-# Assert that connector runtime has at least one active subscribed topic.
-# Call this after activating mapping and before publishing test payload.
-dm_assert_mqtt_topics_active() {   # [connector_identifier]
-    local _cid="${1:-${_DM_MQTT_CONNECTOR_ID:-}}"
+# Assert that the connector has the topic this test needs actually subscribed.
+# Call this after activating the mapping and before publishing the test payload.
+#
+# Pass the mapping id: the mapping's own mappingTopic must then appear in the
+# connector's subscription map with a count > 0. Without it the check degrades to
+# "at least one topic subscribed", which any unrelated active mapping in the tenant
+# satisfies — that weaker check let a test publish into a topic the connector had
+# never subscribed and fail much later with a puzzling "no measurement found".
+dm_assert_mqtt_topics_active() {   # [mapping_id] [connector_identifier]
+    local _mapping_ref="${1:-}"
+    local _cid="${2:-${_DM_MQTT_CONNECTOR_ID:-}}"
     [ -z "${_cid:-}" ] && dm_error "Connector ID not set for active topic assertion"
 
     local _connected
@@ -1075,34 +1083,68 @@ dm_assert_mqtt_topics_active() {   # [connector_identifier]
         return 0
     fi
 
-        # Runtime subscription updates are asynchronous. Poll briefly before failing.
-        local _topic_count=0 _sub_map='{}' _attempt
-        for _attempt in 1 2 3 4 5 6 7 8; do
-                _sub_map=$(dm_api_must GET "/monitoring/subscription/${_cid}")
-                _topic_count=$(printf '%s' "$_sub_map" | jq -r '
-                        if type == "object" then
-                            (to_entries | map(select((.value | tonumber? // 0) > 0)) | length)
-                        else
-                            0
-                        end' 2>/dev/null || printf '0')
-
-                if [ "${_topic_count:-0}" -gt 0 ]; then
-                        break
-                fi
-                sleep 1
-        done
-
-        if [ "${_topic_count:-0}" -lt 1 ]; then
-                local _deploy _mapping_stats
-                _deploy=$(dm_api_must GET "/deployment/defined" | jq -c . 2>/dev/null || printf '{}')
-                _mapping_stats=$(dm_api GET "/monitoring/status/mapping/statistic" | jq -c . 2>/dev/null || printf '[]')
-                dm_warn "Connector $_cid has 0 active inbound subscriptions after activation. subscriptionMap=${_sub_map}"
-                dm_warn "Deployment map snapshot: ${_deploy}"
-                dm_warn "Mapping statistics snapshot: ${_mapping_stats}"
-                dm_error "No active MQTT topic subscriptions detected for connector $_cid after mapping activation"
+    # Resolve the mapping's own topic, so the assertion is about this test's topic
+    # and not about whatever else happens to be active in the tenant.
+    local _expected_topic=""
+    if [ -n "$_mapping_ref" ]; then
+        _expected_topic=$(dm_api GET "/mapping/${_mapping_ref}" 2>/dev/null \
+            | jq -r '.mappingTopic // empty' 2>/dev/null || printf '')
+        if [ -z "$_expected_topic" ]; then
+            dm_warn "Could not resolve mappingTopic for mapping ${_mapping_ref} — falling back to the any-topic check"
         fi
+    fi
 
+    # Runtime subscription updates are asynchronous. Poll briefly before failing.
+    local _topic_count=0 _sub_map='{}' _attempt _found=false
+    for _attempt in 1 2 3 4 5 6 7 8; do
+        _sub_map=$(dm_api_must GET "/monitoring/subscription/${_cid}")
+        _topic_count=$(printf '%s' "$_sub_map" | jq -r '
+            if type == "object" then
+                (to_entries | map(select((.value | tonumber? // 0) > 0)) | length)
+            else
+                0
+            end' 2>/dev/null || printf '0')
+
+        if [ -n "$_expected_topic" ]; then
+            _found=$(printf '%s' "$_sub_map" | jq -r --arg t "$_expected_topic" '
+                if type == "object" then (((.[$t] // 0) | tonumber? // 0) > 0)
+                else false end' 2>/dev/null || printf 'false')
+            [ "${_found:-false}" = "true" ] && break
+        elif [ "${_topic_count:-0}" -gt 0 ]; then
+            break
+        fi
+        sleep 1
+    done
+
+    if [ -n "$_expected_topic" ] && [ "${_found:-false}" != "true" ]; then
+        _dm_dump_subscription_diagnostics "$_cid" "$_sub_map" \
+            "topic '${_expected_topic}' is not subscribed after activation"
+        dm_error "Connector $_cid has not subscribed the mapping topic '${_expected_topic}' after activation (mapping ${_mapping_ref})"
+    fi
+
+    if [ -z "$_expected_topic" ] && [ "${_topic_count:-0}" -lt 1 ]; then
+        _dm_dump_subscription_diagnostics "$_cid" "$_sub_map" \
+            "0 active inbound subscriptions after activation"
+        dm_error "No active MQTT topic subscriptions detected for connector $_cid after mapping activation"
+    fi
+
+    if [ -n "$_expected_topic" ]; then
+        dm_info "Connector $_cid subscribed topic '${_expected_topic}' (active inbound topics: $_topic_count)"
+    else
         dm_info "Connector $_cid active inbound topic subscriptions: $_topic_count"
+    fi
+}
+
+# Print the deployment / subscription / statistics snapshots that explain why a
+# subscription assertion failed.
+_dm_dump_subscription_diagnostics() {   # <connector_identifier> <subscription_map_json> <reason>
+    local _cid=$1 _sub_map=$2 _reason=$3
+    local _deploy _mapping_stats
+    _deploy=$(dm_api_must GET "/deployment/defined" | jq -c . 2>/dev/null || printf '{}')
+    _mapping_stats=$(dm_api GET "/monitoring/status/mapping/statistic" | jq -c . 2>/dev/null || printf '[]')
+    dm_warn "Connector $_cid: ${_reason}. subscriptionMap=${_sub_map}"
+    dm_warn "Deployment map snapshot: ${_deploy}"
+    dm_warn "Mapping statistics snapshot: ${_mapping_stats}"
 }
 
 # ── Connector helpers ──────────────────────────────────────────────────────────
@@ -1634,10 +1676,41 @@ _dm_mqtt_guard_qos() {  # <qos>
     return 0
 }
 
-dm_mqtt_publish() {     # <topic> <payload> [qos=0]
-    local _topic=$1 _payload=$2 _qos=${3:-0}
+# Require the connector to be CONNECTED right now, polling briefly.
+#
+# A connector that was CONNECTED when the mapping was activated can have dropped
+# again by the time the payload goes out (public brokers disconnect clients, and a
+# duplicate clientId takes the session over). The broker then silently discards the
+# message, and the test fails 20s later on its result assertion with nothing in the
+# output pointing at the connection. Fail here instead, where the cause is visible.
+#
+# Set _DM_MQTT_SKIP_CONNECTOR_CHECK=true for publishes that must not abort the run
+# (e.g. the readiness probe).
+_dm_mqtt_require_connector_connected() {   # [timeout_secs=15] [connector_identifier]
+    local _timeout="${1:-15}" _cid="${2:-${_DM_MQTT_CONNECTOR_ID:-}}"
+    [ "${_DM_MQTT_SKIP_CONNECTOR_CHECK:-false}" = "true" ] && return 0
+    [ -z "${_cid:-}" ] && return 0   # no connector in play (e.g. broker-only helpers)
+
+    local _elapsed=0 _status
+    while [ "$_elapsed" -lt "$_timeout" ]; do
+        _status=$(dm_get_connector_status "$_cid" | jq -r '.status // "UNKNOWN"' 2>/dev/null || printf 'UNKNOWN')
+        [ "$_status" = "CONNECTED" ] && return 0
+        [ "$_elapsed" -eq 0 ] && dm_warn "Connector $_cid is $_status just before publishing — waiting up to ${_timeout}s for it to reconnect"
+        sleep 2
+        _elapsed=$((_elapsed + 2))
+    done
+    dm_error "Connector $_cid is not CONNECTED (status=${_status:-UNKNOWN}) at publish time — the broker would drop the message"
+}
+
+# QoS 1 by default: mosquitto_pub then waits for the broker's PUBACK, so a publish
+# that never reached the broker fails here rather than looking like a mapping bug.
+# (It does not make the broker queue the message for a disconnected connector —
+# that is what _dm_mqtt_require_connector_connected above is for.)
+dm_mqtt_publish() {     # <topic> <payload> [qos=1]
+    local _topic=$1 _payload=$2 _qos=${3:-1}
     local _host="${MQTT_HOST:-broker.hivemq.com}" _port="${MQTT_PORT:-1883}"
     _dm_mqtt_guard_qos "$_qos"
+    _dm_mqtt_require_connector_connected
     local _args=(-h "$_host" -p "$_port" -t "$_topic" -m "$_payload" -q "$_qos")
     _dm_mqtt_append_auth_args _args ""
     _dm_mqtt_append_tls_args _args
@@ -1700,7 +1773,8 @@ dm_mqtt_probe_subscription() {  # <topic> [timeout_secs=10]
     _probe_pid=$!
     sleep 1
 
-    dm_mqtt_publish "$_topic" '{"_dmProbe":"ready"}' 0 >/dev/null 2>&1 || true
+    _DM_MQTT_SKIP_CONNECTOR_CHECK=true \
+        dm_mqtt_publish "$_topic" '{"_dmProbe":"ready"}' 0 >/dev/null 2>&1 || true
 
     set +e
     wait "$_probe_pid"

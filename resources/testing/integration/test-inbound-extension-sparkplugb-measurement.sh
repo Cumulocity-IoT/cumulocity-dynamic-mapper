@@ -80,7 +80,7 @@ dm_success "Sparkplug B mapping created: $MAPPING_ID"
 dm_step 3 "Deploying and activating mapping"
 dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
-dm_assert_mqtt_topics_active
+dm_assert_mqtt_topics_active "$MAPPING_ID"
 dm_success "Mapping deployed and activated"
 
 dm_step 4 "Note: Binary Sparkplug B protobuf payload publishing"

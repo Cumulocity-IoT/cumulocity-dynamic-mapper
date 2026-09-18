@@ -79,7 +79,7 @@ dm_create_mapping "$MAPPING_JSON"
 MAPPING_ID="$_DM_LAST_MAPPING_ID"
 dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
-dm_assert_mqtt_topics_active
+dm_assert_mqtt_topics_active "$MAPPING_ID"
 
 dm_step "Publishing MQTT message to dmtest/json/${EXT_ID} ..."
 dm_mqtt_publish "dmtest/json/${EXT_ID}" '{"temperature":42.5}'

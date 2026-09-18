@@ -81,7 +81,7 @@ dm_create_mapping "$MAPPING_JSON"
 MAPPING_ID="$_DM_LAST_MAPPING_ID"
 dm_deploy_mapping_to_mqtt_connector "$MAPPING_ID"
 dm_activate_mapping "$MAPPING_ID"
-dm_assert_mqtt_topics_active
+dm_assert_mqtt_topics_active "$MAPPING_ID"
 
 # Publish the raw CSV string (not JSON)
 CSV_PAYLOAD='165, 14.5, "2022-08-06T00:14:50.000+02:00","c8y_FuelMeasurement"'
