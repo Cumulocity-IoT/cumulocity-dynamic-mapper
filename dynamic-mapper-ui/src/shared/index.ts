@@ -30,6 +30,7 @@ export * from './connector-configuration/connector.model';
 export * from './connector-details/connector-details.component';
 export * from './connector-details/connector-log.model';
 export * from './connector-details/connector-status-history.component';
+export * from './configuration/configuration.model';
 export * from './mapping/mapping.model';
 export * from './mapping/mapping.constants';
 export * from './misc/admin.guard';

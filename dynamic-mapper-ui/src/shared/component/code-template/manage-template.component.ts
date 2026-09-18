@@ -27,7 +27,7 @@ import {
 import { CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { CapitalizeCasePipe } from '../../../shared';
-import { CodeTemplate } from './../../../configuration';
+import { CodeTemplate } from '../../configuration/configuration.model';
 
 @Component({
   selector: 'd11r-manage-template',

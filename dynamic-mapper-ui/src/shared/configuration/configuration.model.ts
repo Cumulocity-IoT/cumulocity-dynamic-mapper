@@ -1,4 +1,4 @@
-import { Direction, TransformationType } from "../../shared";
+import { Direction, TransformationType } from '../mapping/mapping.model';
 
 /*
  * Copyright (c) 2025 Cumulocity GmbH

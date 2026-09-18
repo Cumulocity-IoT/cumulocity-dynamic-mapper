@@ -65,7 +65,7 @@ import {
   updateTemplatesInEditors,
   validateProtectedFields
 } from '../../shared/mapping/util';
-import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, tryToTemplateType } from '../../configuration/shared/configuration.model';
+import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, tryToTemplateType } from '../../shared/configuration/configuration.model';
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
 import { AIPromptComponent } from '../prompt/ai-prompt.component';
 import { gettext } from '@c8y/ngx-components/gettext';

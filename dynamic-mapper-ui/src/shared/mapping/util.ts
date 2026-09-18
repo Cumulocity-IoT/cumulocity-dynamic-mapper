@@ -29,7 +29,7 @@ import {
   TransformationType
 } from '../../shared';
 import { ValidationFormlyError } from './mapping.model';
-import { MappingTokens, PROTECTED_TOKENS } from '../../mapping/core/processor/processor.model';
+import { MappingTokens, PROTECTED_TOKENS } from './processor/processor.model';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 

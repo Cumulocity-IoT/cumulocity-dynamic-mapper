@@ -74,7 +74,7 @@ import { IIdentified } from '@c8y/client';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, finalize, Subject, take, takeUntil } from 'rxjs';
-import { CodeTemplate } from '../../configuration/shared/configuration.model';
+import { CodeTemplate } from '../../shared/configuration/configuration.model';
 import { MappingService } from '../core/mapping.service';
 import { MappingBulkOperationsService } from '../core/mapping-bulk-operations.service';
 import { ExplorerMappingHandoffService } from '../core/explorer-mapping-handoff.service';
@@ -93,7 +93,7 @@ import {
 } from '../../shared/mapping/mapping.model';
 import { EditorMode } from '../../shared/mapping/stepper.model';
 import { CONTEXT_DATA_KEY_NAME, isCodeOrExtensionTransformation } from '../../shared/mapping/util';
-import { MappingTokens } from '../core/processor/processor.constants';
+import { MappingTokens } from '../../shared/mapping/processor/processor.constants';
 import { CommonModule } from '@angular/common';
 import { MappingStepperComponent } from '../stepper/mapping-stepper.component';
 import {

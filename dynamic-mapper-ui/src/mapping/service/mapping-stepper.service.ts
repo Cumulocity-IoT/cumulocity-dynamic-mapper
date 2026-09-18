@@ -42,12 +42,12 @@ import {
     createCustomUuid,
     getExternalTemplate,
 } from '../../shared';
-import { PROTECTED_TOKENS } from '../core/processor/processor.model';
+import { PROTECTED_TOKENS } from '../../shared/mapping/processor/processor.model';
 import { MappingService } from '../core/mapping.service';
 import { SharedService } from '../../shared';
 import { ExtensionService } from '../../extension';
 import { AIAgentService, resolveRequiredAgentName } from '../core/ai-agent.service';
-import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, decodeCodeTemplates, toTemplateType } from '../../configuration/shared/configuration.model';
+import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, decodeCodeTemplates, toTemplateType } from '../../shared/configuration/configuration.model';
 import { createCompletionProviderFlowFunction, EditorMode } from '../../shared/mapping/stepper.model';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { StepperViewModel, StepperViewModelFactory } from '../stepper/stepper-view.model';

@@ -19,7 +19,7 @@
  */
 import { Component } from '@angular/core';
 import { CellRendererContext, CommonModule } from '@c8y/ngx-components';
-import { MAPPING_STATUS_UNSPECIFIED, MAPPING_STATUS_UNSPECIFIED_LABEL } from '../../shared';
+import { MAPPING_STATUS_UNSPECIFIED, MAPPING_STATUS_UNSPECIFIED_LABEL } from '../../mapping/mapping.model';
 
 @Component({
   selector: 'd11r-mapping-renderer-name',

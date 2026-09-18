@@ -23,7 +23,7 @@ import { FetchClient } from '@c8y/client';
 import { HttpStatusCode } from '@angular/common/http';
 import { TestingService } from './testing.service';
 import { BASE_URL, PATH_TESTING_ENDPOINT, SharedService, Operation, Direction, MappingType, TransformationType, Mapping } from '../../shared';
-import { TestContext } from './processor/processor.model';
+import { TestContext } from '../../shared/mapping/processor/processor.model';
 
 // ---------------------------------------------------------------------------
 // Helpers

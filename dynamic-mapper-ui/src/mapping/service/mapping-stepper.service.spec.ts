@@ -45,7 +45,7 @@ import {
   StepperConfiguration,
   TransformationType
 } from '../../shared';
-import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType } from '../../configuration/shared/configuration.model';
+import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType } from '../../shared/configuration/configuration.model';
 import { captureMappingContentSnapshot } from '../../shared/mapping/util';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { DeploymentMapEntry } from '../../shared';

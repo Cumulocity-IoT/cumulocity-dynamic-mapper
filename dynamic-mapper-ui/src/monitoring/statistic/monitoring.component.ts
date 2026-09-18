@@ -39,9 +39,9 @@ import {
   SharedService
 } from '../../shared';
 import { MonitoringService } from '../shared/monitoring.service';
-import { NumberRendererComponent } from '../renderer/number.renderer.component';
+import { NumberRendererComponent } from '../../shared/component/renderer/number.renderer.component';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { NameRendererComponent } from '../../mapping/renderer/name.renderer.component';
+import { NameRendererComponent } from '../../shared/component/renderer/name.renderer.component';
 import { ActivatedRoute, Router } from '@angular/router';
 import { gettext } from '@c8y/ngx-components/gettext';
 

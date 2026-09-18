@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 
-import { MappingTokens } from './../../mapping/core/processor/processor.model';
+import { MappingTokens } from './processor/processor.model';
 import { EditorMode } from './stepper.model';
 import { ConnectorConfiguration } from '../connector-configuration/connector.model';
 

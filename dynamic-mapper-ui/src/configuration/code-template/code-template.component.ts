@@ -31,7 +31,7 @@ import { BehaviorSubject } from 'rxjs';
 import { base64ToString, stringToBase64 } from '../../shared/mapping/util';
 import { ConfirmationModalComponent, Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
 import { SharedService } from '../../shared/service/shared.service';
-import { CodeTemplate, CodeTemplateMap, TemplateType, decodeCodeTemplates } from '../shared/configuration.model';
+import { CodeTemplate, CodeTemplateMap, TemplateType, decodeCodeTemplates } from '../../shared/configuration/configuration.model';
 import { createCompletionProviderFlowFunction } from '../../shared/mapping/stepper.model';
 
 interface CodeTemplateEntry {

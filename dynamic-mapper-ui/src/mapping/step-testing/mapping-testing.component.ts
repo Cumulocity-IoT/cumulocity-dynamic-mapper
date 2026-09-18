@@ -44,7 +44,7 @@ import {
   isSubstitutionsAsCode,
   ALERT_INFO_TIMEOUT
 } from '../../shared/';
-import { DynamicMapperRequest, TestResult, TestContext, MappingTokens } from '../core/processor/processor.model';
+import { DynamicMapperRequest, TestResult, TestContext, MappingTokens } from '../../shared/mapping/processor/processor.model';
 import { TestingService } from '../core/testing.service';
 import { patchC8YTemplateForTesting, sortObjectKeys } from '../../shared/mapping/util';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
