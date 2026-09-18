@@ -279,6 +279,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
             return matchesDirections && matchesFilter;
           })),
           map(configs => configs.map(config => ({ ...config, id: config.identifier }))),
+          // Default row order; the columns deliberately carry no sortOrder (see GRID_COLUMNS).
+          map(configs => [...configs].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))),
         )
       )
     );

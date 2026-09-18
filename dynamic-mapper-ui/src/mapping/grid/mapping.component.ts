@@ -207,7 +207,7 @@ export class MappingComponent implements OnInit, OnDestroy {
         .getMappingsObservable(this.stepperConfiguration.direction)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
-          next: mappings => this.mappingsEnriched$.next(mappings),
+          next: mappings => this.mappingsEnriched$.next(this.sortByName(mappings)),
           error: error => console.error('Unexpected error in mappings stream:', error)
         });
 
@@ -265,6 +265,13 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.isLoading = false;
     }
 
+  }
+
+  /** Default row order for the grid; see the 'name' column in {@link getColumnsMappings}. */
+  private sortByName(mappings: MappingEnriched[]): MappingEnriched[] {
+    return [...mappings].sort((a, b) =>
+      (a.mapping?.name ?? '').localeCompare(b.mapping?.name ?? '')
+    );
   }
 
   private isDeprecatedMapping(item: any): boolean {
@@ -398,7 +405,11 @@ export class MappingComponent implements OnInit, OnDestroy {
         sortable: true,
         dataType: ColumnDataType.TextShort,
         cellRendererComponent: MappingIdCellRendererComponent,
-        sortOrder: 'asc',
+        // No sortOrder here: the grid sorts by *every* column that carries one, in column
+        // order, and clicking a header only changes that one column. A pre-set 'asc' on the
+        // first column therefore stays the primary key forever and makes sorting by API or
+        // Activate look broken. The default alphabetical order is produced by sorting the
+        // rows below instead.
         visible: true,
         gridTrackSize: '10%'
       },
