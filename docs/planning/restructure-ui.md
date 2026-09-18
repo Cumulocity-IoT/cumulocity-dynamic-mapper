@@ -163,9 +163,10 @@ refactored.
 3. ~~**Normalise naming**~~ — done, see §3. `mapping-tree/` was *not* moved; see the correction there.
 4. ~~**Phase 6 of the dedup plan.**~~ Done — see
    [IMPLEMENTATION-PLAN-COMMIT-MAPPING.md](IMPLEMENTATION-PLAN-COMMIT-MAPPING.md). One
-   `MappingStepperService.commitMapping()` now owns the save sequence for both editors; the one
-   behavioural change is that an UPDATE which touched no connectors no longer rewrites the
-   deployment. That plan's §4 manual regression matrix is **still not executed**.
+   `MappingStepperService.commitMapping()` now owns the save sequence for both editors, with no
+   behavioural change: an earlier note here claimed one, based on a case
+   (an UPDATE committed through the stepper) that turns out to be unreachable — the stepper only
+   ever handles CREATE/COPY. The manual regression matrix is **still not executed**.
 5. ~~**Coverage.**~~ Targeted pass done — see §4.
 
 ## 7. Follow-ups found while fixing the tests ✅ Done

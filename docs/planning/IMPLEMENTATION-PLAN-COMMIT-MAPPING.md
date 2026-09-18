@@ -156,17 +156,28 @@ its test is how the last round of failures went unnoticed:
   `mappingPersisted`; the editor guarded on `deploymentChanged || mode !== UPDATE`.
 
   **Resolved: `mappingPersisted && (deploymentChanged || mode !== UPDATE)`** — the conjunction,
-  which is the editor's condition with the parent's existence check made explicit. Working
-  through the cases, the two conditions already agree everywhere except one: an UPDATE where the
-  connectors were not touched. There the parent issued a deployment `PUT` anyway. That is not a
-  no-op — the backend live-reconciles subscriptions across *all* connectors on that call — so the
-  editor's condition is the correct one and the parent's write is dropped.
+  which is the editor's condition with the parent's existence check made explicit.
 
-  This is the one behavioural change in Phase 6. It required giving the stepper's parent the
-  connector baseline it never tracked (`snapshotConnectors()` at each of the three places it
-  assigns `deploymentMapEntry`); the editor already had it as `initialDeploymentConnectors`.
+  **Correction (the first write-up of this was wrong).** It claimed the two conditions differed on
+  "an UPDATE where the connectors were not touched", and that dropping the parent's redundant
+  `PUT` there was the one behavioural change in Phase 6. That case cannot arise: the stepper's
+  parent only ever commits in `CREATE`/`COPY` — `updateMapping()` routes to the unified editor
+  instead (see §4 of
+  [IMPLEMENTATION-PLAN-STEPPER-UNIFIED-EDITOR-DEDUP.md](IMPLEMENTATION-PLAN-STEPPER-UNIFIED-EDITOR-DEDUP.md)).
+  Working the reachable cases through:
 
----
+  - *Stepper parent*, mode ∈ {CREATE, COPY}: `mode !== UPDATE` is always true, so the conjunction
+    reduces to `mappingPersisted` — exactly the old guard.
+  - *Unified editor*, mode ∈ {UPDATE, READ_ONLY}: a failed save returns early, so
+    `mappingPersisted` is always true where the guard is reached — exactly the old guard.
+
+  So the reconciliation is **behaviour-preserving in both reachable paths**, and Phase 6 carries no
+  behavioural change here at all. The `initialDeploymentConnectors` baseline added to the grid is
+  therefore inert today; it is kept because the shared contract requires the field, and it becomes
+  live the moment anything routes an UPDATE through the stepper.
+
+  The lesson worth keeping: the divergence looked like a real semantic difference, and was argued
+  about on those terms, when the deciding fact was simply which editor handles which `EditorMode`.
 
 ### Saving no longer leaves the unified editor
 
