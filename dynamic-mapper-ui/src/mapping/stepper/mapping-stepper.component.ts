@@ -72,10 +72,10 @@ import { MappingStepTestingComponent } from '../step-testing/mapping-testing.com
 import { CommitEditorState, MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { CommonModule } from '@angular/common';
-import { MappingStepPropertiesComponent } from '../step-property/mapping-properties.component';
+import { MappingStepPropertiesComponent } from '../step-properties/mapping-properties.component';
 import { MappingConnectorComponent } from '../step-connector/mapping-connector.component';
-import { MappingSubstitutionStepComponent } from '../step-transformation/mapping-transformation-step.component';
-import { MappingTemplateStepComponent } from '../step-template/mapping-template-step.component';
+import { MappingSubstitutionStepComponent } from '../step-transformation/mapping-transformation.component';
+import { MappingTemplateStepComponent } from '../step-template/mapping-template.component';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { StepperViewModel } from './stepper-view.model';
 

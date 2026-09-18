@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 export * from './component/code-template/manage-template.component';
-export * from './component/json-editor/jsoneditor.component';
+export * from './component/json-editor/json-editor.component';
 export * from './component/code-explorer/code-editor-drawer.component';
 export * from './component/formly/input.type.component';
 export * from './component/formly/textarea.type.component';

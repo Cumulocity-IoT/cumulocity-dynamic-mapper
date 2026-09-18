@@ -66,7 +66,7 @@ export interface ContentChanges {
   template: '<div [class]="class" [id]="id" #jsonEditorContainer></div>',
   preserveWhitespaces: false,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrls: ['./jsoneditor.style.css'],
+  styleUrls: ['./json-editor.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: []

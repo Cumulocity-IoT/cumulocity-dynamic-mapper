@@ -20,7 +20,7 @@
 
 import { Component } from '@angular/core';
 import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
-import { JsonEditorComponent } from '../../shared/component/json-editor/jsoneditor.component';
+import { JsonEditorComponent } from '../../shared/component/json-editor/json-editor.component';
 
 @Component({
   selector: 'd11r-msg-explorer-date-renderer',

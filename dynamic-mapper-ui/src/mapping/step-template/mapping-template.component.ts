@@ -61,7 +61,7 @@ import { PopoverModule } from 'ngx-bootstrap/popover';
 
 @Component({
   selector: 'd11r-mapping-template-step',
-  templateUrl: './mapping-template-step.component.html',
+  templateUrl: './mapping-template.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   standalone: true,
   imports: [CoreModule, CommonModule, PopoverModule,JsonEditorComponent]

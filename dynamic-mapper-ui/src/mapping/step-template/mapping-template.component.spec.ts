@@ -24,7 +24,7 @@ import { FormControl, FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { Content } from 'vanilla-jsoneditor';
-import { MappingTemplateStepComponent } from './mapping-template-step.component';
+import { MappingTemplateStepComponent } from './mapping-template.component';
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import {
   Direction,
