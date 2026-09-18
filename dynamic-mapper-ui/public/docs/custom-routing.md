@@ -176,11 +176,11 @@ function onMessage(msg, context) {
 }
 ```
 
-:::info Info — Limitations
+##### Limitations
+
 - Only tenant-local microservices can be called via `targetPath` (path must start with `/service/`).
 - No device identity resolution is performed for `cumulocityType: "custom"` objects — the `externalSource` property
   is ignored.
 - Custom routing works for both **inbound** and **outbound** Smart Functions.
 - The `topic` override (dynamic publish topic) applies only to **outbound** Smart Functions and requires an active
   broker connection.
-:::

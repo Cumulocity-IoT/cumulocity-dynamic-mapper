@@ -6,14 +6,12 @@ When you select **Smart Function** as the **Transformation Type**, you can write
 entire payload, rather than just substitutions. At runtime the JavaScript code is evaluated and creates the target
 payload. This gives you the freedom to see the payload exactly as it is sent to the Cumulocity backend.
 
-:::info
 **Power of Smart Functions:** Smart Functions offer maximum flexibility:
 - Complete control over the payload structure
 - Access to device inventory data for enrichment
 - Complex business logic and calculations
 - Multiple outputs from a single input message
 - State management across messages using context
-:::
 
 :::caution
 The JavaScript editor for Smart Function is only available if you select **Smart Function** as a **Transformation
@@ -46,6 +44,10 @@ function onMessage(inputMsg, context) {
 }
 ```
 
+To try a function out, use the **Testing** step of the mapping editor: it runs `onMessage()` against your sample
+payload and shows everything printed with `console.log()` in the **Console output** panel. See
+[Testing a Smart Function](/c8y-pkg-dynamic-mapper/introduction/define-mapping#testing-smart-function).
+
 The **Smart Function** allows enriching the payload with inventory data from the device, e.g.:
 
 ```javascript
@@ -76,7 +78,8 @@ stripped and the code is wrapped in an IIFE so that `onMessage` is registered on
 [**Configuration → Service Configuration → General**](/c8y-pkg-dynamic-mapper/node3/serviceConfiguration/general),
 the execution model changes to true ES module semantics.
 
-:::info ESM mode — what changes
+##### ESM mode — what changes
+
 - **Mapping code runs unmodified** — no `export`/`import` stripping, no IIFE wrapping. (Shared code is always
   converted to a plain script regardless of this setting.)
 - **Strict mode enforced** — undeclared variables, duplicate parameters, and silent type coercions throw errors
@@ -86,7 +89,6 @@ the execution model changes to true ES module semantics.
 - **Top-level `await` supported** — useful for lazy one-time initialization before the first message arrives.
 - **`onMessage` must be exported** — use `export { onMessage }` or `export function onMessage(…)` so the runtime
   can locate the entry point.
-:::
 
 Example Smart Function written for ESM mode:
 
@@ -117,14 +119,14 @@ as globals and can be used directly without an `import`. Static imports would re
 (future work).
 :::
 
-:::info Flat-script mode (default, `supportESM = false`)
+##### Flat-script mode (default, `supportESM = false`)
+
 When ESM support is disabled the runtime automatically:
 1. Strips any `export` and `import` lines from the mapping code.
 2. Wraps the code in an IIFE and registers `onMessage` on `globalThis`.
 
 This means flat-script code does **not** need — and should not have — an `export` statement. Existing mappings
 continue to work unchanged when the setting is off.
-:::
 
 #### Shared Code Templates
 
@@ -132,7 +134,8 @@ The Dynamic Mapper supports **Shared Code** templates — reusable JavaScript li
 injected into the GraalVM context before every Smart Function is executed. Functions and variables defined in a
 Shared Code template are available as globals in all Smart Functions without any import statement.
 
-:::info Info — How Shared Code is loaded
+##### How Shared Code is loaded
+
 1. Navigate to [**Configuration → Code Templates**](/c8y-pkg-dynamic-mapper/node3/codeTemplate/INBOUND_SMART_FUNCTION).
 2. Select a template of type **Shared** from the dropdown (or create one via **Duplicate** from an existing
    template and rename it).
@@ -141,7 +144,6 @@ Shared Code template are available as globals in all Smart Functions without any
 
 Shared code is always evaluated in flat-script mode (even when ESM support is enabled), so do **not** use `export`
 statements in shared templates.
-:::
 
 ```javascript
 // Example Shared Code template content
@@ -229,10 +231,8 @@ When using **Smart Functions** as the **Transformation Type**, metadata is handl
 substitution-based mappings. Instead of using metadata nodes like `_IDENTITY_` or `_CONTEXT_DATA_` in templates,
 you define metadata directly in the JavaScript return object.
 
-:::info
 **Key Difference:** In Smart Functions, you don't manipulate `_IDENTITY_` or `_CONTEXT_DATA_` nodes. Instead, you
 return JavaScript objects with specific properties that control how the mapper processes your data.
-:::
 
 #### Metadata Properties for Inbound Smart Functions
 
@@ -284,7 +284,8 @@ The same value is available to **Java Extensions** as `message.getTransportField
 | `targetAPI` | All | The Cumulocity target API (e.g. `"MEASUREMENT"`, `"EVENT"`). |
 | `aliasMap` / `isActive` | Outbound only | SparkPlug B-specific context properties (`aliasMap` and `isActive`) are available for **outbound** SparkPlug B mappings only. See the *Metadata Properties for Outbound Smart Functions* table for details. |
 
-:::info Info - Context Methods for Accessing Metadata
+##### Context Methods for Accessing Metadata
+
 **Available Context Methods:**
 
 In addition to the properties you return, Smart Functions can access incoming metadata through the `context`
@@ -305,7 +306,6 @@ object:
   `externalId` of the source device.
 
 **Example:** `var publisherClientId = context.getClientId();`
-:::
 
 :::caution
 When using `contextData.deviceName`, `contextData.deviceType`, `contextData.deviceFragments`, or
@@ -522,12 +522,10 @@ Cumulocity REST API using these properties:
 changes, and send a PUT request.
 :::
 
-:::info
 **Dynamic Topic Resolution:** Use `context.getConfig().externalId` to include the device's resolved external ID in
 the topic. For example: `` topic: `measurements/${context.getConfig().externalId}` `` resolves to
 `"measurements/device-serial-123"` at runtime. Requires the mapping to have **Use External Id** enabled and an
 **External Id Type** configured.
-:::
 
 **Example: Basic outbound Smart Function**
 
@@ -642,11 +640,9 @@ method, and the `topic` determines which Cumulocity REST API to call. The mapper
 path construction and proper request formatting. When using `action: "patch"`, the mapper performs a GET + merge +
 PUT operation to partially update the object while preserving existing fields.
 
-:::info
 **Return Type Flexibility:** For outbound Smart Functions, you can return either a single object or an array of
 objects. If you need to send a message to multiple topics or transform one Cumulocity event into multiple external
 messages, return an array.
-:::
 
 ##### Accessing Metadata from Incoming Messages
 
@@ -816,13 +812,13 @@ Not all usage patterns stress Metaspace equally. Four distinct scenarios drive g
 | **Editing an existing mapping's JS code** | Unbounded until rotation. Each save of a modified mapping produces a new content hash and therefore a new native code block in Metaspace. The block compiled from the previous version remains resident for the lifetime of the Engine. A mapping edited 20 times before going to production has accumulated 20 compiled blocks, of which 19 are permanently unreachable. | Compilation-based (`engineRotationThreshold`) — every code edit increments the counter, making development sessions the primary driver of rotation. |
 | **Activate / deactivate a mapping** | *No additional Metaspace* if the code is unchanged. On reactivation the Engine's source cache is hit (same content hash → same compiled block reused). If the code was edited between deactivation and reactivation, one new block is compiled and the old one remains — equivalent to a single code edit. | Activate/deactivate alone does not increment the compilation counter. Only a code change paired with reactivation adds to the count. |
 
-:::info Info — Code churn is the primary Metaspace risk
+##### Code churn is the primary Metaspace risk
+
 Active development on SmartFunction code — whether through edits to existing mappings, delete-and-recreate cycles,
 or deactivate-edit-reactivate workflows — is the dominant driver of Metaspace growth. Each unique code version
 leaves a permanent compiled block until the Engine is rotated. The compilation counter tracks exactly this: it
 increments only when a new (sourceName, contentHash) pair is compiled, not on repeated execution of unchanged
 code. Tune `engineRotationThreshold` to control how many code changes accumulate before a rotation is triggered.
-:::
 
 ##### Reading the Metaspace Logs
 
@@ -846,12 +842,12 @@ t2050305588 - Rotating GraalVM Engine to release Metaspace
 t2050305588 - GraalVM Engine created — baseline Metaspace 287 MB (no max set)
 ```
 
-:::info Info — Interpreting the delta
+##### Interpreting the delta
+
 The difference between the baseline at creation and the value at rotation is the Metaspace consumed by the Engine
 over its lifetime. In the example above: **287 − 112 = 175 MB** across 39 pre-warmed mappings plus subsequent code
 changes. If this delta grows between rotations over time, consider lowering `engineRotationThreshold` (in
 **Service Configuration → General**) or setting an explicit `-XX:MaxMetaspaceSize` JVM flag.
-:::
 
 :::caution Caution — "no max set"
 When the log shows `(no max set)`, the JVM Metaspace is unbounded. The JVM will allocate native memory until the
@@ -897,9 +893,9 @@ in the mapping grid. Use it to locate the affected mapping.
 | `Expected an operand but found export` | The mapping code contains an ES module `export` statement at the top level (e.g. `export default onMessage`) and the **Support ESM modules** setting is *disabled*. In flat-script mode the pre-compiler does not strip `export` keywords. Either enable ESM mode in **Configuration → Service Configuration → General**, or remove the `export` lines from the mapping code (the runtime strips them automatically, but the pre-compiler does not). |
 | `Variable "onMessage" has already been declared` (or `"MeasurementSchema"` or similar) | During pre-compilation all mapping codes are evaluated sequentially in a single GraalVM context. A `var` declaration in one mapping's code leaks into the global scope and collides with the same name in a later mapping. At *runtime* each message gets a fresh context so there is no collision. To fix the warning: change top-level `var` declarations in your mapping code to `const` or `let`, or wrap them in a self-executing function so they are not exposed globally. |
 
-:::info Info — Pre-compilation warnings do not affect correctness
+##### Pre-compilation warnings do not affect correctness
+
 A mapping that fails to pre-compile still executes correctly on every real message. The only consequence is a
 slightly slower first execution after Engine rotation (typically an extra 1–2 seconds for GraalVM JIT cold-start).
 Fix the warnings to restore optimal warm-up performance, but treat them as low-priority unless cold-start latency
 is a concern.
-:::

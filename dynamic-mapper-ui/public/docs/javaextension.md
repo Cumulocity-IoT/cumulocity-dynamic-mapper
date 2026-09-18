@@ -6,7 +6,6 @@ Java Extensions provide enterprise-grade transformation capabilities by allowing
 logic in Java. This approach offers type safety, superior performance, and full access to the Java ecosystem
 including third-party libraries and the Cumulocity Java SDK.
 
-:::info
 **When to use Java Extensions:** Choose Java Extensions when you need:
 - Enterprise-grade type safety with compile-time checking
 - Optimal performance for complex transformations
@@ -14,7 +13,6 @@ including third-party libraries and the Cumulocity Java SDK.
 - Integration with existing Java-based enterprise systems
 - Access to the full Java ecosystem and Cumulocity Java SDK
 - Advanced debugging capabilities with standard Java tools
-:::
 
 :::caution
 Java Extensions must be deployed as plugins to the Dynamic Mapper microservice before they can be used. Once
@@ -63,11 +61,9 @@ microservice is required. Build the jar first — the **End-to-end overview** ab
    implementation declared in its `extension-external.yaml`. Use **Reload** if the card does not yet show your
    extension — loading happens asynchronously, and the banner reports progress while it runs.
 
-:::info
 The jar must contain an `extension-external.yaml` naming each processor and its implementation class. An
 extension whose descriptor is missing or malformed uploads successfully but contributes **0 Loaded** processors —
 if you see that, check the descriptor before looking anywhere else.
-:::
 
 Once loaded, the extension's processors become selectable in the mapping wizard as described above, and the jar
 survives microservice restarts — it is stored in the tenant, not on the container's filesystem.
@@ -218,13 +214,13 @@ public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContex
 }
 ```
 
-:::info getConfigAsMap() — full content
+##### GetConfigAsMap() — full content
+
 In addition to `parameter`, the map returned by `getConfigAsMap()` also contains:
 - **tenant** — current tenant identifier
 - **clientId** — MQTT/connector client ID
 - **topic** — incoming message topic
 - **mappingId**, **mappingName**, **targetAPI**, **debug** — mapping metadata
-:::
 
 ##### Accessing the broker message key
 

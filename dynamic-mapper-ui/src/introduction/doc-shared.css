@@ -18,74 +18,68 @@
  * @authors Christof Strack
  */
 
+/*
+ * SCOPING CONTRACT — read before adding a rule here.
+ *
+ * Every doc component loads this file with `encapsulation: ViewEncapsulation.None`, because the
+ * page body is injected via [innerHTML] and therefore never receives the _ngcontent-* attribute
+ * that emulated encapsulation scopes styles with. The consequence is that *nothing in this file
+ * is scoped by Angular* — a bare `h3` or `.card-block` rule here restyles the whole
+ * application the moment any documentation page has been visited.
+ *
+ * So every selector is prefixed with `.d11r-doc`, the wrapper class on the router-outlet
+ * container in doc-main.component.html. Keep it that way when adding rules.
+ *
+ * The only exceptions are the `.doc-search-*` rules, which style the search box projected into
+ * the Cumulocity action bar via <c8y-action-bar-item> — that markup is rendered outside the
+ * wrapper, so scoping it would stop those rules applying.
+ */
+
 /* ============================================================================ */
 /* LAYOUT & STRUCTURE                                                           */
 /* ============================================================================ */
 
-/* Card sections - main content containers */
-.card-header,
-.card-block {
-  max-width: 1200px;
-  margin-left: 0;
-  margin-right: auto;
-  padding-left: 0;
-  padding-right: 24px;
-}
-
-.card-header {
-  margin-top: 24px;
-  margin-bottom: 16px;
-}
-
-.card-block {
-  margin-bottom: 24px;
-}
-
-/* Markdown-rendered pages (doc-page.component.html): headings/content aren't wrapped
-   in .card-header/.card-block divs, so give the container the same spacing directly. */
-.doc-content {
+/* Markdown-rendered pages: the content isn't wrapped in Cumulocity card elements, so the
+   container carries the page spacing directly. (There used to be unscoped .card-header /
+   .card-block rules here. No doc template ever used them, but because this stylesheet is
+   global they re-laid-out every card, drawer and modal in the application — capping them at
+   1200px, pinning them left and removing their left padding. Removed.) */
+.d11r-doc .doc-content {
   max-width: 1200px;
   padding-right: 24px;
 }
-
-.doc-content h2,
-.doc-content h3 {
+.d11r-doc .doc-content h2,
+.d11r-doc .doc-content h3 {
   margin-top: 24px;
   margin-bottom: 16px;
   scroll-margin-top: 120px;
 }
-
-.doc-content h4,
-.doc-content h5,
-.doc-content h6 {
+.d11r-doc .doc-content h4,
+.d11r-doc .doc-content h5,
+.d11r-doc .doc-content h6 {
   scroll-margin-top: 120px;
   margin-top: 16px;
 }
-
-.doc-content h5 {
+.d11r-doc .doc-content h5 {
   font-size: 16px;
   color: #444;
 }
-
-.doc-content h6 {
+.d11r-doc .doc-content h6 {
   font-size: 14px;
   color: #555;
 }
-
-.doc-content p,
-.doc-content ul,
-.doc-content ol {
+.d11r-doc .doc-content p,
+.d11r-doc .doc-content ul,
+.d11r-doc .doc-content ol {
   font-size: 16px;
   padding-bottom: 8px;
 }
-
-.doc-content img {
+.d11r-doc .doc-content img {
   width: 80%;
   margin-left: 48px;
   margin-bottom: 16px;
 }
-
-.doc-content .image-description {
+.d11r-doc .doc-content .image-description {
   margin-left: 48px;
 }
 
@@ -94,15 +88,14 @@
 /* ============================================================================ */
 
 /* Headings */
-h1,
-.h1 {
+.d11r-doc h1,
+.d11r-doc .h1 {
   font-size: 36px;
 }
-
-h1,
-h2,
-h3,
-h4 {
+.d11r-doc h1,
+.d11r-doc h2,
+.d11r-doc h3,
+.d11r-doc h4 {
   margin: 0 0 1em;
   font-weight: 600;
   line-height: 1.4;
@@ -110,13 +103,11 @@ h4 {
   text-wrap: pretty;
   text-transform: uppercase;
 }
-
-h3 {
+.d11r-doc h3 {
   font-size: 24px;
   color: #333;
 }
-
-h4 {
+.d11r-doc h4 {
   font-size: 18px;
   color: #444;
 }
@@ -126,7 +117,7 @@ h4 {
 /* ============================================================================ */
 
 /* Standard documentation images */
-img {
+.d11r-doc img {
   display: block;
   max-width: 100%;
   height: auto;
@@ -134,7 +125,7 @@ img {
 }
 
 /* Image descriptions */
-.image-description {
+.d11r-doc .image-description {
   font-style: italic;
   color: #666;
   font-size: 14px;
@@ -147,59 +138,56 @@ img {
 /* ============================================================================ */
 
 /* Table container with width constraints */
-.table-responsive {
+.d11r-doc .table-responsive {
   overflow-x: auto;
   margin: 16px 0;
 }
-
-.table-width-80 {
+.d11r-doc .table-width-80 {
   max-width: 80%;
 }
-
-.table-width-100 {
+.d11r-doc .table-width-100 {
   max-width: 100%;
 }
 
 /* Table styling */
-.table {
+.d11r-doc .table {
   width: 100%;
   margin-bottom: 16px;
   border-collapse: collapse;
 }
-
-.table th,
-.table td {
+.d11r-doc .table th,
+.d11r-doc .table td {
   padding: 12px;
   text-align: left;
   border-bottom: 1px solid #e0e0e0;
 }
-
-.table th {
+.d11r-doc .table th {
   font-weight: 600;
   background-color: #f8f9fa;
   border-bottom: 2px solid #dee2e6;
 }
 
-.table-striped tbody tr:nth-of-type(odd) {
-  background-color: #f9f9f9;
+/* Zebra striping removed: row separators alone are enough to track a row, and the
+   alternating fill was a further competing surface on pages that already carry
+   callouts and code blocks. .table-striped is kept as a no-op so existing markup
+   and the code-template gallery template need no change. */
+.d11r-doc .table-striped tbody tr:nth-of-type(odd) {
+  background-color: transparent;
 }
-
-.table-light {
+.d11r-doc .table-light {
   background-color: #f8f9fa;
 }
-
-.table-layout-fixed {
+.d11r-doc .table-layout-fixed {
   table-layout: fixed;
 }
 
 /* Column-width helpers for fixed-layout tables */
-.col-w-15 { width: 15%; }
-.col-w-25 { width: 25%; }
-.col-w-35 { width: 35%; }
-.col-w-60 { width: 60%; }
-.col-w-65 { width: 65%; }
-
-.thead-light th {
+.d11r-doc .col-w-15 { width: 15%; }
+.d11r-doc .col-w-25 { width: 25%; }
+.d11r-doc .col-w-35 { width: 35%; }
+.d11r-doc .col-w-60 { width: 60%; }
+.d11r-doc .col-w-65 { width: 65%; }
+.d11r-doc .thead-light th {
   background-color: #e9ecef;
   color: #495057;
 }
@@ -209,62 +197,73 @@ img {
 /* ============================================================================ */
 
 /* Unordered lists */
-ul.text-16,
-ul {
+.d11r-doc ul.text-16,
+.d11r-doc ul {
   margin: 12px 0;
   padding-left: 24px;
   line-height: 1.4;
 }
-
-ul.text-16 li,
-ul li {
+.d11r-doc ul.text-16 li,
+.d11r-doc ul li {
   margin-bottom: 8px;
 }
 
 /* Ordered lists */
-ol.text-16,
-ol {
+.d11r-doc ol.text-16,
+.d11r-doc ol {
   margin: 12px 0;
   padding-left: 24px;
   line-height: 1.4;
   counter-reset: item;
 }
-
-ol.text-16 li,
-ol li {
+.d11r-doc ol.text-16 li,
+.d11r-doc ol li {
   margin-bottom: 12px;
 }
 
 /* ============================================================================ */
 /* LINKS                                                                        */
 /* ============================================================================ */
-
-a {
+.d11r-doc a {
   color: var(--c8y-brand-primary, #007bff);
   text-decoration: none;
   transition: color 0.2s ease;
 }
-
-a:hover {
+.d11r-doc a:hover {
   color: #0056b3;
   text-decoration: underline;
 }
 
-a:focus {
+/* Dense cross-reference paragraphs were reading as speckled text. Inside prose the
+   link keeps the brand hue but at normal weight with a faint underline, so a run of
+   links no longer competes with headings for attention. */
+.d11r-doc .doc-content p a,
+.d11r-doc .doc-content li a,
+.d11r-doc .doc-content td a {
+  font-weight: inherit;
+  text-decoration-color: rgba(0, 123, 255, 0.35);
+  text-decoration-line: underline;
+  text-underline-offset: 2px;
+}
+.d11r-doc .doc-content p a:hover,
+.d11r-doc .doc-content li a:hover,
+.d11r-doc .doc-content td a:hover {
+  text-decoration-color: currentColor;
+}
+.d11r-doc a:focus {
   outline: 2px solid var(--c8y-brand-primary, #007bff);
   outline-offset: 2px;
 }
 
 /* Links with icons */
-a .fa {
+.d11r-doc a .fa {
   margin-right: 4px;
 }
 
 /* ============================================================================ */
 /* CODE BLOCKS                                                                  */
 /* ============================================================================ */
-
-/* code {
+.d11r-doc /* code {
   padding: 2px 6px;
   background-color: #f5f5f5;
   border: 1px solid #e0e0e0;
@@ -273,8 +272,7 @@ a .fa {
   font-size: 13px;
   color: #d63384;
 } */
-
-code {
+.d11r-doc code {
   padding: 2px 4px;
   border-radius: 3px;
   font-size: 90%;
@@ -282,14 +280,22 @@ code {
   color: var(--c8y-code-color);
 }
 
-pre {
+/* Inline code in prose: neutral, not tinted. The themed --c8y-code-color renders as a
+   saturated pink/magenta, which reads as an error state and introduced a colour that
+   carried no meaning. :not(pre) > code keeps this off the highlighted code blocks,
+   which keep their own dark theme. */
+.d11r-doc .doc-content :not(pre) > code {
+  background-color: #f1f2f4;
+  color: #24292f;
+  border: none;
+}
+.d11r-doc pre {
   margin: 16px 0;
   padding: 0;
   background-color: transparent;
   border: none;
 }
-
-pre code {
+.d11r-doc pre code {
   display: block;
   padding: 0;
   background-color: transparent;
@@ -304,7 +310,7 @@ pre code {
 }
 
 /* Highlight.js syntax highlighting adjustments */
-pre {
+.d11r-doc pre {
   margin: 16px 0 !important;
   padding: 0 !important;
   background-color: #282c34 !important;
@@ -320,20 +326,19 @@ pre {
    theme already renders a light-background SVG, and the two would clash. Overriding the
    !important rule above requires !important here too (a more specific selector alone does not
    win against it). */
-pre.mermaid {
+.d11r-doc pre.mermaid {
   background: transparent !important;
   border-radius: 0 !important;
   padding: 8px 0 !important;
   text-align: center;
 }
-
-pre.mermaid svg {
+.d11r-doc pre.mermaid svg {
   max-width: 100%;
   height: auto;
 }
 
 /* Code element styling */
-pre code {
+.d11r-doc pre code {
   font-family: 'Courier New', Courier, monospace !important;
   font-size: 13px !important;
   line-height: 1.4 !important;
@@ -352,7 +357,7 @@ pre code {
 /* Note: Highlight.js token color styles are defined globally in styles.less */
 
 /* Toolbar container styling - only within code blocks */
-pre .code-toolbar {
+.d11r-doc pre .code-toolbar {
   background-color: #000000;
   padding: 0;
   margin: 0;
@@ -371,7 +376,7 @@ pre .code-toolbar {
 }
 
 /* Custom Copy Button Styling - Cumulocity style */
-.btn-copy-code {
+.d11r-doc .btn-copy-code {
   display: inline-flex;
   align-items: center;
   padding: 5px 12px;
@@ -390,22 +395,18 @@ pre .code-toolbar {
   outline: none;
   white-space: nowrap;
 }
-
-.btn-copy-code:hover {
+.d11r-doc .btn-copy-code:hover {
   background-color: rgba(255, 255, 255, 0.1);
   color: #ffffff;
 }
-
-.btn-copy-code:active {
+.d11r-doc .btn-copy-code:active {
   background-color: rgba(255, 255, 255, 0.05);
 }
-
-.btn-copy-code.copied {
+.d11r-doc .btn-copy-code.copied {
   background-color: rgba(40, 167, 69, 0.2);
   color: #4caf50;
 }
-
-.btn-copy-code i {
+.d11r-doc .btn-copy-code i {
   display: inline-block;
   font-style: normal;
   font-size: 14px;
@@ -414,66 +415,55 @@ pre .code-toolbar {
 /* ============================================================================ */
 /* ADMONITION BOXES                                                             */
 /* ============================================================================ */
-
-
-.admonition {
-  margin: 24px 0;
-  padding: 0;
-  border-radius: 8px;
-  border-left: 8px solid;
-  background-color: #f9f9f9;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+.d11r-doc .admonition {
+  margin: 20px 0;
+  padding: 2px 0 2px 16px;
+  border-radius: 0;
+  border-left: 3px solid;
+  /* No fill: the accent colour lives in the left rule and the label only, so a
+     callout reads as emphasised prose rather than as a coloured block competing
+     with tables, code blocks and body text. */
+  background-color: transparent;
+  box-shadow: none;
   max-width: 100%;
 }
-
-.admonition .title {
+.d11r-doc .admonition .title {
   font-weight: 600;
-  padding: 12px 16px 6px;
+  padding: 0 0 2px;
   margin: 0;
-  font-size: 14px;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
 }
-
-.admonition .content {
-  padding: 12px 16px 16px 16px;
+.d11r-doc .admonition .content {
+  padding: 0;
   font-size: 14px;
   line-height: 1.7;
   margin: 0;
 }
-
-.admonition .content ul {
+.d11r-doc .admonition .content ul {
   margin-top: 8px;
   margin-bottom: 0;
 }
-
-.admonition .content strong {
+.d11r-doc .admonition .content strong {
   font-weight: 600;
   color: #333;
 }
 
 /* Info - Blue */
-.admonition.info {
-  border-left-color: #066ad6;
-  background-color: #d7e7f8;
+.d11r-doc .admonition.info {
+  border-left-color: #9dbfe2;
 }
-
-.admonition.info .title {
-  background-color: #d7e7f8;
-  color: var(--c8y-palette-status-info, #31708f);
+.d11r-doc .admonition.info .title {
+  color: #31708f;
 }
 
 /* Caution/Warning - Orange/Yellow */
-.admonition.caution {
+.d11r-doc .admonition.caution {
   border-left-color: #f0ad4e;
-  background-color: #f9ecc5;
-  ;
 }
-
-.admonition.caution .title {
-  background-color: #f9ecc5;
-  color: var(--c8y-palette-status-warning, #8a6d3b);
+.d11r-doc .admonition.caution .title {
+  color: #8a6d3b;
 }
 
 /* ============================================================================ */
@@ -481,7 +471,7 @@ pre .code-toolbar {
 /* ============================================================================ */
 
 /* Light-background pre block — use instead of inline style="background:#f8f9fa…" */
-pre.pre-light {
+.d11r-doc pre.pre-light {
   background: #f8f9fa !important;
   background-color: #f8f9fa !important;
   color: #333 !important;
@@ -489,39 +479,31 @@ pre.pre-light {
   overflow-x: auto;
   font-size: 0.875em;
 }
-
-pre.pre-light code {
+.d11r-doc pre.pre-light code {
   background-color: transparent !important;
   color: #333 !important;
   font-size: inherit !important;
 }
 
 /* Table section-header row cell (replaces style="text-align:center;font-weight:bold;background:#e7f3ff") */
-.td-section-header {
+.d11r-doc .td-section-header {
   text-align: center;
-  font-weight: bold;
-  background-color: #e7f3ff;
+  font-weight: 600;
+  background-color: #f5f6f7;
 }
 
 /* Important - Red */
-.admonition.important {
+.d11r-doc .admonition.important {
   border-left-color: #d60f0e;
-  background-color: #f9e4e2;
-  /* background-color:  #fdf5f4; */
-  /*var(--c8y-palette-status-danger-light); */
 }
-
-.admonition.important .title {
-  /* background-color: #fdf5f4; */
-  background-color: #f9e4e2;
-  color: var(--c8y-palette-status-danger, #d60f0e);
+.d11r-doc .admonition.important .title {
+  color: #d60f0e;
 }
 
 /* ============================================================================ */
 /* SCROLL TO TOP BUTTON                                                         */
 /* ============================================================================ */
-
-.to-the-top {
+.d11r-doc .to-the-top {
   position: fixed;
   right: 3rem;
   bottom: 4rem;
@@ -545,16 +527,14 @@ pre.pre-light code {
   transition: all 0.3s ease;
   cursor: pointer;
 }
-
-.to-the-top:hover {
+.d11r-doc .to-the-top:hover {
   background-color: var(--c8y-brand-primary, #007bff);
   color: white;
   text-decoration: none;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
-
-.to-the-top:active {
+.d11r-doc .to-the-top:active {
   transform: translateY(0);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
@@ -564,41 +544,38 @@ pre.pre-light code {
 /* ============================================================================ */
 
 /* Text alignment */
-.text-center {
+.d11r-doc .text-center {
   text-align: center;
 }
-
-.text-right {
+.d11r-doc .text-right {
   text-align: right;
 }
-
-.text-left {
+.d11r-doc .text-left {
   text-align: left;
 }
 
 /* Text colors */
-.text-muted {
+.d11r-doc .text-muted {
   color: #6c757d;
 }
 
 /* Text sizes */
-.text-14 {
+.d11r-doc .text-14 {
   font-size: 14px;
   line-height: 1.5;
 }
-
-.text-16 {
+.d11r-doc .text-16 {
   font-size: 16px;
   line-height: 1.6;
 }
 
 /* Alignment */
-.align-middle {
+.d11r-doc .align-middle {
   vertical-align: middle;
 }
 
 /* SVG handling */
-svg {
+.d11r-doc svg {
   width: inherit;
   height: inherit;
 }
@@ -644,7 +621,7 @@ svg {
 /* ============================================================================ */
 /* SCREENSHOT PLACEHOLDERS — shown until the real screenshot image is added      */
 /* ============================================================================ */
-.doc-screenshot-placeholder {
+.d11r-doc .doc-screenshot-placeholder {
   border: 2px dashed var(--c8y-component-border-color, #c8c8c8);
   border-radius: 8px;
   background: var(--c8y-component-background-subtle, #f4f4f5);
@@ -653,7 +630,6 @@ svg {
   text-align: center;
   color: var(--c8y-text-color-muted, #707070);
 }
-
-.doc-screenshot-placeholder code {
+.d11r-doc .doc-screenshot-placeholder code {
   word-break: break-all;
 }

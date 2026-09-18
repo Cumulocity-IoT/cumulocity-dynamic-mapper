@@ -23,13 +23,10 @@ import { MappingService } from '../mapping/core/mapping.service';
 import { Direction, Feature, NODE1, NODE3 } from '../shared';
 import { BehaviorSubject, from, Subject } from 'rxjs';
 import { ConnectorConfigurationService } from '../connector';
-import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
+import { AlertService, CoreModule } from '@c8y/ngx-components';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { SharedService } from '../shared/service/shared.service';
-import { CodeTemplate, CodeTemplateMap } from '../shared/configuration/configuration.model';
-import { CodeEditorDrawerComponent } from '../shared/component/code-explorer/code-editor-drawer.component';
 import { DocMarkdownService } from './doc-markdown.service';
 
 @Component({
@@ -46,15 +43,16 @@ import { DocMarkdownService } from './doc-markdown.service';
 export class DocOverviewComponent implements OnInit {
   @ViewChild('docBody', { static: false }) docBodyRef: ElementRef<HTMLElement>;
 
-  codeTemplates: CodeTemplate[] = [];
   countMappingInbound$: Subject<any> = new BehaviorSubject<any>(0);
   countMappingOutbound$: Subject<any> = new BehaviorSubject<any>(0);
   countConnector$: Subject<any> = new BehaviorSubject<any>(0);
   feature: Feature;
 
-  htmlPart1: SafeHtml = '';
-  htmlPart2: SafeHtml = '';
-  htmlPart3: SafeHtml = '';
+  // The overview page is now short: the intro prose, the live tenant counts, then the
+  // "where to start" tier table. Everything that used to be concatenated onto this page
+  // (getting started, connectors, mappings, SparkPlug B, monitoring, …) is its own route.
+  htmlIntro: SafeHtml = '';
+  htmlNextSteps: SafeHtml = '';
 
   ROUTE_INBOUND: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/inbound`;
   ROUTE_OUTBOUND: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/outbound`;
@@ -71,8 +69,6 @@ export class DocOverviewComponent implements OnInit {
     private connectorConfigurationService: ConnectorConfigurationService,
     private route: ActivatedRoute,
     private router: Router,
-    private bottomDrawerService: BottomDrawerService,
-    private sharedService: SharedService,
     private markdownService: DocMarkdownService,
     private sanitizer: DomSanitizer
   ) {}
@@ -80,47 +76,16 @@ export class DocOverviewComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     this.feature = this.route.snapshot.data['feature'];
 
-    const [part1, part2, part3] = await Promise.all([
-      this.markdownService.loadAndRender('overview-part1'),
-      this.markdownService.loadAndRender('overview-part2'),
-      this.markdownService.loadAndRender('overview-part3')
+    const [intro, nextSteps] = await Promise.all([
+      this.markdownService.loadAndRender('overview'),
+      this.markdownService.loadAndRender('overview-next-steps')
     ]);
-    this.htmlPart1 = this.sanitizer.bypassSecurityTrustHtml(part1.html);
-    this.htmlPart2 = this.sanitizer.bypassSecurityTrustHtml(part2.html);
-    this.htmlPart3 = this.sanitizer.bypassSecurityTrustHtml(part3.html);
+    this.htmlIntro = this.sanitizer.bypassSecurityTrustHtml(intro.html);
+    this.htmlNextSteps = this.sanitizer.bypassSecurityTrustHtml(nextSteps.html);
     // setTimeout (a macrotask) runs after Angular's zone-triggered change detection has
     // committed the three [innerHTML] bindings above to the DOM, so docBodyRef.nativeElement
     // actually contains the <pre class="mermaid"> nodes mermaid.run() needs to find.
     setTimeout(() => this.markdownService.renderMermaidDiagrams(this.docBodyRef.nativeElement));
-
-    // When navigating to a section anchor within the overview page, scroll to it.
-    // Use offsetTop (layout-based, scroll-independent) rather than
-    // getBoundingClientRect() so the correct offset is computed regardless of the
-    // window scroll position at the time this runs.
-    const path = this.route.snapshot.routeConfig?.path || '';
-    if (path && path !== '') {
-      setTimeout(() => {
-        const element = document.getElementById(path);
-        if (element) {
-          window.scrollTo({ top: element.offsetTop - 120, behavior: 'smooth' });
-        }
-      }, 200);
-    }
-
-    const codeTemplatesMap: CodeTemplateMap = await this.sharedService.getCodeTemplates();
-    this.codeTemplates = Object.entries(codeTemplatesMap)
-      .map(([, template]) => template)
-      .sort((a, b) => {
-        const typeOrder = {
-          'INBOUND_SMART_FUNCTION': 1,
-          'OUTBOUND_SMART_FUNCTION': 2,
-          'SHARED': 3,
-          'SYSTEM': 4
-        };
-        const typeComparison = (typeOrder[a.templateType] || 999) - (typeOrder[b.templateType] || 999);
-        if (typeComparison !== 0) return typeComparison;
-        return a.name.localeCompare(b.name);
-      });
 
     from(this.mappingService.getMappings(Direction.INBOUND)).subscribe(
       (mappings) => { this.countMappingInbound$.next(!mappings ? 'no' : mappings.length); }
@@ -145,34 +110,6 @@ export class DocOverviewComponent implements OnInit {
       this.alertService.warning(
         "You don't have the role 'Dynamic Mapper User' and therefore cannot edit mappings. Please contact your administrator."
       );
-    }
-  }
-
-  openCodeExplorer(template: CodeTemplate): void {
-    this.bottomDrawerService.openDrawer(CodeEditorDrawerComponent, {
-      initialState: {
-        encodedCode: template.code,
-        sourceSystem: 'Template',
-        action: 'view'
-      }
-    });
-  }
-
-  getTransformationTypeName(templateType: string): string {
-    switch (templateType) {
-      case 'INBOUND_SMART_FUNCTION':
-      case 'OUTBOUND_SMART_FUNCTION':
-        return 'Smart Functions';
-      case 'SHARED':
-        return 'Shared Code';
-      case 'SYSTEM':
-        return 'System Code';
-      case 'INBOUND':
-        return 'Inbound (deprecated)';
-      case 'OUTBOUND':
-        return 'Outbound (deprecated)';
-      default:
-        return templateType;
     }
   }
 

@@ -130,12 +130,16 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Table_Import.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_TestTransformation.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_TestTransformation.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Test_Transformation.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Test_Transformation.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_SendTestMessage.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_SendTestMessage.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Editor_Test_Transformation.png',
+        to: 'image/Dynamic_Mapper_Mapping_Editor_Test_Transformation.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Send_TestMessage.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Send_TestMessage.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Connector_Overview.png',

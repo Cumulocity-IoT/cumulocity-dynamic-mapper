@@ -28,67 +28,27 @@
       </a>
     </div>
     <div class="doc-content" #docBody>
-      <!-- Static prose (Overview section, up to the live counts below) rendered from markdown. -->
-      <div [innerHTML]="htmlPart1"></div>
+    <!-- Intro prose, up to the live counts below. -->
+    <div [innerHTML]="htmlIntro"></div>
 
-      <!-- Native widget: live mapping/connector counts — needs real app state, so it stays as an
-           actual Angular template rather than markdown (content set via [innerHTML] is never
-           evaluated by Angular, so bindings/pipes here would otherwise just print as literal text). -->
-      <ul class="text-16">
-        <li>
-          <b>{{ countMappingInbound$ | async }}</b>
-          <a [routerLink]="ROUTE_INBOUND"> inbound</a> and
-          <b>{{ countMappingOutbound$ | async }}</b>
-          <a [routerLink]="ROUTE_OUTBOUND"> outbound</a>
-          mappings are currently defined.
-        </li>
-        <li>
-          <b>{{ countConnector$ | async }}</b>
-          <a [routerLink]="ROUTE_CONNECTORS"> connectors</a> are currently defined.
-        </li>
-      </ul>
+    <!-- Native widget: live mapping/connector counts — needs real app state, so it stays as an
+         actual Angular template rather than markdown (content set via [innerHTML] is never
+         evaluated by Angular, so bindings/pipes here would otherwise just print as literal text). -->
+    <ul class="text-16">
+      <li>
+        <b>{{ countMappingInbound$ | async }}</b>
+        <a [routerLink]="ROUTE_INBOUND"> inbound</a> and
+        <b>{{ countMappingOutbound$ | async }}</b>
+        <a [routerLink]="ROUTE_OUTBOUND"> outbound</a>
+        mappings are currently defined.
+      </li>
+      <li>
+        <b>{{ countConnector$ | async }}</b>
+        <a [routerLink]="ROUTE_CONNECTORS"> connectors</a> are currently defined.
+      </li>
+    </ul>
 
-      <!-- Static prose (rest of Overview through the Code Templates section intro) rendered from markdown. -->
-      <div [innerHTML]="htmlPart2"></div>
-
-      <!-- Static prose (rest of Code Templates section through Troubleshooting) rendered from markdown. -->
-      <div [innerHTML]="htmlPart3"></div>
-
-      <!-- Native widget: code template gallery — iterates live codeTemplates and opens the code
-           drawer, so it stays as a real Angular template for the same reason as above. Kept as an
-           appendix at the end of the page (rather than inline after the Code Templates intro) so
-           this long, per-mapping-type table doesn't interrupt the reading flow into Metadata,
-           Reliability, etc. -->
-      <h3 id="code-template-gallery">Appendix: Code Template Gallery</h3>
-      <p>Each template includes sample code demonstrating best practices for:</p>
-      <ul>
-        <li>Accessing and transforming payload data</li>
-        <li>Working with device identifiers and external IDs</li>
-        <li>Enriching data with device inventory information</li>
-        <li>Handling different Cumulocity API types (measurements, events, alarms, inventory)</li>
-        <li>Error handling and logging</li>
-      </ul>
-      <div class="table-responsive table-width-100">
-        <table class="table table-striped table-layout-fixed">
-          <thead class="thead-light">
-            <tr>
-              <th style="width: 20%;">Transformation Type</th>
-              <th style="width: 10%;">Direction</th>
-              <th style="width: 55%;">Description</th>
-              <th style="width: 15%;">View Code</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (template of codeTemplates; track template) {
-            <tr>
-              <td>{{ getTransformationTypeName(template.templateType) }}</td>
-              <td>{{ template.direction }}</td>
-              <td>{{ template.description }}</td>
-              <td><a (click)="openCodeExplorer(template)">View</a></td>
-            </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <!-- The three-tier "where to start" table that routes the reader onward. -->
+    <div [innerHTML]="htmlNextSteps"></div>
   </div>
+</div>

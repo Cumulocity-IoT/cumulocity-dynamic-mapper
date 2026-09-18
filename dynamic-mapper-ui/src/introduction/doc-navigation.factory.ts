@@ -37,188 +37,256 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     'dynamic-mapper-service';
   appName: string;
   isStandaloneApp: boolean = false;
+  /**
+   * The documentation navigator, grouped into three tiers so a reader can tell what they need
+   * now from what they need later:
+   *
+   *   Start     — the path for someone who has never used the mapper (overview, quickstart, concepts)
+   *   Guides    — task-oriented pages, read when doing that task
+   *   Reference — per-feature detail, read on demand
+   *
+   * This replaces a flat list of 16 siblings that all pointed at the same combined page.
+   * Priorities descend within each group; the groups themselves are spaced 100 apart so pages
+   * can be inserted without renumbering neighbours.
+   */
   staticNodesStandalone = {
     rootNode: new NavigatorNode({
       label: gettext('Home'),
       icon: 'home',
       path: '/c8y-pkg-dynamic-mapper/introduction',
-      priority: 614,
+      priority: 1000,
+      preventDuplicates: true
+    }),
+
+    // ---- Start ---------------------------------------------------------------
+    startNode: new NavigatorNode({
+      parent: gettext('Home'),
+      icon: 'rocket',
+      label: gettext('Start'),
+      priority: 900,
       preventDuplicates: true
     }),
     overviewNode: new NavigatorNode({
-      parent: gettext('Home'),
+      parent: gettext('Start'),
       icon: 'book',
       label: gettext('Overview'),
       path: '/c8y-pkg-dynamic-mapper/introduction/overview',
-      priority: 613,
+      priority: 893,
       preventDuplicates: true
     }),
-    gettingStartedNode: new NavigatorNode({
-      parent: gettext('Home'),
-      icon: 'rocket',
-      label: gettext('Getting started'),
-      path: '/c8y-pkg-dynamic-mapper/introduction/getting-started',
-      priority: 612,
+    quickstartNode: new NavigatorNode({
+      parent: gettext('Start'),
+      icon: 'flash',
+      label: gettext('Quickstart'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/quickstart',
+      priority: 892,
       preventDuplicates: true
     }),
-    messageExplorerNode: new NavigatorNode({
+    conceptsNode: new NavigatorNode({
+      parent: gettext('Start'),
+      icon: 'lightbulb-o',
+      label: gettext('Core concepts'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/concepts',
+      priority: 891,
+      preventDuplicates: true
+    }),
+
+    // ---- Guides --------------------------------------------------------------
+    guidesNode: new NavigatorNode({
       parent: gettext('Home'),
-      icon: 'search',
-      label: gettext('Message Explorer'),
-      path: '/c8y-pkg-dynamic-mapper/introduction/message-explorer',
-      priority: 611.5,
+      icon: 'map-o',
+      label: gettext('Guides'),
+      priority: 800,
       preventDuplicates: true
     }),
     managingConnectorsNode: new NavigatorNode({
-      parent: gettext('Home'),
+      parent: gettext('Guides'),
       icon: 'plug',
       label: gettext('Managing connectors'),
       path: '/c8y-pkg-dynamic-mapper/introduction/managing-connectors',
-      priority: 611,
+      priority: 793,
       preventDuplicates: true
     }),
     connectorReferenceNode: new NavigatorNode({
       parent: gettext('Managing connectors'),
       icon: 'image',
-      label: gettext('Connector Reference'),
+      label: gettext('Connector reference'),
       path: '/c8y-pkg-dynamic-mapper/introduction/connectors',
-      priority: 610.9,
-      preventDuplicates: true
-    }),
-    monitoringNode: new NavigatorNode({
-      parent: gettext('Home'),
-      icon: 'line-chart',
-      label: gettext('Monitoring overview'),
-      path: '/c8y-pkg-dynamic-mapper/introduction/monitoring',
-      priority: 598.5,
+      priority: 792,
       preventDuplicates: true
     }),
     definingMappingNode: new NavigatorNode({
-      parent: gettext('Home'),
+      parent: gettext('Guides'),
       icon: 'exchange',
       label: gettext('Defining a mapping'),
       path: '/c8y-pkg-dynamic-mapper/introduction/define-mapping',
-      priority: 610,
-      preventDuplicates: true
-    }),
-    versioningNode: new NavigatorNode({
-      parent: gettext('Home'),
-      icon: 'history',
-      label: gettext('Versioning mappings'),
-      path: '/c8y-pkg-dynamic-mapper/introduction/versioning',
-      priority: 609.8,
-      preventDuplicates: true
-    }),
-    sparkPlugBNode: new NavigatorNode({
-      parent: gettext('Home'),
-      icon: 'bolt',
-      label: gettext('SparkPlug B'),
-      path: '/c8y-pkg-dynamic-mapper/introduction/sparkplugb',
-      priority: 609.5,
+      priority: 791,
       preventDuplicates: true
     }),
     subscriptionOutboundNode: new NavigatorNode({
-      parent: gettext('Home'),
+      parent: gettext('Guides'),
       icon: 'upload',
       label: gettext('Outbound mapping'),
       path: '/c8y-pkg-dynamic-mapper/introduction/define-subscription-for-outbound',
-      priority: 609,
+      priority: 790,
       preventDuplicates: true
     }),
     transformationTypesNode: new NavigatorNode({
-      parent: gettext('Home'),
+      parent: gettext('Guides'),
       icon: 'sitemap',
-      label: gettext('Transformation Types'),
+      label: gettext('Transformation types'),
       path: '/c8y-pkg-dynamic-mapper/introduction/transformation-types',
-      priority: 608,
+      priority: 789,
       preventDuplicates: true
     }),
     jsonNataNode: new NavigatorNode({
-      parent: gettext('Transformation Types'),
+      parent: gettext('Transformation types'),
       icon: 'terminal',
       label: gettext('JSONata'),
       path: '/c8y-pkg-dynamic-mapper/introduction/jsonata',
-      priority: 607,
+      priority: 788,
       preventDuplicates: true
     }),
     smartFunctionNode: new NavigatorNode({
-      parent: gettext('Transformation Types'),
+      parent: gettext('Transformation types'),
       icon: 'code',
       label: gettext('Smart Function'),
       path: '/c8y-pkg-dynamic-mapper/introduction/smartfunction',
-      priority: 606,
+      priority: 787,
       preventDuplicates: true
     }),
     javaExtensionNode: new NavigatorNode({
-      parent: gettext('Transformation Types'),
+      parent: gettext('Transformation types'),
       icon: 'java',
       label: gettext('Java Extension'),
       path: '/c8y-pkg-dynamic-mapper/introduction/javaextension',
-      priority: 604,
+      priority: 786,
       preventDuplicates: true
     }),
     customRoutingNode: new NavigatorNode({
-      parent: gettext('Transformation Types'),
+      parent: gettext('Transformation types'),
       icon: 'random',
-      label: gettext('Custom Routing'),
+      label: gettext('Custom routing'),
       path: '/c8y-pkg-dynamic-mapper/introduction/custom-routing',
-      priority: 603.5,
+      priority: 785,
       preventDuplicates: true
     }),
-    flowStateNode: new NavigatorNode({
-      parent: gettext('Home'),
-      icon: 'flow-chart',
-      label: gettext('Flow State'),
-      path: '/c8y-pkg-dynamic-mapper/introduction/flow-state',
-      priority: 603.5,
+    messageExplorerNode: new NavigatorNode({
+      parent: gettext('Guides'),
+      icon: 'search',
+      label: gettext('Message Explorer'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/message-explorer',
+      priority: 784,
       preventDuplicates: true
     }),
-    codeTemplatesNode: new NavigatorNode({
-      parent: gettext('Home'),
-      icon: 'file-text',
-      label: gettext('Code Templates'),
-      path: '/c8y-pkg-dynamic-mapper/introduction/code-templates',
-      priority: 603,
-      preventDuplicates: true
-    }),
-    metadataNode: new NavigatorNode({
-      parent: gettext('Home'),
-      icon: 'tags',
-      label: gettext('Metadata'),
-      path: '/c8y-pkg-dynamic-mapper/introduction/metadata',
-      priority: 602,
-      preventDuplicates: true
-    }),
-    serviceConfigurationNode: new NavigatorNode({
-      parent: gettext('Home'),
-      icon: 'cog',
-      label: gettext('Service configuration'),
-      path: '/c8y-pkg-dynamic-mapper/introduction/service-configuration',
-      priority: 601,
-      preventDuplicates: true
-    }),
-    reliabilitySettingsNode: new NavigatorNode({
-      parent: gettext('Home'),
-      icon: 'shield',
-      label: gettext('Reliability settings'),
-      path: '/c8y-pkg-dynamic-mapper/introduction/reliability-settings',
-      priority: 600,
-      preventDuplicates: true
-    }),
-    accessControlNode: new NavigatorNode({
-      parent: gettext('Home'),
-      icon: 'lock',
-      label: gettext('Managing permissions'),
-      path: '/c8y-pkg-dynamic-mapper/introduction/access-control',
-      priority: 599,
+    // Label must NOT be plain 'Monitoring'. Cumulocity's NavigatorNode nests by label string,
+    // and the application's own Monitoring node (shared/misc/navigation.factory.ts) is the parent
+    // of six real pages — Statistic processed, Service events, Cache statistic, Versions,
+    // Test device and Hierarchy mapping. Naming this node 'Monitoring' makes those six app pages
+    // reparent themselves under this documentation entry.
+    monitoringNode: new NavigatorNode({
+      parent: gettext('Guides'),
+      icon: 'line-chart',
+      label: gettext('Monitoring overview'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/monitoring',
+      priority: 783,
       preventDuplicates: true
     }),
     troubleshootingNode: new NavigatorNode({
-      parent: gettext('Home'),
+      parent: gettext('Guides'),
       icon: 'wrench',
       label: gettext('Troubleshooting'),
       path: '/c8y-pkg-dynamic-mapper/introduction/troubleshooting',
-      priority: 598,
+      priority: 782,
+      preventDuplicates: true
+    }),
+
+    // ---- Reference -----------------------------------------------------------
+    referenceNode: new NavigatorNode({
+      parent: gettext('Home'),
+      icon: 'list-alt',
+      label: gettext('Reference'),
+      priority: 700,
+      preventDuplicates: true
+    }),
+    payloadTypesNode: new NavigatorNode({
+      parent: gettext('Reference'),
+      icon: 'file-code-o',
+      label: gettext('Payload types'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/payload-types',
+      priority: 699,
+      preventDuplicates: true
+    }),
+    sparkPlugBNode: new NavigatorNode({
+      parent: gettext('Reference'),
+      icon: 'bolt',
+      label: gettext('SparkPlug B'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/sparkplugb',
+      priority: 698,
+      preventDuplicates: true
+    }),
+    metadataNode: new NavigatorNode({
+      parent: gettext('Reference'),
+      icon: 'tags',
+      label: gettext('Metadata'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/metadata',
+      priority: 697,
+      preventDuplicates: true
+    }),
+    flowStateNode: new NavigatorNode({
+      parent: gettext('Reference'),
+      icon: 'flow-chart',
+      label: gettext('Flow state'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/flow-state',
+      priority: 696,
+      preventDuplicates: true
+    }),
+    codeTemplatesNode: new NavigatorNode({
+      parent: gettext('Reference'),
+      icon: 'file-text',
+      label: gettext('Code templates'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/code-templates',
+      priority: 695,
+      preventDuplicates: true
+    }),
+    versioningNode: new NavigatorNode({
+      parent: gettext('Reference'),
+      icon: 'history',
+      label: gettext('Versioning mappings'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/versioning',
+      priority: 694,
+      preventDuplicates: true
+    }),
+    reliabilitySettingsNode: new NavigatorNode({
+      parent: gettext('Reference'),
+      icon: 'shield',
+      label: gettext('Reliability settings'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/reliability-settings',
+      priority: 693,
+      preventDuplicates: true
+    }),
+    aiAssistedNode: new NavigatorNode({
+      parent: gettext('Reference'),
+      icon: 'magic',
+      label: gettext('AI-assisted mapping'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/ai-assisted',
+      priority: 692,
+      preventDuplicates: true
+    }),
+    serviceConfigurationNode: new NavigatorNode({
+      parent: gettext('Reference'),
+      icon: 'cog',
+      label: gettext('Service configuration'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/service-configuration',
+      priority: 691,
+      preventDuplicates: true
+    }),
+    accessControlNode: new NavigatorNode({
+      parent: gettext('Reference'),
+      icon: 'lock',
+      label: gettext('Managing permissions'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/access-control',
+      priority: 690,
       preventDuplicates: true
     }),
   } as const;

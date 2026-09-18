@@ -27,12 +27,10 @@ The full flow when working with a mapping is:
 3. **Activate** a version — its configuration is loaded into the running mapping. To **roll back**, simply
    activate an older version; newer versions are kept and remain available.
 
-:::info Note
 The first time you publish or activate a mapping that has no version history yet, its current active configuration
 is automatically captured as **1.0.0**, so no history is lost. Existing mappings that previously used sequential
 integer version numbers (1, 2, 3…) are automatically migrated to semver format (`1.0.0`, `2.0.0`, etc.) on first
 access.
-:::
 
 ### Choosing the right version bump {#versioning-semver}
 
