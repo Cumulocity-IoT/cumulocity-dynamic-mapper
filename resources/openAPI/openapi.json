@@ -157,7 +157,7 @@
             "content" : {
               "application/json" : {
                 "example" : {
-                  "error" : "Authenticated user does not have the required role: ROLE_MAPPING_HTTP_CONNECTOR_CREATE"
+                  "error" : "Authenticated user does not have the required role: ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE"
                 }
               }
             }
@@ -264,7 +264,7 @@
             "content" : {
               "application/json" : {
                 "example" : {
-                  "error" : "Authenticated user does not have the required role: ROLE_MAPPING_HTTP_CONNECTOR_CREATE"
+                  "error" : "Authenticated user does not have the required role: ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE"
                 }
               }
             }
@@ -373,7 +373,7 @@
             "content" : {
               "application/json" : {
                 "example" : {
-                  "error" : "Authenticated user does not have the required role: ROLE_MAPPING_HTTP_CONNECTOR_CREATE"
+                  "error" : "Authenticated user does not have the required role: ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE"
                 }
               }
             }
@@ -480,7 +480,7 @@
             "content" : {
               "application/json" : {
                 "example" : {
-                  "error" : "Authenticated user does not have the required role: ROLE_MAPPING_HTTP_CONNECTOR_CREATE"
+                  "error" : "Authenticated user does not have the required role: ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE"
                 }
               }
             }

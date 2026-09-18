@@ -104,11 +104,11 @@ export class DocOverviewComponent implements OnInit {
       );
     } else if (!this.feature?.userHasMappingAdminRole) {
       this.alertService.warning(
-        "You don't have the role 'Dynamic Mapper Admin' and therefore cannot create or edit connectors. Please contact your administrator."
+        "You don't have the role ROLE_DYNAMIC_MAPPER_ADMIN and therefore cannot create or edit connectors. Please contact your administrator."
       );
     } else if (!this.feature?.userHasMappingCreateRole) {
       this.alertService.warning(
-        "You don't have the role 'Dynamic Mapper User' and therefore cannot edit mappings. Please contact your administrator."
+        "You don't have the role ROLE_DYNAMIC_MAPPER_CREATE and therefore cannot edit mappings. Please contact your administrator."
       );
     }
   }

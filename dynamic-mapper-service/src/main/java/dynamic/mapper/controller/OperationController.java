@@ -23,6 +23,7 @@ package dynamic.mapper.controller;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -105,6 +106,64 @@ public class OperationController {
     private final ExtensionManager extensionManager;
     private final ObjectMapper objectMapper;
 
+
+    /** Which role each operation needs. ADMIN implies CREATE (see {@link Utils}). */
+    private enum RequiredRole { ADMIN, CREATE }
+
+    /**
+     * The permission table for {@link #runOperation}.
+     *
+     * <p>This used to be 17 hand-written {@code if (!Utils.userHas…Role())} blocks, one per case
+     * in the switch below. That worked, but nothing forced a newly added operation to carry one —
+     * a new {@code case} was simply unguarded, and the omission was invisible. Keeping the
+     * requirement in a table means the static block underneath fails at class load if an
+     * {@link Operation} is ever added without deciding who may run it.</p>
+     */
+    private static final Map<Operation, RequiredRole> REQUIRED_ROLES = Map.ofEntries(
+            Map.entry(Operation.ACTIVATE_MAPPING, RequiredRole.CREATE),
+            Map.entry(Operation.ADD_SAMPLE_MAPPINGS, RequiredRole.CREATE),
+            Map.entry(Operation.APPLY_MAPPING_FILTER, RequiredRole.CREATE),
+            Map.entry(Operation.CLEAR_CACHE, RequiredRole.ADMIN),
+            Map.entry(Operation.CLEAR_CACHE_DEVICE_TO_CLIENT, RequiredRole.ADMIN),
+            Map.entry(Operation.CONNECT, RequiredRole.ADMIN),
+            Map.entry(Operation.DEBUG_MAPPING, RequiredRole.CREATE),
+            Map.entry(Operation.DISCONNECT, RequiredRole.ADMIN),
+            Map.entry(Operation.INIT_CODE_TEMPLATES, RequiredRole.ADMIN),
+            Map.entry(Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS, RequiredRole.ADMIN),
+            Map.entry(Operation.REFRESH_STATUS_MAPPING, RequiredRole.CREATE),
+            Map.entry(Operation.RELOAD_EXTENSIONS, RequiredRole.ADMIN),
+            Map.entry(Operation.RELOAD_MAPPINGS, RequiredRole.CREATE),
+            Map.entry(Operation.RESET_DEPLOYMENT_MAP, RequiredRole.ADMIN),
+            Map.entry(Operation.RESET_STATISTICS_MAPPING, RequiredRole.ADMIN),
+            Map.entry(Operation.ROTATE_GRAALVM_ENGINE, RequiredRole.ADMIN),
+            Map.entry(Operation.UPDATE_CODE, RequiredRole.CREATE));
+
+    static {
+        List<Operation> unmapped = Arrays.stream(Operation.values())
+                .filter(op -> !REQUIRED_ROLES.containsKey(op))
+                .toList();
+        if (!unmapped.isEmpty()) {
+            throw new IllegalStateException(
+                    "Operation(s) missing from OperationController.REQUIRED_ROLES, so they would run unguarded: "
+                            + unmapped);
+        }
+    }
+
+    private static void requireRoleFor(Operation operationType) {
+        RequiredRole required = REQUIRED_ROLES.get(operationType);
+        if (required == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unknown operation: " + operationType);
+        }
+        boolean permitted = required == RequiredRole.ADMIN
+                ? Utils.userHasMappingAdminRole()
+                : Utils.userHasMappingCreateRole();
+        if (!permitted) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "User does not have permission to execute operation " + operationType
+                            + " (requires ROLE_DYNAMIC_MAPPER_" + required + ")");
+        }
+    }
+
     @io.swagger.v3.oas.annotations.Operation(summary = "Execute a service operation", description = """
             Executes various administrative and operational tasks such as reloading mappings, connecting/disconnecting connectors, managing caches, and other maintenance operations. Different operations require different permission levels.
 
@@ -178,109 +237,43 @@ public class OperationController {
             Operation operationType = operation.getOperation();
             Map<String, String> parameters = operation.getParameter();
 
+            requireRoleFor(operationType);
+
             switch (operationType) {
                 case RELOAD_MAPPINGS:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to reload mappings");
-                    }
                     return handleReloadMappings(tenant);
                 case CONNECT:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to connect to connector");
-                    }
                     return handleConnect(tenant, parameters);
                 case DISCONNECT:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to disconnect from connector");
-                    }
                     return handleDisconnect(tenant, parameters);
                 case REFRESH_STATUS_MAPPING:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to refresh status mappings");
-                    }
                     return handleRefreshStatusMapping(tenant);
                 case RESET_STATISTICS_MAPPING:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to reset status mapping");
-                    }
                     return handleResetStatusMapping(tenant);
                 case RESET_DEPLOYMENT_MAP:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to reset deployment map");
-                    }
                     return handleResetDeploymentMap(tenant);
                 case RELOAD_EXTENSIONS:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to reload extensions");
-                    }
                     return handleReloadExtensions(tenant);
                 case ACTIVATE_MAPPING:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to activate mappings");
-                    }
                     return handleActivateMapping(tenant, parameters);
                 case APPLY_MAPPING_FILTER:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to apply mapping filter");
-                    }
                     return handleApplyMappingFilter(tenant, parameters);
 
                 case UPDATE_CODE:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to change transformation code");
-                    }
                     return handleApplyUpdateCode(tenant, parameters);
                 case DEBUG_MAPPING:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to debug mappings");
-                    }
                     return handleDebugMapping(tenant, parameters);
                 case REFRESH_NOTIFICATIONS_SUBSCRIPTIONS:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to refresh notifications subscriptions");
-                    }
                     return handleRefreshNotifications(tenant);
                 case CLEAR_CACHE:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to clear cache");
-                    }
                     return handleClearCache(tenant, parameters);
                 case ADD_SAMPLE_MAPPINGS:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to add sample mappings");
-                    }
                     return handleAddSampleMappings(tenant, parameters);
                 case INIT_CODE_TEMPLATES:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to initialize code templates");
-                    }
                     return handleInitCodeTemplates(tenant, parameters);
                 case CLEAR_CACHE_DEVICE_TO_CLIENT:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to clear device-to-client cache");
-                    }
                     return handleClearCacheDeviceToClient(tenant, parameters);
                 case ROTATE_GRAALVM_ENGINE:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to rotate GraalVM engine");
-                    }
                     serviceRegistry.getGraalVMContextService().rotateEngine(tenant);
                     return ResponseEntity.status(HttpStatus.CREATED).build();
                 default:

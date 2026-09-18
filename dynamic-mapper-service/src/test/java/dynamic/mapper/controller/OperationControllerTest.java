@@ -60,7 +60,11 @@ import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import dynamic.mapper.model.Operation;
+import org.springframework.web.server.ResponseStatusException;
 import dynamic.mapper.model.ServiceOperation;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.mapping.MappingService;
@@ -201,5 +205,31 @@ class OperationControllerTest {
         controller.runOperation(operation);
 
         verify(mappingService).setActivationMapping(TENANT, "m1", false, null);
+    }
+
+    @Test
+    void operationRequiringAdmin_isRejectedForCreateOnlyUser() {
+        // setUp() grants only ROLE_DYNAMIC_MAPPER_CREATE. CONNECT is an admin operation, so the
+        // central permission check in runOperation must refuse it.
+        ServiceOperation operation = new ServiceOperation();
+        operation.setOperation(Operation.CONNECT);
+        Map<String, String> parameters = new HashMap<>();
+        parameters.put("connectorIdentifier", "c1");
+        operation.setParameter(parameters);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> controller.runOperation(operation));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        assertTrue(ex.getReason().contains("ROLE_DYNAMIC_MAPPER_ADMIN"),
+                "the refusal should name the role the caller is missing, got: " + ex.getReason());
+    }
+
+    @Test
+    void everyOperationIsCoveredByThePermissionTable() {
+        // OperationController's static initializer throws if an Operation has no entry in
+        // REQUIRED_ROLES, which would otherwise mean it runs unguarded. Loading the class here
+        // makes that guarantee an explicit, named test rather than an incidental side effect.
+        assertDoesNotThrow(() -> Class.forName(OperationController.class.getName(), true,
+                OperationController.class.getClassLoader()));
     }
 }

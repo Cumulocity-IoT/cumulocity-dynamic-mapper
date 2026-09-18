@@ -815,6 +815,8 @@ public class ConfigurationController {
 
     // TEST ONLY — not exposed in OpenAPI docs
     @Hidden
+    // Writes the tenant's ServiceConfiguration, which the permission model reserves for admins.
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @PutMapping(value = "/test/deprecation-notice", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> setAcceptedDeprecationNotice(
             @RequestParam String version) {
