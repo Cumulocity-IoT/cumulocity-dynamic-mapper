@@ -563,7 +563,12 @@ describe('MappingUnifiedEditorComponent', () => {
     it('alerts and stays in the editor on a successful save', async () => {
       await component.onCommitButton();
 
-      expect(mockAlertService.success).toHaveBeenCalled();
+      // add() rather than success(): the toast needs an explicit timeout, because Cumulocity
+      // auto-dismisses a detail-less success alert after 3s.
+      expect(mockAlertService.add).toHaveBeenCalled();
+      const alert = mockAlertService.add.calls.mostRecent().args[0];
+      expect(alert.type).toBe('success');
+      expect(alert.timeout).toBeGreaterThan(3000);
       expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
     });
 
@@ -573,6 +578,7 @@ describe('MappingUnifiedEditorComponent', () => {
       await component.onCommitButton();
 
       expect(mockAlertService.success).not.toHaveBeenCalled();
+      expect(mockAlertService.add).not.toHaveBeenCalled();
       expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
     });
 

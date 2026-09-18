@@ -467,8 +467,12 @@ export class MappingComponent implements OnInit, OnDestroy {
         sortable: false,
         dataType: ColumnDataType.TextShort,
         cellRendererComponent: StatusRendererComponent,
+        // Makes the cell a link that opens the version drawer for this row. Read by
+        // StatusRendererComponent as context.property['callback'] — 'callback' is not part of
+        // the Column interface, hence the cast, matching how the connector grid does it.
+        callback: this.openVersions.bind(this),
         gridTrackSize: '16%'
-      },
+      } as Column,
       {
         header: 'Activate',
         name: 'active',
@@ -830,12 +834,14 @@ export class MappingComponent implements OnInit, OnDestroy {
       return; // the alert has already been raised
     }
 
-    const message = commitSuccessMessage(
+    const alert = commitSuccessMessage(
       result,
       editorState.mapping.name,
       this.stepperConfiguration.editorMode
     );
-    if (message) this.alertService.success(message);
+    // add() rather than success(): success() leaves the timeout unset, and Cumulocity then
+    // auto-dismisses a detail-less success alert after 3s — too short to read an instruction.
+    if (alert) this.alertService.add({ text: alert.text, type: 'success', timeout: alert.timeout });
 
     this.showConfigMapping = false;
 

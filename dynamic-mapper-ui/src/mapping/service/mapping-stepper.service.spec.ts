@@ -36,6 +36,8 @@ import { ExtensionService } from '../../extension';
 import { AIAgentService } from '../core/ai-agent.service';
 import { EditorMode } from '../../shared/mapping/stepper.model';
 import {
+  ALERT_ACTION_REQUIRED_TIMEOUT,
+  ALERT_SUCCESS_TIMEOUT,
   Direction,
   Extension,
   ExtensionType,
@@ -1191,17 +1193,34 @@ describe('MappingStepperService', () => {
       ({ status: 'saved', contentChanged, deploymentChanged }) as Extract<CommitResult, { status: 'saved' }>;
 
     it('announces a creation for every non-UPDATE mode', () => {
-      expect(commitSuccessMessage(saved(true, true), 'M', EditorMode.CREATE)).toContain('created successfully');
-      expect(commitSuccessMessage(saved(true, true), 'M', EditorMode.COPY)).toContain('created successfully');
+      expect(commitSuccessMessage(saved(true, true), 'M', EditorMode.CREATE)?.text).toContain('created successfully');
+      expect(commitSuccessMessage(saved(true, true), 'M', EditorMode.COPY)?.text).toContain('created successfully');
     });
 
     it('distinguishes the three UPDATE outcomes', () => {
-      expect(commitSuccessMessage(saved(true, true), 'M', EditorMode.UPDATE))
+      expect(commitSuccessMessage(saved(true, true), 'M', EditorMode.UPDATE)?.text)
         .toContain('Saved draft and connector assignments');
-      expect(commitSuccessMessage(saved(true, false), 'M', EditorMode.UPDATE))
+      expect(commitSuccessMessage(saved(true, false), 'M', EditorMode.UPDATE)?.text)
         .toContain('Saved draft for M');
-      expect(commitSuccessMessage(saved(false, true), 'M', EditorMode.UPDATE))
+      expect(commitSuccessMessage(saved(false, true), 'M', EditorMode.UPDATE)?.text)
         .toContain('Connector assignments for M saved');
+    });
+
+    it('keeps the draft messages up longer, because they ask for a follow-up action', () => {
+      // Cumulocity auto-dismisses a detail-less success alert after 3s; these two tell the user
+      // to publish and activate afterwards, so they must outlast that.
+      expect(commitSuccessMessage(saved(true, true), 'M', EditorMode.UPDATE)?.timeout)
+        .toBe(ALERT_ACTION_REQUIRED_TIMEOUT);
+      expect(commitSuccessMessage(saved(true, false), 'M', EditorMode.UPDATE)?.timeout)
+        .toBe(ALERT_ACTION_REQUIRED_TIMEOUT);
+      expect(ALERT_ACTION_REQUIRED_TIMEOUT).toBeGreaterThan(3000);
+    });
+
+    it('uses the ordinary success dwell time for plain confirmations', () => {
+      expect(commitSuccessMessage(saved(true, true), 'M', EditorMode.CREATE)?.timeout)
+        .toBe(ALERT_SUCCESS_TIMEOUT);
+      expect(commitSuccessMessage(saved(false, true), 'M', EditorMode.UPDATE)?.timeout)
+        .toBe(ALERT_SUCCESS_TIMEOUT);
     });
 
     it('says nothing when an UPDATE changed nothing', () => {

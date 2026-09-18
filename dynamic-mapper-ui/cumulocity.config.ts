@@ -50,6 +50,10 @@ export default {
         to: 'image/Dynamic_Mapper_Monitoring_TestDevices.png'
       },
       {
+        from: '../resources/image-optimized/Dynamic_Mapper_Monitoring_Microservice_Log.png',
+        to: 'image/Dynamic_Mapper_Monitoring_Microservice_Log.png'
+      },
+      {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Subscription_Outbound_Resync.png',
         to: 'image/Dynamic_Mapper_Mapping_Subscription_Outbound_Resync.png'
       },
@@ -114,8 +118,8 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Versions_Drawer.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Versions_Status_Badge.png',
-        to: 'image/Dynamic_Mapper_Mapping_Versions_Status_Badge.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Table.png',
+        to: 'image/Dynamic_Mapper_Mapping_Table.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Versions_Retention_Config.png',

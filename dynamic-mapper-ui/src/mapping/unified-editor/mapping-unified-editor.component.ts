@@ -567,8 +567,10 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       return; // the alert has already been raised
     }
 
-    const message = commitSuccessMessage(result, this.mapping.name, this.stepperConfiguration.editorMode);
-    if (message) this.alertService.success(message);
+    const alert = commitSuccessMessage(result, this.mapping.name, this.stepperConfiguration.editorMode);
+    // add() rather than success(): success() leaves the timeout unset, and Cumulocity then
+    // auto-dismisses a detail-less success alert after 3s — too short to read an instruction.
+    if (alert) this.alertService.add({ text: alert.text, type: 'success', timeout: alert.timeout });
 
     // Saving deliberately does NOT leave the editor: the user is typically mid-flow and still
     // wants the Testing tab (or another round of edits) afterwards. Leaving is Cancel's job.

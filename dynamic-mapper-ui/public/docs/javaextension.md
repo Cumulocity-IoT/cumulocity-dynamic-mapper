@@ -23,16 +23,43 @@ stepper.
 ##### End-to-end overview
 
 ```mermaid
-flowchart TD
-    s1["1. Implement ProcessorExtensionInbound&lt;byte[]&gt;<br/>(or ProcessorExtensionOutbound&lt;O&gt; for C8Y to broker)"]
-    s2["2. Register the class in<br/>extension-external.yaml<br/>eventName, className, description, version,<br/>optional default parameter map"]
-    s3["3. Package extension-external.yaml + compiled classes<br/>into a jar archive"]
-    s4["4. Upload the jar:<br/>Configuration &rarr; Processor extension &rarr; Add extension<br/>(the microservice loads it dynamically, per tenant)"]
-    s5["5. Create a mapping with transformation type Extension Java,<br/>select the extension and its eventName;<br/>optionally override the parameter map for this mapping"]
-    s6["Mapping is active:<br/>onMessage(...) runs on every matching broker message,<br/>context.getConfigAsMap() exposes tenant/topic/parameter,<br/>and its CumulocityObject results are sent to Cumulocity"]
+flowchart LR
+    subgraph build["Build"]
+        direction TB
+        s1["1. Implement the interface<br/>ProcessorExtensionInbound"]
+        s2["2. Register the class in<br/>extension-external.yaml"]
+        s3["3. Package classes + yaml<br/>into a jar archive"]
+        s1 --> s2 --> s3
+    end
 
-    s1 --> s2 --> s3 --> s4 --> s5 --> s6
+    subgraph deploy["Deploy"]
+        direction TB
+        s4["4. Upload the jar<br/>Configuration &rarr;<br/>Processor extension"]
+    end
+
+    subgraph run["Run"]
+        direction TB
+        s5["5. Create a mapping with<br/>transformation type<br/>Extension Java"]
+        s6["6. Mapping is active<br/>onMessage() runs on every<br/>matching message"]
+        s5 --> s6
+    end
+
+    s3 --> s4 --> s5
 ```
+
+Each step in detail:
+
+1. **Implement** `ProcessorExtensionInbound<byte[]>` for broker-to-Cumulocity, or
+   `ProcessorExtensionOutbound<O>` for Cumulocity-to-broker.
+2. **Register** the class in `extension-external.yaml` with its `eventName`, `className`, `description`,
+   `version` and an optional default parameter map.
+3. **Package** the yaml together with the compiled classes into a single jar.
+4. **Upload** it under **Configuration → Processor extension → Add extension**. The microservice loads the jar
+   dynamically, per tenant — no redeployment.
+5. **Create a mapping** with transformation type **Extension Java**, select the extension and its `eventName`, and
+   optionally override the parameter map for that mapping.
+6. At runtime `onMessage(...)` receives every matching message. `context.getConfigAsMap()` exposes the tenant,
+   topic and parameter map, and the `CumulocityObject` results your method returns are sent to Cumulocity.
 
 ##### Selecting Java Extensions in the Mapping Stepper
 
@@ -75,7 +102,18 @@ displays all deployed extensions with their properties, implementation details, 
 
 ![Processor Extension Configuration](../../../resources/image/Dynamic_Mapper_Configuration_ProcessorExtension_Plugin_Installed.png "Screenshot showing the Processor Extension configuration page with installed plugins. Each extension displays its name (e.g., CustomEvent, MeasurementToCustomJson), implementation class path, message type, direction (Outbound/Inbound), and active status. The interface allows you to view extension properties and verify that plugins are correctly installed and operational.")
 
-The signature and structure of a **Java Extension** has the form:
+A Java Extension implements one of two interfaces, depending on the direction it serves:
+
+| Direction | Interface | Receives | Returns |
+|---|---|---|---|
+| **Inbound** (broker → Cumulocity) | `ProcessorExtensionInbound<byte[]>` | the raw broker payload as bytes | `CumulocityObject[]` |
+| **Outbound** (Cumulocity → broker) | `ProcessorExtensionOutbound<O>` | the Cumulocity object, **already parsed** | `DeviceMessage[]` |
+
+Both are implemented the same way — a single `onMessage(message, context)` that returns an array — and both are
+packaged, registered and uploaded identically. The direction is derived from the interface you implement; you do
+not declare it anywhere.
+
+###### Inbound — broker to Cumulocity
 
 ```java
 public class ProcessorExtensionSmartInbound01 implements ProcessorExtensionInbound<byte[]> {
@@ -141,6 +179,97 @@ extensions:
 
 Package the configuration file **extension-external.yaml** and the compiled extension class into a `*.jar`, then
 upload it as described in **Uploading a Java Extension** above.
+
+###### Outbound — Cumulocity to broker
+
+An outbound extension implements `ProcessorExtensionOutbound<O>` and returns `DeviceMessage[]`, one entry per
+message to publish. Return an empty array to publish nothing.
+
+```java
+public class ProcessorExtensionSmartOutbound01 implements ProcessorExtensionOutbound<Object> {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Override
+    public DeviceMessage[] onMessage(Message<Object> message, JavaExtensionContext context)
+            throws ProcessingException {
+        try {
+            // Outbound payloads arrive already parsed — cast, do not deserialize.
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payload = (Map<String, Object>) message.getPayload();
+
+            log.info("{} - Payload raw: {}", context.getTenant(), payload);
+
+            // The Cumulocity object carries the device under "source"
+            @SuppressWarnings("unchecked")
+            Map<String, Object> source = (Map<String, Object>) payload.getOrDefault("source", new HashMap<>());
+            String sourceId = (String) source.get("id");
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> measurement = (Map<String, Object>) payload.get("c8y_TemperatureMeasurement");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> series = (Map<String, Object>) measurement.get("T");
+            Number value = (Number) series.get("value");
+
+            // Build whatever shape the device expects
+            Map<String, Object> devicePayload = new HashMap<>();
+            devicePayload.put("time", new DateTime().toString());
+            devicePayload.put("c8y_Steam", Map.of("Temperature", Map.of("unit", "C", "value", value)));
+
+            String jsonPayload = objectMapper.writeValueAsString(devicePayload);
+
+            return new DeviceMessage[] {
+                DeviceMessage.forTopic("measurements/" + sourceId)
+                    .payload(jsonPayload)
+                    .build()
+            };
+
+        } catch (Exception e) {
+            String errorMsg = "Failed to process outbound message: " + e.getMessage();
+            log.error("{} - {}", context.getTenant(), errorMsg, e);
+            context.addWarning(errorMsg);
+            return new DeviceMessage[0];   // nothing is published
+        }
+    }
+}
+```
+
+Register it exactly as an inbound extension — the `className` is what tells the mapper it is outbound:
+
+```yaml
+extensions:
+  # Outbound Extensions (Cumulocity → Device)
+  - eventName: MeasurementToCustomJson
+    className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionSmartOutbound01
+    description: Measurement to custom JSON converter with flexible formatting
+    version: "2.0"
+```
+
+**Two things that differ from inbound and catch people out:**
+
+:::important
+The outbound payload is **already parsed**. `message.getPayload()` returns the Cumulocity object as a
+`Map<String, Object>`, not bytes — casting is correct, and calling `new String(...)` or a JSON parser on it fails.
+Inbound is the opposite: there you do get raw `byte[]` and parse it yourself.
+:::
+
+The **publish topic** is yours to choose per message. Either take the one configured on the mapping with
+`context.getMapping().getPublishTopic()`, or build it from the payload as above — `"measurements/" + sourceId`
+sends each device's data to its own topic from a single mapping.
+
+Beyond `payload(...)`, the `DeviceMessage` builder offers:
+
+| Builder method | Use |
+|---|---|
+| `topic(...)` / `DeviceMessage.forTopic(...)` | The topic to publish to. |
+| `retain(true\|false)` | MQTT retain flag. |
+| `transportField(key, value)` | One transport-specific field, e.g. `transportField("qos", "1")`, or the Kafka record key — see [Accessing the broker message key](#broker-message-key). |
+| `transportFields(map)` | Several at once. |
+| `clientId(...)` / `transportId(...)` | Override the publishing client or transport. |
+| `time(...)` | Message timestamp. |
+
+Returning several `DeviceMessage` entries publishes several messages from one Cumulocity object — useful for
+fan-out, or for protocols that need a header message before the payload.
 
 ##### Extension Parameters
 
@@ -222,7 +351,7 @@ In addition to `parameter`, the map returned by `getConfigAsMap()` also contains
 - **topic** — incoming message topic
 - **mappingId**, **mappingName**, **targetAPI**, **debug** — mapping metadata
 
-##### Accessing the broker message key
+##### Accessing the broker message key {#broker-message-key}
 
 `message.getTransportFields()` returns the transport-specific fields of the received broker message. For Kafka,
 `key` holds the record key — the key, not a header:

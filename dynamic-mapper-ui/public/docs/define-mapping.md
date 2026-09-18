@@ -190,7 +190,7 @@ expected log lines and see the latter, execution never reached your `console.log
 The same messages also go to the microservice log, prefixed with the tenant, so a Smart Function that is already
 active can be followed in production the same way. One difference applies there: `console.debug()` reaches the
 microservice log only when **debug mode** is enabled for that mapping, whereas it always appears in this test
-console. See [Enabling debug mode for a mapping](/c8y-pkg-dynamic-mapper/introduction/troubleshooting).
+console. See [Enabling debug mode for a mapping](/c8y-pkg-dynamic-mapper/introduction/troubleshooting#debug-mode).
 
 :::caution
 Console output contains whatever you print. Avoid logging complete payloads from a mapping that handles personal

@@ -45,6 +45,13 @@ function ensureMermaidInitialized(): void {
     startOnLoad: false,
     theme: 'neutral',
     securityLevel: 'loose',
+    // BOTH htmlLabels flags are required. mermaid 12 ignores flowchart.htmlLabels on its own:
+    // with only the nested flag set, a rendered flowchart still contained one <foreignObject>
+    // per node and just 3 plain <text> elements (the subgraph titles). Adding the top-level flag
+    // drops foreignObject to 0 and renders every label as SVG <text>. That is what actually
+    // prevents the over-wrapping — labels were being broken mid-word ("classes" -> "cl asses")
+    // because foreignObject content inherits the page's CSS.
+    htmlLabels: false,
     flowchart: { htmlLabels: false, wrappingWidth: 360 }
   });
 }

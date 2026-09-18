@@ -69,7 +69,7 @@ The **Status** column of the inbound/outbound mapping list shows, at a glance, t
 mapping (for example <span class="label label-default">v1.2.0</span>) and a <span class="label label-info">draft</span>
 badge when the mapping has unpublished changes.
 
-![Version and draft badges in the mapping list](../../../resources/image/Dynamic_Mapper_Mapping_Versions_Status_Badge.png "The mapping list Status column showing the active version badge and a draft badge.")
+![Version and draft badges in the mapping list](../../../resources/image/Dynamic_Mapper_Mapping_Table.png "The mapping list Status column showing the active version badge and a draft badge.")
 
 ### Change notes {#versioning-labels}
 

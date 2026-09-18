@@ -359,6 +359,18 @@ export const CONNECTOR_FRAGMENT = 'd11r_connector';
 export const MAPPING_GENERATED_TEST_DEVICE = 'd11r_device_generatedType';
 
 export const ALERT_INFO_TIMEOUT = 10000;
+
+/** How long a success toast stays up when its text asks the user to do something afterwards —
+ *  "Saved draft … Publish and activate it (Versions) to apply the changes", for example.
+ *
+ *  Cumulocity's AlertService auto-dismisses a success alert with no details after its own
+ *  ALERT_TIMEOUT of 3s, which is long enough to confirm "it saved" but far too short to read an
+ *  instruction and act on it. Pass this explicitly for those messages. */
+export const ALERT_ACTION_REQUIRED_TIMEOUT = 20000;
+
+/** How long a plain success confirmation stays up — long enough to notice, short enough not to
+ *  linger. Slightly above Cumulocity's 3s default, which is easy to miss. */
+export const ALERT_SUCCESS_TIMEOUT = 6000;
 export const COLOR_HIGHLIGHTED: string = 'lightgrey';
 export const UUID_LENGTH = 8;
 

@@ -26,6 +26,8 @@ import { BehaviorSubject, debounceTime, distinctUntilChanged, map, Observable, s
 import { Alert, AlertService } from '@c8y/ngx-components';
 import { gettext } from '@c8y/ngx-components/gettext';
 import {
+    ALERT_ACTION_REQUIRED_TIMEOUT,
+    ALERT_SUCCESS_TIMEOUT,
     DeploymentMapEntry,
     Direction,
     Extension,
@@ -1073,23 +1075,44 @@ export function snapshotConnectors(deploymentMapEntry: DeploymentMapEntry | unde
     return JSON.stringify(deploymentMapEntry?.connectors ?? []);
 }
 
-/** The success wording for a completed commit, shared so the two editors cannot drift apart. */
+/** A success toast for a completed commit: the wording plus how long it should stay up. */
+export interface CommitSuccessAlert {
+    text: string;
+    /** Explicit, because Cumulocity auto-dismisses a detail-less success alert after 3s — too
+     *  short for the messages below that ask the user to publish and activate afterwards. */
+    timeout: number;
+}
+
+/** The success toast for a completed commit, shared so the two editors cannot drift apart. */
 export function commitSuccessMessage(
     result: Extract<CommitResult, { status: 'saved' }>,
     mappingName: string,
     editorMode: EditorMode
-): string | undefined {
+): CommitSuccessAlert | undefined {
     if (editorMode !== EditorMode.UPDATE) {
-        return gettext(`Mapping ${mappingName} created successfully`);
+        return {
+            text: gettext(`Mapping ${mappingName} created successfully`),
+            timeout: ALERT_SUCCESS_TIMEOUT
+        };
     }
+    // The two draft messages instruct a follow-up action, so they get the longer dwell time.
     if (result.contentChanged && result.deploymentChanged) {
-        return gettext(`Saved draft and connector assignments for ${mappingName}. Publish and activate it (Versions) to apply the changes.`);
+        return {
+            text: gettext(`Saved draft and connector assignments for ${mappingName}. Publish and activate it (Versions) to apply the changes.`),
+            timeout: ALERT_ACTION_REQUIRED_TIMEOUT
+        };
     }
     if (result.contentChanged) {
-        return gettext(`Saved draft for ${mappingName}. Publish and activate it (Versions) to apply the changes.`);
+        return {
+            text: gettext(`Saved draft for ${mappingName}. Publish and activate it (Versions) to apply the changes.`),
+            timeout: ALERT_ACTION_REQUIRED_TIMEOUT
+        };
     }
     if (result.deploymentChanged) {
-        return gettext(`Connector assignments for ${mappingName} saved.`);
+        return {
+            text: gettext(`Connector assignments for ${mappingName} saved.`),
+            timeout: ALERT_SUCCESS_TIMEOUT
+        };
     }
     return undefined;
 }

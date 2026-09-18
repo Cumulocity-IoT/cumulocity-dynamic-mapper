@@ -65,12 +65,58 @@ The following lists common problems and how to resolve them.
   in the connector.
 - Check the Event Log for TLS handshake or connection timeout errors.
 
-#### Enabling debug mode for a mapping
+#### Reading the microservice log {#microservice-log}
+
+When the Event Log and the monitoring counters do not explain a failure, the microservice log is the last and most
+detailed source: it records every message the mapper processed, the decisions it took, and the stack trace of
+anything that threw.
+
+Open it in the **Administration** application under **Ecosystem → Microservices → dynamic-mapper-service → Logs**.
+
+![Microservice log](../../../resources/image/Dynamic_Mapper_Monitoring_Microservice_Log.png "The Logs tab of the dynamic-mapper-service microservice in the Administration application, showing inbound processing, JS LOG lines from a Smart Function, and a WARN explaining why no request was created.")
+
+Useful controls on that page:
+
+- **Instance name** — the microservice may run more than one instance. A given message is handled by exactly one
+  of them, so if you do not find your message, check the other instances.
+- **From** — jump to the time the message arrived, rather than scrolling back through the buffer.
+- **Auto refresh** — follow the log live while you publish a test message.
+- **Download** — save the log for a bug report, or to search it with your own tools.
+
+Every line is tagged with the tenant ID, so on a shared instance you can filter the log down to your own tenant.
+The lines most worth looking for:
+
+| Log line | What it tells you |
+|---|---|
+| `PROCESSING: message on topic: [...]` | The message reached the mapper and a mapping matched that topic. If this is missing, the problem is the connector or the topic, not the transformation. |
+| `Incoming payload (patched) in onMessage()` | The payload as your Smart Function actually received it, after the mapper added its metadata. |
+| `JS LOG: …` | Output from `console.log()` in your Smart Function — the same lines shown in the Console output panel of the mapping editor. See [Testing a Smart Function](/c8y-pkg-dynamic-mapper/introduction/define-mapping#testing-smart-function). |
+| `onMessage function returned N complete message(s)` | How many Cumulocity objects your transformation produced. `0` means the transformation ran but built nothing. |
+| `No requests generated from flow result` | Nothing was sent to Cumulocity — usually paired with a `WARN` above it giving the reason. |
+
+The `WARN` lines are normally the answer. For example, a mapping that produces nothing because the device does not
+exist yet logs exactly that, and names the mapping it applies to:
+
+```text
+WARN  d.m.p.i.p.FlowResultInboundProcessor - Device with externalId 'ctrlx-48FC8D56…' (type 'c8y_Serial')
+      not found in inventory and createNonExistingDevice is disabled — no request created for mapping
+      'a9gzy85q'. Enable createNonExistingDevice or use an existing externalId.
+```
+
+**Raising the log level.** By default the log records the processing steps above but not the full detail of each
+one. Rather than turning up logging globally — which on a busy tenant buries the messages you care about — enable
+**debug** for the one mapping you are investigating. Its entries then include the full payload at each stage, the
+individual substitutions applied, and `JS DEBUG:` output from `console.debug()` in Smart Functions, which is
+otherwise suppressed. See the next section.
+
+#### Enabling debug mode for a mapping {#debug-mode}
 
 Debug mode logs detailed processing information for a specific mapping without enabling verbose logging globally.
 In the mapping list, use the context menu (three-dot icon) to enable **Debug** for a mapping. Debug output
-appears in the **Event Log** and in the microservice logs. Disable debug mode after troubleshooting to avoid
-excessive log volume.
+appears in the **Event Log** and in the
+[microservice log](/c8y-pkg-dynamic-mapper/introduction/troubleshooting#microservice-log), including the
+`JS DEBUG:` lines that are otherwise suppressed. Disable debug mode after troubleshooting to avoid excessive log
+volume.
 
 :::caution
 Debug mode logs full payload content. Do not leave it enabled in production if payloads contain personally
