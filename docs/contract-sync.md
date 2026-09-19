@@ -11,6 +11,49 @@ the umbrella and covers the other eight surfaces.
 
 ---
 
+## 0. What is enforced today, at a glance
+
+The opening paragraph describes the problem as it was. Six of the nine surfaces no longer rely on
+anyone remembering — they fail the build instead.
+
+```mermaid
+flowchart TD
+    RT["THE RUNTIME<br/>what JavaScript actually receives<br/>SmartFunctionContext, InputMessage"]
+
+    TS["TypeScript types"]
+    TPL["JS code templates"]
+    ED["Editor autocomplete<br/>and hover"]
+    PR["AI prompts"]
+    DOC["In-app docs"]
+    ROLE["OpenAPI role names"]
+    HUMAN["Repo docs<br/>Extension guide<br/>Documentation prose"]
+
+    RT -->|"reflection test<br/>build fails"| PR
+    RT -->|"reflection test<br/>build fails"| DOC
+    RT -->|"manifest check<br/>build fails"| ROLE
+    RT -->|"mirror, pinned by<br/>a canonical list"| TS
+    TS -->|"type-check<br/>build fails"| TPL
+    TS -->|"generated<br/>cannot drift"| ED
+    RT -.->|"read by people"| HUMAN
+```
+
+How to read it:
+
+- **Solid arrows are mechanical.** Break one and `mvn test`, `npm test` or the CI job goes red.
+- **The dashed arrow is not.** Those three surfaces get meaning wrong, not identifiers, so a
+  checker cannot tell.
+- **"Generated" is stronger than "checked".** The editor's autocomplete table is produced from the
+  types, so there is no second copy that *can* drift — the others are compared and rejected.
+- **The canonical list is the hub.** It cannot know whether you updated the docs and the prompts,
+  but changing the runtime API trips it, and its failure message lists every surface to mirror
+  the change into. That is the one check whose job is to start a conversation.
+
+What this replaces: previously every arrow in that picture was a convention, and drift was found
+by someone reading two files side by side — which is how six context methods went undocumented
+and an editor tooltip kept advertising a class deleted three releases earlier.
+
+---
+
 ## 1. The principle: one authority, everything else mirrors it
 
 The contract is **the code that constructs the objects handed to user code**. Not the interfaces,
