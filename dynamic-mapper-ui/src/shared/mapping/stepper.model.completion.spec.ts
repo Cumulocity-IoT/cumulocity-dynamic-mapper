@@ -1,4 +1,8 @@
-import { Direction } from './mapping.model';
+// The barrel first, on purpose. mapping.model.ts and processor/processor.model.ts import each
+// other's *values*, so importing stepper.model.ts directly evaluates that pair in an order where
+// the enums are still undefined. Going through the barrel reproduces the order the application
+// itself uses, where the cycle resolves.
+import { Direction } from '../index';
 import { createCompletionProviderFlowFunction } from './stepper.model';
 
 /**
