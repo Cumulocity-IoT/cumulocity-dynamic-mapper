@@ -183,18 +183,15 @@ const header = `/*
  * CI regenerates this file and fails if the result differs from what is committed.
  */
 
-/** One class or enum as the editor's completion and hover providers consume it. */
-export interface GeneratedApiEntry {
-  name: string;
-  isEnum: boolean;
-  documentation: string;
-  deprecated?: boolean;
-  properties?: Array<{ name: string; type: string; documentation: string }>;
-  methods?: Array<{ name: string; parameters: string[]; returnType: string; documentation: string }>;
-  values?: string[];
-}
+import type { ClassOrEnum } from '../smart-function-api.model';
 
-export const SMART_FUNCTION_API: GeneratedApiEntry[] = `;
+/**
+ * Typed as ClassOrEnum on purpose: TypeScript then verifies that what this generator produces
+ * actually satisfies the shape the completion and hover providers consume. A generator change
+ * that dropped \`methods\`, or emitted an enum without \`values\`, fails to compile here rather
+ * than silently degrading autocomplete.
+ */
+export const SMART_FUNCTION_API: ClassOrEnum[] = `;
 
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, header + JSON.stringify(api, null, 2) + ';\n');

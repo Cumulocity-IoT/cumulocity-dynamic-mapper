@@ -19,6 +19,8 @@
  */
 
 import { Direction, StepperConfiguration, Substitution } from '../../shared/mapping/mapping.model';
+import { ClassDefinition, ClassOrEnum, EnumDefinition } from './smart-function-api.model';
+import { SMART_FUNCTION_API } from './generated/smart-function-api.generated';
 
 export enum EditorMode {
   CREATE = 'CREATE',
@@ -42,25 +44,10 @@ export const STEP_SELECT_TEMPLATES = 2;
 export const STEP_DEFINE_SUBSTITUTIONS = 3;
 export const STEP_TEST_MAPPING = 4;
 
-// Type definitions for better type safety
-interface BaseClass {
-  name: string;
-  documentation: string;
-  deprecated?: boolean;
-}
+// The shape these providers consume, and the table itself — generated from the Smart Function
+// type definitions so the editor cannot describe an API the types do not have. Regenerate with
+// `npm run generate:editor-api` in dynamic-mapper-smart-function; CI fails on a stale file.
 
-interface ClassDefinition extends BaseClass {
-  isEnum: false;
-  properties: Array<{ name: string; type: string; documentation: string }>;
-  methods: Array<{ name: string; parameters: string[]; returnType: string; documentation: string }>;
-}
-
-interface EnumDefinition extends BaseClass {
-  isEnum: true;
-  values: string[];
-}
-
-type ClassOrEnum = ClassDefinition | EnumDefinition;
 
 /**
  * Registers completion and hover providers for Flow Function JavaScript in Monaco Editor
@@ -69,184 +56,7 @@ type ClassOrEnum = ClassDefinition | EnumDefinition;
  */
 export function createCompletionProviderFlowFunction(monaco: any, direction: Direction = Direction.INBOUND): { dispose: () => void } {
   // Register flow-specific classes and interfaces
-  const customClasses: ClassOrEnum[] = [
-    {
-      name: 'CumulocityObject',
-      isEnum: false,
-      properties: [
-        { name: 'payload', type: 'object', documentation: 'The same payload that would be used in the C8Y REST/SmartREST API.' },
-        { name: 'cumulocityType', type: '"measurement" | "event" | "alarm" | "operation" | "managedObject" | "custom"', documentation: 'Which type in the C8Y API is being modified. Singular not plural. Serves as discriminator for CumulocityObject. Use "custom" to call a tenant-local microservice — set targetPath to the "/service/…" path.' },
-        { name: 'action', type: '"create" | "update"| "delete" | "patch"', documentation: 'What kind of operation is being performed on this type.' },
-        { name: 'externalSource', type: 'ExternalId[] | ExternalId | ExternalSource[]', documentation: 'External ID configuration for device resolution. Use ExternalId[] for simple lookups, ExternalSource[] for advanced device creation scenarios.' },
-        { name: 'targetPath', type: 'string', documentation: 'Target microservice path used when cumulocityType is "custom". Must start with "/service/" to stay within the tenant. Example: "/service/my-microservice/api/process".' },
-        { name: 'destination', type: '"cumulocity" | "iceflow" | "streaming-analytics"', documentation: 'Destination for the message. Default: "cumulocity".' },
-        { name: 'contextData', type: 'Record<string, any>', documentation: 'Additional context data for device creation (deviceName, deviceType, processingMode, deviceFragments, deviceGroups, attachment fields).' },
-        { name: 'sourceId', type: 'string', documentation: 'Internal Cumulocity source/device ID. Set this to override automatic device resolution.' }
-      ],
-      methods: [],
-      documentation: 'A request going to or coming from Cumulocity core (or IceFlow/offloading).'
-    },
-    {
-      name: 'DeviceMessage',
-      isEnum: false,
-      properties: [
-        { name: 'payload', type: 'Record<string, any> | Uint8Array', documentation: 'Message payload. Prefer a plain JSON object — the runtime serializes it automatically. Use Uint8Array only for binary/non-JSON protocols (e.g. SparkPlug B). TextEncoder/TextDecoder are available.' },
-        { name: 'action', type: '"create" | "update"| "delete" | "patch"', documentation: 'What kind of operation is being performed on this type.' },
-        { name: 'cumulocityType', type: '"measurement" | "event" | "alarm" | "operation" | "managedObject"', documentation: 'Optional: Target Cumulocity API type (measurement, event, alarm, operation, managedObject). If not specified, derived from topic or mapping.' },
-        { name: 'transportId', type: 'string', documentation: 'Identifier for the source/dest transport e.g. "mqtt", "opc-ua".' },
-        { name: 'topic', type: 'string', documentation: 'The topic on the transport. Use _externalId_ placeholder to auto-reference device external ID.' },
-        { name: 'clientId', type: 'string', documentation: 'Transport/MQTT client Id.' },
-        { name: 'transportFields', type: 'Record<string, any>', documentation: 'Dictionary of transport-specific fields/properties/headers. For Kafka, use "key" to define record key.' },
-        { name: 'time', type: 'Date', documentation: 'Timestamp of incoming message; does nothing when sending.' },
-        { name: 'externalSource', type: 'Array<{type: string; externalId?: string}>', documentation: 'External source config for resolving _externalId_ placeholder. Defines which external ID type to use. Provide externalId explicitly when the value is known upfront.' },
-        { name: 'retain', type: 'boolean', documentation: 'Whether the message should be retained on the broker (MQTT retain flag).' },
-        { name: 'sourceId', type: 'string', documentation: 'Internal Cumulocity source/device ID associated with this device message.' }
-      ],
-      methods: [],
-      documentation: 'A message received from a device or sent to a device. Payload is now Uint8Array (changed in v2.0).'
-    },
-    {
-      name: 'ExternalId',
-      isEnum: false,
-      properties: [
-        { name: 'externalId', type: 'string', documentation: 'External Id to be looked up.' },
-        { name: 'type', type: 'string', documentation: 'External ID type, e.g. "c8y_Serial".' }
-      ],
-      methods: [],
-      documentation: 'Simple external ID reference for lookups (introduced in v2.0). Use this for basic external ID references.'
-    },
-    {
-      name: 'ExternalSource',
-      isEnum: false,
-      properties: [
-        { name: 'externalId', type: 'string', documentation: 'External Id to be looked up and/or created to get C8Y "id".' },
-        { name: 'type', type: 'string', documentation: 'External ID type, e.g. "c8y_Serial".' },
-        { name: 'autoCreateDeviceMO', type: 'boolean', documentation: 'Default true. Set false for advanced users who want to create somewhere deeper in the hierarchy.' },
-        { name: 'parentId', type: 'string', documentation: 'To support adding child assets/devices.' },
-        { name: 'childReference', type: '"device" | "asset" | "addition"', documentation: 'If creating a child, what kind to create.' },
-        { name: 'clientId', type: 'string', documentation: 'Transport/MQTT client Id, stored on the MO for outbound messages.' }
-      ],
-      methods: [],
-      documentation: 'Advanced external ID with device creation capabilities. For simple lookups, use ExternalId instead.'
-    },
-    {
-      name: 'DataPrepContext',
-      isEnum: false,
-      properties: [
-        { name: 'runtime', type: 'string', documentation: 'Runtime identifier. Always "dynamic-mapper" in the Dynamic Mapper context.' }
-      ],
-      methods: [
-        { name: 'getState', parameters: ['key', 'defaultValue?'], returnType: 'any', documentation: 'Retrieves a persisted state value. Returns the value stored by a previous invocation, or the defaultValue (if provided) on first call.' },
-        { name: 'setState', parameters: ['key', 'value'], returnType: 'void', documentation: 'Persists a value by key. State survives across message invocations for the same mapping and is cleared when the mapping is deleted.' }
-      ],
-      documentation: 'Base context interface providing persistent state (getState/setState). Extended by SmartFunctionContext with the full Smart Function API.'
-    },
-    {
-      name: 'SmartFunctionContext',
-      isEnum: false,
-      properties: [
-        { name: 'runtime', type: '"dynamic-mapper"', documentation: 'Runtime identifier — always "dynamic-mapper".' }
-      ],
-      methods: [
-        { name: 'getState', parameters: ['key', 'defaultValue?'], returnType: 'any', documentation: 'Retrieves a persisted state value. Returns the value stored by a previous invocation, or the defaultValue (if provided) on first call.' },
-        { name: 'setState', parameters: ['key', 'value'], returnType: 'void', documentation: 'Persists a value by key. State survives across message invocations for the same mapping and is cleared when the mapping is deleted.' },
-        { name: 'getStateAll', parameters: [], returnType: 'Record<string, any>', documentation: 'Returns all persisted state entries for the current mapping as a plain object.' },
-        { name: 'getStateKeySet', parameters: [], returnType: 'string[]', documentation: 'Returns the set of all keys currently stored in the mapping state.' },
-        { name: 'clearState', parameters: [], returnType: 'void', documentation: 'Clears all persisted state for the current mapping. On clearState the state is flushed to the persistent store.' },
-        { name: 'getConfig', parameters: [], returnType: 'Record<string, any>', documentation: 'Returns the mapping configuration object (mappingId, mappingName, tenant, topic, targetAPI, debug, clientId, etc.).' },
-        { name: 'getClientId', parameters: [], returnType: 'string | undefined', documentation: 'Returns the transport/MQTT client ID associated with this mapping, or undefined if not set.' },
-        { name: 'getExternalId', parameters: [], returnType: 'string | undefined', documentation: 'Returns the resolved external ID of the source device (requires useExternalId enabled and externalIdType configured), or undefined.' },
-        { name: 'getTesting', parameters: [], returnType: 'boolean', documentation: 'Returns true if the mapping is currently being tested (not in production).' },
-        { name: 'getManagedObject', parameters: ['c8ySourceId'], returnType: 'C8yManagedObject | null', documentation: 'Lookup a device from inventory cache by internal Cumulocity device ID. Returns null if not found.' },
-        { name: 'getManagedObjectByExternalId', parameters: ['externalId: ExternalId'], returnType: 'C8yManagedObject | null', documentation: 'Lookup a device from inventory cache by ExternalId object ({ externalId, type }). Returns null if not found.' },
-        { name: 'getDTMAsset', parameters: ['assetId'], returnType: 'C8yManagedObject | null', documentation: 'Lookup DTM Asset properties by asset ID. Returns null if not found.' },
-        { name: 'addLogMessage', parameters: ['message'], returnType: 'void', documentation: 'Adds a log message stored under _LOGS_ in state. Visible in the processing result for debugging.' },
-        { name: 'logMessage', parameters: ['message'], returnType: 'void', documentation: 'Alias for addLogMessage(). Adds a log message stored under _LOGS_ in state.' },
-        { name: 'addWarning', parameters: ['warning'], returnType: 'void', documentation: 'Adds a warning message to the processing context. Surfaced for debugging non-fatal issues (e.g. fallback logic applied, optional field missing).' }
-      ],
-      documentation: 'Smart Function runtime context. Extends DataPrepContext with state management, config access, device lookups, and mapping utilities.'
-    },
-    {
-      name: 'DynamicMapperDeviceMessage',
-      isEnum: false,
-      properties: [
-        { name: 'payload', type: 'Record<string, any>', documentation: 'Pre-deserialized JSON payload. Dynamic Mapper automatically deserializes JSON payloads to objects. Use bracket notation to access properties: payload["key"].\n\n**ANY_PAYLOAD (SparkPlugB, Protobuf, XML):** Base64-encoded binary string. Decode with a pure-JS Base64 decoder, for example:\n```js\nfunction decodeBase64(base64) {\n  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";\n  const clean = base64.replace(/=+$/, "");\n  const bytes = [];\n  let buffer = 0;\n  let bits = 0;\n\n  for (let i = 0; i < clean.length; i++) {\n    const value = chars.indexOf(clean.charAt(i));\n    if (value < 0) { continue; }\n    buffer = (buffer << 6) | value;\n    bits += 6;\n    if (bits >= 8) { bits -= 8; bytes.push((buffer >> bits) & 0xff); }\n  }\n  return new Uint8Array(bytes);\n}\nconst bytes = decodeBase64(msg.payload);\n```' },
-        { name: 'topic', type: 'string', documentation: 'The broker topic on which the message arrived (e.g. MQTT topic).' },
-        { name: 'clientId', type: 'string | undefined', documentation: 'Transport/MQTT client ID of the sender. Set for inbound messages; undefined for outbound.' },
-        { name: 'sourceId', type: 'string | undefined', documentation: 'Internal Cumulocity device ID of the originating device. Set for outbound messages; undefined for inbound.' },
-        { name: 'cumulocityType', type: 'string | undefined', documentation: 'Lowercase C8y object type string (e.g. "measurement", "alarm"). Set by the outbound processor; undefined for inbound messages.' },
-        { name: 'time', type: 'string | undefined', documentation: 'ISO-8601 timestamp captured when the message was received by the connector. Use as a reliable receive-time fallback: `var time = payload["time"] ?? msg.time;`' },
-        { name: 'transportId', type: 'string | undefined', documentation: 'Identifier of the connector that delivered this message (e.g. "my-mqtt-connector"). Set for inbound messages; undefined for outbound.' },
-        { name: 'transportFields', type: 'Record<string, string>', documentation: 'Transport-specific key/value pairs (e.g. MQTT 5 user properties). For Kafka this carries the consumed record\'s key under "key" — the record key, not headers — delivered here rather than inside the payload: msg.transportFields["key"]. Empty map when no transport fields are available.' }
-      ],
-      methods: [],
-      documentation: 'Inbound device message passed to the Smart Function as the first argument (`msg`). Payloads are pre-deserialized from JSON for convenience — use bracket notation: msg.payload["key"].'
-    },
-    {
-      name: 'OutputMessage',
-      isEnum: false,
-      properties: [
-        { name: 'sinkType', type: 'string', documentation: 'An unique sink type, example: C8Y Core.' },
-        { name: 'deviceIdentifier', type: 'Record<string, any>', documentation: 'The unique device identifier, example: External Id.' },
-        { name: 'payload', type: 'any', documentation: 'The payload of the message.' },
-        { name: 'properties', type: 'Record<string, any>', documentation: 'A map of properties associated with the message.' }
-      ],
-      methods: [],
-      documentation: 'Output message to be sent by the flow function.'
-    },
-    {
-      name: 'MappingError',
-      isEnum: false,
-      properties: [
-        { name: 'errorDetails', type: 'string[]', documentation: 'Array of error detail strings.' },
-        { name: 'payload', type: 'any', documentation: 'Optional payload that resulted in this error.' }
-      ],
-      methods: [],
-      documentation: 'Error information for mapping operations.'
-    },
-    {
-      name: 'OutboundMessage',
-      isEnum: false,
-      properties: [
-        { name: 'payload', type: 'object', documentation: 'Pre-deserialized Cumulocity domain object payload (e.g. C8yMeasurement). Known fields are typed; custom fragments use bracket notation.' },
-        { name: 'cumulocityType', type: 'string | undefined', documentation: 'Cumulocity API type of the triggering event, e.g. "measurement", "event", "alarm".' },
-        { name: 'sourceId', type: 'string | undefined', documentation: 'Internal Cumulocity device ID of the originating device, if available.' }
-      ],
-      methods: [],
-      documentation: 'Outbound message passed to the Smart Function as the first argument (`msg`). Contains the pre-deserialized Cumulocity domain object that triggered the outbound mapping.'
-    }
-  ];
-
-  // Add enums for specific values
-  const enums: ClassOrEnum[] = [
-    {
-      name: 'CumulocityAction',
-      isEnum: true,
-      values: ['create', 'update', 'delete', 'patch'],
-      documentation: 'HTTP actions: create=POST, update=PUT, delete=DELETE, patch=PATCH.'
-    },
-    {
-      name: 'CumulocityType',
-      isEnum: true,
-      values: ['measurement', 'alarm', 'event', 'managedObject', 'operation', 'custom'],
-      documentation: 'Cumulocity API types (singular form). Use "custom" to target a tenant-local microservice via targetPath.'
-    },
-    {
-      name: 'Destination',
-      isEnum: true,
-      values: ['cumulocity', 'iceflow', 'streaming-analytics'],
-      documentation: 'Available message destinations.'
-    },
-    {
-      name: 'ChildReference',
-      isEnum: true,
-      values: ['device', 'asset', 'addition'],
-      documentation: 'Types of child references when creating hierarchies.'
-    }
-  ];
-
-  // Combine classes and enums
-  const allClasses: ClassOrEnum[] = [...customClasses, ...enums];
+  const allClasses: ClassOrEnum[] = SMART_FUNCTION_API;
 
   // Add utility functions specific to flow functions
   const utilityFunctions = [
