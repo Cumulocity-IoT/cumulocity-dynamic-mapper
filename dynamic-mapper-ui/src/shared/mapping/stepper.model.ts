@@ -377,9 +377,40 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
     { name: 'externalId', type: 'ExternalId', desc: 'External ID reference variable (v2.0+)' }
   ];
 
+  /**
+   * Resolves the thing on the left of a dot to a definition.
+   *
+   * Users type `context.` and `msg.`, i.e. *variables* — not `SmartFunctionContext.`. Matching
+   * only on class names meant the member lists (15 documented methods on SmartFunctionContext
+   * alone) were unreachable in practice, so the receiver is resolved through commonVars first and
+   * only then treated as a literal class name.
+   */
+  const resolveDefinition = (name: string): ClassOrEnum | undefined => {
+    const variable = commonVars.find(v => v.name === name);
+    if (variable) {
+      const byType = allClasses.find(c => c.name === variable.type);
+      if (byType) return byType;
+    }
+    return allClasses.find(c => c.name === name);
+  };
+
+  /** `foo.bar|` -> { receiver: 'foo', typed: 'bar' }. The trailing partial word matters: without
+   *  it the member list vanished as soon as the user typed the first character after the dot. */
+  /** `['key', 'defaultValue?']` -> `${1:key}, ${2:defaultValue}`. Named placeholders let the user
+   *  tab through arguments and see what each one is; the previous empty `${1}` gave no hint. */
+  const snippetArgs = (parameters: string[]): string =>
+    parameters.map((raw, i) => `\${${i + 1}:${raw.replace(/\?$/, '').trim()}}`).join(', ');
+
+  const matchMemberAccess = (text: string): { receiver: string; typed: string } | null => {
+    const m = text.match(/(\w+)\s*\.\s*(\w*)$/);
+    return m ? { receiver: m[1], typed: m[2] } : null;
+  };
+
   // Register completion and hover providers
   const completionDisposable = monaco.languages.registerCompletionItemProvider('javascript', {
-    triggerCharacters: ['.', ' ', '('],
+    // No ' ': a space triggered the widget on essentially every keystroke of prose inside strings
+    // and comments, which made the editor feel noisy without ever offering anything useful.
+    triggerCharacters: ['.', '('],
     provideCompletionItems: function (model: any, position: any, _context: any, _token: any) {
       const textUntilPosition = model.getValueInRange({
         startLineNumber: position.lineNumber,
@@ -399,10 +430,10 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
       const suggestions = [];
 
       // Check for specific contexts
-      const dotMatch = textUntilPosition.match(/(\w+)\.\s*$/);
-      if (dotMatch) {
-        const objectName = dotMatch[1];
-        const matchedClass = allClasses.find(cls => cls.name === objectName);
+      const memberAccess = matchMemberAccess(textUntilPosition);
+      if (memberAccess) {
+        const objectName = memberAccess.receiver;
+        const matchedClass = resolveDefinition(objectName);
 
         // Object property/method completion
         if (matchedClass) {
@@ -457,9 +488,7 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
                 documentation: {
                   value: `${deprecationWarning}**${method.returnType}** ${method.name}(${params})\n\n${method.documentation}`
                 },
-                insertText: method.parameters.length > 0
-                  ? `${method.name}(${method.parameters.map((_, i) => `\${${i + 1}}`).join(', ')})`
-                  : `${method.name}()`,
+                insertText: `${method.name}(${snippetArgs(method.parameters)})`,
                 insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
                 range: range,
                 sortText: classObject.deprecated 
@@ -474,6 +503,11 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
             incomplete: false
           };
         }
+
+        // The receiver is a dot-expression we know nothing about (`payload.`, `someLocal.`).
+        // Returning nothing lets Monaco's own JavaScript worker answer instead; previously this
+        // fell through and offered every global class and helper, which is never right after a dot.
+        return { suggestions: [] };
       }
 
       // Global class/enum completion
@@ -508,7 +542,7 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
           documentation: {
             value: `**${func.returnType}** ${func.name}(${func.parameters.join(', ')})\n\n${func.documentation}`
           },
-          insertText: `${func.name}(${func.parameters.map((_, i) => `\${${i + 1}}`).join(', ')})`,
+          insertText: `${func.name}(${snippetArgs(func.parameters)})`,
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           range: range,
           sortText: `04-${index.toString().padStart(2, '0')}`
@@ -518,6 +552,9 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
       // Provide new object creation completions
       const newMatch = textUntilPosition.match(/new\s+(\w*)$/);
       if (newMatch) {
+        // Only constructors are meaningful after `new`. The global classes and helpers pushed
+        // above would otherwise be returned alongside them, listing every class twice.
+        suggestions.length = 0;
         allClasses.forEach((cls, index) => {
           if (!cls.isEnum) {
             const classObject = cls as ClassDefinition;
@@ -720,6 +757,41 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
             `**Example:**\n` +
             `\`\`\`js\nfunction onMessage(msg, context) {\n  return [{\n    cumulocityType: "measurement",\n    action: "create",\n    payload: { type: "c8y_Temp", time: new Date().toISOString(),\n               c8y_Temp: { T: { value: msg.payload["temp"], unit: "C" } } },\n    externalSource: [{ type: "c8y_Serial", externalId: context.getClientId() }]\n  }];\n}\n\`\`\``;
         return { range, contents: [{ value: content, isTrusted: true }] };
+      }
+
+      // Receiver-aware member hover. `payload` exists on CumulocityObject, DeviceMessage and
+      // OutboundMessage; the name-only search below returns whichever class is declared first, so
+      // hovering `msg.payload` could describe a completely different type. Resolve the receiver
+      // when there is one and answer from that class.
+      const before = model.getValueInRange({
+        startLineNumber: position.lineNumber,
+        startColumn: 1,
+        endLineNumber: position.lineNumber,
+        endColumn: word.startColumn
+      });
+      const receiverMatch = before.match(/(\w+)\s*\.\s*$/);
+      if (receiverMatch) {
+        const owner = resolveDefinition(receiverMatch[1]);
+        if (owner) {
+          if (owner.isEnum) {
+            const enumDef = owner as EnumDefinition;
+            if (enumDef.values.includes(w)) {
+              return { range, contents: [{ value: `\`\`\`typescript\n(enum member) ${owner.name}.${w}\n\`\`\`\n\n${owner.documentation}`, isTrusted: true }] };
+            }
+          } else {
+            const ownerDef = owner as ClassDefinition;
+            const ownProp = ownerDef.properties.find(pr => pr.name === w);
+            if (ownProp) {
+              return { range, contents: [{ value: `\`\`\`typescript\n(property) ${owner.name}.${ownProp.name}: ${ownProp.type}\n\`\`\`\n\n${ownProp.documentation}`, isTrusted: true }] };
+            }
+            const ownMethod = ownerDef.methods.find(mt => mt.name === w);
+            if (ownMethod) {
+              return { range, contents: [{ value: `\`\`\`typescript\n(method) ${owner.name}.${ownMethod.name}(${ownMethod.parameters.join(', ')}): ${ownMethod.returnType}\n\`\`\`\n\n${ownMethod.documentation}`, isTrusted: true }] };
+            }
+          }
+          // Known receiver, unknown member: say nothing rather than describe an unrelated class.
+          return null;
+        }
       }
 
       const func = utilityFunctions.find(f => f.name === w);

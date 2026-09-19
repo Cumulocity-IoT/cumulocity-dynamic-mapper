@@ -114,12 +114,12 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Message_Explorer.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Versions_Drawer.png',
-        to: 'image/Dynamic_Mapper_Mapping_Versions_Drawer.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Message_Explorer_Quickstart.png',
+        to: 'image/Dynamic_Mapper_Mapping_Message_Explorer_Quickstart.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Table.png',
-        to: 'image/Dynamic_Mapper_Mapping_Table.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Versions_Drawer.png',
+        to: 'image/Dynamic_Mapper_Mapping_Versions_Drawer.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Versions_Retention_Config.png',

@@ -27,6 +27,7 @@ following settings:
 | **Topic** (Inbound only) | The broker topic to subscribe to. MQTT wildcards (`#`, `+`) are supported. Be specific to avoid capturing unrelated traffic. |
 | **Source device / group** (Outbound only) | The managed object (device or group) for which a Notification 2.0 subscription is created. Selecting a group captures events for all devices in that group. |
 | **Max messages to buffer** | Maximum number of messages kept in the in-browser buffer (1–500). When the limit is reached, the oldest messages are discarded automatically. Reduce this value for high-frequency topics. |
+| **Session TTL (minutes)** | How long the backend keeps the session alive while it is not being polled, default `10`. An idle session is closed automatically, so raise this when the devices you are waiting for publish infrequently. |
 
 Click **Start** to open the session. The action bar switches to show **Stop session**, **Pause / Resume**, and
 **Clear** controls.

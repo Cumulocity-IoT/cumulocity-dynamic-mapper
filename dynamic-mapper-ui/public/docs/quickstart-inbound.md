@@ -31,6 +31,12 @@ connection logs from the same table — they name the underlying error. See the
 
 #### Step 2 — Start a mapping
 
+:::info
+Already have devices publishing? There is a shorter route: capture one of their messages and let the mapper fill
+in the topic and the payload for you. See
+[Variation — start from a live message](#variation-message-explorer) below, which replaces Steps 2 to 4.
+:::
+
 Go to [**Mapping → Inbound**](/c8y-pkg-dynamic-mapper/node1/mappings/inbound) and click **Add Mapping**.
 
 Leave **Expert Mode** switched off. The dialog then gives you the defaults — payload format **JSON** and a
@@ -71,7 +77,7 @@ In the **Select templates** step, enter the payload your device sends as the sou
 
 This is what your Smart Function receives as `msg.payload`, and what the **Test** step in Step 6 runs against.
 
-#### Step 5 — Write the Smart Function
+#### Step 5 — Write the Smart Function {#step-5}
 
 The **Transformation** step opens a JavaScript editor already filled with the default code template. Replace its
 body with the function below:
@@ -163,6 +169,54 @@ mapping received and the errors it raised, which tells you immediately whether t
 failed inside it. [Troubleshooting](/c8y-pkg-dynamic-mapper/introduction/troubleshooting) covers the usual causes.
 :::
 
+#### Variation — start from a live message {#variation-message-explorer}
+
+Steps 2 to 4 assume you already know the topic and the payload. When you do not — which is the normal case with
+real devices — turn it around: capture a message first and build the mapping from it. Nothing is typed, so nothing
+is guessed wrong.
+
+This replaces **Steps 2, 3 and 4**. Step 1 (the connector) and Steps 5 onwards are unchanged.
+
+**2a. Start a capture session.** Go to
+[**Mapping → Message Explorer**](/c8y-pkg-dynamic-mapper/node1/mappings/messageExplorer) and click
+**Start exploring messages…**. Set **Direction** to `Inbound`, **Connector** to `quickstart`, and **Topic** to
+`quickstart/+`. Leave the other two fields at their defaults, then **Start**.
+
+![Start exploring messages](../../../resources/image/Dynamic_Mapper_Mapping_Message_Explorer_Quickstart.png "The Start exploring messages dialog filled in for this quickstart: direction Inbound, connector quickstart and topic quickstart/+.")
+
+Only **connected** connectors can be selected, so if `quickstart` is missing from the dropdown, go back to Step 1
+and check that it reached the *connected* state. If your device publishes only every few minutes, raise
+**Session TTL** — the session is closed automatically once it has been idle that long.
+
+**2b. Send a message.** Publish to `quickstart/device_01`, exactly as in Step 7:
+
+```json
+{ "temperature": 23.7, "unit": "C" }
+```
+
+It appears in the list within a few seconds. This already tells you something the main path cannot: that your
+connector is subscribed and the message really is reaching the mapper. If nothing arrives, the problem is the
+connector or the topic — and you have found that out before writing any mapping.
+
+**2c. Create the mapping from it.** Click **Create mapping** on the captured row. The **Add Mapping** dialog opens
+with the **source template** pre-filled from the captured payload and the **mapping topic** pre-filled from the
+topic the message arrived on.
+
+Two things are worth adjusting before you continue:
+
+- The topic is filled in as the concrete `quickstart/device_01`. Widen it to `quickstart/+` so the mapping serves
+  every device, and set the **Mapping Topic Sample** to `quickstart/device_01`.
+- Set **Target API** to `Measurement` and switch on **Create non-existing devices**, as in Step 3.
+
+Then continue at [Step 5](#step-5) and write the Smart Function exactly as described.
+
+:::info
+The captured payload arrives as the device really sends it, including fields the main path's tidy example leaves
+out. If a message carries a broker **key** — a Kafka record key, for instance — that is carried across too. See
+[Message Explorer](/c8y-pkg-dynamic-mapper/introduction/message-explorer) for the details, and for capturing
+**outbound** Cumulocity objects the same way.
+:::
+
 #### What to read next
 
 - [Quickstart outbound](/c8y-pkg-dynamic-mapper/introduction/quickstart-outbound) — the other direction: send a
@@ -172,5 +226,5 @@ failed inside it. [Troubleshooting](/c8y-pkg-dynamic-mapper/introduction/trouble
   multiple outputs, binary payloads.
 - [Code templates](/c8y-pkg-dynamic-mapper/introduction/code-templates) — ready-made starting points instead of
   writing from scratch.
-- [Message Explorer](/c8y-pkg-dynamic-mapper/introduction/message-explorer) — if you do not know what your real
-  devices send, capture a live message and build the mapping from it.
+- [Message Explorer](/c8y-pkg-dynamic-mapper/introduction/message-explorer) — the tool behind the
+  [variation above](#variation-message-explorer), including capturing outbound Cumulocity objects.

@@ -29,7 +29,7 @@ import { BsModalService } from 'ngx-bootstrap/modal';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BehaviorSubject } from 'rxjs';
 import { base64ToString, stringToBase64 } from '../../shared/mapping/util';
-import { ConfirmationModalComponent, Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
+import { ConfirmationModalComponent, Direction, Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
 import { SharedService } from '../../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap, TemplateType, decodeCodeTemplates } from '../../shared/configuration/configuration.model';
 import { createCompletionProviderFlowFunction } from '../../shared/mapping/stepper.model';
@@ -150,7 +150,13 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
         this.templateType === TemplateType.OUTBOUND_SMART_FUNCTION ||
         this.templateType === TemplateType.SHARED ||
         this.templateType === TemplateType.SYSTEM) {
-      this.completionProviderDisposable = createCompletionProviderFlowFunction(monaco);
+      // The direction drives the onMessage signature and the type of `msg` shown in hovers and
+      // completions. Omitting it defaulted every template to INBOUND, so an outbound template
+      // documented an inbound msg and the wrong return type.
+      const direction = this.templateType === TemplateType.OUTBOUND_SMART_FUNCTION
+        ? Direction.OUTBOUND
+        : Direction.INBOUND;
+      this.completionProviderDisposable = createCompletionProviderFlowFunction(monaco, direction);
     }
   }
 
