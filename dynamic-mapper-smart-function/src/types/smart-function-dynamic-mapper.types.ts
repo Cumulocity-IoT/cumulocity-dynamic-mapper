@@ -697,6 +697,25 @@ export type C8yObjectAction = 'create' | 'update' | 'delete' | 'patch';
 export type C8yObjectType = 'measurement' | 'event' | 'alarm' | 'operation' | 'managedObject' | 'custom';
 
 /**
+ * Where a {@link CumulocityObject} is sent. Default `"cumulocity"`.
+ *
+ * - `"cumulocity"` — Cumulocity core
+ * - `"iceflow"` — IceFlow, for offloading
+ * - `"streaming-analytics"` — Streaming Analytics
+ *
+ * Mirrors `Destination.java`. Named rather than inlined on {@link CumulocityObject.destination}
+ * so the mapping editor's completion provider can be generated from this file — an inline union
+ * has no name to generate an entry from.
+ */
+export type C8yDestination = 'cumulocity' | 'iceflow' | 'streaming-analytics';
+
+/**
+ * What kind of child relationship to create when {@link ExternalSource} builds a device beneath a
+ * parent. Named for the same reason as {@link C8yDestination}.
+ */
+export type C8yChildReference = 'device' | 'asset' | 'addition';
+
+/**
  * Details of external Id for advanced device creation scenarios.
  * For simple lookups, use {@link ExternalId} instead.
  *
@@ -738,7 +757,7 @@ export interface ExternalSource {
    *
    * @remarks Not yet implemented on the backend — see the interface-level remark.
    */
-  childReference?: 'device' | 'asset' | 'addition';
+  childReference?: C8yChildReference;
 
   /**
    * Transport/MQTT client ID.
@@ -882,7 +901,7 @@ export interface CumulocityObject<
    * - "iceflow" - Send to IceFlow for offloading
    * - "streaming-analytics" - Send to Streaming Analytics
    */
-  destination?: 'cumulocity' | 'iceflow' | 'streaming-analytics';
+  destination?: C8yDestination;
 
   /**
    * Context data for device creation.

@@ -130,16 +130,6 @@ export function createCompletionProviderFlowFunction(monaco: any, direction: Dir
       documentation: 'Advanced external ID with device creation capabilities. For simple lookups, use ExternalId instead.'
     },
     {
-      name: 'CumulocitySource',
-      isEnum: false,
-      deprecated: true,
-      properties: [
-        { name: 'internalId', type: 'string', documentation: '**DEPRECATED** - Use externalSource with ExternalId or specify id in payload directly. Will be removed in v6.2.0.' }
-      ],
-      methods: [],
-      documentation: '**DEPRECATED** - Use externalSource with ExternalId instead, or specify the id directly in the payload. Will be removed in version 6.2.0.'
-    },
-    {
       name: 'DataPrepContext',
       isEnum: false,
       properties: [

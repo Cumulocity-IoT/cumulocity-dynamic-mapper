@@ -7,12 +7,18 @@
 /**
  * Public API exports for Smart Function Runtime types.
  *
- * IMPORTANT: These types are imported from the main Dynamic Mapper UI project
- * to maintain a single source of truth. The UI project at:
- * ../dynamic-mapper-ui/src/mapping/core/processor/smart-function-runtime.types.ts
- * is the authoritative source for all Smart Function type definitions.
+ * Source of truth: the **Java runtime** — `SmartFunctionContext.java`, `InputMessage.java`,
+ * `CumulocityObject.java` and `DeviceMessage.java` in `dynamic-mapper-service`. The declarations
+ * in this package are a hand-maintained mirror of what those classes actually expose to
+ * JavaScript; see `docs/contract-sync.md` for the checks that keep them aligned.
  *
- * This prevents duplication and ensures types stay in sync.
+ * Downstream consumers mirror *this* package, not the other way round:
+ * - the shipped JS code templates are type-checked against it (`npm run check:templates`)
+ * - the mapping editor's completion provider is being moved onto it
+ *
+ * (An earlier version of this comment named
+ * `dynamic-mapper-ui/src/mapping/core/processor/smart-function-runtime.types.ts` as the
+ * authority. That file does not exist, and the direction it described was backwards.)
  */
 
 // Re-exports IDP DataPrep base types (DataPrepContext, ExternalId) and all DM-specific types
