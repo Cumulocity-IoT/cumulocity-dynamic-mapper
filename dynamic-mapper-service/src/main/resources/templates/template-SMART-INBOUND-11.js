@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @name Sample persistent state - per-device running statistics
  * @description Tracks message count and running average temperature per device, using the MQTT
@@ -28,6 +29,10 @@
  *   { "temperature": 23.5 }
 */
 
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
+ */
 function onMessage(msg, context) {
     var payload = msg.payload;
     var temperature = payload["temperature"];

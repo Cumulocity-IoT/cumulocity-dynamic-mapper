@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @name Forward payload to tenant microservice (inbound)
  * @description Demonstrates custom routing: forwards the incoming device payload to a
@@ -14,6 +15,10 @@
  *     "externalId": "sensor-berlin-01",
  *     "temperature": 23.5
  * }
+ */
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
  */
 function onMessage(msg, context) {
     var payload = msg.payload;

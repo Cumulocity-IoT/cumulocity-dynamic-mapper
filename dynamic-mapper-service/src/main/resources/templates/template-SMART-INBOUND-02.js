@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @name Smart Function using device data for enrichment
  * @description Creates either c8y_CurrentMeasurement or c8y_VoltageMeasurement, depending on the inventory data (enrichment)
@@ -18,6 +19,10 @@
  * Note: The device inventory must have c8y_Sensor.type.voltage=true or c8y_Sensor.type.current=true
 */
 
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
+ */
 function onMessage(msg, context) {
     var payload = msg.payload;
 

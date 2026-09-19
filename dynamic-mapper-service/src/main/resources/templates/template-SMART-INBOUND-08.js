@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @name SparkPlugB DDATA/NDATA decoder
  * @description Decodes a SparkPlugB protobuf payload received via the ANY_PAYLOAD mapping type.
@@ -274,6 +275,10 @@ function toC8yName(metricName) {
 // Smart Function entry point
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
+ */
 function onMessage(msg, context) {
 
     // 1 ── Decode Base64 → raw bytes ────────────────────────────────────────

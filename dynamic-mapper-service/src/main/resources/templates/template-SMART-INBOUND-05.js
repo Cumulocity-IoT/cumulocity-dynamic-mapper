@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @name Sample parsing payload as CSV
  * @description Parses a multiline CSV payload and creates one measurement per data line. Requires a
@@ -28,6 +29,10 @@
  * defines one, and falls back to the first CSV line. It is resolved as a c8y_Serial external id.
  */
 
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
+ */
 function onMessage(msg, context) {
     const payload = msg.payload;
     console.log("Payload Raw: " + payload);

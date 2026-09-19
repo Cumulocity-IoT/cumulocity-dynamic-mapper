@@ -42,7 +42,7 @@ Two consequences worth internalising:
 |---|---|---|---|
 | 1 | TypeScript type definitions | `dynamic-mapper-smart-function/src/types/` | Author-time: valid code won't compile, or invalid code does |
 | 2 | Mock context helpers | same file, `createMockRuntimeContext*` | Tests pass against an API that no longer matches |
-| 3 | JS code templates | `dynamic-mapper-service/src/main/resources/templates/*.js` | Users copy a template that throws |
+| 3 | JS code templates | `dynamic-mapper-service/src/main/resources/templates/*.js` | Users copy a template that throws — **now build-enforced, see §3.5** |
 | 4 | Java extension interfaces | `processor/extension/ProcessorExtension{Inbound,Outbound}.java` | Extension authors code against the wrong shape |
 | 5 | AI prompts | `dynamic-mapper-service/src/main/resources/prompts/*.txt` | The AI generates mappings using APIs that don't exist — **silent, and at scale** |
 | 6 | In-app documentation | `dynamic-mapper-ui/public/docs/*.md` | Users follow instructions that don't work |
@@ -132,7 +132,22 @@ grep -rhoE 'context\.(\w+)\s*\(' dynamic-mapper-service/src/main/resources/templ
   | sed 's/context\.//;s/(//' | sort -u
 ```
 
-### 3.5 In-app doc images actually ship
+### 3.5 Templates type-check against the real types — **enforced**
+
+Level 2. `dynamic-mapper-smart-function/tsconfig.templates.json` runs `tsc --checkJs` over
+`dynamic-mapper-service/src/main/resources/templates/*.js` with the Smart Function types mapped in.
+A template calling a method that does not exist, or reading a `msg` field that is not there, fails
+the build:
+
+```bash
+cd dynamic-mapper-smart-function && npm run check:templates
+```
+
+It runs automatically via the `pretest` hook and in the `smart-function-contract` CI job. Everything
+it needed inside the templates is comments (`// @ts-check` plus JSDoc `@param`), so the GraalVM
+runtime still sees plain JavaScript — verified with `node --check` on all 18 templates.
+
+### 3.6 In-app doc images actually ship
 
 Already automated and **failing the build**: `dynamic-mapper-ui/scripts/optimize-images.js` runs on
 `prebuild` and errors if a `public/docs/*.md` image has no `buildTime.copy` entry in
@@ -179,8 +194,8 @@ of checking is as likely to be wrong as the thing being checked.
    [smart-function-type-sync.md §5.2](smart-function-type-sync.md).
 2. **Prompt contract test.** Assert every `context.*` and `msg.*` token in `prompts/*.txt` exists in
    the runtime list. Cheapest possible protection for the highest-blast-radius surface.
-3. **Template lint.** Assert templates call only real APIs, and use field style (`msg.payload`) not
-   getter style.
+3. ~~**Template lint.**~~ **Done** — superseded by the type-check in §3.5, which is strictly
+   stronger than a grep: it validates against the actual interfaces rather than a banned-word list.
 4. **Editor provider test.** Already exists —
    `dynamic-mapper-ui/src/shared/mapping/stepper.model.completion.spec.ts` drives the real provider
    with a stub Monaco. Extend it to assert the advertised member list matches a canonical set.

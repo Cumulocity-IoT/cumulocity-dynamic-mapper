@@ -200,7 +200,23 @@ void dataPrepContextMethodsMatchCanonicalList() {
 When this list and the TypeScript interface diverge, the test is the single source of truth:
 update both together.
 
-### 5.3 Template lint check (recommended)
+### 5.3 Template type-check (implemented 2026-09-19)
+
+Templates are now type-checked against the real types rather than grepped for banned patterns:
+
+```bash
+cd dynamic-mapper-smart-function && npm run check:templates
+```
+
+`tsconfig.templates.json` compiles the templates with `checkJs` and the types mapped in; each
+template carries `// @ts-check` and a JSDoc `@param` pair naming `msg` and `context`. Phantom
+context methods and phantom `msg` fields both fail the build. Wired into `pretest` and into the
+`smart-function-contract` job in `.github/workflows/ci.yml`. GraalVM is unaffected — the additions
+are comments only.
+
+The grep-based lint below is kept for reference; the type-check supersedes it.
+
+### 5.3b Template lint check (superseded)
 
 A simple grep script that fails if deprecated patterns appear in any template:
 

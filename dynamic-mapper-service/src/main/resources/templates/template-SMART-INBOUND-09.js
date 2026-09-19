@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @name HART Device Metrics to Cumulocity Measurements
  * @description Maps Sparkplug-B/HART DDATA payload metrics to Cumulocity measurements.
@@ -6,6 +7,10 @@
  * @templateType INBOUND_SMART_FUNCTION
  * @internal true
  * @readonly true
+ */
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
  */
 function onMessage(msg, context) {
     var payload = msg.payload;

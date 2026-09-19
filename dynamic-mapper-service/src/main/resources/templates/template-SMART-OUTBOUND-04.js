@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @name Default template for SparkPlug B outbound (NCMD)
  * @description Sends a SparkPlug B NCMD (Node Command) to an edge node.
@@ -31,6 +32,10 @@
  *   Return null from this function to suppress the command when the device is offline.
  */
 
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').OutboundMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
+ */
 function onMessage(msg, context) {
     var payload = msg.payload;
 

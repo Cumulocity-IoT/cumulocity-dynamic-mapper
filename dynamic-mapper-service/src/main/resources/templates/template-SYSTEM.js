@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @name System code
  * @description System code containing the required definitions of the java classes
