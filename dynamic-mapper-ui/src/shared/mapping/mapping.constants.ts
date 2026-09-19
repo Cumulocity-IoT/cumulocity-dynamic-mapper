@@ -96,10 +96,10 @@ export const SAMPLE_TEMPLATES_EXTERNAL = dynamicTemplates({
         "value": 110,
         "unit": "C" },
       "time":"${SAMPLE_TIME_PLACEHOLDER}",
-      "deviceId":"909090"
+      "externalId":"serial-909090-2026"
   }`,
   ALARM: `{
-    "deviceId":"909090",
+    "externalId":"serial-909090-2026",
     "alarmType": "TestAlarm",
     "description": "This is a new test alarm!",
     "severity": "MAJOR",
@@ -107,7 +107,7 @@ export const SAMPLE_TEMPLATES_EXTERNAL = dynamicTemplates({
     "time": "${SAMPLE_TIME_PLACEHOLDER}"
   }`,
   EVENT: `{
-    "deviceId":"909090",
+    "externalId":"serial-909090-2026",
     "description": "This is a new test event.",
     "time": "${SAMPLE_TIME_PLACEHOLDER}",
     "eventType": "TestEvent"
@@ -115,10 +115,10 @@ export const SAMPLE_TEMPLATES_EXTERNAL = dynamicTemplates({
   INVENTORY: `{
     "name": "Vibration Sensor",
     "type": "maker_Vibration_Sensor",
-    "id": "909090"
+    "externalId": "serial-909090-2026"
  }`,
   OPERATION: `{
-   "deviceId": "909090",
+   "externalId": "serial-909090-2026",
    "description": "New camera operation!",
    "type": "maker_Vibration_Sensor"
   }`,

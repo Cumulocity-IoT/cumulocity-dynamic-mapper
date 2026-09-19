@@ -81,7 +81,8 @@ function onMessage(msg, context) {
     var payload = msg.payload;
 
     // Topic is "quickstart/device_01" — the second segment identifies the device.
-    var deviceId = context.getConfig().topic.split("/")[1];
+    var externalId = context.getConfig().topic.split("/")[1];
+    console.log("External device id:" + externalId);
 
     return [{
         cumulocityType: "measurement",
@@ -96,7 +97,7 @@ function onMessage(msg, context) {
                 }
             }
         },
-        externalSource: [{ "type": "c8y_Serial", "externalId": deviceId }]
+        externalSource: [{ "type": "c8y_Serial", "externalId": externalId }]
     }];
 }
 export { onMessage };
