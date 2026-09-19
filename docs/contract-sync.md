@@ -45,10 +45,10 @@ Two consequences worth internalising:
 | 3 | JS code templates | `dynamic-mapper-service/src/main/resources/templates/*.js` | Users copy a template that throws — **now build-enforced, see §3.5** |
 | 4 | Java extension interfaces | `processor/extension/ProcessorExtension{Inbound,Outbound}.java` | Extension authors code against the wrong shape |
 | 5 | AI prompts | `dynamic-mapper-service/src/main/resources/prompts/*.txt` | The AI generates mappings using APIs that don't exist — **now build-enforced, see §3.6** |
-| 6 | In-app documentation | `dynamic-mapper-ui/public/docs/*.md` | Users follow instructions that don't work |
+| 6 | In-app documentation | `dynamic-mapper-ui/public/docs/*.md` | Users follow instructions that don't work — **now build-enforced for the context API, see §3.6** |
 | 7 | Editor completion + hover | `dynamic-mapper-ui/src/shared/mapping/stepper.model.ts` | Autocomplete offers phantom members |
 | 8 | Repo documentation | `docs/**/*.md` | Contributors build on stale assumptions |
-| 9 | OpenAPI spec | `resources/openAPI/openapi.json` | Generated clients and 403 messages name wrong roles |
+| 9 | OpenAPI spec | `resources/openAPI/openapi.json` | Generated clients and 403 messages name wrong roles — **role names now build-enforced, see §3.6** |
 
 Surface 5 deserves the most care. A wrong prompt is not one wrong page — it is every mapping the
 AI generates from then on, and the user has no reason to suspect the tool.
@@ -155,7 +155,13 @@ Level 2. `SmartFunctionApiContractTest` reflects over the concrete objects hande
 - a prompt teaches a `context.*` method the runtime does not have,
 - a prompt teaches a `msg.*` field the runtime does not set, or
 - the context API itself changes, which trips a pinned canonical list whose failure message names
-  the other surfaces to update.
+  the other surfaces to update,
+- `public/docs/smartfunction.md` describes a method that does not exist, **or omits one that
+  does** — the coverage direction is the one that caught six undocumented methods in the
+  2026-09-19 audit,
+- a role named in the OpenAPI spec is not declared in the microservice manifest. A wrong role name
+  never fails at compile time; it sits in a string until a user is told to grant a role that does
+  not exist.
 
 ```bash
 cd dynamic-mapper-service && mvn test -Dtest=SmartFunctionApiContractTest
@@ -212,9 +218,14 @@ of checking is as likely to be wrong as the thing being checked.
 4. ~~**Editor provider test.**~~ **Done differently, and better** — the provider's table is now
    *generated* from the TypeScript types (`npm run generate:editor-api`), with CI failing on a
    stale file. There is no hand-written list left to assert against.
-5. **Doc link + anchor check.** Validate `public/docs/*.md` cross-page links and `{#anchors}` resolve.
+5. **Doc link + anchor check.** Validate `public/docs/*.md` cross-page links and `{#anchors}`
+   resolve. The only item still hand-run — the script is in §3 of this page.
 
 Only item 5 remains hand-run. Everything else fails the build.
+
+Six of the nine surfaces are now mechanically enforced. The three that are not — repo docs,
+the Java extension interfaces and the prose (as opposed to the API names) in the in-app docs —
+resist automated checking because what they get wrong is meaning, not identifiers.
 
 ---
 

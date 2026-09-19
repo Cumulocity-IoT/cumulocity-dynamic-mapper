@@ -26,6 +26,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -87,6 +89,28 @@ class SmartFunctionApiContractTest {
     private static final List<String> PROMPTS = List.of(
             "prompts/smartfunction_prompt.txt",
             "prompts/jsonata_prompt.txt");
+
+    /**
+     * The in-app Smart Function reference. Not on the classpath — it belongs to the UI module —
+     * so it is resolved relative to this module. Both modules live in the same repository and the
+     * reactor build spans them, so a missing file means something is genuinely wrong rather than
+     * a partial checkout to tolerate.
+     */
+    private static final Path USER_DOCS =
+            Path.of("..", "dynamic-mapper-ui", "public", "docs", "smartfunction.md");
+
+    /**
+     * Setters the host calls while wiring the context up. They are public because the runtime
+     * needs them, but they are not part of what a Smart Function author should be told about, so
+     * the documentation-coverage check below does not require them.
+     */
+    private static final Set<String> HOST_ONLY = Set.of("setClientId", "setConfig");
+
+    /** The microservice manifest — the only place roles are actually declared to the platform. */
+    private static final Path MANIFEST = Path.of("src", "main", "configuration", "cumulocity.json");
+
+    /** Generated API description, committed so clients and reviewers can read it. */
+    private static final Path OPENAPI = Path.of("..", "resources", "openAPI", "openapi.json");
 
     private static Set<String> contextApi() {
         Set<String> names = new TreeSet<>();
@@ -164,6 +188,64 @@ class SmartFunctionApiContractTest {
             assertTrue(phantom.isEmpty(),
                     prompt + " teaches msg field(s) the runtime does not set: " + phantom
                             + ". Available: " + api);
+        }
+    }
+
+    @Test
+    @DisplayName("the in-app docs only describe context methods that exist")
+    void docsDescribeOnlyRealContextMethods() throws IOException {
+        Set<String> api = contextApi();
+        Set<String> used = tokens(readDocs(), "context\\.(\\w+)\\s*\\(");
+        List<String> phantom = used.stream().filter(n -> !api.contains(n)).collect(Collectors.toList());
+        assertTrue(phantom.isEmpty(),
+                USER_DOCS + " documents context method(s) the runtime does not have: " + phantom);
+    }
+
+    @Test
+    @DisplayName("the in-app docs describe every context method a Smart Function can call")
+    void docsCoverTheWholeContextApi() throws IOException {
+        String docs = readDocs();
+        List<String> undocumented = contextApi().stream()
+                .filter(name -> !HOST_ONLY.contains(name))
+                .filter(name -> !docs.contains(name))
+                .collect(Collectors.toList());
+        assertTrue(undocumented.isEmpty(),
+                "Smart Function context method(s) missing from " + USER_DOCS + ": " + undocumented
+                        + ". Every method a user can call should be documented; if one is "
+                        + "deliberately internal, add it to HOST_ONLY with a reason.");
+    }
+
+    private static String readDocs() throws IOException {
+        assertTrue(Files.exists(USER_DOCS),
+                "expected the in-app Smart Function docs at " + USER_DOCS.toAbsolutePath());
+        return Files.readString(USER_DOCS);
+    }
+
+    @Test
+    @DisplayName("every role named in code, messages and the OpenAPI spec is actually declared")
+    void roleNamesMatchTheManifest() throws IOException {
+        assertTrue(Files.exists(MANIFEST), "manifest not found at " + MANIFEST.toAbsolutePath());
+        Set<String> declared = tokens(Files.readString(MANIFEST), "\"(ROLE_[A-Z_]+)\"");
+        assertTrue(declared.stream().anyMatch(r -> r.startsWith("ROLE_DYNAMIC_MAPPER")),
+                "no Dynamic Mapper roles found in " + MANIFEST + " — check the extraction");
+
+        // A wrong role name never fails at compile time: it sits in a @PreAuthorize string, an
+        // error message, or the generated spec, and only surfaces when a user is told to grant a
+        // role that does not exist. This has happened -- ROLE_MAPPING_HTTP_CONNECTOR_CREATE was
+        // reported in a 403 body for a role actually called ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE.
+        for (Path file : List.of(OPENAPI)) {
+            if (!Files.exists(file)) {
+                continue;
+            }
+            Set<String> used = tokens(Files.readString(file), "(ROLE_DYNAMIC[A-Z_]*|ROLE_MAPPING[A-Z_]*)");
+            List<String> unknown = used.stream()
+                    .filter(r -> !declared.contains(r))
+                    .collect(Collectors.toList());
+            assertTrue(unknown.isEmpty(),
+                    file + " names role(s) that are not declared in " + MANIFEST + ": " + unknown
+                            + ". Declared: " + declared.stream()
+                                    .filter(r -> r.startsWith("ROLE_DYNAMIC_MAPPER"))
+                                    .collect(Collectors.toList()));
         }
     }
 }
