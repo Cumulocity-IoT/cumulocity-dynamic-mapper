@@ -149,6 +149,18 @@ jobs:
         run: npm test
         working-directory: ./dynamic-mapper-smart-function
 
+      # The editor's completion data is generated from the type definitions. Regenerating must be
+      # a no-op: if it is not, the committed file is stale and the mapping editor would describe
+      # an API the types no longer have.
+      - name: Editor completion data is up to date
+        run: |
+          npm run generate:editor-api
+          if ! git diff --exit-code -- ../dynamic-mapper-ui/src/shared/mapping/generated; then
+            echo "::error::Generated editor API is stale. Run 'npm run generate:editor-api' in dynamic-mapper-smart-function and commit the result."
+            exit 1
+          fi
+        working-directory: ./dynamic-mapper-smart-function
+
   # Job 4: Build verification
   build:
     name: Build and Package
