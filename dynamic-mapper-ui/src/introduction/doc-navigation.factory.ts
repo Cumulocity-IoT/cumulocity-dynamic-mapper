@@ -77,9 +77,17 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     quickstartNode: new NavigatorNode({
       parent: gettext('Start'),
       icon: 'flash',
-      label: gettext('Quickstart'),
-      path: '/c8y-pkg-dynamic-mapper/introduction/quickstart',
+      label: gettext('Quickstart inbound'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/quickstart-inbound',
       priority: 892,
+      preventDuplicates: true
+    }),
+    quickstartOutboundNode: new NavigatorNode({
+      parent: gettext('Start'),
+      icon: 'upload',
+      label: gettext('Quickstart outbound'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/quickstart-outbound',
+      priority: 891.5,
       preventDuplicates: true
     }),
     conceptsNode: new NavigatorNode({

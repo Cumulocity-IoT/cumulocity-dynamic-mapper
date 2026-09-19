@@ -1,8 +1,8 @@
 ---
-title: Quickstart
+title: Quickstart inbound
 ---
 
-### Quickstart: your first mapping {#quickstart}
+### Quickstart: your first inbound mapping {#quickstart-inbound}
 
 By the end of this page a temperature reading published to an MQTT topic will show up as a measurement on a device
 in Cumulocity. It takes about 15 minutes.
@@ -165,6 +165,8 @@ failed inside it. [Troubleshooting](/c8y-pkg-dynamic-mapper/introduction/trouble
 
 #### What to read next
 
+- [Quickstart outbound](/c8y-pkg-dynamic-mapper/introduction/quickstart-outbound) — the other direction: send a
+  command from Cumulocity back to the device, reusing the connector and device you just created.
 - [Core concepts](/c8y-pkg-dynamic-mapper/introduction/concepts) — the vocabulary behind what you just built.
 - [Smart Functions](/c8y-pkg-dynamic-mapper/introduction/smartfunction) — the full API: device lookups, state,
   multiple outputs, binary payloads.

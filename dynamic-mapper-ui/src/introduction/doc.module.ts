@@ -40,7 +40,7 @@ import { DocCodeTemplatesComponent } from './doc-code-templates.component';
  */
 const MARKDOWN_PAGES = [
   // Start
-  'quickstart', 'concepts',
+  'quickstart-inbound', 'quickstart-outbound', 'concepts',
   // Guides
   'managing-connectors', 'connectors', 'define-mapping',
   'define-subscription-for-outbound', 'transformation-types',
@@ -62,7 +62,9 @@ const MARKDOWN_PAGES = [
  * anchor, since the section now lives at `/introduction/metadata`.
  */
 const LEGACY_REDIRECTS: Record<string, string> = {
-  'getting-started': 'quickstart'
+  'getting-started': 'quickstart-inbound',
+  // Renamed to 'quickstart-inbound' when the outbound quickstart was added, so the pair reads as a set.
+  'quickstart': 'quickstart-inbound'
 };
 
 @NgModule({

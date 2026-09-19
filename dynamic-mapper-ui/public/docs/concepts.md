@@ -34,7 +34,8 @@ managed object.
 transforms them, and publishes the result. Outbound additionally needs a **subscription** that says which devices
 to watch.
 
-→ [Outbound mappings](/c8y-pkg-dynamic-mapper/introduction/define-subscription-for-outbound)
+→ [Quickstart outbound](/c8y-pkg-dynamic-mapper/introduction/quickstart-outbound) ·
+[Outbound mappings](/c8y-pkg-dynamic-mapper/introduction/define-subscription-for-outbound)
 
 #### Payload type
 
@@ -96,6 +97,6 @@ A single message can match more than one mapping — `device/+/data` and `device
 
 #### What to read next
 
-- [Quickstart](/c8y-pkg-dynamic-mapper/introduction/quickstart) if you have not built a mapping yet.
+- [Quickstart](/c8y-pkg-dynamic-mapper/introduction/quickstart-inbound) if you have not built a mapping yet.
 - [Defining a mapping](/c8y-pkg-dynamic-mapper/introduction/define-mapping) for the wizard in full.
 - [Metadata](/c8y-pkg-dynamic-mapper/introduction/metadata) for `_TOPIC_LEVEL_`, `_IDENTITY_` and `_CONTEXT_DATA_`.

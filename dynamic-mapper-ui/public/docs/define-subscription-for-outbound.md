@@ -4,6 +4,9 @@ title: Outbound mappings
 
 ### Defining a subscription for outbound mapping {#define-subscription-for-outbound}
 
+For a worked end-to-end example — subscribe a device, build the mapping and trigger it with a real operation — see
+the [outbound quickstart](/c8y-pkg-dynamic-mapper/introduction/quickstart-outbound).
+
 When defining an outbound mapping, the **Dynamic Mapper backend** needs to be triggered when data for a device is
 updated.
 This only happens when you created a subscription for the device. The details on how to create subscriptions is
