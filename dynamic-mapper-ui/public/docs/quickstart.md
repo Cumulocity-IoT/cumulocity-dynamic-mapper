@@ -97,17 +97,42 @@ function onMessage(msg, context) {
                 }
             }
         },
-        externalSource: [{ "type": "c8y_Serial", "externalId": externalId }]
+        externalSource: [{ "type": "c8y_Serial", "externalId": externalId }],
+        contextData: {
+            "deviceName": "Temperature-Sensor-01",
+            "deviceType": "c8y_TemperatureSensor"
+        }
     }];
 }
 export { onMessage };
 ```
 
-Three things are worth noticing, because every inbound Smart Function does them:
+Four things are worth noticing, because most inbound Smart Functions do them:
 
 - It **returns an array**. One message can produce several Cumulocity objects; here it produces one.
 - `cumulocityType` and `action` say *what* to create — a measurement, in this case.
 - `externalSource` says *which device* the data belongs to. Without it the mapper cannot route the measurement.
+- `contextData.deviceName` and `contextData.deviceType` describe the **device to create**. This is where the
+  **Create non-existing devices** switch from Step 3 pays off: the first message from an unknown external ID
+  creates the device, and without these it would appear in Device Management under its external ID with no type at
+  all. Here it is created as `Temperature-Sensor-01` of type `c8y_TemperatureSensor`.
+
+:::info
+Both apply **only at creation**. Once the device exists, later messages neither rename it nor change its type —
+edit it in Device Management instead.
+
+The **type** is worth setting deliberately: it is what device lists, smart rules and dashboards filter on, so
+devices created without one are awkward to work with later. A type is a free-form string; the `c8y_` prefix is
+only a convention.
+
+Note also that the example hard-codes one name while the mapping topic `quickstart/+` serves *every* device under
+`quickstart/`. That is fine for a single test device, but in practice derive the name from the message — for
+example `"deviceName": "Sensor " + externalId`. The type is usually the same for every device a mapping creates,
+so a constant is normally right there.
+
+`contextData` shapes the created device further still, through `deviceFragments` and `deviceGroups`. See
+[Smart Functions](/c8y-pkg-dynamic-mapper/introduction/smartfunction) for the full list.
+:::
 
 #### Step 6 — Test, save, activate
 
@@ -127,7 +152,10 @@ Publish to `quickstart/device_01` through the Cumulocity MQTT Service:
 { "temperature": 23.7, "unit": "C" }
 ```
 
-In **Device Management** a device `device_01` now exists, carrying a temperature measurement.
+In **Device Management** a device named **Temperature-Sensor-01**, of type `c8y_TemperatureSensor`, now exists —
+carrying a temperature measurement. It was created by the first message, with the name and type coming from
+`contextData`, and the external ID `device_01` — taken from the topic — recorded under its **Identity** tab. That
+external ID, not the name, is what links every later message to this device.
 
 :::info
 Nothing arrived? Open [Monitoring](/c8y-pkg-dynamic-mapper/introduction/monitoring) — it counts the messages each
