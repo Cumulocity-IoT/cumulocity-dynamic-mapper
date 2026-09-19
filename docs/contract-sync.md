@@ -44,7 +44,7 @@ Two consequences worth internalising:
 | 2 | Mock context helpers | same file, `createMockRuntimeContext*` | Tests pass against an API that no longer matches |
 | 3 | JS code templates | `dynamic-mapper-service/src/main/resources/templates/*.js` | Users copy a template that throws — **now build-enforced, see §3.5** |
 | 4 | Java extension interfaces | `processor/extension/ProcessorExtension{Inbound,Outbound}.java` | Extension authors code against the wrong shape |
-| 5 | AI prompts | `dynamic-mapper-service/src/main/resources/prompts/*.txt` | The AI generates mappings using APIs that don't exist — **silent, and at scale** |
+| 5 | AI prompts | `dynamic-mapper-service/src/main/resources/prompts/*.txt` | The AI generates mappings using APIs that don't exist — **now build-enforced, see §3.6** |
 | 6 | In-app documentation | `dynamic-mapper-ui/public/docs/*.md` | Users follow instructions that don't work |
 | 7 | Editor completion + hover | `dynamic-mapper-ui/src/shared/mapping/stepper.model.ts` | Autocomplete offers phantom members |
 | 8 | Repo documentation | `docs/**/*.md` | Contributors build on stale assumptions |
@@ -147,7 +147,24 @@ It runs automatically via the `pretest` hook and in the `smart-function-contract
 it needed inside the templates is comments (`// @ts-check` plus JSDoc `@param`), so the GraalVM
 runtime still sees plain JavaScript — verified with `node --check` on all 18 templates.
 
-### 3.6 In-app doc images actually ship
+### 3.6 Prompts and the runtime API — **enforced**
+
+Level 2. `SmartFunctionApiContractTest` reflects over the concrete objects handed to GraalVM —
+`SmartFunctionContext` and `InputMessage`, not the interfaces — and fails the Maven build when:
+
+- a prompt teaches a `context.*` method the runtime does not have,
+- a prompt teaches a `msg.*` field the runtime does not set, or
+- the context API itself changes, which trips a pinned canonical list whose failure message names
+  the other surfaces to update.
+
+```bash
+cd dynamic-mapper-service && mvn test -Dtest=SmartFunctionApiContractTest
+```
+
+The third check is the hub this page argued for: it cannot know whether the TypeScript, the docs
+and the prompts were updated, but it makes the decision impossible to skip silently.
+
+### 3.7 In-app doc images actually ship
 
 Already automated and **failing the build**: `dynamic-mapper-ui/scripts/optimize-images.js` runs on
 `prebuild` and errors if a `public/docs/*.md` image has no `buildTime.copy` entry in
@@ -188,21 +205,16 @@ of checking is as likely to be wrong as the thing being checked.
 
 ## 6. Recommended automation, in priority order
 
-1. **Java reflection contract test** (highest value, lowest cost). A JUnit test that enumerates
-   `SmartFunctionContext`'s public methods against a canonical list. Adding a Java method without
-   updating the list fails CI, which forces the conversation about the other surfaces. Sketch in
-   [smart-function-type-sync.md §5.2](smart-function-type-sync.md).
-2. **Prompt contract test.** Assert every `context.*` and `msg.*` token in `prompts/*.txt` exists in
-   the runtime list. Cheapest possible protection for the highest-blast-radius surface.
+1. ~~**Java reflection contract test.**~~ **Done** — `SmartFunctionApiContractTest`, see §3.6.
+2. ~~**Prompt contract test.**~~ **Done** — same test, see §3.6.
 3. ~~**Template lint.**~~ **Done** — superseded by the type-check in §3.5, which is strictly
    stronger than a grep: it validates against the actual interfaces rather than a banned-word list.
-4. **Editor provider test.** Already exists —
-   `dynamic-mapper-ui/src/shared/mapping/stepper.model.completion.spec.ts` drives the real provider
-   with a stub Monaco. Extend it to assert the advertised member list matches a canonical set.
+4. ~~**Editor provider test.**~~ **Done differently, and better** — the provider's table is now
+   *generated* from the TypeScript types (`npm run generate:editor-api`), with CI failing on a
+   stale file. There is no hand-written list left to assert against.
 5. **Doc link + anchor check.** Validate `public/docs/*.md` cross-page links and `{#anchors}` resolve.
 
-Until 1–3 exist, run §3 by hand whenever a change touches `processor/model/` or
-`processor/runtime/`.
+Only item 5 remains hand-run. Everything else fails the build.
 
 ---
 
@@ -211,4 +223,5 @@ Until 1–3 exist, run §3 by hand whenever a change touches `processor/model/` 
 | Date | Scope | Outcome |
 |---|---|---|
 | 2026-06 | TS types ↔ Java runtime | 6 gaps found and fixed — see [smart-function-type-sync.md §6](smart-function-type-sync.md) |
+| 2026-09-19 | Enforcement | Templates type-checked against the types; editor table generated from them; prompts and the context API pinned by `SmartFunctionApiContractTest`. Four surfaces moved from convention to build-enforced. |
 | 2026-09-19 | All nine surfaces | `CumulocityObject`, `DeviceMessage`, templates, editor provider: **in sync**. Fixed: `OutboundMessage` missing 5 runtime fields; `clearState` missing from TS; 6 context methods undocumented; `jsonata_prompt.txt` missing `deviceFragments`/`deviceGroups`, listing `retain` under the wrong direction, and omitting `OPERATION` from the target-API list |
