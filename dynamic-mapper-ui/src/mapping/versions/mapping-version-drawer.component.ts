@@ -33,7 +33,7 @@ import { ConfirmationModalComponent, Mapping, SharedModule } from '../../shared'
 import { MappingService } from '../core/mapping.service';
 import { NoteEditCellRendererComponent } from './note-edit-cell-renderer.component';
 import { VersionStateCellRendererComponent } from './version-state-cell.renderer.component';
-import { PublishVersionModalComponent } from './publish-version-modal.component';
+import { MappingPublishService } from './mapping-publish.service';
 
 type VersionState = 'active' | 'published' | 'draft';
 
@@ -92,6 +92,7 @@ export class MappingVersionDrawerComponent implements OnInit {
   private readonly mappingService = inject(MappingService);
   private readonly alertService = inject(AlertService);
   private readonly bsModalService = inject(BsModalService);
+  private readonly publishService = inject(MappingPublishService);
 
   /** Emits true if anything changed, so the opener can refresh the mapping grid. */
   closeSubject = new Subject<boolean>();
@@ -251,38 +252,15 @@ export class MappingVersionDrawerComponent implements OnInit {
   }
 
   async publish(): Promise<void> {
-    // Fetch version suggestions first, then open the publish dialog.
-    let suggestions: { patch: string; minor: string; major: string };
-    try {
-      suggestions = await this.mappingService.suggestNextVersions(this.mapping.id);
-    } catch {
-      suggestions = { patch: '1.0.0', minor: '1.0.0', major: '1.0.0' };
-    }
-
-    const result = await new Promise<{ version: string; note: string } | null>(resolve => {
-      const ref = this.bsModalService.show(PublishVersionModalComponent, {
-        initialState: {
-          mappingName: this.mapping.name,
-          currentVersion: this.mapping.version ?? null,
-          suggestions
-        }
-      });
-      ref.content.closeSubject.pipe(take(1)).subscribe((r: { version: string; note: string } | null) => {
-        resolve(r);
-        ref.hide();
-      });
-    });
-
-    if (!result) return;
-
     this.busy = true;
     try {
-      const mv = await this.mappingService.publishDraft(this.mapping.id, result.version, result.note || undefined);
-      this.alertService.success(`Published version ${mv.version} of ${this.mapping.name}`);
-      this.changed = true;
-      await this.reload();
-    } catch (e) {
-      this.alertService.danger('Failed to publish draft', (e as Error).message);
+      // Shared with the grid's "Publish draft" row action; also offers activation when the
+      // mapping is still inactive. See MappingPublishService.
+      const outcome = await this.publishService.publishDraft(this.mapping);
+      if (outcome.published) {
+        this.changed = true;
+        await this.reload();
+      }
     } finally {
       this.busy = false;
     }

@@ -19,13 +19,18 @@ messages.
 The full flow when working with a mapping is:
 
 1. **Edit → Save** — your changes are stored in the mapping's single **draft**. The active configuration keeps
-   running unchanged. A <span class="label label-info">draft</span> badge appears in the mapping list.
-2. **Publish** the draft — a dialog opens where you choose the version label and an optional **change note**. Use
-   the **Patch**, **Minor**, or **Major** bump buttons to auto-suggest the next semver label, or type any
-   `MAJOR.MINOR.PATCH` string directly. Once confirmed, the draft becomes a new immutable version. Publishing does
-   not activate the version.
-3. **Activate** a version — its configuration is loaded into the running mapping. To **roll back**, simply
-   activate an older version; newer versions are kept and remain available.
+   running unchanged, so **saving alone changes nothing at runtime**. A
+   <span class="label label-warning">draft</span> badge appears in the Version/Status column of the mapping list
+   to mark the mapping as unfinished. Click the badge to open the version drawer for that mapping.
+2. **Publish** the draft — either from the version drawer, or directly from the mapping list via
+   **⋮ → Publish draft**, which only appears while a draft exists. A dialog opens where you choose the version
+   label and an optional **change note**. Use the **Patch**, **Minor**, or **Major** bump buttons to auto-suggest
+   the next semver label, or type any `MAJOR.MINOR.PATCH` string directly. Once confirmed, the draft becomes a new
+   immutable version.
+3. **Activate** a version — its configuration is loaded into the running mapping. Publishing does not by itself
+   activate anything: if the mapping is **inactive** when you publish, you are asked whether to activate it right
+   away, since it would otherwise process no messages. An already-active mapping picks the new version up
+   immediately. To **roll back**, simply activate an older version; newer versions are kept and remain available.
 
 The first time you publish or activate a mapping that has no version history yet, its current active configuration
 is automatically captured as **1.0.0**, so no history is lost. Existing mappings that previously used sequential
@@ -54,7 +59,7 @@ versions — each tagged with its **State**:
 
 - <span class="label label-primary">active</span> — the version currently running.
 - <span class="label label-default">published</span> — an immutable version you can activate or delete.
-- <span class="label label-info">draft</span> — unpublished edits waiting to be published.
+- <span class="label label-warning">draft</span> — unpublished edits waiting to be published.
 
 Versions are listed in descending semver order (newest first). Each row offers contextual actions in its **⋮**
 menu: **Publish** (on the draft, opens the version-picker dialog), **Activate** and **Delete** (on inactive
@@ -66,8 +71,9 @@ activate another version first.
 ### Version and draft indicators in the mapping list {#versioning-status-badge}
 
 The **Status** column of the inbound/outbound mapping list shows, at a glance, the **active version** of each
-mapping (for example <span class="label label-default">v1.2.0</span>) and a <span class="label label-info">draft</span>
-badge when the mapping has unpublished changes.
+mapping (for example <span class="label label-default">v1.2.0</span>) and a
+<span class="label label-warning">draft</span> badge when the mapping has unpublished changes. Both are links into
+the version drawer.
 
 ![Version and draft badges in the mapping list](../../../resources/image/Dynamic_Mapper_Mapping_Table.png "The mapping list Status column showing the active version badge and a draft badge.")
 

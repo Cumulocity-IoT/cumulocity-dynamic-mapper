@@ -148,10 +148,11 @@
           <span translate class="text-muted">Active </span><span class="text-12 label label-default" title="Active version">v{{ mapping.version }}</span>
         }
         @if (mapping.debug) {
-          <span class="text-12 label label-success">debug</span>
+          <span class="text-12 label label-success"
+            title="Debug logging is enabled for this mapping. View the detailed output in the microservice log: Administration → Ecosystem → Microservices → dynamic-mapper-service → Logs">debug</span>
         }
         @if (mapping.draftDirty) {
-          <span translate class="text-muted">· Editing </span><span class="text-12 label label-info" title="This mapping has unpublished draft changes">draft</span>
+          <span translate class="text-muted">· Editing </span><span class="text-12 label label-warning" title="This mapping has unpublished draft changes">draft</span>
         }
       }
     </div>

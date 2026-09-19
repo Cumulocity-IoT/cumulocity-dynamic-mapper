@@ -81,6 +81,7 @@ import { ExplorerMappingHandoffService } from '../core/explorer-mapping-handoff.
 import { SubscriptionService } from '../core/subscription.service';
 import { ImportMappingsComponent } from '../import/import-modal.component';
 import { MappingVersionDrawerComponent } from '../versions/mapping-version-drawer.component';
+import { MappingPublishService } from '../versions/mapping-publish.service';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
@@ -178,6 +179,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   private readonly bsModalService = inject(BsModalService);
   private readonly bottomDrawerService = inject(BottomDrawerService);
   private readonly confirmationService = inject(ConfirmationModalService);
+  private readonly publishService = inject(MappingPublishService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly explorerMappingHandoff = inject(ExplorerMappingHandoffService);
@@ -307,6 +309,17 @@ export class MappingComponent implements OnInit, OnDestroy {
         icon: 'duplicate',
         callback: this.copyMapping.bind(this),
         showIf: item => this.canManageMappings && !this.isDeprecatedMapping(item)
+      },
+      {
+        // Only offered when there is actually something to publish. Publishing otherwise lives
+        // inside the version drawer, which makes the required follow-up after editing a mapping
+        // easy to miss — this brings it one click from the grid.
+        text: 'Publish draft',
+        type: 'PUBLISH_DRAFT',
+        icon: 'upload',
+        callback: this.publishDraft.bind(this),
+        showIf: item => !!item['mapping']['draftDirty'] && this.canManageMappings
+          && !this.isDeprecatedMapping(item)
       },
       {
         text: 'Versions',
@@ -722,6 +735,13 @@ export class MappingComponent implements OnInit, OnDestroy {
     };
     this.initialDeploymentConnectors = snapshotConnectors(this.deploymentMapEntry);
     this.router.navigate(['edit', mapping.identifier], { relativeTo: this.route });
+  }
+
+  async publishDraft(m: MappingEnriched): Promise<void> {
+    const outcome = await this.publishService.publishDraft(m.mapping);
+    if (outcome.published) {
+      this.mappingService.refreshMappings(this.stepperConfiguration.direction);
+    }
   }
 
   openVersions(m: MappingEnriched) {

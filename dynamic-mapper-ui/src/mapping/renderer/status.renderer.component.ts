@@ -25,7 +25,8 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
  * Version/Status cell of the mapping grid.
  *
  * The cell always renders in the same order, so the column reads as stable slots down the grid:
- * the **version**, then **draft**, then **debug**. Version and draft both describe the version
+ * the **version**, then **draft**, then **debug**. Version and draft are both links into the
+ * version drawer; debug is status only. Version and draft both describe the version
  * (which one is active, and whether unpublished changes exist), so they sit together; debug is
  * operational status and comes last.
  *
@@ -50,7 +51,7 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
         @if (context?.property['callback']) {
           <a class="interact d-flex a-i-center dm-version-link"
             [attr.data-cy]="'dm-mapping-status-link-' + context.item.id"
-            title="Show version history of this mapping"
+            title="Show the version history of this mapping — publish a draft, activate a version or roll back"
             (click)="context.property['callback'](context.item)">
             <i c8yIcon="history" class="dm-version-icon"></i>
             @if (context.value.version) {
@@ -67,15 +68,28 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
         }
 
         <!-- Slot 2 — 'draft' belongs with the version: it describes the version state
-             (unpublished changes), not how the mapping is running. -->
+             (unpublished changes), not how the mapping is running.
+
+             It is styled as action-required rather than as neutral information, because a draft
+             is the one state in this cell that means "you are not finished": the edit does not
+             affect anything until it is published and the mapping activated. When the column
+             supplies a callback it links into the version drawer, where publishing lives. -->
         @if (context.value.draftDirty) {
-          <span class="text-12 label label-info" [attr.data-cy]="'dm-mapping-status-draft-' + context.item.id"
-            title="This mapping has unpublished draft changes">draft</span>
+          @if (context?.property['callback']) {
+            <a class="interact text-12 label label-warning dm-draft-link"
+              [attr.data-cy]="'dm-mapping-status-draft-' + context.item.id"
+              title="Unpublished changes — publish this draft and activate the mapping to apply them"
+              (click)="context.property['callback'](context.item)">draft</a>
+          } @else {
+            <span class="text-12 label label-warning" [attr.data-cy]="'dm-mapping-status-draft-' + context.item.id"
+              title="Unpublished changes — publish this draft and activate the mapping to apply them">draft</span>
+          }
         }
 
         <!-- Slot 3 — operational status, never a link -->
         @if (context.value.debug) {
-          <span class="text-12 label label-success" [attr.data-cy]="'dm-mapping-status-debug-' + context.item.id">debug</span>
+          <span class="text-12 label label-success" [attr.data-cy]="'dm-mapping-status-debug-' + context.item.id"
+            title="Debug logging is enabled for this mapping. View the detailed output in the microservice log: Administration → Ecosystem → Microservices → dynamic-mapper-service → Logs">debug</span>
         }
       </div>
     `,
@@ -103,6 +117,19 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 
     .dm-version-link:hover .dm-version-text {
       text-decoration-color: currentColor;
+    }
+
+    /* The draft badge is a link, but it must still read as a badge: keep the label chrome and
+       add the underline that marks it as clickable at rest (c8y's .interact is cursor-only). */
+    .dm-draft-link {
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      cursor: pointer;
+    }
+
+    .dm-draft-link:hover,
+    .dm-draft-link:focus {
+      filter: brightness(0.92);
     }
   `],
   standalone: true,

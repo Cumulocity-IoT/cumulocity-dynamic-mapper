@@ -32,7 +32,10 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
         <span class="label label-primary" [attr.data-cy]="'dm-version-state-active'">{{ 'active' | translate }}</span>
       }
       @case ('draft') {
-        <span class="label label-info" [attr.data-cy]="'dm-version-state-draft'">{{ 'draft' | translate }}</span>
+        <!-- label-warning, matching the draft badge in the mapping grid (StatusRendererComponent):
+             a draft means "unpublished, not in effect yet", so it reads as action-required in both
+             places rather than as neutral information. -->
+        <span class="label label-warning" [attr.data-cy]="'dm-version-state-draft'">{{ 'draft' | translate }}</span>
       }
       @default {
         <span class="label label-default" [attr.data-cy]="'dm-version-state-published'">{{ 'published' | translate }}</span>

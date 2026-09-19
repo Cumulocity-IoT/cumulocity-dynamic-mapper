@@ -46,11 +46,13 @@ describe('VersionStateCellRendererComponent', () => {
     expect(span?.textContent).toContain('active');
   });
 
-  it('renders the draft label with the info style for "draft"', () => {
+  it('renders the draft label with the warning style for "draft"', () => {
+    // label-warning, not label-info: a draft is unfinished work that needs publishing, and the
+    // badge must look the same here as in the mapping grid (StatusRendererComponent).
     const el = render('draft');
     const span = el.querySelector('[data-cy="dm-version-state-draft"]');
     expect(span).toBeTruthy();
-    expect(span?.className).toContain('label-info');
+    expect(span?.className).toContain('label-warning');
     expect(span?.textContent).toContain('draft');
   });
 

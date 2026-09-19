@@ -70,14 +70,52 @@ describe('StatusRendererComponent', () => {
     expect(link?.textContent).toContain('v1.2.3');
   });
 
-  it('never renders the state labels inside the link', () => {
+  it('keeps the version link to itself — no other label inside it', () => {
     const el = render(ALL, () => undefined);
-    const link = el.querySelector('a')!;
-    expect(link.textContent).not.toContain('debug');
-    expect(link.textContent).not.toContain('draft');
-    // …and they are still present in the cell, just outside the anchor.
-    expect(el.querySelector('[data-cy="dm-mapping-status-debug-row-1"]')).not.toBeNull();
-    expect(el.querySelector('[data-cy="dm-mapping-status-draft-row-1"]')).not.toBeNull();
+    const versionLink = el.querySelector('[data-cy="dm-mapping-status-link-row-1"]')!;
+    expect(versionLink.textContent).not.toContain('debug');
+    expect(versionLink.textContent).not.toContain('draft');
+  });
+
+  it('renders draft as its own link, flagged as action-required', () => {
+    // A draft is the one state here that means "not finished": the edit does nothing until it is
+    // published and the mapping activated. It links into the drawer where publishing lives.
+    const el = render(ALL, () => undefined);
+    const draft = el.querySelector('[data-cy="dm-mapping-status-draft-row-1"]')!;
+    expect(draft.tagName).toBe('A');
+    expect(draft.classList).toContain('label-warning');
+    expect(draft.getAttribute('title')).toContain('publish');
+  });
+
+  it('invokes the callback when the draft badge is clicked', () => {
+    const callback = jasmine.createSpy('callback');
+    const el = render({ version: '1.2.3', draftDirty: true }, callback);
+    el.querySelector<HTMLElement>('[data-cy="dm-mapping-status-draft-row-1"]')!
+      .dispatchEvent(new MouseEvent('click'));
+    expect(callback).toHaveBeenCalledWith({ id: 'row-1' });
+  });
+
+  it('tells the user where to find debug output, on hover', () => {
+    const el = render(ALL, () => undefined);
+    const tip = el.querySelector('[data-cy="dm-mapping-status-debug-row-1"]')!.getAttribute('title')!;
+    expect(tip).toContain('microservice log');
+    expect(tip).toContain('dynamic-mapper-service');
+  });
+
+  it('says what the version link actually does, on hover', () => {
+    const el = render(ALL, () => undefined);
+    const tip = el.querySelector('[data-cy="dm-mapping-status-link-row-1"]')!.getAttribute('title')!;
+    expect(tip).toContain('version history');
+  });
+
+  it('never makes debug a link — it is status, not an action', () => {
+    const el = render(ALL, () => undefined);
+    expect(el.querySelector('[data-cy="dm-mapping-status-debug-row-1"]')!.tagName).toBe('SPAN');
+  });
+
+  it('renders draft as a plain badge when there is no callback', () => {
+    const el = render(ALL);
+    expect(el.querySelector('[data-cy="dm-mapping-status-draft-row-1"]')!.tagName).toBe('SPAN');
   });
 
   it('shows the history icon and link-styled version at rest, not only on hover', () => {
