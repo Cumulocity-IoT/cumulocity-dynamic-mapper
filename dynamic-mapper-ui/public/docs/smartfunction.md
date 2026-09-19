@@ -304,6 +304,20 @@ object:
   includes the `topic` field (the configured subscription topic pattern, e.g. `"testDevice/+/data"`), which can be
   split to derive positional segment meanings. For outbound mappings it additionally provides the resolved
   `externalId` of the source device.
+- `context.getExternalId()` - Returns the resolved external ID of the source device. This is the recommended way
+  to identify the device in an **outbound** function — an operation carries the device under `deviceId`, not
+  `source`, so reading `payload["source"]["id"]` is unreliable and throws when absent. Requires **Use external
+  id** and an **External Id type** on the mapping.
+- `context.getStateKeySet()` - Returns just the keys currently held in state, without their values.
+- `context.clearState()` - Removes every state entry held for this mapping.
+- `context.getDTMAsset(assetId)` - Looks up a Digital Twin Manager asset by ID.
+- `context.addWarning(message)` - Records a non-fatal warning against this message. Warnings surface in the test
+  result and in the [microservice log](/c8y-pkg-dynamic-mapper/introduction/troubleshooting#microservice-log),
+  without failing the mapping.
+- `context.addLogMessage(message)` / `context.logMessage(message)` - Appends a message to the processing log for
+  this execution. For ordinary debugging prefer `console.log()`, which is shown in the **Console output** panel of
+  the mapping editor — see
+  [Testing a Smart Function](/c8y-pkg-dynamic-mapper/introduction/define-mapping#testing-smart-function).
 
 **Example:** `var publisherClientId = context.getClientId();`
 

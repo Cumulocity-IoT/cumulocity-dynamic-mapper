@@ -374,6 +374,19 @@ export interface SmartFunctionContext extends DataPrepContext {
   getStateKeySet(): string[];
 
   /**
+   * Removes every state entry held for this mapping.
+   *
+   * Exists on the runtime context (`SmartFunctionContext.clearState`) but was missing here.
+   *
+   * @example Reset an accumulator once it has been flushed
+   * if (context.getState("count") >= 100) {
+   *   flush(context.getStateAll());
+   *   context.clearState();
+   * }
+   */
+  clearState(): void;
+
+  /**
    * Indicates whether this invocation is running inside a test cycle
    * (i.e., triggered from the mapping test UI rather than a live message).
    *
@@ -629,6 +642,23 @@ export type C8yPayloadTypeMap = {
   managedObject: C8yManagedObject;
   /** Arbitrary body sent to a tenant-local microservice via {@link CumulocityObject.targetPath}. */
   custom: Record<string, any>;
+};
+
+/**
+ * Payload shapes as **received** by an outbound Smart Function.
+ *
+ * Identical to {@link C8yPayloadTypeMap} except for `measurement`. That map describes what you
+ * *send* to Cumulocity, where a bulk `{ measurements: [...] }` collection is legitimate. Nothing
+ * ever arrives that way: `FlowOutboundProcessor.createInputMessage` hands the function the single
+ * Cumulocity object that triggered the mapping, taken from one Notification 2.0 delta.
+ *
+ * Keeping the bulk arm in the received type forced every consumer to narrow a union that cannot
+ * occur — `msg.payload.source` and `msg.payload["c8y_TemperatureMeasurement"]` did not compile in
+ * the examples, for a case the runtime never produces.
+ */
+export type C8yReceivedPayloadTypeMap = Omit<C8yPayloadTypeMap, 'measurement'> & {
+  /** A single measurement — bulk collections are a send-only shape. */
+  measurement: C8yMeasurement;
 };
 
 /**
@@ -1128,7 +1158,7 @@ export type SmartFunctionIn<
  */
 export interface OutboundMessage<
   T extends C8yObjectType = C8yObjectType,
-  TPayload extends C8yPayloadTypeMap[T] = C8yPayloadTypeMap[T]
+  TPayload extends C8yReceivedPayloadTypeMap[T] = C8yReceivedPayloadTypeMap[T]
 > {
   /**
    * The Cumulocity event/measurement/alarm payload, pre-deserialized.
@@ -1156,6 +1186,27 @@ export interface OutboundMessage<
 
   /** Internal Cumulocity device ID of the originating device, if available. */
   sourceId?: string;
+
+  /**
+   * The mapping's publish topic, as resolved for this message.
+   *
+   * The runtime hands outbound functions the same `InputMessage` shape it uses inbound
+   * (`FlowOutboundProcessor.createInputMessage`), so this is populated — it was simply missing
+   * from this interface.
+   */
+  topic?: string;
+
+  /** ISO-8601 timestamp of when the runtime processed this event. */
+  time?: string;
+
+  /**
+   * Always absent outbound. The runtime passes `null` for these three: there is no publishing
+   * client, connector or transport metadata on a Cumulocity-originated event. They are declared
+   * so `msg` stays structurally compatible with {@link DynamicMapperDeviceMessage}.
+   */
+  clientId?: never;
+  transportId?: never;
+  transportFields?: never;
 }
 
 /**
@@ -1210,7 +1261,8 @@ export interface OutboundMessage<
  */
 export type SmartFunctionOut<
   T extends C8yObjectType = C8yObjectType,
-  TPayload extends C8yPayloadTypeMap[T] = C8yPayloadTypeMap[T]
+  // Received, not sent: see C8yReceivedPayloadTypeMap. Must match OutboundMessage's constraint.
+  TPayload extends C8yReceivedPayloadTypeMap[T] = C8yReceivedPayloadTypeMap[T]
 > = (
   msg: OutboundMessage<T, TPayload>,
   context: SmartFunctionContext
@@ -1267,7 +1319,7 @@ export type SmartFunction = SmartFunctionIn | SmartFunctionOut;
 export type OutboundMessageByType = {
   [T in C8yObjectType]: {
     /** Pre-deserialized C8y payload, typed to the matching domain interface. */
-    payload: C8yPayloadTypeMap[T];
+    payload: C8yReceivedPayloadTypeMap[T];
     /**
      * Required in V2 — the Java runtime always sets this for outbound messages.
      * Enables discriminant narrowing without casting.
@@ -1380,6 +1432,9 @@ export interface SmartFunctionContextV2<
 
   /** Returns all state keys currently stored in the context. */
   getStateKeySet(): string[];
+
+  /** Removes every state entry held for this mapping. */
+  clearState(): void;
 
   /**
    * Returns true when running inside a test cycle (mapping test UI).
@@ -1780,6 +1835,9 @@ export function createMockRuntimeContextV2<
     getStateKeySet(): string[] {
       return Object.keys(state);
     },
+    clearState(): void {
+      for (const key of Object.keys(state)) delete (state as Record<string, unknown>)[key];
+    },
     getTesting(): boolean {
       return false;
     }
@@ -1851,6 +1909,9 @@ export function createMockRuntimeContext(options: {
     },
     getStateKeySet(): string[] {
       return Object.keys(state);
+    },
+    clearState(): void {
+      for (const key of Object.keys(state)) delete (state as Record<string, unknown>)[key];
     },
     getTesting(): boolean {
       return false;

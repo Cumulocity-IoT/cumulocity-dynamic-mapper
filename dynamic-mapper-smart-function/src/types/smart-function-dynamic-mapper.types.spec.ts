@@ -30,6 +30,14 @@ import {
   createMockPayload
 } from './smart-function-dynamic-mapper.types';
 
+/**
+ * An inbound Smart Function may return a single object or an array — the signature allows both,
+ * so indexing the result directly does not type-check. This narrows it the way the runtime does.
+ */
+function firstResult<T>(result: T | T[]): T {
+  return Array.isArray(result) ? result[0] : result;
+}
+
 describe('Smart Function Runtime Types', () => {
   describe('Mock Helpers', () => {
     it('should create mock payload with object-style access', () => {
@@ -219,7 +227,7 @@ describe('Smart Function Runtime Types', () => {
       const result = onMessage(mockMsg, mockContext);
 
       // Assert
-      const action = result[0] as CumulocityObject;
+      const action = firstResult(result) as CumulocityObject;
       const p1 = action.payload as Record<string, unknown>;
       expect(p1['type']).toBe('c8y_VoltageMeasurement');
       expect(p1['c8y_Voltage']).toBeDefined();
@@ -284,7 +292,7 @@ describe('Smart Function Runtime Types', () => {
       const result = onMessage(mockMsg, mockContext);
 
       // Assert
-      const action = result[0] as CumulocityObject;
+      const action = firstResult(result) as CumulocityObject;
       const p2 = action.payload as Record<string, unknown>;
       expect(p2['type']).toBe('c8y_CurrentMeasurement');
       expect(p2['c8y_Current']).toBeDefined();
@@ -292,7 +300,7 @@ describe('Smart Function Runtime Types', () => {
 
     it('should return empty array when device is not found', () => {
       // Define Smart Function
-      const onMessage: SmartFunctionIn = (msg, context) => {
+      const onMessage: SmartFunctionIn = (_msg, context) => {
         const clientId = context.getClientId()!;
 
         const device: C8yManagedObject | null = context.getManagedObjectByExternalId({
@@ -340,7 +348,7 @@ describe('Smart Function Runtime Types', () => {
   describe('Outbound Smart Function', () => {
     it('should create device message for outbound communication', () => {
       // Define Smart Function (Cumulocity → Broker)
-      const onMessage: SmartFunctionOut = (msg, context) => {
+      const onMessage: SmartFunctionOut = (msg, _context) => {
         // No cast needed: msg.payload is SmartFunctionPayload
         const sourceId = msg.payload['source']['id'];
 
@@ -379,7 +387,7 @@ describe('Smart Function Runtime Types', () => {
 
     it('should use _externalId_ placeholder in topic', () => {
       // Define Smart Function (Cumulocity → Broker)
-      const onMessage: SmartFunctionOut = (msg, context) => {
+      const onMessage: SmartFunctionOut = (msg, _context) => {
         // payload is now C8yPayloadTypeMap[T] — use bracket notation (preferred)
         const temp = msg.payload['c8y_TemperatureMeasurement']?.['T']?.['value'];
 
@@ -456,13 +464,13 @@ describe('Smart Function Runtime Types', () => {
       const result2 = onMessage(msg2, mockContext);
 
       // Assert
-      const action1 = result1[0] as CumulocityObject;
+      const action1 = firstResult(result1) as CumulocityObject;
       const stats1 = (action1.payload as Record<string, any>)['c8y_Statistics'];
       expect(stats1).toBeDefined();
       expect(stats1.lastValue).toBe(0);
       expect(stats1.messageCount).toBe(1);
 
-      const action2 = result2[0] as CumulocityObject;
+      const action2 = firstResult(result2) as CumulocityObject;
       const stats2 = (action2.payload as Record<string, any>)['c8y_Statistics'];
       expect(stats2.lastValue).toBe(20.0);
       expect(stats2.messageCount).toBe(2);
@@ -504,7 +512,7 @@ describe('Smart Function Runtime Types', () => {
       const result = onMessage(mockMsg, mockContext);
 
       // Assert
-      const action = result[0] as CumulocityObject;
+      const action = firstResult(result) as CumulocityObject;
       expect(action.contextData).toEqual({
         deviceName: 'Test Sensor',
         deviceType: 'c8y_Sensor'

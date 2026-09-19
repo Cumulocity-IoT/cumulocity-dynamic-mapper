@@ -4,6 +4,10 @@ This document describes the strategy for keeping the TypeScript type definitions
 in `dynamic-mapper-smart-function/src/types/` in sync with the Java runtime API
 exposed to JavaScript via GraalVM.
 
+> The same contract is also described by the AI prompts, the in-app docs, the editor's
+> completion provider and the JS templates. [contract-sync.md](contract-sync.md) is the umbrella
+> strategy covering all nine surfaces, with runnable checks; this page is the TypeScript detail.
+
 ---
 
 ## 1. What "sync" means here
@@ -70,8 +74,10 @@ history. The resources listed below are now in sync.
 
 **Templates**
 
-- All 15 templates use field style (`msg.payload`, `msg.topic`) — getter style (`msg.getPayload()`) removed.
-- All timestamp fallbacks use `new Date().toISOString()` — `msg.time` references removed (field not set by runtime).
+- All 18 templates use field style (`msg.payload`, `msg.topic`) — getter style (`msg.getPayload()`) removed.
+- Timestamp fallbacks use `msg.time` (14 of 18 templates); no template uses `new Date().toISOString()`.
+  `InputMessage.time` **is** set by both processors, so the earlier claim that it was unset — and the
+  resulting advice to use `new Date()` — was wrong and has been reversed. Verified 2026-09-19.
 
 **Output types**
 
@@ -137,7 +143,11 @@ Use this checklist whenever a Smart Function API change is made.
 1. Change the template in `resources/templates/`.
 2. Verify the template runs correctly against a local instance using the corresponding script in `resources/testing/integration/` (e.g., `test-inbound-json-smartfunction.sh`).
 3. Use **field style only** (`msg.payload`, `msg.topic`). Getter style (`msg.getPayload()`) is deprecated and must not appear in templates.
-4. Use `msg.time` as the timestamp fallback — it is set by the connector at receive time. Do NOT use `new Date().toISOString()`. Pattern: `var time = payload["time"] || msg.time;`
+4. Use `msg.time` as the timestamp fallback. Do NOT use `new Date().toISOString()`. Pattern:
+   `var time = payload["time"] || msg.time;`
+   Note what `msg.time` actually is: `Instant.now().toString()` at the moment the runtime builds the
+   input message — i.e. **processing time, not connector receive time**. Prefer a timestamp from the
+   payload whenever the device sends one.
 5. If the template demonstrates a new pattern, add a matching JSDoc `@example` to the relevant TypeScript type.
 
 ### 4.5 TypeScript-only change (improve generics, add JSDoc, deprecate)
@@ -236,9 +246,11 @@ The following issues were found during the initial audit (2026-06) and have been
 
 | Gap | Issue | Resolution |
 |---|---|---|
-| A | `DynamicMapperDeviceMessage` declared `time`, `transportId`, `transportFields` — none are set by `InputMessage.java` | Removed from TypeScript; added `sourceId` and `cumulocityType` which are actually set. Templates changed to use `new Date().toISOString()` instead of `msg.time`. |
+| A | `DynamicMapperDeviceMessage` declared `time`, `transportId`, `transportFields` — believed unset by `InputMessage.java` | **Superseded.** All three *are* set (inbound sets `time`, `transportId` and `transportFields`; outbound sets `time`). They were re-added and the templates reverted to `msg.time`. The original diagnosis was wrong — see the 2026-09-19 row below. |
 | B | `addWarning` was `private` in `SmartFunctionContext.java` — not accessible from JavaScript; `logMessage`/`addLogMessage` missing from TypeScript | Made `addWarning` public + `@Override`; added `addWarning` to `DataPrepContext.java` interface; added `logMessage`, `addLogMessage` to TypeScript. |
 | C | `getTesting()` declared in `DataPrepContext.java` but missing from TypeScript | Added `getTesting(): boolean` to `SmartFunctionContext`, `SmartFunctionContextV2`, and both mock helpers. |
 | D | `getStateKeySet()` declared in `DataPrepContext.java` but missing from TypeScript | Added `getStateKeySet(): string[]` to `SmartFunctionContext`, `SmartFunctionContextV2`, and both mock helpers. |
 | E | `docs/smart-functions.md` documented phantom methods (`getDevice`, `getCache`, `setCache`, `log`) | Rewrote the entire document against the live API. |
 | F | All 15 templates used deprecated getter style (`msg.getPayload()`, `msg.getTopic()`) | Replaced every getter call with field-style access (`msg.payload`, `msg.topic`) across all templates. |
+
+| 2026-09-19 | Re-audit against the runtime | `OutboundMessage` was missing 5 of 8 `InputMessage` fields; `clearState` missing from both context interfaces; gap A above found to be a misdiagnosis. All fixed. Details in [contract-sync.md §7](contract-sync.md). |
