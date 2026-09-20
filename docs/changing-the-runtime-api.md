@@ -28,7 +28,7 @@ Both halves matter. Declaring the field is not enough — it stays `null` until 
 | Adding to | Also do this |
 |---|---|
 | `InputMessage` | Pass it in **both** `FlowInboundProcessor.createInputMessage` and `FlowOutboundProcessor.createInputMessage`. They share one constructor, so decide what the other direction passes — `null` is a legitimate answer, and the TypeScript side then declares `never`. |
-| `SmartFunctionContext` | Implement it there. Methods only on the interface (`DataPrepContext`) are not what JavaScript receives. |
+| `SmartFunctionContext` | Implement it on the concrete class — that is the object handed to the engine, and `allowPublicAccess(true)` exposes its public methods whether or not an interface declares them. Add it to `DataPrepContext` as well only if Java Extensions should have it too. |
 | `CumulocityObject` / `DeviceMessage` | These are what user code *returns*, so the consuming processor (`FlowResultInboundProcessor` / `FlowResultOutboundProcessor`) has to read the new field or nothing happens. |
 | An enum (`CumulocityType`, `MappingAction`, `Destination`, `RepairStrategy`, `API`) | Check the JSON value the enum serialises to — that string, not the Java constant name, is what every mirror must use. |
 

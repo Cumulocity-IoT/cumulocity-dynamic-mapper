@@ -15,9 +15,11 @@ exposed to JavaScript via GraalVM.
 The TypeScript file
 [smart-function-dynamic-mapper.types.ts](../dynamic-mapper-smart-function/src/types/smart-function-dynamic-mapper.types.ts)
 is a **hand-written contract** that documents the API Smart Functions see at
-runtime. It has no build-time link to the Java source. "Sync" means every public
-method, field, and constant a JavaScript Smart Function can call at runtime has a
-matching declaration in the TypeScript types — no more, no less.
+runtime. It is not generated from the Java source — but since 2026-09 the build compares the two:
+`SmartFunctionApiContractTest` fails when the `msg` interfaces and `InputMessage.java` disagree,
+and the editor's autocomplete is generated from this file rather than written beside it. "Sync"
+means every public method, field, and constant a JavaScript Smart Function can call at runtime has
+a matching declaration in the TypeScript types — no more, no less.
 
 | Java source of truth | TypeScript counterpart |
 |---|---|
@@ -28,14 +30,15 @@ matching declaration in the TypeScript types — no more, no less.
 | `ExternalSource.java` | `ExternalSource` in `smart-function-dynamic-mapper.types.ts` |
 | Templates in `resources/templates/` | Code examples in JSDoc comments |
 | Test scripts in `resources/testing/integration/` | `*.spec.ts` tests |
-| Angular docs in `doc-smartfunction.component.html` | JSDoc and inline docs |
+| In-app docs `dynamic-mapper-ui/public/docs/smartfunction.md` | JSDoc and inline docs |
 
 ---
 
-## 2. Current sync status (as of 2026-06)
+## 2. Current sync status (as of 2026-09-20)
 
-All gaps identified in the initial audit have been resolved. See Section 6 for the
-history. The resources listed below are now in sync.
+All gaps identified in the audits have been resolved. See Section 6 for the history.
+The resources listed below are in sync, and most of the comparison is now done by the build
+rather than by reading — see [contract-sync.md §3](contract-sync.md).
 
 ### 2.1 Confirmed in sync
 
@@ -58,16 +61,22 @@ history. The resources listed below are now in sync.
 | `addWarning(msg)` | `DataPrepContext.addWarning(String)` / `SmartFunctionContext` override | stores under `_WARNINGS_` key |
 | `logMessage(msg)` | `DataPrepContext.logMessage(String)` | `@deprecated` — prefer `console.log` |
 | `addLogMessage(msg)` | `DataPrepContext.addLogMessage(String)` | `@deprecated` — prefer `console.log` |
+| `clearState()` | `DataPrepContext.clearState()` | drops all state for the mapping |
 
-**Input message fields (`DynamicMapperDeviceMessage` ↔ `InputMessage.java`)**
+`SmartFunctionContext` also declares `setClientId` and `setConfig`, which JavaScript *can* call —
+`allowPublicAccess(true)` exposes them — but they exist for the host to populate the context before
+the function runs. They are deliberately absent from the TypeScript and from the docs, and
+`SmartFunctionApiContractTest` keeps them out via its `HOST_ONLY` set.
+
+**Input message fields (`DynamicMapperDeviceMessage` + `OutboundMessage` ↔ `InputMessage.java`)**
 
 | TypeScript | Java | Set by |
 |---|---|---|
 | `msg.payload` | `InputMessage.payload` | Both processors |
 | `msg.topic` | `InputMessage.topic` | Both processors |
 | `msg.clientId` | `InputMessage.clientId` | Inbound processor; `null` for outbound |
-| `msg.sourceId` | `InputMessage.sourceId` | Outbound processor; `null` for inbound |
-| `msg.cumulocityType` | `InputMessage.cumulocityType` | Outbound processor; `null` for inbound |
+| `msg.sourceId` | `InputMessage.sourceId` | Outbound processor; typed `never` on `DynamicMapperDeviceMessage` since inbound passes `null` |
+| `msg.cumulocityType` | `InputMessage.cumulocityType` | Outbound processor; typed `never` on `DynamicMapperDeviceMessage` since inbound passes `null` |
 | `msg.time` | `InputMessage.time` | Both processors (`Instant.now().toString()`) |
 | `msg.transportId` | `InputMessage.transportId` | Inbound processor (`context.getConnectorIdentifier()`); `null` for outbound |
 | `msg.transportFields` | `InputMessage.transportFields` | Inbound processor; carries the Kafka record **key** as `{"key": ...}`, empty map when the transport has none |
@@ -98,7 +107,7 @@ history. The resources listed below are now in sync.
 | `smart-function-dynamic-mapper.types.ts` | Shared | Any change to `SmartFunctionContext.java`, `InputMessage.java`, `CumulocityObject.java`, `DeviceMessage.java`, `ExternalSource.java` |
 | `resources/templates/*.js` | Backend | Any API surface change; all templates must stay runnable |
 | `smart-function-dynamic-mapper.types.spec.ts` | Shared | Any type change; new methods need test coverage |
-| `doc-smartfunction.component.html` | Frontend | TypeScript types or templates change |
+| `dynamic-mapper-ui/public/docs/smartfunction.md` | Frontend | TypeScript types or templates change (context-API coverage is build-enforced) |
 | `docs/smart-functions.md` | Shared | Any of the above change |
 
 ---
@@ -109,8 +118,16 @@ Use this checklist whenever a Smart Function API change is made.
 
 ### 4.1 Adding a new method or field to the Java API
 
-1. **Java** — add the method to `DataPrepContext.java` (interface) and implement it in `SmartFunctionContext.java`.
-   - If the method is only on the concrete class (not the interface), it will NOT be visible from JavaScript via GraalVM — always add to the interface.
+1. **Java** — implement the method on `SmartFunctionContext.java`, and add it to
+   `DataPrepContext.java` as well if Java Extensions should have it too.
+   - **The concrete class is what JavaScript sees.** The runtime configures
+     `HostAccess.newBuilder().allowPublicAccess(true)`, which exposes every public method of the
+     object's class whether or not an interface declares it — `setClientId` and `setConfig` reach
+     JavaScript exactly this way. An earlier version of this page claimed the opposite ("only on
+     the concrete class → NOT visible → always add to the interface"); that was wrong.
+   - The interface still matters, just for a different reason: `DataPrepContext` is what Java
+     Extensions are written against, so a method added only to `SmartFunctionContext` is available
+     to Smart Functions but not to extension authors. Decide which audience you mean.
 2. **TypeScript** — mirror the method in `SmartFunctionContext` in `smart-function-dynamic-mapper.types.ts`.
    - Also add to `SmartFunctionContextV2` if applicable.
 3. **Mock helpers** — implement the method in both `createMockRuntimeContext` and `createMockRuntimeContextV2`.
@@ -124,8 +141,15 @@ Use this checklist whenever a Smart Function API change is made.
 
 1. **Java** — add the public field (and its getter alias) to `InputMessage.java`.
    - Both `msg.field` (direct) and `msg.getField()` (getter) are supported; Java must expose both.
-   - Set the field in `FlowInboundProcessor.createInputMessage` or `FlowOutboundProcessor.createInputMessage` as appropriate.
-2. **TypeScript** — add the field to `DynamicMapperDeviceMessage` (inbound) or `OutboundMessage` (outbound) in `smart-function-dynamic-mapper.types.ts`.
+   - Set the field in `FlowInboundProcessor.createInputMessage` and/or
+     `FlowOutboundProcessor.createInputMessage`. Both call the same constructor, so you are choosing
+     what the *other* direction passes; `null` is a legitimate answer, and it must be matched by a
+     `never` in step 2.
+2. **TypeScript** — add the field to **both** `DynamicMapperDeviceMessage` and `OutboundMessage` in
+   `smart-function-dynamic-mapper.types.ts`. The direction that does not receive it declares
+   `never`, not nothing — omission then always means "forgotten". Both halves are build-enforced:
+   the contract test compares the declared fields against `InputMessage.java`, and compares the
+   `never`s against what each processor actually passes.
 3. **Mock helpers** — update `createMockInputMessage` / `createMockOutboundMessage` if the field is needed in tests.
 4. **Templates** — update any template that would benefit from the new field.
 5. **Docs** — update the `msg` fields table in `docs/smart-functions.md`.
@@ -135,7 +159,7 @@ Use this checklist whenever a Smart Function API change is made.
 1. **Java** — keep the old method and mark it `@Deprecated`. Add the new name alongside it.
 2. **TypeScript** — mark the old name `@deprecated` in the JSDoc and add the new name.
 3. **Templates** — update all templates to use the new name immediately (templates are the canonical example).
-4. **Lint gate** — add the old name to the banned-patterns list in Section 5.3 so templates never regress.
+4. **Gate** — no list to maintain: once the templates use the new name, `npm run check:templates` (§5.3) fails on any template that goes back to the old one, because the old name is gone from the types.
 5. After one major version, remove the deprecated Java method and its TypeScript counterpart together.
 
 ### 4.4 Template-only change (new example, bug fix)
@@ -171,34 +195,23 @@ The spec file `smart-function-dynamic-mapper.types.spec.ts` compiles against the
 Any method added to the interface but missing from the mock helpers causes a compile-time error,
 forcing the developer to implement it before CI passes.
 
-### 5.2 Java reflection contract test (recommended)
+### 5.2 Java reflection contract test (implemented 2026-09-19)
 
-Add a JUnit test that enumerates every public method on `DataPrepContext` and asserts it matches
-a canonical list. A PR adding a Java method without updating the list fails CI immediately.
+Shipped as `dynamic-mapper-service/src/test/java/dynamic/mapper/processor/SmartFunctionApiContractTest.java`
+and run by the normal `mvn test`. Eight checks; the ones that matter here:
 
-```java
-// SmartFunctionContractTest.java
-@Test
-void dataPrepContextMethodsMatchCanonicalList() {
-    List<String> actual = Arrays.stream(DataPrepContext.class.getMethods())
-        .map(Method::getName)
-        .filter(n -> !n.startsWith("lambda$"))
-        .distinct().sorted().toList();
+- the context API JavaScript sees matches a pinned canonical list, so any addition, removal or
+  rename fails the build with a message naming the other surfaces to update;
+- the TypeScript `msg` interfaces declare exactly the public fields of `InputMessage.java`;
+- the fields each direction leaves unset are exactly the ones its interface declares `never`,
+  established by running both processors rather than by reading their source.
 
-    List<String> EXPECTED = List.of(
-        "addLogMessage", "addWarning", "clearState",
-        "getClientId", "getConfig", "getDTMAsset", "getExternalId",
-        "getManagedObject", "getManagedObjectByExternalId",
-        "getState", "getStateAll", "getStateKeySet",
-        "getTesting", "logMessage", "setState"
-    );
-
-    assertThat(actual).containsExactlyInAnyOrderElementsOf(EXPECTED);
-}
+```bash
+cd dynamic-mapper-service && mvn test -Dtest=SmartFunctionApiContractTest
 ```
 
-When this list and the TypeScript interface diverge, the test is the single source of truth:
-update both together.
+It reflects over the **concrete** `SmartFunctionContext` class, not `DataPrepContext` — see §4.1
+for why that distinction is the whole point.
 
 ### 5.3 Template type-check (implemented 2026-09-19)
 
@@ -214,45 +227,30 @@ context methods and phantom `msg` fields both fail the build. Wired into `pretes
 `smart-function-contract` job in `.github/workflows/ci.yml`. GraalVM is unaffected — the additions
 are comments only.
 
-The grep-based lint below is kept for reference; the type-check supersedes it.
+### 5.3c Editor autocomplete is generated (implemented 2026-09-19)
 
-### 5.3b Template lint check (superseded)
-
-A simple grep script that fails if deprecated patterns appear in any template:
+The mapping editor's completion and hover data is no longer hand-maintained beside the types; it is
+produced from them by `dynamic-mapper-smart-function/scripts/generate-editor-api.cjs` into
+`dynamic-mapper-ui/src/shared/mapping/generated/smart-function-api.generated.ts`, which
+`stepper.model.ts` imports as `SMART_FUNCTION_API`. CI regenerates and fails on any diff.
 
 ```bash
-#!/usr/bin/env bash
-# lint-templates.sh — run from repo root
-TEMPLATES=dynamic-mapper-service/src/main/resources/templates
-
-echo "Checking for deprecated getter style..."
-if grep -rEn "msg\.(getPayload|getTopic|getClientId|getSourceId|getCumulocityType)\(\)" "$TEMPLATES"; then
-  echo "ERROR: getter-style msg access is deprecated. Use msg.payload, msg.topic, etc."
-  exit 1
-fi
-
-echo "Checking for removed context methods..."
-if grep -rn "context\.getDevice\|context\.getCache\|context\.setCache\|context\.log(" "$TEMPLATES"; then
-  echo "ERROR: phantom context methods found. Use getManagedObjectByExternalId, getState, setState, console.log."
-  exit 1
-fi
-
-echo "Checking for obsolete new Date().toISOString() fallback..."
-if grep -rn "new Date().toISOString()" "$TEMPLATES"; then
-  echo "ERROR: new Date() fallback is obsolete. Use msg.time (set by the connector at receive time)."
-  exit 1
-fi
-
-echo "All template checks passed."
+cd dynamic-mapper-smart-function && npm run generate:editor-api
 ```
 
-Integrate into the Maven build via `exec-maven-plugin` or as a CI step.
+This is the only surface that *cannot* drift, because there is no second copy to compare. Full
+chain in [contract-sync.md §3.7](contract-sync.md).
 
-### 5.4 Angular doc component (future)
+### 5.4 In-app documentation (partly enforced)
 
-`doc-smartfunction.component.html` is rendered in the Angular app. A Cypress or Playwright test
-asserting that code blocks reference the canonical method names (e.g. `getManagedObjectByExternalId`,
-`getState`) would prevent the UI docs from silently drifting.
+`doc-smartfunction.component.html` no longer exists; the in-app docs are Markdown under
+`dynamic-mapper-ui/public/docs/`, rendered by the doc module. `smartfunction.md` is checked in both
+directions by the contract test — it may not describe a context method the runtime lacks, and it
+may not omit one the runtime has. That coverage check is what found six undocumented methods in the
+2026-09-19 audit.
+
+What is still unchecked is the *prose*: an accurate method name wrapped in a wrong explanation
+passes. Nothing mechanical will catch that.
 
 ---
 
@@ -269,4 +267,9 @@ The following issues were found during the initial audit (2026-06) and have been
 | E | `docs/smart-functions.md` documented phantom methods (`getDevice`, `getCache`, `setCache`, `log`) | Rewrote the entire document against the live API. |
 | F | All 15 templates used deprecated getter style (`msg.getPayload()`, `msg.getTopic()`) | Replaced every getter call with field-style access (`msg.payload`, `msg.topic`) across all templates. |
 
+### Later audits
+
+| Date | Scope | Outcome |
+|---|---|---|
 | 2026-09-19 | Re-audit against the runtime | `OutboundMessage` was missing 5 of 8 `InputMessage` fields; `clearState` missing from both context interfaces; gap A above found to be a misdiagnosis. All fixed. Details in [contract-sync.md §7](contract-sync.md). |
+| 2026-09-20 | Populated-ness, and this page | Inbound `sourceId` / `cumulocityType` were typed as strings although `FlowInboundProcessor` passes `null` — now `never`, and enforced. This page was corrected too: §4.1 had claimed that a method only on the concrete class is invisible to JavaScript, which is false under `allowPublicAccess(true)`; §5.2 still called the contract test "recommended" three months after it shipped; and §5.4 targeted a component that had been deleted. |

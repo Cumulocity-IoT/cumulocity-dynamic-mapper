@@ -73,13 +73,19 @@ not the docs — the construction sites.
 | Which `_CONTEXT_DATA_` keys do anything | `inbound/processor/SubstitutionResultInboundProcessor.java`, `FlowResultInboundProcessor.java`, `outbound/processor/SubstitutionResultOutboundProcessor.java` |
 | Allowed enum values | `CumulocityType`, `MappingAction`, `Destination`, `RepairStrategy`, `API` |
 
-Two consequences worth internalising:
+Two consequences worth internalising. Both are now build-enforced, but the reasoning is what
+matters — the same trap appears wherever a mirror is written by hand.
 
-- **An interface is not the contract.** `DataPrepContext` declares 13 methods; the object actually
-  passed to JavaScript (`SmartFunctionContext`) has 15. Auditing the interface alone under-reports.
-- **A field existing is not the same as it being populated.** `InputMessage` has 8 fields, but
-  outbound passes `null` for three of them. Declaring them without saying so is how a documented
-  field becomes a runtime `undefined`.
+- **An interface is not the contract.** `DataPrepContext` declares 15 methods;
+  `SmartFunctionContext implements DataPrepContext` and adds two more (`setClientId`, `setConfig`),
+  so 17 reach the engine. Auditing the interface under-reports what the object can do. Enforced by
+  `SmartFunctionApiContractTest`, which reflects over the concrete class.
+- **A field existing is not the same as it being populated.** `InputMessage` has 8 fields, and
+  neither direction fills them all: outbound passes `null` for `clientId`, `transportId` and
+  `transportFields`, inbound for `sourceId` and `cumulocityType`. Declaring one without saying so
+  is how a documented field becomes a runtime `undefined` — which is exactly what inbound
+  `sourceId` and `cumulocityType` were until 2026-09-20. Enforced by running both processors and
+  requiring the empty fields to match the interface's `never` declarations; see §3.6.
 
 ---
 
@@ -122,19 +128,30 @@ D=open('dynamic-mapper-smart-function/src/types/dataprep.types.ts').read()
 i=T.index('export interface SmartFunctionContext'); j=T.index('export interface', i+10)
 ts=set(re.findall(r'^\s{2}(\w+)\s*[(<]', T[i:j], re.M)) | set(re.findall(r'^\s{2}(\w+)\s*[(<]', D, re.M))
 
-E=open('dynamic-mapper-ui/src/shared/mapping/stepper.model.ts').read()
-k=E.index("name: 'SmartFunctionContext'")
-editor=set(re.findall(r"\{ name: '(\w+)', parameters", E[k:k+4500]))
-
 docs=open('dynamic-mapper-ui/public/docs/smartfunction.md').read()
 prompt=open('dynamic-mapper-service/src/main/resources/prompts/smartfunction_prompt.txt').read()
 
-for label, S_ in [('ts-defs',ts), ('editor',editor)]:
-    print(f'{label:<10} missing={sorted(runtime-S_) or "none"}  phantom={sorted(S_-runtime-{"runtime","payload"}) or "none"}')
+print(f'{"ts-defs":<10} missing={sorted(runtime-ts) or "none"}  phantom={sorted(ts-runtime-{"runtime","payload"}) or "none"}')
 for label, text in [('docs',docs), ('prompt',prompt)]:
     print(f'{label:<10} missing={sorted(m for m in runtime if not re.search(rf"\b{m}\b", text)) or "none"}')
 PY
 ```
+
+A clean run prints `missing=none` on every line except one known exception:
+
+```
+ts-defs    missing=none  phantom=none
+docs       missing=none
+prompt     missing=['addLogMessage']
+```
+
+`addLogMessage` is deprecated, and the prompt deliberately does not teach the AI to emit it. The
+prompt is checked for *phantom* methods by the contract test, not for coverage, so this is expected
+rather than a gap.
+
+The editor used to be a fourth column here, read out of `stepper.model.ts`. It was removed when the
+editor's table became generated from the TypeScript definitions (§3.7): comparing it against the
+runtime now only re-tests the `ts-defs` line, and CI already fails on a stale generated file.
 
 ### 3.2 `msg` shape
 
@@ -313,7 +330,7 @@ of checking is as likely to be wrong as the thing being checked.
 | Regex misses the last enum constant | `CREATE_IF_MISSING` before `}` has no trailing `,` — reported as "missing from Java" when it exists | Match `[,;)}]`, or count against the file |
 | Markdown-only image grep | `docs/**` uses `<img src="…">`, not `![](…)` — 46 references invisible | Match both forms |
 | Splitting on a heading that occurs twice | Splitting the prompt on "For OUTBOUND mappings" hit the wrong occurrence and reported 8 keys missing that were present | Use `index(start)` then `index(end, start)` |
-| Interface ≠ runtime object | `DataPrepContext` 13 methods vs `SmartFunctionContext` 15 | Audit the concrete class that is passed to the engine — `SmartFunctionApiContractTest` reflects over the class, not the interface |
+| Interface ≠ runtime object | `DataPrepContext` 15 methods vs `SmartFunctionContext` 17 | Audit the concrete class that is passed to the engine — `SmartFunctionApiContractTest` reflects over the class, not the interface |
 | Declared ≠ populated | Inbound declared `sourceId` and `cumulocityType` as strings while `FlowInboundProcessor` passes `null` for both | Run the processor and look at the object, not the constructor call |
 | A green build ≠ the test ran | Two jest suites failed to **compile**, so 17 tests never executed while the summary said "7 passed" | Compare suite *and* test counts before/after |
 | `tsc -p tsconfig.json` ≠ what ts-jest compiles | The types spec is outside the main tsconfig; 8 errors were invisible to `tsc` | Run both |
