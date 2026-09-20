@@ -159,7 +159,9 @@ function buildInterface(name) {
       const sig = signatures[signatures.length - 1];
       const methodDefaults = new Map(defaults);
       for (const tp of sig.typeParameters ?? []) {
-        methodDefaults.set(tp.name.text, tp.default?.getText() ?? 'any');
+        const typeParamName = tp?.symbol?.escapedName ?? tp?.name?.text ?? tp?.getSymbol?.()?.getName();
+        if (typeParamName == null) continue;
+        methodDefaults.set(String(typeParamName), tp.default?.getText() ?? 'any');
       }
       methods.push({
         name: sym.getName(),
