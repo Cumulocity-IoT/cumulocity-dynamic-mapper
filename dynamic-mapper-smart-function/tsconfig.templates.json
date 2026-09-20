@@ -12,9 +12,10 @@
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
-    "module": "esnext",
+"module": "esnext",
     "target": "es2020",
     "moduleResolution": "bundler",
+    "moduleDetection": "force",
     "skipLibCheck": true,
     // Templates are teaching examples, not application code: they use loose JS idioms on purpose.
     // strict would drown the real signal (phantom APIs) in implicit-any noise.
