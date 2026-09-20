@@ -6,8 +6,6 @@
  *              The targetPath must start with /service/ and point to a microservice
  *              that is subscribed to the same Cumulocity tenant.
  * @templateType OUTBOUND_SMART_FUNCTION
- * @internal true
- * @readonly true
  *
  * Sample Cumulocity operation payload (source):
  * {

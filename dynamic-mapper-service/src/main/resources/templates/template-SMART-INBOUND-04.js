@@ -3,8 +3,6 @@
  * @name Create either measurement or event
  * @description Create either measurement or event, with persistent state for message counting and error deduplication
  * @templateType INBOUND_SMART_FUNCTION
- * @internal true
- * @readonly true
  *
  * Demonstrates two state use cases:
  * 1. Message counters — count telemetry and error messages across invocations

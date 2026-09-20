@@ -4,8 +4,6 @@
  * @description System code containing the required definitions of the java classes
  * @templateType SYSTEM
  * @defaultTemplate true
- * @internal true
- * @readonly true
  */
  
 // Polyfill for atob and btoa using Java-Interop

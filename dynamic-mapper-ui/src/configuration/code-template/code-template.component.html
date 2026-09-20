@@ -39,7 +39,7 @@
 
 <c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link"
-    title="{{ 'Delete this custom template permanently. System templates cannot be deleted — use Init system code templates to restore them.' | translate }}"
+    title="{{ 'Delete this custom template permanently. System templates cannot be deleted — use Init internal code templates to restore them.' | translate }}"
     (click)="onDeleteCodeTemplate()" [disabled]="codeTemplateDecoded?.internal || !feature?.userHasMappingAdminRole">
     <i c8yIcon="minus-circle"></i>
     {{ 'Delete' | translate }}
@@ -58,7 +58,7 @@
     title="{{ 'Restore all system (read-only) templates to their factory defaults. Your custom templates are not affected.' | translate }}"
     (click)="onInitSystemCodeTemplate()" [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="reset"></i>
-    {{ 'Init system code templates' | translate }}
+    {{ 'Init internal code templates' | translate }}
   </button>
   <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
       'Restores all read-only system templates (SHARED, SYSTEM, and built-in transformation types) to their factory defaults. Custom templates you created are not affected.'

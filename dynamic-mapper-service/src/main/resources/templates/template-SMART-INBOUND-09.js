@@ -5,8 +5,6 @@
  *              Each metric in the metrics array becomes a separate measurement fragment.
  *              Only numeric values are sent; booleans are converted to 0/1.
  * @templateType INBOUND_SMART_FUNCTION
- * @internal true
- * @readonly true
  */
 /**
  * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg

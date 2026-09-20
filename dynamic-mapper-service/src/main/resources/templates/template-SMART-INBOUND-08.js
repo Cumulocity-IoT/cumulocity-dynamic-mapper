@@ -9,8 +9,6 @@
  *              device-id) extracted from the SparkPlugB topic.
  *              Base64 decoding is done in pure ECMAScript (no Java interop required).
  * @templateType INBOUND_SMART_FUNCTION
- * @internal true
- * @readonly true
  *
  * Requires:
  *   MappingType  : ANY_PAYLOAD

@@ -3,8 +3,6 @@
  * @name Sample persistent state - running statistics
  * @description Tracks message count and running average temperature across invocations
  * @templateType INBOUND_SMART_FUNCTION
- * @internal true
- * @readonly true
  *
  * Demonstrates persistent state management:
  * - State written with context.setState() survives across message invocations

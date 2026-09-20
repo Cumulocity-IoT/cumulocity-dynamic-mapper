@@ -217,7 +217,7 @@ public class ServiceConfigurationService {
      * that are absent by {@code @name} and never overwrites one already stored. The symptom is
      * every Smart Function mapping in the tenant dying at activation with
      * {@code Access to host class ... is not allowed or does not exist}, fixable only by manually
-     * running "Init system code templates". Shipping the fix should be enough.
+     * running "Init internal code templates". Shipping the fix should be enough.
      *
      * @return {@code true} when the stored template differed and was replaced (caller should
      *         persist the configuration)
@@ -286,9 +286,14 @@ public class ServiceConfigurationService {
             content = new String(is.readAllBytes(), StandardCharsets.UTF_8);
         }
 
-        // Scope annotation parsing to the JSDoc header only, not the full file
-        int headerEnd = findJSDocHeaderEnd(content);
-        String header = (headerEnd != -1) ? content.substring(0, headerEnd) : content;
+        // Scope annotation parsing to the JSDoc header only, not the full file. The shipped
+        // templates open with `// @ts-check`, so the header does not start at offset 0 and the
+        // prologue has to come off first -- otherwise findJSDocHeaderEnd reports "no header" and
+        // every annotation is looked up across the whole file, where a stray `@name` in a comment
+        // would win.
+        String body = content.substring(leadingDirectives(content).length());
+        int headerEnd = findJSDocHeaderEnd(body);
+        String header = (headerEnd != -1) ? body.substring(0, headerEnd) : body;
 
         String name = extractAnnotation(header, "@name");
         String description = extractAnnotation(header, "@description");
@@ -303,11 +308,13 @@ public class ServiceConfigurationService {
         }
 
         boolean defaultTemplate = Boolean.parseBoolean(extractAnnotation(header, "@defaultTemplate"));
-        // @internal/@readonly decide whether "Init system code templates" may replace a stored
-        // template. Absent, they parse to false, which silently turns a shipped template into an
-        // editable tenant copy that no reset can ever clear -- so say so rather than default quietly.
-        boolean internal = parseRequiredFlag(header, "@internal", fileName, name);
-        boolean readonly = parseRequiredFlag(header, "@readonly", fileName, name);
+        // Derived from the type rather than declared per file: see
+        // TemplateType.isFrameworkOwnedWhenShipped(). `internal` (no DELETE) and `readonly`
+        // (no PUT) remain separate fields on CodeTemplate because they guard different endpoints;
+        // what they are for a *shipped* template is simply not an independent decision.
+        boolean frameworkOwned = templateType.isFrameworkOwnedWhenShipped();
+        boolean internal = frameworkOwned;
+        boolean readonly = frameworkOwned;
 
         String templateId;
         if (defaultTemplate && !defaultTemplateRegistered.get(templateType)) {
@@ -344,15 +351,6 @@ public class ServiceConfigurationService {
      * Parses a boolean flag that every packaged template is expected to declare, warning when it
      * is missing instead of defaulting to {@code false} without a trace.
      */
-    private boolean parseRequiredFlag(String header, String annotation, String fileName, String name) {
-        String raw = extractAnnotation(header, annotation);
-        if (raw == null || raw.isEmpty()) {
-            log.warn("Template '{}' in file {} does not declare {}; assuming false", name, fileName, annotation);
-            return false;
-        }
-        return Boolean.parseBoolean(raw);
-    }
-
     /**
      * Extracts annotation value from the file content.
      *
@@ -528,6 +526,13 @@ public class ServiceConfigurationService {
                 return;
             }
 
+            // Split off anything that legitimately precedes the JSDoc header — today that is
+            // `// @ts-check`, which the template type-check needs on the first line. Everything
+            // below assumes the content starts at `/**`, so the prologue is put back at the end
+            // rather than being parsed, prepended to, or folded into the comment block.
+            String prologue = leadingDirectives(decodedCode);
+            decodedCode = decodedCode.substring(prologue.length());
+
             // Remove any corrupted or duplicate headers
             decodedCode = cleanCorruptedHeader(decodedCode, codeTemplate);
 
@@ -560,7 +565,7 @@ public class ServiceConfigurationService {
                 decodedCode = header + "\n\n" + codeBody.replaceAll("^\n+", "");
             }
 
-            codeTemplate.code = encode(decodedCode);
+            codeTemplate.code = encode(prologue + decodedCode);
             log.info("Successfully rectified header for template: {}", codeTemplate.name);
 
         } catch (Exception e) {
@@ -769,6 +774,33 @@ public class ServiceConfigurationService {
         return newHeader.toString();
     }
 
+    /**
+     * Returns the leading blank lines and {@code //} line comments that sit above a template's
+     * JSDoc header, or an empty string when the header comes first.
+     *
+     * <p>Header rectification was written on the assumption that a template starts with
+     * {@code /**}. Once the shipped templates gained {@code // @ts-check} for the template
+     * type-check, that assumption made {@link #findJSDocHeaderEnd} report "no header", so a freshly
+     * generated one was prepended above the real one and every template ended up with two. Folding
+     * the directive into the JSDoc instead is not an option either: inside a comment block it is
+     * inert, and the type-check would stop running without failing.</p>
+     */
+    private String leadingDirectives(String content) {
+        int index = 0;
+        while (index < content.length()) {
+            int lineEnd = content.indexOf('\n', index);
+            String line = (lineEnd == -1 ? content.substring(index) : content.substring(index, lineEnd)).trim();
+            if (!line.isEmpty() && !line.startsWith("//")) {
+                break;
+            }
+            if (lineEnd == -1) {
+                return content;
+            }
+            index = lineEnd + 1;
+        }
+        return content.substring(0, index);
+    }
+
     private static final String SYSTEM_SECTION_MARKER =
             " * --- metadata above is auto-generated, add your documentation below ---";
 
@@ -785,8 +817,11 @@ public class ServiceConfigurationService {
         sb.append(renderDescription(codeTemplate.description)).append("\n");
         sb.append(" * @templateType ").append(codeTemplate.templateType.name()).append("\n");
         sb.append(" * @defaultTemplate ").append(codeTemplate.defaultTemplate).append("\n");
-        sb.append(" * @internal ").append(codeTemplate.internal).append("\n");
-        sb.append(" * @readonly ").append(codeTemplate.readonly).append("\n");
+        // @internal and @readonly are deliberately not written: for a shipped template they follow
+        // from @templateType (TemplateType.isFrameworkOwnedWhenShipped), and for a tenant's own
+        // template they are request data that a comment cannot change. Emitting them invited an
+        // author to edit a line that nothing reads back. They stay in SYSTEM_SECTION_ANNOTATIONS so
+        // that headers stored before this change are cleaned up on the next save.
         sb.append(SYSTEM_SECTION_MARKER);
         return sb.toString();
     }

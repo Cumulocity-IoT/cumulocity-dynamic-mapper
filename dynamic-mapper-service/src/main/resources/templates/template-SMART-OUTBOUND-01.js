@@ -4,8 +4,6 @@
  * @description Creates one measurement
  * @templateType OUTBOUND_SMART_FUNCTION
  * @defaultTemplate true
- * @internal true
- * @readonly true
  *
  * Sample Cumulocity measurement payload (source)
  * {

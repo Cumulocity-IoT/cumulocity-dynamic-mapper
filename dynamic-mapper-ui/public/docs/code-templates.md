@@ -19,7 +19,7 @@ a mapping has been created does *not* affect existing mappings.
 | `INBOUND_SMART_FUNCTION` | Inbound | Starting template for inbound Smart Function mappings | Yes (duplicate system template to customise) |
 | `OUTBOUND_SMART_FUNCTION` | Outbound | Starting template for outbound Smart Function mappings | Yes (duplicate system template to customise) |
 | `SHARED` | Both | Evaluated before every Smart Function execution — define helper functions and constants here that are available as globals in all Smart Functions without any import statement | Yes |
-| `SYSTEM` | — | Read-only canonical defaults maintained by the mapper. Use **Duplicate** to create a customisable copy. The *Init system code templates* action restores all system templates to factory defaults (your custom templates are not affected). | No (read-only) |
+| `SYSTEM` | — | Read-only canonical defaults maintained by the mapper. Use **Duplicate** to create a customisable copy. The *Init internal code templates* action restores all system templates to factory defaults (your custom templates are not affected). | No (read-only) |
 
 The templates currently present in your tenant are listed in the
 [gallery](#code-template-gallery) below.

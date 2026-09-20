@@ -13,15 +13,15 @@
 A code template is a named blob of JavaScript, base64-encoded, stored **per tenant** inside
 `ServiceConfiguration.codeTemplates` (a `Map<String, CodeTemplate>`). Templates are seeded from
 `src/main/resources/templates/template-*.js` on the classpath, and each file's JSDoc header
-carries its metadata as annotations (`@name`, `@templateType`, `@internal`, `@readonly`,
+carries its metadata as annotations (`@name`, `@description`, `@templateType`,
 `@defaultTemplate`).
 
 They serve three different purposes, which is the root of most of the confusion:
 
 | `templateType` | Role | Owner |
 |---|---|---|
-| `SYSTEM` | Preamble evaluated before every Smart Function: `Java.type(...)` bindings, `atob`/`btoa` polyfills. | Framework (`@internal`, `@readonly`) |
-| `SHARED` | Helpers the tenant wants available to all Smart Functions. | **Customer** (`@internal false`, `@readonly false`) |
+| `SYSTEM` | Preamble evaluated before every Smart Function: `Java.type(...)` bindings, `atob`/`btoa` polyfills. | Framework — protected |
+| `SHARED` | Helpers the tenant wants available to all Smart Functions. | **Customer** — the one shipped template that is editable and deletable |
 | `INBOUND_SMART_FUNCTION` / `OUTBOUND_SMART_FUNCTION` | Starting points copied into a new mapping. Edits here never affect existing mappings. | Shipped samples + customer copies |
 
 The SYSTEM/SHARED distinction is load-bearing and correctly declared in the files themselves, but
@@ -122,7 +122,7 @@ Omitted from the first pass of this review; added after the fact.
 - **`shared/confirmation/` → `shared/component/confirmation/`.** Every other shared component
   topic (`code-explorer`, `code-template`, `formly`, `json-editor`, `renderer`, `select`) lives
   under `shared/component/`; this one sat beside it. It is used by the code-template screen's
-  "Init system code templates" confirmation, among others. Three import sites plus the barrel.
+  "Init internal code templates" confirmation, among others. Three import sites plus the barrel.
 - **`code-template.component.css` → `code-template.component.style.css`.** Its two siblings in
   `configuration/` (`service-configuration`, `import-service-configuration-modal`) both use
   `.component.style.css`. Repo-wide the suffix is split 8/7, so this is local consistency only,
@@ -184,9 +184,17 @@ disagree, and nothing read `direction` anyway — the UI derives `templateType` 
   emitted by `buildSystemSection()`, so both were already being stripped on load — removing them
   changes nothing at runtime. `@direction` stays in `SYSTEM_ANNOTATIONS` purely so legacy stored
   headers still get the line removed on their next rectify.
-- A missing `@internal`/`@readonly` now warns instead of defaulting silently to `false`. That
-  default is what let two templates ship as non-internal, escape the `initCodeTemplates()` purge,
-  and accumulate a duplicate per "Init system code templates" click.
+- `@internal` and `@readonly` are gone from the shipped headers entirely; they are derived from
+  `@templateType` by `TemplateType.isFrameworkOwnedWhenShipped()` — everything the product ships is
+  protected except `SHARED`. They were never set independently (17 files declared both `true`, one
+  declared both `false`), and an omitted annotation parsed to `false`, which is what let two
+  templates ship as non-internal, escape the `initCodeTemplates()` purge, and accumulate a
+  duplicate per "Init internal code templates" click. A derived value cannot be omitted.
+
+  The two fields stay separate on `CodeTemplate` because they still guard different endpoints:
+  `internal` rejects DELETE, `readonly` rejects PUT. And they are still honoured as *request* data
+  for a template a tenant creates — only the shipped ones are derived. Both annotations remain in
+  `SYSTEM_ANNOTATIONS` so that headers stored before this change lose the lines on their next save.
 
 Not breaking: no tenant migration is required and every serialized payload is byte-identical to
 before.

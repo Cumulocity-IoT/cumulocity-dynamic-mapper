@@ -3,8 +3,6 @@
  * @name Creates one measurement as array
  * @description Creates one measurement as array
  * @templateType OUTBOUND_SMART_FUNCTION
- * @internal true
- * @readonly true
  *
  * Sample Cumulocity measurement payload (source)
  * {

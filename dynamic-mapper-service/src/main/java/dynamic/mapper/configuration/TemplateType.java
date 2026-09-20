@@ -65,4 +65,26 @@ public enum TemplateType {
     public Direction getDirection() {
         return direction;
     }
+
+    /**
+     * Whether a template of this type, <b>as shipped on the classpath</b>, is framework-owned:
+     * it may not be edited or deleted, and "Reset System Templates" replaces it from the
+     * classpath. Everything the product ships is protected except {@code SHARED}, which exists
+     * precisely so that a tenant has somewhere to put its own globals.
+     *
+     * <p>This used to be two annotations every template file had to declare by hand,
+     * {@code @internal} (may not be deleted) and {@code @readonly} (may not be edited). They were
+     * never set independently — all 17 protected templates declared both {@code true} and
+     * {@code SHARED} declared both {@code false} — while an omitted annotation silently parsed to
+     * {@code false} and turned a shipped template into an editable tenant copy that no reset could
+     * clear. The type already carried the answer, so the type now gives it.</p>
+     *
+     * <p>This says nothing about a template a <i>user</i> created with the same type. Those are
+     * editable and deletable, and their flags come from the create request, not from here. The two
+     * fields stay separate on {@link CodeTemplate} because they still guard different endpoints:
+     * {@code internal} rejects DELETE, {@code readonly} rejects PUT.</p>
+     */
+    public boolean isFrameworkOwnedWhenShipped() {
+        return this != SHARED;
+    }
 }

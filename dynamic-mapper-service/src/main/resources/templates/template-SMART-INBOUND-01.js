@@ -4,8 +4,6 @@
  * @description Default template for Smart Function, creates one measurement
  * @templateType INBOUND_SMART_FUNCTION
  * @defaultTemplate true
- * @internal true
- * @readonly true
  *
  * Sample payload
  * {

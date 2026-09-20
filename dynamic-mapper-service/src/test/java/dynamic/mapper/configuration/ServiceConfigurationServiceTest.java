@@ -103,6 +103,58 @@ class ServiceConfigurationServiceTest {
     }
 
     @Test
+    void rectifyHeaderInCodeTemplate_keepsTsCheckDirectiveAboveTheHeader_withoutDuplicatingIt() {
+        // The shipped templates open with `// @ts-check` so that `npm run check:templates` type-
+        // checks them. Rectification used to see "no JSDoc at position 0", prepend a fresh header
+        // and leave the real one in place, so every template came back with two.
+        String onDisk = "// @ts-check\n" +
+                "/**\n" +
+                " * @name Old Name\n" +
+                " * @description Old description\n" +
+                " * @templateType INBOUND_SMART_FUNCTION\n" +
+                " * @defaultTemplate true\n" +
+                " * @internal true\n" +
+                " * @readonly true\n" +
+                " *\n" +
+                " * Sample payload\n" +
+                " * { \"foo\": \"bar\" }\n" +
+                " */\n\n" +
+                "function onMessage(msg, context) { return []; }\n";
+        CodeTemplate t = template(onDisk);
+        t.name = "My Template";
+
+        service.rectifyHeaderInCodeTemplate(t);
+
+        String result = decode(t.code);
+        // Exactly one metadata header, not two.
+        assertEquals(1, countOccurrences(result, "@templateType"), result);
+        assertEquals(1, countOccurrences(result, "@name"), result);
+        // The directive stays on the first line and outside the comment block: inside a JSDoc it
+        // would be inert and the template type-check would silently stop running.
+        assertTrue(result.startsWith("// @ts-check\n"), result);
+        assertEquals(1, countOccurrences(result, "// @ts-check"), result);
+        assertTrue(result.indexOf("// @ts-check") < result.indexOf("/**"), result);
+        // Everything the normal migration guarantees still holds.
+        assertTrue(result.contains("@name My Template"), result);
+        assertFalse(result.contains("@name Old Name"), result);
+        assertTrue(result.contains("Sample payload"), result);
+        assertTrue(result.contains("function onMessage(msg, context) { return []; }"), result);
+    }
+
+    @Test
+    void rectifyHeaderInCodeTemplate_isIdempotent_forATemplateThatOpensWithADirective() {
+        String onDisk = "// @ts-check\n/**\n * @name My Template\n */\n\nfunction onMessage() {}\n";
+        CodeTemplate t = template(onDisk);
+
+        service.rectifyHeaderInCodeTemplate(t);
+        String once = decode(t.code);
+        service.rectifyHeaderInCodeTemplate(t);
+        String twice = decode(t.code);
+
+        assertEquals(once, twice, "re-saving a template must not accumulate headers");
+    }
+
+    @Test
     void rectifyHeaderInCodeTemplate_migratesLegacySingleSectionHeader_preservingFreeFormDocs() {
         String legacy = "/**\n" +
                 " * @name Old Name\n" +
@@ -211,11 +263,16 @@ class ServiceConfigurationServiceTest {
         service.rectifyHeaderInCodeTemplate(t);
 
         String result = decode(t.code);
-        // Regenerated system section still correctly reports internal=false,
-        // not confused by the free-form mention of "@internal"
-        assertTrue(result.contains("@internal false"), result);
-        assertFalse(result.contains("@internal true"), result);
+        // The free-form mention survives verbatim, below the marker where the author put it...
         assertTrue(result.contains("payload field \"@internal\" flags system-only devices"), result);
+        int markerIdx = result.indexOf("--- metadata above is auto-generated");
+        assertTrue(markerIdx != -1 && result.indexOf("payload field") > markerIdx, result);
+        // ...and it is not promoted into the regenerated system section. @internal is no longer
+        // written there at all -- it is derived from @templateType -- so the only occurrence left
+        // in the whole header must be the author's prose.
+        assertEquals(1, countOccurrences(result, "@internal"), result);
+        assertFalse(result.contains(" * @internal "), result);
+        assertFalse(result.contains("@readonly"), result);
     }
 
     @Test
@@ -309,10 +366,26 @@ class ServiceConfigurationServiceTest {
             // SHARED is the one template customers own; everything else ships framework-managed,
             // and a non-internal shipped template is re-added under a fresh id on every
             // "Reset System Templates" because the purge only drops internal ones.
-            if (t.templateType != TemplateType.SHARED) {
-                assertTrue(t.internal, "shipped template must be @internal true: " + t.name);
-                assertTrue(t.readonly, "shipped template must be @readonly true: " + t.name);
-            }
+            //
+            // Both flags are derived from the type now, so this also pins the derivation against
+            // the real classpath contents rather than against a hand-written annotation.
+            boolean expected = t.templateType != TemplateType.SHARED;
+            assertEquals(expected, t.internal, "wrong 'internal' for shipped template: " + t.name);
+            assertEquals(expected, t.readonly, "wrong 'readonly' for shipped template: " + t.name);
+            assertEquals(t.templateType.isFrameworkOwnedWhenShipped(), t.internal, t.name);
+        }
+    }
+
+    @Test
+    void everyTemplateTypeDecidesWhetherItIsFrameworkOwned() {
+        // A new TemplateType silently inherits "framework-owned", which would make a shipped
+        // template of that type undeletable and uneditable. Listing the exceptions here forces
+        // the decision to be made rather than defaulted into.
+        for (TemplateType type : TemplateType.values()) {
+            boolean expected = type != TemplateType.SHARED;
+            assertEquals(expected, type.isFrameworkOwnedWhenShipped(),
+                    type + ": decide explicitly whether a shipped template of this type may be "
+                            + "edited and deleted, then update this test");
         }
     }
 
@@ -438,7 +511,7 @@ class ServiceConfigurationServiceTest {
 
     /**
      * The whole point: an upgraded tenant must pick up a corrected SYSTEM template without anyone
-     * clicking "Init system code templates". Before this, addMissingInternalTemplates() only added
+     * clicking "Init internal code templates". Before this, addMissingInternalTemplates() only added
      * templates absent by @name, so a stored copy naming a Java class that had moved package kept
      * breaking every Smart Function mapping in the tenant.
      */

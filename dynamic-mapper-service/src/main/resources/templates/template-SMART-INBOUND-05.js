@@ -4,8 +4,6 @@
  * @description Parses a multiline CSV payload and creates one measurement per data line. Requires a
  *              mapping that delivers the raw text, so the CSV arrives as a string in payload.payload.
  * @templateType INBOUND_SMART_FUNCTION
- * @internal true
- * @readonly true
  *
  * Sample payload (topic 'testCSV/351144440855493')
  * {

@@ -6,8 +6,6 @@
  *              SparkPlug B protobuf binary by the mapper before publishing.
  * @templateType OUTBOUND_SMART_FUNCTION
  * @mappingType SPARKPLUGB
- * @internal true
- * @readonly true
  *
  * Expected use-case:
  *   A Cumulocity operation (e.g. c8y_Command) triggers an NCMD message to the

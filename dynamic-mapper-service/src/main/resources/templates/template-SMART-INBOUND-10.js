@@ -7,8 +7,6 @@
  *              The targetPath must start with /service/ and point to a microservice
  *              that is subscribed to the same Cumulocity tenant.
  * @templateType INBOUND_SMART_FUNCTION
- * @internal true
- * @readonly true
  *
  * Sample payload (MQTT topic: testCustomRouting/sensor-berlin-01)
  * {
