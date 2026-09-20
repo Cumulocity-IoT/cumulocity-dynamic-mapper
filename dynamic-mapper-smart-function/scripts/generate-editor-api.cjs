@@ -2,6 +2,13 @@
 /**
  * Generates the mapping editor's completion/hover data from the Smart Function type definitions.
  *
+ * HOW IT WORKS, IN ONE PARAGRAPH
+ * TypeScript interfaces vanish at compile time, so the editor cannot reflect over them the way
+ * the Java tests reflect over the runtime classes. Instead this script runs the TypeScript
+ * *compiler* over the type definitions and walks the resulting program: for each interface it
+ * asks the type checker for the properties, their resolved types and their JSDoc, and writes all
+ * of that out as a plain data array the editor can import at runtime.
+ *
  * The editor's provider (dynamic-mapper-ui/src/shared/mapping/stepper.model.ts) used to restate
  * ~188 lines of type information that already exists as TypeScript interfaces here. The two
  * copies drifted silently — nothing could catch a renamed field or a stale enum value. This
@@ -51,6 +58,9 @@ const UNIONS = [
   { as: 'ChildReference', from: 'C8yChildReference' }
 ];
 
+// A TypeScript program is the compiler's view of a set of files: parsed, bound, and ready to be
+// queried. The checker is what answers semantic questions about it ("what type is this symbol?",
+// "what does its JSDoc say?") — the same engine the editor uses for IntelliSense.
 const program = ts.createProgram([ENTRY], {
   noEmit: true,
   skipLibCheck: true,
@@ -62,7 +72,14 @@ const checker = program.getTypeChecker();
 const source = program.getSourceFile(ENTRY);
 if (!source) throw new Error(`cannot load ${ENTRY}`);
 
-/** Collects every exported interface / type alias declaration by name. */
+/**
+  * Index every interface and type alias by name, across the entry file and everything it imports.
+  *
+  * Needed because the two inputs are looked up by name (INTERFACES, UNIONS) and because
+  * DataPrepContext and ExternalId live in a second file (dataprep.types.ts) that the entry file
+  * re-exports. Walking `program.getSourceFiles()` rather than just the entry picks those up.
+  * Declaration files (.d.ts) are skipped: lib.dom, node types and the like would flood the map.
+  */
 const declarations = new Map();
 for (const sf of program.getSourceFiles()) {
   if (sf.isDeclarationFile) continue;
@@ -73,7 +90,13 @@ for (const sf of program.getSourceFiles()) {
   });
 }
 
+// The JSDoc prose for a symbol, flattened to a single line. getDocumentationComment returns
+// structured "display parts" (text, link targets, …) rather than a string, and drops the tags —
+// so `@example` and `@since` blocks do not end up in the tooltip, only the description.
 const docOf = sym => ts.displayPartsToString(sym.getDocumentationComment(checker)).replace(/\s+/g, ' ').trim();
+
+// Tags are read separately from the prose. The editor greys out and de-prioritises anything
+// carrying @deprecated, so this has to survive the trip from the type definitions.
 const isDeprecated = sym => sym.getJsDocTags(checker).some(t => t.name === 'deprecated');
 
 /**
@@ -103,8 +126,18 @@ function renderType(typeText, defaults) {
   return out.replace(/\s+/g, ' ').trim();
 }
 
+/**
+  * Turns one interface into the editor's entry for it.
+  *
+  * Properties and methods are not declared separately in the table, so they are told apart by
+  * asking the checker whether a member's type has call signatures — `getState(key)` does,
+  * `payload` does not. That also means a property holding a function type would be listed as a
+  * method, which is the right answer for a completion popup.
+  */
 function buildInterface(name) {
   const decl = declarations.get(name);
+  // Fail loudly. A renamed interface silently producing a shorter table would quietly strip
+  // entries out of the editor, and the CI diff would look like an intentional change.
   if (!decl) throw new Error(`interface ${name} not found in ${ENTRY}`);
   const defaults = typeParamDefaults(decl);
   const type = checker.getTypeAtLocation(decl);
@@ -112,6 +145,8 @@ function buildInterface(name) {
   const properties = [];
   const methods = [];
 
+  // getPropertiesOfType, not the declaration's own members: this resolves inherited members too,
+  // which is how SmartFunctionContext picks up everything it extends from DataPrepContext.
   for (const sym of checker.getPropertiesOfType(type)) {
     const d = sym.valueDeclaration ?? sym.declarations?.[0];
     if (!d) continue;
@@ -150,11 +185,20 @@ function buildInterface(name) {
   return entry;
 }
 
+/**
+  * Turns a string-literal union (`'create' | 'update' | …`) into the editor's enum entry.
+  *
+  * These are unions rather than TypeScript enums because that is what the runtime actually
+  * exchanges — plain strings over the GraalVM boundary — so the type mirrors the wire format
+  * instead of introducing a construct the JavaScript side does not have.
+  */
 function buildUnion({ as, from }) {
   const decl = declarations.get(from);
   if (!decl) throw new Error(`union ${from} not found in ${ENTRY}`);
   const type = checker.getTypeAtLocation(decl);
   const members = type.isUnion() ? type.types : [type];
+  // Only string literals become values. A union that had drifted to include something else
+  // (a widened `string`, say) would silently contribute nothing, so the guard below catches it.
   const values = members
     .map(t => (t.isStringLiteral() ? t.value : null))
     .filter(v => v !== null);
@@ -193,6 +237,9 @@ import type { ClassOrEnum } from '../smart-function-api.model';
  */
 export const SMART_FUNCTION_API: ClassOrEnum[] = `;
 
+// Written as formatted JSON inside a TypeScript file: valid TS, and a readable line-by-line
+// diff in the pull request that changes the types — which is the point of committing it rather
+// than generating during the UI build.
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, header + JSON.stringify(api, null, 2) + ';\n');
 
