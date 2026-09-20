@@ -93,7 +93,7 @@ Two consequences worth internalising:
 | 4 | Java extension interfaces | `processor/extension/ProcessorExtension{Inbound,Outbound}.java` | Extension authors code against the wrong shape |
 | 5 | AI prompts | `dynamic-mapper-service/src/main/resources/prompts/*.txt` | The AI generates mappings using APIs that don't exist — **now build-enforced, see §3.6** |
 | 6 | In-app documentation | `dynamic-mapper-ui/public/docs/*.md` | Users follow instructions that don't work — **now build-enforced for the context API, see §3.6** |
-| 7 | Editor completion + hover | `dynamic-mapper-ui/src/shared/mapping/stepper.model.ts` | Autocomplete offers phantom members |
+| 7 | Editor completion + hover | `dynamic-mapper-ui/src/shared/mapping/stepper.model.ts` | Autocomplete offers phantom members — **now generated from surface 1, see §3.7** |
 | 8 | Repo documentation | `docs/**/*.md` | Contributors build on stale assumptions |
 | 9 | OpenAPI spec | `resources/openAPI/openapi.json` | Generated clients and 403 messages name wrong roles — **role names now build-enforced, see §3.6** |
 
@@ -221,7 +221,56 @@ cd dynamic-mapper-service && mvn test -Dtest=SmartFunctionApiContractTest
 The third check is the hub this page argued for: it cannot know whether the TypeScript, the docs
 and the prompts were updated, but it makes the decision impossible to skip silently.
 
-### 3.7 In-app doc images actually ship
+### 3.7 The editor's autocomplete is generated, not checked — **cannot drift**
+
+The strongest guarantee on this page, because there is no second copy to compare: what the mapping
+editor offers in autocomplete and hover is *produced from* the TypeScript types.
+
+```mermaid
+flowchart LR
+    T["smart-function-dynamic-mapper.types.ts<br/>the hand-written mirror"]
+    G["generate-editor-api.cjs<br/>runs the TypeScript compiler"]
+    A["smart-function-api.generated.ts<br/>export SMART_FUNCTION_API"]
+    P["stepper.model.ts<br/>completion and hover providers"]
+    U(["What the user sees<br/>in the mapping editor"])
+
+    T --> G --> A --> P --> U
+```
+
+| Step | File |
+|---|---|
+| Source | `dynamic-mapper-smart-function/src/types/smart-function-dynamic-mapper.types.ts` |
+| Generator | `dynamic-mapper-smart-function/scripts/generate-editor-api.cjs` |
+| Output | `dynamic-mapper-ui/src/shared/mapping/generated/smart-function-api.generated.ts` |
+| Consumer | `dynamic-mapper-ui/src/shared/mapping/stepper.model.ts` |
+| Shape both agree on | `dynamic-mapper-ui/src/shared/mapping/smart-function-api.model.ts` |
+
+The generator cannot reflect over TypeScript interfaces — they do not exist at runtime — so it runs
+the TypeScript *compiler* over the definitions and queries the same checker that powers IntelliSense
+for each property, its resolved type and its JSDoc. The result is 14 entries (10 interfaces, 4
+enums) written as plain JSON inside a `.ts` file, which keeps the diff readable line by line.
+
+The whole consumer side is one line:
+
+```ts
+// stepper.model.ts
+const allClasses: ClassOrEnum[] = SMART_FUNCTION_API;
+```
+
+Three rules keep it honest:
+
+- **Never edit the generated file.** It carries a DO-NOT-EDIT header; change the types and rerun
+  `npm run generate:editor-api`.
+- **It is committed, not built on demand.** The UI and the types package are separate npm trees, so
+  a build-time import would need workspaces first — and committing means the generated diff shows
+  up in the pull request that changes the types.
+- **CI regenerates and fails on any difference**, so a stale file cannot survive review.
+
+Because the output is typed as `ClassOrEnum` — the same interface the providers consume — a
+generator change that dropped `methods`, or emitted an enum without `values`, fails to compile
+rather than quietly degrading autocomplete.
+
+### 3.8 In-app doc images actually ship
 
 Already automated and **failing the build**: `dynamic-mapper-ui/scripts/optimize-images.js` runs on
 `prebuild` and errors if a `public/docs/*.md` image has no `buildTime.copy` entry in

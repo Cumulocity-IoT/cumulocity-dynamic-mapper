@@ -51,7 +51,11 @@ That is the whole Java side. Everything below is propagation.
 cd dynamic-mapper-smart-function && npm run generate:editor-api
 ```
 
-Never edit `dynamic-mapper-ui/src/shared/mapping/generated/` by hand. Commit the result.
+This reads the type definitions with the TypeScript compiler and rewrites
+`dynamic-mapper-ui/src/shared/mapping/generated/smart-function-api.generated.ts`, which
+`stepper.model.ts` imports as `SMART_FUNCTION_API` — that array *is* the editor's autocomplete.
+Never edit it by hand; commit the result. The full chain is in
+[contract-sync.md §3.7](contract-sync.md).
 
 ### 4. Update the prose
 
