@@ -767,6 +767,21 @@ public class ConfigurationController {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                         String.format("Template with id '%s' already exists", codeTemplate.id));
             }
+            // `defaultTemplate` means "this is the template a new mapping of this type starts
+            // from", and the seeding code expresses that by giving it the type's name as its id.
+            // A template with any other id therefore cannot be the default, whatever the request
+            // says. The UI's Duplicate action used to copy the flag along with the rest of the
+            // template, which left two templates of one type claiming it; the next startup then
+            // saw the type's default as already present and handed the shipped template a UUID id
+            // instead of its canonical one, breaking the editor's lookup of the starting template.
+            if (codeTemplate.defaultTemplate && codeTemplate.templateType != null
+                    && !codeTemplate.templateType.name().equals(codeTemplate.id)) {
+                log.info("{} - Ignoring defaultTemplate=true on new template [{}]: only '{}' can be "
+                        + "the default for {}", tenant, codeTemplate.id,
+                        codeTemplate.templateType.name(), codeTemplate.templateType);
+                codeTemplate.defaultTemplate = false;
+            }
+
             serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate);
             codeTemplates.put(codeTemplate.id, codeTemplate);
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);

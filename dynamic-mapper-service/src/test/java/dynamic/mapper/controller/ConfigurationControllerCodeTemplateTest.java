@@ -21,7 +21,9 @@
 package dynamic.mapper.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -182,6 +184,33 @@ class ConfigurationControllerCodeTemplateTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("b3RoZXI=", codeTemplates.get("custom").code);
+    }
+
+    // ---- create ----
+
+    @Test
+    void createClearsDefaultTemplateOnACopy() {
+        // What "Duplicate" sends: everything from the original, with a fresh id.
+        CodeTemplate copy = template("8f3a2b", false, false);
+        copy.defaultTemplate = true;
+
+        ResponseEntity<HttpStatus> response = controller.createCodeTemplate(copy);
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertFalse(codeTemplates.get("8f3a2b").defaultTemplate,
+                "a copy must not claim to be the default for its type");
+    }
+
+    @Test
+    void createKeepsDefaultTemplateWhenTheIdIsTheTypeName() {
+        // The canonical default of a type is the one whose id *is* the type name; re-creating it
+        // must not silently demote it.
+        CodeTemplate canonical = template(TemplateType.INBOUND_SMART_FUNCTION.name(), false, false);
+        canonical.defaultTemplate = true;
+
+        controller.createCodeTemplate(canonical);
+
+        assertTrue(codeTemplates.get(TemplateType.INBOUND_SMART_FUNCTION.name()).defaultTemplate);
     }
 
     @Test

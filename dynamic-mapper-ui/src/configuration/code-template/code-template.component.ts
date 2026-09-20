@@ -284,7 +284,13 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
         code: encodedCode,
         id: createCustomUuid(),
         internal: false,
-        readonly: false
+        readonly: false,
+        // A copy is never the default for its type. `defaultTemplate` means "this is the template
+        // a new mapping starts from", and only the template whose id *is* the type name can be
+        // that. Inheriting it from the original left two templates of the type claiming it, which
+        // makes addMissingInternalTemplates() on the next startup consider the type's default
+        // already present and hand the shipped one a UUID id instead of its canonical one.
+        defaultTemplate: false
       });
       if (response.ok) {
         this.alertService.success(gettext('Copied code template'));
