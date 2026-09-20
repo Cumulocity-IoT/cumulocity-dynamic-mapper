@@ -293,6 +293,18 @@ Because the output is typed as `ClassOrEnum` — the same interface the provider
 generator change that dropped `methods`, or emitted an enum without `values`, fails to compile
 rather than quietly degrading autocomplete.
 
+That last sentence was true of the *type* but not of the *build* until 2026-09-20: the UI is not
+compiled anywhere in CI, so a generator that omitted `documentation` from every method entry
+produced 17 `TS2741` errors that appeared only in a developer's `ng build`. The generated file and
+the model are both dependency-free, so the check now runs in the package that owns the generator:
+
+```bash
+cd dynamic-mapper-smart-function && npm run check:generated
+```
+
+It is wired into `pretest` and runs in CI immediately after regeneration — "up to date" and
+"compiles" are separate failures and both are now enforced.
+
 ### 3.8 In-app doc images actually ship
 
 Already automated and **failing the build**: `dynamic-mapper-ui/scripts/optimize-images.js` runs on

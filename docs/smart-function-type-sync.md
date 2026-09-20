@@ -236,6 +236,7 @@ produced from them by `dynamic-mapper-smart-function/scripts/generate-editor-api
 
 ```bash
 cd dynamic-mapper-smart-function && npm run generate:editor-api
+npm run check:generated   # the output must also compile against the UI's ClassOrEnum
 ```
 
 This is the only surface that *cannot* drift, because there is no second copy to compare. Full

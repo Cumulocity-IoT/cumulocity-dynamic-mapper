@@ -149,12 +149,17 @@ jobs:
         run: npm test
         working-directory: ./dynamic-mapper-smart-function
 
-      # The editor's completion data is generated from the type definitions. Regenerating must be
-      # a no-op: if it is not, the committed file is stale and the mapping editor would describe
-      # an API the types no longer have.
-      - name: Editor completion data is up to date
+      # The editor's completion data is generated from the type definitions. Two things have to
+      # hold, and they fail differently:
+      #   1. regenerating is a no-op -- otherwise the committed file is stale and the mapping
+      #      editor describes an API the types no longer have;
+      #   2. the output compiles against the interface the UI's providers consume -- the UI is not
+      #      built anywhere in this workflow, so without this the only place a malformed entry
+      #      surfaces is a developer's `ng build`.
+      - name: Editor completion data is up to date and compiles
         run: |
           npm run generate:editor-api
+          npm run check:generated
           if [ -n "$(git status --porcelain -- ../dynamic-mapper-ui/src/shared/mapping/generated)" ]; then
             echo "::error::Generated editor API is stale. Run 'npm run generate:editor-api' in dynamic-mapper-smart-function and commit the result."
             exit 1
