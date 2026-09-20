@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @name Create measurement and implicitly create device with deviceFragments and deviceGroups
  * @description Creates one measurement and implicitly creates a device with deviceType, deviceName,
@@ -20,6 +21,10 @@
  * topic 'testSmartInbound/sensor-berlin-01'
 */
 
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
+ */
 function onMessage(msg, context) {
     var payload = msg.payload;
 

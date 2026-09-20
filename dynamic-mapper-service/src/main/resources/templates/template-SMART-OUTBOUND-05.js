@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @name Forward operation to tenant microservice (outbound)
  * @description Demonstrates custom routing: when a Cumulocity operation is received,
@@ -14,6 +15,10 @@
  *     "deviceId": "12345",
  *     "c8y_Command": { "text": "reboot" }
  * }
+ */
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').OutboundMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
  */
 function onMessage(msg, context) {
     var payload = msg.payload;

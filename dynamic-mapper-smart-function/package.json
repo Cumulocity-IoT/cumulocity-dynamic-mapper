@@ -7,6 +7,9 @@
   "zshy": "./src/index.ts",
   "scripts": {
     "build": "zshy",
+    "check:templates": "tsc --noEmit -p tsconfig.templates.json",
+    "generate:editor-api": "node scripts/generate-editor-api.cjs",
+    "pretest": "npm run check:templates",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint src/**/*.ts",

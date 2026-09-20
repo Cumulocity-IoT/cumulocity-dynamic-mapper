@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @name Template for Smart Function with sourceId override
  * @description Demonstrates routing measurements to parent device using sourceId.
@@ -29,6 +30,10 @@
  *
 */
 
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
+ */
 function onMessage(msg, context) {
     var payload = msg.payload;
 

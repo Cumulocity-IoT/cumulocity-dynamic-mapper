@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @name Create either measurement or event
  * @description Create either measurement or event, with persistent state for message counting and error deduplication
@@ -28,6 +29,10 @@
  * topic 'flowState/sensor-berlin-01'
 */
 
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
+ */
 function onMessage(msg, context) {
     var payload = msg.payload;
 

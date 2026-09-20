@@ -12,6 +12,8 @@ dashjoin = "dashjoin"
 CBOR = "CBOR"
 unparseable="unparseable"
 mis = "mis"
+unparameterised="unparameterised"
+prioritises="prioritises"
 
 [files]
 extend-exclude = ["**/MQTT3ClientTest.java","**/AMQPClientTest.java","**/mappings**.json", "**/*Mappings**.json" , "**/profiler/*.json", "**/SparkplugBProto.java"]

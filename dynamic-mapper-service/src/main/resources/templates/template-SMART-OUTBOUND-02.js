@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @name Creates one measurement as array
  * @description Creates one measurement as array
@@ -20,6 +21,10 @@
  * publishTopic 'measurements/berlin_01'
 */
 
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').OutboundMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
+ */
 function onMessage(msg, context) {
     var payload = msg.payload;
 
