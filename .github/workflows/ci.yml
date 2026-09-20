@@ -155,7 +155,7 @@ jobs:
       - name: Editor completion data is up to date
         run: |
           npm run generate:editor-api
-          if ! git diff --exit-code -- ../dynamic-mapper-ui/src/shared/mapping/generated; then
+          if [ -n "$(git status --porcelain -- ../dynamic-mapper-ui/src/shared/mapping/generated)" ]; then
             echo "::error::Generated editor API is stale. Run 'npm run generate:editor-api' in dynamic-mapper-smart-function and commit the result."
             exit 1
           fi
