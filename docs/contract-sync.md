@@ -9,6 +9,10 @@ This page is the strategy for preventing that. For the Smart Function TypeScript
 specifically, [smart-function-type-sync.md](smart-function-type-sync.md) goes deeper; this page is
 the umbrella and covers the other eight surfaces.
 
+> Looking for what to actually *do* when changing a POJO? That is
+> [changing-the-runtime-api.md](changing-the-runtime-api.md) — the procedure, the commands, and
+> what fails if you skip a step. This page explains why it is set up that way.
+
 ---
 
 ## 0. What is enforced today, at a glance

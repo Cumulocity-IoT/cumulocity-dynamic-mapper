@@ -20,7 +20,8 @@ looking for how to *use* the deployed app, that lives in the app itself (Help me
 | [ui.md](ui.md) | Entry point for `dynamic-mapper-ui` — links to architecture, components, build/test |
 | [extensions.md](extensions.md) | Full guide for adding a custom broker connector or a Java processor extension, with code samples |
 | [smart-functions.md](smart-functions.md) | Smart Function (GraalVM JavaScript) development, for both backend and mapping-editor context |
-| [contract-sync.md](contract-sync.md) | **Start here for any API change.** The nine places that describe the runtime contract, runnable checks to diff them, and change triggers |
+| [changing-the-runtime-api.md](changing-the-runtime-api.md) | **Start here for any API change.** Step-by-step: which POJO to change first, what to mirror, which scripts to run, what fails if you skip a step |
+| [contract-sync.md](contract-sync.md) | Why those steps exist — the nine places that describe the runtime contract and how each is enforced |
 | [smart-function-type-sync.md](smart-function-type-sync.md) | Keeping the Smart Function TypeScript types in sync with the runtime API (the TypeScript detail under `contract-sync.md`) |
 | [testing.md](testing.md) | Test strategy across all four layers (backend, frontend, system/shell, Smart Function module) |
 | [feature/README.md](feature/README.md) | One page per feature, split into Requirements (the contract) and Implementation (how it's built) |
