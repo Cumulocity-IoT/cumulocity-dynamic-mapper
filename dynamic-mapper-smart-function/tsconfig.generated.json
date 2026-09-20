@@ -1,0 +1,25 @@
+{
+  // Type-checks the generated editor API against the interface the UI's providers consume.
+  //
+  // The generated file is guarded by a CI step that proves it is *up to date*, but until now
+  // nothing proved it *compiles*: the UI is not built in CI, so a generator that emitted a member
+  // without `documentation` produced 17 TS2741 errors that only appeared on a developer's machine.
+  //
+  // Both files are dependency-free — the model imports nothing and the generated file imports only
+  // the model — so this runs here, in the package that owns the generator, without installing the
+  // UI's dependencies.
+  //
+  // Run via `npm run check:generated`.
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true,
+    "target": "es2020",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": []
+  },
+  "include": [
+    "../dynamic-mapper-ui/src/shared/mapping/smart-function-api.model.ts",
+    "../dynamic-mapper-ui/src/shared/mapping/generated/*.ts"
+  ]
+}

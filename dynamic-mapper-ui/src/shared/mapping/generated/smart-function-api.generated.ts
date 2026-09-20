@@ -205,7 +205,8 @@ export const SMART_FUNCTION_API: ClassOrEnum[] = [
           "key",
           "defaultValue"
         ],
-        "returnType": "any"
+        "returnType": "any",
+        "documentation": "Retrieves a persisted state value by key. State **persists across message invocations** for the same mapping. Values written by a previous message are available when the next message arrives. State is scoped per tenant + mapping — it is not shared across mappings or tenants. State does not survive a service restart (in-memory only). The optional type parameter `TValue` lets callers annotate the expected value type and avoid `as` casts on the result. Defaults to `any` so existing code that omits the type parameter continues to work unchanged. **Limitation:** Because `TValue` is a method-level generic (not class-level), TypeScript cannot enforce that `getState<T>` and `setState<T>` use the *same* type for the same key across calls. Nothing prevents: ```ts context.setState<string>('count', 'hello'); context.getState<number>('count', 0); // compiles, but wrong ``` For cross-call consistency use {@link SmartFunctionContextV2 } (V2), which declares the full state shape once via the class-level `TState` generic. When `defaultValue` is provided and `TValue` is omitted, TypeScript infers `TValue` from the default — e.g. `getState('count', 0)` returns `number`."
       },
       {
         "name": "setState",
@@ -213,7 +214,8 @@ export const SMART_FUNCTION_API: ClassOrEnum[] = [
           "key",
           "value"
         ],
-        "returnType": "void"
+        "returnType": "void",
+        "documentation": "Persists a state value by key. The value is stored in memory and made available to subsequent invocations of the same mapping. State is automatically cleared when the mapping is deleted. For concurrent invocations of the same mapping, last-writer-wins. The optional type parameter `TValue` constrains the stored value type at the call site only — see `getState` for the cross-call consistency limitation. Defaults to `any` so existing code is unaffected."
       }
     ],
     "documentation": "Standard IDP DataPrep context interface. Minimal context with state management only. Dynamic Mapper extends this with additional capabilities. See {@link SmartFunctionContext } for the extended version."
@@ -232,79 +234,92 @@ export const SMART_FUNCTION_API: ClassOrEnum[] = [
       {
         "name": "getStateAll",
         "parameters": [],
-        "returnType": "Record<string, any>"
+        "returnType": "Record<string, any>",
+        "documentation": "Retrieves all state as a single object. Useful for debugging or logging all state at once."
       },
       {
         "name": "getClientId",
         "parameters": [],
-        "returnType": "string"
+        "returnType": "string",
+        "documentation": "Retrieves the MQTT client ID or transport client identifier."
       },
       {
         "name": "getExternalId",
         "parameters": [],
-        "returnType": "string"
+        "returnType": "string",
+        "documentation": "Returns the resolved external ID of the source device for outbound mappings. Only populated when the mapping has `useExternalId` enabled and a non-empty `externalIdType` configured. Equivalent to `context.getConfig().externalId`."
       },
       {
         "name": "getManagedObject",
         "parameters": [
           "c8ySourceId"
         ],
-        "returnType": "any"
+        "returnType": "any",
+        "documentation": "Looks up a device from the inventory cache by internal Cumulocity device ID. The optional type parameter `TManagedObject` lets callers declare the exact shape of the returned object and get full type safety on custom fragments without any manual casting. The default is the base {@link C8yManagedObject}, so existing code that omits the type parameter continues to work unchanged."
       },
       {
         "name": "getManagedObjectByExternalId",
         "parameters": [
           "externalId"
         ],
-        "returnType": "any"
+        "returnType": "any",
+        "documentation": "Looks up a device from the inventory cache by external ID. This is the recommended way to look up devices by their external identifiers. The optional type parameter `TManagedObject` lets callers declare the exact shape of the returned object and get full type safety on custom fragments without any manual casting. The default is the base {@link C8yManagedObject}, so existing code that omits the type parameter continues to work unchanged."
       },
       {
         "name": "getDTMAsset",
         "parameters": [
           "assetId"
         ],
-        "returnType": "any"
+        "returnType": "any",
+        "documentation": "Looks up DTM (Digital Twin Manager) Asset properties by asset ID. The optional type parameter `TAsset` lets callers declare the expected asset shape and get full type safety on custom properties without casting. Defaults to {@link C8yManagedObject} so existing code is unaffected. Returns `null` when the asset is not found."
       },
       {
         "name": "getConfig",
         "parameters": [],
-        "returnType": "any"
+        "returnType": "any",
+        "documentation": "Retrieves read-only mapping configuration for the current invocation. Contains mapping metadata such as `mappingId`, `mappingName`, `version`, `tenant`, `topic`, `targetAPI`, `debug`, `clientId`, and optional flags like `createNonExistingDevice` or `eventWithAttachment`. This is populated before the Smart Function is called and does **not** persist across invocations (unlike `getState` / `setState`). The optional type parameter `TConfig` lets callers declare the exact shape of the config object for full type safety on known keys. Defaults to `Record<string, any>` so existing code is unaffected."
       },
       {
         "name": "addWarning",
         "parameters": [
           "warning"
         ],
-        "returnType": "void"
+        "returnType": "void",
+        "documentation": "Adds a warning message to the processing context. Warnings are collected and surfaced to users for debugging. Use this for non-fatal issues that should be brought to attention (e.g., fallback logic applied, optional field missing). Stored separately from log messages and visible in the Dynamic Mapper UI."
       },
       {
         "name": "logMessage",
         "parameters": [
           "message"
         ],
-        "returnType": "void"
+        "returnType": "void",
+        "documentation": "Logs a message to the processing context. Alias for {@link addLogMessage} — prefer `console.log` for general debugging. Log messages are stored internally and surfaced alongside warnings in the UI."
       },
       {
         "name": "addLogMessage",
         "parameters": [
           "message"
         ],
-        "returnType": "void"
+        "returnType": "void",
+        "documentation": "Logs a message to the processing context (canonical form)."
       },
       {
         "name": "getStateKeySet",
         "parameters": [],
-        "returnType": "string[]"
+        "returnType": "string[]",
+        "documentation": "Returns all state keys currently stored in the context. Useful for inspecting or iterating over all persisted state keys."
       },
       {
         "name": "clearState",
         "parameters": [],
-        "returnType": "void"
+        "returnType": "void",
+        "documentation": "Removes every state entry held for this mapping. Exists on the runtime context (`SmartFunctionContext.clearState`) but was missing here."
       },
       {
         "name": "getTesting",
         "parameters": [],
-        "returnType": "boolean"
+        "returnType": "boolean",
+        "documentation": "Indicates whether this invocation is running inside a test cycle (i.e., triggered from the mapping test UI rather than a live message). Use this to skip side effects (alarms, external API calls) during tests."
       },
       {
         "name": "getState",
@@ -312,7 +327,8 @@ export const SMART_FUNCTION_API: ClassOrEnum[] = [
           "key",
           "defaultValue"
         ],
-        "returnType": "any"
+        "returnType": "any",
+        "documentation": "Retrieves a persisted state value by key. State **persists across message invocations** for the same mapping. Values written by a previous message are available when the next message arrives. State is scoped per tenant + mapping — it is not shared across mappings or tenants. State does not survive a service restart (in-memory only). The optional type parameter `TValue` lets callers annotate the expected value type and avoid `as` casts on the result. Defaults to `any` so existing code that omits the type parameter continues to work unchanged. **Limitation:** Because `TValue` is a method-level generic (not class-level), TypeScript cannot enforce that `getState<T>` and `setState<T>` use the *same* type for the same key across calls. Nothing prevents: ```ts context.setState<string>('count', 'hello'); context.getState<number>('count', 0); // compiles, but wrong ``` For cross-call consistency use {@link SmartFunctionContextV2 } (V2), which declares the full state shape once via the class-level `TState` generic. When `defaultValue` is provided and `TValue` is omitted, TypeScript infers `TValue` from the default — e.g. `getState('count', 0)` returns `number`."
       },
       {
         "name": "setState",
@@ -320,7 +336,8 @@ export const SMART_FUNCTION_API: ClassOrEnum[] = [
           "key",
           "value"
         ],
-        "returnType": "void"
+        "returnType": "void",
+        "documentation": "Persists a state value by key. The value is stored in memory and made available to subsequent invocations of the same mapping. State is automatically cleared when the mapping is deleted. For concurrent invocations of the same mapping, last-writer-wins. The optional type parameter `TValue` constrains the stored value type at the call site only — see `getState` for the cross-call consistency limitation. Defaults to `any` so existing code is unaffected."
       }
     ],
     "documentation": "Dynamic Mapper's enhanced runtime context. Extends standard IDP DataPrepContext with additional capabilities for: - Persistent state across message invocations (per mapping) - Device enrichment/lookups from inventory cache - DTM (Digital Twin Manager) integration ### Persistent state `setState` / `getState` values survive across messages for the same mapping. They are cleared when the mapping is deleted and do not survive a service restart."

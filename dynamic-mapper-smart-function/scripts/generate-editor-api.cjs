@@ -163,10 +163,17 @@ function buildInterface(name) {
         if (typeParamName == null) continue;
         methodDefaults.set(String(typeParamName), tp.default?.getText() ?? 'any');
       }
+      // Prefer the chosen overload's own JSDoc; fall back to the symbol's. Always emit the key,
+      // even when empty: `ClassDefinition.methods` requires `documentation`, so omitting it makes
+      // the generated file fail to compile in the UI build.
+      const sigDoc = ts.displayPartsToString(sig.getDocumentationComment(checker))
+        .replace(/\s+/g, ' ')
+        .trim();
       methods.push({
         name: sym.getName(),
         parameters: sig.getParameters().map(p => p.getName()),
         returnType: renderType(checker.typeToString(sig.getReturnType()), methodDefaults),
+        documentation: sigDoc || documentation,
       });
     } else {
       const rendered = renderType(checker.typeToString(symType), defaults);
