@@ -26,7 +26,7 @@
     }
   },
   "include": [
-    "../dynamic-mapper-service/src/main/resources/templates/*.js",
+    "../dynamic-mapper-service/src/main/resources/templates/template-SMART-*.js",
     "./src/types/graalvm-globals.d.ts"
   ]
 }
