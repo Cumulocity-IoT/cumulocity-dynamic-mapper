@@ -83,7 +83,7 @@ cd dynamic-mapper-service && mvn test -Dtest=SmartFunctionApiContractTest
 
 ## What fails if you skip a step
 
-Seven checks in `SmartFunctionApiContractTest`, plus the template and generator guards. The point
+Eight checks in `SmartFunctionApiContractTest`, plus the template and generator guards. The point
 of the table is to show you will be told, not to be memorised.
 
 | Skipped | What fails | Message you get |
@@ -94,6 +94,7 @@ of the table is to show you will be told, not to be memorised.
 | Document a new context method | contract test | `context method(s) missing from …smartfunction.md: [x]` |
 | Remove a context method the docs still describe | contract test | `documents context method(s) the runtime does not have: [x]` |
 | Prompt references something that does not exist | contract test | `teaches context method(s) the runtime does not have: [x]` |
+| Declare a field as present that the direction never passes | contract test | `the fields declared `never` must be exactly the ones this direction leaves unset` |
 | Template uses a field the types do not declare | `npm run check:templates` | `Property 'x' does not exist on type 'DynamicMapperDeviceMessage'` |
 | Change the context API at all | contract test | canonical-list failure naming every surface to update |
 
@@ -111,10 +112,14 @@ Stated plainly so you know when to be careful rather than trusting a green build
 | **Java enum ↔ TypeScript union** | Adding `Destination.ARCHIVE` in Java and forgetting `C8yDestination` leaves the editor and types a value short | Diff them by hand when touching an enum |
 | **`CumulocityObject` / `DeviceMessage` ↔ their TypeScript interfaces** | Only `InputMessage` has the exact-mirror check; the return types rely on review | Same |
 | **TypeScript `SmartFunctionContext` ↔ the Java class** | The canonical list pins the *Java* side, so an addition is noticed — but nothing verifies the TypeScript actually gained it | The canonical-list failure names it; do not just update the list |
-| **A field declared but never populated** | Passes every check, is `undefined` at runtime | Test the mapping end to end |
 
-The first three are the same mechanism as the `InputMessage` check and could be closed the same
-way; they are open because nothing has gone wrong there yet, not because they are hard.
+These are the same mechanism as the `InputMessage` check and could be closed the same way; they
+are open because nothing has gone wrong there yet, not because they are hard.
+
+What *is* now checked is whether a field is actually populated: the contract test runs both
+processors and requires the fields each direction leaves unset to be exactly the ones its
+TypeScript interface declares `never`. So "I declared it but no processor sets it" fails the build
+rather than surfacing as `undefined` in someone's mapping.
 
 ---
 
@@ -125,7 +130,8 @@ way; they are open because nothing has gone wrong there yet, not because they ar
 2. `FlowInboundProcessor.createInputMessage` — pass the real value.
    `FlowOutboundProcessor.createInputMessage` — pass `null` if outbound has no such thing.
 3. Types — add `correlationId?: string` to `DynamicMapperDeviceMessage`, and
-   `correlationId?: never` to `OutboundMessage` with a comment saying why.
+   `correlationId?: never` to `OutboundMessage` with a comment saying why. The `never` has to match
+   the `null` you passed in step 2; the contract test compares them by running both processors.
 4. `npm run generate:editor-api`.
 5. Add it to the `msg` fields table in `smartfunction.md`; mention it in the prompt if the AI
    should use it.

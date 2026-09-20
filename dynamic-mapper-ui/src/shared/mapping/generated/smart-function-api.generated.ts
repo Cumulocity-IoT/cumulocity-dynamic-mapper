@@ -362,16 +362,6 @@ export const SMART_FUNCTION_API: ClassOrEnum[] = [
         "documentation": "Transport client ID (e.g., MQTT client ID). Set for inbound messages; null for outbound."
       },
       {
-        "name": "sourceId",
-        "type": "string",
-        "documentation": "Internal Cumulocity device ID of the originating device. Set for outbound messages; null for inbound."
-      },
-      {
-        "name": "cumulocityType",
-        "type": "C8yObjectType",
-        "documentation": "Lowercase C8y object type string, matching the {@link C8yObjectType} union. Set by the outbound processor; null for inbound messages. Enables discriminant narrowing: `switch (msg.cumulocityType) { ... }`."
-      },
-      {
         "name": "time",
         "type": "string",
         "documentation": "ISO-8601 timestamp captured when the message was received by the connector. Use as a reliable receive-time fallback when the payload has no timestamp: `var time = payload[\"time\"] ?? msg.time;`"

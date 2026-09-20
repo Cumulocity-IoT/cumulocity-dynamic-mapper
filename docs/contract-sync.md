@@ -209,6 +209,12 @@ Level 2. `SmartFunctionApiContractTest` reflects over the concrete objects hande
 - a role named in the OpenAPI spec is not declared in the microservice manifest. A wrong role name
   never fails at compile time; it sits in a string until a user is told to grant a role that does
   not exist,
+- the fields a direction leaves unset are not exactly the ones its TypeScript interface declares
+  `never`. This one does not read the source — it *runs* `createInputMessage` for both directions
+  against a context where every value is present, and asks the resulting object which fields came
+  back empty. Declaring a field a processor hard-codes to `null` is how a documented field becomes
+  a runtime `undefined`; it is what this check caught on inbound `sourceId` and `cumulocityType`.
+  A field neither direction populates fails too, as dead weight,
 - the TypeScript `msg` interfaces do not declare exactly the public fields of `InputMessage`.
   Missing means a field exists at runtime that authors cannot see; extra means TypeScript promises
   a field that is `undefined`. A field a direction never receives is declared `never`, so omission
@@ -307,7 +313,8 @@ of checking is as likely to be wrong as the thing being checked.
 | Regex misses the last enum constant | `CREATE_IF_MISSING` before `}` has no trailing `,` — reported as "missing from Java" when it exists | Match `[,;)}]`, or count against the file |
 | Markdown-only image grep | `docs/**` uses `<img src="…">`, not `![](…)` — 46 references invisible | Match both forms |
 | Splitting on a heading that occurs twice | Splitting the prompt on "For OUTBOUND mappings" hit the wrong occurrence and reported 8 keys missing that were present | Use `index(start)` then `index(end, start)` |
-| Interface ≠ runtime object | `DataPrepContext` 13 methods vs `SmartFunctionContext` 15 | Audit the concrete class that is passed to the engine |
+| Interface ≠ runtime object | `DataPrepContext` 13 methods vs `SmartFunctionContext` 15 | Audit the concrete class that is passed to the engine — `SmartFunctionApiContractTest` reflects over the class, not the interface |
+| Declared ≠ populated | Inbound declared `sourceId` and `cumulocityType` as strings while `FlowInboundProcessor` passes `null` for both | Run the processor and look at the object, not the constructor call |
 | A green build ≠ the test ran | Two jest suites failed to **compile**, so 17 tests never executed while the summary said "7 passed" | Compare suite *and* test counts before/after |
 | `tsc -p tsconfig.json` ≠ what ts-jest compiles | The types spec is outside the main tsconfig; 8 errors were invisible to `tsc` | Run both |
 | zsh eats unquoted globs | `grep --include=*.ts` fails with "no matches found" before grep runs | Quote them, or use `grep -r` over a path |
@@ -340,4 +347,5 @@ resist automated checking because what they get wrong is meaning, not identifier
 |---|---|---|
 | 2026-06 | TS types ↔ Java runtime | 6 gaps found and fixed — see [smart-function-type-sync.md §6](smart-function-type-sync.md) |
 | 2026-09-19 | Enforcement | Templates type-checked against the types; editor table generated from them; prompts and the context API pinned by `SmartFunctionApiContractTest`. Four surfaces moved from convention to build-enforced. |
+| 2026-09-20 | Populated-ness | Added the behavioural `never` check. Found inbound `sourceId` and `cumulocityType` typed as strings although `FlowInboundProcessor` hard-codes `null` — both now `never`, and both dropped out of the editor's inbound autocomplete on the next regeneration. |
 | 2026-09-19 | All nine surfaces | `CumulocityObject`, `DeviceMessage`, templates, editor provider: **in sync**. Fixed: `OutboundMessage` missing 5 runtime fields; `clearState` missing from TS; 6 context methods undocumented; `jsonata_prompt.txt` missing `deviceFragments`/`deviceGroups`, listing `retain` under the wrong direction, and omitting `OPERATION` from the target-API list |

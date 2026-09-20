@@ -101,17 +101,20 @@ export interface DynamicMapperDeviceMessage {
   clientId?: string;
 
   /**
-   * Internal Cumulocity device ID of the originating device.
-   * Set for outbound messages; null for inbound.
+   * Always absent inbound. `FlowInboundProcessor` passes `null`: an inbound message arrives from
+   * the transport, before any device has been resolved, so there is no Cumulocity ID yet.
+   * Declared rather than omitted so that `msg` stays structurally comparable with
+   * {@link OutboundMessage}, where it is a real `string`.
    */
-  sourceId?: string;
+  sourceId?: never;
 
   /**
-   * Lowercase C8y object type string, matching the {@link C8yObjectType} union.
-   * Set by the outbound processor; null for inbound messages.
-   * Enables discriminant narrowing: `switch (msg.cumulocityType) { ... }`.
+   * Always absent inbound. Set only by the outbound processor, which derives it from the
+   * Cumulocity API the notification came from; there is no equivalent for a transport message.
+   * See {@link OutboundMessage.cumulocityType}, where it is a {@link C8yObjectType} and supports
+   * discriminant narrowing: `switch (msg.cumulocityType) { ... }`.
    */
-  cumulocityType?: C8yObjectType;
+  cumulocityType?: never;
 
   /**
    * ISO-8601 timestamp captured when the message was received by the connector.

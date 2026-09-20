@@ -31,7 +31,9 @@ import java.nio.file.Path;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -41,7 +43,13 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import org.graalvm.polyglot.Context;
+
+import dynamic.mapper.model.API;
+import dynamic.mapper.processor.inbound.processor.FlowInboundProcessor;
 import dynamic.mapper.processor.model.InputMessage;
+import dynamic.mapper.processor.outbound.processor.FlowOutboundProcessor;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.SmartFunctionContext;
 
 /**
@@ -288,6 +296,82 @@ class SmartFunctionApiContractTest {
             assertTrue(phantom.isEmpty(), iface + " declares field(s) " + phantom
                     + " that InputMessage.java does not have. They would be undefined at runtime.");
         }
+    }
+
+    /**
+     * Runs the real {@code createInputMessage} of a direction against a context where every source
+     * value is present, and reports the fields that came back empty anyway — those are the ones the
+     * processor hard-codes to {@code null}.
+     *
+     * <p>Asking the processor is the only honest way to answer this. Reading the constructor call
+     * with a regex would tell us what the source looks like, not what the runtime produces, and
+     * {@code transportFields} alone would fool it: the constructor turns a {@code null} argument
+     * into an empty map.</p>
+     */
+    private static Set<String> fieldsLeftEmpty(AbstractFlowProcessor processor, ProcessingContext<?> context) {
+        Set<String> empty = new TreeSet<>();
+        try (Context graal = Context.newBuilder().allowAllAccess(true).build()) {
+            InputMessage message = processor.createInputMessage(graal, context).asHostObject();
+            for (Field f : InputMessage.class.getFields()) {
+                Object value = f.get(message);
+                if (value == null || (value instanceof Map<?, ?> map && map.isEmpty())) {
+                    empty.add(f.getName());
+                }
+            }
+        } catch (IllegalAccessException e) {
+            throw new AssertionError("InputMessage fields are public; this cannot happen", e);
+        }
+        return empty;
+    }
+
+    /** Every value a direction could draw on, so that anything still null was never passed. */
+    private static ProcessingContext<Object> fullyPopulatedContext() {
+        return ProcessingContext.builder()
+                .payload(new LinkedHashMap<String, Object>(Map.of("temperature", 21)))
+                .topic("device/contract-test")
+                .clientId("contract-test-client")
+                .sourceId("1234")
+                .connectorIdentifier("contract-test-connector")
+                .api(API.MEASUREMENT)
+                .key("contract-test-key")
+                .build();
+    }
+
+    @Test
+    @DisplayName("`never` marks exactly the msg fields a direction does not populate")
+    void typeScriptNeverMatchesWhatTheProcessorsActuallyPass() throws IOException {
+        assertTrue(Files.exists(TS_TYPES), "type definitions not found at " + TS_TYPES.toAbsolutePath());
+        String types = Files.readString(TS_TYPES);
+
+        // The collaborators are unused by createInputMessage, and passing null says so.
+        Map<String, Set<String>> unpopulated = new LinkedHashMap<>();
+        unpopulated.put("DynamicMapperDeviceMessage",
+                fieldsLeftEmpty(new FlowInboundProcessor(null, null), fullyPopulatedContext()));
+        unpopulated.put("OutboundMessage",
+                fieldsLeftEmpty(new FlowOutboundProcessor(null, null, null), fullyPopulatedContext()));
+
+        for (Map.Entry<String, Set<String>> direction : unpopulated.entrySet()) {
+            String iface = direction.getKey();
+            Set<String> declaredNever = tokens(interfaceBody(types, iface),
+                    "(?m)^\\s{2}(\\w+)\\??\\s*:\\s*never\\b");
+
+            assertEquals(direction.getValue(), declaredNever,
+                    iface + ": the fields declared `never` must be exactly the ones this direction "
+                            + "leaves unset. Fields the runtime never passes but TypeScript types as "
+                            + "present are `undefined` at runtime while autocomplete offers them; "
+                            + "fields typed `never` that the runtime does pass are invisible to "
+                            + "authors. If a processor started or stopped populating a field, this "
+                            + "is the line to change.");
+        }
+
+        // A field no direction populates is dead: declaring it `never` everywhere would satisfy
+        // the loop above while the field itself does nothing but sit in InputMessage.
+        Set<String> deadEverywhere = new TreeSet<>(unpopulated.values().iterator().next());
+        unpopulated.values().forEach(deadEverywhere::retainAll);
+        assertTrue(deadEverywhere.isEmpty(), "InputMessage field(s) " + deadEverywhere
+                + " are populated by neither processor. Either populate the field in the direction "
+                + "it belongs to, or remove it — a field that is `never` in both directions is dead "
+                + "weight that still has to be mirrored everywhere.");
     }
 
     /** The text between an interface's braces, matched by depth so nested types do not end it early. */
