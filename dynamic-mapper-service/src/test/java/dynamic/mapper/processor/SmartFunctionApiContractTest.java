@@ -112,6 +112,19 @@ class SmartFunctionApiContractTest {
     /** Generated API description, committed so clients and reviewers can read it. */
     private static final Path OPENAPI = Path.of("..", "resources", "openAPI", "openapi.json");
 
+    /** The hand-maintained TypeScript mirror of the runtime API. */
+    private static final Path TS_TYPES = Path.of("..", "dynamic-mapper-smart-function", "src",
+            "types", "smart-function-dynamic-mapper.types.ts");
+
+    /**
+     * The two TypeScript interfaces describing {@code msg}. Both must account for every public
+     * field of {@link InputMessage}: the runtime hands the same object to each direction, and a
+     * field the direction never receives is declared {@code never} rather than left out, so that
+     * omission always means "forgotten" and never "deliberately absent".
+     */
+    private static final List<String> MESSAGE_INTERFACES =
+            List.of("DynamicMapperDeviceMessage", "OutboundMessage");
+
     private static Set<String> contextApi() {
         Set<String> names = new TreeSet<>();
         for (Method m : SmartFunctionContext.class.getMethods()) {
@@ -247,5 +260,50 @@ class SmartFunctionApiContractTest {
                                     .filter(r -> r.startsWith("ROLE_DYNAMIC_MAPPER"))
                                     .collect(Collectors.toList()));
         }
+    }
+
+    @Test
+    @DisplayName("the TypeScript msg interfaces declare exactly the runtime's fields")
+    void typeScriptMirrorsTheMessageFields() throws IOException {
+        assertTrue(Files.exists(TS_TYPES), "type definitions not found at " + TS_TYPES.toAbsolutePath());
+        String types = Files.readString(TS_TYPES);
+
+        Set<String> runtime = new TreeSet<>();
+        for (Field f : InputMessage.class.getFields()) {
+            runtime.add(f.getName());
+        }
+
+        for (String iface : MESSAGE_INTERFACES) {
+            Set<String> declared = tokens(interfaceBody(types, iface), "(?m)^\\s{2}(?:readonly\\s+)?(\\w+)\\??\\s*:");
+
+            List<String> missing = runtime.stream()
+                    .filter(f -> !declared.contains(f)).collect(Collectors.toList());
+            assertTrue(missing.isEmpty(), iface + " does not declare runtime field(s) " + missing
+                    + ". Adding a field to InputMessage.java without mirroring it here leaves it "
+                    + "invisible to Smart Function authors. Declare it, using `never` if this "
+                    + "direction never receives it.");
+
+            List<String> phantom = declared.stream()
+                    .filter(f -> !runtime.contains(f)).collect(Collectors.toList());
+            assertTrue(phantom.isEmpty(), iface + " declares field(s) " + phantom
+                    + " that InputMessage.java does not have. They would be undefined at runtime.");
+        }
+    }
+
+    /** The text between an interface's braces, matched by depth so nested types do not end it early. */
+    private static String interfaceBody(String source, String interfaceName) {
+        int at = source.indexOf("export interface " + interfaceName);
+        assertTrue(at >= 0, "interface " + interfaceName + " not found in " + TS_TYPES);
+        int open = source.indexOf('{', at);
+        int depth = 0;
+        for (int i = open; i < source.length(); i++) {
+            char c = source.charAt(i);
+            if (c == '{') {
+                depth++;
+            } else if (c == '}' && --depth == 0) {
+                return source.substring(open, i);
+            }
+        }
+        throw new IllegalStateException("unbalanced braces in " + interfaceName);
     }
 }

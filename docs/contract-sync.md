@@ -204,7 +204,11 @@ Level 2. `SmartFunctionApiContractTest` reflects over the concrete objects hande
   2026-09-19 audit,
 - a role named in the OpenAPI spec is not declared in the microservice manifest. A wrong role name
   never fails at compile time; it sits in a string until a user is told to grant a role that does
-  not exist.
+  not exist,
+- the TypeScript `msg` interfaces do not declare exactly the public fields of `InputMessage`.
+  Missing means a field exists at runtime that authors cannot see; extra means TypeScript promises
+  a field that is `undefined`. A field a direction never receives is declared `never`, so omission
+  always means "forgotten" rather than "deliberately absent".
 
 ```bash
 cd dynamic-mapper-service && mvn test -Dtest=SmartFunctionApiContractTest
@@ -222,6 +226,11 @@ Already automated and **failing the build**: `dynamic-mapper-ui/scripts/optimize
 ---
 
 ## 4. Change triggers
+
+Adding a field to `InputMessage.java` is the worked example: declare it **and populate it** in
+`FlowInboundProcessor.createInputMessage` / `FlowOutboundProcessor.createInputMessage`, then mirror
+it into both TypeScript interfaces, regenerate the editor table, and update the docs and prompts.
+Every one of those steps now fails the build if skipped.
 
 | If you change… | Also update |
 |---|---|
