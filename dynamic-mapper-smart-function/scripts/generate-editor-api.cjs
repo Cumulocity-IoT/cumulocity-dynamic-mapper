@@ -157,11 +157,14 @@ function buildInterface(name) {
     if (signatures.length > 0) {
       // Overloads: the last signature is the most general, which is the useful one to show.
       const sig = signatures[signatures.length - 1];
+      const methodDefaults = new Map(defaults);
+      for (const tp of sig.typeParameters ?? []) {
+        methodDefaults.set(tp.name.text, tp.default?.getText() ?? 'any');
+      }
       methods.push({
         name: sym.getName(),
         parameters: sig.getParameters().map(p => p.getName()),
-        returnType: renderType(checker.typeToString(sig.getReturnType()), defaults),
-        documentation
+        returnType: renderType(checker.typeToString(sig.getReturnType()), methodDefaults),
       });
     } else {
       const rendered = renderType(checker.typeToString(symType), defaults);
