@@ -546,6 +546,9 @@ public class HttpPollingConnector extends AConnectorClient {
             log.error("{} - Poll failed for topic [{}] {} consecutive times, marking connector FAILED: {}",
                     tenant, topic, attempt, e.getMessage());
             connectionStateManager.updateStatusWithError(e);
+            // FAILED is terminal for this polling lifecycle; do not allow a later
+            // success to overwrite it with CONNECTED.
+            return;
         }
 
         scheduleNextPoll(topic, delayMs);
