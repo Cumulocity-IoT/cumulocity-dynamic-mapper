@@ -44,27 +44,46 @@ a **SMART_FUNCTION** to decode the payload and transform it into a `MEASUREMENT`
 ### REST Polling connector
 
 The **REST Polling** connector is for sources that only expose a REST API and cannot push data
-themselves: instead of subscribing to a broker topic, it periodically sends a GET request to a
-configured URL and feeds each response into the inbound mapping pipeline.
+themselves: instead of subscribing to a broker topic, it periodically sends a GET request and
+feeds each response into the inbound mapping pipeline.
 
 ![REST Polling connector settings](../../../resources/image/Dynamic_Mapper_Connector_Rest_Polling.png "REST Polling connector configuration properties.")
 
 | Property | Notes |
 |---|---|
-| **URL** | The exact endpoint to poll — required |
-| **Poll interval (seconds)** | Default 60; minimum **30 seconds**, enforced when saving the connector |
-| **Authentication** | `None`, `Basic`, or `Bearer` |
-| **Headers** | Additional static headers sent with every poll request |
+| `url` | Base URL — each deployed mapping's **topic** is appended as the request path, e.g. `url=https://api.example.com/v1` + mapping topic `devices/measurements` → `GET https://api.example.com/v1/devices/measurements` |
+| `pollIntervalSeconds` | Default 60; minimum **30 seconds**, enforced when saving the connector |
+| `authentication` | `None`, `Basic`, or `Bearer` |
+| `headers` | Additional static headers sent with every poll request |
 
-All mappings deployed to one REST Polling connector instance poll the **same URL and interval** —
-each gets its own independently scheduled poll job, but to poll different endpoints, create one
-connector instance per endpoint.
+Each mapping deployed to one REST Polling connector instance gets its **own independently
+scheduled poll job**, and — since the topic becomes the path — can target its own endpoint under
+the connector's base URL. All mappings on one connector instance still share the same **poll
+interval** and **credentials/host**; a different interval or a different host needs a separate
+connector instance.
 
-:::info No pagination yet
-Every poll fetches the full response fresh; there is no support yet for cursor-based or
-incremental fetching (e.g. only new data since the last poll). Keep response payloads reasonably
-small.
-:::
+#### Incremental fetch and pagination
+
+Both are optional and off by default (every poll otherwise fetches the full response fresh):
+
+| Property | Notes |
+|---|---|
+| `cursorParam` | Query parameter name used to send an incremental-fetch cursor with each poll (e.g. `since`) — leave empty to disable |
+| `cursorExtractionExpression` | JSONata evaluated against each response to compute the next cursor value (e.g. `items[-1].timestamp`); only used together with `cursorParam` |
+| `paginationMode` | `None` (default), `NextLinkHeader`, `NextFieldInBody`, or `PageNumber` — how to drain multiple pages within one poll cycle |
+| `maxPagesPerPoll` | Safety cap on pages drained per cycle, regardless of whether more are available |
+| `pageParam` | Query parameter the next page's token/number is sent under (`NextFieldInBody` / `PageNumber` modes only) |
+| `nextPageExpression` | JSONata extracting the next page's token from the response (`NextFieldInBody` mode only) |
+| `pageStartValue` | First page number (`PageNumber` mode only), e.g. `0` for a zero-indexed API |
+
+Each pagination mode stops on its own signal from the response — no separate "last page" flag to
+configure: `NextLinkHeader` stops once an RFC 5988 `Link: rel="next"` header is absent,
+`NextFieldInBody` stops once `nextPageExpression` returns nothing, and `PageNumber` stops once a
+response is an empty `[]` or `{}`.
+
+The cursor advances after *every* page is successfully processed, not just once per poll cycle —
+so if pagination fails partway through, the next poll resumes from the last page that made it
+through rather than re-fetching already-processed pages or losing the unprocessed remainder.
 
 Message Explorer works on this connector too, but with a cost that doesn't apply to broker-based
 connectors: exploring a topic with no mapping deployed on it yet starts real periodic requests
