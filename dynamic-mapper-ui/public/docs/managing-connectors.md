@@ -12,19 +12,19 @@ with systems that only expose a REST API and cannot push data themselves, and th
 for internal Cumulocity REST API operations.
 The mapper supports the following connectors and payload formats:
 
-| Connector | Inbound | Outbound | JavaScript | Supported Payload Formats |
-|---|:---:|:---:|:---:|---|
-| **AMQP 0-9-1** (RabbitMQ, etc.) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
-| **AMQP 1.0** (Azure Service Bus, Artemis, Solace, etc.) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
-| **Apache Pulsar** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
-| **Cumulocity API** (for internal Cumulocity REST API) | – | ✓ | ✓ | JSON |
-| **Cumulocity MQTT Service** (device isolation, one instance per tenant) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
-| **Google Cloud Pub/Sub** (e.g. Google Manufacturing Data Engine) | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
-| **HTTP Connector** (one instance per tenant) | ✓ | – | ✓ | JSON, Hex, Protobuf, Extension |
-| **Kafka** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
-| **MQTT** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension, **SparkPlug B** |
-| **REST Polling** (for external REST APIs with no push capability) | ✓ | – | ✓ | JSON |
-| **Webhook** (for external REST APIs) | – | ✓ | ✓ | JSON |
+| Connector | Inbound | Outbound | Supported Payload Formats |
+|---|:---:|:---:|---|
+| **AMQP 0-9-1** (RabbitMQ, etc.) | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **AMQP 1.0** (Azure Service Bus, Artemis, Solace, etc.) | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **Apache Pulsar** | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **Cumulocity API** (for internal Cumulocity REST API) | – | ✓ | JSON |
+| **Cumulocity MQTT Service** (device isolation, one instance per tenant) | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **Google Cloud Pub/Sub** (e.g. Google Manufacturing Data Engine) | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **HTTP Connector** (one instance per tenant) | ✓ | – | JSON, Hex, Protobuf, Extension |
+| **Kafka** | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
+| **MQTT** | ✓ | ✓ | JSON, Hex, Protobuf, Extension, **SparkPlug B** |
+| **REST Polling** (for external REST APIs with no push capability) | ✓ | – | JSON |
+| **Webhook** (for external REST APIs) | – | ✓ | JSON |
 
 :::caution
 Some connectors like HTTP Connector and Cumulocity MQTT Service have only one instance per tenant. Multiple
