@@ -344,6 +344,7 @@ public class HttpClient extends AConnectorClient {
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
                         .order(2)
                         .readonly(true)
+                        .hidden(true)
                         .defaultValue(false))
 
                 // Leading slash configuration

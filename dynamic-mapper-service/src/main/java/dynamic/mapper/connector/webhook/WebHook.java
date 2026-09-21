@@ -897,6 +897,7 @@ public class WebHook extends AConnectorClient {
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
                         .order(9)
                         .readonly(true)
+                        .hidden(true)
                         .defaultValue(false))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()

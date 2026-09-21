@@ -188,7 +188,8 @@ Built via `ConnectorSpecificationBuilder.create("REST Polling", ConnectorType.RE
 | `pageParam` | string | no | — | Query parameter name for the page token/number; `NextFieldInBody`/`PageNumber` only |
 | `nextPageExpression` | string | no | — | JSONata extracting the next page token from the response; `NextFieldInBody` only |
 | `pageStartValue` | numeric | no | `1` | First page number; `PageNumber` only |
-| `supportsWildcardInTopicInbound` / `Outbound` | boolean, readonly | no | `false` | Each "topic" is a concrete poll-job key, not a broker wildcard pattern |
+| `supportsWildcardInTopicInbound` | boolean, readonly | no | `false` | Each "topic" is a concrete poll-job key, not a broker wildcard pattern |
+| `supportsWildcardInTopicOutbound` | boolean, readonly, **hidden** | no | `false` | Hidden rather than shown disabled — this inbound-only connector has no outbound direction for it to describe (fixed 2026-09-21; see `docs/feature/connector-webhook.md`'s note on `WebHookInternal` for the same `.hidden(true)` pattern) |
 
 ### Incremental fetch (v2) — IMPLEMENTED 2026-09-21
 

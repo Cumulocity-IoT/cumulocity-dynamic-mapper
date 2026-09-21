@@ -940,6 +940,7 @@ public class HttpPollingConnector extends AConnectorClient {
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
                         .order(15)
                         .readonly(true)
+                        .hidden(true)
                         .defaultValue(false))
 
                 .build();

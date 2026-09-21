@@ -58,7 +58,7 @@ Built via `ConnectorSpecificationBuilder.create("Webhook", ConnectorType.WEB_HOO
 | `headerAccept` | string | no | `application/json` | shown when `cumulocityInternal=false` |
 | `baseUrlHealthEndpoint` | string | no | — | health-check GET target, shown when `cumulocityInternal=false` |
 | `headers` | map | no | `{}` | arbitrary custom headers |
-| `supportsWildcardInTopicInbound` | boolean, readonly | no | `false` | |
+| `supportsWildcardInTopicInbound` | boolean, readonly, **hidden** | no | `false` | Hidden rather than shown disabled — WebHook is outbound-only, so there's no inbound direction for it to describe (fixed 2026-09-21) |
 | `supportsWildcardInTopicOutbound` | boolean, readonly | no | `true` | |
 
 Supports POST/PUT/PATCH/DELETE; the mapping's publish topic is appended to `baseUrl`
