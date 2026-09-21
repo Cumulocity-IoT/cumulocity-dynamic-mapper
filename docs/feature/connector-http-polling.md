@@ -37,10 +37,10 @@ custom microservice that polls and forwards into Cumulocity or the mapper.
 - **A hard floor of 30 seconds on `pollIntervalSeconds`.** Enforced in `isConfigValid()`,
   to protect both the polled endpoint and this service from too many concurrent poll jobs.
 - **Delivery is at-least-once, GET only.** By default every poll fetches the full response fresh
-  ("GET full response every interval"). Optional cross-poll incremental fetch (a cursor, e.g. a
-  `since` timestamp, carried between polls) is implemented — see "Incremental fetch (v2)" below —
-  but intra-poll pagination (draining multiple pages within one poll) is not; see `PLANNING.md`'s
-  "v2 candidate design" section, part B.
+  ("GET full response every interval"). Both optional v2 features are implemented and off by
+  default: cross-poll incremental fetch (a cursor, e.g. a `since` timestamp, carried between
+  polls — see "Incremental fetch (v2)" below) and intra-poll pagination (draining multiple pages
+  within one poll — see "Pagination (v2)" below).
 - **Failure escalates through the same connector health mechanism as every other
   connector**, not a bespoke one: repeated poll failures move the connector through
   `RETRYING` (with backoff) to `FAILED`, visible in the same status UI/API as an MQTT
@@ -98,11 +98,14 @@ membership, `pollTasks` only ever holds a real `ScheduledFuture` once one exists
 
 ### Poll execution and dispatch
 
-On a successful (2xx) response, `executePoll()` builds a `ConnectorMessage` (payload = raw
-response body bytes, `topic` = the mapping topic, `tenant`, `connectorIdentifier`,
-`sendPayload=true`) and calls `dispatcher.onMessage(connectorMessage)` — the same
-fire-and-forget dispatch `AbstractMqttCallback`/`KafkaClientV2` use, simpler than MQTT's
-QoS-ack handling since polling has no broker redelivery to coordinate with.
+`executePoll()` runs a loop, not a single request — one iteration per page (a single iteration
+when `paginationMode=None`, the default). Each successful (2xx) page builds its own
+`ConnectorMessage` (payload = raw response body bytes, `topic` = the mapping topic, `tenant`,
+`connectorIdentifier`, `sendPayload=true`) and calls `dispatcher.onMessage(connectorMessage)` —
+the same fire-and-forget dispatch `AbstractMqttCallback`/`KafkaClientV2` use, simpler than MQTT's
+QoS-ack handling since polling has no broker redelivery to coordinate with. Pages are dispatched
+one at a time as they arrive, never buffered as a whole result set. See "Pagination (v2)" below
+for how the loop decides whether to continue.
 
 ### Configuration (`ConnectorSpecification`)
 
@@ -118,27 +121,32 @@ Built via `ConnectorSpecificationBuilder.create("REST Polling", ConnectorType.RE
 | `headers` | map | no | `{}` | Additional static headers sent with every poll request |
 | `cursorParam` | string | no | — | Query parameter name for the incremental-fetch cursor (v2, see below); empty disables it |
 | `cursorExtractionExpression` | string | no | — | JSONata evaluated against each response to compute the next cursor (v2); only takes effect with `cursorParam` set |
+| `paginationMode` | option | no | `None` | `None` / `NextLinkHeader` / `NextFieldInBody` / `PageNumber` (v2, see below) |
+| `maxPagesPerPoll` | numeric | no | `20` | Safety cap on pages drained per poll cycle; shown for any non-`None` `paginationMode` |
+| `pageParam` | string | no | — | Query parameter name for the page token/number; `NextFieldInBody`/`PageNumber` only |
+| `nextPageExpression` | string | no | — | JSONata extracting the next page token from the response; `NextFieldInBody` only |
+| `pageStartValue` | numeric | no | `1` | First page number; `PageNumber` only |
 | `supportsWildcardInTopicInbound` / `Outbound` | boolean, readonly | no | `false` | Each "topic" is a concrete poll-job key, not a broker wildcard pattern |
 
 ### Incremental fetch (v2) — IMPLEMENTED 2026-09-21
 
 Opt-in per connector via `cursorParam`/`cursorExtractionExpression`; both empty (the default)
 keeps v1 behavior exactly (plain full-response poll, nothing sent or stored). See
-`attic/feature/http-polling/PLANNING.md`'s v2 section for the original design discussion — this
-implements part A (cross-poll cursor) only; part B (intra-poll pagination) is still not
-implemented.
+`attic/feature/http-polling/PLANNING.md`'s v2 section for the original design discussion — both
+part A (cross-poll cursor) and part B (intra-poll pagination, below) are now implemented.
 
-- **Request**: if a cursor is available for the topic, `executeGet(cursor)` adds it as a query
-  parameter via `WebClient`'s `UriBuilder.queryParam(cursorParam, cursor)` — not a manual string
-  template, so it URL-encodes correctly and composes with any existing query string already in
-  `url`.
-- **Extraction**: after a successful poll's data is dispatched (`dispatcher.onMessage(...)`
-  returns), `advanceCursor()` parses the response body (`com.dashjoin.jsonata.json.Json.parseJson`,
+- **Request**: if a cursor is available for the topic, `buildQueryParams()` adds it as a query
+  parameter, applied via `WebClient`'s `UriBuilder.queryParam(cursorParam, cursor)` in
+  `executeGet()` — not a manual string template, so it URL-encodes correctly and composes with
+  any existing query string already in `url` (and with a page parameter, when pagination is also
+  active).
+- **Extraction**: after each page's data is dispatched (`dispatcher.onMessage(...)` returns),
+  `advanceCursor()` parses that page's response body (`com.dashjoin.jsonata.json.Json.parseJson`,
   the same parser `JSONPayloadDeserializer` uses) and evaluates `cursorExtractionExpression`
   against it via `com.dashjoin.jsonata.Jsonata.jsonata(...).evaluate(...)` — the identical call
   `AbstractJSONataExtractionProcessor.extractContentFromPayload()` uses elsewhere in the mapper,
   reused rather than reimplemented. A response the expression can't evaluate logs a warning and
-  leaves the cursor unchanged (that poll behaves like v1) instead of failing the poll.
+  leaves the cursor unchanged (that page behaves like v1) instead of failing the poll.
 - **Persistence**: the cursor lives on `MappingStatus.cursor` (`model/status/MappingStatus.java`),
   resolved from the poll's topic via `mappingService.getCacheMappingInbound(tenant)` (matched on
   `mappingTopic`). This reuses `MappingStatus`'s existing inventory-persisted,
@@ -147,11 +155,44 @@ implemented.
   mappings share one topic, they already share this connector's one poll job for it (see
   "Subscribe" above), so they share its cursor too — resolved by taking the first matching
   mapping, deliberately not an error.
-- **Ordering matters**: the cursor advances *after* dispatch, never before — a crash between
-  dispatch and the next poll re-polls the same window rather than silently skipping data.
+- **Ordering matters**: the cursor advances *after each page's* dispatch, never before — see
+  "Pagination (v2)" for why this is per-page rather than once per poll.
 - Two backward-compatible constructor/call-site changes came with this: `MappingStatus` gained an
   11th field via a new all-args constructor, with the pre-existing 10-arg constructor kept
   (delegating with `cursor = null`) so none of its ~20 test call sites needed touching.
+
+### Pagination (v2) — IMPLEMENTED 2026-09-21
+
+Opt-in via `paginationMode` (default `None` = single GET per poll, unchanged v1 behavior).
+`executePoll()`'s loop fetches, dispatches, and advances the cursor for one page, then decides
+whether to continue based on the active mode — each mode has its own stop condition read directly
+from the response, so no separate "has more pages" flag is needed:
+
+| `paginationMode` | Continuation | Stop condition |
+|---|---|---|
+| `NextLinkHeader` | `extractNextLinkUri()` parses an RFC 5988 `Link` response header (`<url>; rel="next"`) | Header absent |
+| `NextFieldInBody` | `extractNextPageToken()` evaluates `nextPageExpression` (JSONata) against the body, sent as `pageParam` on the next request | Expression returns nothing |
+| `PageNumber` | `pageParam` increments from `pageStartValue` | `isEmptyPage()`: body parses to an empty `[]` or `{}` |
+
+`maxPagesPerPoll` (default 20) caps every mode regardless of what the response claims, so one
+runaway or misconfigured endpoint can't starve this connector's other topics' scheduled polls —
+hitting the cap logs a warning and ends that poll cycle; the next scheduled poll resumes normally
+(using whatever cursor was recorded through the last page processed).
+
+`NextLinkHeader`'s continuation is an **absolute URI** the server hands back — `executeGet()`
+hits it directly (`pollingClient.get().uri(absoluteUri)`) instead of composing query parameters
+onto `url`, since the server already encodes everything needed (including, typically, its own
+cursor-equivalent) into that URL. The other two modes compose query parameters onto `url` via
+`buildQueryParams()`, the same mechanism the cursor uses, so cursor and pagination combine freely
+in `NextFieldInBody`/`PageNumber` modes.
+
+**Failure semantics — the reason the cursor advances per page, not once per poll**: if page 3 of
+5 fails, pages 1–2's already-recorded cursor progress means the next poll resumes from there
+rather than re-fetching (and re-dispatching) already-processed pages, or losing the unprocessed
+remainder silently. The alternative (cursor advances only after the whole poll succeeds) would
+mean any mid-pagination failure re-processes every earlier page in that cycle on the next poll —
+harmless for idempotent consumers, but needless duplicate work and, for cursor-based upstream
+APIs specifically, easy to get subtly wrong if "since" isn't perfectly idempotent across retries.
 
 `isConfigValid()` also requires `user`+`password` (Basic) or `token` (Bearer) to be
 non-empty when the corresponding `authentication` value is selected.
@@ -219,10 +260,17 @@ just adds a broker subscription, essentially free.
 - **`url`/`pollIntervalSeconds` are connector-level**, not per-mapping, despite each
   mapping getting its own scheduled poll job — see "Requirements" above. Don't assume
   different mappings on one connector instance can poll different endpoints.
-- **No intra-poll pagination** — a poll that needs multiple pages (page 1, 2, 3…) to drain all
-  new data isn't handled; every poll issues exactly one GET. Cross-poll incremental fetch (a
-  cursor carried between separate polls) *is* implemented — see "Incremental fetch (v2)" above —
-  don't confuse the two. See `PLANNING.md`'s v2 section, part B, if implementing pagination later.
+- **Pagination stop conditions are trust-the-response, not verify-the-response** — `PageNumber`
+  mode's `isEmptyPage()` treats an unparsable body as *non-empty* (keeps paginating rather than
+  guessing), which means a misconfigured `paginationMode=PageNumber` against a non-paginated,
+  non-JSON, or differently-shaped API can page all the way to `maxPagesPerPoll` before stopping,
+  rather than failing fast. Watch for this via `maxPagesPerPoll` warnings in the logs.
+- **`NextLinkHeader` mode ignores `cursorParam` on every page after the first** — once pagination
+  switches to following an absolute next-page URI, `buildQueryParams()` (and therefore the cursor)
+  is bypassed entirely for that request; only page 1 of a `NextLinkHeader` cycle carries the
+  cursor query parameter. This is deliberate (the server-provided URL is authoritative for that
+  API's own pagination), but combining `NextLinkHeader` with incremental fetch across *separate
+  polls* still works — the cursor is only irrelevant *within* one multi-page cycle.
 - **Backoff/failure state is connector-wide**, not per-mapping-topic — a single failing
   mapping's backoff affects the connector's overall reported status.
 - **No frontend-specific work was needed**: connector config forms are data-driven off
