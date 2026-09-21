@@ -180,9 +180,9 @@ public class MappingStatus implements Serializable {
      * every time. Advanced only after a poll's data has been successfully dispatched — never
      * speculatively before — so a crash re-polls the same window rather than silently skipping it.
      */
-@Schema(description = "Incremental-fetch cursor for connectors that support it (e.g. REST Polling); null if unused", example = "2026-09-21T10:00:00.000Z")
+    @Schema(description = "Incremental-fetch cursor for connectors that support it (e.g. REST Polling); null if unused", example = "2026-09-21T10:00:00.000Z")
     @Setter
-    public volatile String cursor
+    public volatile String cursor;
 
     /**
      * Identity is the mapping {@code identifier} — the key every status map is keyed by, and
