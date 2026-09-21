@@ -24,6 +24,7 @@ import {
   connectorStatusToSeverity,
   ConnectorStatus,
   ConnectorStatusHistory,
+  formatElapsedDuration,
   getSeverityBadgeClass
 } from './connector-log.model';
 
@@ -45,5 +46,22 @@ export class ConnectorStatusHistoryComponent {
 
   getSeverityClass(status: ConnectorStatus): string {
     return getSeverityBadgeClass(connectorStatusToSeverity(status));
+  }
+
+  /** "+<elapsed>" label for the gap since the previous entry, or `null` for the first entry / an
+   * unparsable timestamp (in which case the caller renders nothing). */
+  getElapsedSincePrevious(index: number): string | null {
+    const entries = this.history?.history;
+    if (!entries || index <= 0) {
+      return null;
+    }
+    const previousTime = entries[index - 1]?.date;
+    const currentTime = entries[index]?.date;
+    if (!previousTime || !currentTime) {
+      return null;
+    }
+    const deltaMs = new Date(currentTime).getTime() - new Date(previousTime).getTime();
+    const formatted = formatElapsedDuration(deltaMs);
+    return formatted ? `+${formatted}` : null;
   }
 }

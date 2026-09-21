@@ -139,8 +139,11 @@
                 }}
               </span>
               @if (getConnectorStatusHistory(event); as connectorStatusHistory) {
-              <span class="text-10 label label-default m-l-4" title="{{ 'Number of status transitions bundled into this session' | translate }}">
-                {{ connectorStatusHistory.history.length }} {{ connectorStatusHistory.history.length === 1 ? 'event' : 'events' }}
+              <span class="text-10 label label-default m-l-4"
+                title="{{ connectorStatusHistory.historyTruncated
+                  ? ('Showing the ' + connectorStatusHistory.history.length + ' most recent of ' + (connectorStatusHistory.history.length + connectorStatusHistory.historyOmittedCount) + ' status transitions in this session')
+                  : ('Number of status transitions bundled into this session' | translate) }}">
+                {{ connectorStatusHistory.history.length }}{{ connectorStatusHistory.historyTruncated ? '+' : '' }} {{ connectorStatusHistory.history.length === 1 && !connectorStatusHistory.historyTruncated ? 'event' : 'events' }}
               </span>
               @if (!connectorStatusHistory.sessionClosed) {
               <span class="text-10 label label-info m-l-4" translate>open</span>

@@ -26,7 +26,11 @@ export interface ConnectorStatusEvent {
   id?: string;
   connectorIdentifier: string;
   connectorName: string;
-  /** @deprecated the backend stopped populating this redundant, per-property date field; use `time` (the event's own timestamp) instead. */
+  /** ISO-8601 UTC timestamp of this specific transition. Populated on nested entries inside a
+   * bundled session's `history` (see ConnectorStatusHistory) — the backend `ConnectorStatusEvent`
+   * model has no separate `time` field, only this one. For the top-level, flattened event (one
+   * per Cumulocity Event / session), prefer `time` (the event's own timestamp) instead; `date`
+   * there reflects only the most recent transition's time, redundant with `time`. */
   date?: string;
   time?: string;
   status: ConnectorStatus;
@@ -72,6 +76,38 @@ export function connectorStatusToSeverity(status?: ConnectorStatus | string | nu
     case ConnectorStatus.RETRYING: return 'warning';
     default: return 'info';
   }
+}
+
+/**
+ * Formats a millisecond duration as a compact "+<elapsed>" label for the gap between two
+ * consecutive transitions in a bundled session's timeline (see ConnectorStatusHistoryComponent).
+ * A session can legitimately span hours (e.g. CONNECTED -> RETRYING -> CONNECTED), so without
+ * this the nested list gives no sense of how far apart two entries actually occurred.
+ * Returns `null` for a non-finite/negative delta (out-of-order or missing timestamps) so the
+ * caller can skip rendering rather than show a nonsensical value.
+ */
+export function formatElapsedDuration(ms: number): string | null {
+  if (!Number.isFinite(ms) || ms < 0) {
+    return null;
+  }
+  const totalSeconds = Math.round(ms / 1000);
+  if (totalSeconds < 1) {
+    return '<1s';
+  }
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (days > 0) {
+    return `${days}d ${hours}h`;
+  }
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+  return `${seconds}s`;
 }
 
 /**

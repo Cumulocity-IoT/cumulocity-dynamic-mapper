@@ -592,6 +592,17 @@ public abstract class AConnectorClient {
                 connectorIdentifier,
                 this::sendConnectorLifecycle, connectorRegistry);
 
+        // This is a fresh client instance — either a genuine microservice restart, or simply this
+        // connector being disabled and re-enabled (ConnectorClientFactory always creates a new
+        // instance) — so connectionStateManager above has no memory of whatever session the
+        // PREVIOUS instance last reported. If that session never reached a clean terminal status
+        // (e.g. the process was killed mid-flap), it would otherwise stay "open" on Cumulocity
+        // forever. Best-effort: failures are logged and swallowed inside the call itself, must
+        // never block/fail connector startup.
+        if (serviceConfiguration.getSendConnectorLifecycle()) {
+            c8yAgent.closeOrphanedConnectorSession(tenant, connectorName, connectorIdentifier);
+        }
+
         this.housekeepingExecutor = new ScheduledThreadPoolExecutor(1, r -> {
             Thread t = new Thread(r, "housekeeping-" + connectorIdentifier);
             t.setDaemon(true);

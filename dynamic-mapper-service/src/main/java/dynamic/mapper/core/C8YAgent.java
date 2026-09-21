@@ -23,6 +23,8 @@ package dynamic.mapper.core;
 
 import static java.util.Map.entry;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +69,7 @@ import com.cumulocity.sdk.client.alarm.AlarmApi;
 import com.cumulocity.sdk.client.buffering.Future;
 import com.cumulocity.sdk.client.devicecontrol.DeviceControlApi;
 import com.cumulocity.sdk.client.event.EventApi;
+import com.cumulocity.sdk.client.event.EventFilter;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -85,6 +88,8 @@ import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.BinaryInfo;
 import dynamic.mapper.model.status.ConnectorStatus;
+import dynamic.mapper.model.status.ConnectorStatusEvent;
+import dynamic.mapper.model.status.ConnectorStatusHistory;
 import dynamic.mapper.model.status.LoggingEventType;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.processor.ProcessingException;
@@ -478,6 +483,92 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             "description", LoggingEventType.CONNECTOR_EVENT_TYPE.getDescription()
         );
         er.setProperty("d11r_metadata", metadata);
+    }
+
+    /** Bounds how many of the agent's most recent connector status events {@link
+     * #closeOrphanedConnectorSession} scans looking for this connector's newest one. A session
+     * normally has only a handful of entries and connectors don't reconnect constantly, so the
+     * target event is almost always within the first few; this is just a safety cap against
+     * scanning unboundedly on a tenant with many connectors sharing the same agent source. */
+    private static final int ORPHAN_SESSION_SCAN_LIMIT = 100;
+
+    /**
+     * Closes a connection-lifecycle session left open (sessionClosed=false) by a connector's
+     * PREVIOUS run, if one exists. Called once per {@link dynamic.mapper.connector.core.client.AConnectorClient}
+     * construction (see {@code initializeManagers()}), before that run's first status transition.
+     * <p>
+     * The in-memory {@link dynamic.mapper.connector.core.client.ConnectionStateManager} always
+     * starts with no active session — not just after a microservice restart, but also whenever a
+     * connector is disabled and re-enabled (a fresh client instance is created either way, see
+     * {@code ConnectorClientFactory}). If that previous run's last transition wasn't a clean
+     * DISCONNECTED/FAILED (e.g. the process was killed mid-flap, CONNECTED -> RETRYING), the old
+     * Event is left at {@code sessionClosed=false} forever, since nothing will ever append to it
+     * again — it would otherwise keep showing up under "only open sessions" filtering (see
+     * MappingServiceEventComponent) indefinitely, with no link to this new run's session.
+     */
+    public void closeOrphanedConnectorSession(String tenant, String connectorName, String connectorIdentifier) {
+        MapperServiceRepresentation source = mapperConfiguration.getMapperServiceRepresentation(tenant);
+        subscriptionsService.runForTenant(tenant, () -> {
+            MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
+            contextService.runWithinContext(context, () -> {
+                try {
+                    EventFilter filter = new EventFilter()
+                            .byType(LoggingEventType.CONNECTOR_EVENT_TYPE.getType())
+                            .bySource(new GId(source.getId()));
+                    List<EventRepresentation> events = new ArrayList<>();
+                    for (EventRepresentation e : eventApi.getEventsByFilter(filter)
+                            .get(ORPHAN_SESSION_SCAN_LIMIT).elements(ORPHAN_SESSION_SCAN_LIMIT)) {
+                        events.add(e);
+                    }
+                    events.sort(Comparator.comparing(EventRepresentation::getDateTime).reversed());
+
+                    for (EventRepresentation event : events) {
+                        Object rawLog = event.getProperty("d11r_connectorStatusLog");
+                        if (rawLog == null) {
+                            continue;
+                        }
+                        ConnectorStatusHistory session = objectMapper.convertValue(rawLog, ConnectorStatusHistory.class);
+                        if (!connectorIdentifier.equals(session.getConnectorIdentifier())) {
+                            continue;
+                        }
+                        // Newest event for THIS connector found. Any earlier one can't possibly
+                        // still be open (a session hard-closes before a later one opens), so this
+                        // is the only candidate — close it if needed, then stop scanning either way.
+                        if (!session.isSessionClosed()) {
+                            ConnectorStatusEvent closing = new ConnectorStatusEvent(ConnectorStatus.DISCONNECTED);
+                            closing.setConnectorName(connectorName);
+                            closing.setConnectorIdentifier(connectorIdentifier);
+                            closing.setMessage("Session ended: connector restarted before this session reached a terminal status");
+                            session.append(closing);
+                            session.setSessionClosed(true);
+
+                            EventRepresentation update = new EventRepresentation();
+                            update.setId(event.getId());
+                            Map<String, String> statusMap = Map.ofEntries(
+                                    entry("status", session.getCurrentStatus().name()),
+                                    entry("message", closing.getMessage()),
+                                    entry("connectorName", connectorName),
+                                    entry("connectorIdentifier", connectorIdentifier));
+                            applyConnectorStatusFragments(update, closing.getMessage(),
+                                    ConnectorStatus.DISCONNECTED.toSeverity(), statusMap, session);
+
+                            c8ySemaphore.acquire();
+                            try {
+                                this.eventApi.update(update);
+                            } finally {
+                                c8ySemaphore.release();
+                            }
+                            log.info("{} - Closed orphaned connector status session for connector {} (event {})",
+                                    tenant, connectorIdentifier, event.getId().getValue());
+                        }
+                        return;
+                    }
+                } catch (Exception e) {
+                    log.warn("{} - Failed to reconcile orphaned connector status session for connector {}: {}",
+                            tenant, connectorIdentifier, e.getMessage());
+                }
+            });
+        });
     }
 
     public Certificate loadCertificateByName(String certificateName, String fingerprint,
