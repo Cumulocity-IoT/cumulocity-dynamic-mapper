@@ -158,6 +158,10 @@ export default {
         to: 'image/Dynamic_Mapper_Connector_WebHook.png'
       },
       {
+        from: '../resources/image-optimized/Dynamic_Mapper_Connector_Rest_Polling.png',
+        to: 'image/Dynamic_Mapper_Connector_Rest_Polling.png'
+      },
+      {
         from: '../resources/image-optimized/Dynamic_Mapper_Connector_Kafka.png',
         to: 'image/Dynamic_Mapper_Connector_Kafka.png'
       },

@@ -36,11 +36,11 @@ custom microservice that polls and forwards into Cumulocity or the mapper.
   model change) — flagged as a possible follow-up.
 - **A hard floor of 30 seconds on `pollIntervalSeconds`.** Enforced in `isConfigValid()`,
   to protect both the polled endpoint and this service from too many concurrent poll jobs.
-- **Delivery is at-least-once, GET only, no pagination.** v1 is a plain "GET full response
-  every interval." Pagination and incremental/cursor-based fetching (e.g. `?since=<ts>`)
-  are explicitly out of scope for v1 — see `PLANNING.md`'s "v2 candidate design" section
-  for the deferred design (separates intra-poll pagination from cross-poll incremental
-  fetch, and the cursor-persistence problem that design would need to solve).
+- **Delivery is at-least-once, GET only.** By default every poll fetches the full response fresh
+  ("GET full response every interval"). Optional cross-poll incremental fetch (a cursor, e.g. a
+  `since` timestamp, carried between polls) is implemented — see "Incremental fetch (v2)" below —
+  but intra-poll pagination (draining multiple pages within one poll) is not; see `PLANNING.md`'s
+  "v2 candidate design" section, part B.
 - **Failure escalates through the same connector health mechanism as every other
   connector**, not a bespoke one: repeated poll failures move the connector through
   `RETRYING` (with backoff) to `FAILED`, visible in the same status UI/API as an MQTT
@@ -71,7 +71,7 @@ system — it registers a **self-rescheduling** poll chain for that topic on a p
 `ensureScheduler()`):
 
 ```
-subscribe(topic) → pollTasks.put(topic, null) → scheduleNextPoll(topic, 0)
+subscribe(topic) → subscribedTopics.add(topic) → scheduleNextPoll(topic, 0)
                                                        ↓
                                                  executePoll(topic)
                                           success ↓         ↓ failure
@@ -81,9 +81,20 @@ subscribe(topic) → pollTasks.put(topic, null) → scheduleNextPoll(topic, 0)
 
 Each run reschedules itself rather than using a fixed-rate schedule — this is what lets the
 delay vary per attempt (backoff) while still respecting the configured interval on success.
-`unsubscribe(topic)` cancels that topic's `ScheduledFuture` and removes it from `pollTasks`;
-`scheduleNextPoll`/`executePoll` both check `pollTasks.containsKey(topic)` before acting, so
-an unsubscribe racing with an in-flight run is a no-op rather than a leaked reschedule.
+`unsubscribe(topic)` removes the topic from `subscribedTopics` and cancels its `ScheduledFuture`
+in `pollTasks`; `scheduleNextPoll`/`executePoll` both check `subscribedTopics.contains(topic)`
+before acting, so an unsubscribe racing with an in-flight run is a no-op rather than a leaked
+reschedule.
+
+Subscription membership (`subscribedTopics`) and the actual scheduled job (`pollTasks`) are
+**two separate structures**, not one map doing double duty — `subscribe()` originally tried to
+mark "subscribed, job not yet scheduled" by putting a `null` value into `pollTasks`
+(`ConcurrentHashMap<String, ScheduledFuture<?>>`) before the real future existed. `ConcurrentHashMap`
+throws `NullPointerException` on `put(key, null)` — it doesn't allow null values — so `subscribe()`
+threw on every call, silently (the exception surfaced only as an opaque `subscriptionWarning` with
+a null message on an explorer session, or was swallowed entirely for a real mapping subscribe path).
+Fixed 2026-09-21 by splitting the two concerns: `subscribedTopics` (a plain key set) tracks
+membership, `pollTasks` only ever holds a real `ScheduledFuture` once one exists.
 
 ### Poll execution and dispatch
 
@@ -105,7 +116,42 @@ Built via `ConnectorSpecificationBuilder.create("REST Polling", ConnectorType.RE
 | `user` / `password` | string / sensitive | no | — | shown when `authentication=Basic` |
 | `token` | sensitive | no | — | shown when `authentication=Bearer` |
 | `headers` | map | no | `{}` | Additional static headers sent with every poll request |
+| `cursorParam` | string | no | — | Query parameter name for the incremental-fetch cursor (v2, see below); empty disables it |
+| `cursorExtractionExpression` | string | no | — | JSONata evaluated against each response to compute the next cursor (v2); only takes effect with `cursorParam` set |
 | `supportsWildcardInTopicInbound` / `Outbound` | boolean, readonly | no | `false` | Each "topic" is a concrete poll-job key, not a broker wildcard pattern |
+
+### Incremental fetch (v2) — IMPLEMENTED 2026-09-21
+
+Opt-in per connector via `cursorParam`/`cursorExtractionExpression`; both empty (the default)
+keeps v1 behavior exactly (plain full-response poll, nothing sent or stored). See
+`attic/feature/http-polling/PLANNING.md`'s v2 section for the original design discussion — this
+implements part A (cross-poll cursor) only; part B (intra-poll pagination) is still not
+implemented.
+
+- **Request**: if a cursor is available for the topic, `executeGet(cursor)` adds it as a query
+  parameter via `WebClient`'s `UriBuilder.queryParam(cursorParam, cursor)` — not a manual string
+  template, so it URL-encodes correctly and composes with any existing query string already in
+  `url`.
+- **Extraction**: after a successful poll's data is dispatched (`dispatcher.onMessage(...)`
+  returns), `advanceCursor()` parses the response body (`com.dashjoin.jsonata.json.Json.parseJson`,
+  the same parser `JSONPayloadDeserializer` uses) and evaluates `cursorExtractionExpression`
+  against it via `com.dashjoin.jsonata.Jsonata.jsonata(...).evaluate(...)` — the identical call
+  `AbstractJSONataExtractionProcessor.extractContentFromPayload()` uses elsewhere in the mapper,
+  reused rather than reimplemented. A response the expression can't evaluate logs a warning and
+  leaves the cursor unchanged (that poll behaves like v1) instead of failing the poll.
+- **Persistence**: the cursor lives on `MappingStatus.cursor` (`model/status/MappingStatus.java`),
+  resolved from the poll's topic via `mappingService.getCacheMappingInbound(tenant)` (matched on
+  `mappingTopic`). This reuses `MappingStatus`'s existing inventory-persisted,
+  survives-a-restart, periodically-flushed machinery wholesale — no new persistence
+  infrastructure, the crux flagged as open in `PLANNING.md`'s original v2 sketch. If several
+  mappings share one topic, they already share this connector's one poll job for it (see
+  "Subscribe" above), so they share its cursor too — resolved by taking the first matching
+  mapping, deliberately not an error.
+- **Ordering matters**: the cursor advances *after* dispatch, never before — a crash between
+  dispatch and the next poll re-polls the same window rather than silently skipping data.
+- Two backward-compatible constructor/call-site changes came with this: `MappingStatus` gained an
+  11th field via a new all-args constructor, with the pre-existing 10-arg constructor kept
+  (delegating with `cursor = null`) so none of its ~20 test call sites needed touching.
 
 `isConfigValid()` also requires `user`+`password` (Basic) or `token` (Bearer) to be
 non-empty when the corresponding `authentication` value is selected.
@@ -173,10 +219,10 @@ just adds a broker subscription, essentially free.
 - **`url`/`pollIntervalSeconds` are connector-level**, not per-mapping, despite each
   mapping getting its own scheduled poll job — see "Requirements" above. Don't assume
   different mappings on one connector instance can poll different endpoints.
-- **No pagination/cursor support** — a poll that needs multiple pages to drain new data, or
-  needs to avoid re-fetching unchanged data, isn't handled; every poll fetches the full
-  response fresh. See `PLANNING.md`'s v2 section if implementing this later — it flags the
-  cursor-persistence-across-restarts problem specifically.
+- **No intra-poll pagination** — a poll that needs multiple pages (page 1, 2, 3…) to drain all
+  new data isn't handled; every poll issues exactly one GET. Cross-poll incremental fetch (a
+  cursor carried between separate polls) *is* implemented — see "Incremental fetch (v2)" above —
+  don't confuse the two. See `PLANNING.md`'s v2 section, part B, if implementing pagination later.
 - **Backoff/failure state is connector-wide**, not per-mapping-topic — a single failing
   mapping's backoff affects the connector's overall reported status.
 - **No frontend-specific work was needed**: connector config forms are data-driven off

@@ -45,6 +45,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import com.dashjoin.jsonata.json.Json;
+
+import static com.dashjoin.jsonata.Jsonata.jsonata;
+
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -401,16 +405,18 @@ public class HttpPollingConnector extends AConnectorClient {
         }
 
         long pollIntervalMs = getEffectivePollIntervalSeconds() * 1000L;
+        Mapping mapping = resolveMapping(topic);
 
         try {
-            ResponseEntity<String> response = executeGet().timeout(REQUEST_TIMEOUT).block();
+            ResponseEntity<String> response = executeGet(currentCursor(mapping)).timeout(REQUEST_TIMEOUT).block();
 
             if (response != null && response.getStatusCode().is2xxSuccessful()) {
                 consecutiveFailures.set(0);
                 connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
 
-                byte[] payload = response.getBody() != null
-                        ? response.getBody().getBytes(StandardCharsets.UTF_8)
+                String body = response.getBody();
+                byte[] payload = body != null
+                        ? body.getBytes(StandardCharsets.UTF_8)
                         : new byte[0];
 
                 ConnectorMessage connectorMessage = ConnectorMessage.builder()
@@ -428,6 +434,10 @@ public class HttpPollingConnector extends AConnectorClient {
 
                 if (dispatcher != null) {
                     dispatcher.onMessage(connectorMessage);
+                    // Only advance the cursor once the poll's data has actually been handed to the
+                    // pipeline — never speculatively before — so a crash re-polls the same window
+                    // instead of silently skipping it.
+                    advanceCursor(mapping, body);
                 } else {
                     log.warn("{} - No dispatcher wired, dropping poll result for topic [{}]", tenant, topic);
                 }
@@ -524,8 +534,19 @@ public class HttpPollingConnector extends AConnectorClient {
         return builder.build();
     }
 
-    private Mono<ResponseEntity<String>> executeGet() {
-        return pollingClient.get()
+    /**
+     * @param cursor current incremental-fetch cursor value for this topic, or {@code null} if
+     *               incremental fetch is disabled (no {@code cursorParam} configured) or this is
+     *               the first poll (no cursor recorded yet). When non-null, sent as a query
+     *               parameter named by the {@code cursorParam} property.
+     */
+    private Mono<ResponseEntity<String>> executeGet(String cursor) {
+        String cursorParam = (String) connectorConfiguration.getProperties().get("cursorParam");
+        WebClient.RequestHeadersSpec<?> request = StringUtils.isNotEmpty(cursorParam) && cursor != null
+                ? pollingClient.get().uri(uriBuilder -> uriBuilder.queryParam(cursorParam, cursor).build())
+                : pollingClient.get();
+
+        return request
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, response -> {
                     String error = "Poll failed with client error: " + response.statusCode();
@@ -539,6 +560,62 @@ public class HttpPollingConnector extends AConnectorClient {
     }
 
     // -------------------------------------------------------------------------
+    // Incremental fetch (v2): a topic's cursor is stored on its mapping's MappingStatus
+    // (persisted to inventory the same way every other mapping status field already is, which is
+    // what makes it survive a service restart). Opt-in per mapping: empty/unset `cursorParam`
+    // keeps v1 behavior (plain full-response poll, no cursor sent, nothing extracted or stored).
+    // -------------------------------------------------------------------------
+
+    /**
+     * Resolves the topic back to its {@link Mapping}. Several mappings can in principle share one
+     * topic (the same dedup semantics {@code MappingSubscriptionManager} applies for MQTT) — in
+     * that case they already share this connector's one poll job for that topic, so they share
+     * its cursor too; this returns the first match. Returns {@code null} for a topic with no
+     * backing mapping at all (e.g. a Message Explorer session with no mapping deployed yet), in
+     * which case incremental fetch is simply skipped for that poll.
+     */
+    private Mapping resolveMapping(String topic) {
+        return mappingService.getCacheMappingInbound(tenant).values().stream()
+                .filter(m -> topic.equals(m.getMappingTopic()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private String currentCursor(Mapping mapping) {
+        if (mapping == null) {
+            return null;
+        }
+        return mappingService.getMappingStatus(tenant, mapping).getCursor();
+    }
+
+    /**
+     * Evaluates {@code cursorExtractionExpression} (JSONata) against the poll response and
+     * stores the result as the mapping's new cursor. A no-op if incremental fetch isn't
+     * configured, the mapping couldn't be resolved, or extraction fails (logged, not fatal —
+     * a broken extraction expression degrades to "always full-response poll", not a failed poll).
+     */
+    private void advanceCursor(Mapping mapping, String responseBody) {
+        if (mapping == null || StringUtils.isEmpty(responseBody)) {
+            return;
+        }
+        String extractionExpression = (String) connectorConfiguration.getProperties().get("cursorExtractionExpression");
+        if (StringUtils.isEmpty(extractionExpression)) {
+            return;
+        }
+
+        try {
+            Object parsed = Json.parseJson(responseBody);
+            Object extracted = jsonata(extractionExpression).evaluate(parsed);
+            if (extracted != null) {
+                mappingService.getMappingStatus(tenant, mapping).setCursor(extracted.toString());
+            }
+        } catch (Exception e) {
+            log.warn("{} - Failed to evaluate cursorExtractionExpression [{}] for mapping [{}]: {}",
+                    tenant, extractionExpression, mapping.getIdentifier(), e.getMessage());
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Config schema
     // -------------------------------------------------------------------------
 
@@ -547,7 +624,9 @@ public class HttpPollingConnector extends AConnectorClient {
                 .create("REST Polling", ConnectorType.REST_POLLING)
                 .description("Periodically issues an HTTP GET request against the configured REST endpoint " +
                         "and feeds each successful response into the inbound mapping pipeline. " +
-                        "v1: plain full-response polling, no pagination or incremental (cursor) fetch. " +
+                        "Optional incremental fetch: set cursorParam + cursorExtractionExpression to send " +
+                        "a cursor with each request and advance it from the response; leave both empty for " +
+                        "plain full-response polling. No intra-poll pagination yet. " +
                         "pollIntervalSeconds has a hard minimum of " + MIN_POLL_INTERVAL_SECONDS + " seconds.")
                 .supportsMessageContext(false)
                 .supportedDirections(supportedDirections())
@@ -583,13 +662,26 @@ public class HttpPollingConnector extends AConnectorClient {
                         .description("Additional headers sent with every poll request.")
                         .required(false))
 
-                .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                .property("cursorParam", ConnectorPropertyBuilder.optionalString()
                         .order(7)
+                        .description("Query parameter name used to send the incremental-fetch cursor with " +
+                                "each poll (e.g. \"since\"). Leave empty to disable incremental fetch — every " +
+                                "poll then fetches the full response, as in v1."))
+
+                .property("cursorExtractionExpression", ConnectorPropertyBuilder.optionalString()
+                        .order(8)
+                        .description("JSONata expression evaluated against each response to compute the next " +
+                                "cursor value (e.g. \"items[-1].timestamp\"). Only takes effect together with " +
+                                "cursorParam; a response the expression can't evaluate leaves the cursor " +
+                                "unchanged rather than failing the poll."))
+
+                .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(9)
                         .readonly(true)
                         .defaultValue(false))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(8)
+                        .order(10)
                         .readonly(true)
                         .defaultValue(false))
 

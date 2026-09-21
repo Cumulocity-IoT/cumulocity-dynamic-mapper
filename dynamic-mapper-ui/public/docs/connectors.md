@@ -47,6 +47,8 @@ The **REST Polling** connector is for sources that only expose a REST API and ca
 themselves: instead of subscribing to a broker topic, it periodically sends a GET request to a
 configured URL and feeds each response into the inbound mapping pipeline.
 
+![REST Polling connector settings](../../../resources/image/Dynamic_Mapper_Connector_Rest_Polling.png "REST Polling connector configuration properties.")
+
 | Property | Notes |
 |---|---|
 | **URL** | The exact endpoint to poll — required |

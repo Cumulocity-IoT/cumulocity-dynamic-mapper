@@ -80,7 +80,19 @@ public class MappingStatus implements Serializable {
      */
     public static MappingStatus createUnspecified() {
         return new MappingStatus(IDENT_UNSPECIFIED_MAPPING, IDENT_UNSPECIFIED_MAPPING,
-                IDENT_UNSPECIFIED_MAPPING, null, "#", "#", 0, 0, 0, "");
+                IDENT_UNSPECIFIED_MAPPING, null, "#", "#", 0, 0, 0, "", null);
+    }
+
+    /**
+     * Pre-{@code cursor} constructor, kept for every existing caller (test fixtures and any
+     * external code) that built a {@code MappingStatus} before this field existed. Equivalent to
+     * the full constructor with {@code cursor = null}.
+     */
+    public MappingStatus(String id, String name, String identifier, Direction direction,
+            String mappingTopic, String publishTopic, long messagesReceived, long errors,
+            long currentFailureCount, String loadingError) {
+        this(id, name, identifier, direction, mappingTopic, publishTopic, messagesReceived, errors,
+                currentFailureCount, loadingError, null);
     }
 
     /**
@@ -160,6 +172,19 @@ public class MappingStatus implements Serializable {
     public String loadingError;
 
     /**
+     * Incremental-fetch cursor (e.g. a "since" timestamp or an opaque next-page token) for
+     * connectors that support it — currently the REST Polling connector's v2 cursor-based fetch.
+     * {@code null} for every mapping that doesn't use incremental fetch. Persisted the same way
+     * as the rest of this class (the {@code d11r_mapping} inventory fragment), which is what
+     * makes it survive a service restart instead of resetting the poll to "from the beginning"
+     * every time. Advanced only after a poll's data has been successfully dispatched — never
+     * speculatively before — so a crash re-polls the same window rather than silently skipping it.
+     */
+    @Schema(description = "Incremental-fetch cursor for connectors that support it (e.g. REST Polling); null if unused", example = "2026-09-21T10:00:00.000Z")
+    @Setter
+    public String cursor;
+
+    /**
      * Identity is the mapping {@code identifier} — the key every status map is keyed by, and
      * the only one that is always populated ({@code id}, the Cumulocity managed-object id, is
      * null for a status created before the mapping was persisted).
@@ -193,7 +218,7 @@ public class MappingStatus implements Serializable {
      */
     public synchronized MappingStatus snapshot() {
         return new MappingStatus(id, name, identifier, direction, mappingTopic, publishTopic,
-                messagesReceived, errors, currentFailureCount, loadingError);
+                messagesReceived, errors, currentFailureCount, loadingError, cursor);
     }
 
     /**
