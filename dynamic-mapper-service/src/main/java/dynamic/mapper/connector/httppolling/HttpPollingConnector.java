@@ -79,14 +79,16 @@ import java.util.regex.Pattern;
  * exactly as {@code AbstractMqttCallback} does for a broker-pushed message.
  * <p>
  * "Subscribing" here does not mean a broker topic subscription: {@link #subscribe(String, Qos)}
- * is called once per distinct inbound mapping topic (the same dedup semantics
- * {@code MappingSubscriptionManager} already applies for MQTT) and registers a scheduled poll job
- * for that topic. This yields one HTTP call per mapping topic, not one shared call per connector
- * — a deliberate tradeoff: mappings that happen to resolve to the same final URL are not
- * deduplicated. The topic doubles as the request path appended to the connector's base
- * {@code url} (see {@link #topicPath}, the same convention the Default HTTP Connector already
- * uses for inbound) — so one connector instance (one host, one set of credentials) can poll many
- * distinct endpoints, one per mapping, rather than needing a new connector instance per URL.
+ * is called once per distinct inbound mapping <em>topic</em>, not once per mapping —
+ * {@code MappingSubscriptionManager} reference-counts mappings by topic and only invokes
+ * {@code subscribe()} for the first mapping on a given topic, exactly the dedup semantics it
+ * already applies for MQTT. One poll job is registered per distinct topic; mappings that share a
+ * topic share that one poll job (and, since the topic doubles as the request path below, its one
+ * underlying HTTP call) — they are not each polled independently. The topic doubles as the
+ * request path appended to the connector's base {@code url} (see {@link #topicPath}, the same
+ * convention the Default HTTP Connector already uses for inbound) — so one connector instance
+ * (one host, one set of credentials) can poll many distinct endpoints, one per distinct topic,
+ * rather than needing a new connector instance per URL.
  * <p>
  * Optional v2 features, both opt-in and off by default (plain "GET full response every interval"
  * otherwise): incremental fetch (a cursor carried between separate polls) and intra-poll
@@ -448,6 +450,18 @@ public class HttpPollingConnector extends AConnectorClient {
         String paginationMode = readPaginationMode();
         int maxPages = getMaxPagesPerPoll();
 
+        // Defensive, even though isConfigValid() already rejects this at save time (e.g. a
+        // connector saved before that validation existed): never loop on duplicate page
+        // requests because pageParam/nextPageExpression is missing — fall back to a single
+        // page rather than silently re-fetching (and re-dispatching) the same response up to
+        // maxPagesPerPoll times.
+        if (!isPaginationRuntimeConfigValid(paginationMode)) {
+            log.warn("{} - paginationMode [{}] misconfigured for topic [{}] (missing pageParam" +
+                    "/nextPageExpression) — falling back to a single-page poll this cycle",
+                    tenant, paginationMode, topic);
+            paginationMode = "None";
+        }
+
         try {
             String cursor = currentCursor(mapping);
             URI nextUri = null;
@@ -457,6 +471,19 @@ public class HttpPollingConnector extends AConnectorClient {
 
             while (hasMore) {
                 pageCount++;
+
+                // cancelPollTask() uses Future.cancel(false) (no interrupt), so a poll already
+                // blocked in .block() below keeps running past an unsubscribe/disconnect that
+                // happens while it's in flight. Re-check right before firing the request (skips
+                // wasted work mid-pagination) and again immediately before dispatch below (the
+                // gap that actually matters: unsubscribed between "request sent" and "response
+                // arrived" must not let a disabled/deleted mapping's late data through).
+                if (!subscribedTopics.contains(topic)) {
+                    log.debug("{} - Poll for topic [{}] abandoned mid-cycle: unsubscribed while in flight",
+                            tenant, topic);
+                    return;
+                }
+
                 Map<String, String> queryParams = buildQueryParams(cursor, paginationMode, nextPageParamValue);
                 ResponseEntity<String> response = executeGet(topic, queryParams, nextUri)
                         .timeout(REQUEST_TIMEOUT).block();
@@ -464,6 +491,12 @@ public class HttpPollingConnector extends AConnectorClient {
                 if (response == null || !response.getStatusCode().is2xxSuccessful()) {
                     throw new ConnectorException("Poll returned unsuccessful status: "
                             + (response != null ? response.getStatusCode() : "unknown"));
+                }
+
+                if (!subscribedTopics.contains(topic)) {
+                    log.debug("{} - Discarding late response for topic [{}]: unsubscribed while the " +
+                            "request was in flight", tenant, topic);
+                    return;
                 }
 
                 consecutiveFailures.set(0);
@@ -740,6 +773,27 @@ public class HttpPollingConnector extends AConnectorClient {
     private String readPaginationMode() {
         String mode = (String) connectorConfiguration.getProperties().get("paginationMode");
         return StringUtils.isNotEmpty(mode) ? mode : "None";
+    }
+
+    /**
+     * Runtime counterpart of the {@code paginationMode} checks in {@link #isConfigValid}: without
+     * a {@code pageParam} (and, for {@code NextFieldInBody}, a {@code nextPageExpression}), the
+     * connector cannot actually tell the server which page to fetch next, so every "page" request
+     * would be identical to the first — see {@link #executePoll}'s fallback to a single page.
+     */
+    private boolean isPaginationRuntimeConfigValid(String paginationMode) {
+        if ("None".equals(paginationMode) || "NextLinkHeader".equals(paginationMode)) {
+            return true;
+        }
+        String pageParam = (String) connectorConfiguration.getProperties().get("pageParam");
+        if (StringUtils.isEmpty(pageParam)) {
+            return false;
+        }
+        if ("NextFieldInBody".equals(paginationMode)) {
+            String nextPageExpression = (String) connectorConfiguration.getProperties().get("nextPageExpression");
+            return StringUtils.isNotEmpty(nextPageExpression);
+        }
+        return true;
     }
 
     private int getMaxPagesPerPoll() {

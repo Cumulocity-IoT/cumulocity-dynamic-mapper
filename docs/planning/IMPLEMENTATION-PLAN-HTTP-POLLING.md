@@ -153,12 +153,15 @@ connector, not a new subsystem.
 
 ## Resolved decisions
 
-- **One HTTP call per mapping, not per connector.** Reuse the existing `subscribe(topic, qos)` /
-  `unsubscribe` lifecycle: each mapping deployed to the connector schedules its own poll job
-  (keyed by mapping topic), the same way one MQTT connector already hosts many independent topic
-  subscriptions. No change to `AConnectorClient`'s contract. Known tradeoff, accepted: if multiple
-  mappings resolve to the same final URL+interval, calls are not deduplicated — revisit only if
-  that usage pattern shows up in practice.
+- **One HTTP call per distinct topic, not per connector — corrected 2026-09-21.** Reuse the
+  existing `subscribe(topic, qos)`/`unsubscribe` lifecycle: each distinct inbound *topic* gets
+  its own scheduled poll job (keyed by topic), the same way one MQTT connector already hosts many
+  independent topic subscriptions. No change to `AConnectorClient`'s contract. Mappings sharing a
+  topic share that one poll job — `MappingSubscriptionManager.subscribeToNewTopics()` only
+  invokes `subscribe()` for the first mapping on a given topic, so same-topic calls **are**
+  deduplicated by construction. (Originally documented here as the opposite — "not
+  deduplicated" — which was inaccurate; a Copilot PR review caught the discrepancy between that
+  claim and the actual `subscribe()`-once-per-topic behavior described two bullets above.)
 - **Interval floor: 30 seconds.** Enforce as a hard minimum for `pollIntervalSeconds`, validated in
   `isConfigValid(ConnectorConfiguration)`, to prevent tenants from hammering external APIs or
   overloading the service with many concurrent per-mapping poll jobs. `pollIntervalSeconds` remains

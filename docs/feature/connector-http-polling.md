@@ -51,11 +51,14 @@ custom microservice that polls and forwards into Cumulocity or the mapper.
   the mapping/flow level would only ever be meaningful for HTTP and dead weight for every
   other connector type — this is a deliberate architectural choice, not an oversight (see
   "Background" above).
-- **One HTTP call per mapping, not one shared call per connector.** Each mapping deployed
-  to the connector gets its own independently scheduled poll job, keyed by the mapping's
-  topic — the same way one MQTT connector already hosts many independent topic
-  subscriptions. **Known v1 tradeoff**: if multiple mappings happen to target the same URL
-  and interval, calls are not deduplicated.
+- **One HTTP call per distinct topic, not per mapping — CORRECTED 2026-09-21.** Each distinct
+  inbound mapping *topic* gets its own scheduled poll job. Mappings that share a topic share
+  that one poll job (and its one underlying HTTP call), exactly the same topic-level dedup
+  `MappingSubscriptionManager` already applies for MQTT — `subscribe()` is only invoked for the
+  first mapping on a given topic. (An earlier version of this doc claimed same-topic calls were
+  *not* deduplicated; that was wrong — verify against `MappingSubscriptionManager.subscribeToNewTopics()`
+  if this ever needs re-checking.) Since the topic is the request path with no transformation,
+  there's no way for two *different* topics to collide into the same URL either.
 - **`url` is a base URL; the mapping's topic is the path — RESOLVED 2026-09-21.** Each mapping
   deployed to the connector polls `url` + `/<mapping topic>` (e.g. `url=https://api.example.com/v1`,
   topic `devices/measurements` → `GET https://api.example.com/v1/devices/measurements`), the same
@@ -321,6 +324,14 @@ just adds a broker subscription, essentially free.
 
 ### Gotchas
 
+- **A cancelled in-flight poll could previously dispatch late data — FIXED 2026-09-21.**
+  `cancelPollTask()` uses `Future.cancel(false)` (no interrupt), so a poll already blocked in
+  `.block()` inside `executePoll()` keeps running past an `unsubscribe()`/`disconnect()` that
+  happens while it's in flight; `subscribedTopics` was previously only checked once at the very
+  top of `executePoll()`, not again once the response actually arrived. `executePoll()` now
+  re-checks `subscribedTopics.contains(topic)` both before firing each page's request (skips
+  wasted work mid-pagination) and immediately after the response arrives, before dispatch —
+  a disabled/deleted mapping can no longer have a straggling response processed after unsubscribe.
 - **`pollIntervalSeconds` is still connector-level**, not per-mapping — every mapping on one
   connector instance polls at the same interval, unlike `url`/path (per-mapping since the
   2026-09-21 fix — see "URL joining" above). Don't assume different mappings on one connector
