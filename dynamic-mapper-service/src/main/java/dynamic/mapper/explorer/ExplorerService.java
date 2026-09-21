@@ -488,14 +488,22 @@ public class ExplorerService {
                 }
             } else {
                 AConnectorClient client = connectorRegistry.getClientForTenant(tenant, session.getConnectorIdentifier());
-                client.removeExplorerListener(listener);
-                // Unsubscribe the broker topic only if no other still-active explorer session on
-                // the same connector needs the exact same topic. Without this check, stopping one
-                // explorer session (e.g. a different user/tab exploring the same topic) would
-                // unsubscribe the broker topic out from under every other concurrent session —
-                // client.unsubscribeExplorerTopic() itself only guards against active mappings.
-                if (!otherSessionStillNeedsTopic(tenant, session)) {
-                    client.unsubscribeExplorerTopic(session.getTopic());
+                // getClientForTenant() returns null (not a ConnectorRegistryException) once the
+                // connector has been deleted/deregistered — e.g. removed while this session was
+                // still open. Nothing left to unregister from in that case.
+                if (client == null) {
+                    log.debug("{} - Skipping explorer listener unregister: connector {} no longer registered",
+                            tenant, session.getConnectorIdentifier());
+                } else {
+                    client.removeExplorerListener(listener);
+                    // Unsubscribe the broker topic only if no other still-active explorer session on
+                    // the same connector needs the exact same topic. Without this check, stopping one
+                    // explorer session (e.g. a different user/tab exploring the same topic) would
+                    // unsubscribe the broker topic out from under every other concurrent session —
+                    // client.unsubscribeExplorerTopic() itself only guards against active mappings.
+                    if (!otherSessionStillNeedsTopic(tenant, session)) {
+                        client.unsubscribeExplorerTopic(session.getTopic());
+                    }
                 }
             }
         } catch (ConnectorRegistryException e) {
