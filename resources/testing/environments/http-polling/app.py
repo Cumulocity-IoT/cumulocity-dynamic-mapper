@@ -77,7 +77,7 @@ def _authorized() -> bool:
         return header == expected
     if AUTH_MODE == "bearer":
         return header == f"Bearer {AUTH_TOKEN}"
-    return True
+    return False
 
 
 # ---------------------------------------------------------------------------
