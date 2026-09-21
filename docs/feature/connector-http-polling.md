@@ -28,12 +28,19 @@ custom microservice that polls and forwards into Cumulocity or the mapper.
   topic — the same way one MQTT connector already hosts many independent topic
   subscriptions. **Known v1 tradeoff**: if multiple mappings happen to target the same URL
   and interval, calls are not deduplicated.
-- **`url` and `pollIntervalSeconds` are connector-level, not per-mapping**, despite the
-  "one call per mapping" model above — every mapping on one connector instance polls the
-  *same* URL. Getting different URLs/intervals requires separate connector instances, one
-  per target. This is a deliberate v1 simplification, not the originally-scoped per-mapping
-  design (`Mapping` has no generic per-connector-type properties bag to hold that without a
-  model change) — flagged as a possible follow-up.
+- **`url` is a base URL; the mapping's topic is the path — RESOLVED 2026-09-21.** Each mapping
+  deployed to the connector polls `url` + `/<mapping topic>` (e.g. `url=https://api.example.com/v1`,
+  topic `devices/measurements` → `GET https://api.example.com/v1/devices/measurements`), the same
+  convention the Default HTTP Connector already uses for inbound (topic = path segment). One
+  connector instance (one host, one set of credentials) can therefore serve many distinct
+  endpoints — a separate connector instance is only needed for a genuinely different host or
+  credential set, not merely a different path. This replaces the earlier v1 simplification where
+  `url` had to be the exact target and every mapping on a connector necessarily hit the same
+  endpoint. No `Mapping` schema change was needed — the topic field already existed.
+- **`pollIntervalSeconds` is still connector-level**, unlike `url` above — every mapping on one
+  connector instance shares the same poll interval. Getting a different interval still requires a
+  separate connector instance. Not addressed by the `url`-per-mapping fix; flagged as a possible
+  follow-up if it turns out to matter in practice.
 - **A hard floor of 30 seconds on `pollIntervalSeconds`.** Enforced in `isConfigValid()`,
   to protect both the polled endpoint and this service from too many concurrent poll jobs.
 - **Delivery is at-least-once, GET only.** By default every poll fetches the full response fresh
@@ -96,6 +103,33 @@ a null message on an explorer session, or was swallowed entirely for a real mapp
 Fixed 2026-09-21 by splitting the two concerns: `subscribedTopics` (a plain key set) tracks
 membership, `pollTasks` only ever holds a real `ScheduledFuture` once one exists.
 
+### URL joining: `url` is a base, the topic is the path — RESOLVED 2026-09-21
+
+Originally `url` had to be the exact poll target, so every mapping on one connector instance
+necessarily hit the same endpoint (one connector instance per distinct URL). `topicPath(topic)`
+now normalizes the mapping topic into a leading-`/` path segment, and `executeGet()` appends it
+via `WebClient`'s `UriBuilder.path(...)` before adding any query params — the same "topic = path"
+convention the Default HTTP Connector already uses for inbound
+(`.../httpConnector/<MAPPING_TOPIC>`), and the mirror image of WebHook's outbound
+`buildFullPath()` (base URL + publish topic).
+
+`buildWebClient()` strips a single trailing slash from the configured `url` before it becomes the
+`WebClient`'s base URL, so joining with `topicPath()`'s always-leading-`/` result never produces
+a double slash regardless of whether the operator wrote `url` with or without a trailing `/`.
+
+Unlike WebHook's equivalent (`buildFullPath()`, a manual `baseUrl.split("\\?")` string patch
+flagged as fragile in `docs/feature/connector-webhook.md`), this join goes entirely through
+`UriBuilder` — path and query composition, and encoding, are handled by Spring's
+`UriComponentsBuilder` rather than hand-rolled string logic, so an existing query string already
+present in `url` (e.g. `url=https://api.example.com/v1?apiVersion=1`) is preserved correctly
+alongside the cursor/page query params added on top (see "Incremental fetch (v2)" /
+"Pagination (v2)" below) — the exact class of bug WebHook's approach is documented as fragile
+against doesn't apply here.
+
+`NextLinkHeader` pagination mode is the one exception: once a page hands back an absolute
+next-page URI, `executeGet()` hits it directly and neither `topicPath()` nor the query-building
+in `buildQueryParams()` apply for that request — the server-provided URL is authoritative.
+
 ### Poll execution and dispatch
 
 `executePoll()` runs a loop, not a single request — one iteration per page (a single iteration
@@ -113,7 +147,7 @@ Built via `ConnectorSpecificationBuilder.create("REST Polling", ConnectorType.RE
 
 | Property | Type | Required | Default | Notes |
 |---|---|---|---|---|
-| `url` | string | yes | — | The exact GET target — no path is appended from the mapping topic |
+| `url` | string | yes | — | Base URL; each mapping's topic is appended as the request path — see below |
 | `pollIntervalSeconds` | numeric | no | `60` | Hard minimum `30`, enforced in `isConfigValid()` and defensively re-clamped at runtime in `getEffectivePollIntervalSeconds()` |
 | `authentication` | option | no | — | `None` / `Basic` / `Bearer` |
 | `user` / `password` | string / sensitive | no | — | shown when `authentication=Basic` |
@@ -257,9 +291,15 @@ just adds a broker subscription, essentially free.
 
 ### Gotchas
 
-- **`url`/`pollIntervalSeconds` are connector-level**, not per-mapping, despite each
-  mapping getting its own scheduled poll job — see "Requirements" above. Don't assume
-  different mappings on one connector instance can poll different endpoints.
+- **`pollIntervalSeconds` is still connector-level**, not per-mapping — every mapping on one
+  connector instance polls at the same interval, unlike `url`/path (per-mapping since the
+  2026-09-21 fix — see "URL joining" above). Don't assume different mappings on one connector
+  instance can poll at different intervals.
+- **A mapping's topic must be a valid URL path segment** now that it's appended to `url` — a
+  topic chosen purely as an internal label (not meant to resemble a real path) will 404 against
+  the actual API unless it happens to match one. This is a behavior change from before the
+  2026-09-21 URL-joining fix, when the topic was purely an internal key with no bearing on the
+  request URL.
 - **Pagination stop conditions are trust-the-response, not verify-the-response** — `PageNumber`
   mode's `isEmptyPage()` treats an unparsable body as *non-empty* (keeps paginating rather than
   guessing), which means a misconfigured `paginationMode=PageNumber` against a non-paginated,

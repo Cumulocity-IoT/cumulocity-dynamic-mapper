@@ -82,7 +82,11 @@ import java.util.regex.Pattern;
  * is called once per distinct inbound mapping topic (the same dedup semantics
  * {@code MappingSubscriptionManager} already applies for MQTT) and registers a scheduled poll job
  * for that topic. This yields one HTTP call per mapping topic, not one shared call per connector
- * — a deliberate v1 tradeoff: mappings that happen to share the same topic/URL are not deduplicated.
+ * — a deliberate tradeoff: mappings that happen to resolve to the same final URL are not
+ * deduplicated. The topic doubles as the request path appended to the connector's base
+ * {@code url} (see {@link #topicPath}, the same convention the Default HTTP Connector already
+ * uses for inbound) — so one connector instance (one host, one set of credentials) can poll many
+ * distinct endpoints, one per mapping, rather than needing a new connector instance per URL.
  * <p>
  * Optional v2 features, both opt-in and off by default (plain "GET full response every interval"
  * otherwise): incremental fetch (a cursor carried between separate polls) and intra-poll
@@ -437,7 +441,7 @@ public class HttpPollingConnector extends AConnectorClient {
             while (hasMore) {
                 pageCount++;
                 Map<String, String> queryParams = buildQueryParams(cursor, paginationMode, nextPageParamValue);
-                ResponseEntity<String> response = executeGet(queryParams, nextUri)
+                ResponseEntity<String> response = executeGet(topic, queryParams, nextUri)
                         .timeout(REQUEST_TIMEOUT).block();
 
                 if (response == null || !response.getStatusCode().is2xxSuccessful()) {
@@ -569,8 +573,12 @@ public class HttpPollingConnector extends AConnectorClient {
         @SuppressWarnings("unchecked")
         Map<String, String> headers = (Map<String, String>) connectorConfiguration.getProperties().get("headers");
 
+        // Strip a trailing slash so appending a mapping's topic as a path (see executeGet /
+        // topicPath) always joins with exactly one separator, never "//".
+        String normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+
         WebClient.Builder builder = WebClient.builder()
-                .baseUrl(baseUrl)
+                .baseUrl(normalizedBaseUrl)
                 .defaultHeader("Accept", "application/json");
 
         if ("Basic".equalsIgnoreCase(authentication) && !StringUtils.isEmpty(user) && !StringUtils.isEmpty(password)) {
@@ -593,21 +601,25 @@ public class HttpPollingConnector extends AConnectorClient {
     }
 
     /**
-     * @param queryParams query parameters to append to {@link #baseUrl} (cursor and/or page
-     *                    param, whichever apply — see {@link #buildQueryParams}). Ignored when
-     *                    {@code absoluteUri} is given.
+     * @param topic       the mapping topic this poll is for — appended to {@link #baseUrl} as the
+     *                    request path (see {@link #topicPath}), the same convention the Default
+     *                    HTTP Connector already uses for inbound (topic = path segment). Lets one
+     *                    connector instance (one base URL, one set of credentials) serve many
+     *                    distinct endpoints, one per mapping, instead of needing a new connector
+     *                    instance per URL. Ignored when {@code absoluteUri} is given.
+     * @param queryParams query parameters to append (cursor and/or page param, whichever apply —
+     *                    see {@link #buildQueryParams}). Ignored when {@code absoluteUri} is given.
      * @param absoluteUri when non-null (a {@code NextLinkHeader} pagination continuation), hit
-     *                    this URI directly instead of {@link #baseUrl} + {@code queryParams} —
-     *                    the server already handed back the complete next-page URL.
+     *                    this URI directly instead of {@link #baseUrl} + path + {@code queryParams}
+     *                    — the server already handed back the complete next-page URL.
      */
-    private Mono<ResponseEntity<String>> executeGet(Map<String, String> queryParams, URI absoluteUri) {
+    private Mono<ResponseEntity<String>> executeGet(String topic, Map<String, String> queryParams, URI absoluteUri) {
         WebClient.RequestHeadersSpec<?> request;
         if (absoluteUri != null) {
             request = pollingClient.get().uri(absoluteUri);
-        } else if (queryParams.isEmpty()) {
-            request = pollingClient.get();
         } else {
             request = pollingClient.get().uri(uriBuilder -> {
+                uriBuilder.path(topicPath(topic));
                 queryParams.forEach(uriBuilder::queryParam);
                 return uriBuilder.build();
             });
@@ -624,6 +636,16 @@ public class HttpPollingConnector extends AConnectorClient {
                     return Mono.error(new ConnectorException(error));
                 })
                 .toEntity(String.class);
+    }
+
+    /**
+     * Normalizes a mapping topic into a URI path segment: exactly one leading {@code /}, no
+     * duplicate slashes when joined onto {@link #baseUrl} (already trailing-slash-stripped in
+     * {@link #buildWebClient()}). {@code "devices/measurements"} and {@code "/devices/measurements"}
+     * both become {@code "/devices/measurements"}.
+     */
+    private String topicPath(String topic) {
+        return topic.startsWith("/") ? topic : "/" + topic;
     }
 
     // -------------------------------------------------------------------------
@@ -825,7 +847,10 @@ public class HttpPollingConnector extends AConnectorClient {
 
                 .property("url", ConnectorPropertyBuilder.requiredString()
                         .order(0)
-                        .description("The REST endpoint to poll with GET."))
+                        .description("Base REST endpoint. Each mapping's topic is appended as the request " +
+                                "path — e.g. url=https://api.example.com/v1, mapping topic=devices/measurements " +
+                                "-> GET https://api.example.com/v1/devices/measurements. Lets one connector " +
+                                "instance (one host, one set of credentials) serve many mappings/endpoints."))
 
                 .property("pollIntervalSeconds", ConnectorPropertyBuilder.create(ConnectorPropertyType.NUMERIC_PROPERTY)
                         .order(1)

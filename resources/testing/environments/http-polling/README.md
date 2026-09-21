@@ -23,10 +23,10 @@ Unlike the Kafka/AMQP/Pulsar test environments, this target does not need to
 be reachable *by Cumulocity Cloud* — only by the dynamic-mapper-service
 process itself, whether it runs locally or is deployed. Deploying the mock as
 its own Cumulocity microservice (the same pattern as `../microservice/`)
-means it is reachable at a stable path —
-`${C8Y_BASEURL}/service/http-polling-mock/measurements` — from the mapper
-**regardless of where the mapper runs**, with no RequestBin-style public URL
-or "create disabled, run locally" workaround needed (unlike `../webhook/` and
+means it is reachable at a stable base path —
+`${C8Y_BASEURL}/service/http-polling-mock` — from the mapper **regardless of
+where the mapper runs**, with no RequestBin-style public URL or "create
+disabled, run locally" workaround needed (unlike `../webhook/` and
 `../kafka/`).
 
 ## 1. Running locally (quick smoke test, no deploy)
@@ -65,9 +65,10 @@ curl -s -H 'Authorization: Bearer test-token' http://localhost:80/measurements |
 ```
 
 To exercise the `REST_POLLING` connector itself against this local instance,
-point its `url` at wherever the local process is reachable from the
-dynamic-mapper-service (e.g. `http://localhost:80/measurements` if the
-service also runs locally on the same host) — the same "run locally, create
+point its `url` (a base URL — see step 3) at wherever the local process is
+reachable from the dynamic-mapper-service (e.g. `http://localhost:80` if the
+service also runs locally on the same host, with a mapping topic of
+`measurements` to reach `/measurements`) — the same "run locally, create
 the connector disabled, then enable" pattern the Kafka test environment
 uses, since Cumulocity Cloud cannot reach a bare `localhost` port. See
 `../kafka/README.md` for that workflow in full.
@@ -127,13 +128,18 @@ curl -s -X POST "${C8Y_BASEURL}/service/dynamic-mapper-service/configuration/con
     \"description\": \"http-polling-mock test target\",
     \"enabled\": true,
     \"properties\": {
-      \"url\": \"${C8Y_BASEURL}/service/http-polling-mock/measurements\",
+      \"url\": \"${C8Y_BASEURL}/service/http-polling-mock\",
       \"pollIntervalSeconds\": 30,
       \"authentication\": \"None\",
       \"headers\": {}
     }
   }"
 ```
+
+`url` is a **base URL** — the mapping's topic gets appended as the request path (step 4), so it
+deliberately does *not* end in `/measurements` here. One connector instance can serve several
+mappings against different paths under this same base, e.g. a topic of `measurements` resolves to
+`GET ${C8Y_BASEURL}/service/http-polling-mock/measurements`.
 
 Or with go-c8y-cli:
 
@@ -145,7 +151,7 @@ c8y api --method POST --url /service/dynamic-mapper-service/configuration/connec
     \"connectorType\": \"REST_POLLING\",
     \"name\": \"Test REST Polling Connector\",
     \"enabled\": true,
-    \"properties\": { \"url\": \"${C8Y_BASEURL}/service/http-polling-mock/measurements\", \"pollIntervalSeconds\": 30 }
+    \"properties\": { \"url\": \"${C8Y_BASEURL}/service/http-polling-mock\", \"pollIntervalSeconds\": 30 }
   }"
 ```
 
@@ -170,7 +176,7 @@ reaching the mock's own check.
 
 | Property | Required | Notes |
 |----------|----------|-------|
-| `url` | yes | Full GET target — no path is appended, this is the exact request URL |
+| `url` | yes | Base URL — each deployed mapping's topic is appended as the request path |
 | `pollIntervalSeconds` | no | Default `60`; **hard minimum `30`** — `isConfigValid` rejects anything lower |
 | `authentication` | no | `None` (default), `Basic`, or `Bearer` |
 | `user` / `password` | only if `authentication: "Basic"` | |
@@ -197,12 +203,13 @@ curl -s "${C8Y_BASEURL}/service/dynamic-mapper-service/monitoring/status/connect
 ## 4. Create an inbound mapping
 
 In the UI: **Mapping → Inbound → Add mapping**, select connector
-`test-rest-polling-connector`. The mapping's **topic** is just the
-subscription key for this connector's per-mapping poll job (there is no
-broker topic) — any distinct string works, e.g. `poll-source`. Map the
-response fields (`deviceId`, `timestamp`, `temperature`) to a measurement,
-using the sample payload below as the source for the mapping editor's test
-step.
+`test-rest-polling-connector`, and set the mapping's **topic** to
+`measurements`. Unlike a broker topic, this is appended directly to the
+connector's `url` as the request path — so this mapping polls
+`${C8Y_BASEURL}/service/http-polling-mock/measurements`, matching the mock's
+route. Map the response fields (`deviceId`, `timestamp`, `temperature`) to a
+measurement, using the sample payload below as the source for the mapping
+editor's test step.
 
 Sample response body (what `/measurements` returns):
 ```json
