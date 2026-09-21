@@ -1109,23 +1109,27 @@ public abstract class AConnectorClient {
     /**
      * Checks whether this connector is capable of handling the mapping's topic.
      * <p>
-     * If the mapping's topic contains MQTT-style wildcards ({@code #} / {@code +}), the
-     * connector must declare support for wildcards in that direction —
-     * {@code supportsWildcardInTopicInbound} for the inbound {@code mappingTopic},
-     * {@code supportsWildcardInTopicOutbound} for the outbound {@code publishTopic} (a
-     * placeholder template validated structurally against a sample, see
-     * {@code MappingValidator#validatePublishTopicAndSampleConsistency}/{@code isWildcardTopic} —
-     * not a literal broker-side publish, the placeholders are resolved to concrete values before
-     * anything is actually sent).
+     * Currently this means: if the mapping's inbound topic contains MQTT wildcards
+     * ({@code #} / {@code +}), the connector must support wildcard subscriptions. Outbound
+     * mappings are always compatible: a {@code publishTopic}'s {@code +}/{@code #} characters are
+     * mapping-level placeholders resolved to concrete values before anything is actually
+     * published (see {@code MappingValidator#isWildcardTopic}/
+     * {@code validatePublishTopicAndSampleConsistency}) — no literal wildcard ever reaches the
+     * broker, so a connector's {@code supportsWildcardInTopicOutbound} (a broker *subscription*
+     * capability) has nothing to gate here. An earlier version of this method applied the
+     * outbound capability check to the unresolved {@code publishTopic} template directly, which
+     * wrongly rejected valid outbound mappings on connectors whose `supportsWildcardInTopicOutbound`
+     * defaults to {@code false} (e.g. AMQP, Kafka) even though those connectors only ever publish
+     * the already-resolved topic. Caught in review — reverted 2026-09-21.
      * <p>
      * This is a <em>capability</em> check only. Whether the mapping is actually assigned to
      * this connector is a separate concern handled by {@link #isDeployedInConnector(Mapping)}.
      */
     private boolean isMappingCompatibleWithConnector(Mapping mapping) {
-        String topic = mapping.getDirection().equals(Direction.INBOUND)
-                ? mapping.getMappingTopic()
-                : mapping.getPublishTopic();
-        boolean containsWildcards = topic != null && topic.matches(".*[#+].*");
+        // Wildcards are only relevant for inbound subscriptions; ignore for outbound.
+        boolean containsWildcards = mapping.getDirection().equals(Direction.INBOUND)
+                && mapping.getMappingTopic() != null
+                && mapping.getMappingTopic().matches(".*[#+].*");
         boolean compatible = supportsWildcardInTopic(mapping.getDirection()) || !containsWildcards;
 
         if (!compatible) {
