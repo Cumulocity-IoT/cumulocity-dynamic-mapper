@@ -684,7 +684,7 @@ public class HttpPollingConnector extends AConnectorClient {
      * which case incremental fetch is simply skipped for that poll.
      */
     private Mapping resolveMapping(String topic) {
-        return mappingService.getCacheMappingInbound(tenant).values().stream()
+        return mappingSubscriptionManager.getEffectiveMappingsInbound().values().stream()
                 .filter(m -> topic.equals(m.getMappingTopic()))
                 .findFirst()
                 .orElse(null);
