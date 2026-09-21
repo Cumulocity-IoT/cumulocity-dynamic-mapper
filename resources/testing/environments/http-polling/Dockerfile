@@ -17,5 +17,5 @@ ENV SERVER_PORT=80
 
 EXPOSE 80
 
-# Use gunicorn for production; 2 workers is plenty for a test microservice
-CMD ["gunicorn", "--bind", "0.0.0.0:80", "--workers", "2", "--timeout", "60", "app:app"]
+# Use a single worker so the in-memory request log remains complete and clearable
+CMD ["gunicorn", "--bind", "0.0.0.0:80", "--workers", "1", "--timeout", "60", "app:app"]

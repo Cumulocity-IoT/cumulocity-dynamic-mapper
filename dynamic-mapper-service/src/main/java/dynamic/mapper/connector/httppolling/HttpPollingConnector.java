@@ -326,6 +326,22 @@ public class HttpPollingConnector extends AConnectorClient {
             }
         }
 
+        String paginationMode = (String) configuration.getProperties().get("paginationMode");
+        String pageParam = (String) configuration.getProperties().get("pageParam");
+        String nextPageExpression = (String) configuration.getProperties().get("nextPageExpression");
+        if ("NextFieldInBody".equals(paginationMode)) {
+            if (StringUtils.isEmpty(pageParam) || StringUtils.isEmpty(nextPageExpression)) {
+                log.warn("{} - paginationMode NextFieldInBody requires both pageParam and " +
+                        "nextPageExpression to be set", tenant);
+                return false;
+            }
+        } else if ("PageNumber".equals(paginationMode)) {
+            if (StringUtils.isEmpty(pageParam)) {
+                log.warn("{} - paginationMode PageNumber requires pageParam to be set", tenant);
+                return false;
+            }
+        }
+
         return true;
     }
 
