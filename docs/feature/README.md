@@ -48,7 +48,7 @@ decided against rather than forgotten.
 | Page | Covers |
 |---|---|
 | [connector-framework.md](connector-framework.md) | The shared abstraction every connector extends |
-| [connector-mqtt.md](connector-mqtt.md) · [connector-mqtt-service.md](connector-mqtt-service.md) · [connector-kafka.md](connector-kafka.md) · [connector-pulsar.md](connector-pulsar.md) · [connector-amqp.md](connector-amqp.md) · [connector-http.md](connector-http.md) · [connector-webhook.md](connector-webhook.md) · [connector-google-pubsub.md](connector-google-pubsub.md) | Per-connector specifics |
+| [connector-mqtt.md](connector-mqtt.md) · [connector-mqtt-service.md](connector-mqtt-service.md) · [connector-kafka.md](connector-kafka.md) · [connector-pulsar.md](connector-pulsar.md) · [connector-amqp.md](connector-amqp.md) · [connector-http.md](connector-http.md) · [connector-http-polling.md](connector-http-polling.md) · [connector-webhook.md](connector-webhook.md) · [connector-google-pubsub.md](connector-google-pubsub.md) | Per-connector specifics |
 
 ### Tooling
 

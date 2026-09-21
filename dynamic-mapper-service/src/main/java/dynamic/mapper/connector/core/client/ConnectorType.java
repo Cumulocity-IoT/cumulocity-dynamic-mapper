@@ -33,5 +33,6 @@ public enum ConnectorType {
     AMQP_091,
     AMQP_10,
     GOOGLE_PUBSUB,
+    REST_POLLING,
     TEST,
 }

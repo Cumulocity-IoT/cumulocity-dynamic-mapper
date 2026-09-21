@@ -7,8 +7,9 @@ title: Managing connectors
 The first step when working with the Dynamic Mapper is to create a connector. Select based on your message broker
 or integration requirements.
 For IoT devices, MQTT connectors are most common. For enterprise integrations, consider Kafka or HTTP connectors.
-Webhooks are ideal for outbound integrations to external systems, while the Cumulocity API connector is for
-internal Cumulocity REST API operations.
+Webhooks are ideal for outbound integrations to external systems, REST Polling is for inbound integrations
+with systems that only expose a REST API and cannot push data themselves, and the Cumulocity API connector is
+for internal Cumulocity REST API operations.
 The mapper supports the following connectors and payload formats:
 
 | Connector | Inbound | Outbound | JavaScript | Supported Payload Formats |
@@ -22,6 +23,7 @@ The mapper supports the following connectors and payload formats:
 | **HTTP Connector** (one instance per tenant) | ✓ | – | ✓ | JSON, Hex, Protobuf, Extension |
 | **Kafka** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension |
 | **MQTT** | ✓ | ✓ | ✓ | JSON, Hex, Protobuf, Extension, **SparkPlug B** |
+| **REST Polling** (for external REST APIs with no push capability) | ✓ | – | ✓ | JSON |
 | **Webhook** (for external REST APIs) | – | ✓ | ✓ | JSON |
 
 :::caution

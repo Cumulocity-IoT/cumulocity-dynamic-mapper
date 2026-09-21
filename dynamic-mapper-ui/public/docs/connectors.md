@@ -41,6 +41,34 @@ a **SMART_FUNCTION** to decode the payload and transform it into a `MEASUREMENT`
 
 ![Webhook connector settings](../../../resources/image/Dynamic_Mapper_Connector_WebHook.png "Webhook connector configuration properties.")
 
+### REST Polling connector
+
+The **REST Polling** connector is for sources that only expose a REST API and cannot push data
+themselves: instead of subscribing to a broker topic, it periodically sends a GET request to a
+configured URL and feeds each response into the inbound mapping pipeline.
+
+| Property | Notes |
+|---|---|
+| **URL** | The exact endpoint to poll — required |
+| **Poll interval (seconds)** | Default 60; minimum **30 seconds**, enforced when saving the connector |
+| **Authentication** | `None`, `Basic`, or `Bearer` |
+| **Headers** | Additional static headers sent with every poll request |
+
+All mappings deployed to one REST Polling connector instance poll the **same URL and interval** —
+each gets its own independently scheduled poll job, but to poll different endpoints, create one
+connector instance per endpoint.
+
+:::info No pagination yet
+Every poll fetches the full response fresh; there is no support yet for cursor-based or
+incremental fetching (e.g. only new data since the last poll). Keep response payloads reasonably
+small.
+:::
+
+Message Explorer works on this connector too, but with a cost that doesn't apply to broker-based
+connectors: exploring a topic with no mapping deployed on it yet starts real periodic requests
+against the endpoint for as long as the session is open — see the note in
+[Message Explorer](/c8y-pkg-dynamic-mapper/introduction/message-explorer).
+
 ### Kafka connector security {#kafka-connector-security}
 
 ![Kafka connector settings](../../../resources/image/Dynamic_Mapper_Connector_Kafka.png "Kafka connector configuration properties.")
