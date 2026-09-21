@@ -98,9 +98,12 @@ def health():
 def measurements():
     _request_log.append({
         "receivedAt": _now(),
-        "headers": dict(request.headers),
+        "headers": {
+            key: "<redacted>" if key.lower() == "authorization" else value
+            for key, value in request.headers.items()
+        },
         "authorized": _authorized(),
-    })
+    }
 
     if not _authorized():
         logger.warning("GET /measurements – rejected, bad/missing %s credentials", AUTH_MODE)
