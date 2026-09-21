@@ -1109,17 +1109,23 @@ public abstract class AConnectorClient {
     /**
      * Checks whether this connector is capable of handling the mapping's topic.
      * <p>
-     * Currently this means: if the mapping's inbound topic contains MQTT wildcards
-     * ({@code #} / {@code +}), the connector must support wildcard subscriptions. Outbound
-     * mappings are always compatible (no broker subscription is performed).
+     * If the mapping's topic contains MQTT-style wildcards ({@code #} / {@code +}), the
+     * connector must declare support for wildcards in that direction —
+     * {@code supportsWildcardInTopicInbound} for the inbound {@code mappingTopic},
+     * {@code supportsWildcardInTopicOutbound} for the outbound {@code publishTopic} (a
+     * placeholder template validated structurally against a sample, see
+     * {@code MappingValidator#validatePublishTopicAndSampleConsistency}/{@code isWildcardTopic} —
+     * not a literal broker-side publish, the placeholders are resolved to concrete values before
+     * anything is actually sent).
      * <p>
      * This is a <em>capability</em> check only. Whether the mapping is actually assigned to
      * this connector is a separate concern handled by {@link #isDeployedInConnector(Mapping)}.
      */
     private boolean isMappingCompatibleWithConnector(Mapping mapping) {
-        // Wildcards are only relevant for inbound subscriptions; ignore for outbound.
-        boolean containsWildcards = mapping.getDirection().equals(Direction.INBOUND)
-                && mapping.getMappingTopic().matches(".*[#+].*");
+        String topic = mapping.getDirection().equals(Direction.INBOUND)
+                ? mapping.getMappingTopic()
+                : mapping.getPublishTopic();
+        boolean containsWildcards = topic != null && topic.matches(".*[#+].*");
         boolean compatible = supportsWildcardInTopic(mapping.getDirection()) || !containsWildcards;
 
         if (!compatible) {

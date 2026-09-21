@@ -872,7 +872,7 @@ public class WebHook extends AConnectorClient {
                         .order(3)
                         .condition("authentication", "Basic"))
 
-                .property("token", ConnectorPropertyBuilder.optionalString()
+                .property("token", ConnectorPropertyBuilder.optionalSensitive()
                         .order(4)
                         .condition("authentication", "Bearer"))
 

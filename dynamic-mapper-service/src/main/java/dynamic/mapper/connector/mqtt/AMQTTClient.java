@@ -433,7 +433,9 @@ public abstract class AMQTTClient extends AConnectorClient {
 
     @Override
     public Boolean supportsWildcardInTopic(Direction direction) {
-        return readWildcardFlag(direction, true, false);
+        // Fallback defaults must match the spec's declared .defaultValue(true) for both
+        // directions (below) — used only if a legacy stored config predates this property.
+        return readWildcardFlag(direction, true, true);
     }
 
     @Override
