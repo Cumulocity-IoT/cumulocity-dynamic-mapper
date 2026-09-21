@@ -6,8 +6,36 @@ counterpart to the push-driven [HTTP connector](connector-http.md) and the inbou
 counterpart to the outbound-only [WebHook connector](connector-webhook.md). Implemented by
 [`HttpPollingConnector`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/httppolling/HttpPollingConnector.java),
 using Spring's reactive `WebClient` (blocked synchronously per poll), and extends
-`AConnectorClient` — see [connector-framework.md](connector-framework.md). Original request
-and design discussion: `attic/feature/http-polling/REQUIREMENT.MD` and `PLANNING.md`.
+`AConnectorClient` — see [connector-framework.md](connector-framework.md). Design journal (full
+evaluation, alternatives considered, verified-against-code research at each decision point):
+[planning/IMPLEMENTATION-PLAN-HTTP-POLLING.md](../planning/IMPLEMENTATION-PLAN-HTTP-POLLING.md).
+
+---
+
+## Background
+
+Requested by a user on the community forum:
+
+> I'm currently trying to use the Dynamic Mapper to periodically poll data from an external REST
+> API and map it as e.g. measurements into Cumulocity: trigger (e.g. 5min) → REST GET (external
+> API) → mapping result → create MEA in Cumulocity. For Outbound, there is the Webhook Connector,
+> which allows sending data to an external REST API. For Inbound however, I don't see any
+> connector that can actively poll an external REST API. [...] A native REST polling feature
+> directly in the Dynamic Mapper would be much more elegant and helpful, as it would allow
+> leveraging the mapping functionalities of Dynamic Mapper, without having to develop and
+> maintain an additional Microservice.
+
+An internal reviewer note settled the one architectural question worth settling explicitly —
+whether this belongs in the connector layer or as a generic flow/mapping trigger (paraphrased
+from German):
+
+> I'd still see this as a connector's job, not the flow's. Or would you add an `onInterval` [flow
+> handler]? That method would only ever be relevant for HTTP — for MQTT it's meaningless. That's
+> why I'd say it belongs in the connector.
+
+That framing holds throughout: every requirement below follows from treating polling as
+transport-specific connector behavior (like MQTT's broker subscription or Kafka's consumer group),
+not a cross-cutting mapping feature.
 
 ---
 
@@ -22,7 +50,7 @@ custom microservice that polls and forwards into Cumulocity or the mapper.
 - **Polling belongs to the connector, not the flow.** A generic "on interval" trigger at
   the mapping/flow level would only ever be meaningful for HTTP and dead weight for every
   other connector type — this is a deliberate architectural choice, not an oversight (see
-  `PLANNING.md`'s evaluation section).
+  "Background" above).
 - **One HTTP call per mapping, not one shared call per connector.** Each mapping deployed
   to the connector gets its own independently scheduled poll job, keyed by the mapping's
   topic — the same way one MQTT connector already hosts many independent topic
@@ -166,8 +194,9 @@ Built via `ConnectorSpecificationBuilder.create("REST Polling", ConnectorType.RE
 
 Opt-in per connector via `cursorParam`/`cursorExtractionExpression`; both empty (the default)
 keeps v1 behavior exactly (plain full-response poll, nothing sent or stored). See
-`attic/feature/http-polling/PLANNING.md`'s v2 section for the original design discussion — both
-part A (cross-poll cursor) and part B (intra-poll pagination, below) are now implemented.
+[planning/IMPLEMENTATION-PLAN-HTTP-POLLING.md](../planning/IMPLEMENTATION-PLAN-HTTP-POLLING.md)'s
+v2 section for the original design discussion — both part A (cross-poll cursor) and part B
+(intra-poll pagination, below) are now implemented.
 
 - **Request**: if a cursor is available for the topic, `buildQueryParams()` adds it as a query
   parameter, applied via `WebClient`'s `UriBuilder.queryParam(cursorParam, cursor)` in
@@ -185,7 +214,7 @@ part A (cross-poll cursor) and part B (intra-poll pagination, below) are now imp
   resolved from the poll's topic via `mappingService.getCacheMappingInbound(tenant)` (matched on
   `mappingTopic`). This reuses `MappingStatus`'s existing inventory-persisted,
   survives-a-restart, periodically-flushed machinery wholesale — no new persistence
-  infrastructure, the crux flagged as open in `PLANNING.md`'s original v2 sketch. If several
+  infrastructure, the crux flagged as open in the planning doc's original v2 sketch. If several
   mappings share one topic, they already share this connector's one poll job for it (see
   "Subscribe" above), so they share its cursor too — resolved by taking the first matching
   mapping, deliberately not an error.
@@ -269,8 +298,8 @@ connector reports not-connected but `pollTasks` is non-empty, it force-cancels e
 runs `disconnect()`) and then fully shuts down `pollScheduler` via `shutdownNow()` — this
 is reached from tenant cleanup via `BootstrapService.cleanTenantResources()` →
 `ConnectorRegistry.unregisterAllClientsForTenant()` → `AConnectorClient.stopHousekeepingAndClose()`
-→ `close()`, confirmed during implementation (this chain was an open question in
-`PLANNING.md` before the connector was built).
+→ `close()`, confirmed during implementation (this chain was an open question in the planning
+doc before the connector was built).
 
 ### Message Explorer
 

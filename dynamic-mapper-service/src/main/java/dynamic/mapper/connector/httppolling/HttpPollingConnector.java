@@ -91,7 +91,8 @@ import java.util.regex.Pattern;
  * Optional v2 features, both opt-in and off by default (plain "GET full response every interval"
  * otherwise): incremental fetch (a cursor carried between separate polls) and intra-poll
  * pagination (draining multiple pages within one poll cycle) — see
- * {@code attic/feature/http-polling/PLANNING.md} and {@code docs/feature/connector-http-polling.md}.
+ * {@code docs/feature/connector-http-polling.md} and
+ * {@code docs/planning/IMPLEMENTATION-PLAN-HTTP-POLLING.md}.
  */
 @Slf4j
 public class HttpPollingConnector extends AConnectorClient {
