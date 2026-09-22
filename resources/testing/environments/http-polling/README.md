@@ -363,6 +363,60 @@ c8y api --method GET --url /service/http-polling-mock/requests
 c8y api --method GET --url /service/http-polling-mock/requests | jq '[.[] | select(.path == "/events")]'
 ```
 
+### 6.4 Sample output: consecutive polls
+
+What healthy, stable polling looks like on `/requests` — captured from a real run, timestamps
+adjusted to the connectors' actual 30s `pollIntervalSeconds` cadence for readability. `query` is
+recorded separately from `path` (Flask's `request.path` excludes the query string), which is what
+makes the cursor's `since=` value visible here rather than only in the mock's own stdout log.
+
+**`demo-rest-polling-connector`** (two independent poll jobs, `measurements` + `status`, both on
+one connector instance — this is the "different topics, same connector" demo):
+
+```json
+[
+  {"path": "/measurements", "query": "", "receivedAt": "2026-09-22T11:00:00.123Z", "authorized": true},
+  {"path": "/status",       "query": "", "receivedAt": "2026-09-22T11:00:00.145Z", "authorized": true},
+  {"path": "/measurements", "query": "", "receivedAt": "2026-09-22T11:00:30.130Z", "authorized": true},
+  {"path": "/status",       "query": "", "receivedAt": "2026-09-22T11:00:30.151Z", "authorized": true},
+  {"path": "/measurements", "query": "", "receivedAt": "2026-09-22T11:01:00.128Z", "authorized": true},
+  {"path": "/status",       "query": "", "receivedAt": "2026-09-22T11:01:00.149Z", "authorized": true}
+]
+```
+
+Both topics fire every ~30s, a few milliseconds apart (they're two independent poll jobs on the
+same connector, not one request doing double duty) — that small, *consistent* offset between them
+on every cycle is expected. `headers` is omitted above for brevity; it carries whatever the
+connector's `authentication`/`headers` properties send, redacting `Authorization`.
+
+**`demo-rest-polling-connector-cursor`** (`events`, cursor advancing each poll):
+
+```json
+[
+  {"path": "/events", "query": "",         "receivedAt": "2026-09-22T11:00:05.200Z", "authorized": true},
+  {"path": "/events", "query": "since=1",  "receivedAt": "2026-09-22T11:00:35.210Z", "authorized": true},
+  {"path": "/events", "query": "since=2",  "receivedAt": "2026-09-22T11:01:05.225Z", "authorized": true}
+]
+```
+
+The first poll has no `since` at all — no cursor is stored yet — and returns every event
+accumulated so far; from the second poll on, `since=<lastId>` climbs by exactly one per cycle,
+because `cursorExtractionExpression` (`$max(id)`) reads back the highest `id` from each response
+and each poll appends exactly one synthetic event. What that second poll's response body actually
+looks like:
+
+```json
+[
+  {"id": 2, "deviceId": "poll-sensor-01", "timestamp": "2026-09-22T11:00:35.212Z", "text": "Synthetic poll event #2"}
+]
+```
+
+A `since=` that stays empty/absent across every poll, or that repeats the same value instead of
+climbing, means the cursor isn't advancing — check `cursorParam`/`cursorExtractionExpression` on
+the connector, and see "Cursor advances only after processing succeeds" in
+`docs/feature/connector-http-polling.md` for what can block it (a mapping processing failure never
+advances the cursor, by design).
+
 ## Troubleshooting
 
 ### `"... cannot access endpoint: /service/dynamic-mapper-service/..."` / `general/internalError`

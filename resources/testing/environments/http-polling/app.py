@@ -111,9 +111,13 @@ def _authorized() -> bool:
 def _log_request() -> None:
     """Records one entry in the shared /requests inspection log — shared by every
     poll endpoint (/measurements, /status, /events) so `GET /requests` shows the
-    combined timeline across all of them, tagged by which path was hit."""
+    combined timeline across all of them, tagged by which path was hit. `query` is
+    recorded separately from `path` (Flask's `request.path` excludes it) so the
+    cursor's `since=` value on each /events poll is visible here too, not just in
+    this process's own stdout log."""
     _request_log.append({
         "path": request.path,
+        "query": request.query_string.decode(),
         "receivedAt": _now(),
         "headers": {
             key: "<redacted>" if key.lower() == "authorization" else value
