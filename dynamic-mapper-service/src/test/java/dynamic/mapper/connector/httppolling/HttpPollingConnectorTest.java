@@ -37,6 +37,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -56,6 +58,9 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 
 /**
  * Tests for {@link HttpPollingConnector}'s declaration and pure-logic pieces (config validation,
@@ -737,5 +742,113 @@ public class HttpPollingConnectorTest {
                 new Class<?>[] { String.class }, "devices/measurements");
 
         assertEquals("mapping-a", resolved.getIdentifier());
+    }
+
+    // -------------------------------------------------------------------------
+    // awaitProcessingSuccess (private) — deep-review round 2026-09-22:
+    // ProcessingResultHelper.failure() builds a wrapper with no Future at all
+    // -------------------------------------------------------------------------
+
+    @Test
+    public void testAwaitProcessingSuccess_nullProcessingResult_returnsFalseWithoutNPE() throws Exception {
+        // Regression: ProcessingResultHelper.failure() sets no processingResult, so
+        // resultWrapper.getProcessingResult() is null. Before the fix, calling .get() on that
+        // unconditionally threw NullPointerException (accidentally caught two frames up in
+        // executePoll's generic catch, not handled deliberately).
+        client = new HttpPollingConnector();
+        setField(client, "tenant", "test-tenant");
+
+        ProcessingResultWrapper<Object> failure = ProcessingResultHelper.failure();
+
+        Object result = assertDoesNotThrow(() -> invokePrivate(client, "awaitProcessingSuccess",
+                new Class<?>[] { ProcessingResultWrapper.class, String.class }, failure, "devices/measurements"));
+        assertEquals(Boolean.FALSE, result);
+    }
+
+    @Test
+    public void testAwaitProcessingSuccess_completedFutureNoErrors_returnsTrue() throws Exception {
+        client = new HttpPollingConnector();
+        setField(client, "tenant", "test-tenant");
+
+        List<ProcessingContext<Object>> emptyResults = Collections.emptyList();
+        ProcessingResultWrapper<Object> success = ProcessingResultWrapper.<Object>builder()
+                .processingResult(CompletableFuture.completedFuture(emptyResults))
+                .consolidatedQos(Qos.AT_LEAST_ONCE)
+                .build();
+
+        Object result = invokePrivate(client, "awaitProcessingSuccess",
+                new Class<?>[] { ProcessingResultWrapper.class, String.class }, success, "devices/measurements");
+        assertEquals(Boolean.TRUE, result);
+    }
+
+    // -------------------------------------------------------------------------
+    // executePoll (private) — deep-review round 2026-09-22: concurrent-execution guard
+    // -------------------------------------------------------------------------
+
+    @Test
+    public void testExecutePoll_skipsWhenPreviousPollStillInFlight() throws Exception {
+        // Regression: upgradeQosForRetainedTopics() re-invokes subscribe() for an
+        // already-subscribed topic, which used to unconditionally cancel+reschedule — allowing a
+        // second executePoll() to start for the same topic while the first was still blocked on
+        // its HTTP call, racing on the same mapping's cursor. Simulate "already in flight" and
+        // confirm the second invocation returns immediately instead of touching the (here, null)
+        // pollingClient — an NPE from pollingClient would prove the guard did NOT trigger.
+        MappingSubscriptionManager mappingSubscriptionManager = mock(MappingSubscriptionManager.class);
+        when(mappingSubscriptionManager.getEffectiveMappingsInbound()).thenReturn(Collections.emptyMap());
+
+        client = new HttpPollingConnector();
+        setField(client, "tenant", "test-tenant");
+        setField(client, "mappingSubscriptionManager", mappingSubscriptionManager);
+        setField(client, "connectorConfiguration", configWithProperties(minimalValidProperties()));
+
+        String topic = "devices/measurements";
+        Set<String> subscribedTopics = getField(client, "subscribedTopics");
+        subscribedTopics.add(topic);
+        Set<String> inFlightTopics = getField(client, "inFlightTopics");
+        inFlightTopics.add(topic);
+
+        assertDoesNotThrow(() -> invokePrivate(client, "executePoll", new Class<?>[] { String.class }, topic));
+
+        // The guard must not have cleared the in-flight marker of the poll it deferred to.
+        assertTrue(inFlightTopics.contains(topic));
+    }
+
+    // -------------------------------------------------------------------------
+    // handlePollFailure (private) — deep-review round 2026-09-22: per-topic failure isolation
+    // -------------------------------------------------------------------------
+
+    @Test
+    public void testHandlePollFailure_isolatedPerTopic() throws Exception {
+        // Regression: a single connector-wide consecutiveFailures counter meant a persistently
+        // broken topic could push a healthy, unrelated topic on the same connector past
+        // MAX_CONSECUTIVE_FAILURES and mark the whole connector FAILED (terminal) on the
+        // healthy topic's behalf. Each topic must accumulate its own failure streak.
+        MappingSubscriptionManager mappingSubscriptionManager = mock(MappingSubscriptionManager.class);
+        when(mappingSubscriptionManager.getEffectiveMappingsInbound()).thenReturn(Collections.emptyMap());
+        ConnectionStateManager connectionStateManager = mock(ConnectionStateManager.class);
+
+        client = new HttpPollingConnector();
+        setField(client, "tenant", "test-tenant");
+        setField(client, "mappingSubscriptionManager", mappingSubscriptionManager);
+        setField(client, "connectionStateManager", connectionStateManager);
+        setField(client, "connectorConfiguration", configWithProperties(minimalValidProperties()));
+
+        String brokenTopic = "devices/broken";
+        String healthyTopic = "devices/healthy";
+        Set<String> subscribedTopics = getField(client, "subscribedTopics");
+        subscribedTopics.add(brokenTopic);
+        subscribedTopics.add(healthyTopic);
+
+        Exception failure = new RuntimeException("simulated poll failure");
+        for (int i = 0; i < 5; i++) {
+            invokePrivate(client, "handlePollFailure", new Class<?>[] { String.class, Exception.class },
+                    brokenTopic, failure);
+        }
+        invokePrivate(client, "handlePollFailure", new Class<?>[] { String.class, Exception.class },
+                healthyTopic, failure);
+
+        Map<String, AtomicInteger> consecutiveFailuresByTopic = getField(client, "consecutiveFailuresByTopic");
+        assertEquals(5, consecutiveFailuresByTopic.get(brokenTopic).get());
+        assertEquals(1, consecutiveFailuresByTopic.get(healthyTopic).get());
     }
 }

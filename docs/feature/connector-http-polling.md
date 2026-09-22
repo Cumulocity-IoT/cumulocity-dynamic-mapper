@@ -100,13 +100,25 @@ public List<Direction> supportedDirections() {
 route an outbound publish to this connector type in practice, but a hard throw isn't
 warranted either (mirrors `HttpClient`'s inbound-only pattern).
 
+`isPassiveReceiver()` returns `true` (confirmed correct in the 2026-09-22 deep review, after
+briefly appearing as a bare `return false;` with no explanatory comment during earlier edits — a
+likely accidental regression, restored). This connector never needs to be "connected" in the
+broker sense before it can accept subscriptions — there is no persistent connection to establish,
+each poll is its own independent HTTP request — so `reconcileSubscriptions()`/
+`updateSubscriptionForInbound()` (which gate on `!isConnected() && !isPassiveReceiver()`) must not
+block subscribing here on a connection state that this connector doesn't meaningfully have.
+
 ### "Subscribe" = register a poll job, not a broker subscription
 
 `subscribe(topic, qos)` is called once per distinct inbound mapping topic (the same dedup
 semantics `MappingSubscriptionManager` applies for MQTT). It does not talk to any external
 system — it registers a **self-rescheduling** poll chain for that topic on a per-instance
-`ScheduledExecutorService` (`pollScheduler`, 4 daemon threads, created lazily via
-`ensureScheduler()`):
+`ScheduledExecutorService` (`pollScheduler`, created lazily via `ensureScheduler()`). This pool is
+timing-only — it now runs a single daemon thread (reduced from 4, fixed 2026-09-22), since each
+scheduled callback immediately hands the actual work off to `virtualThreadPool.execute(...)`
+rather than running `executePoll()` (an HTTP call plus the bounded wait in
+`awaitProcessingSuccess()`, together up to ~2 minutes worst case) directly on it — see "Poll
+execution and dispatch" below:
 
 ```
 subscribe(topic) → subscribedTopics.add(topic) → scheduleNextPoll(topic, 0)
@@ -163,14 +175,105 @@ in `buildQueryParams()` apply for that request — the server-provided URL is au
 
 ### Poll execution and dispatch
 
-`executePoll()` runs a loop, not a single request — one iteration per page (a single iteration
-when `paginationMode=None`, the default). Each successful (2xx) page builds its own
-`ConnectorMessage` (payload = raw response body bytes, `topic` = the mapping topic, `tenant`,
-`connectorIdentifier`, `sendPayload=true`) and calls `dispatcher.onMessage(connectorMessage)` —
-the same fire-and-forget dispatch `AbstractMqttCallback`/`KafkaClientV2` use, simpler than MQTT's
-QoS-ack handling since polling has no broker redelivery to coordinate with. Pages are dispatched
-one at a time as they arrive, never buffered as a whole result set. See "Pagination (v2)" below
-for how the loop decides whether to continue.
+`executePoll()` is a thin in-flight guard around `executePollInternal()`, which runs a loop, not a
+single request — one iteration per page (a single iteration when `paginationMode=None`, the
+default). Each successful (2xx) page builds its own `ConnectorMessage` (payload = raw response
+body bytes, `topic` = the mapping topic, `tenant`, `connectorIdentifier`, `sendPayload=true`) and
+calls `dispatcher.onMessage(connectorMessage)` — the same dispatch `AbstractMqttCallback`/
+`KafkaClientV2` use. Unlike a pure fire-and-forget, the returned `ProcessingResultWrapper` is then
+awaited (bounded) via `awaitProcessingSuccess()` before the cursor is allowed to advance — see
+"Cursor advances only after processing succeeds" below. Pages are dispatched one at a time as they
+arrive, never buffered as a whole result set. See "Pagination (v2)" below for how the loop decides
+whether to continue, and the diagram below for how a scheduled tick becomes a running poll.
+
+#### Concurrent-execution guard (in-flight topics) — FIXED 2026-09-22
+
+`subscribe()`/`upgradeQosForRetainedTopics()` can re-invoke `subscribe(topic, qos)` for a topic
+that is already subscribed (e.g. to upgrade its QoS on a retained topic) — this unconditionally
+cancels and reschedules that topic's poll job. `cancelPollTask()` only calls
+`Future.cancel(false)` (no interrupt, so any in-flight `.block()` HTTP call or the bounded wait in
+`awaitProcessingSuccess()` keeps running to completion), so a resubscribe during an in-flight poll
+used to let a second `executePoll()` start for the *same* topic before the first had finished —
+two concurrent runs racing on the same mapping's cursor (`advanceCursor()` from one run could be
+silently overwritten or interleaved with the other's).
+
+`executePoll(topic)` now guards its body with a `Set<String> inFlightTopics`
+(`ConcurrentHashMap.newKeySet()`): it must win `inFlightTopics.add(topic)` before doing any work,
+and always removes itself in a `finally` block. A run that loses the race (a poll for that topic
+is already running) logs at debug and returns immediately — the in-flight run supersedes it, so
+nothing is lost, only deferred to whatever the in-flight run's own `scheduleNextPoll` does next.
+
+### Diagram: poll job lifecycle, scheduling, and cursor retrieval
+
+One poll job per distinct mapping topic, from `subscribe()` through a scheduled tick to the next
+reschedule. `pollScheduler` is a single timing-only thread; the actual poll (HTTP call + bounded
+wait for the mapping pipeline) always runs on `virtualThreadPool`, never on the scheduler thread
+itself.
+
+```mermaid
+flowchart TD
+    subgraph Setup["One-time, per topic"]
+        A["connect()"] --> B["initializeSubscriptionsAfterConnect()"]
+        B --> C["subscribe(topic, qos)\nper deployed mapping"]
+        C --> D["subscribedTopics.add(topic)"]
+        D --> E["scheduleNextPoll(topic, 0)"]
+    end
+
+    subgraph Scheduler["pollScheduler (1 daemon thread, timing only)"]
+        E --> F["ScheduledFuture fires after delayMs"]
+        F --> G{"subscribedTopics\ncontains topic?"}
+        G -- no --> Z1(["no-op\n(unsubscribed before it fired)"])
+        G -- yes --> H["virtualThreadPool.execute(...)\nhand off, don't block this thread"]
+    end
+
+    subgraph Poll["virtualThreadPool (one virtual thread per tick)"]
+        H --> I["executePoll(topic)"]
+        I --> J{"inFlightTopics.add(topic)\nsucceeds?"}
+        J -- no --> Z2(["skip this tick\na poll for this topic\nis already running"])
+        J -- yes --> K["executePollInternal(topic)"]
+
+        subgraph Loop["Page loop (1 iteration if paginationMode=None)"]
+            K --> L["resolveMapping(topic)\nlowest-identifier mapping\nsharing this topic"]
+            L --> M["currentCursor(mapping)\nread MappingStatus.cursor"]
+            M --> N["buildQueryParams(cursor, paginationMode, pageToken)"]
+            N --> O["executeGet(topic, params)\nWebClient GET, 30s timeout"]
+            O --> P{"2xx response?"}
+            P -- no --> Q["throw ConnectorException"]
+            P -- yes --> R["dispatcher.onMessage(connectorMessage)"]
+            R --> S["awaitProcessingSuccess(resultWrapper)\nbounded .get(), checks\ncancellationRequested +\nextractMaxHttpStatus"]
+            S -- failed/timeout --> Q
+            S -- success --> T["advanceCursor(mapping, body)\nJSONata-extract + persist\nMappingStatus.cursor"]
+            T --> U{"more pages?\n(NextLinkHeader /\nNextFieldInBody / PageNumber)"}
+            U -- yes, under maxPagesPerPoll --> N
+            U -- no / cap reached --> V["consecutiveFailuresByTopic\n[topic].set(0)\nupdateStatus(CONNECTED)"]
+        end
+
+        Q --> W["handlePollFailure(topic, e)\nconsecutiveFailuresByTopic\n[topic].incrementAndGet()"]
+        W --> X{"attempt <= 5?"}
+        X -- yes --> Y1["updateStatusRetrying(...)\nscheduleNextPoll(topic, backoffMs)"]
+        X -- no --> Y2["updateStatusWithError(...)\nFAILED — terminal,\nno reschedule"]
+
+        V --> Y3["scheduleNextPoll(topic, pollIntervalMs)"]
+        Y1 --> F
+        Y3 --> F
+        K --> Z3["finally: inFlightTopics.remove(topic)"]
+    end
+```
+
+Key properties this diagram makes explicit:
+
+- **Scheduling and execution are on different pools** — the scheduler thread only ever decides
+  *when*, never blocks on HTTP or pipeline processing (see "Subscribe" above).
+- **The in-flight guard (`inFlightTopics`) sits between the scheduler and the actual poll body** —
+  a resubscribe-triggered reschedule can produce a second tick for a topic whose previous run
+  hasn't finished; that second tick is dropped, not queued or run in parallel.
+- **The cursor is only persisted after a page's dispatch is confirmed successful** — a failure at
+  any point in the loop (bad HTTP status, failed/timed-out processing) skips straight to
+  `handlePollFailure` without touching `MappingStatus.cursor`, so the next poll resumes from the
+  last page that actually completed, never from data that was fetched but not confirmed processed.
+- **Failure accounting and the resulting backoff/`FAILED` transition are per-topic** — one topic
+  reaching `FAILED` (terminal, no further `scheduleNextPoll`) does not affect any other topic's
+  own counter or schedule.
 
 ### Configuration (`ConnectorSpecification`)
 
@@ -263,6 +366,17 @@ stops for that cycle.
   11th field via a new all-args constructor, with the pre-existing 10-arg constructor kept
   (delegating with `cursor = null`) so none of its ~20 test call sites needed touching.
 
+**Null `Future` from an early-exit dispatch — FIXED 2026-09-22.** `ProcessingResultHelper.failure()`
+— used when `dispatcher.onMessage(...)` bails before real (async) processing ever started, e.g. the
+payload couldn't be deserialized or no mapping resolved for the topic — builds a
+`ProcessingResultWrapper` with **no `processingResult` set**, i.e. `getProcessingResult()` returns
+`null`. `awaitProcessingSuccess()` used to call `.get(...)` on that unconditionally, throwing a
+`NullPointerException` that happened to be caught two frames up by `executePoll`'s generic
+`catch (Exception e)` — accidentally routed through the correct failure path (`handlePollFailure`,
+cursor not advanced), but by luck, not by design, and logged as an opaque NPE rather than the
+actual cause. `awaitProcessingSuccess()` now checks `getProcessingResult() == null` explicitly
+first and returns `false` with a clear log message before ever calling `.get()`.
+
 ### Pagination (v2) — IMPLEMENTED 2026-09-21
 
 Opt-in via `paginationMode` (default `None` = single GET per poll, unchanged v1 behavior).
@@ -313,19 +427,38 @@ timeout.
 ### Error handling, backoff, and health status
 
 Reuses the existing `ConnectionStateManager`/`ConnectorStatus` mechanism as-is — no new
-status/alarm plumbing. A connector-wide (not per-topic) `AtomicInteger consecutiveFailures`
-drives it:
+status/alarm plumbing. A **per-topic** `Map<String, AtomicInteger> consecutiveFailuresByTopic`
+drives it (previously a single connector-wide counter — see "Per-topic failure isolation" below):
 
-- **Success** → reset the counter, `updateStatus(CONNECTED, ...)`.
+- **Success** → reset that topic's counter, `updateStatus(CONNECTED, ...)`.
 - **Failure, attempt ≤ 5** → `updateStatusRetrying(exception, delaySeconds)` (`RETRYING`).
 - **Failure, attempt > 5** → `updateStatusWithError(exception)` (`FAILED`).
 
 Backoff is linear-capped, mirroring MQTT's reconnect shape but sized to the poll interval
 rather than MQTT's fixed constants: `delay = min(attempt * pollIntervalMs, 300_000ms)`.
-Because the failure counter and resulting status are connector-wide, one struggling mapping
-sharing a connector with others affects the reported status for all of them — an accepted
-consequence of `url` being connector-level (there is realistically one target endpoint per
-connector instance in the current design).
+`updateStatus(...)`/`updateStatusWithError(...)` still report one status for the whole connector
+(there is no per-topic status concept in `ConnectionStateManager`), so a persistently broken
+topic's `FAILED` status is still visible connector-wide — but it can no longer be *caused* by an
+unrelated topic's failures being counted against it (see below).
+
+#### Per-topic failure isolation — FIXED 2026-09-22
+
+Before this fix, a single `AtomicInteger consecutiveFailures` was shared by every topic on the
+connector. `FAILED` (attempt > `MAX_CONSECUTIVE_FAILURES`, i.e. 5) is **terminal** for a topic's
+polling lifecycle — `handlePollFailure()` deliberately does not call `scheduleNextPoll()` once
+reached, so that topic's poll chain stops dead until a reconnect. With one shared counter, five
+consecutive failures from a single persistently-broken topic (bad credentials, deleted upstream
+endpoint, etc.) would silently stop polling for every *other*, perfectly healthy topic on the
+same connector too — each of their next failures (or even their next *success*, since the
+counter was reset to 0 on any topic's success and incremented by any topic's failure,
+interleaved unpredictably across topics) could tip the shared counter over the threshold.
+
+Fixed by replacing the single counter with `Map<String, AtomicInteger> consecutiveFailuresByTopic`,
+keyed by topic: `handlePollFailure(topic, e)` increments and checks only that topic's own entry,
+and the success path in `executePollInternal()` resets only that topic's own entry to zero.
+`unsubscribe()`/`cancelPollTask()` removes the topic's entry so it doesn't linger after a mapping
+is undeployed, and `connect()` clears the whole map on (re)connect, matching the previous
+reset-on-connect behavior.
 
 ### Lifecycle / cleanup
 
@@ -387,8 +520,10 @@ just adds a broker subscription, essentially free.
   cursor query parameter. This is deliberate (the server-provided URL is authoritative for that
   API's own pagination), but combining `NextLinkHeader` with incremental fetch across *separate
   polls* still works — the cursor is only irrelevant *within* one multi-page cycle.
-- **Backoff/failure state is connector-wide**, not per-mapping-topic — a single failing
-  mapping's backoff affects the connector's overall reported status.
+- **Backoff/failure counting is per-topic** (fixed 2026-09-22; was connector-wide before), but
+  the reported `ConnectorStatus` itself is still one value for the whole connector — a topic that
+  trips `FAILED` still surfaces as the connector's overall status, it just can no longer get there
+  because of a *different* topic's failures.
 - **No frontend-specific work was needed**: connector config forms are data-driven off
   `ConnectorSpecification`, so `REST_POLLING` appears in the connector-type dropdown
   automatically once registered in `ConnectorRegistry`/`ConnectorClientFactory` — verify

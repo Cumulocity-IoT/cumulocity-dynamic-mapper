@@ -140,12 +140,52 @@ public class HttpPollingConnector extends AConnectorClient {
      * can't be marked "subscribed" there before its first {@link ScheduledFuture} exists. */
     private final Set<String> subscribedTopics = ConcurrentHashMap.newKeySet();
 
-    /** The currently scheduled poll job per subscribed topic, once one exists. */
+    /** The currently scheduled (timing-only, see {@link #pollScheduler}) poll job per subscribed
+     * topic, once one exists. */
     private final Map<String, ScheduledFuture<?>> pollTasks = new ConcurrentHashMap<>();
 
-    /** Connector-wide consecutive-failure counter feeding the RETRYING/FAILED backoff logic. */
-    private final AtomicInteger consecutiveFailures = new AtomicInteger(0);
+    /**
+     * Topics with an {@link #executePoll} currently running. Guards against two overlapping
+     * executions for the same topic — found in review 2026-09-22: {@link #subscribe} cancels the
+     * previously scheduled future and reschedules unconditionally at delay 0, but
+     * {@code Future.cancel(false)} cannot stop a run that has already started (e.g. blocked in
+     * the HTTP call or in {@link #awaitProcessingSuccess}, up to
+     * {@code ServiceConfiguration.PROCESSING_HARD_CEILING_MS} = 120s). A resubscribe of an
+     * already-subscribed topic is a real path, not a contrived one:
+     * {@code MappingSubscriptionManager.upgradeQosForRetainedTopics()} calls {@code subscribe()}
+     * again whenever a second mapping added to an existing topic has a higher configured
+     * {@code qos}. Without this guard, two concurrent executions for the same topic would race on
+     * the shared {@code MappingStatus.cursor} read/write and could double-dispatch the same data.
+     * {@link #executePoll} claims its topic here before doing any work and always releases it in
+     * a {@code finally}; a run that finds its topic already claimed bails out immediately — the
+     * in-flight run's own eventual {@link #scheduleNextPoll} call continues the chain, so nothing
+     * needs to happen on the {@link #subscribe} side.
+     */
+    private final Set<String> inFlightTopics = ConcurrentHashMap.newKeySet();
 
+    /**
+     * Per-topic (not connector-wide) consecutive-failure counters feeding the RETRYING/FAILED
+     * backoff logic — found in review 2026-09-22: a single shared counter meant one topic's
+     * failures and another topic's successes could interleave, letting an unrelated topic's
+     * blip push a healthy topic over {@link #MAX_CONSECUTIVE_FAILURES} (or a healthy topic's
+     * successes mask a genuinely broken one's escalation). Significant once this connector's
+     * whole point is serving several distinct topics/endpoints from one instance (see
+     * {@link #topicPath}) — one bad endpoint must not permanently silence every other mapping on
+     * the same connector. The connector-level {@code ConnectorStatus} itself is still shared
+     * (one per connector instance, a framework-wide model, not changed here) — it settles back to
+     * {@code CONNECTED} on any other topic's next successful poll rather than staying stuck on
+     * whichever topic last reported.
+     */
+    private final Map<String, AtomicInteger> consecutiveFailuresByTopic = new ConcurrentHashMap<>();
+
+    /** Timing only: each scheduled callback just hands the actual (blocking) poll work off to
+     * {@link #virtualThreadPool} and returns immediately — found in review 2026-09-22: this used
+     * to run {@link #executePoll} (including the HTTP call and the bounded wait in
+     * {@link #awaitProcessingSuccess}, together up to ~2 minutes worst case) directly on this
+     * small fixed pool, so a connector with more active topics than threads (or a few
+     * simultaneously slow endpoints) would see poll intervals silently stretch. Every other
+     * blocking-I/O dispatch in this codebase (e.g. {@code AbstractMqttCallback}) already uses
+     * {@link #virtualThreadPool} for exactly this reason. */
     private volatile ScheduledExecutorService pollScheduler;
 
     public HttpPollingConnector() {
@@ -211,7 +251,7 @@ public class HttpPollingConnector extends AConnectorClient {
 
             pollingClient = buildWebClient();
             ensureScheduler();
-            consecutiveFailures.set(0);
+            consecutiveFailuresByTopic.clear();
 
             connectionStateManager.setConnected(true);
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
@@ -367,7 +407,17 @@ public class HttpPollingConnector extends AConnectorClient {
 
     @Override
     protected boolean isPassiveReceiver() {
-        return false;
+        // No broker connection to be "connected" to before (un)subscribing — inbound mapping
+        // changes must reconcile poll jobs immediately, same reasoning as the HTTP connector.
+        // Restored 2026-09-22: this had silently become `false` (the inherited default, matching
+        // MQTT/Kafka's "must be connected first") with no explanatory comment — unlike every
+        // other deliberate change to this file, which is the tell it was likely an accidental
+        // drop from an unrelated edit rather than a considered decision. Confirmed the practical
+        // difference is narrow either way: isConnected() never flips false due to poll failures
+        // (neither updateStatusRetrying nor updateStatusWithError touch it, only an explicit
+        // disconnect() does), so this only matters for mapping/topic changes arriving before the
+        // very first successful connect() or after an explicit disconnect.
+        return true;
     }
 
     @Override
@@ -412,11 +462,13 @@ public class HttpPollingConnector extends AConnectorClient {
             synchronized (this) {
                 if (pollScheduler == null || pollScheduler.isShutdown()) {
                     ThreadFactory threadFactory = r -> {
-                        Thread t = new Thread(r, "http-polling-" + connectorIdentifier);
+                        Thread t = new Thread(r, "http-polling-timer-" + connectorIdentifier);
                         t.setDaemon(true);
                         return t;
                     };
-                    pollScheduler = Executors.newScheduledThreadPool(4, threadFactory);
+                    // Timing only (see field Javadoc) — 1 thread is enough since every callback
+                    // just hands off to virtualThreadPool and returns immediately.
+                    pollScheduler = Executors.newScheduledThreadPool(1, threadFactory);
                 }
             }
         }
@@ -427,6 +479,7 @@ public class HttpPollingConnector extends AConnectorClient {
         if (future != null) {
             future.cancel(false);
         }
+        consecutiveFailuresByTopic.remove(topic);
     }
 
     private void cancelAllPollTasks() {
@@ -445,7 +498,11 @@ public class HttpPollingConnector extends AConnectorClient {
         if (scheduler == null || scheduler.isShutdown()) {
             return;
         }
-        ScheduledFuture<?> future = scheduler.schedule(() -> executePoll(topic), delayMs, TimeUnit.MILLISECONDS);
+        // Hand off to virtualThreadPool immediately rather than running executePoll (HTTP call +
+        // the bounded wait in awaitProcessingSuccess, together up to ~2 minutes worst case)
+        // directly on this small timing-only pool — see pollScheduler's field Javadoc.
+        ScheduledFuture<?> future = scheduler.schedule(
+                () -> virtualThreadPool.execute(() -> executePoll(topic)), delayMs, TimeUnit.MILLISECONDS);
         pollTasks.put(topic, future);
     }
 
@@ -455,6 +512,24 @@ public class HttpPollingConnector extends AConnectorClient {
             return;
         }
 
+        // Guards against a resubscribe (e.g. upgradeQosForRetainedTopics()) firing a second,
+        // concurrent executePoll() for the same topic while one is still blocked on an HTTP
+        // call or awaitProcessingSuccess() — two overlapping polls would race on the same
+        // mapping's cursor, each unaware of the other's advanceCursor() call. Only one poll per
+        // topic may run at a time; a poll that finds itself shut out just skips this cycle,
+        // since the in-flight one supersedes it anyway.
+        if (!inFlightTopics.add(topic)) {
+            log.debug("{} - Skipping poll for topic [{}]: previous poll still in flight", tenant, topic);
+            return;
+        }
+        try {
+            executePollInternal(topic);
+        } finally {
+            inFlightTopics.remove(topic);
+        }
+    }
+
+    private void executePollInternal(String topic) {
         long pollIntervalMs = getEffectivePollIntervalSeconds() * 1000L;
         Mapping mapping = resolveMapping(topic);
         String paginationMode = readPaginationMode();
@@ -509,7 +584,7 @@ public class HttpPollingConnector extends AConnectorClient {
                     return;
                 }
 
-                consecutiveFailures.set(0);
+                consecutiveFailuresByTopic.computeIfAbsent(topic, k -> new AtomicInteger()).set(0);
                 connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
 
                 String body = response.getBody();
@@ -602,6 +677,19 @@ public class HttpPollingConnector extends AConnectorClient {
      *         failure/timeout (already logged) — the caller must not advance the cursor then.
      */
     private boolean awaitProcessingSuccess(ProcessingResultWrapper<?> resultWrapper, String topic) {
+        // Found in review 2026-09-22: ProcessingResultHelper.failure() — an early-exit wrapper
+        // for a dispatch that never even started real (async) processing, e.g. payload
+        // deserialization failure or no mapping resolved — builds a wrapper with NO
+        // processingResult set at all, i.e. getProcessingResult() is null. Calling .get() on that
+        // unconditionally threw a NullPointerException that happened to be caught two frames up
+        // by executePoll's generic catch (Exception e) — accidentally fail-safe, not deliberately.
+        // Handle it explicitly instead of relying on that.
+        if (resultWrapper.getProcessingResult() == null) {
+            log.warn("{} - Dispatch for topic [{}] failed before processing started (no mapping " +
+                    "resolved, or the payload could not be deserialized)", tenant, topic);
+            return false;
+        }
+
         long timeoutMs = resultWrapper.getPipelineTimeoutMS() > 0
                 ? resultWrapper.getPipelineTimeoutMS()
                 : ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
@@ -632,7 +720,7 @@ public class HttpPollingConnector extends AConnectorClient {
 
     private void handlePollFailure(String topic, Exception e) {
         long pollIntervalMs = getEffectivePollIntervalSeconds() * 1000L;
-        int attempt = consecutiveFailures.incrementAndGet();
+        int attempt = consecutiveFailuresByTopic.computeIfAbsent(topic, k -> new AtomicInteger()).incrementAndGet();
         long delayMs = Math.min(attempt * pollIntervalMs, BACKOFF_CAP_MS);
 
         if (attempt <= MAX_CONSECUTIVE_FAILURES) {
