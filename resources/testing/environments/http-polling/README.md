@@ -112,16 +112,17 @@ BUILD_PLATFORM=linux/arm64 ./build.sh   # for ARM-based test environments
 
 ## 3. Create the REST Polling connector
 
+Uses [go-c8y-cli](https://goc8ycli.netlify.app/)'s `c8y api`, which authenticates via your
+currently active `c8y` session (`c8y sessions login`) rather than a manually-built `Authorization`
+header — no `C8Y_TENANT`/`C8Y_USER`/`C8Y_PASSWORD` needed. Only the connector's own `url` property
+(the mock's *external* base URL, not the mapper's) still needs the tenant's base URL:
+
 ```bash
 export C8Y_BASEURL="https://<your-tenant>.cumulocity.com"
-export C8Y_TENANT="<tenant-id>"
-export C8Y_USER="<user>"
-export C8Y_PASSWORD="<password>"
 
-curl -s -X POST "${C8Y_BASEURL}/service/dynamic-mapper-service/configuration/connector/instance" \
-  -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}" \
-  -H 'Content-Type: application/json' \
-  -d "{
+c8y api --method POST --url /service/dynamic-mapper-service/configuration/connector/instance \
+  --header 'Content-Type: application/json' \
+  --data "{
     \"identifier\": \"test-rest-polling-connector\",
     \"connectorType\": \"REST_POLLING\",
     \"name\": \"Test REST Polling Connector\",
@@ -140,20 +141,6 @@ curl -s -X POST "${C8Y_BASEURL}/service/dynamic-mapper-service/configuration/con
 deliberately does *not* end in `/measurements` here. One connector instance can serve several
 mappings against different paths under this same base, e.g. a topic of `measurements` resolves to
 `GET ${C8Y_BASEURL}/service/http-polling-mock/measurements`.
-
-Or with go-c8y-cli:
-
-```bash
-c8y api --method POST --url /service/dynamic-mapper-service/configuration/connector/instance \
-  --header 'Content-Type: application/json' \
-  --data "{
-    \"identifier\": \"test-rest-polling-connector\",
-    \"connectorType\": \"REST_POLLING\",
-    \"name\": \"Test REST Polling Connector\",
-    \"enabled\": true,
-    \"properties\": { \"url\": \"${C8Y_BASEURL}/service/http-polling-mock\", \"pollIntervalSeconds\": 30 }
-  }"
-```
 
 If the mock was deployed with `AUTH_MODE=basic`, add the matching connector
 properties — `user`/`password` must be a **real Cumulocity tenant user's**
@@ -187,17 +174,15 @@ Connect the connector (only needed if created with `enabled: false`, or after
 a disconnect):
 
 ```bash
-curl -s -X POST "${C8Y_BASEURL}/service/dynamic-mapper-service/operation" \
-  -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}" \
-  -H 'Content-Type: application/json' \
-  -d '{"operation": "CONNECT", "parameter": {"connectorIdentifier": "test-rest-polling-connector"}}'
+c8y api --method POST --url /service/dynamic-mapper-service/operation \
+  --header 'Content-Type: application/json' \
+  --data '{"operation": "CONNECT", "parameter": {"connectorIdentifier": "test-rest-polling-connector"}}'
 ```
 
 Check status:
 
 ```bash
-curl -s "${C8Y_BASEURL}/service/dynamic-mapper-service/monitoring/status/connector/test-rest-polling-connector" \
-  -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}"
+c8y api --method GET --url /service/dynamic-mapper-service/monitoring/status/connector/test-rest-polling-connector
 ```
 
 ## 4. Create an inbound mapping
@@ -228,7 +213,7 @@ Watch the mock's request log to confirm the connector is polling at the
 configured interval, and that auth headers (if configured) are present:
 
 ```bash
-watch -n 5 "curl -s ${C8Y_BASEURL}/service/http-polling-mock/requests | jq"
+watch -n 5 "c8y api --method GET --url /service/http-polling-mock/requests"
 ```
 
 Each entry shows `receivedAt`, the request `headers` (`Authorization` is
@@ -258,18 +243,17 @@ step 4 (which shows the equivalent one-mapping UI flow) rather than replace it.
 
 ### 6.1 Create the two connector instances
 
+Same `c8y api` approach as step 3 — only `C8Y_BASEURL` is needed (to fill in the connector's own
+`url` property), authentication comes from your active `c8y` session.
+
 The plain connector (topics `measurements` + `status`, no cursor):
 
 ```bash
 export C8Y_BASEURL="https://<your-tenant>.cumulocity.com"
-export C8Y_TENANT="<tenant-id>"
-export C8Y_USER="<user>"
-export C8Y_PASSWORD="<password>"
 
-curl -s -X POST "${C8Y_BASEURL}/service/dynamic-mapper-service/configuration/connector/instance" \
-  -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}" \
-  -H 'Content-Type: application/json' \
-  -d "{
+c8y api --method POST --url /service/dynamic-mapper-service/configuration/connector/instance \
+  --header 'Content-Type: application/json' \
+  --data "{
     \"identifier\": \"demo-rest-polling-connector\",
     \"connectorType\": \"REST_POLLING\",
     \"name\": \"Demo REST Polling Connector\",
@@ -285,13 +269,14 @@ curl -s -X POST "${C8Y_BASEURL}/service/dynamic-mapper-service/configuration/con
 ```
 
 The cursor-enabled connector (topic `events` only — `cursorParam`/`cursorExtractionExpression`
-apply to every mapping on a connector, so the cursor demo needs its own instance):
+apply to every mapping on a connector, so the cursor demo needs its own instance). Note the
+escaped `\$max` — a literal `$` in `--data`'s JSON string must be escaped, or the shell expands it
+as an (empty/undefined) variable reference before `c8y` ever sees the JSON:
 
 ```bash
-curl -s -X POST "${C8Y_BASEURL}/service/dynamic-mapper-service/configuration/connector/instance" \
-  -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}" \
-  -H 'Content-Type: application/json' \
-  -d "{
+c8y api --method POST --url /service/dynamic-mapper-service/configuration/connector/instance \
+  --header 'Content-Type: application/json' \
+  --data "{
     \"identifier\": \"demo-rest-polling-connector-cursor\",
     \"connectorType\": \"REST_POLLING\",
     \"name\": \"Demo REST Polling Connector (cursor)\",
@@ -303,7 +288,7 @@ curl -s -X POST "${C8Y_BASEURL}/service/dynamic-mapper-service/configuration/con
       \"authentication\": \"None\",
       \"headers\": {},
       \"cursorParam\": \"since\",
-      \"cursorExtractionExpression\": \"$max(id)\"
+      \"cursorExtractionExpression\": \"\$max(id)\"
     }
   }"
 ```
@@ -312,10 +297,9 @@ Connect both (only needed if created with `enabled: false`, or after a disconnec
 
 ```bash
 for c in demo-rest-polling-connector demo-rest-polling-connector-cursor; do
-  curl -s -X POST "${C8Y_BASEURL}/service/dynamic-mapper-service/operation" \
-    -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}" \
-    -H 'Content-Type: application/json' \
-    -d "{\"operation\": \"CONNECT\", \"parameter\": {\"connectorIdentifier\": \"$c\"}}"
+  c8y api --method POST --url /service/dynamic-mapper-service/operation \
+    --header 'Content-Type: application/json' \
+    --data "{\"operation\": \"CONNECT\", \"parameter\": {\"connectorIdentifier\": \"$c\"}}"
 done
 ```
 
@@ -341,20 +325,17 @@ mapping = next(m for m in mappings if m['identifier'] == '$identifier')
 json.dump(mapping, open('/tmp/${identifier}.json', 'w'))
 "
 
-  curl -s -X POST "${C8Y_BASEURL}/service/dynamic-mapper-service/mapping" \
-    -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}" \
-    -H 'Content-Type: application/json' \
-    -d @"/tmp/${identifier}.json" > /dev/null
+  c8y api --method POST --url /service/dynamic-mapper-service/mapping \
+    --header 'Content-Type: application/json' \
+    --data "$(cat /tmp/${identifier}.json)" > /dev/null
 
-  curl -s -X PUT "${C8Y_BASEURL}/service/dynamic-mapper-service/deployment/defined/${identifier}" \
-    -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}" \
-    -H 'Content-Type: application/json' \
-    --data "[\"${connector}\"]" > /dev/null
+  c8y api --method PUT --url "/service/dynamic-mapper-service/deployment/defined/${identifier}" \
+    --header 'Content-Type: application/json' \
+    --template "[\"${connector}\"]" > /dev/null
 
-  curl -s -X POST "${C8Y_BASEURL}/service/dynamic-mapper-service/operation" \
-    -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}" \
-    -H 'Content-Type: application/json' \
-    -d "{\"operation\": \"ACTIVATE_MAPPING\", \"parameter\": {\"id\": \"${identifier}\", \"active\": \"true\"}}"
+  c8y api --method POST --url /service/dynamic-mapper-service/operation \
+    --header 'Content-Type: application/json' \
+    --data "{\"operation\": \"ACTIVATE_MAPPING\", \"parameter\": {\"id\": \"${identifier}\", \"active\": \"true\"}}"
 }
 
 create_deploy_activate httppoll-meas           demo-rest-polling-connector
@@ -362,29 +343,36 @@ create_deploy_activate httppoll-status          demo-rest-polling-connector
 create_deploy_activate httppoll-events-cursor   demo-rest-polling-connector-cursor
 ```
 
-`deployment/defined` takes a JSON array of connector identifiers — pass it as a literal
-(`--data "[...]"` above), not via a shell variable substitution into a `--template`/`jq` filter;
-see the "Gotchas" note in `docs/feature/connector-http-polling.md` about `PUT
-/deployment/defined` silently mangling an array body under go-c8y-cli's `--template input.value`.
+`deployment/defined` takes a JSON array of connector identifiers — pass it via `--template` with a
+**literal** array (`--template "[...]"` above), not `--data`; see the "Gotchas" note in
+`docs/feature/connector-http-polling.md` about `PUT /deployment/defined`'s array body getting
+silently mangled under a dynamically-built `--template input.value`-style filter.
 
 ### 6.3 Verify
 
 ```bash
 # All three poll jobs show up here once connected and deployed:
-curl -s "${C8Y_BASEURL}/service/dynamic-mapper-service/monitoring/status/connector/demo-rest-polling-connector" \
-  -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}"
-curl -s "${C8Y_BASEURL}/service/dynamic-mapper-service/monitoring/status/connector/demo-rest-polling-connector-cursor" \
-  -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}"
+c8y api --method GET --url /service/dynamic-mapper-service/monitoring/status/connector/demo-rest-polling-connector
+c8y api --method GET --url /service/dynamic-mapper-service/monitoring/status/connector/demo-rest-polling-connector-cursor
 
 # The mock's request log should show /measurements, /status, and /events(?since=...) interleaved:
-curl -s "${C8Y_BASEURL}/service/http-polling-mock/requests" | jq
+c8y api --method GET --url /service/http-polling-mock/requests
 
 # /events requests should show since= growing across cycles, not stuck at empty/absent —
 # that's the cursor actually advancing.
-curl -s "${C8Y_BASEURL}/service/http-polling-mock/requests" | jq '[.[] | select(.path == "/events")]'
+c8y api --method GET --url /service/http-polling-mock/requests | jq '[.[] | select(.path == "/events")]'
 ```
 
 ## Troubleshooting
+
+### `"... cannot access endpoint: /service/dynamic-mapper-service/..."` / `general/internalError`
+
+This is a platform-gateway error, not an auth failure — a bad credential gets a plain `401`, and
+this message body actually names your correctly-identified tenant/user, proving the gateway parsed
+your credentials fine and simply couldn't route the call. It means `dynamic-mapper-service` itself
+isn't reachable at that moment: check **Administration → Ecosystem → Microservices →
+dynamic-mapper-service** (or `c8y microservices get --id dynamic-mapper-service`) — not subscribed,
+crashed, or still (re)starting all produce this same error. Once it shows `UP`, retry.
 
 ### No new entries in `/requests`
 
