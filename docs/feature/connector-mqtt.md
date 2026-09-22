@@ -129,12 +129,29 @@ back to the system default trust store (`builder.sslWithDefaultConfig()`).
 
 Opt-in via `isSparkplugHost`/`sparkplugHostId`. On connect,
 [`SparkplugCertificateManager`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/SparkplugCertificateManager.java)
-subscribes to `spBv1.0/+` and publishes a Birth Certificate to `spBv1.0/STATE/<hostId>`
+subscribes to `spBv1.0/#` and publishes a Birth Certificate to `spBv1.0/STATE/<hostId>`
 (retained, QoS 1); on disconnect it publishes a Death Certificate first. Despite the
 name, this is unrelated to X.509/TLS certificates — "Birth/Death Certificate" is
-Sparkplug B protocol terminology for online/offline state messages. Actual Sparkplug B
-payload encode/decode (protobuf) is handled by a separate extension, not by this
-connector package.
+Sparkplug B protocol terminology for online/offline state messages.
+(The subscribe pattern was `spBv1.0/+` — a single-level wildcard that never matches any
+real Sparkplug topic, since those all have 4+ segments — until fixed 2026-09-22; if you
+see `+` referenced anywhere else, it's stale.)
+
+The built-in Sparkplug B payload codec (protobuf encode/decode) is handled by
+[`SparkPlugBDeserializer`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/deserializer/SparkPlugBDeserializer.java)
+/
+[`SparkPlugBSerializer`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/serializer/SparkPlugBSerializer.java)
+in `dynamic-mapper-service` core (`MappingType.SPARKPLUGB`, forced `SMART_FUNCTION`
+transformation), not by this connector package — this Host-mode subscribe/publish
+behavior and the mapping-level codec are two independent things that happen to both live
+under the "Sparkplug B" feature name. A separate, optional hand-rolled path also exists
+for users who want Java instead of JS: `ANY_PAYLOAD` + `EXTENSION_JAVA` with a custom
+extension that decodes the protobuf itself (reference implementation:
+`dynamic-mapper-extension/.../ProcessorExtensionSparkplugBMeasurement.java`, DDATA-only,
+see [extensions.md](../extensions.md)) — that one genuinely does live in the extension
+module, but it's an alternative to `MappingType.SPARKPLUGB`, not what backs it. See
+[`dynamic-mapper-ui/public/docs/sparkplugb.md`](../../dynamic-mapper-ui/public/docs/sparkplugb.md)
+for the mapping-level (NBIRTH/NDATA/DBIRTH/DDATA/NCMD/DCMD) side.
 
 ### Gotchas
 

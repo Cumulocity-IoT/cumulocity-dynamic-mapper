@@ -282,9 +282,14 @@ route selects and sequences them:
 - [`transformation-smart-functions.md`](transformation-smart-functions.md) — GraalVM-sandboxed JavaScript (`TransformationType.SMART_FUNCTION`).
 - [`transformation-java-extensions.md`](transformation-java-extensions.md) — Java `ProcessorExtensionInbound<O>` plugins (`TransformationType.EXTENSION_JAVA`).
 
-`MappingType.PROTOBUF_INTERNAL` (internal protobuf, e.g. SparkPlug B once decoded) is
-handled by `InternalProtobufProcessor` directly on the inbound route and is not one of the
-three pluggable transformation types above.
+`MappingType.PROTOBUF_INTERNAL` is handled by `InternalProtobufProcessor` (using
+`BytePayloadDeserializer`) directly on the inbound route and is not one of the three
+pluggable transformation types above. `MappingType.SPARKPLUGB` is a separate mapping
+type with its own dedicated codec (`SparkPlugBDeserializer`/`SparkPlugBSerializer`,
+forced `SMART_FUNCTION` transformation per [mapping-validation.md](mapping-validation.md)
+rule 4) — despite Sparkplug B also being protobuf-encoded on the wire, it is not routed
+through `InternalProtobufProcessor`/`PROTOBUF_INTERNAL` and the two should not be
+conflated.
 
 ### Substitution and identity resolution
 
