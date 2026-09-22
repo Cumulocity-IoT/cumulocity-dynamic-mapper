@@ -231,9 +231,9 @@ configured interval, and that auth headers (if configured) are present:
 watch -n 5 "curl -s ${C8Y_BASEURL}/service/http-polling-mock/requests | jq"
 ```
 
-Each entry shows `receivedAt`, the full request `headers` (check
-`Authorization` matches what you configured), and whether the request was
-`authorized`. Within ~30s (the enforced minimum interval) of connecting, new
+Each entry shows `receivedAt`, the request `headers` (`Authorization` is
+redacted), and whether the request was `authorized`. Use `authorized` to verify
+the configured credentials. Within ~30s (the enforced minimum interval) of connecting, new
 entries should appear; the connector's `Message Explorer` / mapping test
 results should show a new measurement each cycle with a different
 `temperature`.
