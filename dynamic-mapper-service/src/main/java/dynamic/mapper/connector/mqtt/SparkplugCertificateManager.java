@@ -37,7 +37,7 @@ import java.util.concurrent.TimeUnit;
 public class SparkplugCertificateManager {
 
     private static final String SPARKPLUG_STATE_TOPIC_PATTERN = "spBv1.0/STATE/%s";
-    private static final String SPARKPLUG_SUBSCRIBE_PATTERN = "spBv1.0/+";
+    private static final String SPARKPLUG_SUBSCRIBE_PATTERN = "spBv1.0/#";
     private static final int PERIODIC_BIRTH_CERTIFICATE_INTERVAL_SECONDS = 60;
 
     private final String tenant;

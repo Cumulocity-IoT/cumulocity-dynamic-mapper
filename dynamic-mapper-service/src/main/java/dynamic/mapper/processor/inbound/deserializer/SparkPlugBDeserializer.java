@@ -36,6 +36,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -394,12 +395,20 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
             if (pm.hasTimestamp()) {
                 metric.put("timestamp", pm.getTimestamp());
             }
-            // Resolve datatype: proto value takes priority, fall back to birth-map entry
+            // Resolve datatype: proto value takes priority, fall back to birth-map entry.
+            // The birth-map entry may hold either the raw spec integer (in-memory NBIRTH/DBIRTH
+            // alias map, see buildAliasMapFromMetrics) or the spec name (persisted fragment
+            // round-tripped through storeSparkPlugBBirthMessage/convertMetrics), so both are handled.
             int resolvedDatatype = pm.getDatatype();
             if (resolvedDatatype == 0 && alias != null && aliasToMetricDef != null) {
                 Map<String, Object> def = aliasToMetricDef.get(alias);
-                if (def != null && def.get("dataType") instanceof Number) {
-                    resolvedDatatype = ((Number) def.get("dataType")).intValue();
+                if (def != null) {
+                    Object dataTypeVal = def.get("dataType");
+                    if (dataTypeVal instanceof Number) {
+                        resolvedDatatype = ((Number) dataTypeVal).intValue();
+                    } else if (dataTypeVal instanceof String) {
+                        resolvedDatatype = resolveDataTypeId((String) dataTypeVal);
+                    }
                 }
             }
             if (resolvedDatatype != 0) {
@@ -445,7 +454,11 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
             case 14: return pm.getStringValue(); // Text
             case 15: return pm.getStringValue(); // UUID
             case 16: return null;                // DataSet
-            case 17: return pm.getBytesValue().toByteArray();
+            // Base64-encode rather than returning the raw byte[]: a raw byte[] embedded in the
+            // metrics list breaks JSON serialisation downstream (net.minidev.json, used by
+            // FilterInboundProcessor/Substitution.toPrettyJsonString for filter evaluation,
+            // throws ClassCastException on a byte[] where it expects Object[]).
+            case 17: return Base64.getEncoder().encodeToString(pm.getBytesValue().toByteArray());
             case 18: return null;                // File
             case 19: return null;                // Template
             default:
@@ -477,6 +490,36 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
             case 18: return "File";
             case 19: return "Template";
             default: return "Unknown(" + datatype + ")";
+        }
+    }
+
+    /**
+     * Reverse of {@link #resolveDataTypeName(int)}: map a persisted spec name back to its
+     * SparkPlug B datatype integer, so birth-fragment entries round-tripped through JSON
+     * (which hold the name rather than the raw integer) can still be resolved.
+     */
+    private int resolveDataTypeId(String dataTypeName) {
+        switch (dataTypeName) {
+            case "Int8":     return 1;
+            case "Int16":    return 2;
+            case "Int32":    return 3;
+            case "Int64":    return 4;
+            case "UInt8":    return 5;
+            case "UInt16":   return 6;
+            case "UInt32":   return 7;
+            case "UInt64":   return 8;
+            case "Float":    return 9;
+            case "Double":   return 10;
+            case "Boolean":  return 11;
+            case "String":   return 12;
+            case "DateTime": return 13;
+            case "Text":     return 14;
+            case "UUID":     return 15;
+            case "DataSet":  return 16;
+            case "Bytes":    return 17;
+            case "File":     return 18;
+            case "Template": return 19;
+            default:         return 0;
         }
     }
 

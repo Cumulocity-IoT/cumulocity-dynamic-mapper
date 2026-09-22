@@ -1,0 +1,46 @@
+services:
+  hivemq:
+    image: hivemq/hivemq-ce:latest
+    container_name: sparkplug-hivemq
+    hostname: hivemq
+    ports:
+      - "1883:1883"    # Plain MQTT (no TLS, no auth) — for the emulator and Dynamic Mapper
+      - "8080:8080"    # HiveMQ CE control center
+    volumes:
+      - ./hivemq-conf/config.xml:/opt/hivemq/conf/config.xml:ro
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/1883"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - sparkplug-network
+    restart: unless-stopped
+
+  tb-sparkplug-emulator:
+    image: thingsboard/tb-sparkplug-emulator:latest
+    # amd64-only image (no arm64 build published) — on Apple Silicon this needs
+    # Rosetta emulation. Enable Docker Desktop > Settings > General >
+    # "Use Rosetta for x86/amd64 emulation on Apple Silicon", then restart Docker.
+    platform: linux/amd64
+    container_name: tb-sparkplug-emulator
+    depends_on:
+      hivemq:
+        condition: service_healthy
+    environment:
+      # Container-network hostname, NOT localhost/127.0.0.1 — from inside this container
+      # "localhost" would resolve to the emulator container itself, not the broker.
+      SPARKPLUG_SERVER_URL: "tcp://hivemq:1883"
+      SPARKPLUG_CLIENT_GROUP_ID: "Plant_1"
+      SPARKPLUG_CLIENT_NODE_ID: "EdgeNode_01"
+      SPARKPLUG_PUBLISH_INTERVAL: "5000"
+      # SPARKPLUG_CLIENT_MQTT_USERNAME / _PASSWORD omitted: the bundled HiveMQ CE
+      # config (hivemq-conf/config.xml) has no auth plugin, so any/no credentials work.
+    networks:
+      - sparkplug-network
+    restart: unless-stopped
+
+networks:
+  sparkplug-network:
+    driver: bridge
