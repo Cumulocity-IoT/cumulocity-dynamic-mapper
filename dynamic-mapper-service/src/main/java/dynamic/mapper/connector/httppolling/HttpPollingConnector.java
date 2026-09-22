@@ -529,7 +529,8 @@ public class HttpPollingConnector extends AConnectorClient {
                 }
 
                 if (dispatcher != null) {
-                    dispatcher.onMessage(connectorMessage);
+                    dispatcher.onMessage(connectorMessage).getProcessingResult()
+                            .get(REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
                     // Advance the cursor after every page, not just once at the end of the whole
                     // poll: if a later page in this same cycle fails, the cursor must reflect the
                     // last page that actually made it through, not roll all the way back to
