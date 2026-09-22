@@ -696,4 +696,46 @@ public class HttpPollingConnectorTest {
         Object cursor = invokePrivate(client, "currentCursor", new Class<?>[] { Mapping.class }, resolved);
         assertEquals("2026-01-01T00:00:00Z", cursor);
     }
+
+    @Test
+    public void testResolveMapping_multipleMappingsShareTopic_picksLowestIdentifierDeterministically()
+            throws Exception {
+        // Regression: getEffectiveMappingsInbound() is a plain ConcurrentHashMap with no
+        // iteration-order guarantee. resolveMapping() must not depend on encounter order (e.g. a
+        // stream findFirst()) when several mappings share a topic, or the mapping whose
+        // MappingStatus.cursor is read/written could silently change across restarts or after
+        // unrelated map churn triggers a rehash — see the Javadoc on resolveMapping().
+        Mapping mappingB = Mapping.builder()
+                .identifier("mapping-b")
+                .mappingTopic("devices/measurements")
+                .direction(Direction.INBOUND)
+                .build();
+        Mapping mappingA = Mapping.builder()
+                .identifier("mapping-a")
+                .mappingTopic("devices/measurements")
+                .direction(Direction.INBOUND)
+                .build();
+        Mapping mappingC = Mapping.builder()
+                .identifier("mapping-c")
+                .mappingTopic("devices/measurements")
+                .direction(Direction.INBOUND)
+                .build();
+
+        MappingSubscriptionManager mappingSubscriptionManager = mock(MappingSubscriptionManager.class);
+        // Insertion order deliberately not sorted, to prove the result doesn't depend on it.
+        Map<String, Mapping> effective = new HashMap<>();
+        effective.put("mapping-b", mappingB);
+        effective.put("mapping-a", mappingA);
+        effective.put("mapping-c", mappingC);
+        when(mappingSubscriptionManager.getEffectiveMappingsInbound()).thenReturn(effective);
+
+        client = new HttpPollingConnector();
+        setField(client, "mappingSubscriptionManager", mappingSubscriptionManager);
+        setField(client, "tenant", "test-tenant");
+
+        Mapping resolved = (Mapping) invokePrivate(client, "resolveMapping",
+                new Class<?>[] { String.class }, "devices/measurements");
+
+        assertEquals("mapping-a", resolved.getIdentifier());
+    }
 }

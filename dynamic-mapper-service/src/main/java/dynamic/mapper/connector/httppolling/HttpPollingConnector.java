@@ -60,6 +60,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -776,14 +777,34 @@ public class HttpPollingConnector extends AConnectorClient {
      * Resolves the topic back to its {@link Mapping}. Several mappings can in principle share one
      * topic (the same dedup semantics {@code MappingSubscriptionManager} applies for MQTT) — in
      * that case they already share this connector's one poll job for that topic, so they share
-     * its cursor too; this returns the first match. Returns {@code null} for a topic with no
-     * backing mapping at all (e.g. a Message Explorer session with no mapping deployed yet), in
-     * which case incremental fetch is simply skipped for that poll.
+     * its cursor too (stored on that one mapping's {@code MappingStatus}, since there is no
+     * separate per-topic storage — see "Persistence" in the class doc).
+     * <p>
+     * The candidate is picked deterministically, by the lowest {@code identifier} — not "whichever
+     * comes first" from {@code getEffectiveMappingsInbound()}'s iteration order. That backing map
+     * is a plain {@code ConcurrentHashMap}, whose encounter order isn't guaranteed and can change
+     * across a restart, or even mid-session after a rehash triggered by unrelated map churn — a
+     * {@code findFirst()} on it could therefore silently switch which mapping's cursor is being
+     * read/written between poll cycles, even with the same set of mappings deployed throughout.
+     * Sorting by identifier fixes the same mapping every time as long as it continues to exist.
+     * Caught in PR review (Copilot) — fixed 2026-09-22.
+     * <p>
+     * Known residual tradeoff: if that specific (lowest-identifier) mapping is later removed
+     * while other same-topic mappings remain, the newly-lowest one has its own separate, likely
+     * unset cursor — the group's progress is lost and incremental fetch effectively restarts for
+     * it. Accepted since sharing one topic across mappings is itself an edge case (this connector
+     * is far more commonly configured with one mapping per topic); a full fix would need cursor
+     * storage keyed by (connector, topic) instead of by mapping, which is a bigger change than
+     * warranted for that edge case alone.
+     * <p>
+     * Returns {@code null} for a topic with no backing mapping at all (e.g. a Message Explorer
+     * session with no mapping deployed yet), in which case incremental fetch is simply skipped
+     * for that poll.
      */
     private Mapping resolveMapping(String topic) {
         return mappingSubscriptionManager.getEffectiveMappingsInbound().values().stream()
                 .filter(m -> topic.equals(m.getMappingTopic()))
-                .findFirst()
+                .min(Comparator.comparing(Mapping::getIdentifier))
                 .orElse(null);
     }
 

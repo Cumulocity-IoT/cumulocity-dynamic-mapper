@@ -224,7 +224,16 @@ v2 section for the original design discussion — both part A (cross-poll cursor
   periodically-flushed machinery wholesale — no new persistence infrastructure, the crux flagged
   as open in the planning doc's original v2 sketch. If several mappings share one topic, they
   already share this connector's one poll job for it (see "Subscribe" above), so they share its
-  cursor too — resolved by taking the first matching mapping, deliberately not an error.
+  cursor too — resolved by picking the mapping with the lowest `identifier`, **deterministically,
+  not "whichever the map iterates first" — FIXED 2026-09-22**. `getEffectiveMappingsInbound()` is
+  a plain `ConcurrentHashMap` with no iteration-order guarantee; an earlier `findFirst()` could
+  silently pick a different mapping across restarts or after unrelated map churn triggered a
+  rehash, switching which mapping's cursor was being read/written mid-session (caught in PR
+  review, Copilot). Residual tradeoff, accepted: if that specific lowest-identifier mapping is
+  later removed while others on the same topic remain, the group's cursor progress is lost
+  (falls back to the newly-lowest mapping's own likely-unset cursor) — a full fix needs cursor
+  storage keyed by (connector, topic) rather than by mapping, not warranted for what is already
+  an edge case (one mapping per topic is the common configuration).
 - **Ordering matters**: the cursor advances *after each page's dispatch has been confirmed
   successful*, never before — see "Pagination (v2)" for why this is per-page rather than once per
   poll, and "Cursor advances only after processing succeeds" for what "confirmed successful"
