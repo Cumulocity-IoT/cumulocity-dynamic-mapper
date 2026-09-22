@@ -225,14 +225,16 @@ function onMessage(msg, context) {
 }
 ```
 
-#### Using Metadata in Smart Functions
+#### Using Metadata in Smart Functions {#metadata}
 
 When using **Smart Functions** as the **Transformation Type**, metadata is handled differently than in
 substitution-based mappings. Instead of using metadata nodes like `_IDENTITY_` or `_CONTEXT_DATA_` in templates,
 you define metadata directly in the JavaScript return object.
 
 **Key Difference:** In Smart Functions, you don't manipulate `_IDENTITY_` or `_CONTEXT_DATA_` nodes. Instead, you
-return JavaScript objects with specific properties that control how the mapper processes your data.
+return JavaScript objects with specific properties that control how the mapper processes your data. For the
+JSONata equivalent (transformation type **Substitution as JSONata Expression**), see
+[Metadata (JSONata)](/c8y-pkg-dynamic-mapper/introduction/metadata).
 
 #### Metadata Properties for Inbound Smart Functions
 

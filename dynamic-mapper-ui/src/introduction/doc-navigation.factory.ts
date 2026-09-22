@@ -236,7 +236,7 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     metadataNode: new NavigatorNode({
       parent: gettext('Reference'),
       icon: 'tags',
-      label: gettext('Metadata'),
+      label: gettext('Metadata (JSONata)'),
       path: '/c8y-pkg-dynamic-mapper/introduction/metadata',
       priority: 697,
       preventDuplicates: true

@@ -1,8 +1,14 @@
 ---
-title: Metadata
+title: Metadata (JSONata)
 ---
 
-### Using metadata in source templates and target templates {#metadata}
+### Using metadata in source templates and target templates (JSONata substitutions) {#metadata}
+
+:::caution
+This page covers metadata for mappings with transformation type **Substitution as JSONata Expression**. It does
+**not** apply to transformation type **Smart Function** — for that, see
+[Using Metadata in Smart Functions](/c8y-pkg-dynamic-mapper/introduction/smartfunction#metadata) instead.
+:::
 
 The mapper adds metadata in source and target templates to control the processing of the mapping. All JSON nodes
 that are added as metadata to the templates are enclosed in `_`, e.g. `_CONTEXT_DATA_`, `_IDENTITY_` and
@@ -18,10 +24,6 @@ All metadata nodes including sub-nodes are not meant to be changed directly. All
 before the processing of a mapping and removed from the target payload before it is sent. Therefore, the metadata
 is not saved in the mapping itself and cannot store individual information. To overwrite e.g. the API for a
 mapping at runtime, you have to add a substitution: `[ 'EVENT' → _CONTEXT_DATA_.api ]`.
-
-This section does not apply for mappings with transformation type **Smart Function**. For this transformation
-type check out the code templates, which contains samples on how to achieve the same results using
-[Smart Functions](/c8y-pkg-dynamic-mapper/introduction/smartfunction).
 :::
 
 ![Change metadata](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Change_Metadata.png "Screenshot showing additional substitution changing the target API to 'EVENT'")
