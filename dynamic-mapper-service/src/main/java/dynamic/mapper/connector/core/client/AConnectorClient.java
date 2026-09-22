@@ -88,6 +88,7 @@ public abstract class AConnectorClient {
 
     private static final long SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_SECONDS = 10L;
     private static final long SUBSCRIPTION_INIT_RETRY_MAX_DELAY_SECONDS = 300L;
+    private static final long RECONCILE_RETRY_DELAY_SECONDS = 5L;
 
     public static final String MQTT_PROTOCOL_MQTT = "mqtt://";
     public static final String MQTT_PROTOCOL_MQTTS = "mqtts://";
@@ -284,6 +285,8 @@ public abstract class AConnectorClient {
     private final ReentrantLock connectDisconnectExecutionLock = new ReentrantLock();
     // Guards against scheduling overlapping retry chains for initializeSubscriptionsAfterConnect()
     private final AtomicBoolean subscriptionInitRetryScheduled = new AtomicBoolean(false);
+    // Guards against scheduling overlapping retry chains for reconcileSubscriptions()
+    private final AtomicBoolean reconcileRetryScheduled = new AtomicBoolean(false);
     // When the current subscription-init retry chain started, so the success log can report
     // how long the connector spent in RETRYING before recovering.
     private volatile long subscriptionInitRetryStartedAtMs;
@@ -926,11 +929,19 @@ public abstract class AConnectorClient {
      * Called when the deployment map changes (a mapping is assigned to / removed from this
      * connector) so that newly deployed mappings are subscribed and un-deployed mappings are
      * unsubscribed live, without requiring a connector reconnect or a manual mappings reload.
+     * <p>
+     * If the connector isn't connected yet (e.g. this races a just-started service that is
+     * still completing its initial broker handshake), the reconcile is deferred and retried
+     * rather than silently dropped — unlike {@link #initializeSubscriptionsAfterConnect()},
+     * which is only invoked once a connect actually succeeds, nothing else would otherwise
+     * re-trigger this reconcile, leaving {@code RELOAD_MAPPINGS} / a deployment change
+     * permanently unapplied until the next full reconnect.
      */
     public void reconcileSubscriptions() {
         if (!isConnected() && !isPassiveReceiver()) {
-            log.debug("{} - Not connected, skipping subscription reconcile for connector: {}",
-                    tenant, connectorName);
+            log.info("{} - Not connected yet, deferring subscription reconcile for connector: {} (retry in {}s)",
+                    tenant, connectorName, RECONCILE_RETRY_DELAY_SECONDS);
+            scheduleReconcileRetry();
             return;
         }
 
@@ -943,6 +954,27 @@ public abstract class AConnectorClient {
         initializeSubscriptionsOutbound(outboundMappings);
 
         log.info("{} - Reconciled subscriptions for connector: {}", tenant, connectorName);
+    }
+
+    /**
+     * Schedules a single retry of {@link #reconcileSubscriptions()} on the housekeeping
+     * executor. At most one retry is in flight at a time; a reconcile call that arrives while
+     * one is already scheduled just relies on that pending retry re-checking current state.
+     * Cancelled automatically on disconnect, since it runs on {@code housekeepingExecutor},
+     * which is shut down in {@link #stopHousekeepingAndClose()}.
+     */
+    private void scheduleReconcileRetry() {
+        if (!reconcileRetryScheduled.compareAndSet(false, true)) {
+            return;
+        }
+        if (housekeepingExecutor == null || housekeepingExecutor.isShutdown()) {
+            reconcileRetryScheduled.set(false);
+            return;
+        }
+        housekeepingExecutor.schedule(() -> {
+            reconcileRetryScheduled.set(false);
+            reconcileSubscriptions();
+        }, RECONCILE_RETRY_DELAY_SECONDS, TimeUnit.SECONDS);
     }
 
     /**
