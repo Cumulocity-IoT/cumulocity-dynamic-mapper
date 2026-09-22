@@ -36,8 +36,11 @@ import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
+import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
 import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpHeaders;
@@ -62,11 +65,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -529,8 +534,16 @@ public class HttpPollingConnector extends AConnectorClient {
                 }
 
                 if (dispatcher != null) {
-                    dispatcher.onMessage(connectorMessage).getProcessingResult()
-                            .get(REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+                    ProcessingResultWrapper<?> resultWrapper = dispatcher.onMessage(connectorMessage);
+                    if (!awaitProcessingSuccess(resultWrapper, topic)) {
+                        // Treated exactly like a failed fetch: caught by the surrounding
+                        // try/catch below, which routes through handlePollFailure (backoff,
+                        // RETRYING/FAILED) — the cursor is not advanced for this page, and
+                        // pagination stops here, so the next poll resumes from the last page
+                        // that actually completed successfully.
+                        throw new ConnectorException("Mapping processing did not complete " +
+                                "successfully for topic [" + topic + "]");
+                    }
                     // Advance the cursor after every page, not just once at the end of the whole
                     // poll: if a later page in this same cycle fails, the cursor must reflect the
                     // last page that actually made it through, not roll all the way back to
@@ -573,6 +586,48 @@ public class HttpPollingConnector extends AConnectorClient {
         }
 
         scheduleNextPoll(topic, pollIntervalMs);
+    }
+
+    /**
+     * Blocks (bounded) on the mapping pipeline's actual result for one dispatched message,
+     * mirroring the same wait/timeout/cancellation handling every broker callback (e.g.
+     * {@code AbstractMqttCallback}) already uses for QoS &gt; 0 messages. {@code onMessage}
+     * starts Camel processing asynchronously and returns a {@link ProcessingResultWrapper}
+     * immediately — a future that merely *completing* says nothing about whether every matched
+     * mapping actually succeeded, only {@link ProcessingResultHelper#extractMaxHttpStatus} does.
+     * Without this, the cursor could advance (see {@link #advanceCursor}) past data a mapping
+     * failure, timeout, or downstream Cumulocity error never actually processed.
+     *
+     * @return {@code true} only if processing completed with no error; {@code false} on any
+     *         failure/timeout (already logged) — the caller must not advance the cursor then.
+     */
+    private boolean awaitProcessingSuccess(ProcessingResultWrapper<?> resultWrapper, String topic) {
+        long timeoutMs = resultWrapper.getPipelineTimeoutMS() > 0
+                ? resultWrapper.getPipelineTimeoutMS()
+                : ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
+        try {
+            List<? extends ProcessingContext<?>> results = resultWrapper.getProcessingResult()
+                    .get(timeoutMs, TimeUnit.MILLISECONDS);
+
+            // JS CPU timeout may have fired and closed the GraalVM context before the wall-clock
+            // timeout expired — the future completes early with cancellationRequested=true.
+            if (resultWrapper.getCancellationRequested().get()) {
+                log.warn("{} - Processing for topic [{}] was cancelled (JS CPU timeout) before " +
+                        "the wall-clock timeout, treating as failed", tenant, topic);
+                return false;
+            }
+
+            int httpStatusCode = ProcessingResultHelper.extractMaxHttpStatus(results, tenant, topic, log);
+            return httpStatusCode < 0;
+        } catch (InterruptedException | ExecutionException e) {
+            log.warn("{} - Mapping processing failed for topic [{}]: {}", tenant, topic, e.getMessage());
+            return false;
+        } catch (TimeoutException e) {
+            boolean drained = resultWrapper.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
+            log.warn("{} - Mapping processing timed out for topic [{}] after {}ms (drained={})",
+                    tenant, topic, timeoutMs, drained);
+            return false;
+        }
     }
 
     private void handlePollFailure(String topic, Exception e) {

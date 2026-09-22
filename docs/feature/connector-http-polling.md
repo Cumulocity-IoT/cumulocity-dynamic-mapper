@@ -207,23 +207,49 @@ v2 section for the original design discussion — both part A (cross-poll cursor
   `executeGet()` — not a manual string template, so it URL-encodes correctly and composes with
   any existing query string already in `url` (and with a page parameter, when pagination is also
   active).
-- **Extraction**: after each page's data is dispatched (`dispatcher.onMessage(...)` returns),
-  `advanceCursor()` parses that page's response body (`com.dashjoin.jsonata.json.Json.parseJson`,
-  the same parser `JSONPayloadDeserializer` uses) and evaluates `cursorExtractionExpression`
-  against it via `com.dashjoin.jsonata.Jsonata.jsonata(...).evaluate(...)` — the identical call
+- **Extraction**: after each page's data is dispatched **and confirmed successfully processed**
+  (see "Cursor advances only after processing succeeds" below — not merely after
+  `dispatcher.onMessage(...)` returns), `advanceCursor()` parses that page's response body
+  (`com.dashjoin.jsonata.json.Json.parseJson`, the same parser `JSONPayloadDeserializer` uses)
+  and evaluates `cursorExtractionExpression` against it via
+  `com.dashjoin.jsonata.Jsonata.jsonata(...).evaluate(...)` — the identical call
   `AbstractJSONataExtractionProcessor.extractContentFromPayload()` uses elsewhere in the mapper,
   reused rather than reimplemented. A response the expression can't evaluate logs a warning and
   leaves the cursor unchanged (that page behaves like v1) instead of failing the poll.
 - **Persistence**: the cursor lives on `MappingStatus.cursor` (`model/status/MappingStatus.java`),
-  resolved from the poll's topic via `mappingService.getCacheMappingInbound(tenant)` (matched on
-  `mappingTopic`). This reuses `MappingStatus`'s existing inventory-persisted,
-  survives-a-restart, periodically-flushed machinery wholesale — no new persistence
-  infrastructure, the crux flagged as open in the planning doc's original v2 sketch. If several
-  mappings share one topic, they already share this connector's one poll job for it (see
-  "Subscribe" above), so they share its cursor too — resolved by taking the first matching
-  mapping, deliberately not an error.
-- **Ordering matters**: the cursor advances *after each page's* dispatch, never before — see
-  "Pagination (v2)" for why this is per-page rather than once per poll.
+  resolved from the poll's topic via `mappingSubscriptionManager.getEffectiveMappingsInbound()`
+  (matched on `mappingTopic`) — the mappings actually deployed to *this* connector, not every
+  inbound mapping tenant-wide, so a same-named topic on a different connector can't be resolved
+  by mistake. This reuses `MappingStatus`'s existing inventory-persisted, survives-a-restart,
+  periodically-flushed machinery wholesale — no new persistence infrastructure, the crux flagged
+  as open in the planning doc's original v2 sketch. If several mappings share one topic, they
+  already share this connector's one poll job for it (see "Subscribe" above), so they share its
+  cursor too — resolved by taking the first matching mapping, deliberately not an error.
+- **Ordering matters**: the cursor advances *after each page's dispatch has been confirmed
+  successful*, never before — see "Pagination (v2)" for why this is per-page rather than once per
+  poll, and "Cursor advances only after processing succeeds" for what "confirmed successful"
+  actually checks.
+
+#### Cursor advances only after processing succeeds — FIXED 2026-09-21
+
+`dispatcher.onMessage(...)` starts Camel processing asynchronously and returns a
+`ProcessingResultWrapper` immediately — a `Future` that has merely *completed* says nothing about
+whether every mapping that matched actually succeeded. An earlier version of this code either
+ignored the wrapper entirely, or (a later partial fix) blocked on the future without inspecting
+its result — so a mapping failure, timeout, or downstream Cumulocity error that didn't throw out
+of the `Future` itself would still let the cursor advance past data that was never actually
+processed. Caught in PR review (Copilot).
+
+`awaitProcessingSuccess()` now mirrors the exact wait/timeout/cancellation handling every broker
+callback (e.g. `AbstractMqttCallback`) already uses for QoS>0 messages: bounded
+`.get(timeoutMs, TimeUnit.MILLISECONDS)` on `getProcessingResult()` (timeout = the wrapper's own
+`pipelineTimeoutMS`, falling back to `ServiceConfiguration.PROCESSING_HARD_CEILING_MS`), a check
+for `cancellationRequested` (a JS CPU timeout can close the GraalVM context and complete the
+future early), and `ProcessingResultHelper.extractMaxHttpStatus(...)` — the same helper broker
+callbacks use to decide ack vs. no-ack — to detect a per-context processing failure that
+completed without throwing. Any of these failing is treated exactly like a failed HTTP fetch:
+routed through `handlePollFailure` (backoff, `RETRYING`/`FAILED`), cursor not advanced, pagination
+stops for that cycle.
 - Two backward-compatible constructor/call-site changes came with this: `MappingStatus` gained an
   11th field via a new all-args constructor, with the pre-existing 10-arg constructor kept
   (delegating with `cursor = null`) so none of its ~20 test call sites needed touching.
