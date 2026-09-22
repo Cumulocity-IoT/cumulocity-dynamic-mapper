@@ -17,5 +17,10 @@ ENV SERVER_PORT=80
 
 EXPOSE 80
 
-# Use a single worker so the in-memory request log remains complete and clearable
-CMD ["gunicorn", "--bind", "0.0.0.0:80", "--workers", "1", "--timeout", "60", "app:app"]
+# Single worker *process* so the in-memory request log / event store stay in one place
+# (each gunicorn worker process would otherwise have its own independent copy) — but
+# multiple threads within it, so concurrent poll requests from two connectors (or two
+# topics on the same connector) don't serialize behind gunicorn's sync worker and risk
+# tripping the connector's own 30s per-poll REQUEST_TIMEOUT. app.py's shared mutable
+# state (_events_store/_event_seq) is guarded by a lock for exactly this concurrency.
+CMD ["gunicorn", "--bind", "0.0.0.0:80", "--workers", "1", "--worker-class", "gthread", "--threads", "4", "--timeout", "60", "app:app"]

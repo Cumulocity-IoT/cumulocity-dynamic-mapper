@@ -39,6 +39,7 @@ import base64
 import logging
 import os
 import random
+import threading
 from collections import deque
 from datetime import datetime, timezone
 
@@ -79,6 +80,14 @@ _request_log: deque = deque(maxlen=_MAX_LOGGED_REQUESTS)
 _MAX_STORED_EVENTS = 500
 _events_store: list = []
 _event_seq = 0
+
+# Guards the read-modify-write on _event_seq/_events_store above. The Dockerfile runs
+# gunicorn with a single worker *process* (deliberately, so this in-memory state and
+# _request_log stay in one place) but multiple threads (--worker-class gthread), so
+# concurrent /events requests from two connector poll jobs firing close together are a
+# real scenario, not a hypothetical — without this lock they could race and either
+# duplicate an id or lose an increment.
+_state_lock = threading.Lock()
 
 
 def _now() -> str:
@@ -183,25 +192,27 @@ def events():
 
     # Simulate one new event "arriving" on every poll, whether or not a cursor was
     # sent, so there's always something new to see regardless of which mapping polls.
-    _event_seq += 1
-    _events_store.append({
-        "id": _event_seq,
-        "deviceId": DEVICE_ID,
-        "timestamp": _now(),
-        "text": f"Synthetic poll event #{_event_seq}",
-    })
-    del _events_store[:-_MAX_STORED_EVENTS]
+    with _state_lock:
+        _event_seq += 1
+        _events_store.append({
+            "id": _event_seq,
+            "deviceId": DEVICE_ID,
+            "timestamp": _now(),
+            "text": f"Synthetic poll event #{_event_seq}",
+        })
+        del _events_store[:-_MAX_STORED_EVENTS]
+        snapshot = list(_events_store)
 
     since = request.args.get("since")
     if since is not None:
         try:
             since_id = int(since)
-            result = [e for e in _events_store if e["id"] > since_id]
+            result = [e for e in snapshot if e["id"] > since_id]
         except ValueError:
             logger.warning("GET /events – ignoring non-numeric since=%r", since)
-            result = list(_events_store)
+            result = snapshot
     else:
-        result = list(_events_store)
+        result = snapshot
 
     logger.info("GET /events – since=%s, returning %d event(s)", since, len(result))
     return jsonify(result), 200
