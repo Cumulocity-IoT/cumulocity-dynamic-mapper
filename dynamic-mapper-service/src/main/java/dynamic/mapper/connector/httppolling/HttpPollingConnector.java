@@ -503,6 +503,9 @@ public class HttpPollingConnector extends AConnectorClient {
                 connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
 
                 String body = response.getBody();
+                if ("PageNumber".equals(paginationMode) && isEmptyPage(body)) {
+                    break;
+                }
                 byte[] payload = body != null
                         ? body.getBytes(StandardCharsets.UTF_8)
                         : new byte[0];
