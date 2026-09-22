@@ -362,9 +362,7 @@ public class HttpPollingConnector extends AConnectorClient {
 
     @Override
     protected boolean isPassiveReceiver() {
-        // No broker connection to be "connected" to before (un)subscribing — inbound mapping
-        // changes must reconcile poll jobs immediately, same reasoning as the HTTP connector.
-        return true;
+        return false;
     }
 
     @Override
