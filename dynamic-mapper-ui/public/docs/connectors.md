@@ -6,16 +6,6 @@ This page walks through the connector configuration UI and covers connector-spec
 of supported connectors, directions, and payload formats, see the table in
 [Managing connectors](/c8y-pkg-dynamic-mapper/introduction/managing-connectors#managing-connectors).
 
-### Default HTTP Connector
-
-The **Default HTTP Connector** does not need to be created manually — it is created automatically for every
-tenant at microservice startup. It is reachable at
-`https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapper-service/httpConnector/<MAPPING_TOPIC>`: the path segment
-after `.../httpConnector/` is used directly as the mapping topic. For example, a JSON payload POSTed to
-`.../httpConnector/temp/berlin_01` is resolved against a mapping with mapping topic `temp/berlin_01`.
-
-![HTTP connector settings](../../../resources/image/Dynamic_Mapper_Connector_Http.png "Default HTTP Connector (inbound) configuration properties.")
-
 ### Adding and managing connectors
 
 Add a new connector using the following wizard
@@ -32,6 +22,16 @@ When a connection fails to establish, the connection logs on the same page show 
 often the fastest way to spot an incorrect parameter:
 
 ![Connector logs](../../../resources/image/Dynamic_Mapper_Connector_Details.png "Connection logs helping identify why a connector failed to connect.")
+
+### Default HTTP Connector
+
+The **Default HTTP Connector** does not need to be created manually — it is created automatically for every
+tenant at microservice startup. It is reachable at
+`https://<YOUR_CUMULOCITY_TENANT>/service/dynamic-mapper-service/httpConnector/<MAPPING_TOPIC>`: the path segment
+after `.../httpConnector/` is used directly as the mapping topic. For example, a JSON payload POSTed to
+`.../httpConnector/temp/berlin_01` is resolved against a mapping with mapping topic `temp/berlin_01`.
+
+![HTTP connector settings](../../../resources/image/Dynamic_Mapper_Connector_Http.png "Default HTTP Connector (inbound) configuration properties.")
 
 ### Webhook connector
 
