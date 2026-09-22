@@ -216,9 +216,8 @@ public class HttpPollingConnector extends AConnectorClient {
             connectionStateManager.setConnected(true);
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
 
-            // Initialize inbound subscriptions -> schedules one poll job per mapping topic
-            List<Mapping> inboundMappings = mappingService.getMappings(tenant, Direction.INBOUND);
-            initializeSubscriptionsInbound(inboundMappings, true);
+            // Rebuild mapping caches and initialize subscriptions through the shared retry-aware path.
+            initializeSubscriptionsAfterConnect();
 
             log.info("{} - HttpPolling connector connected successfully, url: {}", tenant, baseUrl);
         } catch (Exception e) {
