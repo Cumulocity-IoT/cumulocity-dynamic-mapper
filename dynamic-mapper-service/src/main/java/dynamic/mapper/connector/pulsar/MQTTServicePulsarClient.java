@@ -743,7 +743,10 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
     @Override
     public Boolean supportsWildcardInTopic(Direction direction) {
-        return true;
+        // Fallback defaults must match the spec's declared .defaultValue(true) for both
+        // directions — consistent with the rest of the framework's "declare a property, read
+        // it via readWildcardFlag" pattern (e.g. PulsarConnectorClient), rather than hardcoding.
+        return readWildcardFlag(direction, true, true);
     }
 
 

@@ -32,6 +32,13 @@ following settings:
 Click **Start** to open the session. The action bar switches to show **Stop session**, **Pause / Resume**, and
 **Clear** controls.
 
+:::info REST Polling connector
+Starting an inbound session on a **REST Polling** connector for a topic with no mapping deployed yet triggers
+real periodic GET requests against the polled endpoint (at the connector's configured interval) for as long as
+the session stays open. Unlike broker-based connectors, exploring here is not free — stop the session when done
+rather than letting it sit until the idle timeout closes it.
+:::
+
 #### Viewing captured messages
 
 Each captured message appears as a row in the message list with the following columns:

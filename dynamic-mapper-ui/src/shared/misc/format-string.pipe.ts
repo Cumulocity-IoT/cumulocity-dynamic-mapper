@@ -27,8 +27,14 @@ export class FormatStringPipe implements PipeTransform {
   transform(value: string, removeLastWords: number = 0): string {
     if (!value) return '';
 
-    // First, replace underscores with spaces
-    const withSpaces = value.replace(/_/g, ' ');
+    // Split camelCase/PascalCase at lower-to-upper transitions (e.g. "pollIntervalSeconds" ->
+    // "poll Interval Seconds") before anything is lowercased below. A no-op on inputs that are
+    // already all-uppercase-with-underscores (e.g. "WEB_HOOK_INTERNAL"), since there is no
+    // lowercase-to-uppercase transition to find there.
+    const camelSplit = value.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+
+    // Then replace underscores with spaces
+    const withSpaces = camelSplit.replace(/_/g, ' ');
 
     // Convert to lowercase and split into words
     const words = withSpaces.toLowerCase().split(' ');

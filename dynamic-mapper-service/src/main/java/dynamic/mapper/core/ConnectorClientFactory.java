@@ -29,6 +29,7 @@ import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.googlepubsub.GooglePubSubClient;
 import dynamic.mapper.connector.http.HttpClient;
+import dynamic.mapper.connector.httppolling.HttpPollingConnector;
 import dynamic.mapper.connector.kafka.KafkaClientV2;
 import dynamic.mapper.connector.mqtt.MQTT3Client;
 import dynamic.mapper.connector.mqtt.MQTT5Client;
@@ -166,6 +167,13 @@ public class ConnectorClientFactory {
                 connectorClient = new GooglePubSubClient(serviceRegistry, connectorRegistry,
                         connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
                 log.info("{} - Google Pub/Sub Connector created, identifier: {}", tenant,
+                        connectorConfiguration.getIdentifier());
+                break;
+
+            case REST_POLLING:
+                connectorClient = new HttpPollingConnector(serviceRegistry, connectorRegistry,
+                        connectorConfiguration, null, additionalSubscriptionIdTest, tenant);
+                log.info("{} - REST Polling Connector created, identifier: {}", tenant,
                         connectorConfiguration.getIdentifier());
                 break;
 

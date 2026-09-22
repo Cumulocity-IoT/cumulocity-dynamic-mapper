@@ -178,7 +178,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
         type,
         wrappers: ['c8y-form-field'],
         props: {
-          label: entry.key,
+          label: this.formatStringPipe.transform(entry.key),
           required: entry.property.required,
           disabled: entry.property.readonly || this.readOnly,
           description: entry.property.description || undefined,
@@ -213,7 +213,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   }
 
   private createSensitiveStringField(entry: PropertyEntry): FormlyFieldConfig {
-    return this.createBaseFormField(entry, 'input', { type: 'password' });
+    return this.createBaseFormField(entry, 'input', { type: 'password', sensitive: true });
   }
 
   private createBooleanField(entry: PropertyEntry): FormlyFieldConfig {
@@ -254,7 +254,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
         type: 'd11r-input-list',
         wrappers: ['c8y-form-field'],
         props: {
-          label: entry.key,
+          label: this.formatStringPipe.transform(entry.key),
           required: entry.property.required,
           disabled: entry.property.readonly || this.readOnly,
           description: entry.property.description || undefined,
