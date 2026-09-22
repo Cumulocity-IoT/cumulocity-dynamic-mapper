@@ -328,6 +328,13 @@ public class HttpPollingConnector extends AConnectorClient {
             }
         }
 
+        String cursorParam = (String) configuration.getProperties().get("cursorParam");
+        String cursorExtractionExpression = (String) configuration.getProperties().get("cursorExtractionExpression");
+        if (StringUtils.isEmpty(cursorParam) != StringUtils.isEmpty(cursorExtractionExpression)) {
+            log.warn("{} - incremental fetch requires both cursorParam and cursorExtractionExpression", tenant);
+            return false;
+        }
+
         String paginationMode = (String) configuration.getProperties().get("paginationMode");
         String pageParam = (String) configuration.getProperties().get("pageParam");
         String nextPageExpression = (String) configuration.getProperties().get("nextPageExpression");
