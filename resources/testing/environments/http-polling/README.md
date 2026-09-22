@@ -240,16 +240,21 @@ results should show a new measurement each cycle with a different
 
 ## 6. Example mappings (API-driven, three connector features at once)
 
-`mappings/` has three ready-to-use mapping bodies that together exercise the connector
-features covered above end to end against this mock: two topics sharing one connector
-instance, and the incremental-fetch cursor feature. They complement step 4 (which shows
-the equivalent one-mapping UI flow) rather than replace it.
+`mappings/sample-mappings.json` is a single array-format file — the same shape the
+Dynamic Mapper UI's mapping import/export uses (see `resources/samples/mappings-*.json`)
+— containing three ready-to-use **Smart Function** mappings that together exercise the
+connector features covered above end to end against this mock: two topics sharing one
+connector instance, and the incremental-fetch cursor feature. Each mapping's `code` is a
+base64-encoded JavaScript `onMessage(msg, context)` function (see `docs/smart-functions.md`)
+rather than JSONata substitutions — required for mapping 3, whose response is a JSON array
+and which builds one Cumulocity event per array item entirely in code. They complement
+step 4 (which shows the equivalent one-mapping UI flow) rather than replace it.
 
-| File | Topic → mock route | Demonstrates |
+| Mapping (`identifier`) | Topic → mock route | Demonstrates |
 |---|---|---|
-| `mappings/01-measurements.json` | `measurements` → `GET /measurements` | Baseline single-topic polling → `MEASUREMENT` |
-| `mappings/02-status.json` | `status` → `GET /status` | **Different topics, same connector**: deployed to the *same* connector instance as `01-measurements.json` — one poll job per topic, both sharing one `url`/credentials |
-| `mappings/03-events-cursor.json` | `events` → `GET /events?since=<cursor>` | **Incremental-fetch cursor**: a *separate* connector instance with `cursorParam`/`cursorExtractionExpression` configured (cursor/pagination settings are connector-level — see `docs/feature/connector-http-polling.md` — so this can't share the plain connector above), plus `expandArray` turning each poll's array of new events into one Cumulocity event per item |
+| `httppoll-meas` | `measurements` → `GET /measurements` | Baseline single-topic polling → `MEASUREMENT` |
+| `httppoll-status` | `status` → `GET /status` | **Different topics, same connector**: deployed to the *same* connector instance as `httppoll-meas` — one poll job per topic, both sharing one `url`/credentials |
+| `httppoll-events-cursor` | `events` → `GET /events?since=<cursor>` | **Incremental-fetch cursor**: a *separate* connector instance with `cursorParam`/`cursorExtractionExpression` configured (cursor/pagination settings are connector-level — see `docs/feature/connector-http-polling.md` — so this can't share the plain connector above); the code loops over the response array, building one Cumulocity event per new item |
 
 ### 6.1 Create the two connector instances
 
@@ -316,20 +321,30 @@ done
 
 ### 6.2 Create, deploy, and activate the three mappings
 
-Each mapping is POSTed, deployed to its connector (`PUT /deployment/defined/{identifier}` — the
-mapping's own `identifier` field, e.g. `httppoll-meas`, not the numeric `id` the response also
-carries), then activated (mappings are always created inactive, per the `POST /mapping` contract):
+`mappings/sample-mappings.json` can be imported as-is via the UI (**Mapping → Inbound →
+Import**), which deploys nothing by itself — deploy/activate each mapping afterwards as
+usual. To do the whole thing via the REST API instead, each mapping is extracted from the
+array by `identifier`, POSTed individually (`POST /mapping` takes one mapping object, not
+an array), deployed to its connector (`PUT /deployment/defined/{identifier}` — the
+mapping's own `identifier` field, e.g. `httppoll-meas`, not the numeric `id` the response
+also carries), then activated (mappings are always created inactive, per the `POST
+/mapping` contract):
 
 ```bash
 create_deploy_activate() {
-  local file="$1" connector="$2"
-  local identifier
-  identifier=$(python3 -c "import json,sys; print(json.load(open('$file'))['identifier'])")
+  local identifier="$1" connector="$2"
+
+  python3 -c "
+import json
+mappings = json.load(open('mappings/sample-mappings.json'))
+mapping = next(m for m in mappings if m['identifier'] == '$identifier')
+json.dump(mapping, open('/tmp/${identifier}.json', 'w'))
+"
 
   curl -s -X POST "${C8Y_BASEURL}/service/dynamic-mapper-service/mapping" \
     -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}" \
     -H 'Content-Type: application/json' \
-    -d @"$file" > /dev/null
+    -d @"/tmp/${identifier}.json" > /dev/null
 
   curl -s -X PUT "${C8Y_BASEURL}/service/dynamic-mapper-service/deployment/defined/${identifier}" \
     -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}" \
@@ -342,9 +357,9 @@ create_deploy_activate() {
     -d "{\"operation\": \"ACTIVATE_MAPPING\", \"parameter\": {\"id\": \"${identifier}\", \"active\": \"true\"}}"
 }
 
-create_deploy_activate mappings/01-measurements.json   demo-rest-polling-connector
-create_deploy_activate mappings/02-status.json          demo-rest-polling-connector
-create_deploy_activate mappings/03-events-cursor.json   demo-rest-polling-connector-cursor
+create_deploy_activate httppoll-meas           demo-rest-polling-connector
+create_deploy_activate httppoll-status          demo-rest-polling-connector
+create_deploy_activate httppoll-events-cursor   demo-rest-polling-connector-cursor
 ```
 
 `deployment/defined` takes a JSON array of connector identifiers — pass it as a literal
