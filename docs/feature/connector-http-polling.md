@@ -436,6 +436,28 @@ single caller. `executeGet()` maps both 4xx and 5xx responses to a `ConnectorExc
 bounded by a fixed 30s `REQUEST_TIMEOUT` independent of any TCP-level connect/socket
 timeout.
 
+**Connection keep-alive disabled — FIXED 2026-09-22.** `buildWebClient()` configures its
+`WebClient` with `HttpClient.create().keepAlive(false)`, deliberately forcing a fresh
+connection (and, over TLS, a fresh handshake) on every request rather than letting
+reactor-netty pool and reuse one. Found live against a target deployed as its own
+Cumulocity microservice: polls hung for exactly `REQUEST_TIMEOUT` (30s) — no response, no
+connection-reset error, nothing — on requests that reused a pooled connection, while every
+poll that opened a fresh connection succeeded immediately. Root cause: each topic's poll
+cycle is at least `MIN_POLL_INTERVAL_SECONDS` (30s) apart, but reactor-netty's default
+`HttpClient` has no idle-eviction on its connection pool, so a connection sitting idle for
+a whole poll interval is exactly the kind of connection an intermediate gateway or load
+balancer (here, Cumulocity's own platform gateway in front of the deployed target) may have
+already timed out and silently dropped — some intermediaries send a clean close/reset back
+(harmless: reactor-netty detects this and transparently opens a fresh connection before any
+request bytes go out), but others "black hole" it: the client's write succeeds locally into
+the socket buffer, and nothing ever comes back, which is indistinguishable from a slow
+server until `REQUEST_TIMEOUT` fires. Not reproducible against a bare local target over
+loopback (no intermediary hop to silently drop anything), which is why this surfaced only
+against the real deployed path. The fix trades a small, fixed per-poll cost (new
+connection/handshake) — negligible at a 30s-minimum cadence — for eliminating this failure
+mode outright, rather than trying to tune the pool's idle timeout below whatever unknown,
+un-configurable-by-us timeout the shortest intermediary in the path happens to use.
+
 ### Error handling, backoff, and health status
 
 Reuses the existing `ConnectionStateManager`/`ConnectorStatus` mechanism as-is — no new

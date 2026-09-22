@@ -45,8 +45,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
 
 import com.dashjoin.jsonata.json.Json;
 
@@ -725,8 +727,23 @@ public class HttpPollingConnector extends AConnectorClient {
         // topicPath) always joins with exactly one separator, never "//".
         String normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
 
+        // keepAlive(false): every poll cycle is at least MIN_POLL_INTERVAL_SECONDS (30s) apart,
+        // and reactor-netty's default HttpClient pools/reuses connections with no idle-eviction
+        // by default. A connection left idle across that whole interval is exactly the kind of
+        // stale connection an intermediate gateway/load balancer (Cumulocity's own platform
+        // gateway in front of a deployed target, or any real-world API's reverse proxy) is likely
+        // to have silently dropped — some close it outright (fast failure, harmless), but others
+        // "black hole" it (accept the write, never respond), which the client can't distinguish
+        // from a slow server until REQUEST_TIMEOUT fires. Found via a live tenant: a poll target
+        // deployed as its own Cumulocity microservice intermittently hung for exactly 30s on
+        // reused connections while every *fresh* connection succeeded immediately. Disabling
+        // keep-alive means a new connection (and, over TLS, a new handshake) per request — real
+        // but negligible overhead at a 30s-minimum poll cadence, and it eliminates this whole
+        // class of bug outright rather than requiring the pool's idle timeout to be tuned lower
+        // than every intermediary's own (unknown, un-configurable-by-us) timeout.
         WebClient.Builder builder = WebClient.builder()
                 .baseUrl(normalizedBaseUrl)
+                .clientConnector(new ReactorClientHttpConnector(HttpClient.create().keepAlive(false)))
                 .defaultHeader("Accept", "application/json");
 
         if ("Basic".equalsIgnoreCase(authentication) && !StringUtils.isEmpty(user) && !StringUtils.isEmpty(password)) {
