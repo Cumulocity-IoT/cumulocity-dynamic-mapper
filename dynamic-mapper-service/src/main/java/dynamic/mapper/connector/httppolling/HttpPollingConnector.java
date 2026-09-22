@@ -43,7 +43,6 @@ import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -58,10 +57,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -74,8 +71,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * REST/HTTP Polling Connector Client (inbound only).
@@ -117,16 +112,6 @@ public class HttpPollingConnector extends AConnectorClient {
 
     /** Cap on the linear backoff delay between retries, mirroring AMQTTClient.RECONNECT_DELAY_MAX_MS. */
     private static final long BACKOFF_CAP_MS = 300_000L;
-
-    /** Default {@code maxPagesPerPoll} when not configured or invalid. */
-    private static final int DEFAULT_MAX_PAGES_PER_POLL = 20;
-
-    /** Default {@code pageStartValue} for {@code PageNumber} pagination mode. */
-    private static final long DEFAULT_PAGE_START_VALUE = 1L;
-
-    /** Matches the {@code rel="next"} entry of an RFC 5988 {@code Link} header, e.g.
-     * {@code <https://api.example.com/x?page=2>; rel="next"}. */
-    private static final Pattern NEXT_LINK_PATTERN = Pattern.compile("<([^>]+)>\\s*;\\s*rel=\"?next\"?");
 
     /** Bounds every GET call, independent of TCP-level connect/socket timeouts. */
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
@@ -345,58 +330,8 @@ public class HttpPollingConnector extends AConnectorClient {
         if (configuration == null) {
             return false;
         }
-
-        String url = (String) configuration.getProperties().get("url");
-        if (StringUtils.isEmpty(url)) {
-            return false;
-        }
-
-        Long pollIntervalSeconds = readPollIntervalSeconds(configuration);
-        if (pollIntervalSeconds != null && pollIntervalSeconds < MIN_POLL_INTERVAL_SECONDS) {
-            log.warn("{} - pollIntervalSeconds {} is below the enforced minimum of {}s", tenant,
-                    pollIntervalSeconds, MIN_POLL_INTERVAL_SECONDS);
-            return false;
-        }
-
-        String authentication = (String) configuration.getProperties().get("authentication");
-        String user = (String) configuration.getProperties().get("user");
-        String password = (String) configuration.getProperties().get("password");
-        String token = (String) configuration.getProperties().get("token");
-
-        if ("Basic".equalsIgnoreCase(authentication)) {
-            if (StringUtils.isEmpty(user) || StringUtils.isEmpty(password)) {
-                return false;
-            }
-        } else if ("Bearer".equalsIgnoreCase(authentication)) {
-            if (StringUtils.isEmpty(token)) {
-                return false;
-            }
-        }
-
-        String cursorParam = (String) configuration.getProperties().get("cursorParam");
-        String cursorExtractionExpression = (String) configuration.getProperties().get("cursorExtractionExpression");
-        if (StringUtils.isEmpty(cursorParam) != StringUtils.isEmpty(cursorExtractionExpression)) {
-            log.warn("{} - incremental fetch requires both cursorParam and cursorExtractionExpression", tenant);
-            return false;
-        }
-
-        String paginationMode = (String) configuration.getProperties().get("paginationMode");
-        String pageParam = (String) configuration.getProperties().get("pageParam");
-        String nextPageExpression = (String) configuration.getProperties().get("nextPageExpression");
-        if ("NextFieldInBody".equals(paginationMode)) {
-            if (StringUtils.isEmpty(pageParam) || StringUtils.isEmpty(nextPageExpression)) {
-                log.warn("{} - paginationMode NextFieldInBody requires both pageParam and " +
-                        "nextPageExpression to be set", tenant);
-                return false;
-            }
-        } else if ("PageNumber".equals(paginationMode)) {
-            if (StringUtils.isEmpty(pageParam)) {
-                log.warn("{} - paginationMode PageNumber requires pageParam to be set", tenant);
-                return false;
-            }
-        }
-
-        return true;
+        return HttpPollingRequestHelper.isConfigValid(configuration.getProperties(),
+                MIN_POLL_INTERVAL_SECONDS, tenant, log);
     }
 
     @Override
@@ -532,15 +467,19 @@ public class HttpPollingConnector extends AConnectorClient {
     private void executePollInternal(String topic) {
         long pollIntervalMs = getEffectivePollIntervalSeconds() * 1000L;
         Mapping mapping = resolveMapping(topic);
+        Map<String, Object> properties = connectorConfiguration.getProperties();
+        String cursorParam = (String) properties.get("cursorParam");
+        String pageParam = (String) properties.get("pageParam");
+        String nextPageExpression = (String) properties.get("nextPageExpression");
         String paginationMode = readPaginationMode();
-        int maxPages = getMaxPagesPerPoll();
+        int maxPages = HttpPollingRequestHelper.getMaxPagesPerPoll(properties.get("maxPagesPerPoll"));
 
         // Defensive, even though isConfigValid() already rejects this at save time (e.g. a
         // connector saved before that validation existed): never loop on duplicate page
         // requests because pageParam/nextPageExpression is missing — fall back to a single
         // page rather than silently re-fetching (and re-dispatching) the same response up to
         // maxPagesPerPoll times.
-        if (!isPaginationRuntimeConfigValid(paginationMode)) {
+        if (!HttpPollingRequestHelper.isPaginationRuntimeConfigValid(paginationMode, pageParam, nextPageExpression)) {
             log.warn("{} - paginationMode [{}] misconfigured for topic [{}] (missing pageParam" +
                     "/nextPageExpression) — falling back to a single-page poll this cycle",
                     tenant, paginationMode, topic);
@@ -550,7 +489,9 @@ public class HttpPollingConnector extends AConnectorClient {
         try {
             String cursor = currentCursor(mapping);
             URI nextUri = null;
-            String nextPageParamValue = "PageNumber".equals(paginationMode) ? readPageStartValue() : null;
+            String nextPageParamValue = "PageNumber".equals(paginationMode)
+                    ? HttpPollingRequestHelper.readPageStartValue(properties.get("pageStartValue"))
+                    : null;
             int pageCount = 0;
             boolean hasMore = true;
 
@@ -569,7 +510,8 @@ public class HttpPollingConnector extends AConnectorClient {
                     return;
                 }
 
-                Map<String, String> queryParams = buildQueryParams(cursor, paginationMode, nextPageParamValue);
+                Map<String, String> queryParams = HttpPollingRequestHelper.buildQueryParams(cursor, cursorParam,
+                        paginationMode, pageParam, nextPageParamValue);
                 ResponseEntity<String> response = executeGet(topic, queryParams, nextUri)
                         .timeout(REQUEST_TIMEOUT).block();
 
@@ -588,7 +530,7 @@ public class HttpPollingConnector extends AConnectorClient {
                 connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
 
                 String body = response.getBody();
-                if ("PageNumber".equals(paginationMode) && isEmptyPage(body)) {
+                if ("PageNumber".equals(paginationMode) && HttpPollingRequestHelper.isEmptyPage(body)) {
                     break;
                 }
                 byte[] payload = body != null
@@ -632,15 +574,16 @@ public class HttpPollingConnector extends AConnectorClient {
                 hasMore = false;
                 switch (paginationMode) {
                     case "NextLinkHeader" -> {
-                        nextUri = extractNextLinkUri(response);
+                        nextUri = HttpPollingRequestHelper.extractNextLinkUri(response, tenant, log);
                         hasMore = nextUri != null;
                     }
                     case "NextFieldInBody" -> {
-                        nextPageParamValue = extractNextPageToken(body);
+                        nextPageParamValue = HttpPollingRequestHelper.extractNextPageToken(body,
+                                nextPageExpression, tenant, log);
                         hasMore = StringUtils.isNotEmpty(nextPageParamValue);
                     }
                     case "PageNumber" -> {
-                        hasMore = !isEmptyPage(body);
+                        hasMore = !HttpPollingRequestHelper.isEmptyPage(body);
                         if (hasMore) {
                             nextPageParamValue = String.valueOf(Long.parseLong(nextPageParamValue) + 1);
                         }
@@ -824,7 +767,7 @@ public class HttpPollingConnector extends AConnectorClient {
             request = pollingClient.get().uri(absoluteUri);
         } else {
             request = pollingClient.get().uri(uriBuilder -> {
-                uriBuilder.path(topicPath(topic));
+                uriBuilder.path(HttpPollingRequestHelper.topicPath(topic));
                 queryParams.forEach(uriBuilder::queryParam);
                 return uriBuilder.build();
             });
@@ -843,15 +786,6 @@ public class HttpPollingConnector extends AConnectorClient {
                 .toEntity(String.class);
     }
 
-    /**
-     * Normalizes a mapping topic into a URI path segment: exactly one leading {@code /}, no
-     * duplicate slashes when joined onto {@link #baseUrl} (already trailing-slash-stripped in
-     * {@link #buildWebClient()}). {@code "devices/measurements"} and {@code "/devices/measurements"}
-     * both become {@code "/devices/measurements"}.
-     */
-    private String topicPath(String topic) {
-        return topic.startsWith("/") ? topic : "/" + topic;
-    }
 
     // -------------------------------------------------------------------------
     // Incremental fetch (v2): a topic's cursor is stored on its mapping's MappingStatus
@@ -947,132 +881,11 @@ public class HttpPollingConnector extends AConnectorClient {
         return StringUtils.isNotEmpty(mode) ? mode : "None";
     }
 
-    /**
-     * Runtime counterpart of the {@code paginationMode} checks in {@link #isConfigValid}: without
-     * a {@code pageParam} (and, for {@code NextFieldInBody}, a {@code nextPageExpression}), the
-     * connector cannot actually tell the server which page to fetch next, so every "page" request
-     * would be identical to the first — see {@link #executePoll}'s fallback to a single page.
-     */
-    private boolean isPaginationRuntimeConfigValid(String paginationMode) {
-        if ("None".equals(paginationMode) || "NextLinkHeader".equals(paginationMode)) {
-            return true;
-        }
-        String pageParam = (String) connectorConfiguration.getProperties().get("pageParam");
-        if (StringUtils.isEmpty(pageParam)) {
-            return false;
-        }
-        if ("NextFieldInBody".equals(paginationMode)) {
-            String nextPageExpression = (String) connectorConfiguration.getProperties().get("nextPageExpression");
-            return StringUtils.isNotEmpty(nextPageExpression);
-        }
-        return true;
-    }
-
-    private int getMaxPagesPerPoll() {
-        Object value = connectorConfiguration.getProperties().get("maxPagesPerPoll");
-        if (value == null) {
-            return DEFAULT_MAX_PAGES_PER_POLL;
-        }
-        try {
-            int parsed = Integer.parseInt(value.toString());
-            return parsed > 0 ? parsed : DEFAULT_MAX_PAGES_PER_POLL;
-        } catch (NumberFormatException e) {
-            return DEFAULT_MAX_PAGES_PER_POLL;
-        }
-    }
-
-    private String readPageStartValue() {
-        Object value = connectorConfiguration.getProperties().get("pageStartValue");
-        if (value == null) {
-            return String.valueOf(DEFAULT_PAGE_START_VALUE);
-        }
-        try {
-            return String.valueOf(Long.parseLong(value.toString()));
-        } catch (NumberFormatException e) {
-            return String.valueOf(DEFAULT_PAGE_START_VALUE);
-        }
-    }
-
-    /**
-     * Composes the query parameters for one page request: the incremental-fetch cursor (if
-     * configured, independent of pagination — the two features combine freely) plus, for
-     * {@code NextFieldInBody}/{@code PageNumber} modes, the current page token/number under
-     * {@code pageParam}. {@code NextLinkHeader} mode contributes nothing here — its continuation
-     * is the absolute URI handled separately in {@link #executeGet}.
-     */
-    private Map<String, String> buildQueryParams(String cursor, String paginationMode, String pageParamValue) {
-        Map<String, String> params = new LinkedHashMap<>();
-        String cursorParam = (String) connectorConfiguration.getProperties().get("cursorParam");
-        if (StringUtils.isNotEmpty(cursorParam) && cursor != null) {
-            params.put(cursorParam, cursor);
-        }
-        if (("NextFieldInBody".equals(paginationMode) || "PageNumber".equals(paginationMode))
-                && pageParamValue != null) {
-            String pageParam = (String) connectorConfiguration.getProperties().get("pageParam");
-            if (StringUtils.isNotEmpty(pageParam)) {
-                params.put(pageParam, pageParamValue);
-            }
-        }
-        return params;
-    }
-
-    /** Parses an RFC 5988 {@code Link} header for the {@code rel="next"} entry. */
-    private URI extractNextLinkUri(ResponseEntity<String> response) {
-        List<String> linkHeaders = response.getHeaders().get(HttpHeaders.LINK);
-        if (linkHeaders == null) {
-            return null;
-        }
-        for (String headerValue : linkHeaders) {
-            for (String part : headerValue.split(",")) {
-                Matcher m = NEXT_LINK_PATTERN.matcher(part.trim());
-                if (m.find()) {
-                    try {
-                        return URI.create(m.group(1));
-                    } catch (IllegalArgumentException e) {
-                        log.warn("{} - Ignoring unparsable next-page Link header value: {}", tenant, m.group(1));
-                        return null;
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    /** Evaluates {@code nextPageExpression} (JSONata) against the response body. */
-    private String extractNextPageToken(String responseBody) {
-        String expression = (String) connectorConfiguration.getProperties().get("nextPageExpression");
-        if (StringUtils.isEmpty(expression) || StringUtils.isEmpty(responseBody)) {
-            return null;
-        }
-        try {
-            Object parsed = Json.parseJson(responseBody);
-            Object extracted = jsonata(expression).evaluate(parsed);
-            return extracted != null ? extracted.toString() : null;
-        } catch (Exception e) {
-            log.warn("{} - Failed to evaluate nextPageExpression [{}]: {}", tenant, expression, e.getMessage());
-            return null;
-        }
-    }
-
-    /** {@code PageNumber} mode's stop condition: an empty JSON array or object body. */
-    private boolean isEmptyPage(String responseBody) {
-        if (StringUtils.isBlank(responseBody)) {
-            return true;
-        }
-        try {
-            Object parsed = Json.parseJson(responseBody);
-            if (parsed instanceof Collection<?> collection) {
-                return collection.isEmpty();
-            }
-            if (parsed instanceof Map<?, ?> map) {
-                return map.isEmpty();
-            }
-        } catch (Exception e) {
-            // Unparsable body: don't guess — treat as non-empty so pagination halts on the next
-            // maxPagesPerPoll cap rather than silently stopping early on a transient parse issue.
-        }
-        return false;
-    }
+    // Pagination requirement checks, query-param composition, and per-page continuation/stop-
+    // condition extraction (NextLinkHeader/NextFieldInBody/PageNumber, isEmptyPage) all now live
+    // in HttpPollingRequestHelper — pure functions of a response/body/config value, with no
+    // dependency on this connector's mutable state, so they're both simpler to read here at the
+    // call sites above and directly unit-testable without a wired-up connector instance.
 
     // -------------------------------------------------------------------------
     // Config schema
@@ -1150,7 +963,7 @@ public class HttpPollingConnector extends AConnectorClient {
                 .property("maxPagesPerPoll", ConnectorPropertyBuilder.create(ConnectorPropertyType.NUMERIC_PROPERTY)
                         .order(10)
                         .required(false)
-                        .defaultValue(DEFAULT_MAX_PAGES_PER_POLL)
+                        .defaultValue(HttpPollingRequestHelper.DEFAULT_MAX_PAGES_PER_POLL)
                         .condition("paginationMode", "NextLinkHeader", "NextFieldInBody", "PageNumber")
                         .description("Safety cap on pages drained per poll cycle, regardless of whether more " +
                                 "pages are available — protects other topics' scheduled polls on this connector " +
@@ -1173,7 +986,7 @@ public class HttpPollingConnector extends AConnectorClient {
                 .property("pageStartValue", ConnectorPropertyBuilder.create(ConnectorPropertyType.NUMERIC_PROPERTY)
                         .order(13)
                         .required(false)
-                        .defaultValue(DEFAULT_PAGE_START_VALUE)
+                        .defaultValue(HttpPollingRequestHelper.DEFAULT_PAGE_START_VALUE)
                         .condition("paginationMode", "PageNumber")
                         .description("First page number sent under pageParam (e.g. 0 for a zero-indexed API)."))
 

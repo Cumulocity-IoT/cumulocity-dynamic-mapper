@@ -88,6 +88,18 @@ custom microservice that polls and forwards into Cumulocity or the mapper.
 
 ## Implementation
 
+Split across two classes (2026-09-22): `HttpPollingConnector` owns all mutable state (poll
+scheduling, in-flight/failure tracking, the WebClient) and framework integration; the pure,
+stateless request/response logic — config validation, query-param composition, pagination
+continuation/stop-condition extraction, JSONata evaluation — lives in
+`HttpPollingRequestHelper`, a package-private class of static functions with no dependency on
+connector state. Kept to that boundary deliberately: the concurrency-sensitive state
+(`subscribedTopics`, `inFlightTopics`, `consecutiveFailuresByTopic`, `pollTasks`) stays in one
+place with one clear owner, the same lesson from the `ProcessingContext` "context decomposition"
+attempt that was tried and reverted elsewhere in this codebase — splitting *that* part into
+separate classes would reintroduce exactly the kind of copy-out/copy-back risk this connector's
+2026-09-22 concurrency fixes (above) just removed.
+
 ### Direction: inbound only
 
 ```java

@@ -42,6 +42,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 
@@ -71,6 +73,8 @@ import dynamic.mapper.processor.util.ProcessingResultHelper;
  * {@code resources/testing/environments/http-polling/} instead (see docs/feature/connector-http-polling.md).
  */
 public class HttpPollingConnectorTest {
+
+    private static final Logger TEST_LOG = LoggerFactory.getLogger(HttpPollingConnectorTest.class);
 
     private HttpPollingConnector client;
 
@@ -365,241 +369,167 @@ public class HttpPollingConnectorTest {
     }
 
     // -------------------------------------------------------------------------
-    // topicPath (private)
+    // HttpPollingRequestHelper.topicPath — pure, called directly (package-private, no reflection
+    // needed now that the pure request/response helpers live outside HttpPollingConnector)
     // -------------------------------------------------------------------------
 
     @Test
-    public void testTopicPath_addsLeadingSlashWhenMissing() throws Exception {
-        client = new HttpPollingConnector();
-        Object result = invokePrivate(client, "topicPath", new Class<?>[] { String.class }, "devices/measurements");
-        assertEquals("/devices/measurements", result);
+    public void testTopicPath_addsLeadingSlashWhenMissing() {
+        assertEquals("/devices/measurements", HttpPollingRequestHelper.topicPath("devices/measurements"));
     }
 
     @Test
-    public void testTopicPath_preservesExistingLeadingSlash() throws Exception {
-        client = new HttpPollingConnector();
-        Object result = invokePrivate(client, "topicPath", new Class<?>[] { String.class }, "/devices/measurements");
-        assertEquals("/devices/measurements", result);
+    public void testTopicPath_preservesExistingLeadingSlash() {
+        assertEquals("/devices/measurements", HttpPollingRequestHelper.topicPath("/devices/measurements"));
     }
 
     // -------------------------------------------------------------------------
-    // buildQueryParams (private)
+    // HttpPollingRequestHelper.buildQueryParams
     // -------------------------------------------------------------------------
 
     @Test
-    public void testBuildQueryParams_cursorOnly_noneMode() throws Exception {
-        client = new HttpPollingConnector();
-        Map<String, Object> properties = minimalValidProperties();
-        properties.put("cursorParam", "since");
-        setField(client, "connectorConfiguration", configWithProperties(properties));
-
-        @SuppressWarnings("unchecked")
-        Map<String, String> params = (Map<String, String>) invokePrivate(client, "buildQueryParams",
-                new Class<?>[] { String.class, String.class, String.class }, "2026-01-01T00:00:00Z", "None", null);
+    public void testBuildQueryParams_cursorOnly_noneMode() {
+        Map<String, String> params = HttpPollingRequestHelper.buildQueryParams(
+                "2026-01-01T00:00:00Z", "since", "None", null, null);
 
         assertEquals(Map.of("since", "2026-01-01T00:00:00Z"), params);
     }
 
     @Test
-    public void testBuildQueryParams_pageNumberMode_includesPageParam() throws Exception {
-        client = new HttpPollingConnector();
-        Map<String, Object> properties = minimalValidProperties();
-        properties.put("paginationMode", "PageNumber");
-        properties.put("pageParam", "page");
-        setField(client, "connectorConfiguration", configWithProperties(properties));
-
-        @SuppressWarnings("unchecked")
-        Map<String, String> params = (Map<String, String>) invokePrivate(client, "buildQueryParams",
-                new Class<?>[] { String.class, String.class, String.class }, null, "PageNumber", "3");
+    public void testBuildQueryParams_pageNumberMode_includesPageParam() {
+        Map<String, String> params = HttpPollingRequestHelper.buildQueryParams(
+                null, null, "PageNumber", "page", "3");
 
         assertEquals(Map.of("page", "3"), params);
     }
 
     @Test
-    public void testBuildQueryParams_cursorAndPageCombineFreely() throws Exception {
-        client = new HttpPollingConnector();
-        Map<String, Object> properties = minimalValidProperties();
-        properties.put("cursorParam", "since");
-        properties.put("paginationMode", "NextFieldInBody");
-        properties.put("pageParam", "pageToken");
-        properties.put("nextPageExpression", "nextPageToken");
-        setField(client, "connectorConfiguration", configWithProperties(properties));
-
-        @SuppressWarnings("unchecked")
-        Map<String, String> params = (Map<String, String>) invokePrivate(client, "buildQueryParams",
-                new Class<?>[] { String.class, String.class, String.class }, "cursor-1", "NextFieldInBody", "tok-2");
+    public void testBuildQueryParams_cursorAndPageCombineFreely() {
+        Map<String, String> params = HttpPollingRequestHelper.buildQueryParams(
+                "cursor-1", "since", "NextFieldInBody", "pageToken", "tok-2");
 
         assertEquals(Map.of("since", "cursor-1", "pageToken", "tok-2"), params);
     }
 
     @Test
-    public void testBuildQueryParams_nextLinkHeaderMode_contributesNoPageParam() throws Exception {
-        client = new HttpPollingConnector();
-        Map<String, Object> properties = minimalValidProperties();
-        properties.put("cursorParam", "since");
-        setField(client, "connectorConfiguration", configWithProperties(properties));
-
-        @SuppressWarnings("unchecked")
-        Map<String, String> params = (Map<String, String>) invokePrivate(client, "buildQueryParams",
-                new Class<?>[] { String.class, String.class, String.class }, "cursor-1", "NextLinkHeader", "ignored");
-
+    public void testBuildQueryParams_nextLinkHeaderMode_contributesNoPageParam() {
         // NextLinkHeader's continuation is an absolute URI handled elsewhere — buildQueryParams
         // must not add a page param for it even if a stray value is passed in.
+        Map<String, String> params = HttpPollingRequestHelper.buildQueryParams(
+                "cursor-1", "since", "NextLinkHeader", "page", "ignored");
+
         assertEquals(Map.of("since", "cursor-1"), params);
     }
 
     // -------------------------------------------------------------------------
-    // isEmptyPage (private) — PageNumber mode's stop condition
+    // HttpPollingRequestHelper.isEmptyPage — PageNumber mode's stop condition
     // -------------------------------------------------------------------------
 
     @Test
-    public void testIsEmptyPage_blankBody_true() throws Exception {
-        client = new HttpPollingConnector();
-        assertTrue((Boolean) invokePrivate(client, "isEmptyPage", new Class<?>[] { String.class }, (Object) null));
-        assertTrue((Boolean) invokePrivate(client, "isEmptyPage", new Class<?>[] { String.class }, "   "));
+    public void testIsEmptyPage_blankBody_true() {
+        assertTrue(HttpPollingRequestHelper.isEmptyPage(null));
+        assertTrue(HttpPollingRequestHelper.isEmptyPage("   "));
     }
 
     @Test
-    public void testIsEmptyPage_emptyArray_true() throws Exception {
-        client = new HttpPollingConnector();
-        assertTrue((Boolean) invokePrivate(client, "isEmptyPage", new Class<?>[] { String.class }, "[]"));
+    public void testIsEmptyPage_emptyArray_true() {
+        assertTrue(HttpPollingRequestHelper.isEmptyPage("[]"));
     }
 
     @Test
-    public void testIsEmptyPage_emptyObject_true() throws Exception {
-        client = new HttpPollingConnector();
-        assertTrue((Boolean) invokePrivate(client, "isEmptyPage", new Class<?>[] { String.class }, "{}"));
+    public void testIsEmptyPage_emptyObject_true() {
+        assertTrue(HttpPollingRequestHelper.isEmptyPage("{}"));
     }
 
     @Test
-    public void testIsEmptyPage_nonEmptyArray_false() throws Exception {
-        client = new HttpPollingConnector();
-        assertFalse((Boolean) invokePrivate(client, "isEmptyPage", new Class<?>[] { String.class },
-                "[{\"id\":1}]"));
+    public void testIsEmptyPage_nonEmptyArray_false() {
+        assertFalse(HttpPollingRequestHelper.isEmptyPage("[{\"id\":1}]"));
     }
 
     @Test
-    public void testIsEmptyPage_nonEmptyObject_false() throws Exception {
-        client = new HttpPollingConnector();
-        assertFalse((Boolean) invokePrivate(client, "isEmptyPage", new Class<?>[] { String.class },
-                "{\"id\":1}"));
+    public void testIsEmptyPage_nonEmptyObject_false() {
+        assertFalse(HttpPollingRequestHelper.isEmptyPage("{\"id\":1}"));
     }
 
     @Test
-    public void testIsEmptyPage_unparsableBody_treatedAsNonEmpty() throws Exception {
-        client = new HttpPollingConnector();
+    public void testIsEmptyPage_unparsableBody_treatedAsNonEmpty() {
         // Defensive: don't guess on a parse failure — treat as non-empty so pagination halts on
         // maxPagesPerPoll rather than silently stopping early on a transient parse issue.
-        assertFalse((Boolean) invokePrivate(client, "isEmptyPage", new Class<?>[] { String.class },
-                "not json"));
+        assertFalse(HttpPollingRequestHelper.isEmptyPage("not json"));
     }
 
     // -------------------------------------------------------------------------
-    // extractNextLinkUri (private) — NextLinkHeader mode's continuation
+    // HttpPollingRequestHelper.extractNextLinkUri — NextLinkHeader mode's continuation
     // -------------------------------------------------------------------------
 
     @Test
-    public void testExtractNextLinkUri_present() throws Exception {
-        client = new HttpPollingConnector();
-        setField(client, "tenant", "test-tenant");
+    public void testExtractNextLinkUri_present() {
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.LINK, "<https://api.example.com/x?page=2>; rel=\"next\"");
         ResponseEntity<String> response = new ResponseEntity<>("{}", headers, 200);
 
-        Object result = invokePrivate(client, "extractNextLinkUri",
-                new Class<?>[] { ResponseEntity.class }, response);
+        URI result = HttpPollingRequestHelper.extractNextLinkUri(response, "test-tenant", TEST_LOG);
 
         assertEquals(URI.create("https://api.example.com/x?page=2"), result);
     }
 
     @Test
-    public void testExtractNextLinkUri_picksNextAmongMultipleRelations() throws Exception {
-        client = new HttpPollingConnector();
-        setField(client, "tenant", "test-tenant");
+    public void testExtractNextLinkUri_picksNextAmongMultipleRelations() {
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.LINK, "<https://api.example.com/x?page=1>; rel=\"prev\", "
                 + "<https://api.example.com/x?page=3>; rel=\"next\", "
                 + "<https://api.example.com/x?page=9>; rel=\"last\"");
         ResponseEntity<String> response = new ResponseEntity<>("{}", headers, 200);
 
-        Object result = invokePrivate(client, "extractNextLinkUri",
-                new Class<?>[] { ResponseEntity.class }, response);
+        URI result = HttpPollingRequestHelper.extractNextLinkUri(response, "test-tenant", TEST_LOG);
 
         assertEquals(URI.create("https://api.example.com/x?page=3"), result);
     }
 
     @Test
-    public void testExtractNextLinkUri_absentHeader_returnsNull() throws Exception {
-        client = new HttpPollingConnector();
-        setField(client, "tenant", "test-tenant");
+    public void testExtractNextLinkUri_absentHeader_returnsNull() {
         ResponseEntity<String> response = new ResponseEntity<>("{}", new HttpHeaders(), 200);
 
-        Object result = invokePrivate(client, "extractNextLinkUri",
-                new Class<?>[] { ResponseEntity.class }, response);
-
-        assertNull(result);
+        assertNull(HttpPollingRequestHelper.extractNextLinkUri(response, "test-tenant", TEST_LOG));
     }
 
     @Test
-    public void testExtractNextLinkUri_noNextRelation_returnsNull() throws Exception {
-        client = new HttpPollingConnector();
-        setField(client, "tenant", "test-tenant");
+    public void testExtractNextLinkUri_noNextRelation_returnsNull() {
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.LINK, "<https://api.example.com/x?page=1>; rel=\"prev\"");
         ResponseEntity<String> response = new ResponseEntity<>("{}", headers, 200);
 
-        Object result = invokePrivate(client, "extractNextLinkUri",
-                new Class<?>[] { ResponseEntity.class }, response);
-
-        assertNull(result);
+        assertNull(HttpPollingRequestHelper.extractNextLinkUri(response, "test-tenant", TEST_LOG));
     }
 
     // -------------------------------------------------------------------------
-    // isPaginationRuntimeConfigValid (private) — runtime counterpart of isConfigValid's checks
+    // HttpPollingRequestHelper.isPaginationRuntimeConfigValid — runtime counterpart of
+    // isConfigValid's pagination checks
     // -------------------------------------------------------------------------
 
     @Test
-    public void testIsPaginationRuntimeConfigValid_none_true() throws Exception {
-        client = new HttpPollingConnector();
-        setField(client, "connectorConfiguration", configWithProperties(new HashMap<>()));
-        assertTrue((Boolean) invokePrivate(client, "isPaginationRuntimeConfigValid",
-                new Class<?>[] { String.class }, "None"));
+    public void testIsPaginationRuntimeConfigValid_none_true() {
+        assertTrue(HttpPollingRequestHelper.isPaginationRuntimeConfigValid("None", null, null));
     }
 
     @Test
-    public void testIsPaginationRuntimeConfigValid_nextLinkHeader_true() throws Exception {
-        client = new HttpPollingConnector();
-        setField(client, "connectorConfiguration", configWithProperties(new HashMap<>()));
-        assertTrue((Boolean) invokePrivate(client, "isPaginationRuntimeConfigValid",
-                new Class<?>[] { String.class }, "NextLinkHeader"));
+    public void testIsPaginationRuntimeConfigValid_nextLinkHeader_true() {
+        assertTrue(HttpPollingRequestHelper.isPaginationRuntimeConfigValid("NextLinkHeader", null, null));
     }
 
     @Test
-    public void testIsPaginationRuntimeConfigValid_pageNumberMissingPageParam_false() throws Exception {
-        client = new HttpPollingConnector();
-        setField(client, "connectorConfiguration", configWithProperties(new HashMap<>()));
-        assertFalse((Boolean) invokePrivate(client, "isPaginationRuntimeConfigValid",
-                new Class<?>[] { String.class }, "PageNumber"));
+    public void testIsPaginationRuntimeConfigValid_pageNumberMissingPageParam_false() {
+        assertFalse(HttpPollingRequestHelper.isPaginationRuntimeConfigValid("PageNumber", null, null));
     }
 
     @Test
-    public void testIsPaginationRuntimeConfigValid_pageNumberWithPageParam_true() throws Exception {
-        client = new HttpPollingConnector();
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("pageParam", "page");
-        setField(client, "connectorConfiguration", configWithProperties(properties));
-        assertTrue((Boolean) invokePrivate(client, "isPaginationRuntimeConfigValid",
-                new Class<?>[] { String.class }, "PageNumber"));
+    public void testIsPaginationRuntimeConfigValid_pageNumberWithPageParam_true() {
+        assertTrue(HttpPollingRequestHelper.isPaginationRuntimeConfigValid("PageNumber", "page", null));
     }
 
     @Test
-    public void testIsPaginationRuntimeConfigValid_nextFieldInBodyMissingExpression_false() throws Exception {
-        client = new HttpPollingConnector();
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("pageParam", "page");
-        setField(client, "connectorConfiguration", configWithProperties(properties));
-        assertFalse((Boolean) invokePrivate(client, "isPaginationRuntimeConfigValid",
-                new Class<?>[] { String.class }, "NextFieldInBody"));
+    public void testIsPaginationRuntimeConfigValid_nextFieldInBodyMissingExpression_false() {
+        assertFalse(HttpPollingRequestHelper.isPaginationRuntimeConfigValid("NextFieldInBody", "page", null));
     }
 
     // -------------------------------------------------------------------------
