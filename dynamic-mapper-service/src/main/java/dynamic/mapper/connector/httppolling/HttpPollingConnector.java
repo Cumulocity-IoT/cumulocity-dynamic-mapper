@@ -338,8 +338,16 @@ public class HttpPollingConnector extends AConnectorClient {
 
     @Override
     public Boolean supportsWildcardInTopic(Direction direction) {
-        // Each subscribed "topic" is a concrete poll-job key, not a broker wildcard pattern.
-        return readWildcardFlag(direction, false, false);
+        // Hardcoded false, not delegated to readWildcardFlag(): that helper reads the flag back
+        // out of connectorConfiguration's stored properties, so on a connector where it's a real
+        // runtime toggle a caller bypassing the UI (a raw API call, an import) could set it to
+        // true and readWildcardFlag() would honor it. Each subscribed "topic" here is a concrete
+        // poll-job key — there is no subscription-pattern-matching mechanism this connector could
+        // honor even if asked to, in either direction, so the runtime answer must not be swayable
+        // by a stored property at all. The corresponding ConnectorSpecification properties
+        // (readonly, defaultValue false, outbound also hidden) are a UI-level hint on top of this,
+        // not the actual guarantee.
+        return false;
     }
 
     @Override

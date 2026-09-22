@@ -368,6 +368,22 @@ public class HttpPollingConnectorTest {
         assertFalse(client.supportsWildcardInTopic(Direction.OUTBOUND));
     }
 
+    @Test
+    public void testSupportsWildcardInTopic_notSwayedByStoredConfigOverride() throws Exception {
+        // Regression: supportsWildcardInTopic() must not delegate to readWildcardFlag() (which
+        // reads connectorConfiguration's stored properties) for this connector — there is no
+        // subscription-pattern-matching mechanism it could honor even if a raw API call/import
+        // bypassed the UI's readonly hint and stored supportsWildcardInTopicInbound=true.
+        client = new HttpPollingConnector();
+        Map<String, Object> properties = minimalValidProperties();
+        properties.put("supportsWildcardInTopicInbound", true);
+        properties.put("supportsWildcardInTopicOutbound", true);
+        setField(client, "connectorConfiguration", configWithProperties(properties));
+
+        assertFalse(client.supportsWildcardInTopic(Direction.INBOUND));
+        assertFalse(client.supportsWildcardInTopic(Direction.OUTBOUND));
+    }
+
     // -------------------------------------------------------------------------
     // HttpPollingRequestHelper.topicPath — pure, called directly (package-private, no reflection
     // needed now that the pure request/response helpers live outside HttpPollingConnector)
