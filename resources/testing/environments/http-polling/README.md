@@ -238,6 +238,137 @@ entries should appear; the connector's `Message Explorer` / mapping test
 results should show a new measurement each cycle with a different
 `temperature`.
 
+## 6. Example mappings (API-driven, three connector features at once)
+
+`mappings/` has three ready-to-use mapping bodies that together exercise the connector
+features covered above end to end against this mock: two topics sharing one connector
+instance, and the incremental-fetch cursor feature. They complement step 4 (which shows
+the equivalent one-mapping UI flow) rather than replace it.
+
+| File | Topic → mock route | Demonstrates |
+|---|---|---|
+| `mappings/01-measurements.json` | `measurements` → `GET /measurements` | Baseline single-topic polling → `MEASUREMENT` |
+| `mappings/02-status.json` | `status` → `GET /status` | **Different topics, same connector**: deployed to the *same* connector instance as `01-measurements.json` — one poll job per topic, both sharing one `url`/credentials |
+| `mappings/03-events-cursor.json` | `events` → `GET /events?since=<cursor>` | **Incremental-fetch cursor**: a *separate* connector instance with `cursorParam`/`cursorExtractionExpression` configured (cursor/pagination settings are connector-level — see `docs/feature/connector-http-polling.md` — so this can't share the plain connector above), plus `expandArray` turning each poll's array of new events into one Cumulocity event per item |
+
+### 6.1 Create the two connector instances
+
+The plain connector (topics `measurements` + `status`, no cursor):
+
+```bash
+export C8Y_BASEURL="https://<your-tenant>.cumulocity.com"
+export C8Y_TENANT="<tenant-id>"
+export C8Y_USER="<user>"
+export C8Y_PASSWORD="<password>"
+
+curl -s -X POST "${C8Y_BASEURL}/service/dynamic-mapper-service/configuration/connector/instance" \
+  -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}" \
+  -H 'Content-Type: application/json' \
+  -d "{
+    \"identifier\": \"demo-rest-polling-connector\",
+    \"connectorType\": \"REST_POLLING\",
+    \"name\": \"Demo REST Polling Connector\",
+    \"description\": \"http-polling-mock — measurements + status, no cursor\",
+    \"enabled\": true,
+    \"properties\": {
+      \"url\": \"${C8Y_BASEURL}/service/http-polling-mock\",
+      \"pollIntervalSeconds\": 30,
+      \"authentication\": \"None\",
+      \"headers\": {}
+    }
+  }"
+```
+
+The cursor-enabled connector (topic `events` only — `cursorParam`/`cursorExtractionExpression`
+apply to every mapping on a connector, so the cursor demo needs its own instance):
+
+```bash
+curl -s -X POST "${C8Y_BASEURL}/service/dynamic-mapper-service/configuration/connector/instance" \
+  -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}" \
+  -H 'Content-Type: application/json' \
+  -d "{
+    \"identifier\": \"demo-rest-polling-connector-cursor\",
+    \"connectorType\": \"REST_POLLING\",
+    \"name\": \"Demo REST Polling Connector (cursor)\",
+    \"description\": \"http-polling-mock — events, incremental-fetch cursor\",
+    \"enabled\": true,
+    \"properties\": {
+      \"url\": \"${C8Y_BASEURL}/service/http-polling-mock\",
+      \"pollIntervalSeconds\": 30,
+      \"authentication\": \"None\",
+      \"headers\": {},
+      \"cursorParam\": \"since\",
+      \"cursorExtractionExpression\": \"$max(id)\"
+    }
+  }"
+```
+
+Connect both (only needed if created with `enabled: false`, or after a disconnect):
+
+```bash
+for c in demo-rest-polling-connector demo-rest-polling-connector-cursor; do
+  curl -s -X POST "${C8Y_BASEURL}/service/dynamic-mapper-service/operation" \
+    -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}" \
+    -H 'Content-Type: application/json' \
+    -d "{\"operation\": \"CONNECT\", \"parameter\": {\"connectorIdentifier\": \"$c\"}}"
+done
+```
+
+### 6.2 Create, deploy, and activate the three mappings
+
+Each mapping is POSTed, deployed to its connector (`PUT /deployment/defined/{identifier}` — the
+mapping's own `identifier` field, e.g. `httppoll-meas`, not the numeric `id` the response also
+carries), then activated (mappings are always created inactive, per the `POST /mapping` contract):
+
+```bash
+create_deploy_activate() {
+  local file="$1" connector="$2"
+  local identifier
+  identifier=$(python3 -c "import json,sys; print(json.load(open('$file'))['identifier'])")
+
+  curl -s -X POST "${C8Y_BASEURL}/service/dynamic-mapper-service/mapping" \
+    -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}" \
+    -H 'Content-Type: application/json' \
+    -d @"$file" > /dev/null
+
+  curl -s -X PUT "${C8Y_BASEURL}/service/dynamic-mapper-service/deployment/defined/${identifier}" \
+    -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}" \
+    -H 'Content-Type: application/json' \
+    --data "[\"${connector}\"]" > /dev/null
+
+  curl -s -X POST "${C8Y_BASEURL}/service/dynamic-mapper-service/operation" \
+    -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}" \
+    -H 'Content-Type: application/json' \
+    -d "{\"operation\": \"ACTIVATE_MAPPING\", \"parameter\": {\"id\": \"${identifier}\", \"active\": \"true\"}}"
+}
+
+create_deploy_activate mappings/01-measurements.json   demo-rest-polling-connector
+create_deploy_activate mappings/02-status.json          demo-rest-polling-connector
+create_deploy_activate mappings/03-events-cursor.json   demo-rest-polling-connector-cursor
+```
+
+`deployment/defined` takes a JSON array of connector identifiers — pass it as a literal
+(`--data "[...]"` above), not via a shell variable substitution into a `--template`/`jq` filter;
+see the "Gotchas" note in `docs/feature/connector-http-polling.md` about `PUT
+/deployment/defined` silently mangling an array body under go-c8y-cli's `--template input.value`.
+
+### 6.3 Verify
+
+```bash
+# All three poll jobs show up here once connected and deployed:
+curl -s "${C8Y_BASEURL}/service/dynamic-mapper-service/monitoring/status/connector/demo-rest-polling-connector" \
+  -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}"
+curl -s "${C8Y_BASEURL}/service/dynamic-mapper-service/monitoring/status/connector/demo-rest-polling-connector-cursor" \
+  -u "${C8Y_TENANT}/${C8Y_USER}:${C8Y_PASSWORD}"
+
+# The mock's request log should show /measurements, /status, and /events(?since=...) interleaved:
+curl -s "${C8Y_BASEURL}/service/http-polling-mock/requests" | jq
+
+# /events requests should show since= growing across cycles, not stuck at empty/absent —
+# that's the cursor actually advancing.
+curl -s "${C8Y_BASEURL}/service/http-polling-mock/requests" | jq '[.[] | select(.path == "/events")]'
+```
+
 ## Troubleshooting
 
 ### No new entries in `/requests`
