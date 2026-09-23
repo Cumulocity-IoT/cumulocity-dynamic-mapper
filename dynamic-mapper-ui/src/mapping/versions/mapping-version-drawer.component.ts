@@ -49,6 +49,13 @@ interface VersionRow {
   isDraft: boolean;
   /** Injected per-row by the drawer. Absent when canManage=false (makes the cell read-only). */
   onNoteChange?: (note: string) => void;
+  /**
+   * Injected per-row by the drawer, only for published (non-active, non-draft) rows when
+   * canManage=true. Absent for the active row itself (nothing to activate) and for the draft
+   * (must be published first) — VersionStateCellRendererComponent's toggle is disabled
+   * whenever this is absent.
+   */
+  onActivate?: () => void;
 }
 
 const DRAFT_ROW_ID = '__draft__';
@@ -69,9 +76,17 @@ function compareSemVerDesc(a: string | null | undefined, b: string | null | unde
 /**
  * Bottom drawer listing all records of a mapping line in a single c8y-data-grid:
  * every published version plus the current draft, each tagged with a State
- * (active / published / draft). Row actions are contextual — Publish on the draft,
- * Activate / Delete on inactive published versions. The active version (the one
- * whose `version` field matches the mapping's `version`) has no actions.
+ * (active / published / draft).
+ *
+ * The State column doubles as the activation control (VersionStateCellRendererComponent) —
+ * fixed 2026-09-23: a separate "Activate" row action used a toggle-on *icon* next to a
+ * published row while the active row's State badge sat in its own column with no toggle at
+ * all, which read as two disagreeing indicators (a switch that looks "on" for a row that isn't
+ * actually active). Now there is one indicator per row: the active version's toggle is on and
+ * disabled, every published version's toggle is off and clickable to activate it (which
+ * implicitly deactivates whichever was active before), and the draft — not directly
+ * activatable, it must be published first — keeps its plain badge with no toggle. Remaining row
+ * actions are Publish/Discard on the draft and Delete on inactive published versions.
  *
  * Notes are edited inline via the Cumulocity "edit on focus" pattern; no modal is shown.
  */
@@ -128,11 +143,12 @@ export class MappingVersionDrawerComponent implements OnInit {
         .sort((a, b) => compareSemVerDesc(a.version, b.version))
         .map(v => {
           const rowId = v.id ?? `v${v.version}`;
-          return {
+          const state = (v.version === this.mapping.version ? 'active' : 'published') as VersionState;
+          const row: VersionRow = {
             id: rowId,
             version: v.version ?? '',
             versionDisplay: v.version ? `v${v.version}` : '—',
-            state: (v.version === this.mapping.version ? 'active' : 'published') as VersionState,
+            state,
             note: v.note || '',
             updatedDisplay: v.createdAt ? new Date(v.createdAt).toLocaleString() : '—',
             createdBy: v.createdBy || '—',
@@ -141,6 +157,9 @@ export class MappingVersionDrawerComponent implements OnInit {
               ? (note: string) => this.saveVersionNote(rowId, v.version ?? '', note)
               : undefined
           };
+          // Set after `row` exists so the closure can pass the row itself to activate().
+          row.onActivate = this.canManage && state !== 'active' ? () => this.activate(row) : undefined;
+          return row;
         });
 
       const draftNote = draft?.versionNote ?? '';
@@ -183,6 +202,13 @@ export class MappingVersionDrawerComponent implements OnInit {
   }
 
   async activate(row: VersionRow): Promise<void> {
+    if (this.busy) {
+      // The activation toggle in VersionStateCellRendererComponent is only disabled by
+      // rebuilding rows (onActivate absent) after this method sets busy=true and reload()
+      // completes — there's a window between those two points where a second click could still
+      // reach here. Guarded here too since that race isn't otherwise prevented at the UI level.
+      return;
+    }
     this.busy = true;
     try {
       await this.mappingService.activateVersion(this.mapping.id, row.version);
@@ -329,13 +355,6 @@ export class MappingVersionDrawerComponent implements OnInit {
         icon: 'trash-o',
         callback: () => this.removeDraft(),
         showIf: (row: VersionRow) => this.canManage && row.isDraft && !this.busy
-      },
-      {
-        type: 'ACTIVATE',
-        text: 'Activate',
-        icon: 'toggle-on',
-        callback: (row: VersionRow) => this.activate(row),
-        showIf: (row: VersionRow) => this.canManage && !row.isDraft && row.state !== 'active' && !this.busy
       },
       {
         type: 'DELETE_VERSION',

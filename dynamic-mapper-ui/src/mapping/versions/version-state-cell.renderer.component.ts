@@ -21,16 +21,27 @@ import { Component } from '@angular/core';
 import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 
 /**
- * Renders the state of a version row as a colored label. Expects
- * {@code context.value} to be one of 'active' | 'published' | 'draft'.
+ * Renders the state of a version row — 'active' | 'published' | 'draft' in
+ * {@code context.value} — and, for active/published rows, doubles as the activation control:
+ * a real toggle switch (same `c8y-switch` pattern as MappingStatusActivationRendererComponent
+ * on the main mapping grid) rather than a separate row-action icon.
+ *
+ * Fixed 2026-09-23: previously the active row showed only a static "active" badge and the
+ * published row(s) showed only a separate "Activate" row-action icon (`toggle-on`) that looked
+ * like a live, already-on switch regardless of which row was actually active — two indicators
+ * in different columns that could visually disagree. Now there is exactly one indicator per
+ * row: on+disabled for the active version, off+clickable-to-activate for every published
+ * version. Draft keeps its plain badge — a draft isn't directly activatable, it has to be
+ * published first — so no toggle is offered for it.
+ *
+ * The click handler calls {@code context.item.onActivate}, a callback the drawer injects
+ * per-row (same pattern as NoteEditCellRendererComponent's `onNoteChange`); its absence
+ * disables the toggle (canManage=false, or this is already the active row).
  */
 @Component({
   selector: 'd11r-version-state-cell',
   template: `
     @switch (context.value) {
-      @case ('active') {
-        <span class="label label-primary" [attr.data-cy]="'dm-version-state-active'">{{ 'active' | translate }}</span>
-      }
       @case ('draft') {
         <!-- label-warning, matching the draft badge in the mapping grid (StatusRendererComponent):
              a draft means "unpublished, not in effect yet", so it reads as action-required in both
@@ -38,7 +49,22 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
         <span class="label label-warning" [attr.data-cy]="'dm-version-state-draft'">{{ 'draft' | translate }}</span>
       }
       @default {
-        <span class="label label-default" [attr.data-cy]="'dm-version-state-published'">{{ 'published' | translate }}</span>
+        <label
+          class="c8y-switch"
+          [title]="(context.value === 'active' ? 'This is the active version' : 'Activate this version') | translate"
+        >
+          <input
+            type="checkbox"
+            [attr.data-cy]="'dm-version-state-toggle-' + context.item.id"
+            [checked]="context.value === 'active'"
+            [disabled]="context.value === 'active' || !canActivate"
+            (click)="onToggleClick($event)"
+          />
+          <span></span>
+          <span class="text-capitalize">
+            {{ (context.value === 'active' ? 'active' : 'published') | translate }}
+          </span>
+        </label>
       }
     }
   `,
@@ -47,4 +73,16 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 })
 export class VersionStateCellRendererComponent {
   constructor(public readonly context: CellRendererContext) { }
+
+  get canActivate(): boolean {
+    return typeof (this.context.item as any)?.onActivate === 'function';
+  }
+
+  onToggleClick(event: Event): void {
+    event.preventDefault();
+    if (this.context.value === 'active' || !this.canActivate) {
+      return;
+    }
+    (this.context.item as any).onActivate();
+  }
 }

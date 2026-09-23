@@ -115,6 +115,37 @@ describe('MappingVersionDrawerComponent', () => {
       expect(mockAlertService.danger).toHaveBeenCalled();
       expect(component.loading).toBeFalse();
     });
+
+    it('wires onActivate only on non-active published rows, not on the active row or the draft', async () => {
+      mockMappingService.getVersions.and.resolveTo([
+        buildVersion({ id: 'v1', version: '1.0.0' }), // matches mapping.version -> active
+        buildVersion({ id: 'v2', version: '2.0.0' }) // published
+      ]);
+      mockMappingService.getDraft.and.resolveTo({ ...buildMapping(), versionNote: '', lastUpdate: Date.now() });
+
+      await component.ngOnInit();
+
+      const rows = component.rows$.getValue();
+      const active = rows.find(r => r.state === 'active');
+      const published = rows.find(r => r.state === 'published');
+      const draft = rows.find(r => r.state === 'draft');
+
+      expect(active.onActivate).toBeUndefined();
+      expect(typeof published.onActivate).toBe('function');
+      expect(draft.onActivate).toBeUndefined();
+    });
+
+    it('does not wire onActivate on any row when canManage=false', async () => {
+      component.canManage = false;
+      mockMappingService.getVersions.and.resolveTo([
+        buildVersion({ id: 'v1', version: '1.0.0' }),
+        buildVersion({ id: 'v2', version: '2.0.0' })
+      ]);
+
+      await component.ngOnInit();
+
+      expect(component.rows$.getValue().every(r => r.onActivate === undefined)).toBeTrue();
+    });
   });
 
   describe('activate', () => {
@@ -135,6 +166,14 @@ describe('MappingVersionDrawerComponent', () => {
 
       expect(mockAlertService.danger).toHaveBeenCalled();
       expect(component.busy).toBeFalse();
+    });
+
+    it('is a no-op while an activation is already in flight', async () => {
+      (component as any).busy = true;
+
+      await component.activate({ version: '2.0.0' } as any);
+
+      expect(mockMappingService.activateVersion).not.toHaveBeenCalled();
     });
   });
 
