@@ -552,12 +552,15 @@ just adds a broker subscription, essentially free.
   eventually stop it, rather than failing fast with a clear cause. `executePollInternal()` now
   throws a `ConnectorException` immediately on `UNPARSABLE` (page 1, typically), routed through the
   same `handlePollFailure` backoff/logging path as any other poll error.
-- **`NextLinkHeader` mode ignores `cursorParam` on every page after the first** — once pagination
-  switches to following an absolute next-page URI, `buildQueryParams()` (and therefore the cursor)
-  is bypassed entirely for that request; only page 1 of a `NextLinkHeader` cycle carries the
-  cursor query parameter. This is deliberate (the server-provided URL is authoritative for that
-  API's own pagination), but combining `NextLinkHeader` with incremental fetch across *separate
-  polls* still works — the cursor is only irrelevant *within* one multi-page cycle.
+- **`NextLinkHeader` mode ignores `cursorParam` on every page after the first — now warned about
+  at config-save time (FIXED 2026-09-23).** Once pagination switches to following an absolute
+  next-page URI, `buildQueryParams()` (and therefore the cursor) is bypassed entirely for that
+  request; only page 1 of a `NextLinkHeader` cycle carries the cursor query parameter. This is
+  deliberate (the server-provided URL is authoritative for that API's own pagination), but
+  combining `NextLinkHeader` with incremental fetch across *separate polls* still works — the
+  cursor is only irrelevant *within* one multi-page cycle. `isConfigValid()` now logs (without
+  rejecting the config — it's a real, working setup for page 1) an advisory warning whenever
+  `cursorParam` is set together with `paginationMode=NextLinkHeader`, so this isn't silent.
 - **Backoff/failure counting is per-topic** (fixed 2026-09-22; was connector-wide before), but
   the reported `ConnectorStatus` itself is still one value for the whole connector — a topic that
   trips `FAILED` still surfaces as the connector's overall status, it just can no longer get there

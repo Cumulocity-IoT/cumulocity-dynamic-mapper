@@ -28,7 +28,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -295,6 +298,42 @@ public class HttpPollingConnectorTest {
         Map<String, Object> properties = minimalValidProperties();
         properties.put("paginationMode", "NextLinkHeader");
         assertTrue(client.isConfigValid(configWithProperties(properties)));
+    }
+
+    @Test
+    public void testIsConfigValid_cursorParamWithNextLinkHeader_validButWarns() {
+        // cursorParam only ever reaches page 1 of a NextLinkHeader cycle — pages 2+ follow the
+        // server's own next-page URL, bypassing cursorParam entirely. Not rejected (it's a real,
+        // working configuration for page 1), but worth flagging so the operator isn't surprised.
+        Map<String, Object> properties = minimalValidProperties();
+        properties.put("cursorParam", "since");
+        properties.put("cursorExtractionExpression", "items[-1].id");
+        properties.put("paginationMode", "NextLinkHeader");
+        Logger mockLog = mock(Logger.class);
+
+        boolean valid = HttpPollingRequestHelper.isConfigValid(properties,
+                HttpPollingConnector.MIN_POLL_INTERVAL_SECONDS, "test-tenant", mockLog);
+
+        assertTrue(valid);
+        verify(mockLog).warn(anyString(), eq("test-tenant"), eq("since"));
+    }
+
+    @Test
+    public void testIsConfigValid_cursorParamWithPageNumber_noWarning() {
+        // Only NextLinkHeader mode bypasses cursorParam past page 1 — PageNumber/NextFieldInBody
+        // combine query params freely with the cursor on every page, so no warning applies.
+        Map<String, Object> properties = minimalValidProperties();
+        properties.put("cursorParam", "since");
+        properties.put("cursorExtractionExpression", "items[-1].id");
+        properties.put("paginationMode", "PageNumber");
+        properties.put("pageParam", "page");
+        Logger mockLog = mock(Logger.class);
+
+        boolean valid = HttpPollingRequestHelper.isConfigValid(properties,
+                HttpPollingConnector.MIN_POLL_INTERVAL_SECONDS, "test-tenant", mockLog);
+
+        assertTrue(valid);
+        verify(mockLog, never()).warn(anyString(), anyString(), anyString());
     }
 
     // -------------------------------------------------------------------------

@@ -70,6 +70,8 @@ final class HttpPollingRequestHelper {
      * when selected; {@code cursorParam}/{@code cursorExtractionExpression} either both set or both
      * empty; pagination mode requirements ({@code pageParam} for {@code NextFieldInBody}/
      * {@code PageNumber}, {@code nextPageExpression} additionally for {@code NextFieldInBody}).
+     * Also logs (but does not reject) an advisory warning when {@code cursorParam} is combined
+     * with {@code paginationMode=NextLinkHeader} — see the note on that combination below.
      */
     static boolean isConfigValid(Map<String, Object> properties, long minPollIntervalSeconds,
             String tenant, Logger log) {
@@ -132,6 +134,19 @@ final class HttpPollingRequestHelper {
                 log.warn("{} - paginationMode PageNumber requires pageParam to be set", tenant);
                 return false;
             }
+        }
+
+        // Advisory only, not rejected: combining the two is a real, working configuration for the
+        // first page of every poll cycle — cursorParam is only ever bypassed for a NextLinkHeader
+        // cycle's page 2 onward, once pagination switches to following the server's own absolute
+        // next-page URI (deliberate: that URL is authoritative for the API's own pagination, see
+        // the "Gotchas" note in docs/feature/connector-http-polling.md). Silent unless flagged
+        // here, since nothing about it fails outright — the connector would otherwise just quietly
+        // stop sending a cursor value the operator configured, past page 1 of every cycle.
+        if (StringUtils.isNotEmpty(cursorParam) && "NextLinkHeader".equals(paginationMode)) {
+            log.warn("{} - cursorParam [{}] is combined with paginationMode=NextLinkHeader: it will only be " +
+                    "sent on each cycle's first page — pages 2+ follow the server-provided next-page URL, " +
+                    "which bypasses cursorParam entirely for the rest of that cycle", tenant, cursorParam);
         }
 
         return true;
