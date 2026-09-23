@@ -13,27 +13,56 @@ import { debounceTime, Subject } from 'rxjs';
 export class InputListComponent implements OnInit, OnDestroy {
   @Input()
   set data(list: Record<string, string> | Array<{ key: string; value: string | undefined }> | null | undefined) {
-    // Handle both object and array input
-    if (!list) {
-      this.dataInternal = [];
-    } else if (Array.isArray(list)) {
-      // If it's already an array, use it
-      this.dataInternal = [...list];
-    } else if (typeof list === 'object') {
-      // If it's an object, convert to array
-      this.dataInternal = Object.entries(list).map(([key, value]) => ({
-        key,
-        value: value as string | undefined
-      }));
-    } else {
-      this.dataInternal = [];
+    const incoming = InputListComponent.toEntries(list);
+
+    // The parent (InputListFormlyComponent) binds [data]="getCurrentData()" — a method call, so
+    // Angular re-invokes this setter on every change-detection cycle, not just when the form
+    // control's value genuinely changes. Clicking "+" (add()) appends a blank {key:'',value:''}
+    // row locally and emits it upward; the formly wrapper filters blank-key rows out before
+    // writing back to the form control (a header needs a key to mean anything), so the
+    // persisted value is unchanged — but the very next CD cycle used to still land here and
+    // rebuild dataInternal from that unchanged persisted value, discarding the just-added blank
+    // row before the user could type a key into it. From the outside this looked like "+" simply
+    // did nothing. Skip the rebuild whenever the incoming data's non-blank-key entries already
+    // match what dataInternal currently holds — a genuine external change (initial load, the
+    // drawer being reused for a different connector, an explicit form reset) still always has a
+    // different meaningful entry set and is picked up as before.
+    if (
+      this.dataInternal.length > 0 &&
+      InputListComponent.sameEntries(
+        incoming.filter((e) => e.key?.trim()),
+        this.dataInternal.filter((e) => e.key?.trim())
+      )
+    ) {
+      return;
     }
 
-    // Add an empty entry if the array is empty - BUT DON'T EMIT CHANGES
-    if (this.dataInternal.length === 0) {
-      this.dataInternal.push({ key: '', value: '' });
-      // Don't call emitChange() here - this would cause the loop!
+    this.dataInternal = incoming.length > 0 ? incoming : [{ key: '', value: '' }];
+  }
+
+  private static toEntries(
+    list: Record<string, string> | Array<{ key: string; value: string | undefined }> | null | undefined
+  ): Array<{ key: string; value: string | undefined }> {
+    if (!list) {
+      return [];
     }
+    if (Array.isArray(list)) {
+      return [...list];
+    }
+    if (typeof list === 'object') {
+      return Object.entries(list).map(([key, value]) => ({ key, value: value as string | undefined }));
+    }
+    return [];
+  }
+
+  private static sameEntries(
+    a: Array<{ key: string; value: string | undefined }>,
+    b: Array<{ key: string; value: string | undefined }>
+  ): boolean {
+    if (a.length !== b.length) {
+      return false;
+    }
+    return a.every((entry, i) => entry.key === b[i].key && entry.value === b[i].value);
   }
 
   private changeSubject = new Subject<void>();
