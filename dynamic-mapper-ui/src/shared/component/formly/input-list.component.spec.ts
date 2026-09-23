@@ -92,6 +92,30 @@ describe('InputListComponent', () => {
 
       expect(component.dataInternal).toEqual([{ key: 'X-Other', value: 'value' }]);
     });
+
+    it('does not let a stale round-trip echo clobber a keystroke typed after that emission', () => {
+      // The real trigger for this: typing is debounced 150ms before add()/onInputChange() emit
+      // upward, so by the time THIS emission's round trip (formControl.setValue -> change
+      // detection -> the `data` setter) lands back here, the user may already have typed
+      // further. Comparing against dataInternal's *current* state (tried first, reverted) fails
+      // this case: dataInternal has moved on, so the stale incoming snapshot no longer matches
+      // it and overwrites it anyway. Comparing against what we ourselves last emitted fixes it —
+      // this incoming value is recognized as an echo of a state we've already superseded, not as
+      // new information, regardless of how far dataInternal has since moved on.
+      component.data = { Accept: 'text/plain' };
+      component.add(); // emits [Accept/text-plain] as lastEmittedMeaningful (blank row filtered)
+
+      // User types a key into the new row before the add() emission's round trip returns.
+      component.dataInternal[1].key = 'X-Custom';
+
+      // The stale echo of add()'s emission arrives now.
+      component.data = { Accept: 'text/plain' };
+
+      expect(component.dataInternal).toEqual([
+        { key: 'Accept', value: 'text/plain' },
+        { key: 'X-Custom', value: '' }
+      ]);
+    });
   });
 
   it('removing the only row leaves one blank row behind', () => {

@@ -11,33 +11,36 @@ import { debounceTime, Subject } from 'rxjs';
   imports: [CoreModule]
 })
 export class InputListComponent implements OnInit, OnDestroy {
+  // The meaningful (non-blank-key) entries as of our own last emitChange() call — i.e. what we
+  // most recently told the parent our state was. `undefined` until the first local edit.
+  //
+  // The parent (InputListFormlyComponent) binds [data]="getCurrentData()" — a method call, so
+  // Angular re-invokes the setter below on every change-detection cycle, not just when the form
+  // control's value genuinely changes from an outside cause. A naive fix that compares the
+  // incoming value against the *current* dataInternal (tried first, reverted) has a race: typing
+  // is debounced 150ms before it's emitted upward, so by the time a given emission's round trip
+  // back through the form control reaches this setter, the user may already have typed further —
+  // dataInternal has moved on, the comparison no longer matches, and the incoming (now-stale)
+  // snapshot overwrites dataInternal, silently dropping the newest keystrokes (looked like a
+  // just-added second row "vanishing" while typing into it).
+  //
+  // Comparing against lastEmittedMeaningful instead fixes this: incoming data that matches what
+  // *we* last sent is always safe to ignore, no matter how stale it is relative to dataInternal's
+  // current state — it can only be an echo of our own past emission, never new information, so
+  // there's nothing in it dataInternal doesn't already (more currently) reflect.
+  private lastEmittedMeaningful?: Array<{ key: string; value: string | undefined }>;
+
   @Input()
   set data(list: Record<string, string> | Array<{ key: string; value: string | undefined }> | null | undefined) {
     const incoming = InputListComponent.toEntries(list);
+    const incomingMeaningful = incoming.filter((e) => e.key?.trim());
 
-    // The parent (InputListFormlyComponent) binds [data]="getCurrentData()" — a method call, so
-    // Angular re-invokes this setter on every change-detection cycle, not just when the form
-    // control's value genuinely changes. Clicking "+" (add()) appends a blank {key:'',value:''}
-    // row locally and emits it upward; the formly wrapper filters blank-key rows out before
-    // writing back to the form control (a header needs a key to mean anything), so the
-    // persisted value is unchanged — but the very next CD cycle used to still land here and
-    // rebuild dataInternal from that unchanged persisted value, discarding the just-added blank
-    // row before the user could type a key into it. From the outside this looked like "+" simply
-    // did nothing. Skip the rebuild whenever the incoming data's non-blank-key entries already
-    // match what dataInternal currently holds — a genuine external change (initial load, the
-    // drawer being reused for a different connector, an explicit form reset) still always has a
-    // different meaningful entry set and is picked up as before.
-    if (
-      this.dataInternal.length > 0 &&
-      InputListComponent.sameEntries(
-        incoming.filter((e) => e.key?.trim()),
-        this.dataInternal.filter((e) => e.key?.trim())
-      )
-    ) {
+    if (this.lastEmittedMeaningful && InputListComponent.sameEntries(incomingMeaningful, this.lastEmittedMeaningful)) {
       return;
     }
 
     this.dataInternal = incoming.length > 0 ? incoming : [{ key: '', value: '' }];
+    this.lastEmittedMeaningful = incomingMeaningful;
   }
 
   private static toEntries(
@@ -113,6 +116,10 @@ export class InputListComponent implements OnInit, OnDestroy {
   }
 
   private emitChange() {
+    // Record what we're telling the parent, so a later echo of exactly this (however stale by
+    // the time it round-trips back through the `data` setter above) is recognized as our own and
+    // ignored rather than clobbering whatever the user has typed since.
+    this.lastEmittedMeaningful = this.dataInternal.filter((e) => e.key?.trim());
     // Emit all data for UI updates
     this.dataChange.emit([...this.dataInternal]);
   }
