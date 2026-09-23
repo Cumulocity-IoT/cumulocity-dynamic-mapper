@@ -216,24 +216,45 @@ final class HttpPollingRequestHelper {
         return evaluateJsonataToString(nextPageExpression, responseBody, tenant, log, "nextPageExpression");
     }
 
-    /** {@code PageNumber} mode's stop condition: an empty JSON array or object body. */
-    static boolean isEmptyPage(String responseBody) {
+    /**
+     * {@code PageNumber} mode's per-page classification: a genuinely empty JSON array/object body
+     * is the mode's normal stop condition ({@link #EMPTY}); anything else JSON-shaped keeps
+     * paginating ({@link #NON_EMPTY}); a body that isn't valid JSON at all ({@link #UNPARSABLE})
+     * means the response doesn't match what {@code PageNumber} mode expects, and the caller must
+     * fail the poll outright rather than silently treating it as "keep going" or "stop here" —
+     * see {@link #classifyPage}.
+     */
+    enum PageStatus { EMPTY, NON_EMPTY, UNPARSABLE }
+
+    /**
+     * Classifies one {@code PageNumber}-mode response body. {@code UNPARSABLE} is deliberately
+     * not folded into {@code NON_EMPTY} (fixed 2026-09-23) — the earlier boolean {@code isEmptyPage}
+     * treated an unparsable body as non-empty so pagination would "keep going", which for a
+     * misconfigured {@code paginationMode=PageNumber} against a non-paginated, non-JSON, or
+     * differently-shaped API meant silently paging all the way to {@code maxPagesPerPoll} (relying
+     * on an unrelated safety cap to eventually stop it) instead of failing fast on page 1 with a
+     * clear cause. The caller now throws a {@code ConnectorException} on {@code UNPARSABLE},
+     * routing through the same {@code handlePollFailure} backoff/logging path as any other poll
+     * failure.
+     */
+    static PageStatus classifyPage(String responseBody) {
         if (StringUtils.isBlank(responseBody)) {
-            return true;
+            return PageStatus.EMPTY;
         }
         try {
             Object parsed = Json.parseJson(responseBody);
             if (parsed instanceof Collection<?> collection) {
-                return collection.isEmpty();
+                return collection.isEmpty() ? PageStatus.EMPTY : PageStatus.NON_EMPTY;
             }
             if (parsed instanceof Map<?, ?> map) {
-                return map.isEmpty();
+                return map.isEmpty() ? PageStatus.EMPTY : PageStatus.NON_EMPTY;
             }
+            // Valid JSON, but neither an array nor an object (e.g. a bare number/string/boolean) —
+            // not what PageNumber mode expects either; treat the same as unparsable.
+            return PageStatus.UNPARSABLE;
         } catch (Exception e) {
-            // Unparsable body: don't guess — treat as non-empty so pagination halts on the next
-            // maxPagesPerPoll cap rather than silently stopping early on a transient parse issue.
+            return PageStatus.UNPARSABLE;
         }
-        return false;
     }
 
     /**

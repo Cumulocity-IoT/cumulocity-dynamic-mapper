@@ -543,11 +543,15 @@ just adds a broker subscription, essentially free.
   the actual API unless it happens to match one. This is a behavior change from before the
   2026-09-21 URL-joining fix, when the topic was purely an internal key with no bearing on the
   request URL.
-- **Pagination stop conditions are trust-the-response, not verify-the-response** — `PageNumber`
-  mode's `isEmptyPage()` treats an unparsable body as *non-empty* (keeps paginating rather than
-  guessing), which means a misconfigured `paginationMode=PageNumber` against a non-paginated,
-  non-JSON, or differently-shaped API can page all the way to `maxPagesPerPoll` before stopping,
-  rather than failing fast. Watch for this via `maxPagesPerPoll` warnings in the logs.
+- **Pagination now fails fast on an unparsable `PageNumber` response — FIXED 2026-09-23.**
+  `HttpPollingRequestHelper.classifyPage()` (renamed from the earlier boolean `isEmptyPage()`)
+  returns one of `EMPTY` / `NON_EMPTY` / `UNPARSABLE` instead of collapsing the last two together.
+  A misconfigured `paginationMode=PageNumber` against a non-paginated, non-JSON, or
+  differently-shaped API used to keep paginating on every `UNPARSABLE` page — `isEmptyPage()`
+  treated it as "non-empty" — silently relying on the unrelated `maxPagesPerPoll` safety cap to
+  eventually stop it, rather than failing fast with a clear cause. `executePollInternal()` now
+  throws a `ConnectorException` immediately on `UNPARSABLE` (page 1, typically), routed through the
+  same `handlePollFailure` backoff/logging path as any other poll error.
 - **`NextLinkHeader` mode ignores `cursorParam` on every page after the first** — once pagination
   switches to following an absolute next-page URI, `buildQueryParams()` (and therefore the cursor)
   is bypassed entirely for that request; only page 1 of a `NextLinkHeader` cycle carries the

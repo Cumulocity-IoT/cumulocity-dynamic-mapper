@@ -540,8 +540,17 @@ public class HttpPollingConnector extends AConnectorClient {
                 connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
 
                 String body = response.getBody();
-                if ("PageNumber".equals(paginationMode) && HttpPollingRequestHelper.isEmptyPage(body)) {
-                    break;
+                if ("PageNumber".equals(paginationMode)) {
+                    HttpPollingRequestHelper.PageStatus pageStatus = HttpPollingRequestHelper.classifyPage(body);
+                    if (pageStatus == HttpPollingRequestHelper.PageStatus.UNPARSABLE) {
+                        throw new ConnectorException("paginationMode PageNumber expected a JSON array/object " +
+                                "response body but got an unparsable one on page " + pageCount + " for topic [" +
+                                topic + "] — failing fast instead of paging through a misconfigured/" +
+                                "non-paginated endpoint");
+                    }
+                    if (pageStatus == HttpPollingRequestHelper.PageStatus.EMPTY) {
+                        break;
+                    }
                 }
                 byte[] payload = body != null
                         ? body.getBytes(StandardCharsets.UTF_8)
@@ -593,10 +602,11 @@ public class HttpPollingConnector extends AConnectorClient {
                         hasMore = StringUtils.isNotEmpty(nextPageParamValue);
                     }
                     case "PageNumber" -> {
-                        hasMore = !HttpPollingRequestHelper.isEmptyPage(body);
-                        if (hasMore) {
-                            nextPageParamValue = String.valueOf(Long.parseLong(nextPageParamValue) + 1);
-                        }
+                        // The classifyPage() check above already returned before reaching here
+                        // unless this page was NON_EMPTY (EMPTY breaks the loop, UNPARSABLE
+                        // throws) — so there is always a next page number to try.
+                        hasMore = true;
+                        nextPageParamValue = String.valueOf(Long.parseLong(nextPageParamValue) + 1);
                     }
                     default -> hasMore = false; // "None": always a single page
                 }
@@ -907,7 +917,7 @@ public class HttpPollingConnector extends AConnectorClient {
     }
 
     // Pagination requirement checks, query-param composition, and per-page continuation/stop-
-    // condition extraction (NextLinkHeader/NextFieldInBody/PageNumber, isEmptyPage) all now live
+    // condition extraction (NextLinkHeader/NextFieldInBody/PageNumber's classifyPage) all now live
     // in HttpPollingRequestHelper — pure functions of a response/body/config value, with no
     // dependency on this connector's mutable state, so they're both simpler to read here at the
     // call sites above and directly unit-testable without a wired-up connector instance.

@@ -26,7 +26,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
@@ -45,7 +48,12 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import org.springframework.web.reactive.function.client.ExchangeFunction;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -438,40 +446,52 @@ public class HttpPollingConnectorTest {
     }
 
     // -------------------------------------------------------------------------
-    // HttpPollingRequestHelper.isEmptyPage — PageNumber mode's stop condition
+    // HttpPollingRequestHelper.classifyPage — PageNumber mode's per-page classification
     // -------------------------------------------------------------------------
 
     @Test
-    public void testIsEmptyPage_blankBody_true() {
-        assertTrue(HttpPollingRequestHelper.isEmptyPage(null));
-        assertTrue(HttpPollingRequestHelper.isEmptyPage("   "));
+    public void testClassifyPage_blankBody_empty() {
+        assertEquals(HttpPollingRequestHelper.PageStatus.EMPTY, HttpPollingRequestHelper.classifyPage(null));
+        assertEquals(HttpPollingRequestHelper.PageStatus.EMPTY, HttpPollingRequestHelper.classifyPage("   "));
     }
 
     @Test
-    public void testIsEmptyPage_emptyArray_true() {
-        assertTrue(HttpPollingRequestHelper.isEmptyPage("[]"));
+    public void testClassifyPage_emptyArray_empty() {
+        assertEquals(HttpPollingRequestHelper.PageStatus.EMPTY, HttpPollingRequestHelper.classifyPage("[]"));
     }
 
     @Test
-    public void testIsEmptyPage_emptyObject_true() {
-        assertTrue(HttpPollingRequestHelper.isEmptyPage("{}"));
+    public void testClassifyPage_emptyObject_empty() {
+        assertEquals(HttpPollingRequestHelper.PageStatus.EMPTY, HttpPollingRequestHelper.classifyPage("{}"));
     }
 
     @Test
-    public void testIsEmptyPage_nonEmptyArray_false() {
-        assertFalse(HttpPollingRequestHelper.isEmptyPage("[{\"id\":1}]"));
+    public void testClassifyPage_nonEmptyArray_nonEmpty() {
+        assertEquals(HttpPollingRequestHelper.PageStatus.NON_EMPTY,
+                HttpPollingRequestHelper.classifyPage("[{\"id\":1}]"));
     }
 
     @Test
-    public void testIsEmptyPage_nonEmptyObject_false() {
-        assertFalse(HttpPollingRequestHelper.isEmptyPage("{\"id\":1}"));
+    public void testClassifyPage_nonEmptyObject_nonEmpty() {
+        assertEquals(HttpPollingRequestHelper.PageStatus.NON_EMPTY,
+                HttpPollingRequestHelper.classifyPage("{\"id\":1}"));
     }
 
     @Test
-    public void testIsEmptyPage_unparsableBody_treatedAsNonEmpty() {
-        // Defensive: don't guess on a parse failure — treat as non-empty so pagination halts on
-        // maxPagesPerPoll rather than silently stopping early on a transient parse issue.
-        assertFalse(HttpPollingRequestHelper.isEmptyPage("not json"));
+    public void testClassifyPage_unparsableBody_unparsable() {
+        // Regression: an earlier boolean isEmptyPage() treated this as "non-empty", relying on the
+        // unrelated maxPagesPerPoll safety cap to eventually stop a misconfigured
+        // paginationMode=PageNumber against a non-paginated/non-JSON endpoint, rather than failing
+        // fast. UNPARSABLE is its own outcome so the caller can throw immediately instead.
+        assertEquals(HttpPollingRequestHelper.PageStatus.UNPARSABLE,
+                HttpPollingRequestHelper.classifyPage("not json"));
+    }
+
+    @Test
+    public void testClassifyPage_validJsonButNotArrayOrObject_unparsable() {
+        // A bare JSON scalar (number/string/boolean) parses fine but isn't a shape PageNumber
+        // mode's empty-page check can evaluate either — same fail-fast treatment as unparsable.
+        assertEquals(HttpPollingRequestHelper.PageStatus.UNPARSABLE, HttpPollingRequestHelper.classifyPage("42"));
     }
 
     // -------------------------------------------------------------------------
@@ -796,5 +816,51 @@ public class HttpPollingConnectorTest {
         Map<String, AtomicInteger> consecutiveFailuresByTopic = getField(client, "consecutiveFailuresByTopic");
         assertEquals(5, consecutiveFailuresByTopic.get(brokenTopic).get());
         assertEquals(1, consecutiveFailuresByTopic.get(healthyTopic).get());
+    }
+
+    // -------------------------------------------------------------------------
+    // executePollInternal (private) — end-to-end wiring for the classifyPage() fail-fast fix
+    // -------------------------------------------------------------------------
+
+    @Test
+    public void testExecutePollInternal_pageNumberUnparsableBody_failsFastViaHandlePollFailure() throws Exception {
+        // Regression: a misconfigured paginationMode=PageNumber against a non-paginated/non-JSON
+        // endpoint used to keep paginating on every unparsable page (isEmptyPage() treated it as
+        // "non-empty") until maxPagesPerPoll silently stopped it. It must now fail on page 1,
+        // routed through handlePollFailure exactly like any other poll error.
+        MappingSubscriptionManager mappingSubscriptionManager = mock(MappingSubscriptionManager.class);
+        when(mappingSubscriptionManager.getEffectiveMappingsInbound()).thenReturn(Collections.emptyMap());
+        ConnectionStateManager connectionStateManager = mock(ConnectionStateManager.class);
+
+        Map<String, Object> properties = minimalValidProperties();
+        properties.put("paginationMode", "PageNumber");
+        properties.put("pageParam", "page");
+        properties.put("maxPagesPerPoll", 20);
+
+        client = new HttpPollingConnector();
+        setField(client, "tenant", "test-tenant");
+        setField(client, "mappingSubscriptionManager", mappingSubscriptionManager);
+        setField(client, "connectionStateManager", connectionStateManager);
+        setField(client, "connectorConfiguration", configWithProperties(properties));
+        setField(client, "baseUrl", (String) properties.get("url"));
+
+        // Stub WebClient: every request gets back 200 OK with a body that isn't JSON at all —
+        // simulates hitting a plain (non-paginated) REST endpoint with PageNumber mode enabled.
+        ExchangeFunction stubExchangeFunction = request -> Mono.just(
+                ClientResponse.create(HttpStatus.OK).body("not json").build());
+        setField(client, "pollingClient", WebClient.builder().exchangeFunction(stubExchangeFunction).build());
+
+        String topic = "devices/measurements";
+        Set<String> subscribedTopics = getField(client, "subscribedTopics");
+        subscribedTopics.add(topic);
+
+        assertDoesNotThrow(() -> invokePrivate(client, "executePollInternal",
+                new Class<?>[] { String.class }, topic));
+
+        // handlePollFailure ran exactly once for this topic (page 1's failure), not after 20
+        // pages' worth of silently-wrong requests.
+        Map<String, AtomicInteger> consecutiveFailuresByTopic = getField(client, "consecutiveFailuresByTopic");
+        assertEquals(1, consecutiveFailuresByTopic.get(topic).get());
+        verify(connectionStateManager).updateStatusRetrying(any(), anyLong());
     }
 }
