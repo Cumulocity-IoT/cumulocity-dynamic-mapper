@@ -301,14 +301,6 @@ export class MappingVersionDrawerComponent implements OnInit {
   private buildColumns(): Column[] {
     return [
       {
-        name: 'state',
-        header: 'State',
-        path: 'state',
-        dataType: ColumnDataType.TextShort,
-        gridTrackSize: '7%',
-        cellRendererComponent: VersionStateCellRendererComponent
-      },
-      {
         name: 'versionDisplay',
         header: 'Version',
         path: 'versionDisplay',
@@ -336,6 +328,17 @@ export class MappingVersionDrawerComponent implements OnInit {
         path: 'createdBy',
         gridTrackSize: '21.5%',
         dataType: ColumnDataType.TextShort
+      },
+      {
+        // Second-to-last column, right before the grid's own actions column (Delete) — the
+        // activation toggle reads as the last real decision a user makes about a row before
+        // any destructive action, not as identifying metadata to scan first.
+        name: 'state',
+        header: 'State',
+        path: 'state',
+        dataType: ColumnDataType.TextShort,
+        gridTrackSize: '7%',
+        cellRendererComponent: VersionStateCellRendererComponent
       }
     ];
   }
