@@ -175,6 +175,35 @@ describe('MappingVersionDrawerComponent', () => {
 
       expect(mockMappingService.activateVersion).not.toHaveBeenCalled();
     });
+
+    it('updates rows in place instead of reloading from the server', async () => {
+      mockMappingService.getVersions.and.resolveTo([
+        buildVersion({ id: 'v1', version: '1.0.0' }), // active
+        buildVersion({ id: 'v2', version: '2.0.0' }) // published
+      ]);
+      await component.ngOnInit();
+      mockMappingService.getVersions.calls.reset();
+      mockMappingService.getDraft.calls.reset();
+      mockMappingService.getMapping.calls.reset();
+      mockMappingService.activateVersion.and.resolveTo({} as any);
+
+      const target = component.rows$.getValue().find(r => r.version === '2.0.0');
+      await component.activate(target);
+
+      // No re-fetch: activating a version doesn't change the set of versions, their notes, or
+      // who created them — only which one is active, applied to the existing rows in place.
+      expect(mockMappingService.getVersions).not.toHaveBeenCalled();
+      expect(mockMappingService.getDraft).not.toHaveBeenCalled();
+      expect(mockMappingService.getMapping).not.toHaveBeenCalled();
+
+      const rows = component.rows$.getValue();
+      const newlyActive = rows.find(r => r.version === '2.0.0');
+      const newlyPublished = rows.find(r => r.version === '1.0.0');
+      expect(newlyActive.state).toBe('active');
+      expect(newlyActive.onActivate).toBeUndefined();
+      expect(newlyPublished.state).toBe('published');
+      expect(typeof newlyPublished.onActivate).toBe('function');
+    });
   });
 
   describe('remove', () => {

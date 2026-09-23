@@ -88,6 +88,12 @@ function compareSemVerDesc(a: string | null | undefined, b: string | null | unde
  * activatable, it must be published first — keeps its plain badge with no toggle. Remaining row
  * actions are Publish/Discard on the draft and Delete on inactive published versions.
  *
+ * activate() updates the affected rows in place (applyActivation()) instead of reloading —
+ * activating a version doesn't change the set of versions, their notes, or who created them,
+ * only which one is active, so a full versions/draft/mapping re-fetch (and the loading-state
+ * flicker that comes with it) would be pure overhead. publish()/remove()/removeDraft() do still
+ * reload(), since those genuinely change which rows exist.
+ *
  * Notes are edited inline via the Cumulocity "edit on focus" pattern; no modal is shown.
  */
 @Component({
@@ -204,9 +210,10 @@ export class MappingVersionDrawerComponent implements OnInit {
   async activate(row: VersionRow): Promise<void> {
     if (this.busy) {
       // The activation toggle in VersionStateCellRendererComponent is only disabled by
-      // rebuilding rows (onActivate absent) after this method sets busy=true and reload()
-      // completes — there's a window between those two points where a second click could still
-      // reach here. Guarded here too since that race isn't otherwise prevented at the UI level.
+      // updating rows (onActivate absent) after this method sets busy=true and the local
+      // update below completes — there's a window between those two points where a second
+      // click could still reach here. Guarded here too since that race isn't otherwise
+      // prevented at the UI level.
       return;
     }
     this.busy = true;
@@ -215,12 +222,34 @@ export class MappingVersionDrawerComponent implements OnInit {
       this.alertService.success(`Activated version ${row.version} of ${this.mapping.name}`);
       this.mapping.version = row.version;
       this.changed = true;
-      await this.reload();
+      // Update the existing rows in place rather than reload() — activating a version changes
+      // nothing about the set of versions, their notes, or who created them, just which one is
+      // active, so a full versions/draft/mapping re-fetch (and the loading-state flicker that
+      // comes with it) is unnecessary here.
+      this.applyActivation(row.version);
     } catch (e) {
       this.alertService.danger('Failed to activate version', (e as Error).message);
     } finally {
       this.busy = false;
     }
+  }
+
+  /**
+   * Updates state/onActivate on every non-draft row in place after a successful
+   * activateVersion() call, without re-fetching from the server. Row order is left untouched —
+   * versions are sorted by semver, not by active state, so activating one never changes it.
+   */
+  private applyActivation(activatedVersion: string): void {
+    const rows = this.rows$.getValue();
+    for (const row of rows) {
+      if (row.isDraft) {
+        continue;
+      }
+      const isNowActive = row.version === activatedVersion;
+      row.state = isNowActive ? 'active' : 'published';
+      row.onActivate = this.canManage && !isNowActive ? () => this.activate(row) : undefined;
+    }
+    this.rows$.next([...rows]);
   }
 
   async remove(row: VersionRow): Promise<void> {
