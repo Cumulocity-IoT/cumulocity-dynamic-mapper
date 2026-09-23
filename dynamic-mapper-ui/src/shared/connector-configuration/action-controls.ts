@@ -91,6 +91,7 @@ export const GRID_COLUMNS: Column[] = [
     header: 'Name',
     path: 'name',
     filterable: false,
+    sortable: true,
     visible: true,
     cellRendererComponent: ConnectorDetailCellRendererComponent,
     dataType: ColumnDataType.TextShort,
@@ -120,6 +121,7 @@ export const GRID_COLUMNS: Column[] = [
     header: 'Type',
     path: 'connectorType',
     filterable: false,
+    sortable: true,
     visible: true,
     cellRendererComponent: LabelTaggedRendererComponent,
     dataType: ColumnDataType.TextShort,
@@ -130,6 +132,9 @@ export const GRID_COLUMNS: Column[] = [
     header: 'Directions',
     path: 'supportedDirections',
     filterable: false,
+    // Not sortable: the underlying value is an array (e.g. ["INBOUND","OUTBOUND"]), same
+    // reasoning as the "connectors"/"status" columns in mapping.component.ts.
+    sortable: false,
     visible: true,
     cellRendererComponent: LabelRendererComponent,
     dataType: ColumnDataType.TextShort,

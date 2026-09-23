@@ -110,6 +110,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       header: 'Mapping topic',
       path: 'mappingTopic',
       filterable: false,
+      sortable: true,
       dataType: ColumnDataType.TextShort,
       //gridTrackSize: '20%'
     },
@@ -118,6 +119,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       header: 'Publish topic',
       path: 'publishTopic',
       filterable: false,
+      sortable: true,
       dataType: ColumnDataType.TextShort,
       //gridTrackSize: '20%'
     },
@@ -126,6 +128,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       name: 'messagesReceived',
       path: 'messagesReceived',
       filterable: true,
+      sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
       gridTrackSize: '12.5%'
@@ -135,6 +138,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       name: 'errors',
       path: 'errors',
       filterable: true,
+      sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
       gridTrackSize: '12.5%'
@@ -144,6 +148,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       name: 'currentFailureCount',
       path: 'currentFailureCount',
       filterable: true,
+      sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
       gridTrackSize: '12.5%'

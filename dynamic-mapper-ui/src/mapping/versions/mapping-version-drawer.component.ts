@@ -305,6 +305,10 @@ export class MappingVersionDrawerComponent implements OnInit {
         header: 'Version',
         path: 'versionDisplay',
         gridTrackSize: '7%',
+        // No sortOrder: the default (newest first, draft pinned to the top) comes from
+        // compareSemVerDesc() sorting the rows in reload() instead — same reasoning as
+        // MappingVersionsCountComponent's 'name' column.
+        sortable: true,
         dataType: ColumnDataType.TextShort
       },
       {
@@ -312,6 +316,7 @@ export class MappingVersionDrawerComponent implements OnInit {
         header: 'Note',
         path: 'note',
         gridTrackSize: '40%',
+        sortable: true,
         dataType: ColumnDataType.TextShort,
         cellRendererComponent: NoteEditCellRendererComponent
       },
@@ -320,6 +325,7 @@ export class MappingVersionDrawerComponent implements OnInit {
         header: 'Updated',
         path: 'updatedDisplay',
         gridTrackSize: '17.5%',
+        sortable: true,
         dataType: ColumnDataType.TextShort
       },
       {
@@ -327,6 +333,7 @@ export class MappingVersionDrawerComponent implements OnInit {
         header: 'By',
         path: 'createdBy',
         gridTrackSize: '21.5%',
+        sortable: true,
         dataType: ColumnDataType.TextShort
       },
       {
@@ -336,6 +343,7 @@ export class MappingVersionDrawerComponent implements OnInit {
         name: 'state',
         header: 'State',
         path: 'state',
+        sortable: true,
         dataType: ColumnDataType.TextShort,
         gridTrackSize: '7%',
         cellRendererComponent: VersionStateCellRendererComponent

@@ -130,6 +130,10 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
         mapping: e.mapping
       }));
 
+      // Default alphabetical order comes from sorting the rows here, not from a column
+      // sortOrder — see the 'name' column's comment in buildColumns().
+      rows.sort((a, b) => a.name.localeCompare(b.name));
+
       this.rows$.next(rows);
     } catch (err) {
       this.alertService.danger('Failed to load version counts', (err as Error).message);
@@ -169,7 +173,12 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
         header: 'Name',
         path: 'name',
         filterable: false,
-        sortOrder: 'asc',
+        sortable: true,
+        // No sortOrder here: the grid sorts by *every* column that carries one, in column
+        // order, and clicking a header only changes that one column. A pre-set 'asc' on the
+        // first column would therefore stay the primary key forever and make sorting by the
+        // other columns look dead. The default alphabetical order is produced by sorting the
+        // rows in loadRows() instead.
         dataType: ColumnDataType.TextShort,
         cellRendererComponent: NameRendererComponent,
         gridTrackSize: '30%',
@@ -180,6 +189,7 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
         header: this.direction === Direction.INBOUND ? 'Mapping topic' : 'Publish topic',
         path: 'topic',
         filterable: false,
+        sortable: true,
         dataType: ColumnDataType.TextShort
       },
       {
@@ -187,6 +197,7 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
         header: 'Active version',
         path: 'activeVersion',
         filterable: false,
+        sortable: true,
         cellRendererComponent: VersionBadgeRendererComponent,
         dataType: ColumnDataType.Numeric,
         gridTrackSize: '15%'
@@ -196,6 +207,7 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
         header: 'Versions',
         path: 'versionCount',
         filterable: false,
+        sortable: true,
         cellRendererComponent: NumberRendererComponent,
         dataType: ColumnDataType.Numeric,
         gridTrackSize: '12%'
@@ -205,6 +217,7 @@ export class MappingVersionsCountComponent implements OnInit, OnDestroy {
         header: 'Status',
         path: 'draftExists',
         filterable: false,
+        sortable: true,
         cellRendererComponent: DraftBadgeRendererComponent,
         dataType: ColumnDataType.TextShort,
         gridTrackSize: '10%'

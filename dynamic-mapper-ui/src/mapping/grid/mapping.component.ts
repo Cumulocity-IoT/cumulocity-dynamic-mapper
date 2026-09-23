@@ -442,7 +442,8 @@ export class MappingComponent implements OnInit, OnDestroy {
           name: 'publishTopic',
           path: 'mapping.publishTopic',
           dataType: ColumnDataType.TextShort,
-          filterable: true
+          filterable: true,
+          sortable: true
         },
       this.stepperConfiguration.direction === Direction.INBOUND
         ? {
@@ -450,7 +451,8 @@ export class MappingComponent implements OnInit, OnDestroy {
           name: 'mappingTopic',
           path: 'mapping.mappingTopic',
           dataType: ColumnDataType.TextShort,
-          filterable: true
+          filterable: true,
+          sortable: true
         }
         : undefined,
       {
