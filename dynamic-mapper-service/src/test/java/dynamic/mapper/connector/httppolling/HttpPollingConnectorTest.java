@@ -48,6 +48,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -855,6 +856,44 @@ public class HttpPollingConnectorTest {
         Map<String, AtomicInteger> consecutiveFailuresByTopic = getField(client, "consecutiveFailuresByTopic");
         assertEquals(5, consecutiveFailuresByTopic.get(brokenTopic).get());
         assertEquals(1, consecutiveFailuresByTopic.get(healthyTopic).get());
+    }
+
+    @Test
+    public void testHandlePollFailure_reportedStatusIdentifiesTopic() throws Exception {
+        // Regression: ConnectorStatus is still one value for the whole connector, shared across
+        // every topic it polls — its message is the only place a multi-topic connector's
+        // RETRYING/FAILED status can identify which topic actually failed. A bare exception with
+        // no topic context (e.g. a reactor TimeoutException straight from executeGet()) used to
+        // reach ConnectionStateManager unchanged, so the status message looked identical no
+        // matter which topic was failing.
+        MappingSubscriptionManager mappingSubscriptionManager = mock(MappingSubscriptionManager.class);
+        when(mappingSubscriptionManager.getEffectiveMappingsInbound()).thenReturn(Collections.emptyMap());
+        ConnectionStateManager connectionStateManager = mock(ConnectionStateManager.class);
+
+        client = new HttpPollingConnector();
+        setField(client, "tenant", "test-tenant");
+        setField(client, "mappingSubscriptionManager", mappingSubscriptionManager);
+        setField(client, "connectionStateManager", connectionStateManager);
+        setField(client, "connectorConfiguration", configWithProperties(minimalValidProperties()));
+
+        String topic = "devices/measurements";
+        Set<String> subscribedTopics = getField(client, "subscribedTopics");
+        subscribedTopics.add(topic);
+
+        java.util.concurrent.TimeoutException originalError = new java.util.concurrent.TimeoutException(
+                "Did not observe any item or terminal signal within 30000ms in 'flatMap'");
+        invokePrivate(client, "handlePollFailure", new Class<?>[] { String.class, Exception.class },
+                topic, originalError);
+
+        ArgumentCaptor<Exception> reported = ArgumentCaptor.forClass(Exception.class);
+        verify(connectionStateManager).updateStatusRetrying(reported.capture(), anyLong());
+
+        Exception reportedError = reported.getValue();
+        assertTrue(reportedError.getMessage().contains("[" + topic + "]"),
+                "Reported status message should name the failing topic: " + reportedError.getMessage());
+        assertEquals(originalError, reportedError.getCause(),
+                "Original exception must be preserved as the cause, so the real error class/message "
+                        + "still surfaces via ConnectionStateManager.buildErrorMessage()'s \"Caused by\" clause");
     }
 
     // -------------------------------------------------------------------------

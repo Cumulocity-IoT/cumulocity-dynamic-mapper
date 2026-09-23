@@ -686,14 +686,28 @@ public class HttpPollingConnector extends AConnectorClient {
         int attempt = consecutiveFailuresByTopic.computeIfAbsent(topic, k -> new AtomicInteger()).incrementAndGet();
         long delayMs = Math.min(attempt * pollIntervalMs, BACKOFF_CAP_MS);
 
+        // The reported ConnectorStatus is still one value for the whole connector (shared across
+        // every topic polled by it — see the field Javadoc on consecutiveFailuresByTopic), so its
+        // message is the only place a multi-topic connector's RETRYING/FAILED status can identify
+        // *which* topic actually failed. Without this wrapping, a bare exception straight from a
+        // broker call — e.g. the reactor TimeoutException from executeGet()'s
+        // .timeout(REQUEST_TIMEOUT).block() — carries no topic context at all, so the status
+        // message looked identical regardless of which topic was failing (found in review
+        // 2026-09-23: the exact TimeoutException text reported here is generic reactor internals,
+        // "Did not observe any item or terminal signal ... in 'flatMap'", with nothing connector-
+        // or topic-specific about it). The original exception is preserved as the cause, so
+        // ConnectionStateManager.buildErrorMessage()'s "Caused by" clause still shows the real
+        // underlying error class/message.
+        ConnectorException scopedError = new ConnectorException("Poll failed for topic [" + topic + "]", e);
+
         if (attempt <= MAX_CONSECUTIVE_FAILURES) {
             log.warn("{} - Poll failed for topic [{}] (attempt {}/{}), retrying in {}ms: {}",
                     tenant, topic, attempt, MAX_CONSECUTIVE_FAILURES, delayMs, e.getMessage());
-            connectionStateManager.updateStatusRetrying(e, delayMs / 1000);
+            connectionStateManager.updateStatusRetrying(scopedError, delayMs / 1000);
         } else {
             log.error("{} - Poll failed for topic [{}] {} consecutive times, marking connector FAILED: {}",
                     tenant, topic, attempt, e.getMessage());
-            connectionStateManager.updateStatusWithError(e);
+            connectionStateManager.updateStatusWithError(scopedError);
             // FAILED is terminal for this polling lifecycle; do not allow a later
             // success to overwrite it with CONNECTED.
             return;

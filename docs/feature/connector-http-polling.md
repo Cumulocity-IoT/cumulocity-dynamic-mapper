@@ -564,7 +564,14 @@ just adds a broker subscription, essentially free.
 - **Backoff/failure counting is per-topic** (fixed 2026-09-22; was connector-wide before), but
   the reported `ConnectorStatus` itself is still one value for the whole connector — a topic that
   trips `FAILED` still surfaces as the connector's overall status, it just can no longer get there
-  because of a *different* topic's failures.
+  because of a *different* topic's failures. Its **message** does identify which topic, though
+  (fixed 2026-09-23): `handlePollFailure()` now wraps the underlying exception in a
+  `ConnectorException("Poll failed for topic [<topic>]", e)` before handing it to
+  `ConnectionStateManager`, preserving the original as the cause. Without this, a bare exception
+  with no topic context of its own (e.g. the reactor `TimeoutException` from `executeGet()`'s
+  `.timeout(REQUEST_TIMEOUT).block()` — its message is generic reactor internals, "Did not observe
+  any item or terminal signal ... in 'flatMap'") made a multi-topic connector's RETRYING/FAILED
+  status message look identical regardless of which topic was actually failing.
 - **No frontend-specific work was needed**: connector config forms are data-driven off
   `ConnectorSpecification`, so `REST_POLLING` appears in the connector-type dropdown
   automatically once registered in `ConnectorRegistry`/`ConnectorClientFactory` — verify
