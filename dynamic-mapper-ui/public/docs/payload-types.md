@@ -45,8 +45,8 @@ raw data via `msg.getPayload()` and decode it with `atob()`.
 #### SparkPlug B
 
 Native first-class support for the [Eclipse Sparkplug B](https://sparkplug.eclipse.org/) protocol over MQTT. For
-**inbound** mappings the binary protobuf payload is automatically decoded by the mapper using the
-[Eclipse Tahu](https://github.com/eclipse-tahu/tahu) library — no manual Base64 decoding required. For **outbound**
+**inbound** mappings the binary protobuf payload is automatically decoded by the mapper (using the message schema
+published by [Eclipse Tahu](https://github.com/eclipse-tahu/tahu)) — no manual Base64 decoding required. For **outbound**
 (NCMD / DCMD) mappings, the metric object returned by your Smart Function is automatically serialized to protobuf
 binary before publishing. See the [SparkPlug B](/c8y-pkg-dynamic-mapper/introduction/sparkplugb) section for the full protocol details, message types,
 and Smart Function API.

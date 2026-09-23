@@ -42,9 +42,12 @@ get their own managed object unless your Smart Function explicitly creates one (
 
 ##### Inbound
 
-1. **Deserialization** — The binary protobuf payload is decoded automatically by the mapper using the
-   [Eclipse Tahu](https://github.com/eclipse-tahu/tahu) library. No manual decoding is needed in your Smart
-   Function.
+1. **Deserialization** — The binary protobuf payload is decoded automatically by the mapper's
+   `SparkPlugBDeserializer`, using the wire-format message schema published by
+   [Eclipse Tahu](https://github.com/eclipse-tahu/tahu) (`SparkplugBProto`). The metric/datatype/
+   alias interpretation itself — resolving `dataType`, extracting the correct value per type,
+   resolving aliases against the birth map — is the mapper's own logic, not delegated to Tahu's
+   higher-level decoder. Either way, no manual decoding is needed in your Smart Function.
 2. **Birth message storage (NBIRTH / DBIRTH)** — After the managed object for the Edge Node is upserted in
    inventory, the decoded metric-definition map (alias → { name, dataType }) is stored as a named fragment on the
    MO. This happens automatically — your Smart Function does not need to handle it.
