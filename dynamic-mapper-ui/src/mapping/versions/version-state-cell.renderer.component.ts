@@ -49,6 +49,10 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
         <span class="label label-warning" [attr.data-cy]="'dm-version-state-draft'">{{ 'draft' | translate }}</span>
       }
       @default {
+        <!-- No visible text label: the column is too narrow for "Active"/"Published" without
+             truncating (found live — showed as clipped "Pu"/"Ac"), and the switch's on/off
+             position plus color already carry the same information. Kept for screen readers
+             (sr-only) and as a hover tooltip via [title], both already in place. -->
         <label
           class="c8y-switch"
           [title]="(context.value === 'active' ? 'This is the active version' : 'Activate this version') | translate"
@@ -61,7 +65,7 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
             (click)="onToggleClick($event)"
           />
           <span></span>
-          <span class="text-capitalize">
+          <span class="sr-only">
             {{ (context.value === 'active' ? 'active' : 'published') | translate }}
           </span>
         </label>
