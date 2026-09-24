@@ -21,16 +21,12 @@
 
 package dynamic.mapper.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
-import org.apache.camel.Exchange;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
@@ -64,10 +60,7 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
      * Template method that defines the overall processing flow.
      * Subclasses should not override this method.
      */
-    @Override
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
-
+    public void process(ProcessingContext<?> context) throws Exception {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 

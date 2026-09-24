@@ -28,14 +28,9 @@ import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.processor.CommonProcessor;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 
-import org.apache.camel.Exchange;
-
 /**
- * Sets the exchange body to the current ProcessingContext so that Camel's
- * aggregation strategy ({@link ProcessingContextAggregationStrategy}) can read
- * it after every split leg. Called before each {@code .stop()} and {@code .end()}
- * in the inbound and outbound route pipelines — i.e. on every terminal path of a
- * single mapping's processing, whether or not it reached JS execution.
+ * Called before each terminal return in the inbound and outbound router pipelines — i.e. on
+ * every terminal path of a single mapping's processing, whether or not it reached JS execution.
  *
  * <p>Also closes the ProcessingContext's GraalVM resources here (idempotent —
  * {@link ProcessingContext#close()} is a no-op if nothing was ever set up). This
@@ -50,9 +45,8 @@ import org.apache.camel.Exchange;
  * is working again, so the {@code maxFailureCount} counter must start over. See
  * {@code docs/feature/reliability.md}.
  *
- * <p>The name "ConsolidationProcessor" is historical. Its responsibility grew from
- * "move the context from the in-header to the exchange body" to also covering this
- * cleanup.
+ * <p>The name "ConsolidationProcessor" is historical, predating the removal of Camel from
+ * this pipeline.
  */
 @Component
 public class ConsolidationProcessor extends CommonProcessor {
@@ -60,10 +54,7 @@ public class ConsolidationProcessor extends CommonProcessor {
     @Autowired
     private MappingService mappingService;
 
-    @Override
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
-        exchange.getIn().setBody(context);
+    public void process(ProcessingContext<?> context) throws Exception {
         if (context != null) {
             // A clean leg ends the failure streak. Skipped for test runs, which must never
             // change the runtime status of a mapping.

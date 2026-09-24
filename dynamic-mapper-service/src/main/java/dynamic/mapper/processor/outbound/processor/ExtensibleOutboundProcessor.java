@@ -21,8 +21,6 @@
 
 package dynamic.mapper.processor.outbound.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.model.Direction;
@@ -54,7 +52,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
+public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor<Object> {
 
     public ExtensibleOutboundProcessor(
             MappingService mappingService,
@@ -62,24 +60,8 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
         super(mappingService, extensionInboundRegistry);
     }
 
-    /**
-     * Override to handle ProcessingContext<Object> for outbound (not byte[])
-     */
     @Override
-    public void process(org.apache.camel.Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = getProcessingContextAsObject(exchange);
-        Mapping mapping = context.getMapping();
-        String tenant = context.getTenant();
-        Boolean testing = context.isTesting();
-
-        try {
-            processWithExtensionOutbound(context);
-        } catch (Exception e) {
-            handleProcessingErrorObject(e, context, tenant, mapping, testing);
-        }
-    }
-
-    private void processWithExtensionOutbound(ProcessingContext<Object> context)
+    protected void processWithExtension(ProcessingContext<Object> context)
             throws ProcessingException {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
@@ -104,17 +86,6 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
             log.error(errorMsg);
             throw new ProcessingException(errorMsg);
         }
-    }
-
-    @Override
-    protected void processWithExtension(ProcessingContext<byte[]> context) throws ProcessingException {
-        // Not used for outbound - we override process() instead
-        throw new UnsupportedOperationException("Outbound processor uses ProcessingContext<Object>, not byte[]");
-    }
-
-    @SuppressWarnings("unchecked")
-    private ProcessingContext<Object> getProcessingContextAsObject(org.apache.camel.Exchange exchange) {
-        return exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
     }
 
     /**
@@ -202,18 +173,7 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     protected void handleProcessingError(
-            Exception e,
-            ProcessingContext<byte[]> context,
-            String tenant,
-            Mapping mapping,
-            Boolean testing) {
-        // Delegate to the Object version (outbound uses ProcessingContext<Object>)
-        handleProcessingErrorObject(e, (ProcessingContext<Object>) (ProcessingContext<?>) context, tenant, mapping, testing);
-    }
-
-    private void handleProcessingErrorObject(
             Exception e,
             ProcessingContext<Object> context,
             String tenant,

@@ -29,12 +29,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -60,12 +57,6 @@ import lombok.extern.slf4j.Slf4j;
 class DeserializationOutboundProcessorTest {
 
     @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
-
-    @Mock
     private ServiceConfiguration serviceConfiguration;
 
     private DeserializationOutboundProcessor processor;
@@ -85,15 +76,6 @@ class DeserializationOutboundProcessorTest {
 
         c8yMessage = createC8YMessage();
         mapping = createOutboundMapping();
-
-        // Setup basic mocks
-        when(exchange.getIn()).thenReturn(message);
-
-        // Setup mock returns for headers and body
-        when(message.getHeader("c8yMessage", C8YMessage.class)).thenReturn(c8yMessage);
-        when(message.getBody(Mapping.class)).thenReturn(mapping);
-        when(message.getHeader("serviceConfiguration", ServiceConfiguration.class)).thenReturn(serviceConfiguration);
-        when(message.getHeader("testing", Boolean.class)).thenReturn(Boolean.FALSE);
 
         // Setup service configuration defaults
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
@@ -219,13 +201,10 @@ class DeserializationOutboundProcessorTest {
     @Test
     void testProcessBasicOutboundMessage() throws Exception {
         // When
-        processor.process(exchange);
+        ProcessingContext<Object> capturedContext = processor.process(
+                c8yMessage.getTenant(), mapping, c8yMessage, serviceConfiguration, false);
 
-        // Then - Verify processingContext was set in header
-        ArgumentCaptor<ProcessingContext> contextCaptor = ArgumentCaptor.forClass(ProcessingContext.class);
-        verify(message).setHeader(eq("processingContext"), contextCaptor.capture());
-
-        ProcessingContext<Object> capturedContext = contextCaptor.getValue();
+        // Then
         assertNotNull(capturedContext, "Processing context should not be null");
         assertEquals(TEST_TENANT, capturedContext.getTenant(), "Should have correct tenant");
         assertEquals(mapping, capturedContext.getMapping(), "Should have correct mapping");
@@ -233,7 +212,7 @@ class DeserializationOutboundProcessorTest {
                 "Should have correct service configuration");
         assertNotNull(capturedContext.getPayload(), "Should have payload from C8Y message");
 
-        log.info("✅ Basic outbound message processing test passed");
+        log.info("Basic outbound message processing test passed");
         log.info("   - Tenant: {}", capturedContext.getTenant());
         log.info("   - Mapping: {}", capturedContext.getMapping().getName());
         log.info("   - Source ID: {}", c8yMessage.getSourceId());
@@ -252,17 +231,14 @@ class DeserializationOutboundProcessorTest {
         c8yMessage.setParsedPayload(eventPayloadMap);
 
         // When
-        processor.process(exchange);
+        ProcessingContext<Object> capturedContext = processor.process(
+                c8yMessage.getTenant(), mapping, c8yMessage, serviceConfiguration, false);
 
         // Then
-        ArgumentCaptor<ProcessingContext> contextCaptor = ArgumentCaptor.forClass(ProcessingContext.class);
-        verify(message).setHeader(eq("processingContext"), contextCaptor.capture());
-
-        ProcessingContext<Object> capturedContext = contextCaptor.getValue();
         assertNotNull(capturedContext, "Processing context should not be null");
         assertNotNull(capturedContext.getPayload(), "Should have event payload");
 
-        log.info("✅ Event message processing test passed");
+        log.info("Event message processing test passed");
         log.info("   - API: {}", c8yMessage.getApi());
         log.info("   - Operation: {}", c8yMessage.getOperation());
     }
@@ -278,17 +254,14 @@ class DeserializationOutboundProcessorTest {
         c8yMessage.setParsedPayload(alarmPayloadMap);
 
         // When
-        processor.process(exchange);
+        ProcessingContext<Object> capturedContext = processor.process(
+                c8yMessage.getTenant(), mapping, c8yMessage, serviceConfiguration, false);
 
         // Then
-        ArgumentCaptor<ProcessingContext> contextCaptor = ArgumentCaptor.forClass(ProcessingContext.class);
-        verify(message).setHeader(eq("processingContext"), contextCaptor.capture());
-
-        ProcessingContext<Object> capturedContext = contextCaptor.getValue();
         assertNotNull(capturedContext, "Processing context should not be null");
         assertEquals(alarmPayloadMap, capturedContext.getPayload(), "Should have alarm payload from parsed payload");
 
-        log.info("✅ Alarm message processing test passed");
+        log.info("Alarm message processing test passed");
         log.info("   - API: {}", c8yMessage.getApi());
         log.info("   - Operation: {}", c8yMessage.getOperation());
     }
@@ -307,17 +280,14 @@ class DeserializationOutboundProcessorTest {
         mapping.setTargetAPI(API.INVENTORY);
 
         // When
-        processor.process(exchange);
+        ProcessingContext<Object> capturedContext = processor.process(
+                c8yMessage.getTenant(), mapping, c8yMessage, serviceConfiguration, false);
 
         // Then
-        ArgumentCaptor<ProcessingContext> contextCaptor = ArgumentCaptor.forClass(ProcessingContext.class);
-        verify(message).setHeader(eq("processingContext"), contextCaptor.capture());
-
-        ProcessingContext<Object> capturedContext = contextCaptor.getValue();
         assertNotNull(capturedContext, "Processing context should not be null");
         assertEquals(inventoryPayloadMap, capturedContext.getPayload(), "Should have inventory payload");
 
-        log.info("✅ Inventory message processing test passed");
+        log.info("Inventory message processing test passed");
     }
 
     @Test
@@ -326,89 +296,68 @@ class DeserializationOutboundProcessorTest {
         c8yMessage.setSendPayload(false);
 
         // When
-        processor.process(exchange);
+        ProcessingContext<Object> capturedContext = processor.process(
+                c8yMessage.getTenant(), mapping, c8yMessage, serviceConfiguration, false);
 
         // Then
-        ArgumentCaptor<ProcessingContext> contextCaptor = ArgumentCaptor.forClass(ProcessingContext.class);
-        verify(message).setHeader(eq("processingContext"), contextCaptor.capture());
-
-        ProcessingContext<Object> capturedContext = contextCaptor.getValue();
         assertNotNull(capturedContext, "Processing context should not be null");
         // The payload should still be available since it's passed through the C8Y
         // message
         assertNotNull(capturedContext.getPayload(), "Should still have payload");
 
-        log.info("✅ SendPayload false test passed");
+        log.info("SendPayload false test passed");
     }
 
     @Test
     void testProcessWithNullC8YMessage() throws Exception {
-        // Given - Null C8Y message
-        when(message.getHeader("c8yMessage", C8YMessage.class)).thenReturn(null);
-
         // When & Then - Should throw exception due to null tenant
-        assertThrows(Exception.class, () -> processor.process(exchange),
+        assertThrows(Exception.class,
+                () -> processor.process(TEST_TENANT, mapping, null, serviceConfiguration, false),
                 "Should throw exception with null C8Y message");
 
-        log.info("✅ Null C8Y message handling test passed");
+        log.info("Null C8Y message handling test passed");
     }
 
     @Test
     void testProcessWithNullMapping() throws Exception {
-        // Given - Null mapping
-        when(message.getBody(Mapping.class)).thenReturn(null);
-
         // When & Then - Should throw exception
-        assertThrows(Exception.class, () -> processor.process(exchange),
+        assertThrows(Exception.class,
+                () -> processor.process(c8yMessage.getTenant(), null, c8yMessage, serviceConfiguration, false),
                 "Should throw exception with null mapping");
 
-        log.info("✅ Null mapping handling test passed");
+        log.info("Null mapping handling test passed");
     }
 
     @Test
     void testProcessWithNullServiceConfiguration() throws Exception {
-        // Given - Null service configuration
-        when(message.getHeader("serviceConfiguration", ServiceConfiguration.class)).thenReturn(null);
-
         // When - Should not throw exception
-        assertDoesNotThrow(() -> processor.process(exchange),
+        ProcessingContext<Object> capturedContext = assertDoesNotThrow(
+                () -> processor.process(c8yMessage.getTenant(), mapping, c8yMessage, null, false),
                 "Processor should handle null service configuration gracefully");
 
         // Then - Verify processing context is still created
-        ArgumentCaptor<ProcessingContext> contextCaptor = ArgumentCaptor.forClass(ProcessingContext.class);
-        verify(message).setHeader(eq("processingContext"), contextCaptor.capture());
-
-        ProcessingContext<Object> capturedContext = contextCaptor.getValue();
         assertNotNull(capturedContext, "Processing context should be created");
         assertEquals(TEST_TENANT, capturedContext.getTenant(), "Should have correct tenant from C8Y message");
         assertEquals(mapping, capturedContext.getMapping(), "Should have correct mapping");
 
-        log.info("✅ Null service configuration handling test passed - graceful handling");
+        log.info("Null service configuration handling test passed - graceful handling");
     }
 
     @Test
     void testProcessWithDifferentOperations() throws Exception {
         // Test CREATE operation
         c8yMessage.setOperation("CREATE");
-        processor.process(exchange);
-
-        ArgumentCaptor<ProcessingContext> contextCaptor = ArgumentCaptor.forClass(ProcessingContext.class);
-        verify(message, times(1)).setHeader(eq("processingContext"), contextCaptor.capture());
+        ProcessingContext<Object> createContext = processor.process(
+                c8yMessage.getTenant(), mapping, c8yMessage, serviceConfiguration, false);
+        assertNotNull(createContext);
 
         // Test UPDATE operation
-        reset(message);
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getHeader("c8yMessage", C8YMessage.class)).thenReturn(c8yMessage);
-        when(message.getBody(Mapping.class)).thenReturn(mapping);
-        when(message.getHeader("serviceConfiguration", ServiceConfiguration.class)).thenReturn(serviceConfiguration);
-        when(message.getHeader("testing", Boolean.class)).thenReturn(Boolean.FALSE);
-
         c8yMessage.setOperation("UPDATE");
-        processor.process(exchange);
+        ProcessingContext<Object> updateContext = processor.process(
+                c8yMessage.getTenant(), mapping, c8yMessage, serviceConfiguration, false);
+        assertNotNull(updateContext);
 
-        verify(message, times(1)).setHeader(eq("processingContext"), any(ProcessingContext.class));
-
-        log.info("✅ Different operations test passed");
+        log.info("Different operations test passed");
         log.info("   - Tested CREATE and UPDATE operations");
     }
 
@@ -419,17 +368,14 @@ class DeserializationOutboundProcessorTest {
         c8yMessage.setTenant(differentTenant);
 
         // When
-        processor.process(exchange);
+        ProcessingContext<Object> capturedContext = processor.process(
+                differentTenant, mapping, c8yMessage, serviceConfiguration, false);
 
         // Then
-        ArgumentCaptor<ProcessingContext> contextCaptor = ArgumentCaptor.forClass(ProcessingContext.class);
-        verify(message).setHeader(eq("processingContext"), contextCaptor.capture());
-
-        ProcessingContext<Object> capturedContext = contextCaptor.getValue();
         assertEquals(differentTenant, capturedContext.getTenant(),
                 "Should use tenant from C8Y message");
 
-        log.info("✅ Different tenant processing test passed");
+        log.info("Different tenant processing test passed");
     }
 
     @Test
@@ -438,16 +384,13 @@ class DeserializationOutboundProcessorTest {
         mapping.setDebug(true);
 
         // When
-        processor.process(exchange);
+        ProcessingContext<Object> capturedContext = processor.process(
+                c8yMessage.getTenant(), mapping, c8yMessage, serviceConfiguration, false);
 
         // Then
-        ArgumentCaptor<ProcessingContext> contextCaptor = ArgumentCaptor.forClass(ProcessingContext.class);
-        verify(message).setHeader(eq("processingContext"), contextCaptor.capture());
-
-        ProcessingContext<Object> capturedContext = contextCaptor.getValue();
         assertTrue(capturedContext.getMapping().getDebug(), "Debug should be enabled");
 
-        log.info("✅ Debug mapping processing test passed");
+        log.info("Debug mapping processing test passed");
     }
 
     @Test
@@ -458,13 +401,10 @@ class DeserializationOutboundProcessorTest {
         c8yMessage.setPayload(createComplexPayloadJson());
 
         // When
-        processor.process(exchange);
+        ProcessingContext<Object> capturedContext = processor.process(
+                c8yMessage.getTenant(), mapping, c8yMessage, serviceConfiguration, false);
 
         // Then
-        ArgumentCaptor<ProcessingContext> contextCaptor = ArgumentCaptor.forClass(ProcessingContext.class);
-        verify(message).setHeader(eq("processingContext"), contextCaptor.capture());
-
-        ProcessingContext<Object> capturedContext = contextCaptor.getValue();
         assertNotNull(capturedContext, "Processing context should not be null");
         assertEquals(complexPayload, capturedContext.getPayload(), "Should use parsed payload");
 
@@ -473,20 +413,16 @@ class DeserializationOutboundProcessorTest {
         assertTrue(payloadMap.containsKey("measurements"), "Should contain measurements array");
         assertTrue(payloadMap.containsKey("metadata"), "Should contain metadata object");
 
-        log.info("✅ Complex parsed payload processing test passed");
+        log.info("Complex parsed payload processing test passed");
     }
 
     @Test
     void testProcessingContextCreation() throws Exception {
         // When
-        processor.process(exchange);
+        ProcessingContext<Object> capturedContext = processor.process(
+                c8yMessage.getTenant(), mapping, c8yMessage, serviceConfiguration, false);
 
         // Then - Verify all context components
-        ArgumentCaptor<ProcessingContext> contextCaptor = ArgumentCaptor.forClass(ProcessingContext.class);
-        verify(message).setHeader(eq("processingContext"), contextCaptor.capture());
-
-        ProcessingContext<Object> capturedContext = contextCaptor.getValue();
-
         // Verify basic properties
         assertEquals(TEST_TENANT, capturedContext.getTenant(), "Tenant should match C8Y message");
         assertEquals(mapping, capturedContext.getMapping(), "Mapping should be set");
@@ -506,7 +442,7 @@ class DeserializationOutboundProcessorTest {
         assertTrue(capturedContext.getErrors().isEmpty(),
                 "Errors should be empty initially");
 
-        log.info("✅ Processing context creation test passed");
+        log.info("Processing context creation test passed");
         log.info("   - Context initialized with all required components");
         log.info("   - Source ID: {}", c8yMessage.getSourceId());
         log.info("   - Device Name: {}", c8yMessage.getDeviceName());

@@ -59,7 +59,6 @@ logging:
     root: WARN
     dynamic.mapper: INFO
     org.springframework: WARN
-    org.apache.camel: WARN
     com.cumulocity: WARN
 
 # Server Configuration

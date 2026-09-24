@@ -56,7 +56,7 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.notification.NotificationSubscriber;
-import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 
 import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.mapping.MappingService;
@@ -644,7 +644,7 @@ public class BootstrapService {
             // DispatcherInbound dispatcherInbound = new
             // DispatcherInbound(serviceRegistry,
             // connectorClient);
-            GenericMessageCallback dispatcherInbound = new CamelDispatcherInbound(serviceRegistry,
+            GenericMessageCallback dispatcherInbound = new InboundMessageDispatcher(serviceRegistry,
                     connectorClient);
             connectorClient.setDispatcher(dispatcherInbound);
             // Connection is done async, future is returned to wait for the connection if

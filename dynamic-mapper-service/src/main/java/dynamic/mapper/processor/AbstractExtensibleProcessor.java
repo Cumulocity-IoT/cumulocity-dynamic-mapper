@@ -21,11 +21,7 @@
 
 package dynamic.mapper.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import java.util.Map;
-
-import org.apache.camel.Exchange;
 
 import dynamic.mapper.model.extension.Extension;
 import dynamic.mapper.model.extension.ExtensionEntry;
@@ -45,7 +41,7 @@ import lombok.extern.slf4j.Slf4j;
  * while allowing subclasses to customize specific steps.
  */
 @Slf4j
-public abstract class AbstractExtensibleProcessor extends CommonProcessor {
+public abstract class AbstractExtensibleProcessor<T> extends CommonProcessor {
 
     protected final MappingService mappingService;
     protected final ExtensionInboundRegistry extensionInboundRegistry;
@@ -61,10 +57,7 @@ public abstract class AbstractExtensibleProcessor extends CommonProcessor {
      * Template method that defines the overall processing flow.
      * Handles exception management and error reporting.
      */
-    @Override
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<byte[]> context = getProcessingContextAsByteArray(exchange);
-
+    public void process(ProcessingContext<T> context) throws Exception {
         // Extract focused contexts
         RoutingContext routing = context.getRoutingContext();
 
@@ -85,7 +78,7 @@ public abstract class AbstractExtensibleProcessor extends CommonProcessor {
      * @param context The processing context
      * @throws ProcessingException if processing fails
      */
-    protected abstract void processWithExtension(ProcessingContext<byte[]> context)
+    protected abstract void processWithExtension(ProcessingContext<T> context)
             throws ProcessingException;
 
     /**
@@ -209,19 +202,8 @@ public abstract class AbstractExtensibleProcessor extends CommonProcessor {
      */
     protected abstract void handleProcessingError(
             Exception e,
-            ProcessingContext<byte[]> context,
+            ProcessingContext<T> context,
             String tenant,
             Mapping mapping,
             Boolean testing);
-
-    /**
-     * Extract processing context from exchange header.
-     *
-     * @param exchange The Camel exchange
-     * @return The processing context
-     */
-    @SuppressWarnings("unchecked")
-    protected ProcessingContext<byte[]> getProcessingContextAsByteArray(Exchange exchange) {
-        return exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
-    }
 }

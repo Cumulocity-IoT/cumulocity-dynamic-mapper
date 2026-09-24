@@ -34,8 +34,6 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.apache.camel.CamelContext;
-import org.apache.camel.impl.DefaultCamelContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,32 +57,27 @@ import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TransformationType;
-import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
+import dynamic.mapper.processor.inbound.InboundMessageRouter;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Integration tests that start from CamelDispatcherInbound.onMessage() entry point.
- * Tests the complete inbound processing pipeline including:
- * - Message dispatching through Camel routes
- * - Deserialization (JSON, FLAT_FILE, HEX, PROTOBUF)
- * - Enrichment (_TOPIC_LEVEL_, _IDENTITY_, _CONTEXT_DATA_)
- * - Filtering (filterMapping, filterInventory)
- * - Extraction (JSONata, SubstitutionAsCode, SmartFunction)
- * - Substitution
- * - Sending to C8Y
+ * Integration tests that start from InboundMessageDispatcher.onMessage() entry point.
+ * Tests the inbound dispatcher's own behavior (mapping resolution, QoS/pipeline-timeout
+ * determination, system-topic/null-payload short-circuiting) with the downstream
+ * {@link InboundMessageRouter} mocked out, since router processing happens asynchronously
+ * on a virtual thread after the dispatcher already returned.
  *
  * This test complements:
  * - MappingScenarioIntegrationTest: Configuration validation only
  * - MappingExecutionIntegrationTest: Direct processor execution
- *
- * This test provides END-TO-END validation through the actual Camel pipeline.
  */
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class CamelPipelineInboundIntegrationTest {
+class InboundPipelineIntegrationTest {
 
     @Mock
     private ServiceRegistry serviceRegistry;
@@ -101,8 +94,10 @@ class CamelPipelineInboundIntegrationTest {
     @Mock
     private AConnectorClient connectorClient;
 
-    private CamelContext camelContext;
-    private CamelDispatcherInbound dispatcher;
+    @Mock
+    private InboundMessageRouter inboundMessageRouter;
+
+    private InboundMessageDispatcher dispatcher;
     private ExecutorService virtualThreadPool;
 
     private ObjectMapper objectMapper;
@@ -120,15 +115,13 @@ class CamelPipelineInboundIntegrationTest {
         inboundMappings = loadMappingsFromFile(INBOUND_MAPPINGS_PATH);
         log.info("Loaded {} inbound mappings for Camel pipeline tests", inboundMappings.size());
 
-        // Setup Camel Context
-        camelContext = new DefaultCamelContext();
         virtualThreadPool = Executors.newVirtualThreadPerTaskExecutor();
 
         // Setup ServiceRegistry mocks
-        when(serviceRegistry.getCamelContext()).thenReturn(camelContext);
         when(serviceRegistry.getVirtualThreadPool()).thenReturn(virtualThreadPool);
         when(serviceRegistry.getMappingService()).thenReturn(mappingService);
         when(serviceRegistry.getServiceConfiguration(TEST_TENANT)).thenReturn(serviceConfiguration);
+        when(serviceRegistry.getInboundMessageRouter()).thenReturn(inboundMessageRouter);
 
         // Setup ServiceConfiguration mocks
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
@@ -153,16 +146,13 @@ class CamelPipelineInboundIntegrationTest {
         // the dispatcher entry point.
 
         // Create dispatcher
-        dispatcher = new CamelDispatcherInbound(serviceRegistry, connectorClient);
+        dispatcher = new InboundMessageDispatcher(serviceRegistry, connectorClient);
 
-        log.info("✅ Camel pipeline test setup completed");
+        log.info("Dispatcher pipeline test setup completed");
     }
 
     @AfterEach
     void tearDown() throws Exception {
-        if (camelContext != null && camelContext.isStarted()) {
-            camelContext.stop();
-        }
         if (virtualThreadPool != null) {
             virtualThreadPool.shutdown();
         }

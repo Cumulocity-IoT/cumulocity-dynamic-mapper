@@ -29,8 +29,6 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,12 +52,6 @@ class DeserializationInboundProcessorErrorHandlingTest {
 
     @Mock
     private MappingService mappingService;
-
-    @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
 
     @Mock
     private ServiceConfiguration serviceConfiguration;
@@ -87,12 +79,6 @@ class DeserializationInboundProcessorErrorHandlingTest {
         // Create real Mapping object with supportsMessageContext initialized
         mapping = Mapping.builder()
                 .build();
-
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getBody(Mapping.class)).thenReturn(mapping);
-        when(message.getHeader("tenant", String.class)).thenReturn(TEST_TENANT);
-        when(message.getHeader("serviceConfiguration", ServiceConfiguration.class)).thenReturn(serviceConfiguration);
-        when(message.getHeader("connectorMessage", ConnectorMessage.class)).thenReturn(connectorMessage);
     }
 
     @Test
@@ -106,10 +92,8 @@ class DeserializationInboundProcessorErrorHandlingTest {
         replaceDeserializerWithMock(MappingType.JSON);
         when(mockDeserializer.deserializePayload(eq(mapping), eq(connectorMessage)))
                 .thenThrow(new IOException("Test IO Exception"));
-        when(message.getHeader("testing", Boolean.class)).thenReturn(Boolean.FALSE);
-
         // When
-        processor.process(exchange);
+        processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
 
         // Then
         verify(mappingService).getMappingStatus(TEST_TENANT, mapping);
@@ -129,10 +113,8 @@ class DeserializationInboundProcessorErrorHandlingTest {
         replaceDeserializerWithMock(MappingType.PROTOBUF_INTERNAL);
         when(mockDeserializer.deserializePayload(eq(mapping), eq(connectorMessage)))
                 .thenThrow(new IOException("Test IO Exception"));
-        when(message.getHeader("testing", Boolean.class)).thenReturn(Boolean.FALSE);
-
         // When
-        processor.process(exchange);
+        processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
 
         // Then
         verify(mappingService).getMappingStatus(TEST_TENANT, mapping);

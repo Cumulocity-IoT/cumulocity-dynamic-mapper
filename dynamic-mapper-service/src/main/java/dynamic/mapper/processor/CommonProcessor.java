@@ -1,8 +1,6 @@
 package dynamic.mapper.processor;
 
 import java.util.List;
-import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.SourceSection;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +20,7 @@ import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public abstract class CommonProcessor implements Processor {
+public abstract class CommonProcessor {
 
     @Autowired
     private ServiceRegistry serviceRegistry;
@@ -32,8 +30,6 @@ public abstract class CommonProcessor implements Processor {
 
     @Autowired
     private InventoryFilterEvaluator inventoryFilterEvaluator;
-
-    public abstract void process(Exchange exchange) throws Exception;
 
     /**
      * Evaluates an inventory filter against cached inventory data

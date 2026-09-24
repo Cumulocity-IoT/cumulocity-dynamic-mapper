@@ -32,8 +32,6 @@ import java.util.List;
 import java.util.Map;
 
 import dynamic.mapper.core.IdentityResolutionService;
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -74,12 +72,6 @@ class SubstitutionResultInboundProcessorTest {
     private MappingService mappingService;
 
     @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
-
-    @Mock
     private ServiceConfiguration serviceConfiguration;
 
     @Mock
@@ -114,8 +106,6 @@ class SubstitutionResultInboundProcessorTest {
         processingContext = createProcessingContext();
 
         // Setup basic mocks
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
         when(serviceConfiguration.getLogSubstitution()).thenReturn(false);
@@ -235,7 +225,7 @@ class SubstitutionResultInboundProcessorTest {
     @Test
     void testProcessSuccess() throws Exception {
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - The processor should handle the processing successfully
         // Don't expect no failure count increase since errors can occur and be handled
@@ -246,7 +236,7 @@ class SubstitutionResultInboundProcessorTest {
     @Test
     void testProcessWithExternalIdResolution() throws Exception {
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class));
@@ -263,7 +253,7 @@ class SubstitutionResultInboundProcessorTest {
                 .thenReturn(null); // Simulate device not found
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Just verify the method was called
         verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class));
@@ -276,7 +266,7 @@ class SubstitutionResultInboundProcessorTest {
         mapping.setCreateNonExistingDevice(false);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - The processor completes processing
         log.info("Parallel processing test completed");
@@ -297,7 +287,7 @@ class SubstitutionResultInboundProcessorTest {
                         RepairStrategy.DEFAULT, false)));
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Context should be updated
         assertEquals(ProcessingMode.PERSISTENT, processingContext.getProcessingMode());
@@ -319,7 +309,7 @@ class SubstitutionResultInboundProcessorTest {
                         false)));
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         BinaryInfo binaryInfo = processingContext.getBinaryInfo();
@@ -341,7 +331,7 @@ class SubstitutionResultInboundProcessorTest {
                         false)));
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Check that processing completed and context was updated
         assertEquals("Smart Sensor", processingContext.getDeviceName());
@@ -355,7 +345,7 @@ class SubstitutionResultInboundProcessorTest {
         mapping.setCreateNonExistingDevice(false);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Processing should complete (filter evaluation happens but doesn't stop
         // processing in this context)
@@ -368,7 +358,7 @@ class SubstitutionResultInboundProcessorTest {
         mapping.setTargetTemplate("");
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Empty template should be handled gracefully
         log.info("Empty target template test completed");
@@ -385,10 +375,8 @@ class SubstitutionResultInboundProcessorTest {
                 .api(API.MEASUREMENT) // Still set API to avoid NPE
                 .build();
 
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(emptyContext);
-
         // When
-        processor.process(exchange);
+        processor.process(emptyContext);
 
         // Then - Should handle gracefully
         log.info("Empty processing cache test completed");
@@ -407,7 +395,7 @@ class SubstitutionResultInboundProcessorTest {
                 new SubstituteValue(22.1, SubstituteValue.TYPE.NUMBER, RepairStrategy.DEFAULT, false)));
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Processing completes with multiple devices
         log.info("Multiple device entries test completed");
@@ -439,7 +427,7 @@ class SubstitutionResultInboundProcessorTest {
     void testUnderSuppliedValueWithIgnoreKeepsTargetTemplateValue() throws Exception {
         givenUnderSuppliedTemperatureValues(RepairStrategy.IGNORE);
 
-        processor.process(exchange);
+        processor.process(processingContext);
 
         assertEquals(3, processingContext.getRequests().size());
         String thirdRequest = processingContext.getRequests().get(2).getRequest();
@@ -452,7 +440,7 @@ class SubstitutionResultInboundProcessorTest {
     void testUnderSuppliedValueWithRemoveIfMissingDeletesTargetNode() throws Exception {
         givenUnderSuppliedTemperatureValues(RepairStrategy.REMOVE_IF_MISSING_OR_NULL);
 
-        processor.process(exchange);
+        processor.process(processingContext);
 
         assertEquals(3, processingContext.getRequests().size());
         String thirdRequest = processingContext.getRequests().get(2).getRequest();
@@ -466,7 +454,7 @@ class SubstitutionResultInboundProcessorTest {
     void testUnderSuppliedValueWithDefaultKeepsNotDefinedMarker() throws Exception {
         givenUnderSuppliedTemperatureValues(RepairStrategy.DEFAULT);
 
-        processor.process(exchange);
+        processor.process(processingContext);
 
         assertEquals(3, processingContext.getRequests().size());
         // DEFAULT has nothing sensible to write, so the gap stays visible in the result.
@@ -485,10 +473,8 @@ class SubstitutionResultInboundProcessorTest {
                 .build();
         // Don't populate cache to cause validation issues
 
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(problematicContext);
-
         // When
-        processor.process(exchange);
+        processor.process(problematicContext);
 
         // Then - Should handle gracefully
         log.info("Exception handling test completed");
@@ -497,7 +483,7 @@ class SubstitutionResultInboundProcessorTest {
     @Test
     void testValidateProcessingCache() throws Exception {
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - should not throw any validation exceptions
         log.info("Processing cache validation test completed");
@@ -515,7 +501,7 @@ class SubstitutionResultInboundProcessorTest {
         processingContext.setApi(API.EVENT);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Processing should complete
         assertEquals(API.EVENT, processingContext.getApi());

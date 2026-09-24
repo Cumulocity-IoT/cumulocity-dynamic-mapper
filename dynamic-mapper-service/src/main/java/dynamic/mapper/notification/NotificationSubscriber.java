@@ -29,7 +29,7 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.device.Device;
 import dynamic.mapper.notification.service.*;
-import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
+import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,7 +63,7 @@ public class NotificationSubscriber {
 
     // === Lifecycle Methods ===
 
-    public void addSubscriber(String tenant, String identifier, CamelDispatcherOutbound dispatcherOutbound) {
+    public void addSubscriber(String tenant, String identifier, OutboundMessageDispatcher dispatcherOutbound) {
         connectorRegistry.addSubscriber(tenant, identifier, dispatcherOutbound);
     }
 
@@ -387,7 +387,7 @@ public class NotificationSubscriber {
     /**
      * Add a connector
      */
-    public void addConnector(String tenant, String connectorIdentifier, CamelDispatcherOutbound dispatcherOutbound) {
+    public void addConnector(String tenant, String connectorIdentifier, OutboundMessageDispatcher dispatcherOutbound) {
         log.info("{} - Adding connector {}", tenant, connectorIdentifier);
         
         // Add subscriber to registry

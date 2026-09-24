@@ -28,8 +28,6 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Source;
@@ -73,12 +71,6 @@ class AbstractFlowProcessorTest {
 
     @Mock
     private GraalVMContextService graalVMContextService;
-
-    @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
 
     @Mock
     private ServiceConfiguration serviceConfiguration;
@@ -178,8 +170,6 @@ class AbstractFlowProcessorTest {
         processingContext = createProcessingContext();
 
         // Setup basic mocks
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
     }
 
@@ -262,7 +252,7 @@ class AbstractFlowProcessorTest {
         assertNotNull(processingContext.getGraalContext(), "GraalVM context should exist initially");
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Context should be closed after processing
         // Note: The context.close() in AbstractFlowProcessorProcessor closes the ProcessingContext,
@@ -464,7 +454,7 @@ class AbstractFlowProcessorTest {
         mapping.setCode(Base64.getEncoder().encodeToString(invalidJsCode.getBytes()));
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         assertTrue(processor.wasHandleErrorCalled(), "Should call handleProcessingError on exception");
@@ -489,7 +479,7 @@ class AbstractFlowProcessorTest {
         mapping.setCode(Base64.getEncoder().encodeToString(errorJsCode.getBytes()));
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         assertTrue(processor.wasHandleErrorCalled(), "Should call error handler");

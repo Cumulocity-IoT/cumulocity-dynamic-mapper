@@ -1,13 +1,10 @@
 package dynamic.mapper.processor.inbound.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
 import org.joda.time.DateTime;
 import org.springframework.stereotype.Component;
 
@@ -58,18 +55,13 @@ public class SendInboundProcessor extends BaseProcessor {
         this.mappingService = mappingService;
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
-
+    public void process(ProcessingContext<Object> context) throws Exception {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
         Boolean testing = context.isTesting();
 
         // Check if processing was cancelled due to timeout
-        ProcessingResultWrapper<?> wrapper = exchange.getIn().getHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER,
-                ProcessingResultWrapper.class);
+        ProcessingResultWrapper<?> wrapper = context.getProcessingResultWrapper();
         if (wrapper != null && wrapper.getCancellationRequested().get()) {
             log.warn("{} - Processing was cancelled (timeout), skipping SendInboundProcessor for mapping: {}",
                     tenant, mapping.getName());
@@ -77,18 +69,10 @@ public class SendInboundProcessor extends BaseProcessor {
         }
 
         try {
-            // Check if we have a single request from parallel processing (body contains split request)
-            DynamicMapperRequest singleRequest = exchange.getIn().getBody(DynamicMapperRequest.class);
-
-            if (singleRequest != null) {
-                // Parallel mode: process single request from body
-                processSingleRequest(context, singleRequest, true);
-            } else {
-                // Sequential mode: collapse multiple measurement requests into one bulk request.
-                bulkMeasurementRequestsIfNeeded(context);
-                // Sequential mode: process all requests in context
-                processAllRequests(context);
-            }
+            // Collapse multiple measurement requests into one bulk request.
+            bulkMeasurementRequestsIfNeeded(context);
+            // Process all requests sequentially.
+            processAllRequests(context);
             // After all requests are processed, store the SparkPlug B birth fragment if applicable.
             // Deliberately outside the INVENTORY request path so it runs even when the Smart Function
             // emits no INVENTORY object (e.g. emits only a MEASUREMENT, or emits nothing at all).
@@ -122,7 +106,7 @@ public class SendInboundProcessor extends BaseProcessor {
         try {
             // Process each C8Y request
             for (DynamicMapperRequest request : context.getRequests()) {
-                processSingleRequest(context, request, false);
+                processSingleRequest(context, request);
             }
 
             // Create alarms for any processing issues (after all requests are processed)
@@ -218,13 +202,12 @@ public class SendInboundProcessor extends BaseProcessor {
     }
 
     /**
-     * Process a single request - common logic for both sequential and parallel modes
+     * Process a single request
      *
      * @param context The processing context
      * @param request The request to process
-     * @param isParallelMode True if processing in parallel mode, false for sequential
      */
-    private void processSingleRequest(ProcessingContext<Object> context, DynamicMapperRequest request, boolean isParallelMode) throws Exception {
+    private void processSingleRequest(ProcessingContext<Object> context, DynamicMapperRequest request) throws Exception {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 
@@ -260,11 +243,7 @@ public class SendInboundProcessor extends BaseProcessor {
                         tenant, request.getApi(), request.getRequest());
             }
 
-            // In parallel mode, create alarms for this specific request immediately
-            // In sequential mode, alarms are created after all requests in processAllRequests
-            if (isParallelMode) {
-                createProcessingAlarmsForRequest(context, request);
-            }
+            // Alarms are created after all requests in processAllRequests.
 
         } catch (Exception e) {
             // Not logged here — see the comment in processAllRequests's catch block; this
@@ -369,27 +348,6 @@ public class SendInboundProcessor extends BaseProcessor {
             context.getCurrentRequest().setError(e);
             request.setError(e);
             throw e;
-        }
-    }
-
-    /**
-     * Create alarms for a specific request (used in parallel mode)
-     */
-    private void createProcessingAlarmsForRequest(ProcessingContext<Object> context, DynamicMapperRequest request) {
-        String tenant = context.getTenant();
-
-        if (request.getSourceId() != null && !context.getAlarms().isEmpty()) {
-            ManagedObjectRepresentation sourceMor = new ManagedObjectRepresentation();
-            sourceMor.setId(new GId(request.getSourceId()));
-
-            context.getAlarms().forEach(alarm -> {
-                try {
-                    c8yAgent.createAlarm("WARNING", alarm, Utils.MAPPER_PROCESSING_ALARM,
-                            new DateTime(), sourceMor, tenant);
-                } catch (Exception e) {
-                    log.warn("{} - Failed to create processing alarm: {}", tenant, e.getMessage());
-                }
-            });
         }
     }
 

@@ -21,14 +21,11 @@
 
 package dynamic.mapper.processor.inbound.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.camel.Exchange;
 import org.springframework.stereotype.Component;
 
 import com.jayway.jsonpath.DocumentContext;
@@ -72,17 +69,14 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
         this.identityResolutionService = identityResolutionService;
     }
 
-    @Override
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
-
+    public void process(ProcessingContext<Object> context) throws Exception {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
         Boolean testing = context.isTesting();
 
         try {
             validateProcessingCache(context);
-            substituteInTargetAndCreateRequests(context, exchange);
+            substituteInTargetAndCreateRequests(context);
 
             // Check inventory filter condition if specified
             // if (mapping.getFilterInventory() != null &&
@@ -121,7 +115,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
     /**
      * Perform substitution and create C8Y requests
      */
-    private void substituteInTargetAndCreateRequests(ProcessingContext<Object> context, Exchange exchange)
+    private void substituteInTargetAndCreateRequests(ProcessingContext<Object> context)
             throws Exception {
         Mapping mapping = context.getMapping();
 
@@ -161,17 +155,6 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
             }
         }
 
-        // Set processing mode flag based on createNonExistingDevice (once, outside loop)
-        // TODO: if (mapping.createNonExistingDevice) process sequentially
-        // else clone context and add multiContext to exchange
-        // then in pipeline split and process in parallel
-        if (!mapping.getCreateNonExistingDevice()) {
-            exchange.getIn().setHeader(CamelHeaders.PARALLEL_PROCESSING, true);
-            log.debug("Marked requests for parallel processing for mapping: {}", mapping.getName());
-        } else {
-            exchange.getIn().setHeader(CamelHeaders.PARALLEL_PROCESSING, false);
-            log.debug("Marked requests for sequential processing for mapping: {}", mapping.getName());
-        }
     }
 
     private void prepareAndSubstituteInPayload(ProcessingContext<Object> context, DocumentContext payloadTarget,

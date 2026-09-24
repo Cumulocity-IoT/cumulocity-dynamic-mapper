@@ -25,9 +25,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -58,12 +55,6 @@ class DeserializationInboundProcessorTest {
     private dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer sparkPlugBDeserializer;
 
     @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
-
-    @Mock
     private ServiceConfiguration serviceConfiguration;
 
     @Mock
@@ -90,13 +81,7 @@ class DeserializationInboundProcessorTest {
                 "unspec-id", "Unspecified Mapping", "UNSPECIFIED", Direction.INBOUND,
                 "#", "#", 0L, 0L, 0L, null);
 
-        // Setup basic exchange and message mocks
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getBody(Mapping.class)).thenReturn(mapping);
-        when(message.getHeader("tenant", String.class)).thenReturn(TEST_TENANT);
-        when(message.getHeader("serviceConfiguration", ServiceConfiguration.class)).thenReturn(serviceConfiguration);
-        when(message.getHeader("connectorMessage", ConnectorMessage.class)).thenReturn(connectorMessage);
-        when(message.getHeader("testing", Boolean.class)).thenReturn(Boolean.FALSE);
+        when(connectorMessage.getConnectorIdentifier()).thenReturn("test-connector");
 
         // Setup mapping status mocks
         when(mappingService.getMappingStatus(any(String.class), any(Mapping.class))).thenReturn(mappingStatus);
@@ -138,10 +123,11 @@ class DeserializationInboundProcessorTest {
         DeserializationInboundProcessor processor = newProcessor();
 
         // When
-        processor.process(exchange);
+        ProcessingContext<?> context = processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
 
         // Then
-        verify(message).setHeader(eq("processingContext"), any(ProcessingContext.class));
+        assertNotNull(context);
+        assertFalse(context.hasError());
     }
 
     @Test
@@ -153,10 +139,11 @@ class DeserializationInboundProcessorTest {
         DeserializationInboundProcessor processor = newProcessor();
 
         // When
-        processor.process(exchange);
+        ProcessingContext<?> context = processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
 
         // Then
-        verify(message).setHeader(eq("processingContext"), any(ProcessingContext.class));
+        assertNotNull(context);
+        assertFalse(context.hasError());
     }
 
     @Test
@@ -169,10 +156,12 @@ class DeserializationInboundProcessorTest {
         DeserializationInboundProcessor processor = newProcessor();
 
         // When
-        processor.process(exchange);
+        ProcessingContext<?> context = processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
 
-        // Then
-        verify(message).setHeader(eq("processingContext"), any(ProcessingContext.class));
+        // Then - no deserializer is registered for MappingType.EXTENSION_JAVA, so this
+        // records an error (matches handleMissingProcessor's behavior, unrelated to Camel removal)
+        assertNotNull(context);
+        assertTrue(context.hasError());
     }
 
     @Test
@@ -184,10 +173,11 @@ class DeserializationInboundProcessorTest {
         DeserializationInboundProcessor processor = newProcessor();
 
         // When
-        processor.process(exchange);
+        ProcessingContext<?> context = processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
 
         // Then
-        verify(message).setHeader(eq("processingContext"), any(ProcessingContext.class));
+        assertNotNull(context);
+        assertFalse(context.hasError());
     }
 
     @Test
@@ -199,27 +189,30 @@ class DeserializationInboundProcessorTest {
         DeserializationInboundProcessor processor = newProcessor();
 
         // When
-        processor.process(exchange);
+        ProcessingContext<?> context = processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
 
         // Then
-        verify(message).setHeader(eq("processingContext"), any(ProcessingContext.class));
+        assertNotNull(context);
+        assertFalse(context.hasError());
     }
 
     @Test
     void testProcessWithNullMappingType() throws Exception {
         // Given
         mapping.setMappingType(null);
+        when(connectorMessage.getPayload()).thenReturn("{\"data\": \"test\"}".getBytes());
 
         DeserializationInboundProcessor processor = newProcessor();
 
         // When
-        processor.process(exchange);
+        ProcessingContext<?> context = processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
 
         // Then
         verify(mappingService).getMappingStatus(TEST_TENANT, Mapping.UNSPECIFIED_MAPPING);
         verify(mappingService).getMappingStatus(TEST_TENANT, mapping);
         verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
-        verify(message).setHeader(eq("processingContext"), any(ProcessingContext.class));
+        assertNotNull(context);
+        assertTrue(context.hasError());
 
         assertEquals(1, mappingStatus.errors);
         assertEquals(1, unspecifiedMappingStatus.errors);
@@ -235,13 +228,13 @@ class DeserializationInboundProcessorTest {
         DeserializationInboundProcessor processor = newProcessor();
 
         // When
-        processor.process(exchange);
+        ProcessingContext<?> context = processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
 
-        // Then - Error handling should be called, and context with error is written to the header
+        // Then - Error handling should be called, and the returned context carries the error
         verify(mappingService).getMappingStatus(TEST_TENANT, mapping);
         verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
-        // Verify setHeader IS called with the error context so downstream processors don't NPE
-        verify(message).setHeader(eq("processingContext"), any(ProcessingContext.class));
+        assertNotNull(context);
+        assertTrue(context.hasError());
 
         assertEquals(1, mappingStatus.errors);
     }
@@ -249,24 +242,22 @@ class DeserializationInboundProcessorTest {
     @Test
     void testProcessWithNullConnectorMessage() throws Exception {
         // Given
-        when(message.getHeader("connectorMessage", ConnectorMessage.class)).thenReturn(null);
         mapping.setMappingType(MappingType.JSON);
 
         DeserializationInboundProcessor processor = newProcessor();
 
         // When & Then
-        assertThrows(Exception.class, () -> processor.process(exchange));
+        assertThrows(Exception.class,
+                () -> processor.process(TEST_TENANT, mapping, null, serviceConfiguration, false));
     }
 
     @Test
     void testProcessWithNullMapping() throws Exception {
-        // Given
-        when(message.getBody(Mapping.class)).thenReturn(null);
-
         DeserializationInboundProcessor processor = newProcessor();
 
         // When & Then
-        assertThrows(NullPointerException.class, () -> processor.process(exchange));
+        assertThrows(NullPointerException.class,
+                () -> processor.process(TEST_TENANT, null, connectorMessage, serviceConfiguration, false));
     }
 
     @Test
@@ -292,25 +283,21 @@ class DeserializationInboundProcessorTest {
             // Create fresh processor for each test
             DeserializationInboundProcessor processor = newProcessor();
 
-            // Reset message mock
-            reset(message);
-            when(exchange.getIn()).thenReturn(message);
-            when(message.getBody(Mapping.class)).thenReturn(mapping);
-            when(message.getHeader("tenant", String.class)).thenReturn(TEST_TENANT);
-            when(message.getHeader("serviceConfiguration", ServiceConfiguration.class))
-                    .thenReturn(serviceConfiguration);
-            when(message.getHeader("connectorMessage", ConnectorMessage.class)).thenReturn(connectorMessage);
-            when(message.getHeader("testing", Boolean.class)).thenReturn(Boolean.FALSE);
-
             // Given
             mapping.setMappingType(type);
             setupValidPayload(type);
 
             // When
-            processor.process(exchange);
+            ProcessingContext<?> context = processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
 
-            // Then
-            verify(message).setHeader(eq("processingContext"), any(ProcessingContext.class));
+            // Then - EXTENSION_JAVA has no registered deserializer, so it records an error
+            // (matches handleMissingProcessor's behavior, unrelated to Camel removal)
+            assertNotNull(context);
+            if (type == MappingType.valueOf("EXTENSION_JAVA")) {
+                assertTrue(context.hasError());
+            } else {
+                assertFalse(context.hasError());
+            }
         }
     }
 

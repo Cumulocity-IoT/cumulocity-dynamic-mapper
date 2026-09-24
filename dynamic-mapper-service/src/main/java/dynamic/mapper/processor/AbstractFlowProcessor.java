@@ -21,8 +21,6 @@
 
 package dynamic.mapper.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
 import java.util.ArrayList;
@@ -33,7 +31,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import org.apache.camel.Exchange;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
@@ -116,22 +113,17 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
         this.graalVMContextService = graalVMContextService;
     }
 
-    @Override
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
-
+    public void process(ProcessingContext<?> context) throws Exception {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 
         // Register a GraalVM cancel action on the wrapper (if present) so that a
         // TimeoutException in the MQTT callback can forcibly stop JS execution via
         // Context.close(cancelIfExecuting=true) — plain thread interruption is ignored by GraalVM.
-        dynamic.mapper.processor.runtime.ProcessingResultWrapper<?> wrapper =
-                exchange.getIn().getHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER,
-                        dynamic.mapper.processor.runtime.ProcessingResultWrapper.class);
+        dynamic.mapper.processor.runtime.ProcessingResultWrapper<?> wrapper = context.getProcessingResultWrapper();
 
         // ── Early-exit: cancellation was requested before this processor was even reached.
-        // This happens when the MQTT timeout fires before the Camel route reaches the
+        // This happens when the MQTT timeout fires before the route reaches the
         // FlowProcessor (cancel actions list was empty at cancel time, so nothing fired).
         if (wrapper != null && wrapper.getCancellationRequested().get()) {
             log.info("{} - Cancellation already requested before process() started, skipping JS execution for mapping: {}",

@@ -35,7 +35,7 @@ import dynamic.mapper.notification.ManagementSubscriptionClient;
 import dynamic.mapper.notification.Utils;
 import dynamic.mapper.notification.websocket.CustomWebSocketClient;
 import dynamic.mapper.notification.websocket.NotificationCallback;
-import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
+import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import lombok.extern.slf4j.Slf4j;
 import org.java_websocket.enums.ReadyState;
 import org.springframework.beans.factory.annotation.Value;
@@ -110,18 +110,18 @@ public class NotificationConnectionManager {
      * so the explorer session receives Notification 2.0 events for the subscribed device.
      * Prefers a non-TEST dispatcher so that the WebSocket callback processes notifications
      * normally — TEST connector dispatchers skip live notifications (early-return guard in
-     * CamelDispatcherOutbound.onNotification) and would silently drop all events.
+     * OutboundMessageDispatcher.onNotification) and would silently drop all events.
      */
     public void initializeExplorerDeviceClient(String tenant, String sessionId) {
-        Map<String, CamelDispatcherOutbound> dispatchers = connectorRegistry.getDispatchers(tenant);
+        Map<String, OutboundMessageDispatcher> dispatchers = connectorRegistry.getDispatchers(tenant);
         if (dispatchers == null || dispatchers.isEmpty()) {
             log.warn("{} - No outbound dispatchers available for explorer session {}", tenant, sessionId);
             return;
         }
-        // Prefer a non-TEST dispatcher: CamelDispatcherOutbound.onNotification returns early
+        // Prefer a non-TEST dispatcher: OutboundMessageDispatcher.onNotification returns early
         // for TEST connectors without calling processNotification, so notifyOutboundExplorerListeners
         // would never fire and no messages would appear in the explorer.
-        CamelDispatcherOutbound dispatcher = dispatchers.values().stream()
+        OutboundMessageDispatcher dispatcher = dispatchers.values().stream()
                 .filter(d -> isValidDispatcher(d)
                         && d.getConnectorClient().getConnectorType() != ConnectorType.TEST)
                 .findFirst()
@@ -515,7 +515,7 @@ public class NotificationConnectionManager {
         }
 
         // Disconnect if no more dispatchers
-        Map<String, CamelDispatcherOutbound> dispatchers = connectorRegistry.getDispatchers(tenant);
+        Map<String, OutboundMessageDispatcher> dispatchers = connectorRegistry.getDispatchers(tenant);
         if (dispatchers == null || dispatchers.isEmpty()) {
             log.info("{} - No more connectors, disconnecting", tenant);
             disconnect(tenant);
@@ -595,13 +595,13 @@ public class NotificationConnectionManager {
     // === Private Helper Methods ===
 
     private void initializeStaticDeviceConnections(String tenant) throws URISyntaxException {
-        Map<String, CamelDispatcherOutbound> dispatchers = connectorRegistry.getDispatchers(tenant);
+        Map<String, OutboundMessageDispatcher> dispatchers = connectorRegistry.getDispatchers(tenant);
         if (dispatchers == null || dispatchers.isEmpty()) {
             log.warn("{} - No outbound dispatchers registered", tenant);
             return;
         }
 
-        for (CamelDispatcherOutbound dispatcher : dispatchers.values()) {
+        for (OutboundMessageDispatcher dispatcher : dispatchers.values()) {
             if (!isValidDispatcher(dispatcher)) {
                 continue;
             }
@@ -656,13 +656,13 @@ public class NotificationConnectionManager {
     }
 
         private void initializeDynamicDeviceConnections(String tenant) throws URISyntaxException {
-        Map<String, CamelDispatcherOutbound> dispatchers = connectorRegistry.getDispatchers(tenant);
+        Map<String, OutboundMessageDispatcher> dispatchers = connectorRegistry.getDispatchers(tenant);
         if (dispatchers == null || dispatchers.isEmpty()) {
             log.warn("{} - No outbound dispatchers registered", tenant);
             return;
         }
 
-        for (CamelDispatcherOutbound dispatcher : dispatchers.values()) {
+        for (OutboundMessageDispatcher dispatcher : dispatchers.values()) {
             if (!isValidDispatcher(dispatcher)) {
                 continue;
             }
@@ -1103,7 +1103,7 @@ public class NotificationConnectionManager {
                         (statusCode != null && statusCode == 401));
     }
 
-    private Boolean isValidDispatcher(CamelDispatcherOutbound dispatcher) {
+    private Boolean isValidDispatcher(OutboundMessageDispatcher dispatcher) {
         return dispatcher != null &&
                 dispatcher.getConnectorClient() != null &&
                 dispatcher.getConnectorClient().getConnectorConfiguration() != null &&

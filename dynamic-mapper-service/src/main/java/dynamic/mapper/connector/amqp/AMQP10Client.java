@@ -34,7 +34,7 @@ import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import jakarta.jms.Connection;
@@ -113,7 +113,7 @@ public class AMQP10Client extends AConnectorClient {
     public AMQP10Client(ServiceRegistry serviceRegistry,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
-            CamelDispatcherInbound dispatcher,
+            InboundMessageDispatcher dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
         this();

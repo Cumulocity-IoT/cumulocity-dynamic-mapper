@@ -35,8 +35,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.apache.camel.CamelContext;
-import org.apache.camel.impl.DefaultCamelContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,31 +59,26 @@ import dynamic.mapper.model.MappingType;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.model.TransformationType;
-import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
+import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
+import dynamic.mapper.processor.outbound.OutboundMessageRouter;
 import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Integration tests that start from CamelDispatcherOutbound.onNotification() entry point.
- * Tests the complete outbound processing pipeline including:
- * - Notification handling from C8Y (measurements, events, alarms, operations)
- * - C8Y message conversion from Notification
- * - Message dispatching through Camel routes
- * - Enrichment (_IDENTITY_, _TOPIC_LEVEL_)
- * - Extraction (JSONata, SubstitutionAsCode, SmartFunction)
- * - Topic construction
- * - Publishing to external system (MQTT/Kafka/HTTP)
+ * Integration tests that start from OutboundMessageDispatcher.onNotification() entry point.
+ * Tests the outbound dispatcher's own behavior (mapping resolution, QoS determination,
+ * C8Y message conversion) with the downstream {@link OutboundMessageRouter} mocked out,
+ * since router processing happens asynchronously on a virtual thread after the dispatcher
+ * already returned.
  *
  * This test complements:
  * - MappingScenarioIntegrationTest: Configuration validation only
- * - CamelPipelineInboundIntegrationTest: Inbound message flow
- *
- * This test provides END-TO-END validation of the outbound pipeline.
+ * - InboundPipelineIntegrationTest: Inbound message flow
  */
 @Slf4j
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class CamelPipelineOutboundIntegrationTest {
+class OutboundPipelineIntegrationTest {
 
     @Mock
     private ServiceRegistry serviceRegistry;
@@ -102,8 +95,10 @@ class CamelPipelineOutboundIntegrationTest {
     @Mock
     private NotificationSubscriber notificationSubscriber;
 
-    private CamelContext camelContext;
-    private CamelDispatcherOutbound dispatcher;
+    @Mock
+    private OutboundMessageRouter outboundMessageRouter;
+
+    private OutboundMessageDispatcher dispatcher;
     private ExecutorService virtualThreadPool;
 
     private ObjectMapper objectMapper;
@@ -121,16 +116,14 @@ class CamelPipelineOutboundIntegrationTest {
         outboundMappings = loadMappingsFromFile(OUTBOUND_MAPPINGS_PATH);
         log.info("Loaded {} outbound mappings for Camel pipeline tests", outboundMappings.size());
 
-        // Setup Camel Context
-        camelContext = new DefaultCamelContext();
         virtualThreadPool = Executors.newVirtualThreadPerTaskExecutor();
 
         // Setup ServiceRegistry mocks
-        when(serviceRegistry.getCamelContext()).thenReturn(camelContext);
         when(serviceRegistry.getVirtualThreadPool()).thenReturn(virtualThreadPool);
         when(serviceRegistry.getMappingService()).thenReturn(mappingService);
         when(serviceRegistry.getServiceConfiguration(TEST_TENANT)).thenReturn(serviceConfiguration);
         when(serviceRegistry.getNotificationSubscriber()).thenReturn(notificationSubscriber);
+        when(serviceRegistry.getOutboundMessageRouter()).thenReturn(outboundMessageRouter);
 
         // Setup ServiceConfiguration mocks
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
@@ -144,16 +137,13 @@ class CamelPipelineOutboundIntegrationTest {
         when(connectorClient.isConnected()).thenReturn(true);
 
         // Create dispatcher
-        dispatcher = new CamelDispatcherOutbound(serviceRegistry, connectorClient);
+        dispatcher = new OutboundMessageDispatcher(serviceRegistry, connectorClient);
 
-        log.info("✅ Camel outbound pipeline test setup completed");
+        log.info("Outbound dispatcher pipeline test setup completed");
     }
 
     @AfterEach
     void tearDown() throws Exception {
-        if (camelContext != null && camelContext.isStarted()) {
-            camelContext.stop();
-        }
         if (virtualThreadPool != null) {
             virtualThreadPool.shutdown();
         }

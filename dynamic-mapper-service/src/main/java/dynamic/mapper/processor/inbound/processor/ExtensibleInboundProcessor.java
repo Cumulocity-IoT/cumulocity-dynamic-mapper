@@ -53,7 +53,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
+public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor<byte[]> {
 
     private final C8YAgent c8yAgent;
 

@@ -21,15 +21,12 @@
 
 package dynamic.mapper.processor.outbound.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.camel.Exchange;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.joda.time.DateTime;
 import org.springframework.stereotype.Component;
@@ -70,10 +67,7 @@ public class SubstitutionResultOutboundProcessor extends BaseProcessor {
         this.mappingService = mappingService;
     }
 
-    @Override
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
-
+    public void process(ProcessingContext<?> context) throws Exception {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 

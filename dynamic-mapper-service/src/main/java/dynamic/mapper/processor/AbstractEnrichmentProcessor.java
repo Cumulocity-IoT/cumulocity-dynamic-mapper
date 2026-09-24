@@ -21,8 +21,6 @@
 
 package dynamic.mapper.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import java.nio.charset.StandardCharsets;
@@ -31,7 +29,6 @@ import java.util.Map;
 
 import dynamic.mapper.model.TransformationType;
 
-import org.apache.camel.Exchange;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Source;
@@ -73,13 +70,9 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         this.flowStateStore = flowStateStore;
     }
 
-    @Override
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT,
-                ProcessingContext.class);
-
+    public void process(ProcessingContext<?> context, String connectorIdentifier) throws Exception {
         if (context == null) {
-            log.warn("processingContext header is null - deserialization likely failed upstream, skipping enrichment");
+            log.warn("processingContext is null - deserialization likely failed upstream, skipping enrichment");
             return;
         }
 
@@ -91,9 +84,6 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
 
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
         MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-
-        // Extract additional info from headers if available
-        String connectorIdentifier = exchange.getIn().getHeader(CamelHeaders.CONNECTOR_IDENTIFIER, String.class);
 
         // Hook for subclass-specific setup (e.g., QoS determination)
         performPreEnrichmentSetup(context, connectorIdentifier);

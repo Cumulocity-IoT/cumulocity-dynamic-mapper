@@ -24,7 +24,6 @@ package dynamic.mapper.processor.outbound.processor;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.camel.Exchange;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -88,16 +87,16 @@ public class TestableFlowResultOutboundProcessor extends FlowResultOutboundProce
     }
 
     @Override
-    public void process(Exchange exchange) throws Exception {
+    public void process(ProcessingContext<?> context) throws Exception {
         log.debug("TestableFlowResultOutboundProcessor.process() called, useSimplifiedProcessing={}",
                 useSimplifiedProcessing);
 
         if (useSimplifiedProcessing) {
             // Use simplified test processing
-            processSimplified(exchange);
+            processSimplified(context);
         } else {
             // Use parent's full processing
-            super.process(exchange);
+            super.process(context);
         }
     }
 
@@ -105,9 +104,7 @@ public class TestableFlowResultOutboundProcessor extends FlowResultOutboundProce
      * Simplified processing for tests - creates exactly one request per
      * DeviceMessage
      */
-    private void processSimplified(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader("processingContext", ProcessingContext.class);
-
+    private void processSimplified(ProcessingContext<?> context) throws Exception {
         if (context == null) {
             log.warn("No processing context found");
             return;

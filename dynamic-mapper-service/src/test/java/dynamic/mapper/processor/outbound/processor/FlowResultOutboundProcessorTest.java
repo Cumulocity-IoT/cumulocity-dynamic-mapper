@@ -29,8 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
 import org.junit.jupiter.api.BeforeEach;
@@ -85,12 +83,6 @@ class FlowResultOutboundProcessorTest {
     private ObjectMapper objectMapper;
 
     @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
-
-    @Mock
     private ServiceConfiguration serviceConfiguration;
 
     private TestableFlowResultOutboundProcessor processor;
@@ -119,8 +111,6 @@ void setUp() throws Exception {
     processingContext = createProcessingContext();
 
     // Setup basic mocks
-    when(exchange.getIn()).thenReturn(message);
-    when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
     when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
     when(serviceConfiguration.getLogPayload()).thenReturn(false);
 
@@ -237,7 +227,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(deviceMsg);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         log.info("Final requests count: {}", processingContext.getRequests().size());
@@ -270,7 +260,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(messages);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         assertFalse(processingContext.isIgnoreFurtherProcessing(),
@@ -296,7 +286,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(null);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         assertTrue(processingContext.isIgnoreFurtherProcessing(),
@@ -313,7 +303,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(new ArrayList<>());
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         assertTrue(processingContext.isIgnoreFurtherProcessing(),
@@ -334,7 +324,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(messages);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         assertTrue(processingContext.isIgnoreFurtherProcessing(),
@@ -357,7 +347,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(deviceMsg);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         assertEquals("transport-key-456", processingContext.getKey(),
@@ -375,7 +365,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(deviceMsg);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         String expectedTopic = "measurements/" + TEST_DEVICE_ID + "/data";
@@ -460,7 +450,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(deviceMsg);
 
         // When - run the real outbound result processor end-to-end
-        fullProcessor.process(exchange);
+        fullProcessor.process(processingContext);
 
         // Then - the _externalId_ token is filled with the C8Y-resolved external id, of the returned type
         assertEquals("devices/" + RESOLVED_EXTERNAL_ID + "/data", processingContext.getResolvedPublishTopic(),
@@ -494,7 +484,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(deviceMsg);
 
         // When
-        customProcessor.process(exchange);
+        customProcessor.process(processingContext);
 
         // Then
         log.info("Requests created: {}", processingContext.getRequests().size());
@@ -526,7 +516,7 @@ void setUp() throws Exception {
         deviceMsg.setTopic("measurement/measurements/" + TEST_DEVICE_ID);
         processingContext.setFlowResult(deviceMsg);
 
-        fullProcessor.process(exchange);
+        fullProcessor.process(processingContext);
 
         assertEquals(1, processingContext.getRequests().size(),
                 "Should produce exactly 1 request, not 2 (regression: double-add via createAndAddDynamicMapperRequest + output.addRequest)");
@@ -639,7 +629,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(deviceMsg);
 
         // When
-        fullProcessor.process(exchange);
+        fullProcessor.process(processingContext);
 
         // Then
         assertFalse(processingContext.getRequests().isEmpty(), "Should have created requests");
@@ -672,7 +662,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(deviceMsg);
 
         // When
-        fullProcessor.process(exchange);
+        fullProcessor.process(processingContext);
 
         // Then
         assertFalse(processingContext.getRequests().isEmpty(), "Should have created requests");
@@ -700,7 +690,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(deviceMsg);
 
         // When
-        fullProcessor.process(exchange);
+        fullProcessor.process(processingContext);
 
         // Then
         assertFalse(processingContext.getRequests().isEmpty(), "Should have created requests");
@@ -730,7 +720,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(deviceMsg);
 
         // When
-        fullProcessor.process(exchange);
+        fullProcessor.process(processingContext);
 
         // Then
         assertFalse(processingContext.getRequests().isEmpty(), "Should have created requests");
@@ -757,7 +747,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(deviceMsg);
 
         // When
-        fullProcessor.process(exchange);
+        fullProcessor.process(processingContext);
 
         // Then
         assertFalse(processingContext.getRequests().isEmpty(), "Should have created requests");
@@ -787,7 +777,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(deviceMsg);
 
         // When
-        fullProcessor.process(exchange);
+        fullProcessor.process(processingContext);
 
         // Then
         assertFalse(processingContext.getRequests().isEmpty(), "Should have created requests");
@@ -818,7 +808,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(deviceMsg);
 
         // When
-        fullProcessor.process(exchange);
+        fullProcessor.process(processingContext);
 
         // Then
         assertFalse(processingContext.getRequests().isEmpty(), "Should have created requests");
@@ -850,7 +840,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(deviceMsg);
 
         // When
-        fullProcessor.process(exchange);
+        fullProcessor.process(processingContext);
 
         // Then
         assertFalse(processingContext.getRequests().isEmpty(), "Should have created requests");
@@ -898,7 +888,7 @@ void setUp() throws Exception {
 
         processingContext.setFlowResult(List.of(childMeasurement, triggerDeviceMsg));
 
-        fullProcessor.process(exchange);
+        fullProcessor.process(processingContext);
 
         // context.sourceId must not have been overwritten by the CumulocityObject iteration
         assertEquals(triggerDeviceId, processingContext.getSourceId(),
@@ -952,7 +942,7 @@ void setUp() throws Exception {
         deviceMsg.setPayload(payload);
         processingContext.setFlowResult(deviceMsg);
 
-        fullProcessor.process(exchange);
+        fullProcessor.process(processingContext);
 
         // resolvedPublishTopic must be set from TOKEN_CONTEXT_DATA
         assertEquals(brokerPublishTopic, processingContext.getResolvedPublishTopic(),
@@ -976,7 +966,7 @@ void setUp() throws Exception {
         processingContext.setFlowResult(deviceMsg);
 
         // When
-        fullProcessor.process(exchange);
+        fullProcessor.process(processingContext);
 
         // Then
         assertFalse(processingContext.getRequests().isEmpty(), "Should have created requests");

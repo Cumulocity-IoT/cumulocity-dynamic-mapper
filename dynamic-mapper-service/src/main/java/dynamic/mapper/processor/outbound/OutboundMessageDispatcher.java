@@ -20,8 +20,6 @@
  */
 package dynamic.mapper.processor.outbound;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import java.net.URI;
@@ -31,12 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-
-import org.apache.camel.CamelContext;
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
-import org.apache.camel.ProducerTemplate;
-import org.apache.camel.support.DefaultExchange;
 
 import com.dashjoin.jsonata.json.Json;
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -61,8 +53,14 @@ import io.micrometer.core.instrument.Timer;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * In-process replacement for the former Camel-backed {@code CamelDispatcherOutbound}. Resolves
+ * the mappings applicable to an outbound {@link C8YMessage} and hands them to
+ * {@link OutboundMessageRouter} for processing, on a virtual thread, instead of sending a Camel
+ * {@code Exchange} through {@code direct:processOutboundMessage}.
+ */
 @Slf4j
-public class CamelDispatcherOutbound implements NotificationCallback {
+public class OutboundMessageDispatcher implements NotificationCallback {
 
     @Getter
     private AConnectorClient connectorClient;
@@ -70,24 +68,21 @@ public class CamelDispatcherOutbound implements NotificationCallback {
     private NotificationSubscriber notificationSubscriber;
     private MappingService mappingService;
     private ServiceRegistry serviceRegistry;
-    private ProducerTemplate producerTemplate;
-    private CamelContext camelContext;
+    private OutboundMessageRouter outboundMessageRouter;
     private final Timer outboundProcessingTimer;
     private final Counter outboundProcessingCounter;
     /**
      * Constructor matching DispatcherInbound signature
      */
-    public CamelDispatcherOutbound(ServiceRegistry serviceRegistry,
+    public OutboundMessageDispatcher(ServiceRegistry serviceRegistry,
             AConnectorClient connectorClient) {
         this.mappingService = serviceRegistry.getMappingService();
         this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
         this.connectorClient = connectorClient;
         this.serviceRegistry = serviceRegistry;
         this.notificationSubscriber = serviceRegistry.getNotificationSubscriber();
+        this.outboundMessageRouter = serviceRegistry.getOutboundMessageRouter();
 
-        // Initialize Camel components
-        this.camelContext = serviceRegistry.getCamelContext();
-        this.producerTemplate = camelContext.createProducerTemplate();
         this.outboundProcessingTimer = Timer.builder("dynmapper_outbound_processing_time")
                 .tag("tenant", connectorClient.getTenant())
                 .tag("connector", connectorClient.getConnectorIdentifier())
@@ -226,19 +221,19 @@ public class CamelDispatcherOutbound implements NotificationCallback {
      */
     private C8YMessage convertNotificationToC8YMessage(Notification notification, String tenant, boolean sendPayload) {
         C8YMessage c8yMessage = new C8YMessage();
-        
+
         // Parse payload
         Map parsedPayload = (Map) Json.parseJson(notification.getMessage());
         c8yMessage.setParsedPayload(parsedPayload);
-        
+
         // Set API and operation
         c8yMessage.setApi(notification.getApi());
         c8yMessage.setOperation(notification.getOperation());
-        
+
         // Extract message ID
         String messageId = String.valueOf(parsedPayload.get("id"));
         c8yMessage.setMessageId(messageId);
-        
+
         // Extract source ID
         try {
             var expression = jsonata(notification.getApi().identifier);
@@ -248,17 +243,17 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         } catch (Exception e) {
             log.debug("{} - Could not extract source.id: {}", tenant, e.getMessage());
         }
-        
+
         // Set payload and tenant
         c8yMessage.setPayload(notification.getMessage());
         c8yMessage.setTenant(tenant);
         c8yMessage.setSendPayload(sendPayload);
-        
+
         return c8yMessage;
     }
 
     /**
-     * Process C8Y message using Camel routes
+     * Process C8Y message via {@link OutboundMessageRouter}
      */
     private ProcessingResultWrapper<?> processMessage(C8YMessage c8yMessage, Mapping testMapping, boolean testing) {
         Timer.Sample timer = Timer.start(Metrics.globalRegistry);
@@ -269,7 +264,7 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         if (serviceConfiguration.getLogPayload()) {
             log.info("{} - PROCESSING: C8Y message, API: {}, device: {}, connector: {}, message id: {}",
                     tenant,
-                    c8yMessage.getApi(), 
+                    c8yMessage.getApi(),
                     c8yMessage.getSourceId(),
                     connectorClient.getConnectorName(),
                     c8yMessage.getMessageId());
@@ -322,17 +317,17 @@ public class CamelDispatcherOutbound implements NotificationCallback {
             log.warn("{} - Error resolving appropriate mapping for C8Y message. Could NOT be parsed. Ignoring this message!",
                     tenant);
             log.debug("Error resolving appropriate mapping: {}", e.getMessage(), e);
-            
+
             // Update unspecified mapping status
             MappingStatus mappingStatusUnspecified = mappingService.getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
             if (mappingStatusUnspecified != null) {
                 mappingStatusUnspecified.incrementErrors();
             }
-            
+
             return result;
         }
 
-        // Process using Camel routes asynchronously
+        // Process via the in-process router, asynchronously.
         // NOTE: This inner virtual thread must respond to cancellation signals emitted by
         // CustomWebSocketClient when a processing timeout is detected. Cancellation happens
         // via ProcessingResultWrapper.cancelProcessing() which:
@@ -344,45 +339,37 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(() -> {
             // ── Early-exit path ──────────────────────────────────────────────────────────
             // If cancelProcessing() was already called (e.g. the timeout fired before this
-            // thread was scheduled), skip Camel processing entirely.
+            // thread was scheduled), skip processing entirely.
             // Lets a timed-out callback verify that this thread really left — Future.isDone()
             // cannot tell it that, see ProcessingResultWrapper.workerCompleted.
             result.markWorkerStarted();
             if (result.getCancellationRequested().get() || Thread.currentThread().isInterrupted()) {
-                log.info("{} - Outbound processing thread cancelled before Camel route started, skipping. connector: {}",
+                log.info("{} - Outbound processing thread cancelled before routing started, skipping. connector: {}",
                         tenant, connectorIdentifier);
                 result.markWorkerCompleted();
                 return new ArrayList<>();
             }
             try {
-                Exchange exchange = createExchange(c8yMessage, resolvedMappings, testing);
-                // *** Set processingResultWrapper so AbstractFlowProcessor can register
-                // GraalVM cancel actions and check early-exit cancellation flags — same
-                // as CamelDispatcherInbound does at its exchange creation. ***
-                exchange.getIn().setHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER, result);
-                Exchange resultExchange = producerTemplate.send("direct:processOutboundMessage", exchange);
-
-                @SuppressWarnings("unchecked")
-                List<ProcessingContext<Object>> contexts = resultExchange.getIn().getHeader(CamelHeaders.PROCESSED_CONTEXTS,
-                        List.class);
+                List<ProcessingContext<Object>> contexts = outboundMessageRouter.processOutboundMessage(
+                        c8yMessage, connectorIdentifier, resolvedMappings, testing, serviceConfiguration, result);
                 return contexts != null ? contexts : new ArrayList<>();
 
             } catch (Exception e) {
                 // ── Cancellation-induced exception path ──────────────────────────────────
-                // Future.cancel(true) sends an interrupt to this thread. If producerTemplate.send()
-                // was blocking on I/O the interrupt causes an InterruptedException which Camel
-                // wraps and re-throws. GraalVM context-close likewise aborts JS and throws a
-                // PolyglotException. In both cases we detect the cancellation via the flag (the
-                // interrupt flag itself may already be cleared by the time we reach here) and
-                // return an empty list instead of propagating a noisy RuntimeException.
+                // Future.cancel(true) sends an interrupt to this thread. If the router was
+                // blocking on I/O the interrupt causes an InterruptedException. GraalVM
+                // context-close likewise aborts JS and throws a PolyglotException. In both
+                // cases we detect the cancellation via the flag (the interrupt flag itself
+                // may already be cleared by the time we reach here) and return an empty list
+                // instead of propagating a noisy RuntimeException.
                 if (result.getCancellationRequested().get()) {
-                    log.info("{} - Outbound processing thread interrupted due to cancellation, aborting Camel route: {}. connector: {}",
+                    log.info("{} - Outbound processing thread interrupted due to cancellation, aborting: {}. connector: {}",
                             tenant, e.getMessage(), connectorIdentifier);
                     Thread.interrupted(); // clear residual interrupt flag to avoid cascading effects
                     return new ArrayList<>();
                 }
-                log.error("{} - Error processing outbound message through Camel routes: {}", tenant, e.getMessage(), e);
-                throw new RuntimeException("Camel processing failed", e);
+                log.error("{} - Error processing outbound message: {}", tenant, e.getMessage(), e);
+                throw new RuntimeException("Outbound processing failed", e);
             } finally {
                 timer.stop(outboundProcessingTimer);
                 result.markWorkerCompleted();
@@ -390,35 +377,6 @@ public class CamelDispatcherOutbound implements NotificationCallback {
         });
         result.setProcessingResult((Future) futureProcessingResult);
         return result;
-    }
-
-    /**
-     * Create Camel Exchange from C8YMessage and resolved mappings
-     */
-    private Exchange createExchange(C8YMessage message, List<Mapping> resolvedMappings, boolean testing) {
-        Exchange exchange = new DefaultExchange(camelContext);
-        Message camelMessage = exchange.getIn();
-
-        // Set the C8YMessage as the body
-        camelMessage.setBody(message);
-
-        // Set headers for processing
-        camelMessage.setHeader(CamelHeaders.CONNECTOR_IDENTIFIER, connectorClient.getConnectorIdentifier());
-        camelMessage.setHeader(CamelHeaders.TENANT, message.getTenant());
-        camelMessage.setHeader(CamelHeaders.SOURCE, message.getSourceId());
-        camelMessage.setHeader(CamelHeaders.TESTING, testing);
-        camelMessage.setHeader(CamelHeaders.MAPPINGS, resolvedMappings);
-        camelMessage.setHeader(CamelHeaders.C8Y_MESSAGE, message);
-        camelMessage.setHeader(CamelHeaders.SERVICE_CONFIGURATION,
-                serviceRegistry.getServiceConfiguration(message.getTenant()));
-
-        // Set payload information
-        camelMessage.setHeader(CamelHeaders.PAYLOAD_BYTES, message.getPayload());
-        if (message.getPayload() != null) {
-            camelMessage.setHeader(CamelHeaders.PAYLOAD_STRING, new String(message.getPayload()));
-        }
-
-        return exchange;
     }
 
     /**

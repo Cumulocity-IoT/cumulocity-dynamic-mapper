@@ -26,11 +26,7 @@ import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -55,25 +51,19 @@ import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.model.TransformationType;
-import dynamic.mapper.processor.util.CamelHeaders;
 import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Tests the parallel request processing path in {@link SendInboundProcessor}.
+ * Tests {@link SendInboundProcessor}'s request-indexing behaviour.
  *
- * The Camel route {@code direct:processRequestsInParallel} splits
- * {@code context.requests} and calls {@code processor.process(exchange)} for
- * each request concurrently, with the individual {@link DynamicMapperRequest}
- * as the exchange body. This test drives that path directly with two concurrent
- * calls to verify that each request is dispatched with the correct list index
- * and receives the correct response.
- *
- * <p>This test file also serves as the first coverage for the parallel code path
- * (previously zero coverage). It is expected to PASS both before and after
- * the thread-safety fix for Bug #3, since the data race in
- * {@code context.setSourceId()} in {@code processInventoryRequest} is not
- * exercised here (MEASUREMENT requests are used, which skip that path).</p>
+ * <p>Camel's {@code direct:processRequestsInParallel} route (which split
+ * {@code context.requests} and dispatched each as a separate Exchange body) was
+ * dead code: the {@code PARALLEL_PROCESSING} header that selected it was set by
+ * {@code SubstitutionResultInboundProcessor} only for the JSONata pipeline, but
+ * read only in the mutually-exclusive Extension pipeline branch, so it never
+ * fired in production. It was removed along with the rest of Camel; requests are
+ * now always processed sequentially via {@code processAllRequests}.
  */
 @Slf4j
 @ExtendWith(MockitoExtension.class)
@@ -126,82 +116,9 @@ class SendInboundProcessorParallelTest {
     }
 
     /**
-     * The Camel parallel split routes each request as the Exchange body; the
-     * processor looks up the index in context.getRequests() and calls
-     * {@code c8yAgent.createMEAO(context, index)}.
-     *
-     * This test verifies that request at index 0 receives the response
-     * associated with index 0, and request at index 1 receives the response
-     * associated with index 1, even when both run concurrently.
-     */
-    @Test
-    void testParallelRequests_eachReceivesCorrectIndexedResponse() throws Exception {
-        // Build two MEASUREMENT requests with no externalId so resolution is skipped
-        DynamicMapperRequest req0 = buildMeasurementRequest("{\"type\":\"c8y_Temp\",\"value\":21.0}");
-        DynamicMapperRequest req1 = buildMeasurementRequest("{\"type\":\"c8y_Temp\",\"value\":22.0}");
-
-        List<DynamicMapperRequest> requests = new ArrayList<>();
-        requests.add(req0);
-        requests.add(req1);
-        processingContext.setRequests(requests);
-
-        // Mock c8yAgent.createMEAO to return distinguishable results per index
-        AbstractExtensibleRepresentation meao0 = mock(AbstractExtensibleRepresentation.class);
-        AbstractExtensibleRepresentation meao1 = mock(AbstractExtensibleRepresentation.class);
-        when(c8yAgent.createMEAO(same(processingContext), eq(0))).thenReturn(meao0);
-        when(c8yAgent.createMEAO(same(processingContext), eq(1))).thenReturn(meao1);
-
-        // We need the real ObjectMapper injected above to serialize the mock MEAO objects.
-        // AbstractExtensibleRepresentation serializes as an empty JSON object by default.
-        // We don't need the response payload content — just that the responses are different.
-        // Verify via verify() that createMEAO was called with the correct indices instead.
-
-        Exchange exchange0 = buildExchange(req0);
-        Exchange exchange1 = buildExchange(req1);
-
-        // Run both concurrently, simulating the Camel parallel split
-        CompletableFuture<Void> f0 = CompletableFuture.runAsync(() -> {
-            try {
-                processor.process(exchange0);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
-        CompletableFuture<Void> f1 = CompletableFuture.runAsync(() -> {
-            try {
-                processor.process(exchange1);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        try {
-            CompletableFuture.allOf(f0, f1).get();
-        } catch (ExecutionException e) {
-            fail("Parallel processing threw an exception: " + e.getCause().getMessage(), e.getCause());
-        }
-
-        // Each request must have been dispatched with the correct index
-        verify(c8yAgent).createMEAO(same(processingContext), eq(0));
-        verify(c8yAgent).createMEAO(same(processingContext), eq(1));
-
-        // Responses must be non-null (set from the mocked MEAO return values)
-        assertNotNull(req0.getResponse(), "Request at index 0 must have a response");
-        assertNotNull(req1.getResponse(), "Request at index 1 must have a response");
-
-        // Verify the responses came from the correct mock (identity-based differentiation)
-        // req0.response was set from meao0, req1.response from meao1.
-        // Since ObjectMapper serializes both mocks as "{}", we verify via the verify() calls above.
-
-        log.info("✅ Parallel requests: both executed with correct indices and received responses");
-        log.info("   req0.response={}", req0.getResponse());
-        log.info("   req1.response={}", req1.getResponse());
-    }
-
-    /**
-     * Baseline: sequential mode (no Exchange body) processes all requests via
-     * processAllRequests → processSingleRequest. Uses MEASUREMENT + EVENT to avoid
-     * the bulk-merge logic that collapses two MEASUREMENT requests into one.
+     * All requests in context.getRequests() are processed via processAllRequests →
+     * processSingleRequest. Uses MEASUREMENT + EVENT to avoid the bulk-merge logic
+     * that collapses two MEASUREMENT requests into one.
      */
     @Test
     void testSequentialRequests_eachReceivesCorrectIndexedResponse() throws Exception {
@@ -225,9 +142,7 @@ class SendInboundProcessorParallelTest {
         when(c8yAgent.createMEAO(same(processingContext), eq(0))).thenReturn(meao0);
         when(c8yAgent.createMEAO(same(processingContext), eq(1))).thenReturn(meao1);
 
-        // Sequential mode: no request in body → processes all requests via processAllRequests
-        Exchange exchange = buildExchange(null);
-        processor.process(exchange);
+        processor.process(processingContext);
 
         verify(c8yAgent).createMEAO(same(processingContext), eq(0));
         verify(c8yAgent).createMEAO(same(processingContext), eq(1));
@@ -235,22 +150,10 @@ class SendInboundProcessorParallelTest {
         assertNotNull(req0.getResponse(), "Request at index 0 must have a response");
         assertNotNull(req1.getResponse(), "Request at index 1 must have a response");
 
-        log.info("✅ Sequential requests processed correctly with indices 0 and 1");
+        log.info("Sequential requests processed correctly with indices 0 and 1");
     }
 
     // ---- helpers ----
-
-    private Exchange buildExchange(DynamicMapperRequest bodyRequest) {
-        Exchange exchange = mock(Exchange.class);
-        Message message = mock(Message.class);
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class))
-                .thenReturn(processingContext);
-        when(message.getHeader(eq(CamelHeaders.PROCESSING_RESULT_WRAPPER), eq(dynamic.mapper.processor.runtime.ProcessingResultWrapper.class)))
-                .thenReturn(null);
-        when(message.getBody(DynamicMapperRequest.class)).thenReturn(bodyRequest);
-        return exchange;
-    }
 
     private DynamicMapperRequest buildMeasurementRequest(String payloadJson) {
         return DynamicMapperRequest.builder()

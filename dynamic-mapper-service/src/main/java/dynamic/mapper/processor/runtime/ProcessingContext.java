@@ -192,7 +192,7 @@ public class ProcessingContext<O> implements AutoCloseable {
     /**
      * Reference to the ProcessingResultWrapper for this processing task.
      * Allows in-flight processors to check if processing has been cancelled.
-     * Set by CamelDispatcherInbound to enable cancellation checks in JavaScript code.
+     * Set by InboundMessageDispatcher to enable cancellation checks in JavaScript code.
      * Can be null if the wrapper is not available.
      */
     @SuppressWarnings("rawtypes")
