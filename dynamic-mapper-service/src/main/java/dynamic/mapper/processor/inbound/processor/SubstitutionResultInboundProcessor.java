@@ -82,7 +82,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
 
         try {
             validateProcessingCache(context);
-            substituteInTargetAndCreateRequests(context, exchange);
+            substituteInTargetAndCreateRequests(context);
 
             // Check inventory filter condition if specified
             // if (mapping.getFilterInventory() != null &&
@@ -121,7 +121,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
     /**
      * Perform substitution and create C8Y requests
      */
-    private void substituteInTargetAndCreateRequests(ProcessingContext<Object> context, Exchange exchange)
+    private void substituteInTargetAndCreateRequests(ProcessingContext<Object> context)
             throws Exception {
         Mapping mapping = context.getMapping();
 
@@ -161,17 +161,11 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
             }
         }
 
-        // Set processing mode flag based on createNonExistingDevice (once, outside loop)
-        // TODO: if (mapping.createNonExistingDevice) process sequentially
-        // else clone context and add multiContext to exchange
-        // then in pipeline split and process in parallel
-        if (!mapping.getCreateNonExistingDevice()) {
-            exchange.getIn().setHeader(CamelHeaders.PARALLEL_PROCESSING, true);
-            log.debug("Marked requests for parallel processing for mapping: {}", mapping.getName());
-        } else {
-            exchange.getIn().setHeader(CamelHeaders.PARALLEL_PROCESSING, false);
-            log.debug("Marked requests for sequential processing for mapping: {}", mapping.getName());
-        }
+        // Requests are always dispatched in parallel downstream (direct:sendRequests) —
+        // see attic/feature/parallel-processing/PARALLEL_PROCESSING_CAMEL.md. Device-creation
+        // races across parallel requests are already handled by
+        // IdentityResolutionService.getOrCreateDeviceThreadSafe's per-external-ID locking,
+        // so no per-mapping opt-in/opt-out flag is needed here.
     }
 
     private void prepareAndSubstituteInPayload(ProcessingContext<Object> context, DocumentContext payloadTarget,

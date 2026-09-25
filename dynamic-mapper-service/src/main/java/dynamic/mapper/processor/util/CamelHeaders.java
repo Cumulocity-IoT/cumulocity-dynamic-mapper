@@ -73,9 +73,6 @@ public final class CamelHeaders {
     /** Raw payload as a byte array. */
     public static final String PAYLOAD_BYTES = "payloadBytes";
 
-    /** Flag enabling parallel per-request processing within a single mapping. */
-    public static final String PARALLEL_PROCESSING = "parallelProcessing";
-
     /** The inbound {@code ConnectorMessage} delivered by the broker. */
     public static final String CONNECTOR_MESSAGE = "connectorMessage";
 

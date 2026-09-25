@@ -230,7 +230,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .process(consolidationProcessor)
                 .stop()
                 .otherwise()
-                .process(inboundSendProcessor)
+                .to("direct:sendRequests")
                 .process(consolidationProcessor)
                 .end();
 
@@ -251,13 +251,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .process(consolidationProcessor)
                 .stop()
                 .otherwise()
-                // Check if parallel processing is enabled
-                .choice()
-                .when(header(CamelHeaders.PARALLEL_PROCESSING).isEqualTo(true))
-                .to("direct:processRequestsInParallel")
-                .otherwise()
-                .process(inboundSendProcessor)
-                .end()
+                .to("direct:sendRequests")
                 .process(consolidationProcessor)
                 .end()
                 .end();
@@ -273,7 +267,7 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .process(consolidationProcessor)
                 .stop()
                 .otherwise()
-                .process(inboundSendProcessor)
+                .to("direct:sendRequests")
                 .process(consolidationProcessor)
                 .end();
 
@@ -288,13 +282,26 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                 .stop()
                 .otherwise()
                 .process(flowResultInboundProcessor)
-                .process(inboundSendProcessor)
+                .to("direct:sendRequests")
                 .process(consolidationProcessor)
                 .end();
 
-        // Add new route for parallel request processing
+        // Shared request-dispatch step for every leaf pipeline above. Requests produced by
+        // one mapping (e.g. an array-expanded Smart Function/JSONata result) are always
+        // dispatched in parallel — see attic/feature/parallel-processing/PARALLEL_PROCESSING_CAMEL.md
+        // for why this replaced the old per-branch, never-reachable CamelHeaders.PARALLEL_PROCESSING
+        // header check.
+        from("direct:sendRequests")
+                .routeId("send-requests")
+                .to("direct:processRequestsInParallel");
+
+        // Parallel request dispatch: step 1 (prepare, once) -> split+parallelProcess (per
+        // request, concurrently) -> step 3 (finalize, once). See SendInboundProcessor's
+        // prepareRequests/processSplitRequest/finalizeAfterRequests javadoc for the full
+        // per-step contract.
         from("direct:processRequestsInParallel")
                 .routeId("parallel-requests-processor")
+                .process(inboundSendProcessor::prepareRequests)
                 .process(exchange -> {
                     ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT,
                             ProcessingContext.class);
@@ -312,11 +319,9 @@ public class DynamicMapperInboundRoutes extends DynamicMapperBaseRoutes {
                     log.debug("Processing request in parallel: API={}, sourceId={}",
                             request.getApi(), request.getSourceId());
                 })
-                .process(inboundSendProcessor)
+                .process(inboundSendProcessor::processSplitRequest)
                 .end()
-                .process(exchange -> {
-                    log.debug("Completed parallel processing of all requests");
-                });
+                .process(inboundSendProcessor::finalizeAfterRequests);
 
         // Error handling route — logs the exception and ensures PROCESSED_CONTEXTS is set to an
         // empty list so the dispatcher's header read never returns null after an exception.

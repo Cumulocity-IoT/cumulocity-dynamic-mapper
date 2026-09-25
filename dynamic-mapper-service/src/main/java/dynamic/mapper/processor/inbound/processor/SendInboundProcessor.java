@@ -58,6 +58,14 @@ public class SendInboundProcessor extends BaseProcessor {
         this.mappingService = mappingService;
     }
 
+    /**
+     * Sequential entry point: processes all of the context's requests, one after another,
+     * on the calling thread. Kept as the {@link org.apache.camel.Processor} contract
+     * implementation and for direct/unit-test invocation; the production inbound pipeline
+     * (see {@code direct:sendRequests} / {@code direct:processRequestsInParallel} in
+     * {@code DynamicMapperInboundRoutes}) now always dispatches requests in parallel via
+     * {@link #prepareRequests}, {@link #processSplitRequest}, and {@link #finalizeAfterRequests}.
+     */
     @Override
     @SuppressWarnings("unchecked")
     public void process(Exchange exchange) throws Exception {
@@ -65,7 +73,6 @@ public class SendInboundProcessor extends BaseProcessor {
 
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
-        Boolean testing = context.isTesting();
 
         // Check if processing was cancelled due to timeout
         ProcessingResultWrapper<?> wrapper = exchange.getIn().getHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER,
@@ -77,18 +84,10 @@ public class SendInboundProcessor extends BaseProcessor {
         }
 
         try {
-            // Check if we have a single request from parallel processing (body contains split request)
-            DynamicMapperRequest singleRequest = exchange.getIn().getBody(DynamicMapperRequest.class);
-
-            if (singleRequest != null) {
-                // Parallel mode: process single request from body
-                processSingleRequest(context, singleRequest, true);
-            } else {
-                // Sequential mode: collapse multiple measurement requests into one bulk request.
-                bulkMeasurementRequestsIfNeeded(context);
-                // Sequential mode: process all requests in context
-                processAllRequests(context);
-            }
+            // Collapse multiple measurement requests into one bulk request.
+            bulkMeasurementRequestsIfNeeded(context);
+            // Process all requests sequentially.
+            processAllRequests(context);
             // After all requests are processed, store the SparkPlug B birth fragment if applicable.
             // Deliberately outside the INVENTORY request path so it runs even when the Smart Function
             // emits no INVENTORY object (e.g. emits only a MEASUREMENT, or emits nothing at all).
@@ -96,22 +95,104 @@ public class SendInboundProcessor extends BaseProcessor {
             // Update the sparkPlugB_isActive flag: TRUE for BIRTH/DATA, FALSE for DEATH.
             updateSparkPlugBActiveStatus(context);
         } catch (Exception e) {
-            String errorMessage = String.format(
-                    "%s - Error in SendInboundProcessor: %s for mapping: %s",
-                    tenant, mapping.getName(), e.getMessage());
-            log.error(errorMessage, e);
-            //Don't double wrap ProcessingExceptions
-            if(e instanceof ProcessingException)
-                context.addError((ProcessingException) e);
-            else
-                context.addError(new ProcessingException(errorMessage, e));
+            recordFailure(context, "Error in SendInboundProcessor: " + e.getMessage(), e);
+        }
+    }
 
-            if (!testing) {
-                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
-                mappingStatus.incrementErrors();
-                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
-            }
+    /**
+     * Parallel dispatch, step 1 of 3 (runs once, before the fan-out): checks for a
+     * timeout-driven cancellation and collapses multiple measurement requests into one
+     * bulk request. Must run before the requests are split across parallel branches, since
+     * it needs to see (and can replace) the whole {@code context.getRequests()} list.
+     */
+    public void prepareRequests(Exchange exchange) throws Exception {
+        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT,
+                ProcessingContext.class);
+        Mapping mapping = context.getMapping();
+
+        ProcessingResultWrapper<?> wrapper = exchange.getIn().getHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER,
+                ProcessingResultWrapper.class);
+        if (wrapper != null && wrapper.getCancellationRequested().get()) {
+            log.warn("{} - Processing was cancelled (timeout), skipping SendInboundProcessor for mapping: {}",
+                    context.getTenant(), mapping.getName());
+            // Empty the request list so the split below iterates zero times; finalizeAfterRequests
+            // still runs afterwards (harmlessly, on an empty context) rather than being skipped.
+            context.setRequests(new ArrayList<>());
             return;
+        }
+
+        bulkMeasurementRequestsIfNeeded(context);
+    }
+
+    /**
+     * Parallel dispatch, step 2 of 3 (runs once per split branch, concurrently): sends a
+     * single request. Failures are isolated to this request — recorded via
+     * {@code request.setError(e)}/{@code context.addError(...)} and swallowed rather than
+     * rethrown, so one failing request never aborts its siblings or skips
+     * {@link #finalizeAfterRequests} for the ones that succeeded.
+     */
+    @SuppressWarnings("unchecked")
+    public void processSplitRequest(Exchange exchange) throws Exception {
+        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT,
+                ProcessingContext.class);
+        DynamicMapperRequest request = exchange.getIn().getBody(DynamicMapperRequest.class);
+        try {
+            processSingleRequest(context, request);
+        } catch (Exception e) {
+            // processSingleRequest already recorded the error on the request itself
+            // (request.setError(e)); mirror it onto the shared context too, the same way
+            // the sequential path's outer catch does, so finalizeAfterRequests can detect
+            // the failure and update mapping status once, in aggregate.
+            if (e instanceof ProcessingException) {
+                context.addError((ProcessingException) e);
+            } else {
+                context.addError(new ProcessingException(
+                        String.format("%s - Error sending request: %s", context.getTenant(), e.getMessage()), e));
+            }
+        }
+    }
+
+    /**
+     * Parallel dispatch, step 3 of 3 (runs once, after all split branches have joined):
+     * batch alarm creation, SparkPlug B birth persistence, and mapping-status bookkeeping —
+     * exactly the same single, once-per-context steps the sequential path performs, so
+     * parallel and sequential dispatch produce identical side effects.
+     */
+    public void finalizeAfterRequests(Exchange exchange) throws Exception {
+        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT,
+                ProcessingContext.class);
+        Mapping mapping = context.getMapping();
+
+        createProcessingAlarms(context);
+        storeSparkPlugBBirthMessage(context);
+        updateSparkPlugBActiveStatus(context);
+
+        if (context.hasError() && !context.isTesting()) {
+            MappingStatus mappingStatus = mappingService.getMappingStatus(context.getTenant(), mapping);
+            mappingStatus.incrementErrors();
+            mappingService.increaseAndHandleFailureCount(context.getTenant(), mapping, mappingStatus);
+        }
+    }
+
+    /**
+     * Shared failure recording for the sequential entry point: logs, records the error on
+     * the context (without double-wrapping an existing {@link ProcessingException}), and
+     * updates mapping status — mirrors the bookkeeping {@link #finalizeAfterRequests} performs
+     * for the parallel path.
+     */
+    private void recordFailure(ProcessingContext<Object> context, String errorMessage, Exception e) {
+        Mapping mapping = context.getMapping();
+        log.error("{} - {} for mapping: {}", context.getTenant(), errorMessage, mapping.getName(), e);
+        if (e instanceof ProcessingException) {
+            context.addError((ProcessingException) e);
+        } else {
+            context.addError(new ProcessingException(errorMessage, e));
+        }
+
+        if (!context.isTesting()) {
+            MappingStatus mappingStatus = mappingService.getMappingStatus(context.getTenant(), mapping);
+            mappingStatus.incrementErrors();
+            mappingService.increaseAndHandleFailureCount(context.getTenant(), mapping, mappingStatus);
         }
     }
 
@@ -122,7 +203,7 @@ public class SendInboundProcessor extends BaseProcessor {
         try {
             // Process each C8Y request
             for (DynamicMapperRequest request : context.getRequests()) {
-                processSingleRequest(context, request, false);
+                processSingleRequest(context, request);
             }
 
             // Create alarms for any processing issues (after all requests are processed)
@@ -218,13 +299,14 @@ public class SendInboundProcessor extends BaseProcessor {
     }
 
     /**
-     * Process a single request - common logic for both sequential and parallel modes
+     * Process a single request - common logic for both sequential and parallel dispatch.
+     * Alarm creation is always batched (see {@link #createProcessingAlarms}), called once
+     * after all of a context's requests have been processed, never per-request here.
      *
      * @param context The processing context
      * @param request The request to process
-     * @param isParallelMode True if processing in parallel mode, false for sequential
      */
-    private void processSingleRequest(ProcessingContext<Object> context, DynamicMapperRequest request, boolean isParallelMode) throws Exception {
+    private void processSingleRequest(ProcessingContext<Object> context, DynamicMapperRequest request) throws Exception {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 
@@ -260,15 +342,12 @@ public class SendInboundProcessor extends BaseProcessor {
                         tenant, request.getApi(), request.getRequest());
             }
 
-            // In parallel mode, create alarms for this specific request immediately
-            // In sequential mode, alarms are created after all requests in processAllRequests
-            if (isParallelMode) {
-                createProcessingAlarmsForRequest(context, request);
-            }
+            // Alarms are always created once, after all requests in the context have been
+            // processed — see processAllRequests / finalizeAfterRequests, never here.
 
         } catch (Exception e) {
             // Not logged here — see the comment in processAllRequests's catch block; this
-            // is rethrown unchanged up to process()'s single logging/handling point.
+            // is rethrown unchanged up to the caller's single logging/handling point.
             request.setError(e);
             throw e;
         }
@@ -369,27 +448,6 @@ public class SendInboundProcessor extends BaseProcessor {
             context.getCurrentRequest().setError(e);
             request.setError(e);
             throw e;
-        }
-    }
-
-    /**
-     * Create alarms for a specific request (used in parallel mode)
-     */
-    private void createProcessingAlarmsForRequest(ProcessingContext<Object> context, DynamicMapperRequest request) {
-        String tenant = context.getTenant();
-
-        if (request.getSourceId() != null && !context.getAlarms().isEmpty()) {
-            ManagedObjectRepresentation sourceMor = new ManagedObjectRepresentation();
-            sourceMor.setId(new GId(request.getSourceId()));
-
-            context.getAlarms().forEach(alarm -> {
-                try {
-                    c8yAgent.createAlarm("WARNING", alarm, Utils.MAPPER_PROCESSING_ALARM,
-                            new DateTime(), sourceMor, tenant);
-                } catch (Exception e) {
-                    log.warn("{} - Failed to create processing alarm: {}", tenant, e.getMessage());
-                }
-            });
         }
     }
 
