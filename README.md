@@ -116,5 +116,6 @@ Reference: [GraalVM Sandboxing](https://www.graalvm.org/latest/security-guide/sa
 
 ---
 
-These tools are provided as-is and without warranty or support. They are not part of the official Cumulocity GmbH product suite. You may use, fork, and modify them under the project license. Contributions are welcome, but inclusion in the main project cannot be guaranteed.
+These tools are provided as-is and without warranty or support. They do not constitute part of the product suite. Users are free to use, fork and modify them, subject to the license agreement. While we welcome contributions, we cannot guarantee to include every contribution in the main project.
 
+For more information, see [cumulocity.com](https://www.cumulocity.com) or ask a question in the [Cumulocity Community](https://community.cumulocity.com/).
