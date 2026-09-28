@@ -1,10 +1,15 @@
 from threading import Thread, Lock, Event
+import argparse
 import queue
 import uuid
 import paho.mqtt.client as mqtt_client
 import logging
-import os, time, random, json, signal, sys, math
+import os, tempfile, time, random, json, signal, sys, math
 from datetime import timezone
+
+from mqtt_load_common import (
+    add_common_args, get_env, provision_client_certs, cleanup_client_certs, resolve_tenant,
+)
 
 
 logger = logging.getLogger("")
@@ -14,19 +19,33 @@ logging.basicConfig(
 logger.info("Load test script started")
 
 
-def get_env(key, default=None):
-    return os.environ.get(key, default)
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="MQTT inbound load test against the Cumulocity MQTT Service. "
+                    "Publishes randomized telemetry/error messages at a target aggregate "
+                    "TPS, spread across as many worker connections as needed to stay "
+                    "under the broker's per-client rate cap.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    add_common_args(parser, default_total_tps=10)
+    parser.add_argument(
+        "--event-num", type=int, default=int(get_env("EVENT_NUM", 10)),
+        help="Number of distinct simulated devices (env: EVENT_NUM)",
+    )
+    parser.add_argument(
+        "--queue-size", type=int, default=int(get_env("QUEUE_SIZE", 5000)),
+        help="Max number of pending messages buffered ahead of publishing (env: QUEUE_SIZE)",
+    )
+    return parser.parse_args()
 
+
+args = parse_args()
 
 # Broker: explicit override > C8Y_DOMAIN > fallback
-broker = get_env("MQTT_BROKER") or get_env("C8Y_DOMAIN") or "broker.emqx.io"
+broker = args.broker or "broker.emqx.io"
+port = args.port
 
-try:
-    port = int(get_env("MQTT_PORT", 9883))
-except (ValueError, TypeError):
-    port = 9883
-
-# Username: explicit override > C8Y_TENANT/C8Y_USERNAME
+# Username/password auth (only used with --auth password): explicit override > C8Y_TENANT/C8Y_USERNAME
 c8y_tenant = get_env("C8Y_TENANT", "")
 c8y_username = get_env("C8Y_USERNAME") or get_env("C8Y_USER", "")
 username = get_env("MQTT_USERNAME") or (
@@ -38,13 +57,17 @@ _auth_header = get_env("C8Y_HEADER_AUTHORIZATION", "")
 _jwt_token = _auth_header.removeprefix("Bearer ").strip()
 password = get_env("MQTT_PASSWORD") or _jwt_token
 
-if not username:
-    raise SystemExit("ERROR: MQTT username could not be determined. Set C8Y_TENANT + C8Y_USERNAME or MQTT_USERNAME.")
-if not password:
-    raise SystemExit("ERROR: MQTT password could not be determined. Set C8Y_HEADER_AUTHORIZATION or MQTT_PASSWORD.")
-
-logger.info(f"MQTT broker={broker}  port={port}  username={username}")
-logger.info(f"Auth: {'JWT token (Bearer)' if _jwt_token else 'MQTT_PASSWORD env var'}")
+if args.auth == "password":
+    if not username:
+        raise SystemExit("ERROR: MQTT username could not be determined. Set C8Y_TENANT + C8Y_USERNAME or MQTT_USERNAME.")
+    if not password:
+        raise SystemExit("ERROR: MQTT password could not be determined. Set C8Y_HEADER_AUTHORIZATION or MQTT_PASSWORD.")
+    logger.info(f"MQTT broker={broker}  port={port}  username={username}")
+    logger.info(f"Auth: {'JWT token (Bearer)' if _jwt_token else 'MQTT_PASSWORD env var'}")
+else:
+    c8y_tenant = resolve_tenant()
+    logger.info(f"MQTT broker={broker}  port={port}  tenant={c8y_tenant}")
+    logger.info("Auth: X.509 client certificate (one per worker connection)")
 
 root_topics = ["smartfunction/performance", "smartfunction/performance2"]
 qos = 0
@@ -81,14 +104,14 @@ def snapshot_counters():
 
 
 #### Test parameters
-EVENT_NUM = 10
-QUEUE_SIZE = 5000
+EVENT_NUM = args.event_num
+QUEUE_SIZE = args.queue_size
 
 # Target aggregate throughput. WORKERS and TPS_PER_CLIENT are derived automatically.
 # The broker enforces a hard limit of 100 msg/s per MQTT client; MAX_TPS_PER_CLIENT
 # stays slightly below that to give headroom.
-TOTAL_TPS = 10
-MAX_TPS_PER_CLIENT = 90
+TOTAL_TPS = args.total_tps
+MAX_TPS_PER_CLIENT = args.max_tps_per_client
 
 WORKERS = math.ceil(TOTAL_TPS / MAX_TPS_PER_CLIENT)
 TPS_PER_CLIENT = TOTAL_TPS / WORKERS
@@ -101,6 +124,11 @@ CONNECT_STAGGER_S = 0.3
 message_type = ["telemetry", "error"]
 capid_list = []
 device_num = EVENT_NUM
+
+# Cert-auth state: one certificate per worker connection (clientId == cert CN).
+# Populated in main() before workers connect, and torn down on exit.
+_cert_dir = None
+_client_certs = []
 
 
 def create_capid(n):
@@ -130,17 +158,31 @@ def connect_mqtt(worker_index: int = 0) -> mqtt_client.Client:
         if rc != 0:
             logger.warning(f"Worker {worker_index}: unexpected disconnect, rc={rc}")
 
-    client_id = f"python-mqtt-{worker_index}-{random.randint(0, 10000)}"
+    if args.auth == "cert":
+        cert = _client_certs[worker_index]
+        client_id = cert.client_id
+    else:
+        client_id = f"python-mqtt-{worker_index}-{random.randint(0, 10000)}"
+
     client = mqtt_client.Client(
         client_id=client_id,
         callback_api_version=mqtt_client.CallbackAPIVersion.VERSION2,
     )
-    if username and password and username.strip() and password.strip():
-        client.username_pw_set(username, password)
-        logger.info(f"Using authentication with username: {username}")
+
+    if args.auth == "cert":
+        # clientId MUST equal the cert CN, tenant id goes in the username field,
+        # no password is used — the client certificate is the credential.
+        client.username_pw_set(c8y_tenant)
+        client.tls_set(certfile=cert.cert_path, keyfile=cert.key_path)
+        logger.info(f"Worker {worker_index}: using client certificate CN={cert.client_id}")
     else:
-        logger.info("Connecting anonymously")
-    client.tls_set()
+        if username and password and username.strip() and password.strip():
+            client.username_pw_set(username, password)
+            logger.info(f"Using authentication with username: {username}")
+        else:
+            logger.info("Connecting anonymously")
+        client.tls_set()
+
     client.tls_insecure_set(True)
     client.clean_session = True
     client.on_connect = on_connect
@@ -267,12 +309,26 @@ def run(start_time):
 
 
 def main():
+    global _cert_dir, _client_certs
+
     create_capid(device_num)
     start_time = time.time()
+
+    if args.auth == "cert":
+        _cert_dir = tempfile.mkdtemp(prefix="dm-loadtest04-certs-")
+        logger.info(f"Provisioning {WORKERS} client certificate(s) for cert auth ...")
+        _client_certs = provision_client_certs(WORKERS, _cert_dir, days=args.cert_days, prefix="dmload04")
+        logger.info(f"Provisioned {len(_client_certs)} client certificate(s).")
+
+    def _cleanup():
+        if args.auth == "cert" and _client_certs:
+            logger.info("Cleaning up provisioned client certificates ...")
+            cleanup_client_certs(_client_certs, _cert_dir)
 
     def _shutdown(sig, frame):
         print("\nShutting down gracefully...")
         print_stats(start_time)
+        _cleanup()
         sys.exit(0)
 
     signal.signal(signal.SIGINT, _shutdown)
@@ -282,6 +338,7 @@ def main():
         run(start_time)
     finally:
         print_stats(start_time)
+        _cleanup()
 
 
 if __name__ == "__main__":
