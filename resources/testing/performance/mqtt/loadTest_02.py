@@ -1,10 +1,14 @@
 from threading import Thread
+import argparse
 import queue
 import paho.mqtt.client as mqtt_client
 import logging
-import os, time, random, json
-from ratelimit import limits, sleep_and_retry
+import os, tempfile, time, random, json, signal, sys, math
 from datetime import datetime, timezone
+
+from mqtt_load_common import (
+    add_common_args, get_env, provision_client_certs, cleanup_client_certs, resolve_tenant,
+)
 
 
 logger = logging.getLogger("")
@@ -14,52 +18,48 @@ logging.basicConfig(
 logger.info("Load test script started")
 
 
-# Helper function to get environment variable with a default value
-def get_env(key, default=None):
-    return os.environ.get(key, default)
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="MQTT inbound load test against the Cumulocity MQTT Service. "
+                    "Publishes batched geolocation/statistics events at a target "
+                    "aggregate TPS, spread across as many worker connections as "
+                    "needed to stay under the broker's per-client rate cap.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    add_common_args(parser, default_total_tps=10)
+    parser.add_argument(
+        "--event-num", type=int, default=int(get_env("EVENT_NUM", 3)),
+        help="Number of distinct simulated devices, also drives batch composition (env: EVENT_NUM)",
+    )
+    parser.add_argument(
+        "--batch-num", type=int, default=int(get_env("BATCH_NUM", 100)),
+        help="Messages grouped per published array batch (env: BATCH_NUM)",
+    )
+    return parser.parse_args()
 
 
-# Set broker from environment variable
-# Priority: MQTT_BROKER > C8Y_DOMAIN > default
-broker = get_env("MQTT_BROKER")
-if not broker:
-    # Fall back to C8Y_DOMAIN if available
-    c8y_domain = get_env("C8Y_DOMAIN")
-    if c8y_domain:
-        broker = c8y_domain
-    else:
-        broker = "broker.emqx.io"  # Default value
+args = parse_args()
 
-# Set port from environment variable or use default
-try:
-    port = int(get_env("MQTT_PORT", 9883))
-except (ValueError, TypeError):
-    # If MQTT_PORT exists but is not a valid integer
-    port = 9883
+# Broker: explicit override > C8Y_DOMAIN > fallback
+broker = args.broker or "broker.emqx.io"
+port = args.port
 
-# Set username from environment variables
-# Priority: USERNAME > C8Y_TENANT/C8Y_USERNAME
-username = get_env("USERNAME")
-if not username:
-    c8y_tenant = get_env("C8Y_TENANT")
-    c8y_username = get_env("C8Y_USERNAME")
-    if c8y_tenant and c8y_username:
-        username = f"{c8y_tenant}/{c8y_username}"
-    else:
-        username = ""  # Default value
+# Username/password auth (only used with --auth password): explicit override > C8Y_TENANT/C8Y_USERNAME
+c8y_tenant = get_env("C8Y_TENANT", "")
+c8y_username = get_env("C8Y_USERNAME") or get_env("C8Y_USER", "")
+username = get_env("MQTT_USERNAME") or (
+    f"{c8y_tenant}/{c8y_username}" if c8y_tenant and c8y_username else ""
+)
+password = get_env("MQTT_PASSWORD", "")
 
-# Set password from environment variable
-password = get_env("PASSWORD", "")  # Default to empty string
-
-# Log the configuration (without showing the password)
-logger.info(f"MQTT Configuration: broker={broker}, port={port}, username={username}")
-if password:
-    logger.info("Password is set")
+if args.auth == "password":
+    logger.info(f"MQTT Configuration: broker={broker}, port={port}, username={username}")
 else:
-    logger.info("Password is not set")
+    c8y_tenant = resolve_tenant()
+    logger.info(f"MQTT broker={broker}  port={port}  tenant={c8y_tenant}")
+    logger.info("Auth: X.509 client certificate (one per worker connection)")
 
 root_topic = "testmapper/"
-client_id = f"python-mqtt-{random.randint(0, 10)}"
 
 task_queue = queue.Queue()
 event_count = 0
@@ -67,15 +67,15 @@ event_count = 0
 
 #### Define test
 # parameter to control message format
-EVENT_NUM = 3  #  total number of events and meas; also the number of device
+EVENT_NUM = args.event_num  #  total number of events and meas; also the number of device
 ARRAY_MESSAGE = True
-# BATCH_NUM = 5000
-BATCH_NUM = 100
+BATCH_NUM = args.batch_num
 
 # parameter to control load
-TPS = 10  # TPS represents the maximum number of allowed publish operations within a specified time period. It effectively controls the rate at which messages can be published to MQTT topics.
-WORKERS = 2
-SLEEP_BETWEEN_ITERATIONS = 1
+TOTAL_TPS = args.total_tps
+MAX_TPS_PER_CLIENT = args.max_tps_per_client
+WORKERS = math.ceil(TOTAL_TPS / MAX_TPS_PER_CLIENT)
+TPS_PER_CLIENT = TOTAL_TPS / WORKERS
 
 # functional parameter
 diff_capid = True
@@ -86,15 +86,9 @@ event_type_list = ["geolocation", "gwCDMStatistics"]
 diff_meas_type = True
 device_num = EVENT_NUM  # Total number of devices
 
-
-# ### Create record file
-# record_name = f'{str(event_num)}-messages-{str(workers)}-workers-array-mes-record.json'
-# if os.path.exists(f'./{record_name}'):
-#     os.remove(f'./{record_name}')
-# with open(record_name, 'w') as f:
-#     f.write('[')
-# # record = open(record_name, 'w')
-# # record.write('[')
+# Cert-auth state: one certificate per worker connection (clientId == cert CN).
+_cert_dir = None
+_client_certs = []
 
 
 def create_capid(device_num):
@@ -102,37 +96,47 @@ def create_capid(device_num):
         capid_list.append("TID-987654-" + str(i).zfill(10))
 
 
-def connect_mqtt():
+def connect_mqtt(worker_index: int = 0):
     def on_connect(client, userdata, flags, rc, properties=None):
         if rc == 0:
             print("Connected to MQTT Service!")
         else:
             print("Failed to connect, return code %d\n", rc)
 
+    if args.auth == "cert":
+        cert = _client_certs[worker_index]
+        client_id = cert.client_id
+    else:
+        client_id = f"python-mqtt-{worker_index}-{random.randint(0, 10000)}"
+
     client = mqtt_client.Client(
         client_id=client_id,
         callback_api_version=mqtt_client.CallbackAPIVersion.VERSION2,
     )
-    # Only set username and password if both are provided and non-empty
-    if username and password and username.strip() != "" and password.strip() != "":
-        client.username_pw_set(username, password)
-        logger.info(f"Using authentication with username: {username}")
+
+    if args.auth == "cert":
+        # clientId MUST equal the cert CN, tenant id goes in the username field,
+        # no password is used — the client certificate is the credential.
+        client.username_pw_set(c8y_tenant)
+        client.tls_set(certfile=cert.cert_path, keyfile=cert.key_path)
+        logger.info(f"Worker {worker_index}: using client certificate CN={cert.client_id}")
     else:
-        logger.info("No authentication credentials provided, connecting anonymously")
-    # client.tls_set(ca_certs="gdroot-g2.crt")
-    client.tls_set()
+        if username and password and username.strip() != "" and password.strip() != "":
+            client.username_pw_set(username, password)
+            logger.info(f"Using authentication with username: {username}")
+        else:
+            logger.info("No authentication credentials provided, connecting anonymously")
+        client.tls_set()
+
     client.tls_insecure_set(True)
     client.on_connect = on_connect
     client.connect(broker, port)
     return client
 
 
-@sleep_and_retry
-@limits(calls=TPS, period=1)
 def publish(client, message, topic):
     global event_count
     result = client.publish(topic, message, qos=1)
-    # result: [0, 1]
     status = result[0]
     if status == 0:
         print(f"Send `{message}` to topic `{topic}`")
@@ -228,6 +232,7 @@ def clear_mes_array(mes_array):
         logging.warning("Attempted to put empty array in queue, skipping...")
     mes_array = []
 
+
 ## def create_mes_array(mes_array, message):
 # this is the task producer
 def create_tasks():
@@ -285,7 +290,11 @@ def create_tasks():
                     clear_mes_array(mes_array_static_array)
 
 
-def consume_tasks(client):
+def consume_tasks(client, tps_per_client=TPS_PER_CLIENT):
+    """Token-bucket / next-send-time scheduling: sleep only when ahead of schedule,
+    so task_queue.get() latency never silently eats into the rate budget."""
+    min_interval = 1.0 / tps_per_client if tps_per_client > 0 else 0
+    next_send = time.monotonic()
     while True:
         new_task = task_queue.get()
         logging.info("Get one task")
@@ -317,66 +326,59 @@ def consume_tasks(client):
             else:
                 topic = root_topic + "gwarray"
 
+        now = time.monotonic()
+        if now < next_send:
+            time.sleep(next_send - now)
         publish(client, payload, topic)
+        next_send = max(time.monotonic(), next_send + min_interval)
         task_queue.task_done()
-        time.sleep(SLEEP_BETWEEN_ITERATIONS)
-
-
-def tps_timer(start_time):
-    while True:
-        now_time = datetime.now(timezone.utc)
-        diff_time = now_time - start_time
-        if diff_time.total_seconds() > 12 * 60 * 60:
-            global TPS
-            TPS = TPS + 10
-        else:
-            time.sleep(3600)
 
 
 def run(start_time):
-    client = connect_mqtt()
-    logging.info("MQTT client created")
-    ### Threads for publishing messages
-    for n in range(WORKERS):
+    ### One dedicated MQTT connection per worker, each capped at TPS_PER_CLIENT
+    for i in range(WORKERS):
+        client = connect_mqtt(worker_index=i)
         t = Thread(target=consume_tasks, args=(client,))
         t.daemon = True
         t.start()
-    logging.info("Publisher threads created")
+    logging.info(f"Started {WORKERS} publisher threads (each a dedicated MQTT client, capped at {TPS_PER_CLIENT} TPS)")
 
-    ### Thread for timer
-    t_timer = Thread(target=tps_timer, args=(start_time,))
-    t_timer.daemon = True
-    t_timer.start()
-    logging.info("Timer thread created")
-
-    client.loop_start()
-    # client.loop_forever()
     create_tasks()
-
-    # time.sleep(3)
-    # while not task_queue.empty():
-    #     pass
-
-    # client.loop_stop()
-
-    # #### Finish writing records
-    # with open(record_name, 'a') as f:
-    #     f.write(']')
-    # # record.write(']')
-    # # record.close()
 
 
 def main():
+    global _cert_dir, _client_certs
+
+    create_capid(device_num)
+    start_time = datetime.now(timezone.utc)
+
+    if args.auth == "cert":
+        _cert_dir = tempfile.mkdtemp(prefix="dm-loadtest02-certs-")
+        logger.info(f"Provisioning {WORKERS} client certificate(s) for cert auth ...")
+        _client_certs = provision_client_certs(WORKERS, _cert_dir, days=args.cert_days, prefix="dmload02")
+        logger.info(f"Provisioned {len(_client_certs)} client certificate(s).")
+
+    def _cleanup():
+        if args.auth == "cert" and _client_certs:
+            logger.info("Cleaning up provisioned client certificates ...")
+            cleanup_client_certs(_client_certs, _cert_dir)
+
+    def _shutdown(sig, frame):
+        print("Shutting down gracefully...")
+        _cleanup()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, _shutdown)
+    signal.signal(signal.SIGTERM, _shutdown)
+
     try:
-        create_capid(device_num)
-        start_time = datetime.now(timezone.utc)
         run(start_time)
     except KeyboardInterrupt:
         print("Shutting down gracefully...")
-        # Cleanup code
     finally:
         stop_time = datetime.now(timezone.utc).isoformat()
         print(f"Script stopped at {stop_time}")
+        _cleanup()
 
 
 if __name__ == "__main__":

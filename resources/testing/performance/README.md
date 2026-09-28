@@ -15,6 +15,8 @@ See **[profiler/TEST.md](profiler/TEST.md)** for the full profiling workflow.
 
 ### MQTT load tests
 
+See **[mqtt/README.md](mqtt/README.md)** for full details (options, auth modes).
+
 ```bash
 pip install -r requirements.txt
 eval $(c8y sessions login)
@@ -22,8 +24,8 @@ eval $(c8y sessions login)
 # JSONata via MQTT
 python3 mqtt/loadTest_03.py
 
-# Smart Function via MQTT
-python3 mqtt/loadTest_04.py
+# Smart Function via MQTT, targeting 250 msg/s aggregate
+python3 mqtt/loadTest_04.py --total-tps 250
 ```
 
 ### Local HTTP profiling
