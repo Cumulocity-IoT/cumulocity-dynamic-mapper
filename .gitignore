@@ -32,6 +32,7 @@ hs_err_pid*
 *.iml
 
 target/
+target_old/
 logs/
 bin/
 attic/*
