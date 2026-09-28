@@ -134,6 +134,15 @@ public class OutboundMessageRouter extends MessageRoutingSupport {
         log.debug("{} - Filtered {} candidate mapping(s) to {} valid mapping(s) for connector {}",
                 tenant, mappings.size(), validMappings.size(), connectorIdentifier);
 
+        // The common case is exactly one matching mapping. Fanning that out through
+        // CompletableFuture.supplyAsync + join would spawn a second virtual thread and
+        // immediately block this one waiting on it — a pure thread-hop with no concurrency
+        // benefit, since there is nothing to run in parallel against. Run it inline instead.
+        if (validMappings.size() == 1) {
+            return List.of(processSingleOutboundMapping(validMappings.get(0), c8yMessage, connectorIdentifier,
+                    testing, serviceConfiguration, resultWrapper));
+        }
+
         List<CompletableFuture<ProcessingContext<Object>>> futures = validMappings.stream()
                 .map(mapping -> CompletableFuture.supplyAsync(
                         () -> processSingleOutboundMapping(mapping, c8yMessage, connectorIdentifier, testing,
