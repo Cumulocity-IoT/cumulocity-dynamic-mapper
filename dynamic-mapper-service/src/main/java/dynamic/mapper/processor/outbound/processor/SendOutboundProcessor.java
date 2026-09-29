@@ -190,6 +190,15 @@ public class SendOutboundProcessor extends BaseProcessor {
                         log.error("{} - Failed to execute CUSTOM request ({}/{}): {}",
                                 tenant, i + 1, requests.size(), e.getMessage(), e);
                         req.setError(e);
+                        // Also record on the shared context — process()'s hasError() check
+                        // (which drives the FAILED/SUCCESSFUL operation auto-ack) only looks at
+                        // context.getErrors(), not per-request errors, so without this a failed
+                        // CUSTOM request would be silently acked as SUCCESSFUL.
+                        context.addError(e instanceof ProcessingException ? (ProcessingException) e
+                                : new ProcessingException(
+                                        String.format("%s - Error executing CUSTOM request: %s", tenant,
+                                                e.getMessage()),
+                                        e));
                     }
                 }
             }
@@ -208,6 +217,14 @@ public class SendOutboundProcessor extends BaseProcessor {
             if (context.getCurrentRequest() != null) {
                 context.getCurrentRequest().setError(e);
             }
+            // Also record on the shared context — see the comment above for why this is
+            // required for the FAILED/SUCCESSFUL auto-ack to reflect a publish failure
+            // (e.g. connectorClient.publishMEAO(context) throwing) instead of silently
+            // acking SUCCESSFUL.
+            context.addError(e instanceof ProcessingException ? (ProcessingException) e
+                    : new ProcessingException(
+                            String.format("%s - Error processing outbound requests: %s", tenant, e.getMessage()),
+                            e));
         }
     }
 
