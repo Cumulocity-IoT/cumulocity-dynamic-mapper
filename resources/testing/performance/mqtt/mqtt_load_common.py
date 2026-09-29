@@ -31,16 +31,26 @@ def fail(message):
     raise SystemExit(f"ERROR: {message}")
 
 
+def _positive_float(value):
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        raise argparse.ArgumentTypeError("must be a positive number")
+    if result <= 0:
+        raise argparse.ArgumentTypeError("must be greater than zero")
+    return result
+
+
 def add_common_args(parser: argparse.ArgumentParser, default_total_tps: float):
     parser.add_argument(
-        "--total-tps", type=float,
-        default=float(get_env("TOTAL_TPS", default_total_tps)),
+        "--total-tps", type=_positive_float,
+        default=_positive_float(get_env("TOTAL_TPS", default_total_tps)),
         help=f"Target aggregate publish rate across all workers, in messages/sec "
              f"(default: {default_total_tps}, env: TOTAL_TPS)",
     )
     parser.add_argument(
-        "--max-tps-per-client", type=float,
-        default=float(get_env("MAX_TPS_PER_CLIENT", 90)),
+        "--max-tps-per-client", type=_positive_float,
+        default=_positive_float(get_env("MAX_TPS_PER_CLIENT", 90)),
         help="Per-MQTT-connection rate cap; the Cumulocity MQTT Service enforces "
              "a hard limit of ~100 msg/s per client (default: 90, env: MAX_TPS_PER_CLIENT)",
     )
