@@ -12,7 +12,7 @@ is about, not in a general "scripts" folder — that grouping is what this layou
 | [`testing/performance/`](testing/performance/) | Load and profiling assets: JMeter profile, Python MQTT generators, async-profiler scripts, and the mappings they drive. |
 | [`testing/environments/`](testing/environments/) | Docker Compose environments for the brokers the tests run against — AMQP, HiveMQ, Kafka, Pulsar, Webhook — plus a local microservice setup. |
 | [`testing/fixtures/`](testing/fixtures/) | Setup scripts that create the devices and subscriptions tests expect. |
-| [`testing/reliability/`](testing/reliability/) | Backend-unavailable / fault-injection testing: a mitmproxy addon that injects HTTP faults, the script to run the service locally against it, and the procedure tying them together. |
+| [`testing/reliability/`](testing/reliability/) | Backend-unavailable / fault-injection testing: a mitmproxy addon that injects HTTP faults, the script to run the service locally against it, and the procedure tying them together ([`TEST-SETUP-C8Y-UNAVAILABLE.md`](testing/reliability/TEST-SETUP-C8Y-UNAVAILABLE.md)). Also holds instructions for a not-yet-implemented concurrency test around GraalVM context borrowing under worker cancellation ([`TEST-INSTRUCTIONS-GRAALVM-CANCEL-RACE.md`](testing/reliability/TEST-INSTRUCTIONS-GRAALVM-CANCEL-RACE.md)). |
 | [`tools/mgmt/`](tools/mgmt/) | `dm.sh`, the CLI for managing a deployed mapper. |
 | [`tools/protobuf/`](tools/protobuf/) | Regenerates the Protobuf descriptors used by the SparkPlug B and Protobuf sample extensions. |
 | [`samples/`](samples/) | Importable sample mappings (JSON) plus their documented overview (xlsx/PDF), and a LoRa decoding example. |
