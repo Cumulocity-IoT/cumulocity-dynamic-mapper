@@ -36,8 +36,8 @@ def _positive_float(value):
         result = float(value)
     except (TypeError, ValueError):
         raise argparse.ArgumentTypeError("must be a positive number")
-    if result <= 0:
-        raise argparse.ArgumentTypeError("must be greater than zero")
+    if not 0 < result < float("inf"):
+        raise argparse.ArgumentTypeError("must be a finite number greater than zero")
     return result
 
 
