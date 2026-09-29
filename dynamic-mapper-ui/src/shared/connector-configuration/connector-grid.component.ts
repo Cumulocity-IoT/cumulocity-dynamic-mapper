@@ -274,6 +274,10 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
       switchMap(([dirs, dirFilter]) =>
         this.connectorConfigurationService.getConfigurationsWithStatus().pipe(
           map(configs => configs.filter(config => {
+            // The auto-created TEST connector singleton backs the mapping-testing feature
+            // internally and is deliberately hidden from the nav (see navigation.factory.ts);
+            // keep it out of the grid too so it can't be edited/deleted/exported by mistake.
+            if (config.connectorType === ConnectorType.TEST) return false;
             const matchesDirections = config.supportedDirections?.some(dir => dirs.includes(dir));
             const matchesFilter = dirFilter === 'ALL' || config.supportedDirections?.includes(dirFilter as Direction);
             return matchesDirections && matchesFilter;
@@ -334,7 +338,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
       return types;
     }, new Set());
     return this.specifications
-      .filter(sp => (!sp.singleton || !configuredConnectorType.has(sp.connectorType)) &&
+      .filter(sp => sp.connectorType !== ConnectorType.TEST &&
+        (!sp.singleton || !configuredConnectorType.has(sp.connectorType)) &&
         (sp.connectorType !== ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR || this.feature.pulsarAvailable))
       .map(sp => sp.connectorType);
   }

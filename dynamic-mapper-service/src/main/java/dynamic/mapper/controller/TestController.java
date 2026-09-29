@@ -157,10 +157,11 @@ public class TestController {
                 var processingResult = (List<? extends ProcessingContext<?>>) processingResultWrapper
                         .getProcessingResult().get();
 
-                if (processingResult != null && processingResult.size() > 1) {
-                    log.warn("{} - Test mapping produced {} result(s), only returning the first result", tenant,
-                            processingResult.size());
-                } else if (processingResult != null && processingResult.size() == 1) {
+                if (processingResult != null && !processingResult.isEmpty()) {
+                    if (processingResult.size() > 1) {
+                        log.warn("{} - Test mapping produced {} result(s), only returning the first result", tenant,
+                                processingResult.size());
+                    }
                     var firstResult = processingResult.get(0);
                     result.setRequests(firstResult.getRequests());
                     result.setWarnings(firstResult.getWarnings());
