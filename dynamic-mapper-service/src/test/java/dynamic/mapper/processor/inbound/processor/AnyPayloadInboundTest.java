@@ -27,12 +27,9 @@ import static org.mockito.Mockito.*;
 
 import java.nio.charset.StandardCharsets;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -69,12 +66,6 @@ class AnyPayloadInboundTest {
     private MappingService mappingService;
 
     @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
-
-    @Mock
     private ServiceConfiguration serviceConfiguration;
 
     @Mock
@@ -109,15 +100,6 @@ class AnyPayloadInboundTest {
                 Direction.INBOUND, "device/+/data", null,
                 0L, 0L, 0L, null);
 
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getBody(Mapping.class)).thenReturn(mapping);
-        when(message.getHeader("tenant", String.class)).thenReturn(TEST_TENANT);
-        when(message.getHeader("serviceConfiguration", ServiceConfiguration.class))
-                .thenReturn(serviceConfiguration);
-        when(message.getHeader("connectorMessage", ConnectorMessage.class))
-                .thenReturn(connectorMessage);
-        when(message.getHeader("testing", Boolean.class)).thenReturn(Boolean.FALSE);
-
         when(mappingService.getMappingStatus(any(), any())).thenReturn(mappingStatus);
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
     }
@@ -135,15 +117,10 @@ class AnyPayloadInboundTest {
         DeserializationInboundProcessor processor = createProcessor();
 
         // When
-        processor.process(exchange);
+        ProcessingContext<?> ctx = processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
 
         // Then
-        ArgumentCaptor<ProcessingContext<?>> ctxCaptor =
-                ArgumentCaptor.forClass(ProcessingContext.class);
-        verify(message).setHeader(eq("processingContext"), ctxCaptor.capture());
-
-        ProcessingContext<?> ctx = ctxCaptor.getValue();
-        assertNotNull(ctx, "ProcessingContext must be set on the exchange");
+        assertNotNull(ctx, "ProcessingContext must be returned");
         assertNotNull(ctx.getPayload(), "Payload must be present in context");
 
         // BytePayloadDeserializer returns raw bytes for ANY_PAYLOAD
@@ -162,14 +139,9 @@ class AnyPayloadInboundTest {
         DeserializationInboundProcessor processor = createProcessor();
 
         // When
-        processor.process(exchange);
+        ProcessingContext<?> ctx = processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
 
         // Then
-        ArgumentCaptor<ProcessingContext<?>> ctxCaptor =
-                ArgumentCaptor.forClass(ProcessingContext.class);
-        verify(message).setHeader(eq("processingContext"), ctxCaptor.capture());
-
-        ProcessingContext<?> ctx = ctxCaptor.getValue();
         assertNotNull(ctx.getPayload());
         assertInstanceOf(byte[].class, ctx.getPayload(),
                 "JSON bytes sent as ANY_PAYLOAD must not be auto-parsed into a Map");
@@ -188,14 +160,9 @@ class AnyPayloadInboundTest {
         DeserializationInboundProcessor processor = createProcessor();
 
         // When
-        processor.process(exchange);
+        ProcessingContext<?> ctx = processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
 
         // Then
-        ArgumentCaptor<ProcessingContext<?>> ctxCaptor =
-                ArgumentCaptor.forClass(ProcessingContext.class);
-        verify(message).setHeader(eq("processingContext"), ctxCaptor.capture());
-
-        ProcessingContext<?> ctx = ctxCaptor.getValue();
         assertNotNull(ctx.getPayload());
         assertInstanceOf(byte[].class, ctx.getPayload());
         assertEquals(65536, ((byte[]) ctx.getPayload()).length,
@@ -214,14 +181,9 @@ class AnyPayloadInboundTest {
         DeserializationInboundProcessor processor = createProcessor();
 
         // When
-        processor.process(exchange);
+        ProcessingContext<?> ctx = processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
 
         // Then
-        ArgumentCaptor<ProcessingContext<?>> ctxCaptor =
-                ArgumentCaptor.forClass(ProcessingContext.class);
-        verify(message).setHeader(eq("processingContext"), ctxCaptor.capture());
-
-        ProcessingContext<?> ctx = ctxCaptor.getValue();
         assertNotNull(ctx);
         assertInstanceOf(byte[].class, ctx.getPayload(),
                 "EXTENSION_JAVA + ANY_PAYLOAD must also receive raw bytes");
@@ -236,9 +198,9 @@ class AnyPayloadInboundTest {
 
         DeserializationInboundProcessor processor = createProcessor();
 
-        // When / Then: must not throw; context is still written to the exchange
-        processor.process(exchange);
-        verify(message).setHeader(eq("processingContext"), any(ProcessingContext.class));
+        // When / Then: must not throw; context is still returned
+        ProcessingContext<?> ctx = processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
+        assertNotNull(ctx);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────

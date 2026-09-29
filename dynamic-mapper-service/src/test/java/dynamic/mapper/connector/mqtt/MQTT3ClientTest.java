@@ -54,7 +54,7 @@ import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
@@ -74,7 +74,7 @@ class MQTT3ClientTest {
     @Mock
     private ConnectorConfiguration connectorConfiguration;
     @Mock
-    private CamelDispatcherInbound dispatcher;
+    private InboundMessageDispatcher dispatcher;
     @Mock
     private MappingService mappingService;
     @Mock

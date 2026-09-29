@@ -98,6 +98,34 @@ public class ProcessingResultWrapper<O> {
     }
 
     /**
+     * Per-mapping worker futures for a message that matched more than one mapping. The single
+     * {@link #processingResult} future only tracks the outer coordinator thread — which, while
+     * fanning out to per-mapping workers, sits blocked in a join that does not respond to
+     * interruption. Without these registered separately, {@link #cancelProcessing()} could only
+     * interrupt the (already-uninterruptibly-waiting) coordinator, leaving every per-mapping
+     * worker — including ones blocked in C8Y HTTP calls — to keep running after a timeout.
+     * Using CopyOnWriteArrayList for thread-safe iteration without locking, same as
+     * {@link #cancelActions}.
+     */
+    @Builder.Default
+    private final CopyOnWriteArrayList<Future<?>> workerFutures = new CopyOnWriteArrayList<>();
+
+    /**
+     * Register a per-mapping worker's future so {@link #cancelProcessing()} can interrupt it
+     * directly. Must be a future obtained from {@link java.util.concurrent.ExecutorService#submit}
+     * (a real {@code FutureTask}) — unlike {@link java.util.concurrent.CompletableFuture#cancel},
+     * {@code FutureTask.cancel(true)} genuinely interrupts the running thread, which is what
+     * actually stops a blocking HTTP call.
+     *
+     * @param future the per-mapping worker's future
+     */
+    public void registerWorkerFuture(Future<?> future) {
+        if (future != null) {
+            workerFutures.add(future);
+        }
+    }
+
+    /**
      * Cancel the ongoing processing:
      * <ol>
      *   <li>Set the {@link #cancellationRequested} flag to true so processing code can detect
@@ -194,6 +222,15 @@ public class ProcessingResultWrapper<O> {
         // 2. Interrupt the processing thread (effective for blocking IO)
         boolean cancelled = processingResult != null && processingResult.cancel(true);
         log.debug("Future.cancel(true) returned: {}", cancelled);
+
+        // 2b. Interrupt every per-mapping worker too (effective for blocking IO) — the outer
+        // future above only reaches the coordinator thread, which for a multi-mapping message
+        // is itself blocked waiting on these, uninterruptibly. Without cancelling them directly,
+        // per-mapping workers blocked in C8Y HTTP calls would keep running regardless.
+        log.debug("Cancelling {} per-mapping worker future(s)", workerFutures.size());
+        for (Future<?> workerFuture : workerFutures) {
+            workerFuture.cancel(true);
+        }
 
         // 3. Run all registered cancel actions (effective for GraalVM JS execution)
         log.debug("Invoking {} cancel action(s)", cancelActions.size());

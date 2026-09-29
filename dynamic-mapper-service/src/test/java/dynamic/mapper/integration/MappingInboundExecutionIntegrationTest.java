@@ -36,8 +36,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
@@ -95,12 +93,6 @@ class MappingInboundExecutionIntegrationTest {
     @Mock
     private ServiceConfiguration serviceConfiguration;
 
-    @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
-
     private JSONataInboundProcessor jsonataProcessor;
     private SubstitutionResultInboundProcessor substitutionProcessor;
 
@@ -126,7 +118,6 @@ class MappingInboundExecutionIntegrationTest {
         // Setup common mocks
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
         when(serviceConfiguration.getLogSubstitution()).thenReturn(false);
-        when(exchange.getIn()).thenReturn(message);
 
         // Setup C8Y Agent mock for device resolution
         ManagedObjectRepresentation mockDevice = new ManagedObjectRepresentation();
@@ -349,9 +340,6 @@ class MappingInboundExecutionIntegrationTest {
                 Direction.INBOUND, mapping.getMappingTopic(), "", 0L, 0L, 0L, null);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
 
-        // Setup exchange message
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(context);
-
         // When - Execute extraction
         jsonataProcessor.extractFromSource(context);
 
@@ -360,7 +348,7 @@ class MappingInboundExecutionIntegrationTest {
         assertFalse(cache.isEmpty(), "Extraction should populate cache");
 
         // Execute substitution
-        substitutionProcessor.process(exchange);
+        substitutionProcessor.process(context);
 
         // Then - Verify processing completed
         // Note: Request creation might require additional setup (external ID resolution, etc.)

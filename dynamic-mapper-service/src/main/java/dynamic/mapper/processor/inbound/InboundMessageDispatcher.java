@@ -1,7 +1,5 @@
 package dynamic.mapper.processor.inbound;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -13,11 +11,6 @@ import dynamic.mapper.processor.ProcessingException;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
-import org.apache.camel.CamelContext;
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
-import org.apache.camel.ProducerTemplate;
-import org.apache.camel.support.DefaultExchange;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
@@ -32,16 +25,21 @@ import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * In-process replacement for the former Camel-backed {@code CamelDispatcherInbound}. Resolves
+ * the mappings applicable to an inbound {@link ConnectorMessage} and hands them to
+ * {@link InboundMessageRouter} for processing, on a virtual thread, instead of sending a Camel
+ * {@code Exchange} through {@code direct:processInboundMessage}.
+ */
 @Slf4j
-public class CamelDispatcherInbound implements GenericMessageCallback {
+public class InboundMessageDispatcher implements GenericMessageCallback {
 
     private final AConnectorClient connectorClient;
     private final ExecutorService virtualThreadPool;
     private final MappingService mappingService;
     private final ServiceRegistry serviceRegistry;
+    private final InboundMessageRouter inboundMessageRouter;
 
-    private final ProducerTemplate producerTemplate;
-    private final CamelContext camelContext;
     private final Timer inboundProcessingTimer;
     private final Counter inboundProcessingCounter;
 
@@ -49,17 +47,14 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
     /**
      * Constructor matching DispatcherInbound signature
      */
-    public CamelDispatcherInbound(ServiceRegistry serviceRegistry,
+    public InboundMessageDispatcher(ServiceRegistry serviceRegistry,
             AConnectorClient connectorClient) {
         this.connectorClient = connectorClient;
         this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
         this.mappingService = serviceRegistry.getMappingService();
         this.serviceRegistry = serviceRegistry;
+        this.inboundMessageRouter = serviceRegistry.getInboundMessageRouter();
 
-
-        // Initialize Camel components
-        this.camelContext = serviceRegistry.getCamelContext();
-        this.producerTemplate = camelContext.createProducerTemplate();
         this.inboundProcessingTimer = Timer.builder("dynmapper_inbound_processing_time")
                 .tag("tenant", connectorClient.getTenant())
                 .tag("connector", connectorClient.getConnectorIdentifier())
@@ -88,7 +83,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
     }
 
     /**
-     * Process message using Camel routes - matches DispatcherInbound.processMessage
+     * Process message via {@link InboundMessageRouter} - matches DispatcherInbound.processMessage
      * signature
      */
     private ProcessingResultWrapper<?> processMessage(ConnectorMessage connectorMessage, Mapping testMapping) {
@@ -167,7 +162,7 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
             log.warn("{} - Error resolving appropriate map for topic {}. Could NOT be parsed. Ignoring this message!",
                     tenant, topic);
             log.debug("Error resolving appropriate mapping: {}", e.getMessage(), e);
-            // Mirrors CamelDispatcherOutbound: a resolution failure belongs to no single
+            // Mirrors OutboundMessageDispatcher: a resolution failure belongs to no single
             // mapping, so it is reported on the catch-all status instead of being dropped.
             MappingStatus mappingStatusUnspecified = mappingService.getMappingStatus(tenant,
                     Mapping.UNSPECIFIED_MAPPING);
@@ -177,29 +172,22 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
             return result;
         }
 
-        // Process using Camel routes asynchronously
+        // Process via the in-process router, asynchronously
         Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(() -> {
             // Lets a timed-out callback verify that this thread really left — Future.isDone()
             // cannot tell it that, see ProcessingResultWrapper.workerCompleted.
             result.markWorkerStarted();
             try {
-                Exchange exchange = createExchange(connectorMessage, resolvedMappings, testing); // Now can use final variable
-                // Pass the result wrapper so in-flight processors can register cancel actions
-                // (e.g. GraalVM context closure) reachable from the timeout handler.
-                exchange.getIn().setHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER, result);
-
                 // Abort early if the MQTT callback already cancelled (timeout fired before
-                // we even reached the Camel route — cancel actions were not yet registered).
+                // we even reached the router - cancel actions were not yet registered).
                 if (result.getCancellationRequested().get()) {
-                    log.warn("{} - Cancellation already requested before Camel route started, aborting processing for topic: {}", tenant, topic);
+                    log.warn("{} - Cancellation already requested before routing started, aborting processing for topic: {}", tenant, topic);
                     return new ArrayList<>();
                 }
 
-                Exchange resultExchange = producerTemplate.send("direct:processInboundMessage", exchange);
+                List<ProcessingContext<Object>> contexts = inboundMessageRouter.processInboundMessage(
+                        connectorMessage, resolvedMappings, testing, serviceConfiguration, result);
 
-                @SuppressWarnings("unchecked")
-                List<ProcessingContext<Object>> contexts = resultExchange.getIn().getHeader(CamelHeaders.PROCESSED_CONTEXTS,
-                        List.class);
                 boolean resend = false;
                 if (contexts != null) {
                     for (ProcessingContext<?> context : contexts) {
@@ -241,10 +229,8 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                         log.info("{} - Resending message to C8Y due to previous 422 error with payload {}", tenant, payload);
                     } else
                         log.info("{} - Resending message to C8Y due to previous 422 error", tenant);
-                    exchange = createExchange(connectorMessage, resolvedMappings, testing);
-                    resultExchange = producerTemplate.send("direct:processInboundMessage", exchange);
-                    contexts = resultExchange.getIn().getHeader(CamelHeaders.PROCESSED_CONTEXTS,
-                            List.class);
+                    contexts = inboundMessageRouter.processInboundMessage(
+                            connectorMessage, resolvedMappings, testing, serviceConfiguration, result);
                     if (contexts != null) {
                         for (ProcessingContext<?> retryContext : contexts) {
                             if (retryContext != null && retryContext.hasError()) {
@@ -259,8 +245,8 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
                 return contexts != null ? contexts : new ArrayList<>();
 
             } catch (Exception e) {
-                log.error("{} - Error processing inbound message through Camel routes: {}", tenant, e.getMessage(), e);
-                throw new RuntimeException("Camel processing failed", e);
+                log.error("{} - Error processing inbound message: {}", tenant, e.getMessage(), e);
+                throw new RuntimeException("Inbound processing failed", e);
             } finally {
                 result.markWorkerCompleted();
             }
@@ -269,35 +255,6 @@ public class CamelDispatcherInbound implements GenericMessageCallback {
         result.setProcessingResult((Future) futureProcessingResult);
 
         return result;
-    }
-
-    /**
-     * Create Camel Exchange from ConnectorMessage and resolved mappings
-     */
-    private Exchange createExchange(ConnectorMessage message, List<Mapping> resolvedMappings, boolean testing) {
-        Exchange exchange = new DefaultExchange(camelContext);
-        Message camelMessage = exchange.getIn();
-
-        // Set the ConnectorMessage as the body
-        camelMessage.setBody(message);
-
-        // Set headers for processing
-        camelMessage.setHeader(CamelHeaders.CONNECTOR_IDENTIFIER, message.getConnectorIdentifier());
-        camelMessage.setHeader(CamelHeaders.TENANT, message.getTenant());
-        camelMessage.setHeader(CamelHeaders.CLIENT, message.getClientId());
-        camelMessage.setHeader(CamelHeaders.TESTING, testing);
-        camelMessage.setHeader(CamelHeaders.MAPPINGS, resolvedMappings);
-        camelMessage.setHeader(CamelHeaders.CONNECTOR_MESSAGE, message);
-        camelMessage.setHeader(CamelHeaders.SERVICE_CONFIGURATION,
-                serviceRegistry.getServiceConfiguration(message.getTenant()));
-
-        // Set payload information
-        camelMessage.setHeader(CamelHeaders.PAYLOAD_BYTES, message.getPayload());
-        if (message.getPayload() != null) {
-            camelMessage.setHeader(CamelHeaders.PAYLOAD_STRING, new String(message.getPayload()));
-        }
-
-        return exchange;
     }
 
     @Override

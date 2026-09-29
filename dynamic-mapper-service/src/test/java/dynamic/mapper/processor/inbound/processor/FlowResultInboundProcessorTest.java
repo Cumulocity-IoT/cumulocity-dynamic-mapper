@@ -31,8 +31,6 @@ import java.util.List;
 import java.util.Map;
 
 import dynamic.mapper.core.IdentityResolutionService;
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -82,12 +80,6 @@ class FlowResultInboundProcessorTest {
     private ObjectMapper objectMapper;
 
     @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
-
-    @Mock
     private ServiceConfiguration serviceConfiguration;
 
     @Mock
@@ -126,8 +118,6 @@ class FlowResultInboundProcessorTest {
         processingContext = createProcessingContext();
 
         // Setup basic mocks
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
 
@@ -212,7 +202,7 @@ class FlowResultInboundProcessorTest {
         processingContext.setFlowResult(cumulocityObj);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         assertFalse(processingContext.isIgnoreFurtherProcessing(),
@@ -239,7 +229,7 @@ class FlowResultInboundProcessorTest {
         processingContext.setFlowResult(messages);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         assertFalse(processingContext.isIgnoreFurtherProcessing(),
@@ -266,7 +256,7 @@ class FlowResultInboundProcessorTest {
         processingContext.setFlowResult(cumulocityObj);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         assertFalse(processingContext.getRequests().isEmpty(),
@@ -290,7 +280,7 @@ class FlowResultInboundProcessorTest {
         processingContext.setFlowResult(flowResult);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         log.info("Ignore further processing: {}", processingContext.isIgnoreFurtherProcessing());

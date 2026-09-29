@@ -30,37 +30,40 @@ import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.notification.websocket.Notification;
 import dynamic.mapper.processor.util.APITopicUtil;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
-import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
+import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Full Spring Boot integration test that validates actual outbound transformation.
  *
- * This test uses the complete Spring context with all Camel routes and processors
- * registered, allowing validation of:
+ * This test uses the complete Spring context with all processors registered,
+ * allowing validation of:
  * - C8Y notification → MQTT/Kafka message transformation
  * - Actual JSONata extraction from C8Y payloads
  * - Substitution and field mapping
  * - resolvedPublishTopic calculation (wildcard substitution)
  * - Final outbound message generation
  *
- * Unlike CamelPipelineOutboundIntegrationTest which only tests dispatcher routing,
+ * Unlike OutboundPipelineIntegrationTest which only tests dispatcher routing,
  * this test validates the complete transformation pipeline.
  */
 @Slf4j
@@ -68,16 +71,22 @@ import lombok.extern.slf4j.Slf4j;
 @ActiveProfiles("test")
 class OutboundTransformationValidationTest {
 
-    @Autowired
-    private CamelDispatcherOutbound dispatcher;
+    // OutboundMessageDispatcher is not a Spring bean (it is created per connector), so it is
+    // built manually from the autowired ServiceRegistry.
+    @MockitoSpyBean
+    private ServiceRegistry serviceRegistry;
 
-    @Autowired
+    @MockitoBean
     private MappingService mappingService;
 
     @MockitoBean
     private C8YAgent c8yAgent;
 
+    private AConnectorClient connectorClient;
+    private OutboundMessageDispatcher dispatcher;
+
     private static final String TEST_TENANT = "testTenant";
+    private static final String TEST_CONNECTOR = "test-connector-001";
 
     @BeforeEach
     void setUp() {
@@ -94,6 +103,18 @@ class OutboundTransformationValidationTest {
 
         when(c8yAgent.resolveGlobalId2ExternalId(eq(TEST_TENANT), any(GId.class), anyString(), anyBoolean()))
                 .thenReturn(mockExternalIdRep);
+
+        ServiceConfiguration serviceConfiguration = mock(ServiceConfiguration.class);
+        lenient().when(serviceConfiguration.getLogPayload()).thenReturn(false);
+        lenient().when(serviceConfiguration.getLogSubstitution()).thenReturn(false);
+        lenient().when(serviceConfiguration.getMaxCPUTimeMS()).thenReturn(5000);
+        doReturn(serviceConfiguration).when(serviceRegistry).getServiceConfiguration(TEST_TENANT);
+
+        connectorClient = mock(AConnectorClient.class);
+        lenient().when(connectorClient.getTenant()).thenReturn(TEST_TENANT);
+        lenient().when(connectorClient.getConnectorIdentifier()).thenReturn(TEST_CONNECTOR);
+        lenient().when(connectorClient.getC8yAgent()).thenReturn(c8yAgent);
+        dispatcher = new OutboundMessageDispatcher(serviceRegistry, connectorClient);
     }
 
     /**

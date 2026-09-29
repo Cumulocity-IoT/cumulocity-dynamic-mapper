@@ -51,7 +51,7 @@ import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
@@ -166,7 +166,7 @@ public class GooglePubSubClientTest {
      * a live Pub/Sub connection.
      */
     @SuppressWarnings("unchecked")
-    private GooglePubSubClient clientWithMocks(CamelDispatcherInbound dispatcher,
+    private GooglePubSubClient clientWithMocks(InboundMessageDispatcher dispatcher,
             ServiceConfiguration serviceConfiguration) throws Exception {
         GooglePubSubClient client = new GooglePubSubClient();
 
@@ -232,7 +232,7 @@ public class GooglePubSubClientTest {
 
     @Test
     public void testProcessPubSubMessage_atMostOnce_acksImmediately() throws Exception {
-        CamelDispatcherInbound dispatcher = mock(CamelDispatcherInbound.class);
+        InboundMessageDispatcher dispatcher = mock(InboundMessageDispatcher.class);
         ServiceConfiguration sc = mock(ServiceConfiguration.class);
         when(sc.getLogPayload()).thenReturn(false);
         doReturn(successWrapper()).when(dispatcher).onMessage(any(ConnectorMessage.class));
@@ -253,7 +253,7 @@ public class GooglePubSubClientTest {
 
     @Test
     public void testProcessPubSubMessage_atLeastOnce_acksOnSuccess() throws Exception {
-        CamelDispatcherInbound dispatcher = mock(CamelDispatcherInbound.class);
+        InboundMessageDispatcher dispatcher = mock(InboundMessageDispatcher.class);
         ServiceConfiguration sc = mock(ServiceConfiguration.class);
         when(sc.getLogPayload()).thenReturn(false);
         doReturn(successWrapper()).when(dispatcher).onMessage(any(ConnectorMessage.class));
@@ -274,7 +274,7 @@ public class GooglePubSubClientTest {
 
     @Test
     public void testProcessPubSubMessage_atLeastOnce_nacksOnProcessingError() throws Exception {
-        CamelDispatcherInbound dispatcher = mock(CamelDispatcherInbound.class);
+        InboundMessageDispatcher dispatcher = mock(InboundMessageDispatcher.class);
         ServiceConfiguration sc = mock(ServiceConfiguration.class);
         when(sc.getLogPayload()).thenReturn(false);
         doReturn(errorWrapper()).when(dispatcher).onMessage(any(ConnectorMessage.class));

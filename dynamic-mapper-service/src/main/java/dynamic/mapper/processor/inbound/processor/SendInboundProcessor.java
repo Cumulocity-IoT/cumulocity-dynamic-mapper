@@ -1,13 +1,10 @@
 package dynamic.mapper.processor.inbound.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
 import org.joda.time.DateTime;
 import org.springframework.stereotype.Component;
 
@@ -58,25 +55,13 @@ public class SendInboundProcessor extends BaseProcessor {
         this.mappingService = mappingService;
     }
 
-    /**
-     * Sequential entry point: processes all of the context's requests, one after another,
-     * on the calling thread. Kept as the {@link org.apache.camel.Processor} contract
-     * implementation and for direct/unit-test invocation; the production inbound pipeline
-     * (see {@code direct:sendRequests} / {@code direct:processRequestsInParallel} in
-     * {@code DynamicMapperInboundRoutes}) now always dispatches requests in parallel via
-     * {@link #prepareRequests}, {@link #processSplitRequest}, and {@link #finalizeAfterRequests}.
-     */
-    @Override
-    @SuppressWarnings("unchecked")
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
-
+    public void process(ProcessingContext<Object> context) throws Exception {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
+        Boolean testing = context.isTesting();
 
         // Check if processing was cancelled due to timeout
-        ProcessingResultWrapper<?> wrapper = exchange.getIn().getHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER,
-                ProcessingResultWrapper.class);
+        ProcessingResultWrapper<?> wrapper = context.getProcessingResultWrapper();
         if (wrapper != null && wrapper.getCancellationRequested().get()) {
             log.warn("{} - Processing was cancelled (timeout), skipping SendInboundProcessor for mapping: {}",
                     tenant, mapping.getName());
@@ -86,7 +71,8 @@ public class SendInboundProcessor extends BaseProcessor {
         try {
             // Collapse multiple measurement requests into one bulk request.
             bulkMeasurementRequestsIfNeeded(context);
-            // Process all requests sequentially.
+            // Process all requests sequentially. Failures are isolated per-request inside
+            // (never thrown from here), so one failing request never skips the rest.
             processAllRequests(context);
             // After all requests are processed, store the SparkPlug B birth fragment if applicable.
             // Deliberately outside the INVENTORY request path so it runs even when the Smart Function
@@ -94,128 +80,64 @@ public class SendInboundProcessor extends BaseProcessor {
             storeSparkPlugBBirthMessage(context);
             // Update the sparkPlugB_isActive flag: TRUE for BIRTH/DATA, FALSE for DEATH.
             updateSparkPlugBActiveStatus(context);
+
+            // At least one request failed above (recorded via context.addError, not thrown) —
+            // bookkeeping mirrors the catch block below, just for isolated per-request failures.
+            if (context.hasError() && !testing) {
+                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+                mappingStatus.incrementErrors();
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            }
         } catch (Exception e) {
-            recordFailure(context, "Error in SendInboundProcessor: " + e.getMessage(), e);
-        }
-    }
+            // Reached only for failures outside the per-request loop (e.g. bulk-merge,
+            // SparkPlug B birth persistence) — per-request send failures are isolated in
+            // processAllRequests and never propagate here.
+            String errorMessage = String.format(
+                    "%s - Error in SendInboundProcessor: %s for mapping: %s",
+                    tenant, mapping.getName(), e.getMessage());
+            log.error(errorMessage, e);
+            //Don't double wrap ProcessingExceptions
+            if(e instanceof ProcessingException)
+                context.addError((ProcessingException) e);
+            else
+                context.addError(new ProcessingException(errorMessage, e));
 
-    /**
-     * Parallel dispatch, step 1 of 3 (runs once, before the fan-out): checks for a
-     * timeout-driven cancellation and collapses multiple measurement requests into one
-     * bulk request. Must run before the requests are split across parallel branches, since
-     * it needs to see (and can replace) the whole {@code context.getRequests()} list.
-     */
-    public void prepareRequests(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT,
-                ProcessingContext.class);
-        Mapping mapping = context.getMapping();
-
-        ProcessingResultWrapper<?> wrapper = exchange.getIn().getHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER,
-                ProcessingResultWrapper.class);
-        if (wrapper != null && wrapper.getCancellationRequested().get()) {
-            log.warn("{} - Processing was cancelled (timeout), skipping SendInboundProcessor for mapping: {}",
-                    context.getTenant(), mapping.getName());
-            // Empty the request list so the split below iterates zero times; finalizeAfterRequests
-            // still runs afterwards (harmlessly, on an empty context) rather than being skipped.
-            context.setRequests(new ArrayList<>());
+            if (!testing) {
+                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+                mappingStatus.incrementErrors();
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            }
             return;
         }
-
-        bulkMeasurementRequestsIfNeeded(context);
     }
 
     /**
-     * Parallel dispatch, step 2 of 3 (runs once per split branch, concurrently): sends a
-     * single request. Failures are isolated to this request — recorded via
+     * Process all requests sequentially. A failing request is isolated — recorded via
      * {@code request.setError(e)}/{@code context.addError(...)} and swallowed rather than
-     * rethrown, so one failing request never aborts its siblings or skips
-     * {@link #finalizeAfterRequests} for the ones that succeeded.
-     */
-    @SuppressWarnings("unchecked")
-    public void processSplitRequest(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT,
-                ProcessingContext.class);
-        DynamicMapperRequest request = exchange.getIn().getBody(DynamicMapperRequest.class);
-        try {
-            processSingleRequest(context, request);
-        } catch (Exception e) {
-            // processSingleRequest already recorded the error on the request itself
-            // (request.setError(e)); mirror it onto the shared context too, the same way
-            // the sequential path's outer catch does, so finalizeAfterRequests can detect
-            // the failure and update mapping status once, in aggregate.
-            if (e instanceof ProcessingException) {
-                context.addError((ProcessingException) e);
-            } else {
-                context.addError(new ProcessingException(
-                        String.format("%s - Error sending request: %s", context.getTenant(), e.getMessage()), e));
-            }
-        }
-    }
-
-    /**
-     * Parallel dispatch, step 3 of 3 (runs once, after all split branches have joined):
-     * batch alarm creation, SparkPlug B birth persistence, and mapping-status bookkeeping —
-     * exactly the same single, once-per-context steps the sequential path performs, so
-     * parallel and sequential dispatch produce identical side effects.
-     */
-    public void finalizeAfterRequests(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT,
-                ProcessingContext.class);
-        Mapping mapping = context.getMapping();
-
-        createProcessingAlarms(context);
-        storeSparkPlugBBirthMessage(context);
-        updateSparkPlugBActiveStatus(context);
-
-        if (context.hasError() && !context.isTesting()) {
-            MappingStatus mappingStatus = mappingService.getMappingStatus(context.getTenant(), mapping);
-            mappingStatus.incrementErrors();
-            mappingService.increaseAndHandleFailureCount(context.getTenant(), mapping, mappingStatus);
-        }
-    }
-
-    /**
-     * Shared failure recording for the sequential entry point: logs, records the error on
-     * the context (without double-wrapping an existing {@link ProcessingException}), and
-     * updates mapping status — mirrors the bookkeeping {@link #finalizeAfterRequests} performs
-     * for the parallel path.
-     */
-    private void recordFailure(ProcessingContext<Object> context, String errorMessage, Exception e) {
-        Mapping mapping = context.getMapping();
-        log.error("{} - {} for mapping: {}", context.getTenant(), errorMessage, mapping.getName(), e);
-        if (e instanceof ProcessingException) {
-            context.addError((ProcessingException) e);
-        } else {
-            context.addError(new ProcessingException(errorMessage, e));
-        }
-
-        if (!context.isTesting()) {
-            MappingStatus mappingStatus = mappingService.getMappingStatus(context.getTenant(), mapping);
-            mappingStatus.incrementErrors();
-            mappingService.increaseAndHandleFailureCount(context.getTenant(), mapping, mappingStatus);
-        }
-    }
-
-    /**
-     * Process all requests sequentially
+     * rethrown, so one failing request never aborts the ones after it or skips
+     * {@link #createProcessingAlarms}.
      */
     private void processAllRequests(ProcessingContext<Object> context) throws Exception {
-        try {
-            // Process each C8Y request
-            for (DynamicMapperRequest request : context.getRequests()) {
+        String tenant = context.getTenant();
+        // Process each C8Y request
+        for (DynamicMapperRequest request : context.getRequests()) {
+            try {
                 processSingleRequest(context, request);
+            } catch (Exception e) {
+                // processSingleRequest already recorded the error on the request itself
+                // (request.setError(e)); mirror it onto the shared context too so process()'s
+                // hasError() check can detect it and update mapping status once, in aggregate.
+                if (e instanceof ProcessingException) {
+                    context.addError((ProcessingException) e);
+                } else {
+                    context.addError(new ProcessingException(
+                            String.format("%s - Error sending request: %s", tenant, e.getMessage()), e));
+                }
             }
-
-            // Create alarms for any processing issues (after all requests are processed)
-            createProcessingAlarms(context);
-
-        } catch (Exception e) {
-            // Not logged here — rethrown as-is (or wrapped, unchanged) up to process()'s
-            // catch, which is the single place this failure is actually handled (added to
-            // context, mapping status updated) and logged, full stack trace included.
-            // Logging here too just duplicated the same trace under a second message.
-            throw e;
         }
+
+        // Create alarms for any processing issues (after all requests are processed)
+        createProcessingAlarms(context);
     }
 
     /**
@@ -299,9 +221,7 @@ public class SendInboundProcessor extends BaseProcessor {
     }
 
     /**
-     * Process a single request - common logic for both sequential and parallel dispatch.
-     * Alarm creation is always batched (see {@link #createProcessingAlarms}), called once
-     * after all of a context's requests have been processed, never per-request here.
+     * Process a single request
      *
      * @param context The processing context
      * @param request The request to process
@@ -342,12 +262,11 @@ public class SendInboundProcessor extends BaseProcessor {
                         tenant, request.getApi(), request.getRequest());
             }
 
-            // Alarms are always created once, after all requests in the context have been
-            // processed — see processAllRequests / finalizeAfterRequests, never here.
+            // Alarms are created after all requests in processAllRequests.
 
         } catch (Exception e) {
             // Not logged here — see the comment in processAllRequests's catch block; this
-            // is rethrown unchanged up to the caller's single logging/handling point.
+            // is rethrown unchanged up to process()'s single logging/handling point.
             request.setError(e);
             throw e;
         }

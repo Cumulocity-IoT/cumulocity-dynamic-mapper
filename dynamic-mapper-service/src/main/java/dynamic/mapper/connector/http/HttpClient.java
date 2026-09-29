@@ -35,7 +35,7 @@ import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 
@@ -76,7 +76,7 @@ public class HttpClient extends AConnectorClient {
     public HttpClient(ServiceRegistry serviceRegistry,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
-            CamelDispatcherInbound dispatcher,
+            InboundMessageDispatcher dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
         this();

@@ -30,8 +30,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Value;
 import org.junit.jupiter.api.AfterEach;
@@ -77,12 +75,6 @@ class FlowInboundProcessorTest {
     private GraalVMContextService graalVMContextService;
 
     @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
-
-    @Mock
     private ServiceConfiguration serviceConfiguration;
 
     @Mock
@@ -116,8 +108,6 @@ class FlowInboundProcessorTest {
         processingContext = createProcessingContext();
 
         // Setup basic mocks
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
 
         // Mock service configuration - avoid mocking fields directly
@@ -251,7 +241,7 @@ class FlowInboundProcessorTest {
         // This test will likely fail due to missing GraalContext, but let's test the
         // basic flow
         try {
-            processor.process(exchange);
+            processor.process(processingContext);
             log.info("FlowInboundProcessor processed SMART_FUNCTION mapping successfully");
         } catch (Exception e) {
             // Expected to fail due to missing GraalVM context, but should increment error
@@ -268,7 +258,7 @@ class FlowInboundProcessorTest {
         mapping.setCode(null);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Should complete processing without executing JavaScript
         log.info("FlowInboundProcessor handled mapping without code");
@@ -281,7 +271,7 @@ class FlowInboundProcessorTest {
 
         try {
             // When
-            processor.process(exchange);
+            processor.process(processingContext);
         } catch (Exception e) {
             // Expected due to missing GraalVM context
             log.info("FlowInboundProcessor correctly handled debug case: {}", e.getMessage());
@@ -295,7 +285,7 @@ class FlowInboundProcessorTest {
 
         try {
             // When
-            processor.process(exchange);
+            processor.process(processingContext);
         } catch (Exception e) {
             // Expected due to missing GraalVM context
             log.info("FlowInboundProcessor correctly handled payload logging case: {}", e.getMessage());
@@ -311,7 +301,7 @@ class FlowInboundProcessorTest {
 
         try {
             // When
-            processor.process(exchange);
+            processor.process(processingContext);
         } catch (Exception e) {
             // Expected due to missing GraalVM context
             log.info("FlowInboundProcessor correctly handled shared code case: {}", e.getMessage());
@@ -327,7 +317,7 @@ class FlowInboundProcessorTest {
 
         try {
             // When
-            processor.process(exchange);
+            processor.process(processingContext);
         } catch (Exception e) {
             // Expected due to missing GraalVM context
             log.info("FlowInboundProcessor correctly handled system code case: {}", e.getMessage());
@@ -385,7 +375,7 @@ class FlowInboundProcessorTest {
         mapping.setCode("invalid-base64-content-that-will-cause-error");
 
         try {
-            processor.process(exchange);
+            processor.process(processingContext);
         } catch (Exception e) {
             // Should handle the error and update mapping status
             verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping),
@@ -531,7 +521,7 @@ class FlowInboundProcessorTest {
         when(mockOnMessageFunction.execute(any(), any())).thenReturn(mockResult);
 
         // When - Process the exchange with the complete flow
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Verify the flow result contains the expected CumulocityObject
         assertNotNull(processingContext.getFlowResult(),
@@ -634,7 +624,7 @@ class FlowInboundProcessorTest {
                         "JavaScript execution failed: Test JavaScript error in onMessage function"));
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Verify error handling
         verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), any(MappingStatus.class));
@@ -814,7 +804,7 @@ class FlowInboundProcessorTest {
         when(mockOnMessageFunction.execute(any(), any())).thenReturn(mockResult);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Verify multiple results
         assertNotNull(processingContext.getFlowResult(), "Flow result should not be null");

@@ -32,7 +32,7 @@ import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 import dynamic.mapper.connector.mqtt.SparkplugCertificateManager;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.ProcessingContext;
@@ -108,7 +108,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     public MQTTServicePulsarClient(ServiceRegistry serviceRegistry,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
-            CamelDispatcherInbound dispatcher,
+            InboundMessageDispatcher dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
         this();

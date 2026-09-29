@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
-import org.apache.camel.CamelContext;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -41,7 +40,9 @@ import dynamic.mapper.model.device.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.notification.NotificationSubscriber;
-import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
+import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
+import dynamic.mapper.processor.outbound.OutboundMessageRouter;
+import dynamic.mapper.processor.inbound.InboundMessageRouter;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.mapping.MappingService;
@@ -93,13 +94,21 @@ public class ServiceRegistry implements IMapperConfiguration {
     @Getter
     private final ExecutorService virtualThreadPool;
 
-    // @Lazy breaks the ServiceRegistry <-> camelContext circular dependency: the Camel
-    // context pulls in the RouteBuilder beans during its own creation, and those routes depend
-    // (transitively, via their processors) back on ServiceRegistry. Injecting a lazy proxy
-    // lets ServiceRegistry be constructed without forcing camelContext creation; the real
-    // context is resolved on first use (when connector dispatchers are built at runtime). Without
-    // this the cycle surfaces under lazy bean initialization (e.g. the test profile).
-    private final CamelContext camelContext;
+    // @Lazy breaks the ServiceRegistry <-> router circular dependency: InboundMessageRouter
+    // and OutboundMessageRouter are constructed with every processor bean as a constructor
+    // argument, and those processors depend (via CommonProcessor's @Autowired field) back on
+    // ServiceRegistry. Injecting lazy proxies lets ServiceRegistry be constructed without
+    // forcing eager router/processor-graph creation; the real beans are resolved on first
+    // use (when connector dispatchers are built at runtime). Without this the cycle surfaces
+    // under lazy bean initialization (e.g. the test profile). This mirrors the former @Lazy
+    // CamelContext field, which existed for the same reason before the Camel removal.
+    @Getter
+    @Lazy
+    private final InboundMessageRouter inboundMessageRouter;
+
+    @Getter
+    @Lazy
+    private final OutboundMessageRouter outboundMessageRouter;
 
     public ServiceRegistry(
             TenantRegistry tenantRegistry,
@@ -108,7 +117,8 @@ public class ServiceRegistry implements IMapperConfiguration {
             NotificationSubscriber notificationSubscriber,
             ObjectMapper objectMapper,
             @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool,
-            @Lazy CamelContext camelContext,
+            @Lazy InboundMessageRouter inboundMessageRouter,
+            @Lazy OutboundMessageRouter outboundMessageRouter,
             @Lazy C8YAgent c8yAgent,
             CacheManager cacheManager,
             @Lazy MappingService mappingService,
@@ -120,7 +130,8 @@ public class ServiceRegistry implements IMapperConfiguration {
         this.notificationSubscriber = notificationSubscriber;
         this.objectMapper = objectMapper;
         this.virtualThreadPool = virtualThreadPool;
-        this.camelContext = camelContext;
+        this.inboundMessageRouter = inboundMessageRouter;
+        this.outboundMessageRouter = outboundMessageRouter;
         this.c8yAgent = c8yAgent;
         this.cacheManager = cacheManager;
         this.mappingService = mappingService;
@@ -196,15 +207,11 @@ public class ServiceRegistry implements IMapperConfiguration {
         tenantRegistry.removeMicroserviceCredentials(tenant);
     }
 
-    public CamelContext getCamelContext() {
-        return this.camelContext;
-    }
-
     public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration,
             AConnectorClient connectorClient) {
         if (serviceConfiguration.getOutboundMappingEnabled()
                 && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
-            CamelDispatcherOutbound dispatcherOutbound = new CamelDispatcherOutbound(
+            OutboundMessageDispatcher dispatcherOutbound = new OutboundMessageDispatcher(
                     this, connectorClient);
             // Always register the dispatcher so a Notification 2.0 WebSocket is established
             // regardless of connector enabled state. This allows the Message Explorer to

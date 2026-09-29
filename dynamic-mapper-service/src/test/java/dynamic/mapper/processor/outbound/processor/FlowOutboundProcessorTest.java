@@ -29,8 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
@@ -71,12 +69,6 @@ class FlowOutboundProcessorTest {
     private GraalVMContextService graalVMContextService;
 
     @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
-
-    @Mock
     private ServiceConfiguration serviceConfiguration;
 
     @Mock
@@ -112,8 +104,6 @@ class FlowOutboundProcessorTest {
         processingContext = createProcessingContext();
 
         // Setup basic mocks
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
 
@@ -189,7 +179,7 @@ class FlowOutboundProcessorTest {
         ProcessingException cause = new ProcessingException("Access to host class ... does not exist");
         processingContext.addError(cause);
 
-        processor.process(exchange);
+        processor.process(processingContext);
 
         assertEquals(1, processingContext.getErrors().size(),
                 "The original diagnosis must be the only error; a follow-on NPE buries it");
@@ -200,7 +190,7 @@ class FlowOutboundProcessorTest {
     void testProcessRecordsAReasonWhenTheContextIsMissingWithoutAnError() throws Exception {
         processingContext.setGraalContext(null);
 
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Never fail silently just because nobody recorded a reason.
         assertEquals(1, processingContext.getErrors().size());
@@ -221,7 +211,7 @@ class FlowOutboundProcessorTest {
                     .thenReturn(expectedMessage);
 
             // When
-            processor.process(exchange);
+            processor.process(processingContext);
 
             // Then
             Object flowResultObj = processingContext.getFlowResult();
@@ -243,7 +233,7 @@ class FlowOutboundProcessorTest {
         when(resultValue.getArraySize()).thenReturn(0L);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Should ignore further processing
         assertTrue(processingContext.isIgnoreFurtherProcessing(),
@@ -258,7 +248,7 @@ class FlowOutboundProcessorTest {
         when(resultValue.hasArrayElements()).thenReturn(false);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Should ignore further processing
         assertFalse(processingContext.isIgnoreFurtherProcessing(),
@@ -290,7 +280,7 @@ class FlowOutboundProcessorTest {
                     .thenReturn(secondDeviceMsg);
 
             // When
-            processor.process(exchange);
+            processor.process(processingContext);
 
             // Then - Should process all messages
             Object flowResultObj = processingContext.getFlowResult();
@@ -318,7 +308,7 @@ class FlowOutboundProcessorTest {
         processingContext.setSharedSource(sharedSource);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - polyfill + shared code + main code = 3 eval calls
         verify(graalContext, times(3)).eval(any(Source.class));
@@ -333,7 +323,7 @@ class FlowOutboundProcessorTest {
         processingContext.setSystemCode(systemCodeBase64);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - polyfill + main code = 2 eval calls (system code cached as Source, no separate eval)
         verify(graalContext, times(2)).eval(any(Source.class));
@@ -347,7 +337,7 @@ class FlowOutboundProcessorTest {
         when(onMessageFunction.execute(any(), any())).thenThrow(new RuntimeException("JavaScript error"));
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Should handle error gracefully
         verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), any());
@@ -362,7 +352,7 @@ class FlowOutboundProcessorTest {
         mapping.setDebug(true);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Should process normally (debug logging is internal)
         verify(onMessageFunction).execute(any(), any());
@@ -424,7 +414,7 @@ class FlowOutboundProcessorTest {
             when(resultValue.isNull()).thenReturn(true);
 
             // When
-            processor.process(exchange);
+            processor.process(processingContext);
 
             // Then - Should handle null gracefully
             assertTrue(processingContext.isIgnoreFurtherProcessing(),
@@ -443,7 +433,7 @@ class FlowOutboundProcessorTest {
             when(resultValue.toString()).thenReturn("undefined");
 
             // When
-            processor.process(exchange);
+            processor.process(processingContext);
 
             // Then - Should handle undefined gracefully
             assertTrue(processingContext.isIgnoreFurtherProcessing(),
@@ -462,7 +452,7 @@ class FlowOutboundProcessorTest {
             when(resultValue.getMemberKeys()).thenReturn(java.util.Set.of());
 
             // When
-            processor.process(exchange);
+            processor.process(processingContext);
 
             // Then - Should handle empty object gracefully
             assertTrue(processingContext.isIgnoreFurtherProcessing(),
@@ -495,7 +485,7 @@ class FlowOutboundProcessorTest {
                     .thenReturn(expectedMessage);
 
             // When
-            processor.process(exchange);
+            processor.process(processingContext);
 
             // Then - polyfill + shared + system + main = 4 eval calls
             verify(graalContext, times(4)).eval(any(Source.class));
@@ -519,7 +509,7 @@ class FlowOutboundProcessorTest {
                     .thenReturn(validDeviceMsg);
 
             // When
-            processor.process(exchange);
+            processor.process(processingContext);
 
             // Then - Should skip null and process valid message
             Object flowResultObj = processingContext.getFlowResult();
@@ -557,7 +547,7 @@ class FlowOutboundProcessorTest {
                     .thenReturn(expectedMessage);
 
             // When
-            processor.process(exchange);
+            processor.process(processingContext);
 
             // Then - Should extract warnings
             List<String> warnings = processingContext.getWarnings();

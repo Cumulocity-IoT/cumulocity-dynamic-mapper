@@ -35,8 +35,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -89,12 +87,6 @@ class MappingOutboundExecutionIntegrationTest {
     @Mock
     private ServiceConfiguration serviceConfiguration;
 
-    @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
-
     private JSONataOutboundProcessor jsonataProcessor;
     private SubstitutionResultOutboundProcessor substitutionProcessor;
 
@@ -119,7 +111,6 @@ class MappingOutboundExecutionIntegrationTest {
         // Setup common mocks
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
         when(serviceConfiguration.getLogSubstitution()).thenReturn(false);
-        when(exchange.getIn()).thenReturn(message);
 
         // Setup C8Y Agent mock for device resolution
         ManagedObjectRepresentation mockDevice = new ManagedObjectRepresentation();
@@ -303,9 +294,6 @@ class MappingOutboundExecutionIntegrationTest {
                 Direction.OUTBOUND, mapping.getMappingTopic(), "", 0L, 0L, 0L, null);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
 
-        // Setup exchange message
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(context);
-
         // When - Execute extraction
         jsonataProcessor.extractFromSource(context);
 
@@ -317,7 +305,7 @@ class MappingOutboundExecutionIntegrationTest {
 
         // Execute substitution
         try {
-            substitutionProcessor.process(exchange);
+            substitutionProcessor.process(context);
             log.info("✅ Complete substitution pipeline executed successfully");
         } catch (Exception e) {
             log.warn("⚠️ Substitution execution encountered expected challenges: {}", e.getMessage());

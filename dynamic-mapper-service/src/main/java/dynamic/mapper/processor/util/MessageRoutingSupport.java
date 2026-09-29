@@ -20,37 +20,35 @@
  */
 package dynamic.mapper.processor.util;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.builder.RouteBuilder;
-import org.springframework.stereotype.Component;
-
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingType;
-import dynamic.mapper.processor.runtime.ProcessingContext;
-import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.model.TransformationType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import lombok.extern.slf4j.Slf4j;
 
-@Component
-public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
+/**
+ * Shared predicates and error-handling logic for {@code InboundMessageRouter} and
+ * {@code OutboundMessageRouter}, the in-process replacements for the former Camel-backed
+ * {@code DynamicMapperInboundRoutes}/{@code DynamicMapperOutboundRoutes} route builders.
+ */
+@Slf4j
+public abstract class MessageRoutingSupport {
 
     protected final ConnectorRegistry connectorRegistry;
 
-    protected DynamicMapperBaseRoutes(ConnectorRegistry connectorRegistry) {
+    protected MessageRoutingSupport(ConnectorRegistry connectorRegistry) {
         this.connectorRegistry = connectorRegistry;
     }
-
-    public abstract void configure() throws Exception;
 
     /**
      * Check if this uses JSONata extraction.
      * Returns false on exception so the caller's otherwise() branch handles it
      * explicitly rather than silently routing to JSONata and masking the real bug.
      */
-    protected boolean isJSONataExtraction(Exchange exchange) {
+    protected boolean isJSONataExtraction(ProcessingContext<?> context) {
         try {
-            ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
             if (context != null && context.getMapping() != null) {
                 // Default processing or explicitly JSONata
                 TransformationType transformationType = context.getMapping().getTransformationType();
@@ -71,9 +69,8 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
      * mappings which carry a leftover extension field from a previous type are not accidentally
      * routed to the extension path.
      */
-    protected boolean isExtension(Exchange exchange) {
+    protected boolean isExtension(ProcessingContext<?> context) {
         try {
-            ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
             return context != null &&
                     context.getMapping() != null &&
                     context.getMapping().getExtension() != null &&
@@ -87,9 +84,8 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
     /**
      * Check if this is extension processing
      */
-    protected boolean isInternalProtobuf(Exchange exchange) {
+    protected boolean isInternalProtobuf(ProcessingContext<?> context) {
         try {
-            ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
             return context != null &&
                     context.getMapping() != null &&
                     (MappingType.PROTOBUF_INTERNAL.equals(context.getMapping().getMappingType()));
@@ -102,9 +98,8 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
     /**
      * Check if the mapping uses flow function transformation
      */
-    protected boolean isFlowFunction(Exchange exchange) {
+    protected boolean isFlowFunction(ProcessingContext<?> context) {
         try {
-            ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
             if (context != null && context.getMapping() != null) {
                 TransformationType transformationType = context.getMapping().getTransformationType();
                 boolean isFlow = TransformationType.SMART_FUNCTION.equals(transformationType);
@@ -163,9 +158,8 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
     /**
      * Check if further processing should be ignored
      */
-    protected boolean shouldIgnoreFurtherProcessing(Exchange exchange) {
+    protected boolean shouldIgnoreFurtherProcessing(ProcessingContext<?> context) {
         try {
-            ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
             return context != null && context.isIgnoreFurtherProcessing();
         } catch (Exception e) {
             log.warn("Error checking ignore further processing: {}", e.getMessage());
@@ -179,40 +173,14 @@ public abstract class DynamicMapperBaseRoutes extends RouteBuilder {
     protected abstract boolean isMappingDeployed(String tenant, Mapping mapping, String connectorIdentifier);
 
     /**
-     * Shared onException(...) body for the inbound/outbound routes: logs the
-     * caught exception with route/endpoint context and sets an empty
-     * ProcessingResultWrapper header so downstream consumers never see a null result.
+     * Shared exception-handling body for the inbound/outbound routers: logs the caught
+     * exception with route context. Mirrors the former Camel {@code onException(...)} handler.
      */
-    protected void handleRouteException(Exchange exchange, String routeLabel) {
-        Exception cause = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
-        String routeId = exchange.getFromRouteId();
-
-        // Safe endpoint access
-        String endpoint = "unknown";
-        try {
-            if (exchange.getFromEndpoint() != null) {
-                endpoint = exchange.getFromEndpoint().getEndpointUri();
-            }
-        } catch (Exception e) {
-            // Ignore endpoint access errors
-        }
-
-        log.error("=== CAMEL {} ROUTE ERROR ===", routeLabel);
-        log.error("Route ID: {}", routeId);
-        log.error("Endpoint: {}", endpoint);
-        if (cause != null) {
-            log.error("Exception Type: {}", cause.getClass().getSimpleName());
-            log.error("Exception Message: {}", cause.getMessage(), cause);
-            log.error("Full Stack Trace: ", cause);
-        } else {
-            log.error("Exception Type: unknown (no exception captured on exchange)");
-        }
-
-        ProcessingResultWrapper<Object> result = ProcessingResultWrapper.builder()
-                .pipelineTimeoutMS(0)
-                .build();
-
-        exchange.getIn().setHeader(CamelHeaders.PROCESSING_RESULT, result);
+    protected void handleRouteException(Exception cause, String routeLabel) {
+        log.error("=== {} ROUTE ERROR ===", routeLabel);
+        log.error("Exception Type: {}", cause.getClass().getSimpleName());
+        log.error("Exception Message: {}", cause.getMessage(), cause);
+        log.error("Full Stack Trace: ", cause);
     }
 
 }

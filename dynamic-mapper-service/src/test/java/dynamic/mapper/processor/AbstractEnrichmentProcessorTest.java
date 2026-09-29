@@ -31,8 +31,6 @@ import java.util.Map;
 
 import dynamic.mapper.processor.runtime.PooledGraalContext;
 import dynamic.mapper.processor.flow.FlowStateStore;
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
@@ -82,12 +80,6 @@ class AbstractEnrichmentProcessorTest {
 
     @Mock
     private FlowStateStore flowStateStore;
-
-    @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
 
     @Mock
     private ServiceConfiguration serviceConfiguration;
@@ -184,9 +176,6 @@ class AbstractEnrichmentProcessorTest {
         processingContext = createProcessingContext();
 
         // Setup basic mocks
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
-        when(message.getHeader("connectorIdentifier", String.class)).thenReturn("test-connector");
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
 
@@ -294,7 +283,7 @@ class AbstractEnrichmentProcessorTest {
         // Given - mapping already defaults to SMART_FUNCTION
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, "test-connector");
 
         // Then
         verify(graalVMContextService).peekGraalEngine(TEST_TENANT);
@@ -310,7 +299,7 @@ class AbstractEnrichmentProcessorTest {
         // Given - mapping already defaults to SMART_FUNCTION
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, "test-connector");
 
         // Then
         verify(graalVMContextService).peekGraalEngine(TEST_TENANT);
@@ -328,7 +317,7 @@ class AbstractEnrichmentProcessorTest {
         mapping.setCode(null);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, "test-connector");
 
         // Then
         verify(graalVMContextService, never()).peekGraalEngine(any());
@@ -344,7 +333,7 @@ class AbstractEnrichmentProcessorTest {
         assertEquals(0L, mappingStatus.messagesReceived, "Initial count should be 0");
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, "test-connector");
 
         // Then
         assertEquals(1L, mappingStatus.messagesReceived, "Should have incremented messages received");
@@ -357,7 +346,7 @@ class AbstractEnrichmentProcessorTest {
         // Given
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, "test-connector");
 
         // Then
         assertTrue(processor.wasPreEnrichmentSetupCalled(),
@@ -373,7 +362,7 @@ class AbstractEnrichmentProcessorTest {
                 .thenThrow(new RuntimeException("Failed to get GraalVM engine"));
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, "test-connector");
 
         // Then
         assertFalse(processor.wasEnrichPayloadCalled(),
@@ -396,12 +385,10 @@ class AbstractEnrichmentProcessorTest {
         };
 
         // Setup mocks for error processor
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
 
         // When
-        errorProcessor.process(exchange);
+        errorProcessor.process(processingContext, "test-connector");
 
         // Then
         assertTrue(errorProcessor.wasHandleErrorCalled(), "Should have called handleEnrichmentError");
@@ -598,11 +585,8 @@ class AbstractEnrichmentProcessorTest {
 
     @Test
     void testProcessWithConnectorIdentifierInHeader() throws Exception {
-        // Given
-        when(message.getHeader("connectorIdentifier", String.class)).thenReturn("mqtt-connector-001");
-
         // When
-        processor.process(exchange);
+        processor.process(processingContext, "mqtt-connector-001");
 
         // Then
         assertTrue(processor.wasPreEnrichmentSetupCalled(),
@@ -616,7 +600,7 @@ class AbstractEnrichmentProcessorTest {
         // Given - mapping already defaults to SMART_FUNCTION
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, "test-connector");
 
         // Then
         assertNotNull(processingContext.getSharedCode(), "Should have set shared code");
@@ -632,7 +616,7 @@ class AbstractEnrichmentProcessorTest {
     @Test
     void testProcessSetsEngineReleaseActionOnContext() throws Exception {
         // When
-        processor.process(exchange);
+        processor.process(processingContext, "test-connector");
 
         // Then — the callback must be registered so GraalVMContextService can close
         // a retired Engine once all its in-flight Contexts have drained.
@@ -648,7 +632,7 @@ class AbstractEnrichmentProcessorTest {
         mapping.setCode(null);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, "test-connector");
 
         // Then
         assertNull(processingContext.getEngineReleaseAction(),
@@ -660,7 +644,7 @@ class AbstractEnrichmentProcessorTest {
     @Test
     void testContextCloseInvokesEngineReleaseAction() throws Exception {
         // Given — wire a custom release action so we can observe whether it fires
-        processor.process(exchange);
+        processor.process(processingContext, "test-connector");
         AtomicBoolean released = new AtomicBoolean(false);
         processingContext.setEngineReleaseAction(() -> released.set(true));
 
@@ -676,7 +660,7 @@ class AbstractEnrichmentProcessorTest {
     @Test
     void testContextCloseClearsEngineReleaseActionAfterInvocation() throws Exception {
         // Given
-        processor.process(exchange);
+        processor.process(processingContext, "test-connector");
         processingContext.setEngineReleaseAction(() -> {});
 
         // When
@@ -693,7 +677,7 @@ class AbstractEnrichmentProcessorTest {
     void testContextCloseCallsReleaseEngineOnService() throws Exception {
         // Given — process() sets an engineReleaseAction that delegates to
         // graalVMContextService.returnContext(poolKey, pooledCtx, graalEngine).
-        processor.process(exchange);
+        processor.process(processingContext, "test-connector");
 
         // When — simulate the context lifecycle ending
         processingContext.close();

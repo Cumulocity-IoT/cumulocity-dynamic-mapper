@@ -22,7 +22,6 @@
 package dynamic.mapper.model.status;
 
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.model.Mapping;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;

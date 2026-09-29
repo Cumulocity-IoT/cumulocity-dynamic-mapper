@@ -1,12 +1,9 @@
 package dynamic.mapper.processor.inbound.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -47,19 +44,14 @@ public class DeserializationInboundProcessor extends BaseProcessor {
         deserializers.put(MappingType.SPARKPLUGB, sparkPlugBDeserializer);
     }
 
-    @Override
+    /**
+     * Builds the {@link ProcessingContext} for a single mapping and deserializes the raw
+     * connector payload into it. Returns the context (carrying an error on failure) rather
+     * than writing it to a Camel exchange header.
+     */
     @SuppressWarnings("unchecked")
-    public void process(Exchange exchange) throws Exception {
-        String tenant = exchange.getIn().getHeader(CamelHeaders.TENANT, String.class);
-        Mapping mapping = exchange.getIn().getBody(Mapping.class);
-        Boolean testing = exchange.getIn().getHeader(CamelHeaders.TESTING, Boolean.class);
-        
-        ServiceConfiguration serviceConfiguration = exchange.getIn().getHeader(CamelHeaders.SERVICE_CONFIGURATION,
-                ServiceConfiguration.class);
-        ConnectorMessage connectorMessage = exchange.getIn().getHeader(CamelHeaders.CONNECTOR_MESSAGE, ConnectorMessage.class);
-
-        // Create a ConnectorMessage from the context for deserialization
-
+    public ProcessingContext<?> process(String tenant, Mapping mapping, ConnectorMessage connectorMessage,
+            ServiceConfiguration serviceConfiguration, Boolean testing) throws Exception {
         if (MappingType.PROTOBUF_INTERNAL.equals(mapping.getMappingType())
                 || MappingType.ANY_PAYLOAD.equals(mapping.getMappingType())) {
             ProcessingContext<byte[]> context = createProcessingContextAsByteArray(tenant, mapping, connectorMessage,
@@ -69,17 +61,15 @@ public class DeserializationInboundProcessor extends BaseProcessor {
                     .get(mapping.getMappingType());
             if (deserializer == null) {
                 handleMissingProcessor(tenant, mapping, context);
-                exchange.getIn().setHeader(CamelHeaders.PROCESSING_CONTEXT, context); // Set context with error
-                return;
+                return context; // Return context with error
             }
             try {
-                byte[] deserializedPayload = deserializer.deserializePayload(mapping, connectorMessage); // <--- line 73
+                byte[] deserializedPayload = deserializer.deserializePayload(mapping, connectorMessage);
                 context.setPayload(deserializedPayload);
-                exchange.getIn().setHeader(CamelHeaders.PROCESSING_CONTEXT, context);
+                return context;
             } catch (IOException e) {
                 handleDeserializationError(tenant, mapping, e, context);
-                exchange.getIn().setHeader(CamelHeaders.PROCESSING_CONTEXT, context);
-                return;
+                return context;
             }
         } else {
             ProcessingContext<Object> context = createProcessingContextAsObject(tenant, mapping, connectorMessage,
@@ -89,21 +79,18 @@ public class DeserializationInboundProcessor extends BaseProcessor {
                     .get(mapping.getMappingType());
             if (deserializer == null) {
                 handleMissingProcessor(tenant, mapping, context);
-                exchange.getIn().setHeader(CamelHeaders.PROCESSING_CONTEXT, context); // Set context with error
-                return;
+                return context; // Return context with error
             }
 
             try {
                 Object deserializedPayload = deserializer.deserializePayload(mapping, connectorMessage);
                 context.setPayload(deserializedPayload);
-                exchange.getIn().setHeader(CamelHeaders.PROCESSING_CONTEXT, context);
+                return context;
             } catch (IOException e) {
                 handleDeserializationError(tenant, mapping, e, context);
-                exchange.getIn().setHeader(CamelHeaders.PROCESSING_CONTEXT, context);
-                return;
+                return context;
             }
         }
-
     }
 
     private void handleMissingProcessor(String tenant, Mapping mapping, ProcessingContext<?> context) {

@@ -121,6 +121,7 @@ device_num = EVENT_NUM
 # Cert-auth state: one certificate per worker connection (clientId == cert CN).
 _cert_dir = None
 _client_certs = []
+_clients = []
 
 # Set once all workers are connected and publishing begins (see run()), so
 # throughput stats exclude cert provisioning + connection ramp-up time.
@@ -168,9 +169,6 @@ def connect_mqtt(worker_index: int = 0):
     client.clean_session = True
     client.on_connect = on_connect
     client.connect(broker, port)
-    # Without a running network loop, CONNACK/keepalive PINGREQ are never
-    # processed and the broker will eventually drop the connection as idle.
-    client.loop_start()
     return client
 
 
@@ -266,15 +264,16 @@ def run():
     moment publishing actually begins (all workers connected), for accurate
     throughput stats — this deliberately excludes cert provisioning and
     connection ramp-up time."""
-    global _publish_start_time
+    global _publish_start_time, _clients
 
     with ThreadPoolExecutor(max_workers=CONNECT_CONCURRENCY) as pool:
         clients = list(pool.map(_connect_worker, range(WORKERS)))
 
+    _clients = [client for client in clients if client is not None]
     connected = 0
-    for client in clients:
-        if client is None:
-            continue
+    for client in _clients:
+        # Start servicing the MQTT connection before its consumer publishes.
+        client.loop_start()
         t = Thread(target=consume_tasks, args=(client,))
         t.daemon = True
         t.start()
@@ -322,6 +321,9 @@ def main():
     try:
         run()
     finally:
+        for client in _clients:
+            client.loop_stop()
+            client.disconnect()
         print_stats(_publish_start_time)
         _cleanup()
 

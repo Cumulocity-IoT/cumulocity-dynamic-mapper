@@ -48,7 +48,7 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
@@ -73,7 +73,7 @@ import lombok.extern.slf4j.Slf4j;
 @ActiveProfiles("test")
 class InboundTransformationValidationTest {
 
-    // CamelDispatcherInbound is not a Spring bean (it is created per connector), so it is built
+    // InboundMessageDispatcher is not a Spring bean (it is created per connector), so it is built
     // manually from the autowired ServiceRegistry, which provides the real, route-registered
     // Camel context. MappingService is mocked so mapping resolution can be stubbed per test.
     @MockitoSpyBean
@@ -86,7 +86,7 @@ class InboundTransformationValidationTest {
     private C8YAgent c8yAgent;
 
     private AConnectorClient connectorClient;
-    private CamelDispatcherInbound dispatcher;
+    private InboundMessageDispatcher dispatcher;
 
     private static final String TEST_TENANT = "testTenant";
     private static final String TEST_CONNECTOR = "test-connector-001";
@@ -123,7 +123,7 @@ class InboundTransformationValidationTest {
         lenient().when(connectorClient.getTenant()).thenReturn(TEST_TENANT);
         lenient().when(connectorClient.getConnectorIdentifier()).thenReturn(TEST_CONNECTOR);
         lenient().when(connectorClient.getC8yAgent()).thenReturn(c8yAgent);
-        dispatcher = new CamelDispatcherInbound(serviceRegistry, connectorClient);
+        dispatcher = new InboundMessageDispatcher(serviceRegistry, connectorClient);
     }
 
     /**

@@ -71,7 +71,7 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.status.MappingStatus;
-import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
+import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
@@ -160,7 +160,7 @@ public class HttpPollingConnectorTest {
     private HttpPollingConnector clientWithMocks(ConnectorConfiguration configuration,
             MappingService mappingService, MappingSubscriptionManager mappingSubscriptionManager,
             ConnectionStateManager connectionStateManager,
-            ServiceConfiguration serviceConfiguration, CamelDispatcherInbound dispatcher) throws Exception {
+            ServiceConfiguration serviceConfiguration, InboundMessageDispatcher dispatcher) throws Exception {
         HttpPollingConnector c = new HttpPollingConnector();
         setField(c, "connectorConfiguration", configuration);
         setField(c, "mappingService", mappingService);
@@ -620,7 +620,7 @@ public class HttpPollingConnectorTest {
         ConnectionStateManager connectionStateManager = mock(ConnectionStateManager.class);
         ServiceConfiguration serviceConfiguration = mock(ServiceConfiguration.class);
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
-        CamelDispatcherInbound dispatcher = mock(CamelDispatcherInbound.class);
+        InboundMessageDispatcher dispatcher = mock(InboundMessageDispatcher.class);
 
         Map<String, Object> properties = minimalValidProperties();
         properties.put("pollIntervalSeconds", 30);
@@ -649,7 +649,7 @@ public class HttpPollingConnectorTest {
         ConnectionStateManager connectionStateManager = mock(ConnectionStateManager.class);
         ServiceConfiguration serviceConfiguration = mock(ServiceConfiguration.class);
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
-        CamelDispatcherInbound dispatcher = mock(CamelDispatcherInbound.class);
+        InboundMessageDispatcher dispatcher = mock(InboundMessageDispatcher.class);
 
         Map<String, Object> properties = minimalValidProperties();
         properties.put("pollIntervalSeconds", 30);

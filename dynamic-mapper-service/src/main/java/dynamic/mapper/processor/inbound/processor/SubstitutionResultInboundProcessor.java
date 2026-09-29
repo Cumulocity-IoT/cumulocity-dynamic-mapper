@@ -21,14 +21,11 @@
 
 package dynamic.mapper.processor.inbound.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.camel.Exchange;
 import org.springframework.stereotype.Component;
 
 import com.jayway.jsonpath.DocumentContext;
@@ -72,10 +69,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
         this.identityResolutionService = identityResolutionService;
     }
 
-    @Override
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
-
+    public void process(ProcessingContext<Object> context) throws Exception {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
         Boolean testing = context.isTesting();
@@ -161,11 +155,6 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
             }
         }
 
-        // Requests are always dispatched in parallel downstream (direct:sendRequests) —
-        // see attic/feature/parallel-processing/PARALLEL_PROCESSING_CAMEL.md. Device-creation
-        // races across parallel requests are already handled by
-        // IdentityResolutionService.getOrCreateDeviceThreadSafe's per-external-ID locking,
-        // so no per-mapping opt-in/opt-out flag is needed here.
     }
 
     private void prepareAndSubstituteInPayload(ProcessingContext<Object> context, DocumentContext payloadTarget,

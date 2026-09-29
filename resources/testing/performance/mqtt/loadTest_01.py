@@ -55,7 +55,7 @@ if args.auth == "cert":
     logger.info(f"MQTT broker={broker}  port={port}  tenant={c8y_tenant}")
     logger.info("Auth: X.509 client certificate (one per worker connection)")
 else:
-    logger.info(f"MQTT broker={broker}  port={port} — connecting anonymously (public mode)")
+    logger.info(f"MQTT broker={broker}  port={port}")
 
 starting_temp = 50
 message_count = args.message_count
@@ -100,6 +100,15 @@ def connect_mqtt(worker_index: int):
         logger.info(f"Worker {worker_index}: using client certificate CN={cert.client_id}")
     else:
         client.tls_set()
+        if args.auth == "password":
+            username = get_env("MQTT_USERNAME") or get_env("C8Y_USERNAME")
+            password = get_env("MQTT_PASSWORD") or get_env("C8Y_PASSWORD")
+            if not username or not password:
+                raise ValueError(
+                    "Password auth requires MQTT_USERNAME and MQTT_PASSWORD "
+                    "(or C8Y_USERNAME and C8Y_PASSWORD)"
+                )
+            client.username_pw_set(username, password)
 
     client.on_connect = on_connect
     client.on_publish = on_publish
@@ -163,11 +172,11 @@ def main():
     signal.signal(signal.SIGINT, _shutdown)
     signal.signal(signal.SIGTERM, _shutdown)
 
-    messages_per_worker = message_count // WORKERS
     threads = []
     try:
         for i in range(WORKERS):
-            thread = threading.Thread(target=send_messages, args=(i, messages_per_worker, TPS_PER_CLIENT))
+            messages_for_worker = message_count // WORKERS + (1 if i < message_count % WORKERS else 0)
+            thread = threading.Thread(target=send_messages, args=(i, messages_for_worker, TPS_PER_CLIENT))
             threads.append(thread)
             thread.start()
 

@@ -1,11 +1,8 @@
 package dynamic.mapper.processor.inbound.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
-import org.apache.camel.Exchange;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.core.ServiceRegistry;
@@ -24,12 +21,8 @@ public class FilterInboundProcessor extends BaseProcessor {
         this.serviceRegistry = serviceRegistry;
     }
 
-    @Override
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
-
+    public void process(ProcessingContext<Object> context) throws Exception {
         applyFilter(context);
-
     }
 
     private void applyFilter(ProcessingContext<Object> context) {

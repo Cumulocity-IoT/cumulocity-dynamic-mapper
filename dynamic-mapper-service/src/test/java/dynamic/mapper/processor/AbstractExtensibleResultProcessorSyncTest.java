@@ -24,8 +24,6 @@ package dynamic.mapper.processor;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,7 +40,6 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.runtime.OutputCollector;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.RoutingContext;
-import dynamic.mapper.processor.util.CamelHeaders;
 import dynamic.mapper.mapping.MappingService;
 
 /**
@@ -68,12 +65,6 @@ class AbstractExtensibleResultProcessorSyncTest {
     @Mock
     private ObjectMapper objectMapper;
 
-    @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
-
     private ProcessingContext<Object> context;
 
     @BeforeEach
@@ -86,10 +77,6 @@ class AbstractExtensibleResultProcessorSyncTest {
                 .mapping(mapping)
                 .topic("test/topic")
                 .build();
-
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class))
-                .thenReturn(context);
     }
 
     /**
@@ -123,7 +110,7 @@ class AbstractExtensibleResultProcessorSyncTest {
         DynamicMapperRequest request = new DynamicMapperRequest();
         Exception error = new IllegalStateException("extension blew up");
 
-        processorEmitting(request, error, "a warning", "a log line").process(exchange);
+        processorEmitting(request, error, "a warning", "a log line").process(context);
 
         assertEquals(1, context.getRequests().size(), "requests should be merged");
         assertSame(request, context.getRequests().get(0));
@@ -147,7 +134,7 @@ class AbstractExtensibleResultProcessorSyncTest {
 
         DynamicMapperRequest fresh = new DynamicMapperRequest();
         processorEmitting(fresh, new IllegalStateException("boom"), "new warning", "new log")
-                .process(exchange);
+                .process(context);
 
         // Entries written by earlier pipeline steps must survive the merge.
         assertEquals(2, context.getRequests().size());

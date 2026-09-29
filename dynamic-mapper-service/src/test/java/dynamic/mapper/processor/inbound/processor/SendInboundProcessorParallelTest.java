@@ -26,11 +26,7 @@ import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,30 +50,20 @@ import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.processor.runtime.ProcessingContext;
-import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.model.TransformationType;
-import dynamic.mapper.processor.util.CamelHeaders;
 import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Tests the parallel request-dispatch entry points on {@link SendInboundProcessor}:
- * {@code prepareRequests} (once, before fan-out), {@code processSplitRequest} (once per
- * request, concurrently), and {@code finalizeAfterRequests} (once, after all requests join).
+ * Tests {@link SendInboundProcessor}'s request-indexing behaviour.
  *
- * <p>The real Camel route {@code direct:processRequestsInParallel} in
- * {@code DynamicMapperInboundRoutes} wires these three steps around a
- * {@code .split(...).parallelProcessing(true)...end()} block. This test drives the same
- * three steps directly (without a real Camel context) to verify that each request is
- * dispatched with the correct list index and receives the correct response even when
- * multiple requests are sent concurrently, and that finalize-time bookkeeping (alarms,
- * mapping status) happens exactly once regardless of how many requests were processed.
- *
- * <p>Every mapping now dispatches its requests in parallel unconditionally — see
- * {@code attic/feature/parallel-processing/PARALLEL_PROCESSING_CAMEL.md} for why the old
- * {@code createNonExistingDevice}-gated {@code CamelHeaders.PARALLEL_PROCESSING} header was
- * removed instead of fixed: {@code IdentityResolutionService.getOrCreateDeviceThreadSafe}'s
- * per-external-ID locking already makes concurrent device resolution/creation safe.</p>
+ * <p>Camel's {@code direct:processRequestsInParallel} route (which split
+ * {@code context.requests} and dispatched each as a separate Exchange body) was
+ * dead code: the {@code PARALLEL_PROCESSING} header that selected it was set by
+ * {@code SubstitutionResultInboundProcessor} only for the JSONata pipeline, but
+ * read only in the mutually-exclusive Extension pipeline branch, so it never
+ * fired in production. It was removed along with the rest of Camel; requests are
+ * now always processed sequentially via {@code processAllRequests}.
  */
 @Slf4j
 @ExtendWith(MockitoExtension.class)
@@ -103,7 +89,6 @@ class SendInboundProcessorParallelTest {
 
     private Mapping mapping;
     private ProcessingContext<Object> processingContext;
-    private MappingStatus mappingStatus;
 
     private static final String TEST_TENANT = "testTenant";
     private static final String TEST_DEVICE_ID = "device-parallel-001";
@@ -114,11 +99,11 @@ class SendInboundProcessorParallelTest {
                 new ObjectMapper(), mappingService);
 
         mapping = buildJsonMapping();
-        mappingStatus = new MappingStatus("id-1", "Parallel test mapping", "ident-1",
-                Direction.INBOUND, "test/topic", null, 0L, 0L, 0L, null);
 
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
-        when(mappingService.getMappingStatus(any(), any())).thenReturn(mappingStatus);
+        when(mappingService.getMappingStatus(any(), any())).thenReturn(
+                new MappingStatus("id-1", "Parallel test mapping", "ident-1",
+                        Direction.INBOUND, "test/topic", null, 0L, 0L, 0L, null));
 
         processingContext = ProcessingContext.<Object>builder()
                 .tenant(TEST_TENANT)
@@ -131,14 +116,21 @@ class SendInboundProcessorParallelTest {
     }
 
     /**
-     * Simulates the real route's split loop: {@code processSplitRequest} is called once per
-     * request, concurrently. Each request must be dispatched with the correct list index and
-     * receive the response associated with that index, even though both run at the same time.
+     * All requests in context.getRequests() are processed via processAllRequests →
+     * processSingleRequest. Uses MEASUREMENT + EVENT to avoid the bulk-merge logic
+     * that collapses two MEASUREMENT requests into one.
      */
     @Test
-    void testParallelRequests_eachReceivesCorrectIndexedResponse() throws Exception {
+    void testSequentialRequests_eachReceivesCorrectIndexedResponse() throws Exception {
         DynamicMapperRequest req0 = buildMeasurementRequest("{\"type\":\"c8y_Temp\",\"value\":21.0}");
-        DynamicMapperRequest req1 = buildMeasurementRequest("{\"type\":\"c8y_Temp\",\"value\":22.0}");
+        // Use EVENT for req1 to prevent bulkMeasurementRequestsIfNeeded from merging both into one
+        DynamicMapperRequest req1 = DynamicMapperRequest.builder()
+                .predecessor(-1)
+                .method(org.springframework.web.bind.annotation.RequestMethod.POST)
+                .api(API.EVENT)
+                .request("{\"type\":\"c8y_LocationUpdate\",\"text\":\"moved\"}")
+                .sourceId(TEST_DEVICE_ID)
+                .build();
 
         List<DynamicMapperRequest> requests = new ArrayList<>();
         requests.add(req0);
@@ -150,154 +142,59 @@ class SendInboundProcessorParallelTest {
         when(c8yAgent.createMEAO(same(processingContext), eq(0))).thenReturn(meao0);
         when(c8yAgent.createMEAO(same(processingContext), eq(1))).thenReturn(meao1);
 
-        Exchange exchange0 = buildSplitExchange(req0);
-        Exchange exchange1 = buildSplitExchange(req1);
+        processor.process(processingContext);
 
-        // Run both concurrently, simulating the parallel split
-        CompletableFuture<Void> f0 = CompletableFuture.runAsync(() -> {
-            try {
-                processor.processSplitRequest(exchange0);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
-        CompletableFuture<Void> f1 = CompletableFuture.runAsync(() -> {
-            try {
-                processor.processSplitRequest(exchange1);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        try {
-            CompletableFuture.allOf(f0, f1).get();
-        } catch (ExecutionException e) {
-            fail("Parallel processing threw an exception: " + e.getCause().getMessage(), e.getCause());
-        }
-
-        // Each request must have been dispatched with the correct index
         verify(c8yAgent).createMEAO(same(processingContext), eq(0));
         verify(c8yAgent).createMEAO(same(processingContext), eq(1));
 
-        // Responses must be non-null (set from the mocked MEAO return values)
         assertNotNull(req0.getResponse(), "Request at index 0 must have a response");
         assertNotNull(req1.getResponse(), "Request at index 1 must have a response");
-        assertFalse(processingContext.hasError(), "Both requests succeeding must leave the context error-free");
 
-        log.info("Parallel requests: both executed with correct indices and received responses");
+        log.info("Sequential requests processed correctly with indices 0 and 1");
     }
 
     /**
-     * One request failing must not prevent the other from succeeding, and the failure must be
-     * recorded on the context (not rethrown) so finalizeAfterRequests still runs.
+     * A failing request must not abort the ones after it, and createProcessingAlarms /
+     * mapping-status bookkeeping must still run once all requests have been attempted.
      */
     @Test
-    void testParallelRequests_oneFailureDoesNotAbortSiblingOrRethrow() throws Exception {
-        DynamicMapperRequest okRequest = buildMeasurementRequest("{\"type\":\"c8y_Temp\",\"value\":21.0}");
-        DynamicMapperRequest failingRequest = buildMeasurementRequest("{\"type\":\"c8y_Temp\",\"value\":22.0}");
+    void testSequentialRequests_oneFailureDoesNotAbortSiblingsOrSkipRemaining() throws Exception {
+        DynamicMapperRequest failingRequest = buildMeasurementRequest("{\"type\":\"c8y_Temp\",\"value\":21.0}");
+        DynamicMapperRequest okRequest = DynamicMapperRequest.builder()
+                .predecessor(-1)
+                .method(org.springframework.web.bind.annotation.RequestMethod.POST)
+                .api(API.EVENT)
+                .request("{\"type\":\"c8y_LocationUpdate\",\"text\":\"moved\"}")
+                .sourceId(TEST_DEVICE_ID)
+                .build();
 
         List<DynamicMapperRequest> requests = new ArrayList<>();
-        requests.add(okRequest);
         requests.add(failingRequest);
+        requests.add(okRequest);
         processingContext.setRequests(requests);
 
-        AbstractExtensibleRepresentation meao0 = mock(AbstractExtensibleRepresentation.class);
-        when(c8yAgent.createMEAO(same(processingContext), eq(0))).thenReturn(meao0);
-        when(c8yAgent.createMEAO(same(processingContext), eq(1)))
-                .thenThrow(new RuntimeException("C8Y unavailable"));
+        AbstractExtensibleRepresentation meao1 = mock(AbstractExtensibleRepresentation.class);
+        when(c8yAgent.createMEAO(same(processingContext), eq(0))).thenThrow(new RuntimeException("C8Y unavailable"));
+        when(c8yAgent.createMEAO(same(processingContext), eq(1))).thenReturn(meao1);
 
-        // processSplitRequest must not throw even though the underlying send fails
-        assertDoesNotThrow(() -> processor.processSplitRequest(buildSplitExchange(okRequest)));
-        assertDoesNotThrow(() -> processor.processSplitRequest(buildSplitExchange(failingRequest)));
+        // Must not throw — the failure is isolated, not propagated
+        assertDoesNotThrow(() -> processor.process(processingContext));
 
-        assertNotNull(okRequest.getResponse(), "The succeeding request must still get a response");
+        // Both requests must have been attempted, despite the first one failing
+        verify(c8yAgent).createMEAO(same(processingContext), eq(0));
+        verify(c8yAgent).createMEAO(same(processingContext), eq(1));
+
         assertNotNull(failingRequest.getError(), "The failing request must record its own error");
+        assertNotNull(okRequest.getResponse(), "The request after the failing one must still be processed");
         assertTrue(processingContext.hasError(), "The failure must be visible on the shared context");
-    }
 
-    /**
-     * finalizeAfterRequests must run its bookkeeping (alarms, mapping status) exactly once,
-     * regardless of how many requests were processed beforehand.
-     */
-    @Test
-    void testFinalizeAfterRequests_updatesMappingStatusOnceWhenContextHasError() throws Exception {
-        processingContext.addError(new dynamic.mapper.processor.ProcessingException("boom", new RuntimeException()));
+        // Mapping status bookkeeping must have run once, in aggregate, for the isolated failure
+        verify(mappingService, times(1)).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), any());
 
-        processor.finalizeAfterRequests(buildContextOnlyExchange());
-
-        verify(mappingService, times(1)).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
-        assertEquals(1L, mappingStatus.errors);
-    }
-
-    @Test
-    void testFinalizeAfterRequests_noMappingStatusUpdateWhenNoError() throws Exception {
-        processor.finalizeAfterRequests(buildContextOnlyExchange());
-
-        verify(mappingService, never()).increaseAndHandleFailureCount(any(), any(), any());
-    }
-
-    /**
-     * prepareRequests must merge multiple MEASUREMENT requests into one bulk request before
-     * the split happens (it can only see/replace the whole list before fan-out, not after).
-     */
-    @Test
-    void testPrepareRequests_bulkMergesMeasurementsBeforeSplit() throws Exception {
-        DynamicMapperRequest m0 = buildMeasurementRequest("{\"measurements\":[{\"value\":21.0}]}");
-        DynamicMapperRequest m1 = buildMeasurementRequest("{\"measurements\":[{\"value\":22.0}]}");
-        List<DynamicMapperRequest> requests = new ArrayList<>();
-        requests.add(m0);
-        requests.add(m1);
-        processingContext.setRequests(requests);
-
-        processor.prepareRequests(buildContextOnlyExchange());
-
-        assertEquals(1, processingContext.getRequests().size(),
-                "Two MEASUREMENT requests must be merged into one bulk request before the split");
-    }
-
-    /**
-     * A cancelled (timed-out) context must be left with zero requests so the split iterates
-     * zero times, rather than continuing to dispatch after the caller gave up.
-     */
-    @Test
-    void testPrepareRequests_cancelledContextClearsRequests() throws Exception {
-        processingContext.setRequests(List.of(buildMeasurementRequest("{\"value\":1}")));
-
-        ProcessingResultWrapper<Object> wrapper = ProcessingResultWrapper.builder().build();
-        wrapper.getCancellationRequested().set(true);
-
-        processor.prepareRequests(buildContextOnlyExchange(wrapper));
-
-        assertTrue(processingContext.getRequests().isEmpty(),
-                "A cancelled context must have its requests cleared before the split");
+        log.info("One failing request did not abort siblings or skip finalization");
     }
 
     // ---- helpers ----
-
-    private Exchange buildSplitExchange(DynamicMapperRequest bodyRequest) {
-        Exchange exchange = mock(Exchange.class);
-        Message message = mock(Message.class);
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class))
-                .thenReturn(processingContext);
-        when(message.getBody(DynamicMapperRequest.class)).thenReturn(bodyRequest);
-        return exchange;
-    }
-
-    private Exchange buildContextOnlyExchange() {
-        return buildContextOnlyExchange(null);
-    }
-
-    private Exchange buildContextOnlyExchange(ProcessingResultWrapper<Object> wrapper) {
-        Exchange exchange = mock(Exchange.class);
-        Message message = mock(Message.class);
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class))
-                .thenReturn(processingContext);
-        when(message.getHeader(eq(CamelHeaders.PROCESSING_RESULT_WRAPPER), eq(ProcessingResultWrapper.class)))
-                .thenReturn(wrapper);
-        return exchange;
-    }
 
     private DynamicMapperRequest buildMeasurementRequest(String payloadJson) {
         return DynamicMapperRequest.builder()

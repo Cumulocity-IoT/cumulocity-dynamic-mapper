@@ -29,8 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -67,12 +65,6 @@ class JSONataOutboundProcessorTest {
     private MappingService mappingService;
 
     @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
-
-    @Mock
     private ServiceConfiguration serviceConfiguration;
 
     private JSONataOutboundProcessor processor;
@@ -105,9 +97,6 @@ class JSONataOutboundProcessorTest {
         processingContext = createProcessingContext();
 
         // Setup basic mocks
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
-
         // FIX: Use eq() for specific tenant, any() for mapping
         when(mappingService.getMappingStatus(eq(TEST_TENANT), any(Mapping.class))).thenReturn(mappingStatus);
 
@@ -229,7 +218,7 @@ class JSONataOutboundProcessorTest {
     @Test
     void testExtractFromSourceBasicSubstitutions() throws Exception {
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Verify no exceptions and processing cache is populated
         Map<String, List<SubstituteValue>> processingCache = processingContext.getProcessingCache();
@@ -272,7 +261,7 @@ class JSONataOutboundProcessorTest {
         when(serviceConfiguration.getLogSubstitution()).thenReturn(true);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         Map<String, List<SubstituteValue>> processingCache = processingContext.getProcessingCache();
@@ -305,7 +294,7 @@ class JSONataOutboundProcessorTest {
         payload.put("_TOPIC_LEVEL_", topicLevels);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         Map<String, List<SubstituteValue>> processingCache = processingContext.getProcessingCache();
@@ -345,7 +334,7 @@ class JSONataOutboundProcessorTest {
         mapping.setSubstitutions(substitutionList.toArray(new Substitution[0]));
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         Map<String, List<SubstituteValue>> processingCache = processingContext.getProcessingCache();
@@ -372,7 +361,7 @@ class JSONataOutboundProcessorTest {
         mapping.setSubstitutions(problematicSubstitutions);
 
         // When - Should not throw exception, errors should be handled gracefully
-        assertDoesNotThrow(() -> processor.process(exchange),
+        assertDoesNotThrow(() -> processor.process(processingContext),
                 "Processor should handle invalid JSONata expression gracefully");
 
         // Then - Check error handling
@@ -419,7 +408,7 @@ class JSONataOutboundProcessorTest {
         processingContext.getErrors().clear();
         processingContext.getProcessingCache().clear();
 
-        assertDoesNotThrow(() -> processor.process(exchange),
+        assertDoesNotThrow(() -> processor.process(processingContext),
                 "Should handle invalid JSONata syntax gracefully");
 
         // The processor logs the error but doesn't add it to
@@ -445,7 +434,7 @@ class JSONataOutboundProcessorTest {
         };
         mapping.setSubstitutions(missingPath);
 
-        assertDoesNotThrow(() -> processor.process(exchange),
+        assertDoesNotThrow(() -> processor.process(processingContext),
                 "Should handle missing path gracefully");
 
         assertTrue(processingContext.getProcessingCache().containsKey("missingPath"),
@@ -479,7 +468,7 @@ class JSONataOutboundProcessorTest {
         mapping.setSubstitutions(substitutions);
 
         // When - Should handle gracefully without throwing exception
-        assertDoesNotThrow(() -> processor.process(exchange),
+        assertDoesNotThrow(() -> processor.process(processingContext),
                 "Should handle null payload gracefully");
 
         // Then - Verify that processing handled the null payload
@@ -549,7 +538,7 @@ class JSONataOutboundProcessorTest {
         mapping.setSubstitutions(substitutions);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         Map<String, List<SubstituteValue>> processingCache = processingContext.getProcessingCache();
@@ -582,7 +571,7 @@ class JSONataOutboundProcessorTest {
         mapping.setSubstitutions(new Substitution[0]);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         Map<String, List<SubstituteValue>> processingCache = processingContext.getProcessingCache();
@@ -599,7 +588,7 @@ class JSONataOutboundProcessorTest {
         processingContext.setPayload(completePayload);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Verify complete processing
         Map<String, List<SubstituteValue>> processingCache = processingContext.getProcessingCache();
@@ -684,7 +673,7 @@ class JSONataOutboundProcessorTest {
         mapping.setSubstitutions(substitutions);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - The processor should handle the missing path gracefully
         Map<String, List<SubstituteValue>> processingCache = processingContext.getProcessingCache();

@@ -30,8 +30,6 @@ import java.util.List;
 import java.util.Map;
 
 import dynamic.mapper.processor.flow.FlowStateStore;
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -78,12 +76,6 @@ class EnrichmentInboundProcessorTest {
     private FlowStateStore flowStateStore;
 
     @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
-
-    @Mock
     private ServiceConfiguration serviceConfiguration;
 
     private EnrichmentInboundProcessor processor;
@@ -120,16 +112,15 @@ class EnrichmentInboundProcessorTest {
 
         processor = new EnrichmentInboundProcessor(serviceRegistry, mappingService, flowStateStore);
 
-        when(exchange.getIn()).thenReturn(message);
         when(mappingService.getMappingStatus(any(), any(Mapping.class))).thenReturn(mappingStatus);
     }
 
     /**
-     * Builds a real ProcessingContext and wires it onto the exchange header the
-     * way the upstream DeserializationInboundProcessor would.
+     * Builds a real ProcessingContext the way the upstream
+     * DeserializationInboundProcessor would.
      */
     private ProcessingContext<Object> stageContext(Object payload, String key) {
-        ProcessingContext<Object> context = ProcessingContext.builder()
+        return ProcessingContext.builder()
                 .tenant(TEST_TENANT)
                 .topic(TEST_TOPIC)
                 .mapping(mapping)
@@ -139,9 +130,6 @@ class EnrichmentInboundProcessorTest {
                 .key(key)
                 .payload(payload)
                 .build();
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(context);
-        when(message.getHeader("connectorIdentifier", String.class)).thenReturn("connector-1");
-        return context;
     }
 
     @SuppressWarnings("unchecked")
@@ -151,7 +139,7 @@ class EnrichmentInboundProcessorTest {
         payload.put("temperature", 21.5);
         ProcessingContext<Object> context = stageContext(payload, null);
 
-        processor.process(exchange);
+        processor.process(context, "connector-1");
 
         assertTrue(payload.containsKey(Mapping.TOKEN_TOPIC_LEVEL),
                 "enrichment must inject the _TOPIC_LEVEL_ token into a Map payload");
@@ -166,7 +154,7 @@ class EnrichmentInboundProcessorTest {
     void propagatesQosFromMappingToContext() throws Exception {
         ProcessingContext<Object> context = stageContext(new HashMap<>(), null);
 
-        processor.process(exchange);
+        processor.process(context, "connector-1");
 
         assertEquals(Qos.AT_LEAST_ONCE, context.getQos(),
                 "performPreEnrichmentSetup must copy the mapping QoS onto the context");
@@ -174,9 +162,9 @@ class EnrichmentInboundProcessorTest {
 
     @Test
     void incrementsMessagesReceivedExactlyOnce() throws Exception {
-        stageContext(new HashMap<>(), null);
+        ProcessingContext<Object> context = stageContext(new HashMap<>(), null);
 
-        processor.process(exchange);
+        processor.process(context, "connector-1");
 
         assertEquals(1L, mappingStatus.messagesReceived,
                 "each processed message must increment messagesReceived once");
@@ -187,9 +175,9 @@ class EnrichmentInboundProcessorTest {
     @Test
     void injectsContextDataTokenWhenMessageKeyPresent() throws Exception {
         Map<String, Object> payload = new HashMap<>();
-        stageContext(payload, "partition-key-7");
+        ProcessingContext<Object> context = stageContext(payload, "partition-key-7");
 
-        processor.process(exchange);
+        processor.process(context, "connector-1");
 
         assertTrue(payload.containsKey(Mapping.TOKEN_CONTEXT_DATA),
                 "a present message key must produce a _CONTEXT_DATA_ token");
@@ -203,9 +191,9 @@ class EnrichmentInboundProcessorTest {
     @Test
     void doesNotInjectContextDataWhenNoKey() throws Exception {
         Map<String, Object> payload = new HashMap<>();
-        stageContext(payload, null);
+        ProcessingContext<Object> context = stageContext(payload, null);
 
-        processor.process(exchange);
+        processor.process(context, "connector-1");
 
         assertFalse(payload.containsKey(Mapping.TOKEN_CONTEXT_DATA),
                 "absent message key must not create a _CONTEXT_DATA_ token");
@@ -218,7 +206,7 @@ class EnrichmentInboundProcessorTest {
         byte[] payload = "raw-binary".getBytes();
         ProcessingContext<Object> context = stageContext(payload, null);
 
-        processor.process(exchange);
+        processor.process(context, "connector-1");
 
         assertSame(payload, context.getPayload(), "non-Map payload must not be replaced");
         assertFalse(context.hasError(), "passing through a non-Map payload is not an error");
@@ -231,7 +219,7 @@ class EnrichmentInboundProcessorTest {
         // exercising the handleEnrichmentError path.
         ProcessingContext<Object> context = stageContext(Map.of("temperature", 21.5), null);
 
-        processor.process(exchange);
+        processor.process(context, "connector-1");
 
         assertTrue(context.hasError(), "an enrichment exception must be recorded on the context");
         assertInstanceOf(ProcessingException.class, context.getErrors().get(0),
@@ -242,10 +230,8 @@ class EnrichmentInboundProcessorTest {
 
     @Test
     void skipsEnrichmentGracefullyWhenContextHeaderMissing() throws Exception {
-        // Upstream deserialization failed and never set the processingContext header.
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(null);
-
-        assertDoesNotThrow(() -> processor.process(exchange));
+        // Upstream deserialization failed and never produced a context.
+        assertDoesNotThrow(() -> processor.process(null, "connector-1"));
 
         // No work should have been attempted against the (absent) mapping.
         verify(mappingService, never()).getMappingStatus(any(), any());
