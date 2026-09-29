@@ -1,4 +1,5 @@
 from threading import Thread, Lock, Event
+from concurrent.futures import ThreadPoolExecutor
 import argparse
 import queue
 import uuid
@@ -118,8 +119,11 @@ TPS_PER_CLIENT = TOTAL_TPS / WORKERS
 
 # How long (seconds) to wait for each client to connect before giving up
 CONNECT_TIMEOUT = 15
-# Stagger between worker connection attempts to avoid broker rate-limiting
-CONNECT_STAGGER_S = 0.3
+# Connect workers concurrently, bounded, instead of one at a time: a fully serial
+# connect loop dilutes measured throughput with several seconds of ramp-up before
+# the last worker ever publishes, while connecting all of them at once risks
+# tripping broker-side connection rate-limiting.
+CONNECT_CONCURRENCY = min(WORKERS, 5)
 
 message_type = ["telemetry", "error"]
 capid_list = []
@@ -129,6 +133,10 @@ device_num = EVENT_NUM
 # Populated in main() before workers connect, and torn down on exit.
 _cert_dir = None
 _client_certs = []
+
+# Set once all workers are connected and publishing begins (see run()), so
+# throughput stats exclude cert provisioning + connection ramp-up time.
+_publish_start_time = None
 
 
 def create_capid(n):
@@ -268,7 +276,7 @@ def consume_tasks(client, tps_per_client=TPS_PER_CLIENT):
 
 def print_stats(start_time):
     created, published, failed = snapshot_counters()
-    elapsed = time.time() - start_time
+    elapsed = time.time() - (start_time or time.time())
     rate = published / elapsed if elapsed > 0 else 0
     print(
         f"\n{'='*50}\n"
@@ -283,19 +291,35 @@ def print_stats(start_time):
     )
 
 
-def run(start_time):
-    for i in range(WORKERS):
-        if i > 0:
-            time.sleep(CONNECT_STAGGER_S)
-        try:
-            client = connect_mqtt(worker_index=i)
-        except RuntimeError as e:
-            logger.error(f"Skipping worker {i}: {e}")
+def _connect_worker(i):
+    try:
+        return connect_mqtt(worker_index=i)
+    except RuntimeError as e:
+        logger.error(f"Skipping worker {i}: {e}")
+        return None
+
+
+def run():
+    """Connect all workers, then start publishing. Sets _publish_start_time to the
+    moment publishing actually begins (all workers connected), for accurate
+    throughput stats — this deliberately excludes cert provisioning and
+    connection ramp-up time."""
+    global _publish_start_time
+
+    with ThreadPoolExecutor(max_workers=CONNECT_CONCURRENCY) as pool:
+        clients = list(pool.map(_connect_worker, range(WORKERS)))
+
+    connected = 0
+    for client in clients:
+        if client is None:
             continue
         t = Thread(target=consume_tasks, args=(client,))
         t.daemon = True
         t.start()
-    logger.info(f"Started {WORKERS} publisher threads (each a dedicated MQTT client, capped at {TPS_PER_CLIENT} TPS)")
+        connected += 1
+    logger.info(f"Started {connected}/{WORKERS} publisher threads (each a dedicated MQTT client, capped at {TPS_PER_CLIENT} TPS)")
+
+    _publish_start_time = time.time()
 
     producer = Thread(target=queue_tasks)
     producer.daemon = True
@@ -312,7 +336,6 @@ def main():
     global _cert_dir, _client_certs
 
     create_capid(device_num)
-    start_time = time.time()
 
     if args.auth == "cert":
         _cert_dir = tempfile.mkdtemp(prefix="dm-loadtest04-certs-")
@@ -327,7 +350,7 @@ def main():
 
     def _shutdown(sig, frame):
         print("\nShutting down gracefully...")
-        print_stats(start_time)
+        print_stats(_publish_start_time)
         _cleanup()
         sys.exit(0)
 
@@ -335,9 +358,9 @@ def main():
     signal.signal(signal.SIGTERM, _shutdown)
 
     try:
-        run(start_time)
+        run()
     finally:
-        print_stats(start_time)
+        print_stats(_publish_start_time)
         _cleanup()
 
 

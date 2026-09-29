@@ -1,4 +1,5 @@
 from threading import Thread
+from concurrent.futures import ThreadPoolExecutor
 import argparse
 import queue
 import paho.mqtt.client as mqtt_client
@@ -77,6 +78,12 @@ MAX_TPS_PER_CLIENT = args.max_tps_per_client
 WORKERS = math.ceil(TOTAL_TPS / MAX_TPS_PER_CLIENT)
 TPS_PER_CLIENT = TOTAL_TPS / WORKERS
 
+# Connect workers concurrently, bounded, instead of one at a time: a fully serial
+# connect loop dilutes measured throughput with several seconds of ramp-up before
+# the last worker ever publishes, while connecting all of them at once risks
+# tripping broker-side connection rate-limiting.
+CONNECT_CONCURRENCY = min(WORKERS, 5)
+
 # functional parameter
 diff_capid = True
 capid_list = []  # ["TID-987654-1234567890", "TID-987654-1234567891"]
@@ -131,6 +138,9 @@ def connect_mqtt(worker_index: int = 0):
     client.tls_insecure_set(True)
     client.on_connect = on_connect
     client.connect(broker, port)
+    # Without a running network loop, CONNACK/keepalive PINGREQ are never
+    # processed and the broker will eventually drop the connection as idle.
+    client.loop_start()
     return client
 
 
@@ -334,14 +344,30 @@ def consume_tasks(client, tps_per_client=TPS_PER_CLIENT):
         task_queue.task_done()
 
 
-def run(start_time):
-    ### One dedicated MQTT connection per worker, each capped at TPS_PER_CLIENT
-    for i in range(WORKERS):
-        client = connect_mqtt(worker_index=i)
+def _connect_worker(i):
+    try:
+        return connect_mqtt(worker_index=i)
+    except Exception as e:
+        logger.error(f"Skipping worker {i}: {e}")
+        return None
+
+
+def run():
+    ### One dedicated MQTT connection per worker, each capped at TPS_PER_CLIENT.
+    ### Connected concurrently (bounded) rather than one at a time, so the last
+    ### worker doesn't come online several seconds after the first.
+    with ThreadPoolExecutor(max_workers=CONNECT_CONCURRENCY) as pool:
+        clients = list(pool.map(_connect_worker, range(WORKERS)))
+
+    connected = 0
+    for client in clients:
+        if client is None:
+            continue
         t = Thread(target=consume_tasks, args=(client,))
         t.daemon = True
         t.start()
-    logging.info(f"Started {WORKERS} publisher threads (each a dedicated MQTT client, capped at {TPS_PER_CLIENT} TPS)")
+        connected += 1
+    logging.info(f"Started {connected}/{WORKERS} publisher threads (each a dedicated MQTT client, capped at {TPS_PER_CLIENT} TPS)")
 
     create_tasks()
 
@@ -350,7 +376,6 @@ def main():
     global _cert_dir, _client_certs
 
     create_capid(device_num)
-    start_time = datetime.now(timezone.utc)
 
     if args.auth == "cert":
         _cert_dir = tempfile.mkdtemp(prefix="dm-loadtest02-certs-")
@@ -372,7 +397,7 @@ def main():
     signal.signal(signal.SIGTERM, _shutdown)
 
     try:
-        run(start_time)
+        run()
     except KeyboardInterrupt:
         print("Shutting down gracefully...")
     finally:
