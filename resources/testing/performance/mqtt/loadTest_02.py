@@ -247,57 +247,62 @@ def clear_mes_array(mes_array):
 # this is the task producer
 def create_tasks():
     while True:
-        if task_queue.qsize() < BATCH_NUM / 10:
-            mes_array_geo_dict = []
-            mes_array_geo_array = []
-            mes_array_static_dict = []
-            mes_array_static_array = []
-            for item in range(EVENT_NUM):
-                if diff_capid:
-                    # tid = random.choice(capid_list)
-                    tid = capid_list[item]
-                else:
-                    tid = "TID-987654-1234567890"
-                if diff_event_type:
-                    event_type = random.choice(event_type_list)
-                else:
-                    event_type = "geolocation"
-                if diff_meas_type:
-                    meas_type = random.choice(["dict", "array"])
-                else:
-                    meas_type = "array"
-                if ARRAY_MESSAGE:
-                    message = create_payload(tid, event_type, meas_type)
-                    if event_type == "geolocation" and meas_type == "dict":
-                        mes_array_geo_dict = create_mes_array(
-                            mes_array_geo_dict, message
-                        )
-                    elif event_type == "geolocation" and meas_type == "array":
-                        mes_array_geo_array = create_mes_array(
-                            mes_array_geo_array, message
-                        )
-                    elif event_type == "gwCDMStatistics" and meas_type == "dict":
-                        mes_array_static_dict = create_mes_array(
-                            mes_array_static_dict, message
-                        )
-                    elif event_type == "gwCDMStatistics" and meas_type == "array":
-                        mes_array_static_array = create_mes_array(
-                            mes_array_static_array, message
-                        )
-                else:
-                    message = create_payload(tid, event_type, meas_type)
-                    logging.debug("Created a message:")
-                    logging.debug(message)
-                    task_queue.put(message)
-                    logging.info("Put a task")
-                if mes_array_geo_dict:
-                    clear_mes_array(mes_array_geo_dict)
-                if mes_array_geo_array:
-                    clear_mes_array(mes_array_geo_array)
-                if mes_array_static_dict:
-                    clear_mes_array(mes_array_static_dict)
-                if mes_array_static_array:
-                    clear_mes_array(mes_array_static_array)
+        if task_queue.qsize() >= BATCH_NUM / 10:
+            # Back off instead of busy-spinning on qsize(): a tight spin loop here
+            # would otherwise hog the GIL and starve the publisher threads of CPU time.
+            time.sleep(0.005)
+            continue
+
+        mes_array_geo_dict = []
+        mes_array_geo_array = []
+        mes_array_static_dict = []
+        mes_array_static_array = []
+        for item in range(EVENT_NUM):
+            if diff_capid:
+                # tid = random.choice(capid_list)
+                tid = capid_list[item]
+            else:
+                tid = "TID-987654-1234567890"
+            if diff_event_type:
+                event_type = random.choice(event_type_list)
+            else:
+                event_type = "geolocation"
+            if diff_meas_type:
+                meas_type = random.choice(["dict", "array"])
+            else:
+                meas_type = "array"
+            if ARRAY_MESSAGE:
+                message = create_payload(tid, event_type, meas_type)
+                if event_type == "geolocation" and meas_type == "dict":
+                    mes_array_geo_dict = create_mes_array(
+                        mes_array_geo_dict, message
+                    )
+                elif event_type == "geolocation" and meas_type == "array":
+                    mes_array_geo_array = create_mes_array(
+                        mes_array_geo_array, message
+                    )
+                elif event_type == "gwCDMStatistics" and meas_type == "dict":
+                    mes_array_static_dict = create_mes_array(
+                        mes_array_static_dict, message
+                    )
+                elif event_type == "gwCDMStatistics" and meas_type == "array":
+                    mes_array_static_array = create_mes_array(
+                        mes_array_static_array, message
+                    )
+            else:
+                message = create_payload(tid, event_type, meas_type)
+                logging.debug("Created a message:")
+                logging.debug(message)
+                task_queue.put(message)
+                logging.info("Put a task")
+            if mes_array_geo_dict:
+                clear_mes_array(mes_array_geo_dict)
+            if mes_array_geo_array:
+                clear_mes_array(mes_array_geo_array)
+            if mes_array_static_dict:
+                clear_mes_array(mes_array_static_dict)
+            if mes_array_static_array:
+                clear_mes_array(mes_array_static_array)
 
 
 def consume_tasks(client, tps_per_client=TPS_PER_CLIENT):

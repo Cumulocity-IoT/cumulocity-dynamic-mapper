@@ -69,7 +69,7 @@ root_topic = "testmapper/"
 geodict_topic = "geodict"
 qos = 0
 
-task_queue = queue.Queue()
+task_queue = queue.Queue(maxsize=args.queue_size)
 
 _counter_lock = Lock()
 _message_create_count = 0
@@ -102,7 +102,6 @@ def snapshot_counters():
 
 #### Test parameters
 EVENT_NUM = args.event_num
-QUEUE_SIZE = args.queue_size
 
 TOTAL_TPS = args.total_tps
 MAX_TPS_PER_CLIENT = args.max_tps_per_client
@@ -212,11 +211,13 @@ def create_payload(cap_id: str):
 
 
 def queue_tasks():
+    # task_queue is bounded (maxsize=QUEUE_SIZE): put() blocks — releasing the GIL
+    # while waiting — once it's full, instead of busy-polling qsize() in a tight
+    # spin loop that would otherwise starve the publisher threads of CPU/GIL time.
     while True:
-        if task_queue.qsize() < QUEUE_SIZE:
-            tid = random.choice(capid_list)
-            task_queue.put(create_payload(tid))
-            inc_created()
+        tid = random.choice(capid_list)
+        task_queue.put(create_payload(tid))
+        inc_created()
 
 
 def consume_tasks(client, tps_per_client=TPS_PER_CLIENT):
