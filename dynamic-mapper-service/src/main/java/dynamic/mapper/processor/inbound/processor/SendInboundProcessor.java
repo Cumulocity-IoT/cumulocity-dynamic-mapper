@@ -71,7 +71,8 @@ public class SendInboundProcessor extends BaseProcessor {
         try {
             // Collapse multiple measurement requests into one bulk request.
             bulkMeasurementRequestsIfNeeded(context);
-            // Process all requests sequentially.
+            // Process all requests sequentially. Failures are isolated per-request inside
+            // (never thrown from here), so one failing request never skips the rest.
             processAllRequests(context);
             // After all requests are processed, store the SparkPlug B birth fragment if applicable.
             // Deliberately outside the INVENTORY request path so it runs even when the Smart Function
@@ -79,7 +80,18 @@ public class SendInboundProcessor extends BaseProcessor {
             storeSparkPlugBBirthMessage(context);
             // Update the sparkPlugB_isActive flag: TRUE for BIRTH/DATA, FALSE for DEATH.
             updateSparkPlugBActiveStatus(context);
+
+            // At least one request failed above (recorded via context.addError, not thrown) —
+            // bookkeeping mirrors the catch block below, just for isolated per-request failures.
+            if (context.hasError() && !testing) {
+                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+                mappingStatus.incrementErrors();
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            }
         } catch (Exception e) {
+            // Reached only for failures outside the per-request loop (e.g. bulk-merge,
+            // SparkPlug B birth persistence) — per-request send failures are isolated in
+            // processAllRequests and never propagate here.
             String errorMessage = String.format(
                     "%s - Error in SendInboundProcessor: %s for mapping: %s",
                     tenant, mapping.getName(), e.getMessage());
@@ -100,25 +112,32 @@ public class SendInboundProcessor extends BaseProcessor {
     }
 
     /**
-     * Process all requests sequentially
+     * Process all requests sequentially. A failing request is isolated — recorded via
+     * {@code request.setError(e)}/{@code context.addError(...)} and swallowed rather than
+     * rethrown, so one failing request never aborts the ones after it or skips
+     * {@link #createProcessingAlarms}.
      */
     private void processAllRequests(ProcessingContext<Object> context) throws Exception {
-        try {
-            // Process each C8Y request
-            for (DynamicMapperRequest request : context.getRequests()) {
+        String tenant = context.getTenant();
+        // Process each C8Y request
+        for (DynamicMapperRequest request : context.getRequests()) {
+            try {
                 processSingleRequest(context, request);
+            } catch (Exception e) {
+                // processSingleRequest already recorded the error on the request itself
+                // (request.setError(e)); mirror it onto the shared context too so process()'s
+                // hasError() check can detect it and update mapping status once, in aggregate.
+                if (e instanceof ProcessingException) {
+                    context.addError((ProcessingException) e);
+                } else {
+                    context.addError(new ProcessingException(
+                            String.format("%s - Error sending request: %s", tenant, e.getMessage()), e));
+                }
             }
-
-            // Create alarms for any processing issues (after all requests are processed)
-            createProcessingAlarms(context);
-
-        } catch (Exception e) {
-            // Not logged here — rethrown as-is (or wrapped, unchanged) up to process()'s
-            // catch, which is the single place this failure is actually handled (added to
-            // context, mapping status updated) and logged, full stack trace included.
-            // Logging here too just duplicated the same trace under a second message.
-            throw e;
         }
+
+        // Create alarms for any processing issues (after all requests are processed)
+        createProcessingAlarms(context);
     }
 
     /**

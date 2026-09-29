@@ -22,8 +22,9 @@ package dynamic.mapper.processor.inbound;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -154,14 +155,34 @@ public class InboundMessageRouter extends MessageRoutingSupport {
                     serviceConfiguration, resultWrapper));
         }
 
-        List<CompletableFuture<ProcessingContext<Object>>> futures = validMappings.stream()
-                .map(mapping -> CompletableFuture.supplyAsync(
+        // Submitted via ExecutorService.submit (a real FutureTask), not
+        // CompletableFuture.supplyAsync: CompletableFuture.cancel() does not interrupt the
+        // running thread, so a cancelled/timed-out message would leave every per-mapping
+        // worker — including ones blocked in C8Y HTTP calls — running regardless. Each future
+        // is registered with resultWrapper so ProcessingResultWrapper.cancelProcessing() can
+        // interrupt it directly; see the class javadoc there.
+        List<Future<ProcessingContext<Object>>> futures = validMappings.stream()
+                .map(mapping -> virtualThreadPool.submit(
                         () -> processSingleInboundMapping(mapping, connectorMessage, testing, serviceConfiguration,
-                                resultWrapper),
-                        virtualThreadPool))
+                                resultWrapper)))
                 .toList();
+        if (resultWrapper != null) {
+            futures.forEach(resultWrapper::registerWorkerFuture);
+        }
 
-        return futures.stream().map(CompletableFuture::join).toList();
+        List<ProcessingContext<Object>> results = new ArrayList<>();
+        for (Future<ProcessingContext<Object>> future : futures) {
+            try {
+                results.add(future.get());
+            } catch (CancellationException | InterruptedException e) {
+                log.warn("{} - Mapping worker cancelled before completing (timeout/shutdown)", tenant);
+                Thread.currentThread().interrupt();
+            } catch (java.util.concurrent.ExecutionException e) {
+                Throwable cause = e.getCause();
+                throw (cause instanceof RuntimeException re) ? re : new RuntimeException(cause);
+            }
+        }
+        return results;
     }
 
     /**

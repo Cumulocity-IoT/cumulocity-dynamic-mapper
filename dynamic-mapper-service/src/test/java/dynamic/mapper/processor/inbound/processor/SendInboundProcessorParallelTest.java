@@ -153,6 +153,47 @@ class SendInboundProcessorParallelTest {
         log.info("Sequential requests processed correctly with indices 0 and 1");
     }
 
+    /**
+     * A failing request must not abort the ones after it, and createProcessingAlarms /
+     * mapping-status bookkeeping must still run once all requests have been attempted.
+     */
+    @Test
+    void testSequentialRequests_oneFailureDoesNotAbortSiblingsOrSkipRemaining() throws Exception {
+        DynamicMapperRequest failingRequest = buildMeasurementRequest("{\"type\":\"c8y_Temp\",\"value\":21.0}");
+        DynamicMapperRequest okRequest = DynamicMapperRequest.builder()
+                .predecessor(-1)
+                .method(org.springframework.web.bind.annotation.RequestMethod.POST)
+                .api(API.EVENT)
+                .request("{\"type\":\"c8y_LocationUpdate\",\"text\":\"moved\"}")
+                .sourceId(TEST_DEVICE_ID)
+                .build();
+
+        List<DynamicMapperRequest> requests = new ArrayList<>();
+        requests.add(failingRequest);
+        requests.add(okRequest);
+        processingContext.setRequests(requests);
+
+        AbstractExtensibleRepresentation meao1 = mock(AbstractExtensibleRepresentation.class);
+        when(c8yAgent.createMEAO(same(processingContext), eq(0))).thenThrow(new RuntimeException("C8Y unavailable"));
+        when(c8yAgent.createMEAO(same(processingContext), eq(1))).thenReturn(meao1);
+
+        // Must not throw — the failure is isolated, not propagated
+        assertDoesNotThrow(() -> processor.process(processingContext));
+
+        // Both requests must have been attempted, despite the first one failing
+        verify(c8yAgent).createMEAO(same(processingContext), eq(0));
+        verify(c8yAgent).createMEAO(same(processingContext), eq(1));
+
+        assertNotNull(failingRequest.getError(), "The failing request must record its own error");
+        assertNotNull(okRequest.getResponse(), "The request after the failing one must still be processed");
+        assertTrue(processingContext.hasError(), "The failure must be visible on the shared context");
+
+        // Mapping status bookkeeping must have run once, in aggregate, for the isolated failure
+        verify(mappingService, times(1)).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), any());
+
+        log.info("One failing request did not abort siblings or skip finalization");
+    }
+
     // ---- helpers ----
 
     private DynamicMapperRequest buildMeasurementRequest(String payloadJson) {
