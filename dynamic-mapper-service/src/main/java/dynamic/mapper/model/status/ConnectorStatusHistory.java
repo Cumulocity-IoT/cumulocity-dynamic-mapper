@@ -21,8 +21,6 @@
 
 package dynamic.mapper.model.status;
 
-import dynamic.mapper.model.Operation;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;

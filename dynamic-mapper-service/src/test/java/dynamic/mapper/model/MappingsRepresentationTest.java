@@ -21,7 +21,6 @@
 
 package dynamic.mapper.model;
 
-import dynamic.mapper.model.device.Device;
 import dynamic.mapper.model.validation.ValidationError;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;

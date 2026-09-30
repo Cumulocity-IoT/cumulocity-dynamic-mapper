@@ -21,7 +21,6 @@
 
 package dynamic.mapper.model;
 
-import dynamic.mapper.model.extension.Extension;
 import dynamic.mapper.model.extension.ExtensionEntry;
 import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.validation.ValidationError;
@@ -40,8 +39,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import dynamic.mapper.model.MappingType;
-import dynamic.mapper.model.TransformationType;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;

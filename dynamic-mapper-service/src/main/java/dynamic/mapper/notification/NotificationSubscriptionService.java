@@ -21,8 +21,6 @@
 
 package dynamic.mapper.notification;
 
-import dynamic.mapper.model.API;
-
 import dynamic.mapper.model.device.Device;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ServiceRegistry;

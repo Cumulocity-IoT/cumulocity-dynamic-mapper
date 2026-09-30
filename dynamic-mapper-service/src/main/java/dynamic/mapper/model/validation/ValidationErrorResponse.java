@@ -21,8 +21,6 @@
 
 package dynamic.mapper.model.validation;
 
-import dynamic.mapper.model.Mapping;
-
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonInclude;

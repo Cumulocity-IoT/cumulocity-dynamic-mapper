@@ -79,7 +79,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import c8y.IsDevice;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.client.Certificate;
-import dynamic.mapper.core.cache.InboundExternalIdCache;
 import dynamic.mapper.core.cache.InventoryCache;
 import dynamic.mapper.core.cache.OutboundExternalIdCache;
 import dynamic.mapper.core.cache.OutboundIdKey;

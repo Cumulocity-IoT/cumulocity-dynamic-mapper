@@ -30,8 +30,6 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.device.Device;
-import dynamic.mapper.explorer.ExplorerMessage;
-import dynamic.mapper.explorer.ExplorerSession;
 import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.notification.Utils;
 import dynamic.mapper.notification.service.DeviceDiscoveryService;

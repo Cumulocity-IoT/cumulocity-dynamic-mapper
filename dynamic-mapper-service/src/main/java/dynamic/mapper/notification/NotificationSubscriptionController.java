@@ -21,8 +21,6 @@
 
 package dynamic.mapper.notification;
 
-import dynamic.mapper.model.API;
-
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;

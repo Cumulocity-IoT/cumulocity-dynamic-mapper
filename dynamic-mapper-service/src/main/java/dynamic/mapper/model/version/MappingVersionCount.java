@@ -21,8 +21,6 @@
 
 package dynamic.mapper.model.version;
 
-import dynamic.mapper.model.Mapping;
-
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**

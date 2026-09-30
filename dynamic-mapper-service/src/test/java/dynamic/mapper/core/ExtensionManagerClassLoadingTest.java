@@ -44,7 +44,6 @@ import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.Message;
-import dynamic.mapper.core.ExtensionInboundRegistry;
 
 class ExtensionManagerClassLoadingTest {
 

@@ -21,8 +21,6 @@
 
 package dynamic.mapper.model.validation;
 
-import dynamic.mapper.model.Mapping;
-
 import lombok.Getter;
 
 import java.util.HashMap;
