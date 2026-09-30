@@ -36,15 +36,15 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<revision>6.5.2-SNAPSHOT</revision>
 		<spring-boot-dependencies.version>4.0.7</spring-boot-dependencies.version>
-		<c8y.version>2026.46.0</c8y.version>
+		<c8y.version>2026.48.0</c8y.version>
 		<lombok.version>1.18.46</lombok.version>
 		<slf4j.version>2.0.18</slf4j.version>
 		<maven.compiler.source>25</maven.compiler.source>
 		<maven.compiler.target>25</maven.compiler.target>
 		<java.version>25</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<graalvm.version>25.3.4.1</graalvm.version>
-		<graalvm.js.version>25.3.4.1</graalvm.js.version>
+		<graalvm.version>25.4.4.1.1</graalvm.version>
+		<graalvm.js.version>25.4.4.1.1</graalvm.js.version>
 		<springdoc.version>2.8.5</springdoc.version>
 		<spring-ai.version>2.0.1</spring-ai.version>
 		<pulsar.version>4.2.4</pulsar.version>
