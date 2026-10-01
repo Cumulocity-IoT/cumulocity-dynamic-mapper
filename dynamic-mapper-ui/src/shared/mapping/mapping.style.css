@@ -205,3 +205,17 @@ d11r-mapping-properties .form-group {
   margin-bottom: 8px;
 }
 
+/* c8y-data-grid lays rows out as a CSS grid (rows are display: contents), so vertical-align has
+   no effect: every cell stretches to the row height and its content sticks to the top. Make each
+   visible cell a flex container to centre its content vertically. Scoped to the mapping grid so
+   other data grids are not affected. */
+d11r-mapping-mapping-grid c8y-data-grid .table-data-grid .cdk-row > .cdk-cell:not(.hidden) {
+  display: flex;
+  align-items: center;
+}
+/* The standard .btn-dot is top-aligned with a negative margin, which pushes the actions
+   menu above the row's centre line. */
+d11r-mapping-mapping-grid c8y-data-grid .cdk-column-actions .btn-dot {
+  align-self: center;
+  margin-top: 0;
+}

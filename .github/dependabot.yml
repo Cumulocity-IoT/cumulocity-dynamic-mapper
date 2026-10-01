@@ -18,6 +18,19 @@ updates:
       # when the UI moves to Angular 22.
       - dependency-name: "ngx-echarts"
         versions: [">=22.0.0"]
+      # The current Cumulocity web SDK (@c8y/*) is built for Angular 21 and cannot move to
+      # Angular 22 yet, so Angular major bumps can't be merged. Patch/minor updates still flow.
+      # Remove these entries once a @c8y release supports Angular 22.
+      - dependency-name: "@angular/*"
+        update-types: ["version-update:semver-major"]
+      # @angular-devkit/* is 0.x with the Angular major encoded in the minor (0.2102.x = Angular 21,
+      # 0.2202.x = Angular 22), so the jump to Angular 22 arrives as a *minor* bump. Patches of
+      # 0.2102.x still flow.
+      - dependency-name: "@angular-devkit/*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      # @c8y/* majors (e.g. 1025.x) are what introduce the next Angular major.
+      - dependency-name: "@c8y/*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "npm"
     directory: "/dynamic-mapper-smart-function"
@@ -25,12 +38,6 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
-    # parser and eslint-plugin declare each other as exact-major peers, so they must move together;
-    # separate PRs fail "npm ci" with ERESOLVE.
-    groups:
-      typescript-eslint:
-        patterns:
-          - "@typescript-eslint/*"
 
   # Keeps action versions current, so runtime deprecations (e.g. Node 20) surface as PRs.
   - package-ecosystem: "github-actions"

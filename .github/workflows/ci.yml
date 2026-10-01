@@ -30,7 +30,7 @@ jobs:
       checks: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 25
         uses: actions/setup-java@v6
@@ -61,7 +61,7 @@ jobs:
       checks: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 25
         uses: actions/setup-java@v6
@@ -91,7 +91,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
@@ -133,7 +133,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # Must satisfy the "engines" range in dynamic-mapper-ui/package.json (^20.19.0 || ^22.12.0).
       - uses: actions/setup-node@v7
@@ -168,7 +168,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 25
         uses: actions/setup-java@v6
@@ -182,7 +182,7 @@ jobs:
         run: mvn -B clean package -DskipTests -Dmicroservice.package.containerSkip=true --file pom.xml
 
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: dynamic-mapper-service
           path: dynamic-mapper-service/target/*.zip

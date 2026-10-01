@@ -33,7 +33,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       # The project needs JDK 25; the runner default is older, so autobuild would fail without this.
       - name: Set up JDK 25
