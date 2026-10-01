@@ -17,7 +17,7 @@ updates:
       # ngx-echarts majors track the Angular major (v22 needs @angular/core >=22). Re-enable
       # when the UI moves to Angular 22.
       - dependency-name: "ngx-echarts"
-        update-types: ["version-update:semver-major"]
+        versions: [">=22.0.0"]
 
   - package-ecosystem: "npm"
     directory: "/dynamic-mapper-smart-function"
