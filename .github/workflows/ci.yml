@@ -182,7 +182,7 @@ jobs:
         run: mvn -B clean package -DskipTests -Dmicroservice.package.containerSkip=true --file pom.xml
 
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: dynamic-mapper-service
           path: dynamic-mapper-service/target/*.zip
