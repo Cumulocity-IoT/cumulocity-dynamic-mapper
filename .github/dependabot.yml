@@ -20,6 +20,12 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    # parser and eslint-plugin declare each other as exact-major peers, so they must move together;
+    # separate PRs fail "npm ci" with ERESOLVE.
+    groups:
+      typescript-eslint:
+        patterns:
+          - "@typescript-eslint/*"
 
   # Keeps action versions current, so runtime deprecations (e.g. Node 20) surface as PRs.
   - package-ecosystem: "github-actions"
