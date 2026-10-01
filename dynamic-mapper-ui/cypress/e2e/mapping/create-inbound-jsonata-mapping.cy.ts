@@ -154,7 +154,8 @@ describe('Mapping — create inbound JSON→EVENT (JSONata) mapping', () => {
     //    rendered by MappingIdCellRendererComponent). MappingEnriched.id is the
     //    mapping's inventory id — the same id POST /mapping returned.
     cy.then(() => {
-      cy.get('c8y-data-grid input[type="search"]').clear().type(mappingName);
+      cy.get('c8y-data-grid input[type="search"]').clear();
+      cy.get('c8y-data-grid input[type="search"]').type(mappingName);
       cy.get(`[data-cy="dm-mapping-id-${mappingId}"]`, { timeout: 15000 })
         .should('exist')
         .and('contain', mappingName);

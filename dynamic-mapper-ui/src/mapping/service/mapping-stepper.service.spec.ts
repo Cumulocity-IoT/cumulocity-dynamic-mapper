@@ -645,7 +645,6 @@ describe('MappingStepperService', () => {
     });
 
     it('sets code-editor help/label for deprecated SUBSTITUTION_AS_CODE mappings', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
       const mapping = makeMapping({ transformationType: TransformationType.SUBSTITUTION_AS_CODE });
       const result = await service.initializeEditorSession(mapping, makeStepperConfig(), new Subject(), callbacks());
       expect(result.codeEditorLabel).toContain('creating substitutions');

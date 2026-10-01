@@ -121,11 +121,14 @@ describe('Mapping — create a simple mapping via the UI stepper', () => {
     stepperButton('dm-mapping-stepper-buttons-connector', 'Next');
 
     // 4. Step 2 (general settings): name + topic (Formly id hooks).
-    cy.get('#mappingName').clear().type(mappingName);
-    cy.get('#mappingTopic').clear().type(mappingTopic);
+    cy.get('#mappingName').clear();
+    cy.get('#mappingName').type(mappingName);
+    cy.get('#mappingTopic').clear();
+    cy.get('#mappingTopic').type(mappingTopic);
     // The sample must have the SAME number of topic levels as the mapping topic;
     // our topic has no wildcards, so the sample is identical.
-    cy.get('#mappingTopicSample').clear().type(mappingTopic);
+    cy.get('#mappingTopicSample').clear();
+    cy.get('#mappingTopicSample').type(mappingTopic);
     cy.getByData('dm-mapping-stepper-buttons-general')
       .find('button')
       .contains('Next')
@@ -143,7 +146,8 @@ describe('Mapping — create a simple mapping via the UI stepper', () => {
     cy.wait('@createMapping').its('response.statusCode').should('be.oneOf', [200, 201]);
 
     // 8. Verify it is listed in the inbound grid (search to beat pagination).
-    cy.get('c8y-data-grid input[type="search"]').clear().type(mappingName);
+    cy.get('c8y-data-grid input[type="search"]').clear();
+    cy.get('c8y-data-grid input[type="search"]').type(mappingName);
     cy.get('c8y-data-grid').contains(mappingName).should('exist');
 
     cy.screenshot('mapping-ui-created');
