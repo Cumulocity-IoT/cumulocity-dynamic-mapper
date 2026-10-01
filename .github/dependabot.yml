@@ -13,6 +13,11 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    ignore:
+      # ngx-echarts majors track the Angular major (v22 needs @angular/core >=22). Re-enable
+      # when the UI moves to Angular 22.
+      - dependency-name: "ngx-echarts"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "npm"
     directory: "/dynamic-mapper-smart-function"
