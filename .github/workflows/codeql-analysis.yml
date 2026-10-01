@@ -38,7 +38,7 @@ jobs:
       # The project needs JDK 25; the runner default is older, so autobuild would fail without this.
       - name: Set up JDK 25
         if: matrix.language == 'java-kotlin'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           java-version: 25
           distribution: zulu
