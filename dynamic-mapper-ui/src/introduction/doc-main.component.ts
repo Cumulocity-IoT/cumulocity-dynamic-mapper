@@ -18,20 +18,13 @@
  * @authors Christof Strack
  */
 
-import { Component, OnDestroy, OnInit, AfterViewChecked, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, ElementRef, ViewChild } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Subscription, filter } from 'rxjs';
+import { scrollToDocElement } from './doc-links';
 
-import hljs from 'highlight.js/lib/core';
-import javascript from 'highlight.js/lib/languages/javascript';
-import java from 'highlight.js/lib/languages/java';
-import yaml from 'highlight.js/lib/languages/yaml';
-
-hljs.registerLanguage('javascript', javascript);
-hljs.registerLanguage('java', java);
-hljs.registerLanguage('yaml', yaml);
 
 @Component({
   selector: 'd11r-landing',
@@ -44,9 +37,7 @@ hljs.registerLanguage('yaml', yaml);
     RouterOutlet,
   ]
 })
-export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
-  private highlightApplied = false;
-
+export class DocMainComponent implements OnInit, OnDestroy {
   @ViewChild('docContent', { static: false }) docContentRef: ElementRef<HTMLElement>;
 
   searchQuery: string = '';
@@ -61,7 +52,6 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   ngOnInit(): void {
     this.clearSearch();
-    this.highlightApplied = false;
 
     this.fragmentSubscription = this.route.fragment.subscribe(fragment => {
       if (fragment) {
@@ -69,12 +59,11 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
       }
     });
 
-    // Reset search and syntax highlighting whenever a child route changes
+    // Reset search whenever a child route changes
     this.routerSubscription = this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
       .subscribe(() => {
         this.clearSearch();
-        this.highlightApplied = false;
         // Scroll to top on every navigation so the incoming page always starts at the
         // top of the viewport. This must be 'instant' (not 'smooth') so it completes
         // before DocOverviewComponent.ngOnInit fires its own 200ms scroll-to-section.
@@ -178,59 +167,7 @@ export class DocMainComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   scrollToElement(elementId: string): void {
-    const element = document.getElementById(elementId);
-    if (element) {
-      window.scrollTo({ top: element.offsetTop - 120, behavior: 'smooth' });
-    }
-  }
-
-  ngAfterViewChecked(): void {
-    if (!this.highlightApplied) {
-      this.highlightApplied = true;
-      setTimeout(() => {
-        document.querySelectorAll('pre code').forEach((block) => {
-          hljs.highlightElement(block as HTMLElement);
-        });
-        this.addCopyButtons();
-      }, 100);
-    }
-  }
-
-  private addCopyButtons(): void {
-    document.querySelectorAll('pre code').forEach((codeElement: Element) => {
-      const pre = codeElement.parentElement;
-      if (!pre || pre.querySelector('.btn-copy-code')) return;
-      (pre as HTMLElement).style.position = 'relative';
-      const toolbar = document.createElement('div');
-      toolbar.className = 'code-toolbar';
-      toolbar.style.cssText = 'display:flex;flex-direction:row;justify-content:flex-end;align-items:center;background-color:#000000';
-      const button = document.createElement('button');
-      button.className = 'btn-copy-code';
-      button.setAttribute('type', 'button');
-      button.setAttribute('aria-label', 'Copy code to clipboard');
-      button.style.cssText = 'margin:2px 4px 4px auto;height:18px;background-color:#000000;font-size:12px';
-      const icon = document.createElement('i');
-      icon.className = 'dlt-c8y-icon-clipboard';
-      icon.style.marginRight = '4px';
-      button.appendChild(icon);
-      button.appendChild(document.createTextNode('Copy to clipboard'));
-      button.addEventListener('click', async () => {
-        const code = codeElement.textContent || '';
-        try {
-          await navigator.clipboard.writeText(code);
-          icon.className = 'dlt-c8y-icon-ok';
-          button.childNodes[1].textContent = 'Copied!';
-          button.classList.add('copied');
-          setTimeout(() => { icon.className = 'dlt-c8y-icon-clipboard'; button.childNodes[1].textContent = 'Copy to clipboard'; button.classList.remove('copied'); }, 2000);
-        } catch {
-          icon.className = 'dlt-c8y-icon-remove';
-          button.childNodes[1].textContent = 'Failed';
-          setTimeout(() => { icon.className = 'dlt-c8y-icon-clipboard'; button.childNodes[1].textContent = 'Copy to clipboard'; }, 2000);
-        }
-      });
-      toolbar.appendChild(button);
-      pre.insertBefore(toolbar, pre.firstChild);
-    });
+    scrollToDocElement(elementId);
   }
 
   ngOnDestroy(): void {

@@ -28,9 +28,6 @@ reach the Transformation step, or starting from an existing code template.
 
 ![Select payload format and transformation type](../../../resources/image/Dynamic_Mapper_Mapping_Table_Add_Modal.png "The Add Mapping dialog: selecting the payload format, the transformation type and, in Expert Mode, the Smart Function source.")
 
-binary before publishing. See the [SparkPlug B](/c8y-pkg-dynamic-mapper/introduction/sparkplugb) section for the full protocol details, message types,
-and Smart Function API.
-
 :::important
 **Payload type and transformation type cannot be changed after mapping creation.** If you need a different type,
 delete the mapping and create a new one. To avoid this, enable **Expert Mode** in the creation dialog to see all
@@ -67,7 +64,7 @@ The levels of the Mapping Topic are split and added to the source payload as `_T
 `["device", "express", "berlin_01"]` for topic `device/express/berlin_01` — see
 [Using metadata in source templates](/c8y-pkg-dynamic-mapper/introduction/metadata).
 
-**Best practice:** **Best Practice:** Always test your mapping with sample payloads before activating it. Use the test feature in
+**Best practice:** Always test your mapping with sample payloads before activating it. Use the test feature in
 step 5 to verify that your substitutions produce the expected Cumulocity format. This helps catch errors early and
 ensures smooth operation.
 

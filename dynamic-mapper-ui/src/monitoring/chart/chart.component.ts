@@ -21,7 +21,7 @@
 import { Component, ElementRef, OnDestroy, OnInit } from '@angular/core';
 import { CoreModule } from '@c8y/ngx-components';
 import { ECharts, EChartsOption } from 'echarts';
-import { NgxEchartsModule, provideEcharts } from 'ngx-echarts';
+import { NgxEchartsModule, provideEchartsCore } from 'ngx-echarts';
 import { Subject } from 'rxjs';
 import { map, takeUntil } from 'rxjs/operators';
 import { Direction, MappingStatus } from '../../shared';
@@ -40,7 +40,7 @@ interface AccumulatedStats {
   styleUrls: ['./chart.component.css'],
   standalone: true,
   imports: [CoreModule, NgxEchartsModule],
-  providers: [provideEcharts()]
+  providers: [provideEchartsCore({ echarts: () => import('echarts') })]
 })
 export class MonitoringChartComponent implements OnInit, OnDestroy {
   mappingStatus$ = new Subject<MappingStatus[]>();

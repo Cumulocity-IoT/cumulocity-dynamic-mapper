@@ -4,7 +4,7 @@ title: Transformation types
 
 ### Transformation types {#transformation-types}
 
-The Dynamic Mapper offers four powerful ways to transform your data between external formats and Cumulocity IoT.
+The Dynamic Mapper offers three ways to transform your data between external formats and Cumulocity IoT.
 Each transformation type provides different levels of control and flexibility, allowing you to choose the
 approach that best fits your use case:
 

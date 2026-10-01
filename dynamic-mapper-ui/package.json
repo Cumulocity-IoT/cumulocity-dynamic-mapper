@@ -60,7 +60,7 @@
     "mermaid": "^12.0.0",
     "monaco-editor": "^0.55.0",
     "ngx-bootstrap": "21.0.1",
-    "ngx-echarts": "^18.0.0",
+    "ngx-echarts": "^21.0.0",
     "rxjs": "7.8.2",
     "tslib": "^2.3.0",
     "vanilla-jsoneditor": "^3.13.0",
@@ -81,7 +81,7 @@
     "cumulocity-cypress": "^1.4.1",
     "cypress": "14.5.4",
     "cypress-slow-down": "^1.3.1",
-    "dotenv": "^16.6.1",
+    "dotenv": "^18.0.4",
     "eslint-plugin-cypress": "^6.4.1",
     "jasmine-core": "~5.9.0",
     "karma": "~6.4.0",
@@ -90,7 +90,7 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
     "less": "^4.2.0",
-    "sharp": "^0.35.3",
+    "sharp": "^0.35.5",
     "typescript": "~5.9.2",
     "webpack": "^5.105.0"
   }

@@ -11,7 +11,7 @@ This walkthrough stays on the default path: the **Cumulocity MQTT Service** conn
 **Smart Function**. Those are the defaults, so you do not have to make a single choice along the way. Everything
 else the mapper can do is covered in the guides, once you have this working.
 
-**Before you start** you need the *Dynamic Mapper Admin* role (to create connectors) and the *Dynamic Mapper User*
+**Before you start** you need the `ROLE_DYNAMIC_MAPPER_ADMIN` role (to create connectors; it also covers mappings) or the `ROLE_DYNAMIC_MAPPER_CREATE`
 role (to create mappings). If you are missing either, the Home page warns you when it loads. See
 [Managing permissions](/c8y-pkg-dynamic-mapper/introduction/access-control).
 
@@ -58,7 +58,7 @@ The wizard has five steps. The first two are configuration:
    - **Target API**: `Measurement`
    - **Mapping Topic**: `quickstart/+`
    - **Mapping Topic Sample**: `quickstart/device_01`
-   - Switch on **Create non-existing devices**, so the mapper creates the device for you the first time a message
+   - Switch on **Create device**, so the mapper creates the device for you the first time a message
      arrives.
 
 The `+` in the mapping topic is a single-level wildcard, so this one mapping serves every device publishing under
@@ -119,7 +119,7 @@ Four things are worth noticing, because most inbound Smart Functions do them:
 - `cumulocityType` and `action` say *what* to create — a measurement, in this case.
 - `externalSource` says *which device* the data belongs to. Without it the mapper cannot route the measurement.
 - `contextData.deviceName` and `contextData.deviceType` describe the **device to create**. This is where the
-  **Create non-existing devices** switch from Step 3 pays off: the first message from an unknown external ID
+  **Create device** switch from Step 3 pays off: the first message from an unknown external ID
   creates the device, and without these it would appear in Device Management under its external ID with no type at
   all. Here it is created as `Temperature-Sensor-01` of type `c8y_TemperatureSensor`.
 
@@ -206,7 +206,7 @@ Two things are worth adjusting before you continue:
 
 - The topic is filled in as the concrete `quickstart/device_01`. Widen it to `quickstart/+` so the mapping serves
   every device, and set the **Mapping Topic Sample** to `quickstart/device_01`.
-- Set **Target API** to `Measurement` and switch on **Create non-existing devices**, as in Step 3.
+- Set **Target API** to `Measurement` and switch on **Create device**, as in Step 3.
 
 Then continue at [Step 5](#step-5) and write the Smart Function exactly as described.
 

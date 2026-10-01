@@ -22,7 +22,7 @@ At runtime, this substitution copies the value at `_TOPIC_LEVEL_[1]` to `source.
 
 For more advanced mapping rules, e.g. extracting parts of a string for a name (40404-psid-device100-w2w2),
 expressions in JSONata can be used.
-To use this option you have to toggle the button **Toggle expert mode**.
+To use this option you have to toggle the button **Expert Mode**.
 
 #### Expert Mode Examples
 

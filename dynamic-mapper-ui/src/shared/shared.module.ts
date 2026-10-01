@@ -22,7 +22,7 @@ import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { CustomFieldTextarea } from './component/formly/textarea.type.component';
 import { FormatStringPipe } from './misc/format-string.pipe';
 import { InputListFormlyComponent } from './component/formly/input-list-formly.component';
-import { provideEcharts } from 'ngx-echarts';
+import { provideEchartsCore } from 'ngx-echarts';
 import { CapitalizeCasePipe } from './misc/capitalize-case.pipe';
 import { FilterJsonPipe } from './misc/filter-json.pipe';
 import { Base64DecodePipe } from './misc/base64-decode.pipe';
@@ -52,7 +52,7 @@ import { WrapperCustomFormField } from './component/formly/custom-form-field-wra
     InputListFormlyComponent
   ],
   providers: [CamelCasePipe, FormatStringPipe, CapitalizeCasePipe, Base64DecodePipe, FilterJsonPipe,
-    provideEcharts(),
+    provideEchartsCore({ echarts: () => import('echarts') }),
     {
       provide: FORMLY_CONFIG,
       multi: true,

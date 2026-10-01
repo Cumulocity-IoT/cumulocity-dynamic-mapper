@@ -15,16 +15,16 @@ The following lists common problems and how to resolve them.
   whether the message counter for the mapping increases. If it does not, the topic pattern is not matching.
 - Check the **Execution Filter** (**Filter execution mapping** on the *Select templates* step) — if set, it must
   evaluate to `true` for the incoming payload, otherwise the message is skipped without an error.
-- If the counter increases but objects are not created, check the **Event Log** for transformation errors.
+- If the counter increases but objects are not created, check the **Service events** for transformation errors.
 
-#### Transformation errors in the Event Log
+#### Transformation errors in Service events
 
 - **"Device not found"** — the `externalId` returned by your mapping does not match any registered device.
-  Enable **Create non-existing devices** on the mapping or pre-register the device in Cumulocity.
+  Enable **Create device** on the mapping or pre-register the device in Cumulocity.
 - **"Cannot evaluate expression"** (JSONata) — the JSONata expression references a field that is missing or null
   in the source payload. Add a null-guard, e.g. `payload.value ? payload.value : 0`.
-- **Smart Function throws a JavaScript exception** — the full stack trace is shown in the Event Log. Use
-  `console.log()` in your function to emit diagnostic output visible in the Event Log.
+- **Smart Function throws a JavaScript exception** — the full stack trace is shown in **Monitoring → Service events**. Use
+  `console.log()` in your function to emit diagnostic output, which appears in the microservice log and the editor's console panel.
 - **"Fragment not found in cache"** — the managed object fragment accessed via `context.getManagedObject()` is
   not in the [**Fragments from inventory to cache**](/c8y-pkg-dynamic-mapper/node3/serviceConfiguration/general)
   list. Add the exact fragment name or a matching glob pattern (e.g. `sparkPlugB_DBIRTH_*`) and clear the
@@ -37,7 +37,7 @@ The following lists common problems and how to resolve them.
   **Event**), the mapping is silently ignored for that notification.
 - Verify that a **subscription** exists for the device. Without a subscription, no outbound messages are
   processed regardless of mapping state.
-- Check the **Inventory Filter** — if set, it must evaluate to `true` for the device's managed object.
+- Check the **Filter Inventory** — if set, it must evaluate to `true` for the device's managed object.
 - Check the **Execution Filter** — if set, it must evaluate to `true` for the triggering payload.
 - Confirm the mapping's **connector** is connected (green status in
   [**Monitoring → Statistics**](/c8y-pkg-dynamic-mapper/node2/monitoring/statistic/inbound)).
@@ -50,7 +50,7 @@ The following lists common problems and how to resolve them.
 #### Smart Function returns stale device inventory data
 
 - The mapper caches inventory fragments for performance. Navigate to
-  [**Service Configuration → Caching**](/c8y-pkg-dynamic-mapper/node3/serviceConfiguration/general) and click
+  [**Service Configuration → Caching**](/c8y-pkg-dynamic-mapper/node3/serviceConfiguration/caching) and click
   **Clear inventory cache** to force a refresh.
 - Ensure the required fragment is listed in
   [**Service Configuration → Function → Fragments from inventory to cache**](/c8y-pkg-dynamic-mapper/node3/serviceConfiguration/general).
@@ -63,11 +63,11 @@ The following lists common problems and how to resolve them.
 - Verify the connector credentials, host, and port in the connector configuration.
 - For TLS connections, ensure the broker's certificate is trusted and the CA certificate is correctly configured
   in the connector.
-- Check the Event Log for TLS handshake or connection timeout errors.
+- Check the Service events for TLS handshake or connection timeout errors.
 
 #### Reading the microservice log {#microservice-log}
 
-When the Event Log and the monitoring counters do not explain a failure, the microservice log is the last and most
+When Service events and the monitoring counters do not explain a failure, the microservice log is the last and most
 detailed source: it records every message the mapper processed, the decisions it took, and the stack trace of
 anything that threw.
 
@@ -113,7 +113,7 @@ otherwise suppressed. See the next section.
 
 Debug mode logs detailed processing information for a specific mapping without enabling verbose logging globally.
 In the mapping list, use the context menu (three-dot icon) to enable **Debug** for a mapping. Debug output
-appears in the **Event Log** and in the
+appears in the
 [microservice log](/c8y-pkg-dynamic-mapper/introduction/troubleshooting#microservice-log), including the
 `JS DEBUG:` lines that are otherwise suppressed. Disable debug mode after troubleshooting to avoid excessive log
 volume.

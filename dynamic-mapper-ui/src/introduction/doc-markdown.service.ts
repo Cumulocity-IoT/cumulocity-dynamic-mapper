@@ -21,6 +21,14 @@
 import { Injectable } from '@angular/core';
 import { Marked, RendererObject, Tokens } from 'marked';
 import mermaid from 'mermaid';
+import hljs from 'highlight.js/lib/core';
+import javascript from 'highlight.js/lib/languages/javascript';
+import java from 'highlight.js/lib/languages/java';
+import yaml from 'highlight.js/lib/languages/yaml';
+
+hljs.registerLanguage('javascript', javascript);
+hljs.registerLanguage('java', java);
+hljs.registerLanguage('yaml', yaml);
 
 export interface RenderedDoc {
   title: string;
@@ -82,7 +90,7 @@ function admonitionExtension(marked: Marked) {
     },
     renderer(token: any): string {
       const body = marked.parse(token.text, { async: false }) as string;
-      return `<div class="admonition ${token.kind}"><div class="title">${token.title}</div><div class="content">${body}</div></div>\n`;
+      return `<div class="admonition ${token.kind}"><div class="title">${escapeHtml(token.title)}</div><div class="content">${body}</div></div>\n`;
     }
   };
 }
@@ -111,6 +119,10 @@ function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function escapeAttr(text: string): string {
+  return escapeHtml(text).replace(/"/g, '&quot;');
+}
+
 // Doc sources use a repo-relative path to resources/image/ (e.g. "../../../resources/image/
 // Foo.png") so the image also resolves when the .md file is browsed directly on GitHub — this
 // module lives 3 levels under the repo root (dynamic-mapper-ui/public/docs/), so that's always
@@ -136,17 +148,17 @@ const docRenderer: Partial<RendererObject> = {
   },
   link({ href, title, tokens }) {
     const text = this.parser.parseInline(tokens);
-    const titleAttr = title ? ` title="${title}"` : '';
+    const titleAttr = title ? ` title="${escapeAttr(title)}"` : '';
     const external = /^https?:\/\//.test(href);
     const target = external ? ' target="_blank" rel="noopener"' : '';
-    return `<a href="${href}"${titleAttr}${target}>${text}</a>`;
+    return `<a href="${escapeAttr(href)}"${titleAttr}${target}>${text}</a>`;
   },
   image({ href, title, text }) {
-    const img = `<img src="${resolveImageHref(href)}" alt="${text}">`;
+    const img = `<img src="${escapeAttr(resolveImageHref(href))}" alt="${escapeAttr(text)}">`;
     if (!title) return img;
     // Marked wraps a lone inline image in a <p> (it's still an inline token); the caption
     // <p> below is unwrapped from that in unwrapImageCaptions() since a <p> can't nest a <p>.
-    return `${img}\n<p class="image-description"><b>Description:</b> ${title}</p>`;
+    return `${img}\n<p class="image-description"><b>Description:</b> ${escapeHtml(title)}</p>`;
   }
 };
 
@@ -214,6 +226,58 @@ export class DocMarkdownService {
       // renders an inline error SVG into the offending node, so just log for diagnostics.
       console.error('Failed to render one or more mermaid diagrams', error);
     }
+  }
+
+  /**
+   * Syntax-highlights every not-yet-highlighted `<pre><code>` block under `container` and adds a
+   * copy-to-clipboard toolbar. Call once the rendered HTML is in the DOM, like
+   * {@link renderMermaidDiagrams}, so it never races with the async markdown fetch.
+   */
+  highlightCodeBlocks(container: HTMLElement): void {
+    container.querySelectorAll<HTMLElement>('pre code').forEach((block) => {
+      if (!block.dataset['highlighted']) {
+        hljs.highlightElement(block);
+      }
+      this.addCopyButton(block);
+    });
+  }
+
+  private addCopyButton(codeElement: HTMLElement): void {
+    const pre = codeElement.parentElement;
+    if (!pre || pre.querySelector('.btn-copy-code')) return;
+    pre.style.position = 'relative';
+    const toolbar = document.createElement('div');
+    toolbar.className = 'code-toolbar';
+    toolbar.style.cssText = 'display:flex;flex-direction:row;justify-content:flex-end;align-items:center;background-color:#000000';
+    const button = document.createElement('button');
+    button.className = 'btn-copy-code';
+    button.setAttribute('type', 'button');
+    button.setAttribute('aria-label', 'Copy code to clipboard');
+    button.style.cssText = 'margin:2px 4px 4px auto;height:18px;background-color:#000000;font-size:12px';
+    const icon = document.createElement('i');
+    icon.className = 'dlt-c8y-icon-clipboard';
+    icon.style.marginRight = '4px';
+    button.appendChild(icon);
+    button.appendChild(document.createTextNode('Copy to clipboard'));
+    const reset = () => {
+      icon.className = 'dlt-c8y-icon-clipboard';
+      button.childNodes[1].textContent = 'Copy to clipboard';
+      button.classList.remove('copied');
+    };
+    button.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(codeElement.textContent || '');
+        icon.className = 'dlt-c8y-icon-ok';
+        button.childNodes[1].textContent = 'Copied!';
+        button.classList.add('copied');
+      } catch {
+        icon.className = 'dlt-c8y-icon-remove';
+        button.childNodes[1].textContent = 'Failed';
+      }
+      setTimeout(reset, 2000);
+    });
+    toolbar.appendChild(button);
+    pre.insertBefore(toolbar, pre.firstChild);
   }
 
   private extractFrontMatter(raw: string): { frontMatter: Record<string, string>; body: string } {

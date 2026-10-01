@@ -125,7 +125,7 @@ not passed inline in the message payload. Read it with
 6. **Smart Function** — Write a `onMessage(msg, context)` function that processes the decoded payload and returns
    `CumulocityObject` instances. See the example below.
 
-#### Birth Message Handling
+#### Birth Message Handling {#birth-message-handling}
 
 ##### How birth fragments are stored
 
@@ -242,7 +242,7 @@ function onMessage(msg, context) {
 }
 ```
 
-#### Smart Function Example — Outbound NCMD
+#### Smart Function Example — Outbound NCMD {#smart-function-example-outbound-ncmd}
 
 The following example sends an NCMD (Node Command) from a Cumulocity operation. The mapper serializes the
 returned metric object to SparkPlug B protobuf binary automatically.
@@ -306,7 +306,7 @@ function onMessage(msg, context) {
 The `type` field in each metric entry is case-insensitive and supports: `Int8`, `Int16`, `Int32`, `Int64`,
 `UInt8`, `UInt16`, `UInt32`, `UInt64`, `Float`, `Double`, `Boolean`, `String`, `DateTime`, `Text`, `UUID`, `Bytes`.
 
-#### Sparkplug Host Mode
+#### Sparkplug Host Mode {#sparkplug-host-mode}
 
 Separately from mapping-level inbound/outbound decoding above, an **MQTT connector** can act as a
 Sparkplug B **Primary Host Application** — the role a SCADA/monitoring system plays in the

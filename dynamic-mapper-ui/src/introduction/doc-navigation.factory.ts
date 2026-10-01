@@ -20,10 +20,8 @@
 
 import { Injectable } from '@angular/core';
 import { ApplicationService } from '@c8y/client';
-import * as _ from 'lodash';
 import {
   AlertService,
-  AppStateService,
   NavigatorNode,
   NavigatorNodeFactory
 } from '@c8y/ngx-components';
@@ -35,8 +33,6 @@ import { SharedService } from '../shared';
 export class DocNavigationFactory implements NavigatorNodeFactory {
   private static readonly APPLICATION_DYNAMIC_MAPPING_SERVICE =
     'dynamic-mapper-service';
-  appName: string;
-  isStandaloneApp: boolean = false;
   /**
    * The documentation navigator, grouped into three tiers so a reader can tell what they need
    * now from what they need later:
@@ -303,19 +299,13 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
     private applicationService: ApplicationService,
     private alertService: AlertService,
     private sharedService: SharedService,
-    private appStateService: AppStateService,
     public router: Router
   ) {
-    this.appStateService.currentApplication.subscribe((cur) => {
-      this.isStandaloneApp =
-        _.has(cur?.manifest, 'isPackage') || _.has(cur?.manifest, 'blueprint');
-      this.appName = cur.name;
-    });
   }
 
   async get(): Promise<any> {
     try {
-      const feature: any = await this.sharedService.getFeatures();
+      const feature = await this.sharedService.getFeatures();
       const navs = Object.values(this.staticNodesStandalone) as NavigatorNode[];
 
       return this.applicationService
