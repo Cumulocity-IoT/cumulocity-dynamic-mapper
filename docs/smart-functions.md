@@ -155,7 +155,7 @@ cd dynamic-mapper-smart-function
 
 npm run build   # compile TypeScript → JavaScript (output in dist/)
 npm test        # run Jest unit tests
-npm run lint    # lint
+npm run lint    # lint (ESLint 10, flat config in eslint.config.js; needs Node 20.19+ or 22.13+)
 ```
 
 See `src/examples/` for inbound and outbound reference implementations, and `src/types/smart-function-dynamic-mapper.types.spec.ts` for testing patterns using the mock helpers (`createMockInputMessage`, `createMockRuntimeContext`).

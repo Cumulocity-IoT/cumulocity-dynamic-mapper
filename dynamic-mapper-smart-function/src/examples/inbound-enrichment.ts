@@ -88,9 +88,8 @@ const onMessage: SmartFunctionIn = (msg, context): CumulocityObject[] => {
   }
 
   // Try to lookup device by device ID — typed so nested fragments are fully typed
-  let deviceByDeviceId: SensorDevice | null = null;
   try {
-    deviceByDeviceId = context.getManagedObject<SensorDevice>(payload['deviceId']);
+    const deviceByDeviceId = context.getManagedObject<SensorDevice>(payload['deviceId']);
     console.log('Device (by device id):', deviceByDeviceId);
   } catch (e) {
     console.error('Error looking up device by ID:', e);
