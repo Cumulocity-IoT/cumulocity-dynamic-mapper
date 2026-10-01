@@ -74,7 +74,7 @@
     "@c8y/devkit": "1024.19.3",
     "@c8y/options": "1024.19.3",
     "@types/file-saver": "^2.0.7",
-    "@types/jasmine": "~5.1.0",
+    "@types/jasmine": "~6.0.0",
     "@types/lodash": "^4.17.24",
     "@typescript-eslint/eslint-plugin": "^8.60.0",
     "@typescript-eslint/parser": "^8.60.0",
