@@ -47,7 +47,7 @@
     "@angular/forms": "21.2.19",
     "@angular/platform-browser": "21.2.19",
     "@angular/router": "21.2.19",
-    "@angular/upgrade": "21.2.19",
+    "@angular/upgrade": "22.2.0",
     "@c8y/bootstrap": "1024.19.3",
     "@c8y/client": "1024.19.3",
     "@c8y/ngx-components": "1024.19.3",
