@@ -1,6 +1,8 @@
 /// <reference types="cypress" />
 
 declare global {
+  // Cypress extends its types through declaration merging, which requires a namespace.
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Cypress {
     interface Chainable {
       getByData(value: string): Chainable<JQuery<HTMLElement>>;
