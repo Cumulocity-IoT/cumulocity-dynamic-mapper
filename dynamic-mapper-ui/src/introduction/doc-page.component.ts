@@ -23,6 +23,7 @@ import { CoreModule } from '@c8y/ngx-components';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { DocMarkdownService } from './doc-markdown.service';
+import { handleDocLinkClick, scrollToDocElement } from './doc-links';
 
 @Component({
   selector: 'd11r-doc-page',
@@ -42,11 +43,6 @@ export class DocPageComponent implements OnInit {
   title = '';
   html: SafeHtml = '';
 
-  // Internal app routes (e.g. /c8y-pkg-dynamic-mapper/introduction/smartfunction) are
-  // intercepted below so navigation goes through the Angular router instead of a full
-  // page reload; external links (target="_blank") pass through untouched.
-  private static readonly INTERNAL_LINK_PREFIX = '/c8y-pkg-dynamic-mapper/';
-
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -63,7 +59,7 @@ export class DocPageComponent implements OnInit {
       // setTimeout (a macrotask) runs after Angular's zone-triggered change detection has
       // committed the new [innerHTML] to the DOM, so docBodyRef.nativeElement actually
       // contains the <pre class="mermaid"> nodes mermaid.run() needs to find.
-      setTimeout(() => this.markdownService.renderMermaidDiagrams(this.docBodyRef.nativeElement));
+      setTimeout(() => this.decorate());
     } catch (error) {
       console.error(error);
       this.title = 'Documentation unavailable';
@@ -74,29 +70,19 @@ export class DocPageComponent implements OnInit {
     }
   }
 
+  private decorate(): void {
+    const body = this.docBodyRef?.nativeElement;
+    if (!body) return; // navigated away before the macrotask ran
+    this.markdownService.highlightCodeBlocks(body);
+    this.markdownService.renderMermaidDiagrams(body);
+  }
+
   scrollToElement(elementId: string): void {
-    const element = document.getElementById(elementId);
-    if (element) {
-      window.scrollTo({ top: element.offsetTop - 80, behavior: 'smooth' });
-    }
+    scrollToDocElement(elementId);
   }
 
   @HostListener('click', ['$event'])
   onClick(event: MouseEvent): void {
-    const target = (event.target as HTMLElement)?.closest('a');
-    if (!target) return;
-    const href = target.getAttribute('href');
-    if (!href) return;
-    // Same-page anchors (the {#id} heading ids these pages define) must scroll rather than
-    // navigate: routing to "#id" would leave the doc route and reload the page. Mirrors the
-    // handling in DocOverviewComponent.
-    if (href.startsWith('#')) {
-      event.preventDefault();
-      this.scrollToElement(href.slice(1));
-      return;
-    }
-    if (!href.startsWith(DocPageComponent.INTERNAL_LINK_PREFIX)) return;
-    event.preventDefault();
-    this.router.navigateByUrl(href);
+    handleDocLinkClick(event, this.router);
   }
 }

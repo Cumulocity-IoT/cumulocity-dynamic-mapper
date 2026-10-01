@@ -35,7 +35,7 @@ flowchart LR
 #### Step 1 — Subscribe the device
 
 Go to [**Mapping → Subscription outbound**](/c8y-pkg-dynamic-mapper/node1/mappings/subscription/static), choose
-**Subscriptions static**, select **Temperature-Sensor-01** and save.
+**Subscription static**, select **Temperature-Sensor-01** and save.
 
 The device now appears in the list of subscribed devices. See
 [Outbound mappings](/c8y-pkg-dynamic-mapper/introduction/define-subscription-for-outbound) for the dynamic

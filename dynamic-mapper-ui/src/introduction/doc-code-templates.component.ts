@@ -24,6 +24,7 @@ import { CoreModule, BottomDrawerService } from '@c8y/ngx-components';
 import { Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { DocMarkdownService } from './doc-markdown.service';
+import { handleDocLinkClick, scrollToDocElement } from './doc-links';
 import { SharedService } from '../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap } from '../shared/configuration/configuration.model';
 import { CodeEditorDrawerComponent } from '../shared/component/code-explorer/code-editor-drawer.component';
@@ -54,8 +55,6 @@ export class DocCodeTemplatesComponent implements OnInit {
   html: SafeHtml = '';
   codeTemplates: CodeTemplate[] = [];
 
-  private static readonly INTERNAL_LINK_PREFIX = '/c8y-pkg-dynamic-mapper/';
-
   constructor(
     private router: Router,
     private markdownService: DocMarkdownService,
@@ -65,10 +64,20 @@ export class DocCodeTemplatesComponent implements OnInit {
   ) {}
 
   async ngOnInit(): Promise<void> {
-    const rendered = await this.markdownService.loadAndRender('code-templates');
-    this.title = rendered.title;
-    this.html = this.sanitizer.bypassSecurityTrustHtml(rendered.html);
-    setTimeout(() => this.markdownService.renderMermaidDiagrams(this.docBodyRef.nativeElement));
+    // A failed markdown fetch must not suppress the live gallery below.
+    try {
+      const rendered = await this.markdownService.loadAndRender('code-templates');
+      this.title = rendered.title;
+      this.html = this.sanitizer.bypassSecurityTrustHtml(rendered.html);
+      setTimeout(() => {
+        const body = this.docBodyRef?.nativeElement;
+        if (!body) return; // navigated away before the macrotask ran
+        this.markdownService.highlightCodeBlocks(body);
+        this.markdownService.renderMermaidDiagrams(body);
+      });
+    } catch (error) {
+      console.error(error);
+    }
 
     const codeTemplatesMap: CodeTemplateMap = await this.sharedService.getCodeTemplates();
     this.codeTemplates = Object.entries(codeTemplatesMap)
@@ -111,25 +120,11 @@ export class DocCodeTemplatesComponent implements OnInit {
   }
 
   scrollToElement(elementId: string): void {
-    const element = document.getElementById(elementId);
-    if (element) {
-      window.scrollTo({ top: element.offsetTop - 80, behavior: 'smooth' });
-    }
+    scrollToDocElement(elementId);
   }
 
   @HostListener('click', ['$event'])
   onClick(event: MouseEvent): void {
-    const target = (event.target as HTMLElement)?.closest('a');
-    if (!target) return;
-    const href = target.getAttribute('href');
-    if (!href) return;
-    if (href.startsWith('#')) {
-      event.preventDefault();
-      this.scrollToElement(href.slice(1));
-      return;
-    }
-    if (!href.startsWith(DocCodeTemplatesComponent.INTERNAL_LINK_PREFIX)) return;
-    event.preventDefault();
-    this.router.navigateByUrl(href);
+    handleDocLinkClick(event, this.router);
   }
 }

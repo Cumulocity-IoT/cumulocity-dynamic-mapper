@@ -400,7 +400,7 @@ return new DeviceMessage[] {
 
 :::important
 **Development Requirements:** To develop Java Extensions, you need:
-- Java Development Kit (JDK) 21 or higher
+- Java Development Kit (JDK) 25 or higher
 - Maven or Gradle for building the extension
 - Access to the Dynamic Mapper extension API and dependencies
 :::

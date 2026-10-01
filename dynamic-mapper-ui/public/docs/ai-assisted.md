@@ -8,11 +8,11 @@ The Dynamic Mapper can leverage AI to automatically generate mapping rules from 
 describe what you want to achieve in natural language, and the AI generates the corresponding JSONata expressions
 or JavaScript code.
 
-In the **Service Configuration → AI** section, assign an AI agent (defined in the Cumulocity AI Agent Manager)
+In the **Service Configuration → AI Agent** section, assign an AI agent (defined in the Cumulocity AI Agent Manager)
 separately for JSONata and JavaScript in Smart Function transformations. This significantly accelerates the
 integration process.
 
-When you configure AI agents in **Service Configuration → AI**, substitutions or JavaScript code can be generated
+When you configure AI agents in **Service Configuration → AI Agent**, substitutions or JavaScript code can be generated
 automatically. Each transformation type (JSONata, Smart Function) can use a different agent. The
 underlying AI provider (Anthropic, OpenAI, etc.) is configured in the AI Agent Manager, not here. The use and
 configuration of the Cumulocity AI Agent Manager is introduced

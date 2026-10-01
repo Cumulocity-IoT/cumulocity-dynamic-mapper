@@ -325,7 +325,7 @@ object:
 
 :::caution
 When using `contextData.deviceName`, `contextData.deviceType`, `contextData.deviceFragments`, or
-`contextData.deviceGroups`, make sure the mapping has the **Create non-existing devices** option enabled.
+`contextData.deviceGroups`, make sure the mapping has the **Create device** option enabled.
 Otherwise, the mapper will fail if the device doesn't exist yet.
 
 `deviceFragments` and `deviceGroups` are only applied when the device is *first created*. They are not re-applied

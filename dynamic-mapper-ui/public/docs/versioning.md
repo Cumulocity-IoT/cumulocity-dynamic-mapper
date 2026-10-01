@@ -87,7 +87,7 @@ the version label, snapshot, and all other fields are immutable.
 ### Configuring how many versions are kept {#versioning-retention}
 
 To bound storage, only the most recent versions of each mapping are retained. The limit is configured per tenant
-under **Configuration → Service configuration → Caching** in the field **Number of mapping versions to retain**
+under **Configuration → Service configuration → General** in the field **Number of mapping versions to retain**
 (default 10). When a new version is published, versions older than this limit are deleted, ordered by publish date
 — the **active version is never deleted**, even if it falls outside the retention window.
 

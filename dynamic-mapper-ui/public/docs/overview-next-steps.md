@@ -8,7 +8,7 @@ This documentation is organised in three tiers, so you only read what you need a
 
 | | Read it when | Start with |
 |---|---|---|
-| **Start** | You are new to the Dynamic Mapper. About 20 minutes end to end. | [Quickstart: your first mapping](/c8y-pkg-dynamic-mapper/introduction/quickstart-inbound), then [outbound](/c8y-pkg-dynamic-mapper/introduction/quickstart-outbound) |
+| **Start** | You are new to the Dynamic Mapper. About 30 minutes end to end (15 minutes per quickstart). | [Quickstart: your first mapping](/c8y-pkg-dynamic-mapper/introduction/quickstart-inbound), then [outbound](/c8y-pkg-dynamic-mapper/introduction/quickstart-outbound) |
 | **Guides** | You are doing a specific task — adding a connector, building a mapping, debugging one. | [Managing connectors](/c8y-pkg-dynamic-mapper/introduction/managing-connectors) |
 | **Reference** | You need the detail on one feature: payload formats, SparkPlug B, reliability, permissions. | [Payload types](/c8y-pkg-dynamic-mapper/introduction/payload-types) |
 

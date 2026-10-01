@@ -28,6 +28,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { DocMarkdownService } from './doc-markdown.service';
+import { handleDocLinkClick, scrollToDocElement } from './doc-links';
 
 @Component({
   selector: 'd11r-doc-overview',
@@ -58,11 +59,6 @@ export class DocOverviewComponent implements OnInit {
   ROUTE_OUTBOUND: string = `/c8y-pkg-dynamic-mapper/${NODE1}/mappings/outbound`;
   ROUTE_CONNECTORS: string = `/c8y-pkg-dynamic-mapper/${NODE3}/connectorConfiguration`;
 
-  // Internal app routes (e.g. /c8y-pkg-dynamic-mapper/introduction/smartfunction) are
-  // intercepted below so navigation goes through the Angular router instead of a full
-  // page reload; external links (target="_blank") pass through untouched.
-  private static readonly INTERNAL_LINK_PREFIX = '/c8y-pkg-dynamic-mapper/';
-
   constructor(
     private mappingService: MappingService,
     private alertService: AlertService,
@@ -76,16 +72,9 @@ export class DocOverviewComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     this.feature = this.route.snapshot.data['feature'];
 
-    const [intro, nextSteps] = await Promise.all([
-      this.markdownService.loadAndRender('overview'),
-      this.markdownService.loadAndRender('overview-next-steps')
-    ]);
-    this.htmlIntro = this.sanitizer.bypassSecurityTrustHtml(intro.html);
-    this.htmlNextSteps = this.sanitizer.bypassSecurityTrustHtml(nextSteps.html);
-    // setTimeout (a macrotask) runs after Angular's zone-triggered change detection has
-    // committed the three [innerHTML] bindings above to the DOM, so docBodyRef.nativeElement
-    // actually contains the <pre class="mermaid"> nodes mermaid.run() needs to find.
-    setTimeout(() => this.markdownService.renderMermaidDiagrams(this.docBodyRef.nativeElement));
+    // Load the prose independently of the live data below: a failed markdown fetch must not
+    // suppress the tenant counts or the permission warnings.
+    this.loadProse().catch(error => console.error(error));
 
     from(this.mappingService.getMappings(Direction.INBOUND)).subscribe(
       (mappings) => { this.countMappingInbound$.next(!mappings ? 'no' : mappings.length); }
@@ -113,26 +102,30 @@ export class DocOverviewComponent implements OnInit {
     }
   }
 
+  private async loadProse(): Promise<void> {
+    const [intro, nextSteps] = await Promise.all([
+      this.markdownService.loadAndRender('overview'),
+      this.markdownService.loadAndRender('overview-next-steps')
+    ]);
+    this.htmlIntro = this.sanitizer.bypassSecurityTrustHtml(intro.html);
+    this.htmlNextSteps = this.sanitizer.bypassSecurityTrustHtml(nextSteps.html);
+    // setTimeout (a macrotask) runs after Angular's zone-triggered change detection has
+    // committed the [innerHTML] bindings to the DOM, so docBodyRef.nativeElement actually
+    // contains the <pre class="mermaid"> nodes mermaid.run() needs to find.
+    setTimeout(() => {
+      const body = this.docBodyRef?.nativeElement;
+      if (!body) return; // navigated away before the macrotask ran
+      this.markdownService.highlightCodeBlocks(body);
+      this.markdownService.renderMermaidDiagrams(body);
+    });
+  }
+
   scrollToElement(elementId: string): void {
-    const element = document.getElementById(elementId);
-    if (element) {
-      window.scrollTo({ top: element.offsetTop - 120, behavior: 'smooth' });
-    }
+    scrollToDocElement(elementId);
   }
 
   @HostListener('click', ['$event'])
   onClick(event: MouseEvent): void {
-    const target = (event.target as HTMLElement)?.closest('a');
-    if (!target) return;
-    const href = target.getAttribute('href');
-    if (!href) return;
-    if (href.startsWith('#')) {
-      event.preventDefault();
-      this.scrollToElement(href.slice(1));
-      return;
-    }
-    if (!href.startsWith(DocOverviewComponent.INTERNAL_LINK_PREFIX)) return;
-    event.preventDefault();
-    this.router.navigateByUrl(href);
+    handleDocLinkClick(event, this.router);
   }
 }
