@@ -20,17 +20,13 @@
  */
 package dynamic.mapper.processor.outbound.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import static com.dashjoin.jsonata.Jsonata.jsonata;
-
-import org.apache.camel.Exchange;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.CommonProcessor;
 import dynamic.mapper.processor.model.C8YMessage;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 
@@ -38,13 +34,6 @@ import lombok.extern.slf4j.Slf4j;
 public abstract class BaseProcessor extends CommonProcessor {
 
     protected static final String EXTERNAL_ID_TOKEN = "_externalId_";
-
-    public abstract void process(Exchange exchange) throws Exception;
-
-    @SuppressWarnings("unchecked")
-    ProcessingContext<Object> createProcessingContextAsObject(Exchange exchange) {
-        return exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
-    }
 
     protected Object extractContent(ProcessingContext<?> context, Object payloadJsonNode,
             String payloadAsString, @NotNull String ps) {

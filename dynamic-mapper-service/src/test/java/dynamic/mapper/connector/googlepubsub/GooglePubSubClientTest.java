@@ -47,15 +47,14 @@ import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
-import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.inbound.CamelDispatcherInbound;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
+import dynamic.mapper.model.DynamicMapperRequest;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 
 import com.google.cloud.pubsub.v1.AckReplyConsumer;
 
@@ -167,7 +166,7 @@ public class GooglePubSubClientTest {
      * a live Pub/Sub connection.
      */
     @SuppressWarnings("unchecked")
-    private GooglePubSubClient clientWithMocks(CamelDispatcherInbound dispatcher,
+    private GooglePubSubClient clientWithMocks(InboundMessageDispatcher dispatcher,
             ServiceConfiguration serviceConfiguration) throws Exception {
         GooglePubSubClient client = new GooglePubSubClient();
 
@@ -233,7 +232,7 @@ public class GooglePubSubClientTest {
 
     @Test
     public void testProcessPubSubMessage_atMostOnce_acksImmediately() throws Exception {
-        CamelDispatcherInbound dispatcher = mock(CamelDispatcherInbound.class);
+        InboundMessageDispatcher dispatcher = mock(InboundMessageDispatcher.class);
         ServiceConfiguration sc = mock(ServiceConfiguration.class);
         when(sc.getLogPayload()).thenReturn(false);
         doReturn(successWrapper()).when(dispatcher).onMessage(any(ConnectorMessage.class));
@@ -254,7 +253,7 @@ public class GooglePubSubClientTest {
 
     @Test
     public void testProcessPubSubMessage_atLeastOnce_acksOnSuccess() throws Exception {
-        CamelDispatcherInbound dispatcher = mock(CamelDispatcherInbound.class);
+        InboundMessageDispatcher dispatcher = mock(InboundMessageDispatcher.class);
         ServiceConfiguration sc = mock(ServiceConfiguration.class);
         when(sc.getLogPayload()).thenReturn(false);
         doReturn(successWrapper()).when(dispatcher).onMessage(any(ConnectorMessage.class));
@@ -275,7 +274,7 @@ public class GooglePubSubClientTest {
 
     @Test
     public void testProcessPubSubMessage_atLeastOnce_nacksOnProcessingError() throws Exception {
-        CamelDispatcherInbound dispatcher = mock(CamelDispatcherInbound.class);
+        InboundMessageDispatcher dispatcher = mock(InboundMessageDispatcher.class);
         ServiceConfiguration sc = mock(ServiceConfiguration.class);
         when(sc.getLogPayload()).thenReturn(false);
         doReturn(errorWrapper()).when(dispatcher).onMessage(any(ConnectorMessage.class));

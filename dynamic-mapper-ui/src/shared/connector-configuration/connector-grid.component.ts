@@ -25,11 +25,11 @@ import { filter, map, switchMap, take, takeUntil } from 'rxjs/operators';
 import { cloneDeep } from 'lodash';
 import { saveAs } from 'file-saver';
 
-import { ConfirmationModalComponent } from '../confirmation/confirmation-modal.component';
+import { ConfirmationModalComponent } from '../component/confirmation/confirmation-modal.component';
 import { ConnectorConfigurationService } from '../service/connector-configuration.service';
 import { LoggingEventType } from '../connector-details/connector-log.model';
 import { DeploymentMapEntry, Direction, Feature } from '../mapping/mapping.model';
-import { createCustomUuid } from '../mapping/util';
+import { createCustomUuid } from '../mapping/mapping.constants';
 import { applyConnectorConfigurationChange, awaitDrawerResult, ConnectorConfiguration, ConnectorConfigurationApiPayload, ConnectorSpecification, ConnectorType, PollingInterval, prepareConnectorConfigurationForApi } from './connector.model';
 import { ACTION_CONTROLS, GRID_COLUMNS } from './action-controls';
 import { ActionVisibilityRule } from './types';
@@ -274,11 +274,17 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
       switchMap(([dirs, dirFilter]) =>
         this.connectorConfigurationService.getConfigurationsWithStatus().pipe(
           map(configs => configs.filter(config => {
+            // The auto-created TEST connector singleton backs the mapping-testing feature
+            // internally and is deliberately hidden from the nav (see navigation.factory.ts);
+            // keep it out of the grid too so it can't be edited/deleted/exported by mistake.
+            if (config.connectorType === ConnectorType.TEST) return false;
             const matchesDirections = config.supportedDirections?.some(dir => dirs.includes(dir));
             const matchesFilter = dirFilter === 'ALL' || config.supportedDirections?.includes(dirFilter as Direction);
             return matchesDirections && matchesFilter;
           })),
           map(configs => configs.map(config => ({ ...config, id: config.identifier }))),
+          // Default row order; the columns deliberately carry no sortOrder (see GRID_COLUMNS).
+          map(configs => [...configs].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))),
         )
       )
     );
@@ -332,7 +338,8 @@ export class ConnectorGridComponent implements OnInit, AfterViewInit, OnChanges,
       return types;
     }, new Set());
     return this.specifications
-      .filter(sp => (!sp.singleton || !configuredConnectorType.has(sp.connectorType)) &&
+      .filter(sp => sp.connectorType !== ConnectorType.TEST &&
+        (!sp.singleton || !configuredConnectorType.has(sp.connectorType)) &&
         (sp.connectorType !== ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR || this.feature.pulsarAvailable))
       .map(sp => sp.connectorType);
   }

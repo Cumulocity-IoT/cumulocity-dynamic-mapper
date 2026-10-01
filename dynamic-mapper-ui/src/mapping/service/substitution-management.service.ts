@@ -21,7 +21,7 @@
 import { Injectable, inject } from '@angular/core';
 import { AlertService } from '@c8y/ngx-components';
 import { Substitution, Mapping } from '../../shared';
-import { SubstitutionModel } from '../shared/stepper.model';
+import { SubstitutionModel } from '../../shared/mapping/stepper.model';
 
 @Injectable()
 export class SubstitutionManagementService {

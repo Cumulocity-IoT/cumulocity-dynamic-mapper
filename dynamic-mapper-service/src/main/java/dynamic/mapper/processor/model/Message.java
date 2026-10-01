@@ -21,6 +21,8 @@
 
 package dynamic.mapper.processor.model;
 
+import dynamic.mapper.processor.runtime.ProcessingContext;
+
 import dynamic.mapper.model.Mapping;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

@@ -140,8 +140,9 @@ public class ProcessorExtensionAlarmToSparkplugB implements ProcessorExtensionOu
             // Determine timestamp (ms since epoch)
             long timestampMs = parseTimestamp(timeStr);
 
-            // Alarm active = true when ACTIVE, false when CLEARED or ACKNOWLEDGED
-            boolean isActive = "ACTIVE".equalsIgnoreCase(status);
+            // Alarm active = true=ACTIVE/ACKNOWLEDGED (still open), false=CLEARED — matches the
+            // documented Boolean metric semantics above (true=ACTIVE / false=CLEARED)
+            boolean isActive = !"CLEARED".equalsIgnoreCase(status);
 
             // Metric name prefix following ISA-95 convention
             String alarmMetricBase = metricPrefix + "/" + alarmType;

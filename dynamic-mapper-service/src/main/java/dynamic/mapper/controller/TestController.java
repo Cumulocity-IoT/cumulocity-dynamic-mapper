@@ -37,8 +37,8 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.TestContext;
 import dynamic.mapper.model.TestResult;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.processor.util.APITopicUtil;
 import dynamic.mapper.notification.websocket.Notification;
 
@@ -50,6 +50,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -91,6 +92,12 @@ public class TestController {
             @ApiResponse(responseCode = "404", description = "Test connector not found"),
             @ApiResponse(responseCode = "500", description = "Test execution failed")
     })
+    // Same roles as creating or updating a mapping: the caller supplies a complete Mapping in the
+    // request body, and with send=true the result is dispatched to Cumulocity for real (and with
+    // createTestDevice=true a managed object is created) using the microservice's own elevated
+    // credentials. Without this, any authenticated tenant user could write measurements, events,
+    // alarms and devices without holding any Dynamic Mapper role.
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @RequestMapping(value = "/test/mapping", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<TestResult> testMapping(
             @RequestBody TestContext context) {
@@ -150,10 +157,11 @@ public class TestController {
                 var processingResult = (List<? extends ProcessingContext<?>>) processingResultWrapper
                         .getProcessingResult().get();
 
-                if (processingResult != null && processingResult.size() > 1) {
-                    log.warn("{} - Test mapping produced {} result(s), only returning the first result", tenant,
-                            processingResult.size());
-                } else if (processingResult != null && processingResult.size() == 1) {
+                if (processingResult != null && !processingResult.isEmpty()) {
+                    if (processingResult.size() > 1) {
+                        log.warn("{} - Test mapping produced {} result(s), only returning the first result", tenant,
+                                processingResult.size());
+                    }
                     var firstResult = processingResult.get(0);
                     result.setRequests(firstResult.getRequests());
                     result.setWarnings(firstResult.getWarnings());
@@ -285,7 +293,9 @@ public class TestController {
         } else {
             log.info("Received request at path: {}", fullPath);
         }
-        log.info("Received body: {}", input);
+        // debug, not info: this endpoint echoes whatever is posted to it, so the body is arbitrary
+        // third-party content that should not land in the tenant's log by default.
+        log.debug("Received body: {}", input);
 
         return input;
     }

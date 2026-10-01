@@ -17,429 +17,999 @@
  *
  * @authors Christof Strack
  */
-import { ResolveFn } from '@angular/router';
-import { API, Direction, Feature, Mapping, MappingType } from './mapping.model';
-import { SharedService } from '../service/shared.service';
-import { inject } from '@angular/core';
+import { AbstractControl } from '@angular/forms';
+import * as _ from 'lodash';
+import * as jsYaml from 'js-yaml';
+import {
+  API,
+  DeploymentMapEntry,
+  Direction,
+  JsonEditorComponent,
+  Mapping,
+  TransformationType
+} from '../../shared';
+import { ValidationFormlyError } from './mapping.model';
+import { MappingTokens, PROTECTED_TOKENS } from './processor/processor.model';
 
-// ─── Private template helpers ────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-const SAMPLE_TIME_PLACEHOLDER = '__SAMPLE_NOW__';
-const HEX_PAYLOAD_PLACEHOLDER = '__HEX_PAYLOAD_NOW__';
+export const CONTEXT_DATA_KEY_NAME = 'key';
+export const CONTEXT_DATA_RETAIN = 'retain';
+export const CONTEXT_DATA_METHOD_NAME = 'method';
+export const CONTEXT_DATA_PUBLISH_TOPIC = 'publishTopic';
 
-function generateHexPayload(): string {
-  const now = new Date().toISOString();
-  const csv = `65, 4.5, "${now}","c8y_FuelMeasurement"`;
-  const hexPairs = Array.from(csv).map(c => c.charCodeAt(0).toString(16).padStart(2, '0'));
-  const groups: string[] = [];
-  for (let i = 0; i < hexPairs.length; i += 2) {
-    groups.push(hexPairs[i] + (hexPairs[i + 1] ?? ''));
-  }
-  return `{"payload":"${groups.join(' ')} "}`;
-}
+export const TOPIC_WILDCARD_MULTI = '#';
+export const TOPIC_WILDCARD_SINGLE = '+';
 
-function withCurrentTime(template: string): string {
-  if (template === HEX_PAYLOAD_PLACEHOLDER) {
-    return generateHexPayload();
-  }
-  return template.replace(SAMPLE_TIME_PLACEHOLDER, new Date().toISOString());
-}
+// ─── Topic string utilities ───────────────────────────────────────────────────
 
-function dynamicTemplates<T extends Record<string, string>>(base: T): T {
-  return new Proxy(base, {
-    get(target, prop: string) {
-      const value = target[prop];
-      return typeof value === 'string' ? withCurrentTime(value) : value;
+export function splitTopicExcludingSeparator(topic: string, cutOffLeadingSlash: boolean): string[] {
+  if (topic) {
+    let topix = topic.trim();
+
+    if (cutOffLeadingSlash) {
+      // Original behavior: remove both leading and trailing slashes
+      topix = topix.replace(/(\/{1,}$)|(^\/{1,})/g, '');
+      return topix.split(/\//g);
+    } else {
+      // New behavior: keep leading slash, remove only trailing slashes
+      topix = topix.replace(/\/{1,}$/g, '');
+      if (topix.startsWith('//')) {
+        topix = '/' + topix.replace(/^\/+/, '');
+      }
+
+      if (topix.startsWith('/')) {
+        const parts = topix.substring(1).split(/\//g);
+        return ['/'].concat(parts);
+      }
+
+      return topix.split(/\//g);
     }
+  } else return undefined;
+}
+
+export function splitTopicIncludingSeparator(topic: string): string[] {
+  const topix = topic;
+  return topix.split(/(?<=\/)|(?=\/)/g);
+}
+
+export function normalizeTopic(topic: string) {
+  let topix = topic;
+  if (topix == undefined) topix = '';
+  // reduce multiple leading or trailing "/" to just one "/"
+  let nt = topix.trim().replace(/(\/{2,}$)|(^\/{2,})/g, '/');
+  // do not use starting slashes, see as well https://www.hivemq.com/blog/mqtt-essentials-part-5-mqtt-topics-best-practices/
+  // remove trailing "/" if topic is ends with "#"
+  nt = nt.replace(/(#\/$)/g, '#');
+  return nt;
+}
+
+export function deriveSampleTopicFromTopic(topic: string) {
+  let topix = topic;
+  if (topix == undefined) topix = '';
+  topix = normalizeTopic(topix);
+  // replace trailing TOPIC_WILDCARD_MULTI "#" with TOPIC_WILDCARD_SINGLE "*"
+  const nt = topix.trim().replace(/#+$/, '+');
+  return nt;
+}
+
+/**
+ * Checks whether `sample` still has the same level structure as `topic`,
+ * i.e. same number of levels (a trailing "#" in topic matches any number of
+ * remaining levels) and identical fixed (non-wildcard) segments. Used to
+ * decide whether an existing sample can be kept when the topic changes,
+ * instead of always deriving a fresh sample from the topic.
+ */
+export function topicsHaveSameStructure(topic: string, sample: string): boolean {
+  if (!topic || !sample) return false;
+
+  const splitTopic = splitTopicExcludingSeparator(topic, false);
+  const splitSample = splitTopicExcludingSeparator(sample, false);
+  if (!splitTopic || !splitSample) return false;
+
+  const hasMultiWildcard = splitTopic[splitTopic.length - 1] === TOPIC_WILDCARD_MULTI;
+  const fixedTopic = hasMultiWildcard ? splitTopic.slice(0, -1) : splitTopic;
+
+  if (hasMultiWildcard ? splitSample.length < fixedTopic.length : splitSample.length !== fixedTopic.length) {
+    return false;
+  }
+
+  for (let i = 0; i < fixedTopic.length; i++) {
+    if ('/' === fixedTopic[i] && '/' !== splitSample[i]) return false;
+    if ('/' === splitSample[i] && '/' !== fixedTopic[i]) return false;
+    if (
+      fixedTopic[i] !== '/' &&
+      fixedTopic[i] !== TOPIC_WILDCARD_SINGLE &&
+      fixedTopic[i] !== TOPIC_WILDCARD_MULTI &&
+      fixedTopic[i] !== splitSample[i]
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function isWildcardTopic(topic: string): boolean {
+  const result =
+    topic.includes(TOPIC_WILDCARD_MULTI) ||
+    topic.includes(TOPIC_WILDCARD_SINGLE);
+  return result;
+}
+
+// ─── Mapping validators ───────────────────────────────────────────────────────
+
+export function isMappingTopicUnique(
+  mapping: Mapping,
+  mappings: Mapping[]
+): boolean {
+  const result = mappings.every((m) => {
+    return (
+      (!mapping.mappingTopic.startsWith(m.mappingTopic) &&
+        !m.mappingTopic.startsWith(mapping.mappingTopic)) ||
+      mapping.id == m.id
+    );
+  });
+  return result;
+}
+
+export function isFilterOutboundUnique(
+  mapping: Mapping,
+  mappings: Mapping[]
+): boolean {
+  let result = true;
+  result = mappings.every((m) => {
+    return mapping.filterMapping != m.filterMapping || mapping.id == m.id;
+  });
+  return result;
+}
+
+// ─── Backend error-code translation ────────────────────────────────────────────
+
+/**
+ * Translates a single backend `ValidationError` code (e.g. `"MappingTopic_And_..."`)
+ * into the human-readable message from `ValidationFormlyError`. Falls back to a
+ * de-slugified version of the code itself (underscores → spaces) for any code the
+ * catalogue doesn't (yet) know about, rather than showing the raw enum token verbatim.
+ */
+export function translateValidationErrorCode(code: string): string {
+  return ValidationFormlyError[code]?.message ?? code.replace(/_/g, ' ');
+}
+
+/**
+ * Builds a single human-readable message from a backend error response body.
+ *
+ * The mapping create/update/publish endpoints return a structured 422 body
+ * (`{ message, errors: string[] }`, see `ValidationErrorResponse` on the backend) on a
+ * validation failure — `errors` are translated individually and joined. Any other
+ * error shape (e.g. a plain `{ message }` from a different failure) falls back to that
+ * message, or to `fallback` if the body has neither.
+ */
+export function buildBackendErrorMessage(body: any, fallback: string): string {
+  if (Array.isArray(body?.errors) && body.errors.length > 0) {
+    return body.errors.map((code: string) => translateValidationErrorCode(code)).join('; ');
+  }
+  return body?.message ?? fallback;
+}
+
+// ─── Form validators ──────────────────────────────────────────────────────────
+
+/**
+ * Propagates each group-level validation error onto the specific sub-control named by
+ * its `errorPath` (set alongside every entry added in `checkTopicsInboundAreValid` /
+ * checkTopicsOutboundAreValid`), in addition to the group-level result those functions
+ * return. Without this, only the group as a whole is marked invalid — Formly's
+ * per-field `c8y-form-field` error rendering (which reads `control.errors`, not the
+ * parent group's) never shows *why*, so the save button is disabled with no visible
+ * reason on the wildcard/topic-sample-mismatch checks (previously only the two
+ * `required` checks propagated to a control, via their own early-return `setErrors`
+ * calls above).
+ */
+function propagateErrorsToControls(control: AbstractControl, errors: Record<string, { errorPath: string }>): void {
+  const byControlPath: Record<string, Record<string, unknown>> = {};
+  Object.entries(errors).forEach(([key, err]) => {
+    byControlPath[err.errorPath] = { ...byControlPath[err.errorPath], [key]: err };
+  });
+  Object.entries(byControlPath).forEach(([path, controlErrors]) => {
+    control['controls'][path]?.setErrors(controlErrors);
   });
 }
 
-// ─── Sample templates ─────────────────────────────────────────────────────────
+export function checkTopicsInboundAreValid(control: AbstractControl) {
+  let errors = {};
+  let error: boolean = false;
 
-export const SAMPLE_TEMPLATES_C8Y = dynamicTemplates({
-  MEASUREMENT: `{
-    "c8y_TemperatureMeasurement": {
-        "T": {
-            "value": 110,
-              "unit": "C" }
-          },
-      "time":"${SAMPLE_TIME_PLACEHOLDER}",
-      "type": "c8y_TemperatureMeasurement"
-  }`,
-  ALARM: `{
-    "severity": "MAJOR",
-    "status": "ACTIVE",
-    "text": "This is a new test alarm!",
-    "time": "${SAMPLE_TIME_PLACEHOLDER}",
-    "type": "c8y_TestAlarm"
-  }`,
-  EVENT: `{
-    "text": "This is a new test event.",
-    "time": "${SAMPLE_TIME_PLACEHOLDER}",
-    "type": "c8y_TestEvent"
- }`,
-  INVENTORY: `{
-    "c8y_IsDevice": {},
-    "name": "Vibration Sensor",
-    "com_cumulocity_model_Agent": {},
-    "type": "maker_Vibration_Sensor"
- }`,
-  OPERATION: `{
-   "description": "New camera operation!",
-   "type": "maker_Vibration_Sensor"
-}`
-});
+  // console.log('Validation options:', options);
 
-export const SAMPLE_TEMPLATES_EXTERNAL = dynamicTemplates({
-  MEASUREMENT: `{
-    "Temperature": {
-        "value": 110,
-        "unit": "C" },
-      "time":"${SAMPLE_TIME_PLACEHOLDER}",
-      "deviceId":"909090"
-  }`,
-  ALARM: `{
-    "deviceId":"909090",
-    "alarmType": "TestAlarm",
-    "description": "This is a new test alarm!",
-    "severity": "MAJOR",
-    "status": "ACTIVE",
-    "time": "${SAMPLE_TIME_PLACEHOLDER}"
-  }`,
-  EVENT: `{
-    "deviceId":"909090",
-    "description": "This is a new test event.",
-    "time": "${SAMPLE_TIME_PLACEHOLDER}",
-    "eventType": "TestEvent"
- }`,
-  INVENTORY: `{
-    "name": "Vibration Sensor",
-    "type": "maker_Vibration_Sensor",
-    "id": "909090"
- }`,
-  OPERATION: `{
-   "deviceId": "909090",
-   "description": "New camera operation!",
-   "type": "maker_Vibration_Sensor"
-  }`,
-  FLAT_FILE: `{"payload":"165, 14.5, \\"${SAMPLE_TIME_PLACEHOLDER}\\",\\"c8y_FuelMeasurement\\""}`,
-  HEX: HEX_PAYLOAD_PLACEHOLDER
-});
+  const { mappingTopic, mappingTopicSample } =
+    control['controls'];
+  mappingTopic.setErrors(null);
+  mappingTopicSample.setErrors(null);
 
-// ─── JSON schemas ─────────────────────────────────────────────────────────────
+  // Propagate required errors onto individual controls so Formly's c8y-form-field
+  // shows the error and propertyFormly.invalid is true. Returning { required: false }
+  // from the group validator is ineffective — Formly strips falsy-value keys.
+  if (!mappingTopic.value) {
+    mappingTopic.setErrors({ required: true });
+    return null;
+  }
+  if (!mappingTopicSample.value) {
+    mappingTopicSample.setErrors({ required: true });
+    return null;
+  }
 
-export const SCHEMA_EVENT = {
-  definitions: {},
-  $schema: 'http://json-schema.org/draft-07/schema#',
-  $id: 'http://example.com/root.json',
-  type: 'object',
-  title: 'EVENT',
-  required: ['type', 'text', 'time'],
-  properties: {
-    source: {
-      $id: '#/properties/source',
-      type: 'object',
-      title: 'The managed object to which the event is associated.',
-      allOf: [{ required: ['id'] }],
-      properties: {
-        id: {
-          type: 'string',
-          minLength: 1,
-          title: 'SourceID'
-        }
+  // count number of "#" in mappingTopic
+  let count_multi = (mappingTopic.value.match(/#/g) || []).length;
+  if (count_multi > 1) {
+    errors = {
+      ...errors,
+      Only_One_Multi_Level_Wildcard: {
+        ...ValidationFormlyError['Only_One_Multi_Level_Wildcard'],
+        errorPath: 'mappingTopic'
       }
-    },
-    type: {
-      $id: '#/properties/type',
-      type: 'string',
-      title: 'Type of the event.'
-    },
-    text: {
-      $id: '#/properties/text',
-      type: 'string',
-      title: 'Text of the event.'
-    },
-    time: {
-      $id: '#/properties/time',
-      type: 'string',
-      title: 'Type of the event.',
-      pattern:
-        '^((?:(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?))(Z|[+-]\\d{2}:\\d{2})?)$'
-    }
+    };
   }
-};
 
-export const SCHEMA_ALARM = {
-  definitions: {},
-  $schema: 'http://json-schema.org/draft-07/schema#',
-  $id: 'http://example.com/root.json',
-  type: 'object',
-  title: 'ALARM',
-  required: ['type', 'text', 'time', 'severity'],
-  properties: {
-    source: {
-      $id: '#/properties/source',
-      type: 'object',
-      title: 'The managed object to which the alarm is associated.',
-      allOf: [{ required: ['id'] }],
-      properties: {
-        id: {
-          type: 'string',
-          minLength: 1,
-          title: 'SourceID'
-        }
-      }
-    },
-    type: {
-      $id: '#/properties/type',
-      type: 'string',
-      title: 'Type of the alarm.'
-    },
-
-    severity: {
-      $id: '#/properties/severity',
-      type: 'string',
-      title: 'Severity of the alarm.',
-      pattern: '^((CRITICAL)|(MAJOR)|(MINOR)|(WARNING))$'
-    },
-    text: {
-      $id: '#/properties/text',
-      type: 'string',
-      title: 'Text of the alarm.'
-    },
-    time: {
-      $id: '#/properties/time',
-      type: 'string',
-      title: 'Type of the alarm.',
-      pattern:
-        '^((?:(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?))(Z|[+-]\\d{2}:\\d{2})?)$'
-    }
-  }
-};
-
-export const SCHEMA_MEASUREMENT = {
-  definitions: {},
-  $schema: 'http://json-schema.org/draft-07/schema#',
-  $id: 'http://example.com/root.json',
-  type: 'object',
-  title: 'MEASUREMENT',
-  required: ['type', 'time'],
-  properties: {
-    source: {
-      $id: '#/properties/source',
-      type: 'object',
-      title: 'The managed object to which the measurement is associated.',
-      allOf: [{ required: ['id'] }],
-      properties: {
-        id: {
-          type: 'string',
-          minLength: 1,
-          title: 'SourceID'
-        }
-      }
-    },
-    type: {
-      $id: '#/properties/type',
-      type: 'string',
-      title: 'Type of the measurement.'
-    },
-    time: {
-      $id: '#/properties/time',
-      type: 'string',
-      title: 'Type of the measurement.',
-      pattern:
-        '^((?:(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?))(Z|[+-]\\d{2}:\\d{2})?)$'
-    }
-  }
-};
-
-export const SCHEMA_INVENTORY = {
-  definitions: {},
-  $schema: 'http://json-schema.org/draft-07/schema#',
-  $id: 'http://example.com/root.json',
-  type: 'object',
-  title: 'INVENTORY',
-  required: ['c8y_IsDevice', 'type', 'name'],
-  properties: {
-    c8y_IsDevice: {
-      $id: '#/properties/c8y_IsDevice',
-      type: 'object',
-      title: 'Mark as device.',
-      properties: {}
-    },
-    type: {
-      $id: '#/properties/type',
-      type: 'string',
-      title: 'Type of the device.'
-    },
-    name: {
-      $id: '#/properties/name',
-      type: 'string',
-      title: 'Name of the device.'
-    },
-    id: {
-      $id: '#/properties/id',
-      type: 'string',
-      title: 'Cumulocity id of the device.'
-    }
-  }
-};
-
-export const SCHEMA_C8Y_INVENTORY = {
-  definitions: {},
-  $schema: 'http://json-schema.org/draft-07/schema#',
-  $id: 'http://example.com/root.json',
-  type: 'object',
-  title: 'INVENTORY',
-  required: ['c8y_IsDevice', 'type', 'name'],
-  properties: {
-    c8y_IsDevice: {
-      $id: '#/properties/c8y_IsDevice',
-      type: 'object',
-      title: 'Mark as device.',
-      properties: {}
-    },
-    type: {
-      $id: '#/properties/type',
-      type: 'string',
-      title: 'Type of the device.'
-    },
-    name: {
-      $id: '#/properties/name',
-      type: 'string',
-      title: 'Name of the device.'
-    },
-    id: {
-      $id: '#/properties/id',
-      type: 'string',
-      title: 'Cumulocity id of the device.',
-    }
-  }
-};
-
-export const SCHEMA_OPERATION = {
-  definitions: {},
-  $schema: 'http://json-schema.org/draft-07/schema#',
-  $id: 'http://example.com/root.json',
-  type: 'object',
-  title: 'OPERATION',
-  required: [],
-  properties: {
-    deviceId: {
-      $id: '#/properties/deviceId',
-      type: 'string',
-      title:
-        'Identifier of the target device where the operation should be performed..'
-    },
-    description: {
-      $id: '#/properties/description',
-      type: 'string',
-      title: 'Description of the operation.'
-    }
-  }
-};
-
-export const SCHEMA_PAYLOAD = {
-  definitions: {},
-  $schema: 'http://json-schema.org/draft-07/schema#',
-  $id: 'http://example.com/root.json',
-  type: 'object',
-  title: 'PAYLOAD',
-  required: []
-};
-
-// ─── Application constants ────────────────────────────────────────────────────
-
-export const MAPPING_TYPE = 'd11r_mapping';
-export const PROCESSOR_EXTENSION_TYPE = 'd11r_processorExtension';
-export const MAPPING_TEST_DEVICE_TYPE = 'd11r_testDevice';
-export const MAPPING_TEST_DEVICE_FRAGMENT = 'd11r_testDevice';
-export const MAPPING_FRAGMENT = 'd11r_mapping';
-export const CONNECTOR_FRAGMENT = 'd11r_connector';
-export const MAPPING_GENERATED_TEST_DEVICE = 'd11r_device_generatedType';
-
-export const ALERT_INFO_TIMEOUT = 10000;
-export const COLOR_HIGHLIGHTED: string = 'lightgrey';
-export const UUID_LENGTH = 8;
-
-export const AGENT_ID = 'd11r_mappingService';
-
-export const NODE1 = 'node1';
-export const NODE2 = 'node2';
-export const NODE3 = 'node3';
-
-// ─── URL / path constants ─────────────────────────────────────────────────────
-
-export const BASE_URL = 'service/dynamic-mapper-service';
-export const BASE_AI_URL = 'service/ai';
-export const PATH_OPERATION_ENDPOINT = 'operation';
-export const PATH_CONFIGURATION_CONNECTION_ENDPOINT = 'configuration/connector';
-export const PATH_CONFIGURATION_SERVICE_ENDPOINT = 'configuration/service';
-export const PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT = 'configuration/code';
-export const PATH_MAPPING_TREE_ENDPOINT = 'monitoring/tree';
-export const PATH_MAPPING_ACTIVE_SUBSCRIPTIONS_ENDPOINT = 'monitoring/tree';
-export const PATH_STATUS_CONNECTORS_ENDPOINT = 'monitoring/status/connectors';
-export const PATH_FEATURE_ENDPOINT = 'configuration/feature';
-export const PATH_EXTENSION_ENDPOINT = 'extension';
-export const PATH_SUBSCRIPTION_ENDPOINT = 'subscription';
-export const PATH_DEPLOYMENT_EFFECTIVE_ENDPOINT = 'deployment/effective';
-export const PATH_DEPLOYMENT_DEFINED_ENDPOINT = 'deployment/defined';
-export const PATH_RELATION_ENDPOINT = 'relation';
-export const PATH_TESTING_ENDPOINT = 'test';
-export const PATH_MAPPING_ENDPOINT = 'mapping';
-export const PATH_AGENT_ENDPOINT = 'agent';
-export const PATH_EXPLORER_ENDPOINT = 'explorer';
-
-// ─── Functions ────────────────────────────────────────────────────────────────
-
-export function getExternalTemplate(mapping: Mapping): any {
+  // wildcard "#" can only appear at the end in mappingTopic
   if (
-    mapping.mappingType == MappingType.FLAT_FILE ||
-    mapping.mappingType == MappingType.HEX
+    count_multi >= 1 &&
+    mappingTopic.value.indexOf(TOPIC_WILDCARD_MULTI) + 1 !=
+    mappingTopic.value.length
   ) {
-    return SAMPLE_TEMPLATES_EXTERNAL[mapping.mappingType];
-  } else {
-    return SAMPLE_TEMPLATES_EXTERNAL[mapping.targetAPI];
+    errors = {
+      ...errors,
+      Multi_Level_Wildcard_Only_At_End: {
+        ...ValidationFormlyError['Multi_Level_Wildcard_Only_At_End'],
+        errorPath: 'mappingTopic'
+      }
+    };
   }
+
+  const splitTT: string[] = splitTopicExcludingSeparator(mappingTopic.value, false);
+  const splitTTS: string[] = splitTopicExcludingSeparator(
+    mappingTopicSample.value, false
+  );
+
+  // MQTT semantics: a trailing "#" matches any number (incl. zero) of remaining
+  // levels, so the sample only needs to have AT LEAST as many levels as the
+  // fixed (non-"#") part of the topic. Without a "#" the level count must match
+  // exactly. "+" matches exactly one level regardless of its value.
+  const hasMultiWildcard = splitTT[splitTT.length - 1] == TOPIC_WILDCARD_MULTI;
+  const fixedTT = hasMultiWildcard ? splitTT.slice(0, -1) : splitTT;
+
+  if (
+    hasMultiWildcard
+      ? splitTTS.length < fixedTT.length
+      : splitTTS.length != fixedTT.length
+  ) {
+    errors = {
+      ...errors,
+      MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
+      {
+        ...ValidationFormlyError[
+        'MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
+        ],
+        errorPath: 'mappingTopic'
+      }
+    };
+  } else {
+    for (let i = 0; i < fixedTT.length; i++) {
+      if ('/' == fixedTT[i] && !('/' == splitTTS[i])) {
+        errors = {
+          ...errors,
+          MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+          {
+            ...ValidationFormlyError[
+            'MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+            ],
+            errorPath: 'mappingTopic'
+          }
+        };
+        break;
+      }
+      if ('/' == splitTTS[i] && !('/' == fixedTT[i])) {
+        errors = {
+          ...errors,
+          MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+          {
+            ...ValidationFormlyError[
+            'MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+            ],
+            errorPath: 'mappingTopic'
+          }
+        };
+        break;
+      }
+      if (
+        !('/' == fixedTT[i]) &&
+        !(TOPIC_WILDCARD_SINGLE == fixedTT[i]) &&
+        !(TOPIC_WILDCARD_MULTI == fixedTT[i])
+      ) {
+        if (fixedTT[i] != splitTTS[i]) {
+          errors = {
+            ...errors,
+            MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+            {
+              ...ValidationFormlyError[
+              'MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+              ],
+              errorPath: 'mappingTopic'
+            }
+          };
+          break;
+        }
+      }
+    }
+  }
+  propagateErrorsToControls(control, errors);
+  return Object.keys(errors).length > 0 ? errors : null;
 }
 
-export function getSchema(
-  targetAPI: string,
-  direction: Direction,
-  isTarget: boolean,
-  getTesting: boolean
-): any {
-  if (
-    (isTarget && direction == Direction.INBOUND) ||
-    (!isTarget && direction == Direction.OUTBOUND)
-  ) {
-    if (targetAPI == API.ALARM.name) {
-      return SCHEMA_ALARM;
-    } else if (targetAPI == API.EVENT.name) {
-      return SCHEMA_EVENT;
-    } else if (targetAPI == API.MEASUREMENT.name) {
-      return SCHEMA_MEASUREMENT;
-    } else if (targetAPI == API.INVENTORY.name) {
-      if (isTarget) return SCHEMA_C8Y_INVENTORY;
-      else return SCHEMA_INVENTORY
+export function checkTopicsOutboundAreValid(control: AbstractControl) {
+  let errors = {};
+  const { publishTopic, publishTopicSample } = control['controls'];
+  if (publishTopic.valid && publishTopicSample.value) {
+    publishTopic.setErrors(null);
+    publishTopicSample.setErrors(null);
+
+    // avoid displaying the message error when values are empty
+    if (publishTopic.value == '' || publishTopicSample.value == '') {
+      return null;
+    }
+
+    // count number of "#" in publishTopic
+    const count_multi = (publishTopic.value?.match(/#/g) || []).length;
+    if (count_multi > 1) {
+      errors = {
+        ...errors,
+        Only_One_Multi_Level_Wildcard: {
+          ...ValidationFormlyError['Only_One_Multi_Level_Wildcard'],
+          errorPath: 'publishTopic'
+        }
+      };
+    }
+
+    // wildcard "#" can only appear at the end in mappingTopic
+    if (
+      count_multi >= 1 &&
+      publishTopic.value.indexOf(TOPIC_WILDCARD_MULTI) + 1 !=
+      publishTopic.value.length
+    ) {
+      errors = {
+        ...errors,
+        Multi_Level_Wildcard_Only_At_End: {
+          ...ValidationFormlyError['Multi_Level_Wildcard_Only_At_End'],
+          errorPath: 'publishTopic'
+        }
+      };
+    }
+
+    const splitPT: string[] = splitTopicExcludingSeparator(publishTopic.value, false);
+    const splitTTS: string[] = splitTopicExcludingSeparator(
+      publishTopicSample.value, false
+    );
+    if (splitPT.length != splitTTS.length) {
+      errors = {
+        ...errors,
+        PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name:
+        {
+          ...ValidationFormlyError[
+          'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name'
+          ],
+          errorPath: 'publishTopicSample'
+        }
+      };
     } else {
-      return SCHEMA_OPERATION;
+      for (let i = 0; i < splitPT.length; i++) {
+        if ('/' == splitPT[i] && !('/' == splitTTS[i])) {
+          errors = {
+            ...errors,
+            PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+            {
+              ...ValidationFormlyError[
+              'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+              ],
+              errorPath: 'publishTopicSample'
+            }
+          };
+          break;
+        }
+        if ('/' == splitTTS[i] && !('/' == splitPT[i])) {
+          errors = {
+            ...errors,
+            PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+            {
+              ...ValidationFormlyError[
+              'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+              ],
+              errorPath: 'publishTopicSample'
+            }
+          };
+          break;
+        }
+        if (
+          !('/' == splitPT[i]) &&
+          !('+' == splitPT[i]) &&
+          !('#' == splitPT[i])
+        ) {
+          if (splitPT[i] != splitTTS[i]) {
+            errors = {
+              ...errors,
+              PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name:
+              {
+                ...ValidationFormlyError[
+                'PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name'
+                ],
+                errorPath: 'publishTopicSample'
+              }
+            };
+            break;
+          }
+        }
+      }
     }
+  }
+
+  propagateErrorsToControls(control, errors);
+  return Object.keys(errors).length > 0 ? errors : null;
+}
+
+export function validateProtectedFields(original: any, updated: any): boolean {
+  for (const field of PROTECTED_TOKENS) {
+    const originalValue = findFieldInObject(original, field);
+    const updatedValue = findFieldInObject(updated, field);
+
+    if (originalValue !== undefined && !_.isEqual(originalValue, updatedValue)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function findFieldInObject(obj: any, fieldName: string): any {
+  if (!obj || typeof obj !== 'object') {
+    return undefined;
+  }
+
+  if (obj.hasOwnProperty(fieldName)) {
+    return obj[fieldName];
+  }
+
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key) && typeof obj[key] === 'object') {
+      const result = findFieldInObject(obj[key], fieldName);
+      if (result !== undefined) {
+        return result;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+// ─── TransformationType predicates ───────────────────────────────────────────
+
+export function checkTransformationType(transformationType: TransformationType, template: any): boolean {
+  // Check if template is JSONArray - in this case transformationType must be TransformationType.SMART_FUNCTION
+
+  if (isJSONArray(template)) {
+    return transformationType === TransformationType.SMART_FUNCTION;
+  }
+
+  return true;
+}
+
+function isJSONArray(value: any): boolean {
+  // Check if already a parsed array
+  if (Array.isArray(value)) {
+    return true;
+  }
+
+  // Check if it's a string representation of a JSON array
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+
+    if (!trimmed || !trimmed.startsWith('[')) {
+      return false;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      return Array.isArray(parsed);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  return false;
+}
+
+export function isCodeOrExtensionTransformation(transformationType: TransformationType): boolean {
+  return transformationType === TransformationType.SMART_FUNCTION
+    || transformationType === TransformationType.EXTENSION_JAVA;
+}
+
+// ─── Template expansion ───────────────────────────────────────────────────────
+
+export function expandExternalTemplate(
+  template: object,
+  mapping: Mapping,
+  levels: string[]
+): object {
+  if (Array.isArray(template) || isCodeOrExtensionTransformation(mapping.transformationType)) {
+    return template;
   } else {
-    return SCHEMA_PAYLOAD;
+    // Define the context data with specific values. A key already present in the template (e.g.
+    // seeded from a real message captured in the Message Explorer) is preferred over the generic
+    // placeholder, so the sample mirrors what the mapping actually receives at runtime.
+    const existingKey = template?.[MappingTokens.CONTEXT_DATA]?.[CONTEXT_DATA_KEY_NAME];
+    let contextData;
+    if (mapping.direction == Direction.INBOUND) {
+      contextData = {
+        [CONTEXT_DATA_KEY_NAME]: existingKey ?? `${CONTEXT_DATA_KEY_NAME}-sample`,
+        // [CONTEXT_DATA_METHOD_NAME]: "POST"
+        // [CONTEXT_DATA_RETAIN]: false,
+      };
+    } else {
+      contextData = {
+        [CONTEXT_DATA_KEY_NAME]: `${CONTEXT_DATA_KEY_NAME}-sample`,
+        [CONTEXT_DATA_METHOD_NAME]: "POST", // Set to "POST" instead of a generated value
+        [CONTEXT_DATA_RETAIN]: false,
+        [CONTEXT_DATA_PUBLISH_TOPIC]: mapping.publishTopic,
+      }
+    };
+    return {
+      ...template,
+      _TOPIC_LEVEL_: levels,
+      _CONTEXT_DATA_: contextData
+    };
+
   }
 }
 
-export function createCustomUuid(): string {
-  const id = Math.random().toString(36).slice(-UUID_LENGTH);
-  return id;
+export function expandC8YTemplate(template: object, mapping: Mapping): object {
+  if (isCodeOrExtensionTransformation(mapping.transformationType)) {
+    return template;
+  }
+  let result;
+  if (mapping.useExternalId) {
+    result = {
+      ...template,
+      _IDENTITY_: {
+        // externalIdType: mapping.externalIdType,
+        externalId: 'any_SerialNumber',
+        // c8ySourceId: '909090'
+      }
+    };
+  } else {
+    result = {
+      ...template,
+      [MappingTokens.IDENTITY]: {
+        c8ySourceId: '909090'
+      }
+    };
+  }
+  if (mapping.direction == Direction.INBOUND) {
+    result = {
+      ...result,
+      [MappingTokens.CONTEXT_DATA]: {
+        'api': mapping.targetAPI,
+        'processingMode': 'PERSISTENT'
+      }
+    };
+
+    if (mapping.createNonExistingDevice) {
+      result = {
+        ...result,
+        [MappingTokens.CONTEXT_DATA]: {
+          ...result[MappingTokens.CONTEXT_DATA], // Spread existing properties
+          'deviceName': 'generatedDevice',
+          'deviceType': 'c8y_GeneratedDeviceType'
+        }
+      };
+    }
+
+    // Handle attachment properties independently
+    if (mapping.eventWithAttachment) {
+      // Initialize [MappingTokens.CONTEXT_DATA] if it doesn't exist yet
+      if (!result[MappingTokens.CONTEXT_DATA]) {
+        result[MappingTokens.CONTEXT_DATA] = {};
+      }
+
+      // Add attachment properties
+      result[MappingTokens.CONTEXT_DATA].attachmentName = 'TestImage.jpeg';
+      result[MappingTokens.CONTEXT_DATA].attachmentType = 'image/jpeg';
+      result[MappingTokens.CONTEXT_DATA].attachmentData = '';
+    }
+  }
+
+  if (mapping.direction == Direction.OUTBOUND) {
+    result[MappingTokens.IDENTITY].c8ySourceId = '909090';
+  }
+
+  return result;
 }
 
-export function nextIdAndPad(id: number, padding: number): string {
-  return (id + 1).toString(10).padStart(padding, '0');
+// ─── Template testing ─────────────────────────────────────────────────────────
+
+export function randomIdAsString() {
+  return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
-export const featureResolver: ResolveFn<Feature> = async (route, state) => {
-  const sharedService = inject(SharedService);
-  return await sharedService.getFeatures();
-};
+export function patchC8YTemplateForTesting(template: object, mapping: Mapping) {
+  const identifier = randomIdAsString();
+  _.set(template, API[mapping.targetAPI].identifier, identifier);
+  // For SMART_FUNCTION and EXTENSION_JAVA the source template must stay clean (allowSourceExpansion=false):
+  // no MappingTokens should appear in source or target templates
+  if (!isCodeOrExtensionTransformation(mapping.transformationType)) {
+    _.set(template, `${MappingTokens.IDENTITY}.c8ySourceId`, identifier);
+    _.set(template, `${MappingTokens.CONTEXT_DATA}.publishTopic`, mapping.publishTopic);
+  }
+}
+
+// ─── Template reduction ───────────────────────────────────────────────────────
+
+export function reduceSourceTemplate(
+  template: object,
+  returnPatched: boolean
+): string {
+  if (!returnPatched) {
+    delete template[MappingTokens.IDENTITY];
+    delete template[MappingTokens.CONTEXT_DATA];
+    delete template[MappingTokens.TOPIC_LEVEL];
+  }
+  const tt = JSON.stringify(template);
+  return tt;
+}
+
+export function reduceTargetTemplate(
+  template: object,
+  patched: boolean
+): string {
+  if (template && !patched) {
+    delete template[MappingTokens.IDENTITY];
+    delete template[MappingTokens.CONTEXT_DATA];
+    delete template[MappingTokens.TOPIC_LEVEL];
+  }
+  const tt = JSON.stringify(template);
+  return tt;
+}
+
+// ─── General utilities ────────────────────────────────────────────────────────
+
+export function isExpression(path) {
+  const containsSpecialChars = (str: string): boolean => {
+    // IMPORTANT: here all special characters that are part of an expression must be listed, as they cause the editor to crash
+    // when the path is used in a selection, e.g. 2 * c8yTemperature.T.value
+    const regex = /[\$\(\)&\s\+\-\/\*\=]/;
+    return regex.test(str);
+  }
+  return containsSpecialChars(path)
+}
+
+export function getTypeOf(object) {
+  const stringConstructor = 'test'.constructor;
+  const arrayConstructor = [].constructor;
+  const objectConstructor = {}.constructor;
+  const booleanConstructor = true.constructor;
+  // console.log("Object constructor", object, object.constructor);
+  if (object === null) {
+    return 'null';
+  } else if (object === undefined) {
+    return 'undefined';
+  } else if (object.constructor === stringConstructor) {
+    return 'String';
+  } else if (object.constructor === arrayConstructor) {
+    return 'Array';
+  } else if (object.constructor === objectConstructor) {
+    return 'Object';
+  } else if (object.constructor === booleanConstructor) {
+    return 'Boolean';
+  } else if (typeof object === 'number') {
+    return 'Number';
+  } else {
+    return "don't know";
+  }
+}
+
+// ─── Base64 / encoding utilities ──────────────────────────────────────────────
+
+export function base64ToString(base64) {
+  const binString = atob(base64);
+  return new TextDecoder().decode(Uint8Array.from(binString, (m) => m.codePointAt(0)));
+}
+
+export function stringToBase64(code2Encode) {
+  const bytes = new TextEncoder().encode(code2Encode);
+  const binString = Array.from(bytes, (byte: any) =>
+    String.fromCodePoint(byte),
+  ).join("");
+  return btoa(binString);
+}
+
+export function base64ToBytes(base64) {
+  const binString = atob(base64);
+  return Uint8Array.from(binString, (m) => m.codePointAt(0));
+}
+
+export function bytesToBase64(bytes) {
+  const binString = Array.from(bytes, (byte: any) =>
+    String.fromCodePoint(byte),
+  ).join("");
+  return btoa(binString);
+}
+
+// ─── String / template utilities ─────────────────────────────────────────────
+
+/**
+ * Marks the end of the auto-generated system section of a CodeTemplate's JSDoc
+ * header (@name, @description, @templateType, @direction, @defaultTemplate,
+ * @internal, @readonly). Must match
+ * `ServiceConfigurationService.SYSTEM_SECTION_MARKER` on the backend, which
+ * generates and rewrites this section on every template save
+ * (`rectifyHeaderInCodeTemplate`) — keep the two in sync.
+ */
+const TEMPLATE_SYSTEM_SECTION_MARKER =
+  '--- metadata above is auto-generated, add your documentation below ---';
+
+/**
+ * Removes the auto-generated system-metadata section of a template's JSDoc
+ * header from a code string, so template-only concepts (@name, @templateType,
+ * @direction, ...) aren't carried over when the template is used as the basis
+ * for a mapping's code. Any free-form documentation the template author wrote
+ * below the marker (e.g. a sample payload) is preserved.
+ *
+ * Templates fetched from the backend always contain the marker (it's written
+ * on every create/update), but this falls back to stripping the individual
+ * system tags for any pre-migration data that doesn't have it yet.
+ */
+export function stripTemplateMetadataTags(code: string): string {
+  if (!code) return code;
+
+  const markerIndex = code.indexOf(TEMPLATE_SYSTEM_SECTION_MARKER);
+  if (markerIndex !== -1) {
+    const blockStart = code.lastIndexOf('/**', markerIndex);
+    const markerLineEnd = code.indexOf('\n', markerIndex);
+    // The marker sits inside the JSDoc block, so the next `*/` closes that same block.
+    const blockEnd = code.indexOf('*/', markerIndex);
+    if (blockStart !== -1 && markerLineEnd !== -1 && blockEnd !== -1) {
+      const before = code.slice(0, blockStart);
+      const after = code.slice(blockEnd + 2);
+      // Drop leading empty continuation lines left behind by the removed system section.
+      const documentation = code
+        .slice(markerLineEnd + 1, blockEnd)
+        .replace(/^(?:[ \t]*\*[ \t]*\n)+/, '');
+
+      // The system section owns the block's `/**` opener. Simply cutting up to the marker line
+      // would delete that opener and leave the author's documentation as a dangling `* ... */`,
+      // which is a syntax error — so re-open the block whenever there is documentation to keep,
+      // and remove the block entirely when there is not.
+      const hasDocumentation = documentation.replace(/^[ \t]*\*?/gm, '').trim() !== '';
+      const rebuilt = hasDocumentation
+        ? `${before}/**\n${documentation}*/${after}`
+        : before + after;
+      return rebuilt.replace(/^\n+/, '');
+    }
+  }
+
+  // Legacy fallback: no marker present, strip the tags most likely to conflict.
+  return code.replace(/^\s*\*\s*@(?:name|description|templateType|direction|defaultTemplate|internal|readonly)\b[^\n]*\n?/gm, '');
+}
+
+/**
+ * Snapshot of a mapping-editing session's initial state, taken once when the editor is opened,
+ * for comparison against the live editing state via {@link hasMappingContentChanged}.
+ */
+export interface MappingContentSnapshot {
+  mappingJson: string;
+  sourceTemplateJson: string;
+  targetTemplateJson: string;
+  mappingCode: string;
+}
+
+export function captureMappingContentSnapshot(
+  mapping: unknown,
+  sourceTemplate: unknown,
+  targetTemplate: unknown,
+  mappingCode: string | undefined
+): MappingContentSnapshot {
+  return {
+    mappingJson: JSON.stringify(mapping),
+    sourceTemplateJson: JSON.stringify(sourceTemplate),
+    targetTemplateJson: JSON.stringify(targetTemplate),
+    mappingCode: mappingCode ?? ''
+  };
+}
+
+/**
+ * Returns true when any mapping content field has changed since {@link captureMappingContentSnapshot}
+ * was taken. Shared by the stepper and the unified editor so an UPDATE-mode commit only creates a
+ * draft when the user actually changed the mapping's content — a connector-only reassignment (which
+ * doesn't touch any of these fields) must not create a no-op draft.
+ */
+export function hasMappingContentChanged(
+  mapping: unknown,
+  sourceTemplate: unknown,
+  targetTemplate: unknown,
+  mappingCode: string | undefined,
+  initial: MappingContentSnapshot
+): boolean {
+  return JSON.stringify(mapping) !== initial.mappingJson
+    || JSON.stringify(sourceTemplate) !== initial.sourceTemplateJson
+    || JSON.stringify(targetTemplate) !== initial.targetTemplateJson
+    || (mappingCode ?? '') !== initial.mappingCode;
+}
+
+/**
+ * Returns true when `code` already exports `exportName` as an ESM named or direct export (e.g.
+ * `export { onMessage };` or `export function onMessage(...)`), so callers don't append a
+ * duplicate export statement. Handles `export default` alongside the other direct-export forms.
+ * Shared by the stepper and the unified editor's code-template insertion — these previously
+ * carried two independently forked copies of this regex pair that had already drifted (the
+ * unified editor's matched `export default`, the stepper's didn't).
+ */
+export function hasEsmExport(code: string, exportName: string): boolean {
+  const escapedName = exportName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const namedExportPattern = new RegExp(`\\bexport\\s*\\{[^}]*\\b${escapedName}\\b(?:\\s+as\\s+\\w+)?[^}]*\\}`, 'm');
+  const directExportPattern = new RegExp(
+    `\\bexport\\s+(?:default\\s+)?(?:async\\s+function|function|const|let|var|class)\\s+${escapedName}\\b`,
+    'm'
+  );
+  return namedExportPattern.test(code) || directExportPattern.test(code);
+}
+
+// ─── Mapping editor session utilities ──────────────────────────────────────────
+// Shared by the stepper (mapping-stepper.component.ts) and the unified editor
+// (mapping-unified-editor.component.ts), which independently duplicated these until a review
+// found ~90% method-level duplication between the two components. See
+// docs/planning/IMPLEMENTATION-PLAN-STEPPER-UNIFIED-EDITOR-DEDUP.md.
+
+/** Serializes an extension parameter block to YAML for display in the parameter textarea. */
+export function configurationToYaml(configuration: Record<string, any> | undefined): string {
+  if (!configuration) {
+    return '';
+  }
+  try {
+    return jsYaml.dump(configuration, { indent: 2 });
+  } catch {
+    return '';
+  }
+}
+
+/** Parses the extension parameter textarea's YAML back into an object. */
+export function yamlToConfiguration(yaml: string): Record<string, any> | undefined {
+  if (!yaml?.trim()) {
+    return undefined;
+  }
+  try {
+    const parsed = jsYaml.load(yaml);
+    return (parsed && typeof parsed === 'object') ? parsed as Record<string, any> : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Builds the mapping snapshot sent to the Testing step / drawer, optionally including the encoded code. */
+export function buildTestMapping(
+  mapping: Mapping,
+  sourceTemplate: any,
+  targetTemplate: any,
+  mappingCode: string | undefined,
+  includeCode: boolean
+): Mapping {
+  const testMapping = structuredClone(mapping);
+  testMapping.sourceTemplate = JSON.stringify(sourceTemplate);
+  testMapping.targetTemplate = JSON.stringify(targetTemplate);
+  if (includeCode && mappingCode) {
+    testMapping.code = stringToBase64(stripTemplateMetadataTags(mappingCode));
+  }
+  return testMapping;
+}
+
+/** A mapping must be bound to at least one connector before it can be saved. */
+export function isConnectorSelectionEmpty(deploymentMapEntry: DeploymentMapEntry | undefined): boolean {
+  return !deploymentMapEntry?.connectors || deploymentMapEntry.connectors.length === 0;
+}
+
+/**
+ * Shape common to the template-step components (currently only `MappingTemplateStepComponent`)
+ * that {@link updateTemplatesInEditors} needs — narrowed to just the fields it reads so this
+ * shared util doesn't have to import the full step component type.
+ */
+export interface TemplateEditorRef {
+  editorSourceStepTemplate?: JsonEditorComponent;
+  editorTargetStepTemplate?: JsonEditorComponent;
+  sourceTemplateUpdated?: any;
+  targetTemplateUpdated?: any;
+}
+
+/**
+ * Reads content directly from the underlying vanilla-jsoneditor instance, bypassing the
+ * `(contentChanged)` mirror (`sourceTemplateUpdated`/`targetTemplateUpdated`). That mirror only
+ * updates when the library's `onChange` fires, which in practice doesn't fire for every edit
+ * path (e.g. some tree-mode interactions) — `.get()` is the library's own source of truth and
+ * is never stale.
+ */
+export function tryGetLiveEditorContent(editor: JsonEditorComponent | undefined): any {
+  if (!editor) return undefined;
+  try {
+    return editor.get();
+  } catch (error) {
+    console.warn('Failed to read live editor content, falling back', error);
+    return undefined;
+  }
+}
+
+/**
+ * Pulls the latest source/target template values out of the template step's editors before a
+ * save or a step/tab transition away from it. Tries the live editor content first, falling back
+ * to the step component's own change-mirror, falling back to the current value — see
+ * {@link tryGetLiveEditorContent} for why the live read is needed.
+ */
+export function updateTemplatesInEditors(
+  templateStepRef: TemplateEditorRef | undefined,
+  currentSourceTemplate: any,
+  currentTargetTemplate: any
+): { sourceTemplate: any; targetTemplate: any } {
+  const liveSource = tryGetLiveEditorContent(templateStepRef?.editorSourceStepTemplate);
+  const liveTarget = tryGetLiveEditorContent(templateStepRef?.editorTargetStepTemplate);
+  return {
+    sourceTemplate: liveSource ?? templateStepRef?.sourceTemplateUpdated ?? currentSourceTemplate,
+    targetTemplate: liveTarget ?? templateStepRef?.targetTemplateUpdated ?? currentTargetTemplate
+  };
+}
+
+// ─── Object utilities ─────────────────────────────────────────────────────────
+
+export /**
+* Creates a new object with sorted keys, optionally placing specified keys at the end
+* @param {Object} obj - The original object
+* @param {Object} options - Configuration options
+* @param {boolean} [options.underscoreKeysAtEnd=true] - Whether to place keys starting with "_" at the end
+* @param {Function} [options.sortFn=null] - Optional custom sort function for keys
+* @returns {Object} - New object with sorted keys
+*/
+  function sortObjectKeys(obj, options = {}) {
+  // Set default options
+  const defaultOptions = {
+    underscoreKeysAtEnd: true,
+    sortFn: null
+  };
+
+  const config = { ...defaultOptions, ...options };
+
+  // Get the keys of the object
+  let keys = Object.keys(obj);
+  let underscoreKeys = [];
+
+  // If we need to place underscore keys at the end, separate them
+  if (config.underscoreKeysAtEnd) {
+    // Extract keys starting with "_"
+    underscoreKeys = keys.filter(key => key.startsWith('_'));
+
+    // Remove underscore keys from the main keys array
+    keys = keys.filter(key => !key.startsWith('_'));
+  }
+
+  // Sort the remaining keys
+  if (config.sortFn && typeof config.sortFn === 'function') {
+    keys.sort(config.sortFn);
+  } else {
+    keys.sort();
+  }
+
+  // Sort underscore keys alphabetically among themselves
+  if (config.underscoreKeysAtEnd) {
+    underscoreKeys.sort();
+    // Append underscore keys to the end
+    keys = [...keys, ...underscoreKeys];
+  }
+
+  // Create a new object with the sorted keys
+  const sortedObj = {};
+  keys.forEach(key => {
+    sortedObj[key] = obj[key];
+  });
+
+  return sortedObj;
+}

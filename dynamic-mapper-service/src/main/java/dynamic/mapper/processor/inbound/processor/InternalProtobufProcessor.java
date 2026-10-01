@@ -21,22 +21,19 @@
 
 package dynamic.mapper.processor.inbound.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import com.google.protobuf.InvalidProtocolBufferException;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
 import dynamic.mapper.processor.processor.fixed.InternalCustomMeasurementOuter;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.RepairStrategy;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.RepairStrategy;
 
 
-import org.apache.camel.Exchange;
 import org.joda.time.DateTime;
 import org.springframework.stereotype.Component;
 
@@ -50,10 +47,7 @@ public class InternalProtobufProcessor extends BaseProcessor {
         this.mappingService = mappingService;
     }
 
-    @Override
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<byte[]> context = getProcessingContextAsByteArray(exchange);
-
+    public void process(ProcessingContext<byte[]> context) throws Exception {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 
@@ -103,11 +97,6 @@ public class InternalProtobufProcessor extends BaseProcessor {
                     TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
 
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    ProcessingContext<byte[]> getProcessingContextAsByteArray(Exchange exchange) {
-        return exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
     }
 
 }

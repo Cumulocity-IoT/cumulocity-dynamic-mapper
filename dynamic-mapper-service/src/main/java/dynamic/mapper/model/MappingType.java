@@ -1,0 +1,55 @@
+/*
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @authors Christof Strack, Stefan Witschel
+ *
+ */
+
+package dynamic.mapper.model;
+
+public enum MappingType {
+    JSON("JSON"),
+    FLAT_FILE("FLAT_FILE"),
+    HEX("HEX"),
+    /** @deprecated Use {@link #ANY_PAYLOAD} with {@link TransformationType#SMART_FUNCTION} or
+     *  {@link TransformationType#EXTENSION_JAVA} instead, which decode Protobuf against your own
+     *  schema rather than the hardcoded internal parser. Retained for existing mappings only:
+     *  its sole supported transformation is the deprecated {@link TransformationType#DEFAULT}. */
+    @Deprecated
+    PROTOBUF_INTERNAL("PROTOBUF_INTERNAL"),
+    /** @deprecated Use {@link #ANY_PAYLOAD} with {@link TransformationType#EXTENSION_JAVA} instead.
+     *  Retained for on-the-fly data migration only; will be removed in a future release. */
+    @Deprecated
+    EXTENSION_JAVA("EXTENSION_JAVA"),
+    /** @deprecated Superseded by {@link #JSON} with {@link TransformationType#SMART_FUNCTION}.
+     *  Retained only so {@code MappingRepository} can migrate existing mappings on load. */
+    @Deprecated
+    CODE_BASED("CODE_BASED"),
+    ANY_PAYLOAD("ANY_PAYLOAD"),
+    SPARKPLUGB("SPARKPLUGB"),
+    ;
+
+    public final String name;
+
+    private MappingType(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return this.name;
+    }
+}

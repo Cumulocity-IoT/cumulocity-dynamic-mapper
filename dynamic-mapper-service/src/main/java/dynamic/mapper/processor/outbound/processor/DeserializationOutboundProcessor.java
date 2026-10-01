@@ -20,37 +20,21 @@
  */
 package dynamic.mapper.processor.outbound.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
-import org.apache.camel.Exchange;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.model.C8YMessage;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
 public class DeserializationOutboundProcessor extends BaseProcessor {
 
-    @Override
-    public void process(Exchange exchange) throws Exception {
-        C8YMessage c8yMessage = exchange.getIn().getHeader(CamelHeaders.C8Y_MESSAGE, C8YMessage.class);
-
-        String tenant = c8yMessage.getTenant();
-        Mapping mapping = exchange.getIn().getBody(Mapping.class);
-        Boolean testing = exchange.getIn().getHeader(CamelHeaders.TESTING, Boolean.class);
-
-        ServiceConfiguration serviceConfiguration = exchange.getIn().getHeader(CamelHeaders.SERVICE_CONFIGURATION,
-                ServiceConfiguration.class);
-
-        ProcessingContext<Object> context = createProcessingContextAsObject(tenant, mapping, c8yMessage,
-                serviceConfiguration, testing);
-
-        exchange.getIn().setHeader(CamelHeaders.PROCESSING_CONTEXT, context);
-
+    public ProcessingContext<Object> process(String tenant, Mapping mapping, C8YMessage c8yMessage,
+            ServiceConfiguration serviceConfiguration, Boolean testing) throws Exception {
+        return createProcessingContextAsObject(tenant, mapping, c8yMessage, serviceConfiguration, testing);
     }
 
 }

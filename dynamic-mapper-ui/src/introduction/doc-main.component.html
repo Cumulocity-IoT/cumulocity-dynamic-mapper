@@ -55,6 +55,9 @@
 <!-- ================================================================================ -->
 <!-- PAGE SWITCHER — each page rendered by its own sub-component                       -->
 <!-- ================================================================================ -->
-<div #docContent>
+<!-- .d11r-doc scopes doc-shared.css. That stylesheet is loaded with ViewEncapsulation.None
+     (the markdown body is injected via [innerHTML] and never gets Angular's _ngcontent-*
+     attribute), so without this wrapper its rules would style the entire application. -->
+<div #docContent class="d11r-doc">
   <router-outlet></router-outlet>
 </div>

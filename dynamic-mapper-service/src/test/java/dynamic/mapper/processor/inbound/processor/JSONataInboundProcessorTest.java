@@ -30,8 +30,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,15 +44,15 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.Substitution;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.RepairStrategy;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
-import dynamic.mapper.processor.model.TransformationType;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.model.TransformationType;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -64,12 +62,6 @@ class JSONataInboundProcessorTest {
 
     @Mock
     private MappingService mappingService;
-
-    @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
 
     @Mock
     private ServiceConfiguration serviceConfiguration;
@@ -99,8 +91,6 @@ class JSONataInboundProcessorTest {
         processingContext = createProcessingContext(mapping);
 
         // Setup mocks
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
         when(serviceConfiguration.getLogSubstitution()).thenReturn(false);
@@ -339,7 +329,7 @@ class JSONataInboundProcessorTest {
 
     @Test
     void testProcessSuccess() throws Exception {
-        processor.process(exchange);
+        processor.process(processingContext);
 
         verify(mappingService, never()).increaseAndHandleFailureCount(any(), any(), any());
         assertEquals(0, mappingStatus.errors);
@@ -350,9 +340,6 @@ class JSONataInboundProcessorTest {
 
     @Test
     void testProcessWithException() throws Exception {
-
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
-
         // Create a spy to control when exceptions are thrown
         JSONataInboundProcessor processorSpy = spy(processor);
 
@@ -361,7 +348,7 @@ class JSONataInboundProcessorTest {
                 .when(processorSpy).extractFromSource(any(ProcessingContext.class));
 
         // When
-        processorSpy.process(exchange);
+        processorSpy.process(processingContext);
 
         // Then - verify error handling was called
         assertTrue(processingContext.getErrors().size() > 0, "Should have added error to context");

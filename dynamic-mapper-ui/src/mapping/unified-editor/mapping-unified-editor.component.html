@@ -113,7 +113,7 @@
 
     <!-- Tab 3: Substitutions -->
     @if (activeTabIndex === TAB_DEFINE_TRANSFORMATION && isTabVisible(TAB_DEFINE_TRANSFORMATION)) {
-    <d11r-mapping-transformation-step [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
+    <d11r-mapping-transformation-step #transformationStep [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
       [sourceTemplate]="sourceTemplate" [targetTemplate]="targetTemplate" [sourceSystem]="sourceSystem"
       [targetSystem]="targetSystem" [feature]="feature" [aiAgentDeployed]="aiAgentDeployed" [aiAgent]="aiAgent"
       [schemaSource]="schemaSource" [schemaTarget]="schemaTarget" [mappingCode]="mappingCode"
@@ -148,17 +148,18 @@
           <span translate class="text-muted">Active </span><span class="text-12 label label-default" title="Active version">v{{ mapping.version }}</span>
         }
         @if (mapping.debug) {
-          <span class="text-12 label label-success">debug</span>
+          <span class="text-12 label label-success"
+            title="Debug logging is enabled for this mapping. View the detailed output in the microservice log: Administration → Ecosystem → Microservices → dynamic-mapper-service → Logs">debug</span>
         }
         @if (mapping.draftDirty) {
-          <span translate class="text-muted">· Editing </span><span class="text-12 label label-info" title="This mapping has unpublished draft changes">draft</span>
+          <span translate class="text-muted">· Editing </span><span class="text-12 label label-warning" title="This mapping has unpublished draft changes">draft</span>
         }
       }
     </div>
     <!-- center: buttons (truly centered because both flanking divs are flex:1) -->
     <div class="d-flex a-i-center" style="gap:16px;">
       <button type="button" class="btn btn-default" (click)="onCancel()" translate data-cy="dm-unified-editor-cancel">
-        Cancel
+        Close
       </button>
       <button type="button" class="btn btn-primary" (click)="onCommitButton()"
         [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.editorMode === EditorMode.READ_ONLY || mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE || (isButtonDisabled$ | async) || (stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim())"

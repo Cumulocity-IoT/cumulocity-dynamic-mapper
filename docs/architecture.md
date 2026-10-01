@@ -46,7 +46,7 @@ Handles received messages and maps them to Cumulocity domain objects. Supports m
 Key classes:
 - `processor/inbound/CamelDispatcherInbound.java` — Apache Camel entry point for Broker → C8Y
 - `processor/outbound/CamelDispatcherOutbound.java` — entry point for C8Y → Broker
-- `processor/model/ProcessingContext.java` — per-message processing state
+- `processor/runtime/ProcessingContext.java` — per-message processing state
 
 ### C8Y Client
 
@@ -130,3 +130,25 @@ The Dynamic Mapper can be deployed as a **multi-tenant microservice** — deploy
 It also supports **multiple simultaneous broker connections** — connectors from different brokers can be active at the same time, each with their own mappings.
 
 > **Note:** When using MQTT or any other message broker besides MQTT Service, you must provide and operate that broker yourself.
+
+### Single-instance requirement
+
+**The service must run as a single replica.** `cumulocity.json` sets `isolation: MULTI_TENANT`
+and deliberately omits `scale`, so the platform runs one instance; the sized variants
+(`cumulocity-2c/-8c/-16c.json`) scale *vertically* (more cpu/memory) for the same reason.
+
+This is a hard correctness requirement, not a performance preference. Essentially all runtime
+state is per-JVM in-memory with no coordination — there is no leader election, distributed
+lock, or shared cache anywhere in the codebase. Running two replicas would break, in rough
+order of severity:
+
+| State | Consequence of a second replica |
+|---|---|
+| `ConnectorRegistry` (live broker client connections) | Each replica opens its own broker connection and processes *every* inbound message — duplicated Cumulocity writes. Silent data corruption. |
+| Outbound Notification 2.0 subscriptions | Each replica receives and publishes the same notification — duplicate outbound messages. |
+| Kafka connector `groupId` | Deterministic and shared, so partitions would be split across replicas — partial processing per replica. |
+| Mapping status counters, Smart Function state, caches, service-event ring buffer | Diverge per replica; the UI shows whichever instance answered. |
+| Message Explorer sessions | Held in memory on the instance that created them, so a poll routed elsewhere returns 404 "session expired". Visible and benign — unlike the rows above. |
+
+If horizontal scaling is ever required, the connector/dispatch layer is what needs to change
+first; Explorer is the least of it.

@@ -50,7 +50,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.notification.GroupCacheManager;
 import dynamic.mapper.notification.NotificationSubscriber;
@@ -69,7 +69,7 @@ class UpdateSubscriptionDeviceGroupTaskTest {
     private static final String DEVICE_A = "dev-a";
     private static final String DEVICE_B = "dev-b";
 
-    @Mock private ConfigurationRegistry configurationRegistry;
+    @Mock private ServiceRegistry serviceRegistry;
     @Mock private C8YAgent c8yAgent;
     @Mock private NotificationSubscriber notificationSubscriber;
 
@@ -78,8 +78,8 @@ class UpdateSubscriptionDeviceGroupTaskTest {
     @BeforeEach
     void setUp() {
         groupCacheManager = new GroupCacheManager(TENANT);
-        lenient().when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
-        lenient().when(configurationRegistry.getNotificationSubscriber()).thenReturn(notificationSubscriber);
+        lenient().when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        lenient().when(serviceRegistry.getNotificationSubscriber()).thenReturn(notificationSubscriber);
 
         // Default stub for subscribeDeviceAndConnect — returns a completed future
         lenient().when(notificationSubscriber.subscribeDeviceAndConnect(
@@ -218,7 +218,7 @@ class UpdateSubscriptionDeviceGroupTaskTest {
     // ------------------------------------------------------------------
 
     private UpdateSubscriptionDeviceGroupTask task(C8YMessage msg) {
-        return new UpdateSubscriptionDeviceGroupTask(configurationRegistry, msg, groupCacheManager);
+        return new UpdateSubscriptionDeviceGroupTask(serviceRegistry, msg, groupCacheManager);
     }
 
     /** Builds a C8YMessage with a childAssets payload listing the given device IDs. */

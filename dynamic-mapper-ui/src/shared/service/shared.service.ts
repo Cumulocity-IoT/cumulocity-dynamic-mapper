@@ -35,7 +35,7 @@ import {
   PATH_OPERATION_ENDPOINT
 } from '..';
 import { Subject, takeUntil, timer } from 'rxjs';
-import { CodeTemplate, CodeTemplateMap, ServiceConfiguration } from '../../configuration';
+import { CodeTemplate, CodeTemplateMap, ServiceConfiguration } from '../configuration/configuration.model';
 import { ServiceOperation } from './shared.model';
 import { OptionsService } from '@c8y/ngx-components';
 

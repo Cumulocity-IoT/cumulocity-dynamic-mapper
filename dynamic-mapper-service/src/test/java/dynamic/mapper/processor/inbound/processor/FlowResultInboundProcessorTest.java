@@ -31,8 +31,6 @@ import java.util.List;
 import java.util.Map;
 
 import dynamic.mapper.core.IdentityResolutionService;
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,18 +51,18 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.CumulocityType;
 import dynamic.mapper.processor.model.ExternalId;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
+import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.MappingAction;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.TransformationType;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.resolver.MappingResolverService;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.TransformationType;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.mapping.resolver.MappingResolverService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -80,12 +78,6 @@ class FlowResultInboundProcessorTest {
 
     @Mock
     private ObjectMapper objectMapper;
-
-    @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
 
     @Mock
     private ServiceConfiguration serviceConfiguration;
@@ -126,8 +118,6 @@ class FlowResultInboundProcessorTest {
         processingContext = createProcessingContext();
 
         // Setup basic mocks
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
         when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
 
@@ -212,7 +202,7 @@ class FlowResultInboundProcessorTest {
         processingContext.setFlowResult(cumulocityObj);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         assertFalse(processingContext.isIgnoreFurtherProcessing(),
@@ -239,7 +229,7 @@ class FlowResultInboundProcessorTest {
         processingContext.setFlowResult(messages);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         assertFalse(processingContext.isIgnoreFurtherProcessing(),
@@ -266,7 +256,7 @@ class FlowResultInboundProcessorTest {
         processingContext.setFlowResult(cumulocityObj);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         assertFalse(processingContext.getRequests().isEmpty(),
@@ -290,7 +280,7 @@ class FlowResultInboundProcessorTest {
         processingContext.setFlowResult(flowResult);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         log.info("Ignore further processing: {}", processingContext.isIgnoreFurtherProcessing());

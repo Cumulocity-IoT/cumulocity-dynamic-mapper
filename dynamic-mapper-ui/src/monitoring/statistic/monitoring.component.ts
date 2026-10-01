@@ -39,9 +39,9 @@ import {
   SharedService
 } from '../../shared';
 import { MonitoringService } from '../shared/monitoring.service';
-import { NumberRendererComponent } from '../renderer/number.renderer.component';
+import { NumberRendererComponent } from '../../shared/component/renderer/number.renderer.component';
 import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
-import { NameRendererComponent } from '../../mapping/renderer/name.renderer.component';
+import { NameRendererComponent } from '../../shared/component/renderer/name.renderer.component';
 import { ActivatedRoute, Router } from '@angular/router';
 import { gettext } from '@c8y/ngx-components/gettext';
 
@@ -53,7 +53,7 @@ interface MonitoringComponentState {
 @Component({
   selector: 'd11r-mapping-monitoring-grid',
   templateUrl: 'monitoring.component.html',
-  styleUrls: ['../../mapping/shared/mapping.style.css'],
+  styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, CommonModule]
@@ -110,6 +110,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       header: 'Mapping topic',
       path: 'mappingTopic',
       filterable: false,
+      sortable: true,
       dataType: ColumnDataType.TextShort,
       //gridTrackSize: '20%'
     },
@@ -118,6 +119,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       header: 'Publish topic',
       path: 'publishTopic',
       filterable: false,
+      sortable: true,
       dataType: ColumnDataType.TextShort,
       //gridTrackSize: '20%'
     },
@@ -126,6 +128,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       name: 'messagesReceived',
       path: 'messagesReceived',
       filterable: true,
+      sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
       gridTrackSize: '12.5%'
@@ -135,6 +138,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       name: 'errors',
       path: 'errors',
       filterable: true,
+      sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
       gridTrackSize: '12.5%'
@@ -144,6 +148,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       name: 'currentFailureCount',
       path: 'currentFailureCount',
       filterable: true,
+      sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
       gridTrackSize: '12.5%'

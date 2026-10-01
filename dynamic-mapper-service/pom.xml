@@ -240,23 +240,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.camel.springboot</groupId>
-            <artifactId>camel-spring-boot-starter</artifactId>
-        </dependency>
-
-        <!-- Camel Core (included in starter but explicit for clarity) -->
-        <dependency>
-            <groupId>org.apache.camel</groupId>
-            <artifactId>camel-core</artifactId>
-        </dependency>
-
-        <!-- Camel Direct component for internal routing -->
-        <dependency>
-            <groupId>org.apache.camel</groupId>
-            <artifactId>camel-direct</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>com.rabbitmq</groupId>
             <artifactId>amqp-client</artifactId>
         </dependency>
@@ -540,7 +523,7 @@
                         </goals>
                         <configuration>
                             <includes>
-                                <include>**/Camel*IntegrationTest.java</include>
+                                <include>**/*PipelineIntegrationTest.java</include>
                                 <include>**/Mapping*ExecutionIntegrationTest.java</include>
                                 <include>**/MappingScenarioIntegrationTest.java</include>
                             </includes>

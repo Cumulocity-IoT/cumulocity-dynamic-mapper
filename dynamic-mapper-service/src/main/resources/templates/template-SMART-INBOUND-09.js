@@ -1,10 +1,14 @@
+// @ts-check
 /**
  * @name HART Device Metrics to Cumulocity Measurements
  * @description Maps Sparkplug-B/HART DDATA payload metrics to Cumulocity measurements.
  *              Each metric in the metrics array becomes a separate measurement fragment.
  *              Only numeric values are sent; booleans are converted to 0/1.
  * @templateType INBOUND_SMART_FUNCTION
- * @direction INBOUND
+ */
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
  */
 function onMessage(msg, context) {
     var payload = msg.payload;

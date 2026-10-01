@@ -27,7 +27,7 @@ import {
   SharedService,
   PATH_TESTING_ENDPOINT,
   Operation} from '../../shared';
-import { TestContext, TestResult } from './processor/processor.model';
+import { TestContext, TestResult } from '../../shared/mapping/processor/processor.model';
 import { HttpStatusCode } from '@angular/common/http';
 
 @Injectable({

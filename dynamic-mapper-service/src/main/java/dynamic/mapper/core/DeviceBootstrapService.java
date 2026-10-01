@@ -40,7 +40,7 @@ import com.cumulocity.sdk.client.inventory.InventoryFilter;
 
 import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
-import dynamic.mapper.model.DeviceToClientMapRepresentation;
+import dynamic.mapper.model.device.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

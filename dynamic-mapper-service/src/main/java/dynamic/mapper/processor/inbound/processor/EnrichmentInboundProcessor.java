@@ -28,16 +28,16 @@ import org.springframework.stereotype.Component;
 
 import com.cumulocity.sdk.client.ProcessingMode;
 
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.AbstractEnrichmentProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.DataPrepContext;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.TransformationType;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.cache.FlowStateStore;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.TransformationType;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.processor.flow.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -49,10 +49,10 @@ import lombok.extern.slf4j.Slf4j;
 public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
 
     public EnrichmentInboundProcessor(
-            ConfigurationRegistry configurationRegistry,
+            ServiceRegistry serviceRegistry,
             MappingService mappingService,
             FlowStateStore flowStateStore) {
-        super(configurationRegistry, mappingService, flowStateStore);
+        super(serviceRegistry, mappingService, flowStateStore);
     }
 
     @Override
@@ -75,9 +75,9 @@ public class EnrichmentInboundProcessor extends AbstractEnrichmentProcessor {
         // For SMART_FUNCTION: populate read-only config — never expand the payload Map
         DataPrepContext flowContext = context.getFlowContext();
         if (isSmartFunction) {
-            if (flowContext instanceof dynamic.mapper.processor.model.SmartFunctionContext) {
-                dynamic.mapper.processor.model.SmartFunctionContext sfContext =
-                        (dynamic.mapper.processor.model.SmartFunctionContext) flowContext;
+            if (flowContext instanceof dynamic.mapper.processor.runtime.SmartFunctionContext) {
+                dynamic.mapper.processor.runtime.SmartFunctionContext sfContext =
+                        (dynamic.mapper.processor.runtime.SmartFunctionContext) flowContext;
                 sfContext.setClientId(context.getClientId());
 
                 Map<String, Object> config = buildBaseSmartFunctionConfig(context);

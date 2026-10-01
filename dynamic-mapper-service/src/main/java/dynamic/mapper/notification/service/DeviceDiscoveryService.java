@@ -24,8 +24,8 @@ package dynamic.mapper.notification.service;
 
 import com.cumulocity.rest.representation.inventory.ManagedObjectReferenceRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import dynamic.mapper.core.ConfigurationRegistry;
-import dynamic.mapper.model.Device;
+import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.model.device.Device;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -44,10 +44,10 @@ public class DeviceDiscoveryService {
 
     private static final int MAX_RECURSION_DEPTH = 10;
 
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
 
-    public DeviceDiscoveryService(@Lazy ConfigurationRegistry configurationRegistry) {
-        this.configurationRegistry = configurationRegistry;
+    public DeviceDiscoveryService(@Lazy ServiceRegistry serviceRegistry) {
+        this.serviceRegistry = serviceRegistry;
     }
 
     // Circuit breaker for preventing infinite recursion
@@ -178,7 +178,7 @@ public class DeviceDiscoveryService {
         for (ManagedObjectReferenceRepresentation childRef : mor.getChildDevices().getReferences()) {
             try {
                 if (isValidManagedObjectRef(childRef)) {
-                    ManagedObjectRepresentation child = configurationRegistry.getC8yAgent()
+                    ManagedObjectRepresentation child = serviceRegistry.getC8yAgent()
                             .getManagedObjectForId(tenant, childRef.getManagedObject().getId().getValue(), false);
                     if (child != null) {
                         findAllRelatedDevicesByMO(tenant, child, devices, true);
@@ -202,7 +202,7 @@ public class DeviceDiscoveryService {
         for (ManagedObjectReferenceRepresentation assetRef : mor.getChildAssets().getReferences()) {
             try {
                 if (isValidManagedObjectRef(assetRef)) {
-                    ManagedObjectRepresentation asset = configurationRegistry.getC8yAgent()
+                    ManagedObjectRepresentation asset = serviceRegistry.getC8yAgent()
                             .getManagedObjectForId(tenant, assetRef.getManagedObject().getId().getValue(), false);
                     if (asset != null) {
                         findAllRelatedDevicesByMO(tenant, asset, devices, false);

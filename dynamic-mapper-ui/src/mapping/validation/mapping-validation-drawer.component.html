@@ -1,0 +1,86 @@
+<!--
+~ Copyright (c) 2025 Cumulocity GmbH.
+~
+~ SPDX-License-Identifier: Apache-2.0
+~
+~  Licensed under the Apache License, Version 2.0 (the "License");
+~  you may not use this file except in compliance with the License.
+~  You may obtain a copy of the License at
+~
+~       http://www.apache.org/licenses/LICENSE-2.0
+~
+~  Unless required by applicable law or agreed to in writing, software
+~  distributed under the License is distributed on an "AS IS" BASIS,
+~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~  See the License for the specific language governing permissions and
+~  limitations under the License.
+~
+~  @authors Christof Strack
+-->
+
+<div class="card-header separator">
+  <h4 class="card-title d-flex a-i-center">
+    <i c8yIcon="exclamation-triangle" class="text-danger m-r-8"></i>
+    <span translate>The mapping could not be saved</span>
+    @if (mappingName) {
+    <span class="text-muted m-l-8">{{ mappingName }}</span>
+    }
+  </h4>
+</div>
+
+<div class="card-inner-scroll fit-h">
+  <div class="p-16">
+    <p class="text-muted">
+      @if (displayedIssues.length === 1) {
+      <span translate>1 problem must be fixed before this mapping can be saved. Your edits are kept.</span>
+      } @else {
+      <span>{{ displayedIssues.length }}&nbsp;<span translate>problems must be fixed before this mapping can be saved. Your edits are kept.</span></span>
+      }
+    </p>
+
+    <ul class="list-group" data-cy="dm-validation-issue-list">
+      @for (issue of displayedIssues; track $index) {
+      <li class="list-group-item">
+        <div class="d-flex a-i-center j-c-between">
+          <div class="flex-grow">
+            @if (issue.heading) {
+            <div class="text-bold">{{ issue.heading }}</div>
+            }
+            <div>{{ issue.message }}</div>
+            @if (issue.value) {
+            <div class="text-13 m-t-4">
+              <span class="text-muted" translate>Value</span>:
+              <code>{{ issue.value }}</code>
+            </div>
+            }
+            @if (issue.reason) {
+            <div class="text-13 text-danger m-t-4">{{ issue.reason }}</div>
+            }
+            @if (issue.field) {
+            <div class="text-12 text-muted m-t-4">{{ issue.field }}</div>
+            }
+          </div>
+          @if (issue.index !== undefined) {
+          <button
+            type="button"
+            class="btn btn-default btn-sm m-l-16 flex-no-shrink"
+            (click)="goTo(issue.index)"
+            data-cy="dm-validation-goto"
+            translate>
+            Go to problem
+          </button>
+          }
+        </div>
+      </li>
+      }
+    </ul>
+  </div>
+</div>
+
+<div class="card-footer separator text-center flex-no-shrink">
+  <div class="form-group">
+    <button type="button" class="btn btn-primary" (click)="close()" data-cy="dm-validation-close" translate>
+      Close and fix
+    </button>
+  </div>
+</div>

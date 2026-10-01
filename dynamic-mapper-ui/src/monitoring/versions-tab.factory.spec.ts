@@ -1,6 +1,6 @@
 import { Router } from '@angular/router';
 import { VersionsTabFactory } from './versions-tab.factory';
-import { NODE2 } from '../shared/mapping/util';
+import { NODE2 } from '../shared/mapping/mapping.constants';
 
 /**
  * `VersionsTabFactory` implements c8y's `TabFactory` interface: `get()` returns the

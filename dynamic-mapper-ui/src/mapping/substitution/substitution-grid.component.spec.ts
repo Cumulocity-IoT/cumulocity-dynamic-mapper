@@ -23,7 +23,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
 import { SubstitutionRendererComponent, SubstitutionGridSettings } from './substitution-grid.component';
-import { EditorMode } from '../shared/stepper.model';
+import { EditorMode } from '../../shared/mapping/stepper.model';
 
 /**
  * Unit tests for {@link SubstitutionRendererComponent} — the substitution list/grid.

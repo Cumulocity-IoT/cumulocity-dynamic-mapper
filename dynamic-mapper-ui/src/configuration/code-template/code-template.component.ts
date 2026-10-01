@@ -28,11 +28,11 @@ import { gettext } from '@c8y/ngx-components/gettext';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { BehaviorSubject } from 'rxjs';
-import { base64ToString, stringToBase64 } from '../../mapping/shared/util';
-import { ConfirmationModalComponent, Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
+import { base64ToString, stringToBase64 } from '../../shared/mapping/util';
+import { ConfirmationModalComponent, Direction, Feature, ManageTemplateComponent, Operation, createCustomUuid } from '../../shared';
 import { SharedService } from '../../shared/service/shared.service';
-import { CodeTemplate, CodeTemplateMap, TemplateType } from '../shared/configuration.model';
-import { createCompletionProviderFlowFunction } from '../../mapping/shared/stepper.model';
+import { CodeTemplate, CodeTemplateMap, TemplateType, decodeCodeTemplates } from '../../shared/configuration/configuration.model';
+import { createCompletionProviderFlowFunction } from '../../shared/mapping/stepper.model';
 
 interface CodeTemplateEntry {
   key: string;
@@ -47,7 +47,7 @@ interface CodeTemplateEntry {
 @Component({
   selector: 'd11r-shared-code',
   templateUrl: 'code-template.component.html',
-  styleUrls: ['./code-template.component.css'],
+  styleUrls: ['./code-template.component.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, CommonModule, PopoverModule, EditorComponent, FormsModule]
@@ -55,7 +55,7 @@ interface CodeTemplateEntry {
 export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild(EditorComponent, { static: false }) codeEditor!: EditorComponent;
 
-  codeTemplateDecoded!: CodeTemplate;
+  codeTemplateDecoded?: CodeTemplate;
   codeTemplatesDecoded: Map<string, CodeTemplate> = new Map<string, CodeTemplate>();
   codeTemplates!: CodeTemplateMap;
   template!: string;
@@ -150,7 +150,13 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
         this.templateType === TemplateType.OUTBOUND_SMART_FUNCTION ||
         this.templateType === TemplateType.SHARED ||
         this.templateType === TemplateType.SYSTEM) {
-      this.completionProviderDisposable = createCompletionProviderFlowFunction(monaco);
+      // The direction drives the onMessage signature and the type of `msg` shown in hovers and
+      // completions. Omitting it defaulted every template to INBOUND, so an outbound template
+      // documented an inbound msg and the wrong return type.
+      const direction = this.templateType === TemplateType.OUTBOUND_SMART_FUNCTION
+        ? Direction.OUTBOUND
+        : Direction.INBOUND;
+      this.completionProviderDisposable = createCompletionProviderFlowFunction(monaco, direction);
     }
   }
 
@@ -186,33 +192,9 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private decodeCodeTemplates(): void {
-    Object.entries(this.codeTemplates).forEach(([key, template]) => {
-      try {
-        const decodedCode = base64ToString(template.code);
-        this.codeTemplatesDecoded.set(key, {
-          id: key,
-          name: template.name,
-          description: template.description,
-          templateType: template.templateType,
-          code: decodedCode,
-          internal: template.internal,
-          readonly: template.readonly,
-          defaultTemplate: false
-        });
-      } catch (error) {
-        console.error(`Failed to decode code template [${key}]:`, error);
-        this.codeTemplatesDecoded.set(key, {
-          id: key,
-          name: template.name,
-          description: template.description ?? '',
-          templateType: template.templateType,
-          code: '// Code Template not valid!',
-          internal: template.internal,
-          readonly: template.readonly,
-          defaultTemplate: false
-        });
-      }
-    });
+    // Rebuilt each time: a template deleted since the last refresh must not linger here and stay
+    // selectable.
+    this.codeTemplatesDecoded = decodeCodeTemplates(this.codeTemplates, base64ToString);
   }
 
   async onInitSystemCodeTemplate() {
@@ -302,7 +284,13 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
         code: encodedCode,
         id: createCustomUuid(),
         internal: false,
-        readonly: false
+        readonly: false,
+        // A copy is never the default for its type. `defaultTemplate` means "this is the template
+        // a new mapping starts from", and only the template whose id *is* the type name can be
+        // that. Inheriting it from the original left two templates of the type claiming it, which
+        // makes addMissingInternalTemplates() on the next startup consider the type's default
+        // already present and hand the shipped one a UUID id instead of its canonical one.
+        defaultTemplate: false
       });
       if (response.ok) {
         this.alertService.success(gettext('Copied code template'));
@@ -336,12 +324,14 @@ export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onValueCodeChange(value: string) {
-    // console.log("code changed", value);
+    if (!this.codeTemplateDecoded) return;
     this.codeTemplateDecoded.code = value;
   }
 
   onSelectCodeTemplate(): void {
-    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template)!;
+    // May legitimately miss: the selected key can have been deleted, or the tab's default set can
+    // exclude it. Everything downstream already guards on a falsy codeTemplateDecoded.
+    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template);
     this.editorOptions = { ...this.editorOptions, readOnly: !!this.codeTemplateDecoded?.readonly };
   }
 

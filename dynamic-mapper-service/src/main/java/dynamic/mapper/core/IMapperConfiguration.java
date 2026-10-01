@@ -26,7 +26,7 @@ import dynamic.mapper.model.MapperServiceRepresentation;
 /**
  * Narrow interface exposing the per-tenant mapper service representation.
  * C8YAgent depends on this interface rather than the concrete
- * ConfigurationRegistry to sever the direct circular dependency.
+ * ServiceRegistry to sever the direct circular dependency.
  */
 public interface IMapperConfiguration {
     MapperServiceRepresentation getMapperServiceRepresentation(String tenant);

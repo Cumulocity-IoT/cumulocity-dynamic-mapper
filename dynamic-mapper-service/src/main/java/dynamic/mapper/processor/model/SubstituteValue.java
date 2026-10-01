@@ -21,6 +21,10 @@
 
 package dynamic.mapper.processor.model;
 
+import dynamic.mapper.processor.util.SubstitutionEvaluation;
+
+import dynamic.mapper.model.RepairStrategy;
+
 import java.util.Map;
 
 import org.json.JSONException;

@@ -1,10 +1,9 @@
+// @ts-check
 /**
  * @name Default template for Smart Function
  * @description Creates one measurement
  * @templateType OUTBOUND_SMART_FUNCTION
  * @defaultTemplate true
- * @internal true
- * @readonly true
  *
  * Sample Cumulocity measurement payload (source)
  * {
@@ -21,6 +20,10 @@
  * publishTopic 'measurements/berlin_01'
 */
 
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').OutboundMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
+ */
 function onMessage(msg, context) {
     var payload = msg.payload;
 

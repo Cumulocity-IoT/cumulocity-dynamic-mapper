@@ -470,4 +470,82 @@ class GraalVMContextServiceTest {
 
         log.info("✅ removeGraalsResources removes all tenant state");
     }
+
+    // -------------------------------------------------------------------------
+    // onMessage lookup (borrowOrCreateContext)
+    // -------------------------------------------------------------------------
+
+    private static String b64(String code) {
+        return java.util.Base64.getEncoder()
+                .encodeToString(code.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    private dynamic.mapper.processor.runtime.PooledGraalContext borrow(String code, boolean supportESM) {
+        Engine engine = service.peekGraalEngine(TENANT);
+        return service.borrowOrCreateContext(
+                "pool:" + System.nanoTime(), TENANT, engine, supportESM,
+                null, null, b64(code), "map-" + System.nanoTime());
+    }
+
+    @Test
+    void borrowOrCreateContext_findsNamedExportUnderESM() {
+        String code = "function onMessage(msg, context) { return []; }\nexport { onMessage };\n";
+
+        var pooled = borrow(code, true);
+
+        assertNotNull(pooled);
+        assertTrue(pooled.getOnMessageFunction().canExecute());
+    }
+
+    /**
+     * `export default function onMessage(...)` exposes the function as the member `default`, not
+     * as `onMessage`, so a named-only lookup misses it and the mapping fails at activation with
+     * "Function 'onMessage' not found". The UI's `hasEsmExport()` treats this form as a valid
+     * export and will not append `export { onMessage };`, so the editor happily saves code the
+     * runtime then refuses to load.
+     */
+    @Test
+    void borrowOrCreateContext_findsDefaultExportUnderESM() {
+        String code = "export default function onMessage(msg, context) { return []; }\n";
+
+        var pooled = borrow(code, true);
+
+        assertNotNull(pooled);
+        assertTrue(pooled.getOnMessageFunction().canExecute());
+    }
+
+    @Test
+    void borrowOrCreateContext_findsPlainFunctionWithoutESM() {
+        // The stripper removes the export, leaving a plain declaration the wrapper hoists.
+        String code = "export default function onMessage(msg, context) { return []; }\n";
+
+        var pooled = borrow(code, false);
+
+        assertNotNull(pooled);
+        assertTrue(pooled.getOnMessageFunction().canExecute());
+    }
+
+    @Test
+    void borrowOrCreateContext_reportsWhatTheCodeActuallyExported() {
+        String code = "function handler(msg, context) { return []; }\nexport { handler };\n";
+
+        RuntimeException thrown = assertThrows(RuntimeException.class, () -> borrow(code, true));
+
+        // The message must name the mismatch, not merely say something is missing.
+        Throwable cause = thrown.getCause() != null ? thrown.getCause() : thrown;
+        assertTrue(cause.getMessage().contains("handler"),
+                "Expected the actual export to be named, got: " + cause.getMessage());
+    }
+
+    @Test
+    void borrowOrCreateContext_tellsTheAuthorWhatToAddWhenNothingIsExported() {
+        String code = "var x = 1;\n";
+
+        RuntimeException thrown = assertThrows(RuntimeException.class, () -> borrow(code, true));
+
+        Throwable cause = thrown.getCause() != null ? thrown.getCause() : thrown;
+        assertTrue(cause.getMessage().contains("export { onMessage }"),
+                "Expected actionable advice, got: " + cause.getMessage());
+    }
+
 }

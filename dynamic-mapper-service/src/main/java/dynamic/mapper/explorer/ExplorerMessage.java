@@ -1,0 +1,62 @@
+/*
+ * Copyright (c) 2025 Cumulocity GmbH.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @authors Christof Strack
+ *
+ */
+
+package dynamic.mapper.explorer;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
+import lombok.Data;
+
+@Data
+@Builder
+@Schema(description = "A message captured by an explorer session from an inbound or outbound connector")
+public class ExplorerMessage {
+
+    @Schema(description = "Direction of the message: INBOUND (broker → C8Y) or OUTBOUND (C8Y → broker)", example = "INBOUND")
+    private String direction;
+
+    @Schema(description = "The topic on which the message was received or sent", example = "sensors/temperature/data")
+    private String topic;
+
+    @Schema(description = "Unique identifier of the connector that received the message", example = "mqtt-broker-01")
+    private String connectorIdentifier;
+
+    @Schema(description = "Client identifier of the broker client that sent the message", example = "device-1234")
+    private String clientId;
+
+    @Schema(description = "Message key, if the broker protocol has one (e.g. Kafka record key); null otherwise", example = "863859042393327")
+    private String key;
+
+    @Schema(description = "Display name of the connector", example = "MQTT Broker")
+    private String connectorName;
+
+    @Schema(description = "Epoch milliseconds when the message was received", example = "1715000000000")
+    private long receivedAt;
+
+    @Schema(description = "Message payload as UTF-8 string, or Base64-encoded for binary payloads")
+    private String payload;
+
+    @Schema(description = "true if the original payload was binary and has been Base64-encoded", example = "false")
+    private boolean binary;
+
+    @Schema(description = "C8Y source device ID (outbound only)", example = "12345")
+    private String sourceId;
+}

@@ -31,7 +31,7 @@ import {
 } from '@c8y/ngx-components';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { ConnectorConfigurationService } from '../../service/connector-configuration.service';
-import { createCustomUuid } from '../../mapping/util';
+import { createCustomUuid } from '../../mapping/mapping.constants';
 import { ConnectorConfiguration, ConnectorType } from '../connector.model';
 
 const SENSITIVE_PLACEHOLDER = '****';

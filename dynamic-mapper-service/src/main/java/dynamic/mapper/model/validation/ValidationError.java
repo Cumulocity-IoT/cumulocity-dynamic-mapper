@@ -1,0 +1,52 @@
+/*
+ * Copyright (c) 2022-2025 Cumulocity GmbH.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @authors Christof Strack, Stefan Witschel
+ *
+ */
+
+package dynamic.mapper.model.validation;
+
+/**
+ * Every value here must correspond to an error actually produced by
+ * {@link dynamic.mapper.mapping.MappingValidator}. Codes that no check produces (dead
+ * enum values) have been removed rather than kept "for documentation" — an unused
+ * error code is a naming trap, not documentation. See the class-level checks:
+ * {@code validateMappingTopic}, {@code validateMappingTopicAndSampleConsistency},
+ * {@code validatePublishTopicAndSampleConsistency}, {@code validateSubstitutions},
+ * {@code validateJSONTemplates}, {@code validateFilterOutboundUniqueness},
+ * {@code validateTransformationType}, {@code validateExtension},
+ * {@code validateMappingTypeConstraints}.
+ */
+public enum ValidationError {
+  Only_One_Multi_Level_Wildcard,
+  Multi_Level_Wildcard_Only_At_End,
+  Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used,
+  One_Substitution_Defining_Device_Identifier_Must_Be_Used,
+  Target_Template_Must_Be_Valid_JSON,
+  Source_Template_Must_Be_Valid_JSON,
+  MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
+  MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
+  PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
+  PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
+  FilterOutbound_Must_Be_Unique,
+  Wrong_Transformation_Type_Array_In_Source_Template_Or_Target_Template_Requires_Transformation_Type_Smart_Function,
+  Extension_Must_Be_Defined_For_Extension_Java_Mapping,
+  Unparsed_MappingType_Requires_Smart_Function_Transformation_Type,
+  Substitution_Source_Expression_Must_Be_Valid_JSONata,
+  Substitution_Paths_Must_Not_Be_Empty
+}

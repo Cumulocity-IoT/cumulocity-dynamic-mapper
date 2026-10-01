@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @name SparkPlugB DDATA/NDATA decoder
  * @description Decodes a SparkPlugB protobuf payload received via the ANY_PAYLOAD mapping type.
@@ -8,9 +9,6 @@
  *              device-id) extracted from the SparkPlugB topic.
  *              Base64 decoding is done in pure ECMAScript (no Java interop required).
  * @templateType INBOUND_SMART_FUNCTION
- * @defaultTemplate false
- * @internal true
- * @readonly true
  *
  * Requires:
  *   MappingType  : ANY_PAYLOAD
@@ -275,6 +273,10 @@ function toC8yName(metricName) {
 // Smart Function entry point
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
+ */
 function onMessage(msg, context) {
 
     // 1 ── Decode Base64 → raw bytes ────────────────────────────────────────

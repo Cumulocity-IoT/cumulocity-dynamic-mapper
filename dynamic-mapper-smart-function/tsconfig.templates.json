@@ -1,0 +1,32 @@
+{
+  // Type-checks the shipped JS code templates against the real Smart Function types.
+  //
+  // The templates in dynamic-mapper-service/src/main/resources/templates are what users copy into
+  // their mappings, and until now nothing verified them: a renamed context method or a dropped
+  // msg field only surfaced when a user's mapping threw at runtime. Everything this adds to the
+  // template files is comments (`// @ts-check` and JSDoc `@param`), so the GraalVM runtime is
+  // unaffected — it still sees plain JavaScript.
+  //
+  // Run via `npm run check:templates`.
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+"module": "esnext",
+    "target": "es2020",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+    // Templates are teaching examples, not application code: they use loose JS idioms on purpose.
+    // strict would drown the real signal (phantom APIs) in implicit-any noise.
+    "strict": false,
+    "noImplicitAny": false,
+    "paths": {
+      "@c8y/dynamic-mapper-smart-function": ["./src/index.ts"]
+    }
+  },
+  "include": [
+    "../dynamic-mapper-service/src/main/resources/templates/template-SMART-*.js",
+    "./src/types/graalvm-globals.d.ts"
+  ]
+}

@@ -61,9 +61,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Feature;
-import dynamic.mapper.service.ConnectorConfigurationService;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.ServiceConfigurationService;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.configuration.ServiceConfigurationService;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.Operation;
@@ -109,7 +109,7 @@ public class ConfigurationController {
     private final ServiceConfigurationService serviceConfigurationService;
     private final BootstrapService bootstrapService;
     private final ContextService<UserCredentials> contextService;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
     private final ObjectMapper objectMapper;
 
     @Value("${APP.externalExtensionsEnabled}")
@@ -141,7 +141,7 @@ public class ConfigurationController {
         feature.setExternalExtensionsEnabled(externalExtensionsEnabled);
         feature.setUserHasMappingCreateRole(Utils.userHasMappingCreateRole());
         feature.setUserHasMappingAdminRole(Utils.userHasMappingAdminRole());
-        feature.setPulsarAvailable(configurationRegistry.isPulsarAvailable(tenant));
+        feature.setPulsarAvailable(serviceRegistry.isPulsarAvailable(tenant));
         feature.setDeviceIsolationMQTTServiceEnabled(serviceConfiguration.getDeviceIsolationMQTTServiceEnabled());
         feature.setSuppressDeprecationWarning(serviceConfiguration.getSuppressDeprecationWarning());
         feature.setAcceptedDeprecationNotice(serviceConfiguration.getAcceptedDeprecationNotice());
@@ -510,7 +510,7 @@ public class ConfigurationController {
     public ResponseEntity<HttpStatus> updateServiceConfiguration(
             @RequestBody Map<String, Object> updates) {
         String tenant = contextService.getContext().getTenant();
-        ServiceConfiguration currentServiceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        ServiceConfiguration currentServiceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
 
         log.info("{} - Update service configuration with partial updates: {}", tenant, updates);
 
@@ -521,12 +521,12 @@ public class ConfigurationController {
                     .readValue(objectMapper.writeValueAsBytes(updates));
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
             if (!serviceConfiguration.getOutboundMappingEnabled()
-                    && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != null
-                    && configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == 200) {
-                configurationRegistry.getNotificationSubscriber().disconnect(tenant);
-            } else if (configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == null
-                    || configurationRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != null
-                            && configurationRegistry.getNotificationSubscriber()
+                    && serviceRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != null
+                    && serviceRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == 200) {
+                serviceRegistry.getNotificationSubscriber().disconnect(tenant);
+            } else if (serviceRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == null
+                    || serviceRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != null
+                            && serviceRegistry.getNotificationSubscriber()
                                     .getDeviceConnectionStatus(tenant) != 200) {
 
                 // Test if OutboundMapping is switched on
@@ -538,12 +538,12 @@ public class ConfigurationController {
                         bootstrapService.initializeConnectorByConfiguration(connectorConfiguration,
                                 serviceConfiguration, tenant);
                     }
-                    configurationRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);
-                    configurationRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
+                    serviceRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);
+                    serviceRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
                 }
             }
 
-            configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
+            serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
             log.error("{} - Error updating service configuration", tenant, ex);
@@ -572,7 +572,7 @@ public class ConfigurationController {
 
             try {
                 serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-                configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
+                serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             } catch (JsonProcessingException ex) {
                 log.error("{} - Error saving service configuration with code templates: {}", tenant, ex);
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -620,45 +620,45 @@ public class ConfigurationController {
 
             try {
                 serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-                configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
+                serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             } catch (JsonProcessingException ex) {
                 log.error("{} - Error saving service configuration with code templates: {}", tenant, ex);
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
             }
         }
-        CodeTemplate result;
-        try {
-            result = codeTemplates.get(id);
-            if (result.internal) {
-                throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE,
-                        "Deletion of internal templates not allowed");
-            }
+        // Checked before the try: both of these are documented outcomes, and the blanket
+        // catch(Exception) below would otherwise turn them into a 500 — the NPE on a missing
+        // template made the 404 branch at the end of this method unreachable, and the 406 was
+        // swallowed because ResponseStatusException is itself a RuntimeException.
+        CodeTemplate result = codeTemplates.get(id);
+        if (result == null) {
+            log.warn("{} - Code template with ID [{}] not found", tenant, id);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        if (result.internal) {
+            throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE,
+                    "Deletion of internal templates not allowed");
+        }
 
+        try {
             result = codeTemplates.remove(id);
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
 
             // Clear cached GraalVM sources if SHARED or SYSTEM templates are deleted
             // (Though this should rarely happen since they're typically marked as internal)
             if (TemplateType.SHARED.name().equals(id)) {
-                configurationRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, "");
+                serviceRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, "");
                 log.info("{} - Cleared cached SHARED code source after deletion", tenant);
             } else if (TemplateType.SYSTEM.name().equals(id)) {
-                configurationRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, "");
+                serviceRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, "");
                 log.info("{} - Cleared cached SYSTEM code source after deletion", tenant);
             }
         } catch (Exception ex) {
             log.error("{} - Error updating code template [{}]", tenant, id, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
-        configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-        if (result == null) {
-            // Template not found - return 404 Not Found
-            log.warn("{} - Code template with ID [{}] not found", tenant, id);
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        } else {
-            // Template exists - return it with 200 OK
-            return new ResponseEntity<>(result, HttpStatus.OK);
-        }
+        serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @Operation(summary = "Get all code templates", description = "Returns all code templates for the current tenant including both system and custom templates.")
@@ -677,12 +677,18 @@ public class ConfigurationController {
     }
 
     @Operation(summary = "Update code template", description = """
-            Updates the code template for the given ID with new JavaScript code.
+            Updates the code template for the given ID with new JavaScript code. Creates it when no
+            template is stored under that ID.
+
+            **Note:** Read-only templates (e.g. `SYSTEM`) cannot be modified. `SYSTEM` is
+            framework-owned and re-loaded from the shipped version on every startup.
 
             **Security:** Requires `ROLE_DYNAMIC_MAPPER_ADMIN`
             """)
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Code template updated successfully", content = @Content),
+            @ApiResponse(responseCode = "400", description = "Path ID and body ID do not match", content = @Content),
+            @ApiResponse(responseCode = "406", description = "Modification of read-only templates is not allowed", content = @Content),
             @ApiResponse(responseCode = "403", description = "Insufficient permissions", content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
@@ -699,22 +705,38 @@ public class ConfigurationController {
         String tenant = contextService.getContext().getTenant();
         try {
             ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-            Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
+            Map<String, CodeTemplate> codeTemplates = getCodeTemplates(tenant, serviceConfiguration);
+
+            // A read-only template is framework-owned (SYSTEM holds the Java bindings the runtime
+            // needs). The UI disables its save button, but that was the ONLY thing stopping an
+            // overwrite — a direct API call could replace SYSTEM and break every Smart Function
+            // mapping in the tenant. SYSTEM is additionally re-loaded from the classpath on every
+            // startup, so such an edit would be silently reverted anyway; refusing it is clearer.
+            CodeTemplate existing = codeTemplates.get(id);
+            if (existing != null && existing.readonly) {
+                throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE,
+                        String.format("Template '%s' is read-only and cannot be modified", id));
+            }
+
             serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate);
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-            configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
+            serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
 
             // Invalidate cached GraalVM sources if SHARED or SYSTEM templates are updated
             if (TemplateType.SHARED.name().equals(id)) {
-                configurationRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, codeTemplate.getCode());
+                serviceRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, codeTemplate.getCode());
                 log.info("{} - Invalidated and updated cached SHARED code source", tenant);
             } else if (TemplateType.SYSTEM.name().equals(id)) {
-                configurationRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, codeTemplate.getCode());
+                serviceRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, codeTemplate.getCode());
                 log.info("{} - Invalidated and updated cached SYSTEM code source", tenant);
             }
 
             log.debug("{} - Updated code template", tenant);
+        } catch (ResponseStatusException ex) {
+            // A deliberate status (e.g. the read-only refusal above) must not be flattened to 500.
+            log.warn("{} - Error updating code template [{}]: {}", tenant, id, ex.getReason());
+            throw ex;
         } catch (Exception ex) {
             log.error("{} - Error updating code template [{}]", tenant, id, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -745,17 +767,32 @@ public class ConfigurationController {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                         String.format("Template with id '%s' already exists", codeTemplate.id));
             }
+            // `defaultTemplate` means "this is the template a new mapping of this type starts
+            // from", and the seeding code expresses that by giving it the type's name as its id.
+            // A template with any other id therefore cannot be the default, whatever the request
+            // says. The UI's Duplicate action used to copy the flag along with the rest of the
+            // template, which left two templates of one type claiming it; the next startup then
+            // saw the type's default as already present and handed the shipped template a UUID id
+            // instead of its canonical one, breaking the editor's lookup of the starting template.
+            if (codeTemplate.defaultTemplate && codeTemplate.templateType != null
+                    && !codeTemplate.templateType.name().equals(codeTemplate.id)) {
+                log.info("{} - Ignoring defaultTemplate=true on new template [{}]: only '{}' can be "
+                        + "the default for {}", tenant, codeTemplate.id,
+                        codeTemplate.templateType.name(), codeTemplate.templateType);
+                codeTemplate.defaultTemplate = false;
+            }
+
             serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate);
             codeTemplates.put(codeTemplate.id, codeTemplate);
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-            configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
+            serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
 
             // Invalidate cached GraalVM sources if SHARED or SYSTEM templates are created
             if (TemplateType.SHARED.name().equals(codeTemplate.id)) {
-                configurationRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, codeTemplate.getCode());
+                serviceRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, codeTemplate.getCode());
                 log.info("{} - Created and cached SHARED code source", tenant);
             } else if (TemplateType.SYSTEM.name().equals(codeTemplate.id)) {
-                configurationRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, codeTemplate.getCode());
+                serviceRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, codeTemplate.getCode());
                 log.info("{} - Created and cached SYSTEM code source", tenant);
             }
 
@@ -782,7 +819,7 @@ public class ConfigurationController {
 
             try {
                 serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-                configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
+                serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
             } catch (JsonProcessingException ex) {
                 log.error("{} - Error saving service configuration with code templates", tenant, ex);
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -793,6 +830,8 @@ public class ConfigurationController {
 
     // TEST ONLY — not exposed in OpenAPI docs
     @Hidden
+    // Writes the tenant's ServiceConfiguration, which the permission model reserves for admins.
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
     @PutMapping(value = "/test/deprecation-notice", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> setAcceptedDeprecationNotice(
             @RequestParam String version) {
@@ -802,7 +841,7 @@ public class ConfigurationController {
             ServiceConfiguration existing = serviceConfigurationService.getServiceConfiguration(tenant);
             existing.setAcceptedDeprecationNotice(version);
             serviceConfigurationService.saveServiceConfiguration(tenant, existing);
-            configurationRegistry.addServiceConfiguration(tenant, existing);
+            serviceRegistry.addServiceConfiguration(tenant, existing);
             return ResponseEntity.ok("acceptedDeprecationNotice set to: " + version);
         } catch (Exception ex) {
             log.error("{} - [TEST] Error setting acceptedDeprecationNotice", tenant, ex);

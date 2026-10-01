@@ -40,7 +40,7 @@ When you modify a `.proto` file, regenerate the Java classes:
 
 ```bash
 cd .../cumulocity-dynamic-mapper
-./resources/script/protobuf/generate_protobuf.sh extension
+./resources/tools/protobuf/generate_protobuf.sh extension
 ```
 
 ### What This Does
@@ -91,7 +91,7 @@ message MyDeviceMessage {
 2. Regenerate Java classes:
 ```bash
 cd .../cumulocity-dynamic-mapper
-./resources/script/protobuf/generate_protobuf.sh extension
+./resources/tools/protobuf/generate_protobuf.sh extension
 ```
 
 3. Create an extension that uses it:
@@ -189,7 +189,7 @@ Current setup uses **proto3** syntax.
 
 ### "Cannot find symbol CustomEventOuter"
 
-- Run the generation script: `./resources/script/protobuf/generate_protobuf.sh extension`
+- Run the generation script: `./resources/tools/protobuf/generate_protobuf.sh extension`
 - Refresh your IDE/rebuild the project
 
 ### "Package does not match expected"

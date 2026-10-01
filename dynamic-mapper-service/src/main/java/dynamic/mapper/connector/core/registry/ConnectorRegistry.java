@@ -22,7 +22,7 @@
 package dynamic.mapper.connector.core.registry;
 
 import dynamic.mapper.connector.core.ConnectorSpecification;
-import dynamic.mapper.processor.outbound.CamelDispatcherOutbound;
+import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
@@ -33,11 +33,12 @@ import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.connector.kafka.KafkaClientV2;
 import dynamic.mapper.connector.mqtt.MQTT3Client;
 import dynamic.mapper.connector.googlepubsub.GooglePubSubClient;
+import dynamic.mapper.connector.httppolling.HttpPollingConnector;
 import dynamic.mapper.connector.pulsar.MQTTServicePulsarClient;
 import dynamic.mapper.connector.pulsar.PulsarConnectorClient;
 import dynamic.mapper.connector.webhook.WebHook;
 import dynamic.mapper.connector.webhook.WebHookInternal;
-import dynamic.mapper.model.ConnectorStatusEvent;
+import dynamic.mapper.model.status.ConnectorStatusEvent;
 
 import org.springframework.stereotype.Component;
 
@@ -62,9 +63,9 @@ public class ConnectorRegistry {
     // Structure: < Tenant, < ConnectorIdentifier, ConnectorStatusEvent > >
     private Map<String, Map<String, ConnectorStatusEvent>> connectorStatusMaps = new ConcurrentHashMap<>();
 
-    // Structure: < Tenant, < ConnectorIdentifier, CamelDispatcherOutbound > >
+    // Structure: < Tenant, < ConnectorIdentifier, OutboundMessageDispatcher > >
     // Added for NotificationSubscriber support
-    private Map<String, Map<String, CamelDispatcherOutbound>> dispatcherOutboundMaps = new ConcurrentHashMap<>();
+    private Map<String, Map<String, OutboundMessageDispatcher>> dispatcherOutboundMaps = new ConcurrentHashMap<>();
 
     // === Existing Methods ===
 
@@ -222,6 +223,7 @@ public class ConnectorRegistry {
         connectorSpecificationMap.put(ConnectorType.AMQP_091, new AMQPClient().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.AMQP_10, new AMQP10Client().getConnectorSpecification());
         connectorSpecificationMap.put(ConnectorType.GOOGLE_PUBSUB, new GooglePubSubClient().getConnectorSpecification());
+        connectorSpecificationMap.put(ConnectorType.REST_POLLING, new HttpPollingConnector().getConnectorSpecification());
     }
 
     // === New Methods for NotificationSubscriber Support ===
@@ -229,7 +231,7 @@ public class ConnectorRegistry {
     /**
      * Add a dispatcher for notification subscriber tracking
      */
-    public void addSubscriber(String tenant, String identifier, CamelDispatcherOutbound dispatcherOutbound) {
+    public void addSubscriber(String tenant, String identifier, OutboundMessageDispatcher dispatcherOutbound) {
         if (tenant == null || identifier == null || dispatcherOutbound == null) {
             log.warn("Cannot add subscriber with null parameters: tenant={}, identifier={}", tenant, identifier);
             return;
@@ -249,7 +251,7 @@ public class ConnectorRegistry {
             return;
         }
 
-        Map<String, CamelDispatcherOutbound> dispatchers = dispatcherOutboundMaps.get(tenant);
+        Map<String, OutboundMessageDispatcher> dispatchers = dispatcherOutboundMaps.get(tenant);
         if (dispatchers != null) {
             dispatchers.remove(identifier);
             log.debug("{} - Removed subscriber {}", tenant, identifier);
@@ -259,7 +261,7 @@ public class ConnectorRegistry {
     /**
      * Get all dispatchers for a tenant
      */
-    public Map<String, CamelDispatcherOutbound> getDispatchers(String tenant) {
+    public Map<String, OutboundMessageDispatcher> getDispatchers(String tenant) {
         if (tenant == null) {
             return new HashMap<>();
         }
@@ -269,8 +271,8 @@ public class ConnectorRegistry {
     /**
      * Get a specific dispatcher
      */
-    public CamelDispatcherOutbound getDispatcher(String tenant, String identifier) {
-        Map<String, CamelDispatcherOutbound> dispatchers = dispatcherOutboundMaps.get(tenant);
+    public OutboundMessageDispatcher getDispatcher(String tenant, String identifier) {
+        Map<String, OutboundMessageDispatcher> dispatchers = dispatcherOutboundMaps.get(tenant);
         if (dispatchers != null) {
             return dispatchers.get(identifier);
         }

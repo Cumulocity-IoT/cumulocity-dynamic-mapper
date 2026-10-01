@@ -27,7 +27,7 @@ import { ConnectorConfigurationService } from "../service/connector-configuratio
 import { SharedService } from "../service/shared.service";
 import { Operation } from "../service/shared.model";
 import { Direction, Qos } from "../mapping/mapping.model";
-import { ALERT_INFO_TIMEOUT } from "../mapping/util";
+import { ALERT_INFO_TIMEOUT } from "../mapping/mapping.constants";
 
 export enum ConnectorPropertyType {
   ID_STRING_PROPERTY = 'ID_STRING_PROPERTY',

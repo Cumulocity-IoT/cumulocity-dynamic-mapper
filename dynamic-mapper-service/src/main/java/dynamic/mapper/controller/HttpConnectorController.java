@@ -176,7 +176,7 @@ public class HttpConnectorController {
                 examples = @ExampleObject(
                     value = """
                     {
-                      "error": "Authenticated user does not have the required role: ROLE_MAPPING_HTTP_CONNECTOR_CREATE"
+                      "error": "Authenticated user does not have the required role: ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE"
                     }
                     """
                 )
@@ -237,9 +237,9 @@ public class HttpConnectorController {
 
         String tenant = securityUserDetails.getTenant();
         String user = securityUserDetails.getUsername();
-        log.warn("{} - User {} tried to access HTTPConnectorEndpoint but does not have the required 'ROLE_MAPPING_HTTP_CONNECTOR_CREATE' role",
+        log.warn("{} - User {} tried to access HTTPConnectorEndpoint but does not have the required 'ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE' role",
                 tenant, user);
-        response.sendError(403, "Authenticated user does not have the required role: ROLE_MAPPING_HTTP_CONNECTOR_CREATE");
+        response.sendError(403, "Authenticated user does not have the required role: ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE");
     }
 
     private byte[] readBody(HttpServletRequest request) throws IOException {

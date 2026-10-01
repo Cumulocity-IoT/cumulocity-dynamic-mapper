@@ -34,6 +34,26 @@ export default {
         to: 'README.md'
       },
       {
+        from: '../resources/image-optimized/Dynamic_Mapper_Configuration_Configuration.png',
+        to: 'image/Dynamic_Mapper_Configuration_Configuration.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Configuration_ProcessorExtension.png',
+        to: 'image/Dynamic_Mapper_Configuration_ProcessorExtension.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Configuration_ProcessorExtension_Upload.png',
+        to: 'image/Dynamic_Mapper_Configuration_ProcessorExtension_Upload.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Monitoring_TestDevices.png',
+        to: 'image/Dynamic_Mapper_Monitoring_TestDevices.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Monitoring_Microservice_Log.png',
+        to: 'image/Dynamic_Mapper_Monitoring_Microservice_Log.png'
+      },
+      {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Subscription_Outbound_Resync.png',
         to: 'image/Dynamic_Mapper_Mapping_Subscription_Outbound_Resync.png'
       },
@@ -58,16 +78,8 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png',
-        to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_TransformationType.png'
-      },
-      {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png',
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png'
-      },
-      {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png',
-        to: 'image/Dynamic_Mapper_Mapping_Table_Add_Modal_Payload.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Subscription_Outbound.png',
@@ -102,12 +114,12 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Message_Explorer.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Versions_Drawer.png',
-        to: 'image/Dynamic_Mapper_Mapping_Versions_Drawer.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Message_Explorer_Quickstart.png',
+        to: 'image/Dynamic_Mapper_Mapping_Message_Explorer_Quickstart.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Versions_Status_Badge.png',
-        to: 'image/Dynamic_Mapper_Mapping_Versions_Status_Badge.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Versions_Drawer.png',
+        to: 'image/Dynamic_Mapper_Mapping_Versions_Drawer.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Versions_Retention_Config.png',
@@ -122,12 +134,16 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Table_Import.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_TestTransformation.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_TestTransformation.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Test_Transformation.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Test_Transformation.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_SendTestMessage.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_SendTestMessage.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Editor_Test_Transformation.png',
+        to: 'image/Dynamic_Mapper_Mapping_Editor_Test_Transformation.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Send_TestMessage.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Send_TestMessage.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Connector_Overview.png',
@@ -140,6 +156,10 @@ export default {
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Connector_WebHook.png',
         to: 'image/Dynamic_Mapper_Connector_WebHook.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Connector_Rest_Polling.png',
+        to: 'image/Dynamic_Mapper_Connector_Rest_Polling.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Connector_Kafka.png',

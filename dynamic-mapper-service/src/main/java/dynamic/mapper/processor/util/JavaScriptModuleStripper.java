@@ -48,6 +48,8 @@ import java.util.regex.Pattern;
  *   export function foo() { … }               → kept as  function foo() { … }
  *   export class Foo { … }                    → kept as  class Foo { … }
  *   export const / let / var x = …           → kept as  const / let / var x = …
+ *   export default function foo() { … }       → kept as  function foo() { … }
+ *   export default class Foo { … }            → kept as  class Foo { … }
  *   export default foo;                       → removed entirely
  *   import { … } from '…';                   → removed entirely
  * </pre>
@@ -91,6 +93,17 @@ public final class JavaScriptModuleStripper {
     private static final Pattern EXPORT_BLOCK_CLOSE = Pattern.compile(
             "^\\s*+\\}\\s*+(?:from\\s++['\"][^'\"]*+['\"]\\s*+)?+;?\\s*+$");
 
+    /** {@code export default function …} / {@code export default class …}.
+     *  Strips only the leading {@code export default } keywords; the declaration is kept.
+     *
+     *  <p>Must be applied before {@link #EXPORT_DEFAULT}, which deletes whole lines: without
+     *  this, {@code export default function onMessage(msg, ctx) {} } lost the function itself
+     *  (single-line) or its signature (multi-line), and the mapping then failed to load with
+     *  {@code Function 'onMessage' not found} or a syntax error. {@link #INLINE_EXPORT} does not
+     *  cover it because {@code default} sits between {@code export} and the declaration. */
+    private static final Pattern EXPORT_DEFAULT_DECLARATION = Pattern.compile(
+            "(?m)^(\\s*+)export\\s++default\\s++(async\\s++)?+(function|class)\\b");
+
     /** Single-line {@code export default …;} */
     private static final Pattern EXPORT_DEFAULT = Pattern.compile(
             "(?m)^\\s*+export\\s++default\\s++[^\\n]*$");
@@ -116,7 +129,9 @@ public final class JavaScriptModuleStripper {
      *   <li>Single-line {@code export { … };} blocks are removed.</li>
      *   <li>Inline export declarations ({@code export function/class/const/let/var})
      *       have the {@code export} keyword stripped but the declaration is kept.</li>
-     *   <li>Remaining {@code export default} lines are removed.</li>
+     *   <li>{@code export default function/class} declarations have the
+     *       {@code export default} keywords stripped but the declaration is kept.</li>
+     *   <li>Remaining {@code export default} lines (plain expressions) are removed.</li>
      *   <li>{@code import} lines are removed.</li>
      *   <li>Blank lines introduced by removal are collapsed.</li>
      * </ol>
@@ -135,7 +150,10 @@ public final class JavaScriptModuleStripper {
         // 3. Strip "export " keyword from inline declarations — keep the declaration
         result = INLINE_EXPORT.matcher(result).replaceAll("$1$2$3 ");
 
-        // 4. Remove export default lines
+        // 4a. Strip "export default " from declarations — keep the declaration
+        result = EXPORT_DEFAULT_DECLARATION.matcher(result).replaceAll("$1$2$3 ");
+
+        // 4b. Remove remaining export default lines (plain expressions)
         result = EXPORT_DEFAULT.matcher(result).replaceAll("");
 
         // 5. Remove import lines

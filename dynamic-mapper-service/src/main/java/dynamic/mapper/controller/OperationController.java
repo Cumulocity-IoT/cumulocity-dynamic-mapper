@@ -23,6 +23,7 @@ package dynamic.mapper.controller;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -39,7 +40,8 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.core.BootstrapService;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.CacheManager;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.ExtensionManager;
 import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
@@ -62,13 +64,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.model.LoggingEventType;
+import dynamic.mapper.model.status.LoggingEventType;
 import org.joda.time.DateTime;
-import dynamic.mapper.service.ConnectorConfigurationService;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.ServiceConfigurationService;
-import dynamic.mapper.service.deployment.DeploymentMapService;
-import dynamic.mapper.service.status.MappingStatusService;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.configuration.ServiceConfigurationService;
+import dynamic.mapper.mapping.deployment.DeploymentMapService;
+import dynamic.mapper.mapping.status.MappingStatusService;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Operation;
 import dynamic.mapper.model.ServiceOperation;
@@ -94,14 +96,73 @@ public class OperationController {
     private final BootstrapService bootstrapService;
     private final C8YAgent c8YAgent;
     private final ContextService<UserCredentials> contextService;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
+    private final CacheManager cacheManager;
     private final DeploymentMapService deploymentMapService;
     private final MappingStatusService mappingStatusService;
     private final IdentityFacade identityFacade;
     private final InventoryFacade inventoryFacade;
-    private final dynamic.mapper.service.cache.FlowStateStore flowStateStore;
+    private final dynamic.mapper.processor.flow.FlowStateStore flowStateStore;
     private final ExtensionManager extensionManager;
     private final ObjectMapper objectMapper;
+
+
+    /** Which role each operation needs. ADMIN implies CREATE (see {@link Utils}). */
+    private enum RequiredRole { ADMIN, CREATE }
+
+    /**
+     * The permission table for {@link #runOperation}.
+     *
+     * <p>This used to be 17 hand-written {@code if (!Utils.userHas…Role())} blocks, one per case
+     * in the switch below. That worked, but nothing forced a newly added operation to carry one —
+     * a new {@code case} was simply unguarded, and the omission was invisible. Keeping the
+     * requirement in a table means the static block underneath fails at class load if an
+     * {@link Operation} is ever added without deciding who may run it.</p>
+     */
+    private static final Map<Operation, RequiredRole> REQUIRED_ROLES = Map.ofEntries(
+            Map.entry(Operation.ACTIVATE_MAPPING, RequiredRole.CREATE),
+            Map.entry(Operation.ADD_SAMPLE_MAPPINGS, RequiredRole.CREATE),
+            Map.entry(Operation.APPLY_MAPPING_FILTER, RequiredRole.CREATE),
+            Map.entry(Operation.CLEAR_CACHE, RequiredRole.ADMIN),
+            Map.entry(Operation.CLEAR_CACHE_DEVICE_TO_CLIENT, RequiredRole.ADMIN),
+            Map.entry(Operation.CONNECT, RequiredRole.ADMIN),
+            Map.entry(Operation.DEBUG_MAPPING, RequiredRole.CREATE),
+            Map.entry(Operation.DISCONNECT, RequiredRole.ADMIN),
+            Map.entry(Operation.INIT_CODE_TEMPLATES, RequiredRole.ADMIN),
+            Map.entry(Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS, RequiredRole.ADMIN),
+            Map.entry(Operation.REFRESH_STATUS_MAPPING, RequiredRole.CREATE),
+            Map.entry(Operation.RELOAD_EXTENSIONS, RequiredRole.ADMIN),
+            Map.entry(Operation.RELOAD_MAPPINGS, RequiredRole.CREATE),
+            Map.entry(Operation.RESET_DEPLOYMENT_MAP, RequiredRole.ADMIN),
+            Map.entry(Operation.RESET_STATISTICS_MAPPING, RequiredRole.ADMIN),
+            Map.entry(Operation.ROTATE_GRAALVM_ENGINE, RequiredRole.ADMIN),
+            Map.entry(Operation.UPDATE_CODE, RequiredRole.CREATE));
+
+    static {
+        List<Operation> unmapped = Arrays.stream(Operation.values())
+                .filter(op -> !REQUIRED_ROLES.containsKey(op))
+                .toList();
+        if (!unmapped.isEmpty()) {
+            throw new IllegalStateException(
+                    "Operation(s) missing from OperationController.REQUIRED_ROLES, so they would run unguarded: "
+                            + unmapped);
+        }
+    }
+
+    private static void requireRoleFor(Operation operationType) {
+        RequiredRole required = REQUIRED_ROLES.get(operationType);
+        if (required == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Unknown operation: " + operationType);
+        }
+        boolean permitted = required == RequiredRole.ADMIN
+                ? Utils.userHasMappingAdminRole()
+                : Utils.userHasMappingCreateRole();
+        if (!permitted) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "User does not have permission to execute operation " + operationType
+                            + " (requires ROLE_DYNAMIC_MAPPER_" + required + ")");
+        }
+    }
 
     @io.swagger.v3.oas.annotations.Operation(summary = "Execute a service operation", description = """
             Executes various administrative and operational tasks such as reloading mappings, connecting/disconnecting connectors, managing caches, and other maintenance operations. Different operations require different permission levels.
@@ -176,110 +237,44 @@ public class OperationController {
             Operation operationType = operation.getOperation();
             Map<String, String> parameters = operation.getParameter();
 
+            requireRoleFor(operationType);
+
             switch (operationType) {
                 case RELOAD_MAPPINGS:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to reload mappings");
-                    }
                     return handleReloadMappings(tenant);
                 case CONNECT:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to connect to connector");
-                    }
                     return handleConnect(tenant, parameters);
                 case DISCONNECT:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to disconnect from connector");
-                    }
                     return handleDisconnect(tenant, parameters);
                 case REFRESH_STATUS_MAPPING:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to refresh status mappings");
-                    }
                     return handleRefreshStatusMapping(tenant);
                 case RESET_STATISTICS_MAPPING:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to reset status mapping");
-                    }
                     return handleResetStatusMapping(tenant);
                 case RESET_DEPLOYMENT_MAP:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to reset deployment map");
-                    }
                     return handleResetDeploymentMap(tenant);
                 case RELOAD_EXTENSIONS:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to reload extensions");
-                    }
                     return handleReloadExtensions(tenant);
                 case ACTIVATE_MAPPING:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to activate mappings");
-                    }
                     return handleActivateMapping(tenant, parameters);
                 case APPLY_MAPPING_FILTER:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to apply mapping filter");
-                    }
                     return handleApplyMappingFilter(tenant, parameters);
 
                 case UPDATE_CODE:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to change transformation code");
-                    }
                     return handleApplyUpdateCode(tenant, parameters);
                 case DEBUG_MAPPING:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to debug mappings");
-                    }
                     return handleDebugMapping(tenant, parameters);
                 case REFRESH_NOTIFICATIONS_SUBSCRIPTIONS:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to refresh notifications subscriptions");
-                    }
                     return handleRefreshNotifications(tenant);
                 case CLEAR_CACHE:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to clear cache");
-                    }
                     return handleClearCache(tenant, parameters);
                 case ADD_SAMPLE_MAPPINGS:
-                    if (!Utils.userHasMappingCreateRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to add sample mappings");
-                    }
                     return handleAddSampleMappings(tenant, parameters);
                 case INIT_CODE_TEMPLATES:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to initialize code templates");
-                    }
                     return handleInitCodeTemplates(tenant, parameters);
                 case CLEAR_CACHE_DEVICE_TO_CLIENT:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to clear device-to-client cache");
-                    }
                     return handleClearCacheDeviceToClient(tenant, parameters);
                 case ROTATE_GRAALVM_ENGINE:
-                    if (!Utils.userHasMappingAdminRole()) {
-                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "User does not have permission to rotate GraalVM engine");
-                    }
-                    configurationRegistry.getGraalVMContextService().rotateEngine(tenant);
+                    serviceRegistry.getGraalVMContextService().rotateEngine(tenant);
                     return ResponseEntity.status(HttpStatus.CREATED).build();
                 default:
                     throw new IllegalArgumentException("Unknown operation: " + operationType);
@@ -299,7 +294,7 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleClearCacheDeviceToClient(String tenant, Map<String, String> parameters) {
-        configurationRegistry.clearCacheDeviceToClient(tenant);
+        serviceRegistry.clearCacheDeviceToClient(tenant);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -354,7 +349,7 @@ public class OperationController {
 
         try {
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-            configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
+            serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
         } catch (JsonProcessingException ex) {
             log.error("{} - Error saving service configuration with code templates: {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
@@ -488,7 +483,7 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleRefreshNotifications(String tenant) throws Exception {
-        configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+        serviceRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -544,7 +539,7 @@ public class OperationController {
         // Reconnect outbound notification subscriptions after the connector is ready
         AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
         if (client != null && client.supportedDirections().contains(Direction.OUTBOUND)) {
-            configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+            serviceRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -576,7 +571,7 @@ public class OperationController {
         connectorConfigurationService.saveConnectorConfiguration(configuration);
         bootstrapService.disableConnector(tenant, client.getConnectorIdentifier());
         // Reconnect other notification clients for remaining connectors
-        boolean reconnected = configurationRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
+        boolean reconnected = serviceRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
         if (!reconnected) {
             // Connector is disconnected and marked disabled locally, but reconnecting the
             // remaining notification subscriptions against Cumulocity failed (e.g. backend
@@ -596,19 +591,19 @@ public class OperationController {
         if ("INBOUND_ID_CACHE".equals(cacheId)) {
             Integer cacheSize = serviceConfigurationService
                     .getServiceConfiguration(tenant).getInboundExternalIdCacheSize();
-            configurationRegistry.getC8yAgent().clearInboundExternalIdCache(tenant, false, cacheSize);
+            cacheManager.clearInboundExternalIdCache(tenant, false, cacheSize);
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } else if ("OUTBOUND_ID_CACHE".equals(cacheId)) {
             Integer cacheSize = serviceConfigurationService
                     .getServiceConfiguration(tenant).getOutboundExternalIdCacheSize();
-            configurationRegistry.getC8yAgent().clearOutboundExternalIdCache(tenant, false, cacheSize);
+            cacheManager.clearOutboundExternalIdCache(tenant, false, cacheSize);
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } else if ("INVENTORY_CACHE".equals(cacheId)) {
             Integer cacheSize = serviceConfigurationService
                     .getServiceConfiguration(tenant).getInventoryCacheSize();
-            configurationRegistry.getC8yAgent().clearInventoryCache(tenant, false, cacheSize);
+            cacheManager.clearInventoryCache(tenant, false, cacheSize);
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } else if ("MOCK_IDENTITY_CACHE".equals(cacheId)) {

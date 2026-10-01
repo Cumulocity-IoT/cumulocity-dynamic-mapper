@@ -96,9 +96,9 @@ available, logging a warning and returning a safe default when it is not (e.g.
   (`ExtensionConfiguration.getExternalExtensionsAllowedPackage()`); loading external JARs
   at all is gated by `app.externalExtensionsEnabled` (`ExtensionConfiguration.isExternalExtensionsEnabled()`).
 - Registered extensions are tracked in
-  [`ExtensionInboundRegistry`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/ExtensionInboundRegistry.java) as `Extension` → `Map<eventName, ExtensionEntry>`,
+  [`ExtensionInboundRegistry`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/ExtensionInboundRegistry.java) as `Extension` → `Map<eventName, ExtensionEntry>`,
   where `ExtensionEntry` (
-  [`ExtensionEntry.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/ExtensionEntry.java)) holds the instantiated
+  [`ExtensionEntry.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/extension/ExtensionEntry.java)) holds the instantiated
   `ProcessorExtensionInbound`/`Outbound` object plus load status (`loaded`, `message`) for
   the UI to surface.
 

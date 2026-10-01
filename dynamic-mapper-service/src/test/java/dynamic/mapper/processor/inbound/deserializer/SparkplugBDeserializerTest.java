@@ -35,7 +35,7 @@ import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.CacheManager;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.model.MappingType;
+import dynamic.mapper.model.MappingType;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

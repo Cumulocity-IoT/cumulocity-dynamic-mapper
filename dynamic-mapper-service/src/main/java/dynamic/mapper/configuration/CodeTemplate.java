@@ -23,6 +23,7 @@ package dynamic.mapper.configuration;
 
 import jakarta.validation.constraints.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 
@@ -53,9 +54,6 @@ public class CodeTemplate implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     public TemplateType templateType;
 
-    @JsonSetter(nulls = Nulls.SKIP)
-    public Direction direction;
-
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public String code;
@@ -71,6 +69,20 @@ public class CodeTemplate implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     public boolean defaultTemplate = false;
+
+    /**
+     * The direction this template applies to, derived from its {@link TemplateType} and serialized
+     * for clients that group templates by direction.
+     *
+     * <p>It is deliberately not a stored field: it used to be set from a separate {@code @direction}
+     * annotation that could contradict {@code templateType}, and a client that dropped it on a
+     * round-trip persisted a null. Read-only on the wire, so a PUT can no longer put the two out of
+     * step -- incoming values are ignored rather than rejected.
+     */
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public Direction getDirection() {
+        return templateType != null ? templateType.getDirection() : null;
+    }
 
     @Override
     public CodeTemplate clone() {

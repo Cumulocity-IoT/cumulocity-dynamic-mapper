@@ -1,8 +1,6 @@
 package dynamic.mapper.processor;
 
 import java.util.List;
-import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.SourceSection;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,30 +8,28 @@ import com.cumulocity.model.ID;
 import com.cumulocity.model.idtype.GId;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.ExternalId;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.util.JavaScriptInteropHelper;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
-import dynamic.mapper.service.resolver.InventoryFilterEvaluator;
+import dynamic.mapper.mapping.resolver.InventoryFilterEvaluator;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public abstract class CommonProcessor implements Processor {
+public abstract class CommonProcessor {
 
     @Autowired
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
 
     @Autowired
     private C8YAgent c8yAgent;
 
     @Autowired
     private InventoryFilterEvaluator inventoryFilterEvaluator;
-
-    public abstract void process(Exchange exchange) throws Exception;
 
     /**
      * Evaluates an inventory filter against cached inventory data
@@ -149,7 +145,7 @@ public abstract class CommonProcessor implements Processor {
                     context,
                     log,
                     c8yAgent,
-                    configurationRegistry.getObjectMapper());
+                    serviceRegistry.getObjectMapper());
         }
 
         try {

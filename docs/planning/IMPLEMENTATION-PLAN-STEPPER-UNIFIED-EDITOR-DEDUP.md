@@ -326,31 +326,70 @@ end-to-end.
 
 ## 4. Manual regression test matrix
 
-**Status: not yet executed.** Phases 1–5 were implemented and verified via `ng build
---configuration production` and `tsc -p tsconfig.spec.json --noEmit` (full type-check of the specs
-too), plus new/updated specs written for every piece of logic that moved into
-`MappingStepperService` at each phase (see each phase's implementation note above). No headless
-Chrome was available in the environment this work was done in, so the Jasmine/Karma suite itself
-was not actually executed — only type-checked. Both **running `npm test`** and this manual matrix
-are outstanding before this work ships to users.
+**Purpose:** this is the end-to-end verification pass for the whole UI refactoring series — not
+just Phases 4–5. The automated suite is green (**516 specs, 0 failures**) and every extraction has
+unit coverage, but nothing here has been exercised against a real tenant. That is what this matrix
+is for.
 
-Required before/after Phase 4 and Phase 5 at minimum (recommended for every phase if time
-allows). Run each scenario through **both** editors where applicable.
+**Status: not yet executed.** The original blocker — no headless Chrome in the environment, so the
+Karma suite was only type-checked — is gone: `npm test` runs and passes. The manual pass remains
+outstanding.
 
-| Scenario | Stepper | Unified editor |
+### Which editor opens when
+
+An earlier version of this matrix asked for "update an existing mapping" through the stepper. **That
+is not reachable.** The two editors partition by `EditorMode`, from `mapping/grid/mapping.component.ts`:
+
+| Entry point | `EditorMode` | Opens |
 |---|---|---|
-| Create INBOUND JSON/DEFAULT mapping | ✓ | — (create-only via stepper today) |
-| Create OUTBOUND mapping, no subscription configured → warning shown | ✓ | — |
-| Update existing mapping — actual content change → draft created, "Publish and activate" message | ✓ | ✓ |
-| Update existing mapping — connector-only reassignment → **no** draft created, deployment still saved | ✓ | ✓ |
-| Copy mapping | ✓ | — |
+| `addMapping()` | `CREATE` | **stepper** (`showConfigMapping = true`) |
+| `copyMapping()` | `COPY` | **stepper** (`showConfigMapping = true`) |
+| `updateMapping()` | `UPDATE` / `READ_ONLY` | **unified editor** (`router.navigate(['edit', …])`) |
+
+So the stepper only ever sees CREATE and COPY; the unified editor only ever sees UPDATE and
+READ_ONLY. A row is marked for both editors only where the *scenario* genuinely occurs in both —
+e.g. picking an extension happens while creating (stepper) and while editing (unified editor).
+
+Two consequences worth knowing before testing:
+
+- The unified editor has **no create flow**, which is why it needs no CREATE→UPDATE transition
+  after a save.
+- The stepper parent's commit path never runs with `editorMode === UPDATE`, so its draft-save
+  branch is dead in practice. See the correction in
+  [IMPLEMENTATION-PLAN-COMMIT-MAPPING.md](IMPLEMENTATION-PLAN-COMMIT-MAPPING.md) §4.
+
+### Matrix
+
+| Scenario | Stepper (create/copy) | Unified editor (update) |
+|---|---|---|
+| Create INBOUND JSON/DEFAULT mapping | ✓ | n/a — no create flow |
+| Create OUTBOUND mapping, no subscription configured → warning shown | ✓ | n/a |
+| Copy mapping | ✓ | n/a |
+| "Generate with AI" at creation → review gate blocks advancing until target template reviewed | ✓ | n/a |
+| Update — content change → draft created, "Publish and activate" message | n/a — update never uses the stepper | ✓ |
+| Update — connector-only reassignment → **no** draft created, deployment still saved | n/a | ✓ |
+| Update — nothing changed → save writes neither a draft nor the deployment | n/a | ✓ |
 | Extension-based mapping (select extension name/event, parameter YAML round-trip) | ✓ | ✓ |
 | Code template insert, ESM export already present (`export default function onMessage`) → no duplicate export appended | ✓ | ✓ |
-| "Generate with AI" at creation → review gate blocks advancing until target template reviewed | ✓ | n/a (no create flow) |
 | "Generate substitutions with AI" drawer, from Transformation step/tab | ✓ | ✓ |
 | Legacy `SUBSTITUTION_AS_CODE` mapping — code editor help text correct (Phase 4 risk) | ✓ | ✓ |
-| Cancel mid-edit, no partial save | ✓ | ✓ (navigates back without persisting) |
-| Rapid double-click Next/tab-switch — no corrupted state (already fixed this session, regression-guard only) | ✓ | ✓ |
+| Cancel/Close mid-edit → no partial save | ✓ | ✓ |
+| Rapid double-click Next/tab-switch — no corrupted state (regression-guard only) | ✓ | ✓ |
+
+### Added after the original matrix was written
+
+These came from work that followed Phases 1–5 and are the least-proven part of the tree:
+
+| Scenario | Why it matters |
+|---|---|
+| Save, then keep editing and save again | The editor now **stays open** after a save. The second save must not fail with "modified concurrently" — it re-baselines `lastUpdate` from the server response. |
+| Save, then go to the Testing tab | The reason the stay-open change was made. |
+| Close with unsaved edits → confirmation; "Keep editing" returns to the editor | `unsavedChangesGuard` is the UI's only unsaved-changes protection. |
+| Browser **Back** with unsaved edits → same confirmation | The guard is on the route, so Back must behave like Close. |
+| Rejected save (server validation) → editor stays open, drawer lists the problems | One shared `commitMapping()` now feeds both editors' failure handling. |
+| Smart Function mapping with `export default function onMessage` → activates and runs | Was broken in both ESM modes until this release. |
+| Edit and save a **default** code template → it stays the default | The decoded template used to lose `defaultTemplate` and `direction` on save. |
+| Restart the service → SYSTEM template refreshed, SHARED code untouched | SYSTEM is now re-loaded from the classpath on every startup. |
 
 ---
 

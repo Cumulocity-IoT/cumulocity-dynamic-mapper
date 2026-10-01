@@ -24,7 +24,7 @@ package dynamic.mapper.notification.websocket;
 import java.net.URI;
 
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 
 /**
  * Implement this interface to handle notifications.

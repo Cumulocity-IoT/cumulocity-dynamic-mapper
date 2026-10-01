@@ -1,0 +1,502 @@
+// mapping-substitution-step.component.ts
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  ViewChild,
+  OnDestroy,
+  OnInit,
+  inject
+} from '@angular/core';
+import { FormGroup } from '@angular/forms';
+import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
+import { FormlyFieldConfig } from '@ngx-formly/core';
+import { debounceTime, distinctUntilChanged, Observable, Subject, takeUntil } from 'rxjs';
+import {
+  COLOR_HIGHLIGHTED,
+  Direction,
+  JsonEditorComponent,
+  Mapping,
+  StepperConfiguration,
+  Feature,
+  isSubstitutionsAsCode,
+  RepairStrategy,
+  ALERT_INFO_TIMEOUT
+} from '../../shared';
+import { EditorMode, SubstitutionModel } from '../../shared/mapping/stepper.model';
+import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
+import { AIPromptComponent } from '../prompt/ai-prompt.component';
+import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
+import { MappingStepperService } from '../service/mapping-stepper.service';
+import { SubstitutionManagementService } from '../service/substitution-management.service';
+import { isExpression } from '../../shared/mapping/util';
+import { CommonModule } from '@angular/common';
+import { PopoverModule } from 'ngx-bootstrap/popover';
+import { CollapseModule } from 'ngx-bootstrap/collapse';
+
+@Component({
+  selector: 'd11r-mapping-transformation-step',
+  templateUrl: './mapping-transformation.component.html',
+  styleUrls: ['../../shared/mapping/mapping.style.css'],
+  standalone: true,
+  imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, JsonEditorComponent, SubstitutionRendererComponent]
+})
+export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
+  @Input() mapping: Mapping;
+  @Input() stepperConfiguration: StepperConfiguration;
+  @Input() sourceTemplate: any;
+  @Input() targetTemplate: any;
+  @Input() sourceSystem: string;
+  @Input() targetSystem: string;
+  @Input() feature: Feature;
+  @Input() aiAgentDeployed: boolean;
+  @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
+  @Input() schemaSource: any;
+  @Input() schemaTarget: any;
+  @Input() mappingCode: string;
+  @Input() codeEditorLabel: string;
+  @Input() codeEditorHelp: string;
+  // A boolean, not the raw step/tab index: this component is shared by both the stepper and the
+  // unified editor, which number their steps/tabs independently — comparing a bare index here
+  // would silently break if either caller's ordering changes without both staying in sync.
+  @Input() isBeforeSubstitutionStep: boolean;
+
+  @Output() mappingCodeChange = new EventEmitter<string>();
+
+  @ViewChild('editorSourceStepSubstitution', { static: false })
+  editorSourceStepSubstitution!: JsonEditorComponent;
+
+  @ViewChild('editorTargetStepSubstitution', { static: false })
+  editorTargetStepSubstitution!: JsonEditorComponent;
+
+  private alertService = inject(AlertService);
+  private bottomDrawerService = inject(BottomDrawerService);
+  private stepperService = inject(MappingStepperService);
+  private substitutionService = inject(SubstitutionManagementService);
+
+  private readonly destroy$ = new Subject<void>();
+
+  readonly COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
+  readonly EditorMode = EditorMode;
+  readonly Direction = Direction;
+
+  get identitySubstitutionHint(): string {
+    const side = this.mapping?.direction === Direction.OUTBOUND ? 'source' : 'target';
+    return `One substitution with ${side} <code class="text-warning text-10">_IDENTITY_.externalId</code>`
+      + ` or <code class="text-warning text-10">_IDENTITY_.c8ySourceId</code> must exist.`;
+  }
+
+  templateForm: FormGroup = new FormGroup({});
+  substitutionFormly: FormGroup = new FormGroup({});
+  substitutionFormlyFieldsSource: FormlyFieldConfig[];
+  substitutionFormlyFieldsTarget: FormlyFieldConfig[];
+  substitutionModel: SubstitutionModel = {};
+  selectedSubstitution: number = -1;
+  expertMode: boolean = false;
+  targetTemplateHelp = 'The template contains the dummy field <code>_TOPIC_LEVEL_</code>...';
+
+  isSubstitutionValid$: Observable<boolean>;
+  sourceCustomMessage$: Observable<string>;
+  targetCustomMessage$: Observable<string>;
+
+  editorOptionsSourceSubstitution = {
+    mode: 'tree' as const,
+    removeModes: ['text', 'table'],
+    mainMenuBar: true,
+    navigationBar: false,
+    statusBar: false,
+    readOnly: true,
+    name: 'message'
+  };
+
+  editorOptionsTargetSubstitution = {
+    mode: 'tree' as const,
+    removeModes: ['text', 'table'],
+    mainMenuBar: true,
+    navigationBar: false,
+    readOnly: true,
+    statusBar: true
+  };
+
+  ngOnInit(): void {
+    this.isSubstitutionValid$ = this.stepperService.isSubstitutionValid$;
+    this.sourceCustomMessage$ = this.stepperService.sourceCustomMessage$;
+    this.targetCustomMessage$ = this.stepperService.targetCustomMessage$;
+
+    this.initializeSubstitutionModel();
+    this.initializeFormlyFields();
+    this.updateEditorPermissions();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private initializeSubstitutionModel(): void {
+    this.substitutionModel = {
+      stepperConfiguration: this.stepperConfiguration,
+      pathSource: '',
+      pathTarget: '',
+      pathSourceIsExpression: false,
+      pathTargetIsExpression: false,
+      repairStrategy: RepairStrategy.DEFAULT,
+      expandArray: false,
+      targetExpression: { result: '', resultType: 'empty', valid: false },
+      sourceExpression: { result: '', resultType: 'empty', valid: false }
+    };
+  }
+
+  private static readonly JSONATA_DESCRIPTION = `Use <a href="https://jsonata.org" target="_blank">JSONata</a>
+          in your expressions:
+          <ol>
+            <li>to convert a UNIX timestamp to ISO date format use:
+              <code>$fromMillis($number(deviceTimestamp))</code>
+            </li>
+            <li>to concat strings use "&"
+            </li>
+            <li>to join substring starting at position 5 of property <code>txt</code> with
+              device
+              identifier use: <code>$join([$substring(txt,5), "-", id])</code></li>
+            <li>function chaining using <code>~</code> is supported. The expression <code>Account.Product.(Price * Quantity) ~> $sum()</code>
+              becomes <code>$sum(Account.Product.(Price * Quantity))</code></li>
+          </ol>`;
+
+  private initializeFormlyFields(): void {
+    this.substitutionFormlyFieldsSource = [
+      {
+        key: 'pathSource',
+        type: 'd11r-input',
+        wrappers: ['c8y-form-field'],
+
+        templateOptions: {
+          label: 'Source Expression',
+          class: 'input-sm',
+          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+            !this.stepperConfiguration.allowDefiningSubstitutions,
+          placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',
+          description: MappingSubstitutionStepComponent.JSONATA_DESCRIPTION,
+          required: true,
+          customMessage: this.sourceCustomMessage$
+        },
+        hooks: {
+          onInit: (field: FormlyFieldConfig) => {
+            field.formControl.valueChanges.pipe(
+              debounceTime(500),
+              distinctUntilChanged(),
+              takeUntil(this.destroy$)
+            ).subscribe(path => this.updateSourceExpressionResult(path));
+          }
+        }
+      },
+      {
+        key: 'sourceExpression.result',
+        type: 'd11r-textarea',
+        wrappers: ['c8y-form-field'],
+        props: {
+          readonly: true,
+          required: false,
+          rows: 2,
+          class: 'font-smaller',
+          label: ' Source Result [empty]'
+        },
+        expressions: {
+          'props.label': (field: FormlyFieldConfig) =>
+            ` Source Result [${field.model?.sourceExpression?.resultType ?? 'empty'}]`
+        }
+      }
+    ];
+    this.substitutionFormlyFieldsTarget = [
+      {
+        key: 'pathTarget',
+        type: 'd11r-input',
+        wrappers: ['c8y-form-field'],
+        templateOptions: {
+          label: 'Target Expression',
+          class: 'input-sm',
+          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+            !this.stepperConfiguration.allowDefiningSubstitutions,
+          description: MappingSubstitutionStepComponent.JSONATA_DESCRIPTION,
+          required: true,
+          customMessage: this.targetCustomMessage$
+        },
+        hooks: {
+          onInit: (field: FormlyFieldConfig) => {
+            field.formControl.valueChanges.pipe(
+              debounceTime(500),
+              distinctUntilChanged(),
+              takeUntil(this.destroy$)
+            ).subscribe(path => this.updateTargetExpressionResult(path));
+          }
+        }
+      },
+      {
+        key: 'targetExpression.result',
+        type: 'd11r-textarea',
+        wrappers: ['c8y-form-field'],
+        props: {
+          readonly: true,
+          required: false,
+          rows: 2,
+          class: 'font-smaller',
+          label: ' Target Result [empty]'
+        },
+        expressions: {
+          'props.label': (field: FormlyFieldConfig) =>
+            ` Target Result [${field.model?.targetExpression?.resultType ?? 'empty'}]`
+        }
+      }
+    ];
+  }
+
+  private updateEditorPermissions(): void {
+    if (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole) {
+      this.editorOptionsSourceSubstitution.readOnly = true;
+      this.editorOptionsTargetSubstitution.readOnly = true;
+    }
+  }
+
+  async updateSourceExpressionResult(path: string): Promise<void> {
+    try {
+      const result = await this.stepperService.evaluateSourceExpression(
+        this.editorSourceStepSubstitution?.get(),
+        path
+      );
+      this.substitutionModel.sourceExpression = result;
+      this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
+      this.substitutionFormly.get('pathSource').setErrors(null);
+
+      if (result.resultType == 'Array' && !this.substitutionModel.expandArray) {
+        this.alertService.add({ text: 'Current expression extracts an array. Consider using "Expand as array"...', type: 'info', timeout: ALERT_INFO_TIMEOUT });
+      }
+    } catch (error) {
+      // sourceExpression can still be unset here (e.g. right after selecting an existing
+      // substitution, whose persisted form never carries it) - default it rather than assume it.
+      this.substitutionModel.sourceExpression = {
+        ...(this.substitutionModel.sourceExpression ?? { result: '', resultType: 'empty' }),
+        valid: false
+      };
+      this.substitutionFormly.get('pathSource').setErrors({
+        validationError: { message: error.message }
+      });
+    }
+
+    this.substitutionModel = { ...this.substitutionModel };
+  }
+
+  async updateTargetExpressionResult(path: string): Promise<void> {
+    try {
+      const result = await this.stepperService.evaluateTargetExpression(
+        this.editorTargetStepSubstitution?.get(),
+        path
+      );
+      this.substitutionModel.targetExpression = result;
+      this.substitutionFormly.get('pathTarget').setErrors(null);
+
+      if (path == '$') {
+        this.stepperService.targetCustomMessage$.next(
+          'By specifying "$" you selected the root of the target template...'
+        );
+      }
+    } catch (error) {
+      this.substitutionModel.targetExpression = {
+        ...(this.substitutionModel.targetExpression ?? { result: '', resultType: 'empty' }),
+        valid: false
+      };
+      this.substitutionFormly.get('pathTarget').setErrors({
+        validationError: { message: error.message }
+      });
+    }
+
+    this.substitutionModel = { ...this.substitutionModel };
+  }
+
+  onSelectedPathSourceChanged(path: string): void {
+    this.substitutionFormly.get('pathSource').setValue(path);
+    this.substitutionModel.pathSource = path;
+    this.substitutionModel.pathSourceIsExpression = isExpression(path);
+  }
+
+  onSelectedPathTargetChanged(path: string): void {
+    this.substitutionFormly.get('pathTarget').setValue(path);
+    this.substitutionModel.pathTarget = path;
+  }
+
+  onAddSubstitution(): void {
+    if (!this.isSubstitutionValid()) {
+      this.alertService.warning('Please select nodes in both templates to define a substitution.');
+      return;
+    }
+
+    this.substitutionModel.expandArray = false;
+    this.substitutionModel.repairStrategy = RepairStrategy.DEFAULT;
+
+    this.substitutionService.addSubstitution(
+      this.substitutionModel,
+      this.mapping,
+      this.refreshSubstitutionValidity
+    );
+
+    this.selectedSubstitution = -1;
+  }
+
+  onUpdateSubstitution(): void {
+    this.substitutionService.updateSubstitution(
+      this.selectedSubstitution,
+      this.substitutionModel,
+      this.mapping,
+      () => {
+        this.refreshSubstitutionValidity();
+        // A completed update is a natural end to the editing session - return to "add" state
+        // rather than leaving the just-saved row selected and both buttons still enabled.
+        this.cancelEditSubstitution();
+      }
+    );
+  }
+
+  /** Leaves edit mode: clears the selected row, resets the form back to its "add" state, and
+   *  clears the stale node highlight left in both editors from the substitution being edited. */
+  cancelEditSubstitution(): void {
+    this.selectedSubstitution = -1;
+    this.initializeSubstitutionModel();
+    this.substitutionFormly.get('pathSource')?.setValue('', { emitEvent: false });
+    this.substitutionFormly.get('pathTarget')?.setValue('', { emitEvent: false });
+    this.editorSourceStepSubstitution?.clearSelection();
+    this.editorTargetStepSubstitution?.clearSelection();
+  }
+
+  /** Inline expandArray/repairStrategy edits in the grid mutate the substitution in place -
+   *  no selection/model change is needed, just re-run validity. */
+  onGridSubstitutionChange(): void {
+    this.refreshSubstitutionValidity();
+  }
+
+  onDeleteSubstitution(selected: number): void {
+    this.substitutionService.deleteSubstitution(
+      selected,
+      this.mapping,
+      this.refreshSubstitutionValidity
+    );
+    // Deleting shifts every later index down by one, so a stale selectedSubstitution would
+    // otherwise point at the wrong row (or go out of range) for "Update substitution".
+    if (this.selectedSubstitution === selected) {
+      this.selectedSubstitution = -1;
+    } else if (this.selectedSubstitution > selected) {
+      this.selectedSubstitution--;
+    }
+  }
+
+  private readonly refreshSubstitutionValidity = (): void => {
+    this.stepperService.refreshSubstitutionValidity(
+      this.mapping,
+      this.stepperConfiguration,
+      this.isBeforeSubstitutionStep
+    );
+  };
+
+  async onSelectSubstitution(selected: number): Promise<void> {
+    if (selected < 0 || selected >= this.mapping.substitutions.length) return;
+
+    this.selectedSubstitution = selected;
+    this.substitutionModel = {
+      ...this.mapping.substitutions[selected],
+      stepperConfiguration: this.stepperConfiguration
+    };
+    this.substitutionModel.pathSourceIsExpression = isExpression(this.substitutionModel.pathSource);
+
+    await Promise.all([
+      this.editorSourceStepSubstitution.setSelectionToPath(this.substitutionModel.pathSource),
+      this.editorTargetStepSubstitution.setSelectionToPath(this.substitutionModel.pathTarget)
+    ]);
+
+    // Explicitly (re-)evaluate both expressions rather than relying on side effects to trigger
+    // it: JsonEditorComponent.setSelectionToPath() above is a no-op for any expression containing
+    // special characters (a very common case in Expert Mode), and ngx-formly only patches (and
+    // fires valueChanges for) the pathSource/pathTarget controls when their current text differs
+    // from the model - so revisiting a row whose text is already showing silently skips
+    // evaluation. Either way, the persisted Substitution never carries sourceExpression/
+    // targetExpression, so without this the Result [type] label is left reading stale/empty
+    // metadata while the result text itself still shows the last thing that WAS evaluated.
+    // Sequential, not Promise.all: both methods finish by doing
+    // `this.substitutionModel = {...this.substitutionModel}`, so running them concurrently risks
+    // one overwriting the other's in-progress mutation.
+    await this.updateSourceExpressionResult(this.substitutionModel.pathSource);
+    await this.updateTargetExpressionResult(this.substitutionModel.pathTarget);
+  }
+
+  toggleExpertMode(): void {
+    this.expertMode = !this.expertMode;
+  }
+
+  async openGenerateSubstitutionDrawer(): Promise<void> {
+    const testMapping: any = { ...this.mapping };
+    testMapping.sourceTemplate = JSON.stringify(this.sourceTemplate);
+    testMapping.targetTemplate = JSON.stringify(this.targetTemplate);
+    // Out-of-band transport fields (e.g. the Kafka record key of the message this mapping was
+    // created from) are not part of the payload, so they can only reach AI generation this way.
+    // Attached to the drawer's copy only — never persisted on the mapping itself.
+    if (this.stepperConfiguration.sampleTransportFields) {
+      testMapping.sampleTransportFields = this.stepperConfiguration.sampleTransportFields;
+    }
+
+    const drawer = this.bottomDrawerService.openDrawer(AIPromptComponent, {
+      initialState: { mapping: testMapping, aiAgent: this.aiAgent, editorMode: this.stepperConfiguration.editorMode }
+    });
+
+    try {
+      const resultOf = await drawer.instance.result;
+
+      if (isSubstitutionsAsCode(this.mapping)) {
+        if (typeof resultOf === 'string' && resultOf.trim()) {
+          this.mappingCodeChange.emit(resultOf);
+        } else {
+          this.alertService.warning('No valid JavaScript code was generated.');
+        }
+      } else {
+        if (Array.isArray(resultOf) && resultOf.length > 0) {
+          this.alertService.success(`Generated ${resultOf.length} substitutions.`);
+          this.selectedSubstitution = -1;
+          // Bulk-replace rather than looping addSubstitution(): that method is fire-and-forget
+          // and opens a blocking confirmation modal per duplicate/expert-mode hit, which stacks
+          // dialogs when applying a freshly-generated set wholesale.
+          this.substitutionService.replaceAllSubstitutions(
+            resultOf,
+            this.mapping,
+            this.refreshSubstitutionValidity
+          );
+        } else {
+          this.alertService.warning('No substitutions were generated.');
+        }
+      }
+    } catch (ex) {
+      // User canceled
+    }
+  }
+
+  onValueCodeChange(value: string): void {
+    this.mappingCodeChange.emit(value);
+  }
+
+  addSubstitutionDisabled(): boolean {
+    // Mutually exclusive with "Update substitution": while a row is selected for editing, Add
+    // would otherwise stay clickable too and push a near-duplicate of the row being edited.
+    // Cancel/New substitution (selectedSubstitution = -1) is the explicit way back to add-mode.
+    return !this.stepperConfiguration.showEditorSource ||
+      this.stepperConfiguration.editorMode === EditorMode.READ_ONLY ||
+      this.selectedSubstitution !== -1 ||
+      !this.isSubstitutionValid();
+  }
+
+  updateSubstitutionDisabled(): boolean {
+    return !this.stepperConfiguration.showEditorSource ||
+      this.stepperConfiguration.editorMode === EditorMode.READ_ONLY ||
+      this.selectedSubstitution === -1 ||
+      !this.isSubstitutionValid();
+  }
+
+  private isSubstitutionValid(): boolean {
+    return this.substitutionService.isSubstitutionValid(this.substitutionModel);
+  }
+
+}

@@ -36,7 +36,7 @@ import {
   SharedModule,
   Substitution
 } from '../../shared';
-import { EditorMode } from '../shared/stepper.model';
+import { EditorMode } from '../../shared/mapping/stepper.model';
 import { CoreModule } from '@c8y/ngx-components';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { Subject, takeUntil } from 'rxjs';

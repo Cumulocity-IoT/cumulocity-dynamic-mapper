@@ -25,7 +25,7 @@ import com.hivemq.client.mqtt.mqtt3.message.publish.Mqtt3Publish;
 
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -35,10 +35,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class MQTT3Callback extends AbstractMqttCallback<Mqtt3Publish> {
 
-    MQTT3Callback(String tenant, ConfigurationRegistry configurationRegistry,
+    MQTT3Callback(String tenant, ServiceRegistry serviceRegistry,
             GenericMessageCallback callback, String connectorIdentifier, String connectorName,
             String clientId, Runnable reconnectTrigger) { // clientId unused in MQTT3 but kept for API symmetry
-        super(tenant, configurationRegistry, callback, connectorIdentifier, connectorName, reconnectTrigger);
+        super(tenant, serviceRegistry, callback, connectorIdentifier, connectorName, reconnectTrigger);
     }
 
     @Override

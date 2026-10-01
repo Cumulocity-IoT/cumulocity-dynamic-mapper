@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @name Forward payload to tenant microservice (inbound)
  * @description Demonstrates custom routing: forwards the incoming device payload to a
@@ -6,13 +7,16 @@
  *              The targetPath must start with /service/ and point to a microservice
  *              that is subscribed to the same Cumulocity tenant.
  * @templateType INBOUND_SMART_FUNCTION
- * @direction INBOUND
  *
  * Sample payload (MQTT topic: testCustomRouting/sensor-berlin-01)
  * {
  *     "externalId": "sensor-berlin-01",
  *     "temperature": 23.5
  * }
+ */
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
  */
 function onMessage(msg, context) {
     var payload = msg.payload;

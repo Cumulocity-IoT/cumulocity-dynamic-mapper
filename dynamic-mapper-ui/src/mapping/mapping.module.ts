@@ -25,7 +25,7 @@ import { DeviceGridService } from '@c8y/ngx-components/device-grid';
 import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { NODE1, featureResolver, Direction } from '../shared';
 import { MappingComponent } from './grid/mapping.component';
-import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from './shared/util';
+import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from '../shared/mapping/util';
 import { MappingSubscriptionComponent } from './subscription/subscription.component';
 import { DeviceClientMapComponent } from './client-relation/device-client-map.component';
 import { MappingTabFactory } from './mapping-tab.factory';
@@ -33,6 +33,7 @@ import { SubstitutionManagementService } from './service/substitution-management
 import { MappingStepperService } from './service/mapping-stepper.service';
 import { MappingUnifiedEditorComponent } from './unified-editor';
 import { mappingEditResolver } from './core/mapping-edit.resolver';
+import { unsavedChangesGuard } from './core/unsaved-changes.guard';
 import { MessageExplorerComponent } from './message-explorer/message-explorer.component';
 
 @NgModule({
@@ -53,6 +54,7 @@ import { MessageExplorerComponent } from './message-explorer/message-explorer.co
         {
           path: 'edit/:identifier',
           component: MappingUnifiedEditorComponent,
+          canDeactivate: [unsavedChangesGuard],
           resolve: { mappingEdit: mappingEditResolver, feature: featureResolver },
           data: { direction: Direction.INBOUND }
         }
@@ -70,6 +72,7 @@ import { MessageExplorerComponent } from './message-explorer/message-explorer.co
         {
           path: 'edit/:identifier',
           component: MappingUnifiedEditorComponent,
+          canDeactivate: [unsavedChangesGuard],
           resolve: { mappingEdit: mappingEditResolver, feature: featureResolver },
           data: { direction: Direction.OUTBOUND }
         }

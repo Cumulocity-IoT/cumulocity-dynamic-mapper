@@ -18,4 +18,4 @@
  * @authors Christof Strack
  */
 export * from './service-configuration.module';
-export * from './shared/configuration.model';
+export * from '../shared/configuration/configuration.model';

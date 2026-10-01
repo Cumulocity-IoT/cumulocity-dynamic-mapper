@@ -27,9 +27,7 @@ import static org.mockito.Mockito.*;
 import java.util.HashMap;
 import java.util.Map;
 
-import dynamic.mapper.service.cache.FlowStateStore;
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
+import dynamic.mapper.processor.flow.FlowStateStore;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,20 +40,20 @@ import org.mockito.quality.Strictness;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.GraalVMContextService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.model.Substitution;
 import dynamic.mapper.processor.model.C8YMessage;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.RepairStrategy;
-import dynamic.mapper.processor.model.TransformationType;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.RepairStrategy;
+import dynamic.mapper.model.TransformationType;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -64,7 +62,7 @@ import lombok.extern.slf4j.Slf4j;
 class EnrichmentOutboundProcessorTest {
 
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
 
     @Mock
     private MappingService mappingService;
@@ -74,12 +72,6 @@ class EnrichmentOutboundProcessorTest {
 
     @Mock
     private dynamic.mapper.core.C8YAgent c8yAgent;
-
-    @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
 
     @Mock
     private ServiceConfiguration serviceConfiguration;
@@ -97,13 +89,7 @@ class EnrichmentOutboundProcessorTest {
     private HostAccess hostAccess;
 
     @Mock
-    private dynamic.mapper.processor.model.RoutingContext routingContext;
-
-    @Mock
-    private dynamic.mapper.processor.model.PayloadContext<Object> payloadContext;
-
-    @Mock
-    private dynamic.mapper.processor.model.ProcessingState processingState;
+    private dynamic.mapper.processor.runtime.RoutingContext routingContext;
 
     private EnrichmentOutboundProcessor processor;
 
@@ -125,14 +111,7 @@ class EnrichmentOutboundProcessorTest {
         mappingStatus = createMappingStatus();
 
         // Create the processor
-        processor = new EnrichmentOutboundProcessor(configurationRegistry, mappingService, c8yAgent, flowStateStore);
-
-        // Setup basic exchange and message mocks
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getHeader("c8yMessage", C8YMessage.class)).thenReturn(c8yMessage);
-        when(message.getBody(Mapping.class)).thenReturn(mapping);
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
-        when(message.getHeader("connectorIdentifier", String.class)).thenReturn(TEST_CONNECTOR_ID);
+        processor = new EnrichmentOutboundProcessor(serviceRegistry, mappingService, c8yAgent, flowStateStore);
 
         // Setup processing context mocks
         when(processingContext.getServiceConfiguration()).thenReturn(serviceConfiguration);
@@ -143,10 +122,7 @@ class EnrichmentOutboundProcessorTest {
 
         // Setup focused context mocks
         when(processingContext.getRoutingContext()).thenReturn(routingContext);
-        when(processingContext.getPayloadContext()).thenReturn(payloadContext);
-        when(processingContext.getProcessingState()).thenReturn(processingState);
         when(routingContext.getTenant()).thenReturn(TEST_TENANT);
-        when(payloadContext.getDeserializedPayload()).thenReturn("test payload");
 
         // Setup mapping status mocks
         when(mappingService.getMappingStatus(anyString(), any(Mapping.class))).thenReturn(mappingStatus);
@@ -156,7 +132,7 @@ class EnrichmentOutboundProcessorTest {
         when(serviceConfiguration.getCodeTemplates()).thenReturn(createCodeTemplates());
 
         // Setup configuration registry defaults
-        when(configurationRegistry.getGraalVMContextService()).thenReturn(graalVMContextService);
+        when(serviceRegistry.getGraalVMContextService()).thenReturn(graalVMContextService);
         when(graalVMContextService.peekGraalEngine(anyString())).thenReturn(graalEngine);
         when(graalVMContextService.getHostAccess()).thenReturn(hostAccess);
     }
@@ -248,7 +224,7 @@ class EnrichmentOutboundProcessorTest {
         when(serviceConfiguration.getLogPayload()).thenReturn(true);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, TEST_CONNECTOR_ID);
 
         // Then
         assertEquals(1L, mappingStatus.messagesReceived, "Should increment messages received");
@@ -264,10 +240,9 @@ class EnrichmentOutboundProcessorTest {
     void testProcessWithConnectorIdentifier() throws Exception {
         // Given - Custom connector identifier
         String customConnector = "custom-mqtt-connector";
-        when(message.getHeader("connectorIdentifier", String.class)).thenReturn(customConnector);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, customConnector);
 
         // Then
         assertEquals(1L, mappingStatus.messagesReceived, "Should increment messages received");
@@ -278,10 +253,9 @@ class EnrichmentOutboundProcessorTest {
     @Test
     void testProcessWithNullConnectorIdentifier() throws Exception {
         // Given - Null connector identifier
-        when(message.getHeader("connectorIdentifier", String.class)).thenReturn(null);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, null);
 
         // Then
         assertEquals(1L, mappingStatus.messagesReceived, "Should increment messages received");
@@ -298,7 +272,7 @@ class EnrichmentOutboundProcessorTest {
         when(serviceConfiguration.getLogPayload()).thenReturn(true);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, TEST_CONNECTOR_ID);
 
         // Then
         assertEquals(1L, mappingStatus.messagesReceived, "Should increment messages received");
@@ -314,7 +288,7 @@ class EnrichmentOutboundProcessorTest {
         when(serviceConfiguration.getLogPayload()).thenReturn(true);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, TEST_CONNECTOR_ID);
 
         // Then
         assertEquals(1L, mappingStatus.messagesReceived, "Should increment messages received");
@@ -331,7 +305,7 @@ class EnrichmentOutboundProcessorTest {
         when(routingContext.getTenant()).thenReturn(differentTenant);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, TEST_CONNECTOR_ID);
 
         // Then
         verify(mappingService).getMappingStatus(differentTenant, mapping);
@@ -346,17 +320,16 @@ class EnrichmentOutboundProcessorTest {
 
         // When & Then - a null mapping is a programming error and must fail fast
         // rather than silently producing an empty/invalid context.
-        assertThrows(NullPointerException.class, () -> processor.process(exchange),
+        assertThrows(NullPointerException.class, () -> processor.process(processingContext, TEST_CONNECTOR_ID),
                 "a null mapping must fail fast with a NullPointerException");
     }
 
     @Test
     void testProcessWithNullProcessingContext() throws Exception {
         // Given - Null processing context (simulates upstream deserialization failure)
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(null);
 
         // When & Then - null context is handled gracefully, no exception thrown
-        assertDoesNotThrow(() -> processor.process(exchange),
+        assertDoesNotThrow(() -> processor.process(null, TEST_CONNECTOR_ID),
                 "Should handle null processing context gracefully");
 
         log.info("✅ Null processing context handling test passed");
@@ -375,7 +348,7 @@ class EnrichmentOutboundProcessorTest {
         when(graalVMContextService.peekGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, TEST_CONNECTOR_ID);
 
         // Then - Verify configuration registry was called (GraalVM setup attempted)
         verify(graalVMContextService).peekGraalEngine(TEST_TENANT);
@@ -404,7 +377,7 @@ class EnrichmentOutboundProcessorTest {
         when(graalVMContextService.peekGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, TEST_CONNECTOR_ID);
 
         // Then - Verify error handling
         verify(graalVMContextService).peekGraalEngine(TEST_TENANT);
@@ -431,7 +404,7 @@ class EnrichmentOutboundProcessorTest {
         when(graalVMContextService.peekGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, TEST_CONNECTOR_ID);
 
         // Then - Verify GraalVM setup was attempted and error was handled
         verify(graalVMContextService).peekGraalEngine(TEST_TENANT);
@@ -458,7 +431,7 @@ class EnrichmentOutboundProcessorTest {
         mapping.setCode(null);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, TEST_CONNECTOR_ID);
 
         // Then - This should always succeed since no GraalVM setup is needed
         assertEquals(1L, mappingStatus.messagesReceived, "Should increment messages received");
@@ -485,7 +458,7 @@ class EnrichmentOutboundProcessorTest {
         mapping.setCode("function transform(input) { return input; }");
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, TEST_CONNECTOR_ID);
 
         // Then - Should process successfully without GraalVM setup
         assertEquals(1L, mappingStatus.messagesReceived, "Should increment messages received");
@@ -507,7 +480,7 @@ class EnrichmentOutboundProcessorTest {
         when(serviceConfiguration.getLogPayload()).thenReturn(true);
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, TEST_CONNECTOR_ID);
 
         // Then - Should process successfully
         assertEquals(1L, mappingStatus.messagesReceived, "Should increment messages received");
@@ -541,7 +514,7 @@ class EnrichmentOutboundProcessorTest {
                 .thenThrow(new RuntimeException("GraalVM setup failed"));
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext, TEST_CONNECTOR_ID);
 
         // Then - Should handle the error gracefully
         assertEquals(1L, mappingStatus.errors, "Should increment error count");
@@ -564,7 +537,7 @@ class EnrichmentOutboundProcessorTest {
         when(graalVMContextService.peekGraalEngine(TEST_TENANT)).thenReturn(graalEngine);
 
         // When - Process twice
-        processor.process(exchange);
+        processor.process(processingContext, TEST_CONNECTOR_ID);
 
         long firstCallErrors = mappingStatus.errors;
         assertTrue(firstCallErrors >= 1L, "First call should fail with mocked Engine");
@@ -573,7 +546,7 @@ class EnrichmentOutboundProcessorTest {
         mappingStatus.messagesReceived = 0L;
         mappingStatus.errors = 0L;
 
-        processor.process(exchange);
+        processor.process(processingContext, TEST_CONNECTOR_ID);
 
         // Then - Should consistently fail with mocked Engine
         assertTrue(mappingStatus.errors >= 1L,

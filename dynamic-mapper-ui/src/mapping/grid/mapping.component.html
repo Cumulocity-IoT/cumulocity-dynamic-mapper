@@ -79,7 +79,7 @@
 <div [ngClass]="{ drawerOpen: showConfigMapping }">
   <div class="bottom-drawer d-col has-backdrop" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
     @if (showConfigMapping) {
-      <d11r-mapping-stepper (cancel)="showConfigMapping = false"
+      <d11r-mapping-stepper #mappingStepper (cancel)="showConfigMapping = false"
         (commit)="onCommitMapping($event)" [mapping]="mappingToUpdate" [stepperConfiguration]="stepperConfiguration"
         [deploymentMapEntry]="deploymentMapEntry">
       </d11r-mapping-stepper>

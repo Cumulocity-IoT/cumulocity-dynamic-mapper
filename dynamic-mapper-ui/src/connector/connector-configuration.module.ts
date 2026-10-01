@@ -22,7 +22,7 @@ import { NgModule } from '@angular/core';
 import { hookRoute } from '@c8y/ngx-components';
 import { connectorResolver, ConnectorDetailsComponent, SharedModule } from '../shared';
 import { ConnectorConfigurationComponent } from './connector-configuration.component';
-import { featureResolver, NODE3 } from '../shared/mapping/util';
+import { featureResolver, NODE3 } from '../shared/mapping/mapping.constants';
 
 @NgModule({
   providers: [

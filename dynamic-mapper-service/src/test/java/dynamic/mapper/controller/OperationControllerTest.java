@@ -53,20 +53,25 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.BootstrapService;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.CacheManager;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.ExtensionManager;
 import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import dynamic.mapper.model.Operation;
+import org.springframework.web.server.ResponseStatusException;
 import dynamic.mapper.model.ServiceOperation;
-import dynamic.mapper.service.ConnectorConfigurationService;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.ServiceConfigurationService;
-import dynamic.mapper.service.cache.FlowStateStore;
-import dynamic.mapper.service.deployment.DeploymentMapService;
-import dynamic.mapper.service.status.MappingStatusService;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.configuration.ServiceConfigurationService;
+import dynamic.mapper.processor.flow.FlowStateStore;
+import dynamic.mapper.mapping.deployment.DeploymentMapService;
+import dynamic.mapper.mapping.status.MappingStatusService;
 
 /**
  * Unit tests for {@link OperationController}'s {@code ACTIVATE_MAPPING} handling
@@ -87,11 +92,12 @@ class OperationControllerTest {
     @Mock private BootstrapService bootstrapService;
     @Mock private C8YAgent c8YAgent;
     @Mock private ContextService<UserCredentials> contextService;
-    @Mock private ConfigurationRegistry configurationRegistry;
+    @Mock private ServiceRegistry serviceRegistry;
     @Mock private DeploymentMapService deploymentMapService;
     @Mock private MappingStatusService mappingStatusService;
     @Mock private IdentityFacade identityFacade;
     @Mock private InventoryFacade inventoryFacade;
+    @Mock private CacheManager cacheManager;
     @Mock private FlowStateStore flowStateStore;
     @Mock private ExtensionManager extensionManager;
     @Mock private ObjectMapper objectMapper;
@@ -101,8 +107,8 @@ class OperationControllerTest {
     @BeforeEach
     void setUp() throws Exception {
         controller = new OperationController(connectorRegistry, mappingService, connectorConfigurationService,
-                serviceConfigurationService, bootstrapService, c8YAgent, contextService, configurationRegistry,
-                deploymentMapService, mappingStatusService, identityFacade, inventoryFacade, flowStateStore,
+                serviceConfigurationService, bootstrapService, c8YAgent, contextService, serviceRegistry,
+                cacheManager, deploymentMapService, mappingStatusService, identityFacade, inventoryFacade, flowStateStore,
                 extensionManager, objectMapper);
 
         UserCredentials creds = mock(UserCredentials.class);
@@ -199,5 +205,31 @@ class OperationControllerTest {
         controller.runOperation(operation);
 
         verify(mappingService).setActivationMapping(TENANT, "m1", false, null);
+    }
+
+    @Test
+    void operationRequiringAdmin_isRejectedForCreateOnlyUser() {
+        // setUp() grants only ROLE_DYNAMIC_MAPPER_CREATE. CONNECT is an admin operation, so the
+        // central permission check in runOperation must refuse it.
+        ServiceOperation operation = new ServiceOperation();
+        operation.setOperation(Operation.CONNECT);
+        Map<String, String> parameters = new HashMap<>();
+        parameters.put("connectorIdentifier", "c1");
+        operation.setParameter(parameters);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> controller.runOperation(operation));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        assertTrue(ex.getReason().contains("ROLE_DYNAMIC_MAPPER_ADMIN"),
+                "the refusal should name the role the caller is missing, got: " + ex.getReason());
+    }
+
+    @Test
+    void everyOperationIsCoveredByThePermissionTable() {
+        // OperationController's static initializer throws if an Operation has no entry in
+        // REQUIRED_ROLES, which would otherwise mean it runs unguarded. Loading the class here
+        // makes that guarantee an explicit, named test rather than an incidental side effect.
+        assertDoesNotThrow(() -> Class.forName(OperationController.class.getName(), true,
+                OperationController.class.getClassLoader()));
     }
 }

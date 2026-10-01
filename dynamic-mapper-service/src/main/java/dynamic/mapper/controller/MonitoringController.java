@@ -48,10 +48,10 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.model.MappingTreeNode;
-import dynamic.mapper.service.ConnectorConfigurationService;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.model.ConnectorStatusEvent;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.model.status.ConnectorStatusEvent;
+import dynamic.mapper.model.status.MappingStatus;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

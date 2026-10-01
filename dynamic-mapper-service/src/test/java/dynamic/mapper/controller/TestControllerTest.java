@@ -60,11 +60,11 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.TestContext;
 import dynamic.mapper.model.TestResult;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
-import dynamic.mapper.processor.model.TransformationType;
+import dynamic.mapper.model.DynamicMapperRequest;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
+import dynamic.mapper.model.TransformationType;
 
 /**
  * Unit tests for {@link TestController#testMapping}, which previously had no direct

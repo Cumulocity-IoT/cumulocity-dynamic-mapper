@@ -1,10 +1,8 @@
+// @ts-check
 /**
  * @name Sample persistent state - running statistics
  * @description Tracks message count and running average temperature across invocations
  * @templateType INBOUND_SMART_FUNCTION
- * @defaultTemplate false
- * @internal true
- * @readonly true
  *
  * Demonstrates persistent state management:
  * - State written with context.setState() survives across message invocations
@@ -15,6 +13,10 @@
  * { "deviceId": "sensor-001", "temperature": 23.5 }
 */
 
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
+ */
 function onMessage(msg, context) {
     var payload = msg.payload;
     var deviceId = payload["deviceId"];

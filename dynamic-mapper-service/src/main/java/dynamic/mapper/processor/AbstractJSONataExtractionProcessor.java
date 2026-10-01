@@ -21,8 +21,6 @@
 
 package dynamic.mapper.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
@@ -30,19 +28,16 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.camel.Exchange;
-
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.model.Substitution;
-import dynamic.mapper.processor.model.PayloadContext;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.RepairStrategy;
-import dynamic.mapper.processor.model.RoutingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.RepairStrategy;
+import dynamic.mapper.processor.runtime.RoutingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
-import dynamic.mapper.processor.model.SubstitutionEvaluation;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.processor.util.SubstitutionEvaluation;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -65,10 +60,7 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
      * Template method that defines the overall processing flow.
      * Subclasses should not override this method.
      */
-    @Override
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
-
+    public void process(ProcessingContext<?> context) throws Exception {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 
@@ -90,24 +82,22 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
      */
     public void extractFromSource(ProcessingContext<?> context) throws ProcessingException {
         RoutingContext routing = context.getRoutingContext();
-        PayloadContext<?> payload = context.getPayloadContext();
 
-        extractFromSource(routing, payload, context);
+        extractFromSource(routing, context);
     }
 
     /**
-     * Extract using focused contexts (RoutingContext, PayloadContext) internally.
+     * Extract using the immutable {@link RoutingContext} projection internally.
      */
     private void extractFromSource(
             RoutingContext routing,
-            PayloadContext<?> payload,
             ProcessingContext<?> context) throws ProcessingException {
         try {
             Mapping mapping = context.getMapping();
             String tenant = routing.getTenant();
             ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
 
-            Object payloadObject = payload.getDeserializedPayload();
+            Object payloadObject = context.getPayload();
             String payloadAsString = toPrettyJsonString(payloadObject);
 
             // Log payload if configured

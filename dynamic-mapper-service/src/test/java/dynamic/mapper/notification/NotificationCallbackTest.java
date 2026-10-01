@@ -26,7 +26,6 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import java.util.concurrent.ExecutorService;
 
@@ -37,7 +36,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 
 /**
  * Tests covering the 401-detection logic in the {@code onClose(int, String)}
@@ -57,7 +56,7 @@ class NotificationCallbackTest {
     private static final String TENANT = "t1";
 
     @Mock
-    private ConfigurationRegistry configurationRegistry;
+    private ServiceRegistry serviceRegistry;
 
     @Mock
     private NotificationSubscriber notificationSubscriber;
@@ -75,9 +74,9 @@ class NotificationCallbackTest {
         // CacheInventoryUpdateClient constructor reads the C8YAgent and the
         // notification subscriber. lenient() avoids UnnecessaryStubbingException
         // for the stubs not exercised by a given test's target client.
-        lenient().when(configurationRegistry.getNotificationSubscriber()).thenReturn(notificationSubscriber);
-        lenient().when(configurationRegistry.getVirtualThreadPool()).thenReturn(virtualThreadPool);
-        lenient().when(configurationRegistry.getC8yAgent()).thenReturn(c8yAgent);
+        lenient().when(serviceRegistry.getNotificationSubscriber()).thenReturn(notificationSubscriber);
+        lenient().when(serviceRegistry.getVirtualThreadPool()).thenReturn(virtualThreadPool);
+        lenient().when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
     }
 
     // ---------------------------------------------------------------------
@@ -86,7 +85,7 @@ class NotificationCallbackTest {
 
     @Test
     void managementClient_onClose_statusCode401_triggersRefresh() {
-        ManagementSubscriptionClient client = new ManagementSubscriptionClient(configurationRegistry, TENANT);
+        ManagementSubscriptionClient client = new ManagementSubscriptionClient(serviceRegistry, TENANT);
 
         // statusCode IS 401 — reason text is irrelevant.
         client.onClose(401, "Normal closure");
@@ -96,7 +95,7 @@ class NotificationCallbackTest {
 
     @Test
     void managementClient_onClose_statusCode1002_reasonContaining401_triggersRefresh() {
-        ManagementSubscriptionClient client = new ManagementSubscriptionClient(configurationRegistry, TENANT);
+        ManagementSubscriptionClient client = new ManagementSubscriptionClient(serviceRegistry, TENANT);
 
         // Real-world case: java-websocket wraps HTTP 401 upgrade rejection as 1002 with reason string.
         client.onClose(1002, "Invalid status code received: 401 Status line: HTTP/1.1 401 Unauthorized");
@@ -106,7 +105,7 @@ class NotificationCallbackTest {
 
     @Test
     void managementClient_onClose_reasonContaining401ButNot401StatusCode_doesNotTriggerRefresh() {
-        ManagementSubscriptionClient client = new ManagementSubscriptionClient(configurationRegistry, TENANT);
+        ManagementSubscriptionClient client = new ManagementSubscriptionClient(serviceRegistry, TENANT);
 
         // statusCode is 1000 (normal close), reason happens to contain "401" — should NOT trigger.
         client.onClose(1000, "error 401 Unauthorized");
@@ -117,7 +116,7 @@ class NotificationCallbackTest {
 
     @Test
     void managementClient_onClose_normal_doesNotTriggerRefresh() {
-        ManagementSubscriptionClient client = new ManagementSubscriptionClient(configurationRegistry, TENANT);
+        ManagementSubscriptionClient client = new ManagementSubscriptionClient(serviceRegistry, TENANT);
 
         client.onClose(1000, "Normal closure");
 
@@ -131,7 +130,7 @@ class NotificationCallbackTest {
 
     @Test
     void cacheInventoryClient_onClose_statusCode401_triggersRefresh() {
-        CacheInventoryUpdateClient client = new CacheInventoryUpdateClient(configurationRegistry, TENANT);
+        CacheInventoryUpdateClient client = new CacheInventoryUpdateClient(serviceRegistry, TENANT);
 
         // statusCode IS 401 — reason text is irrelevant.
         client.onClose(401, "Normal closure");
@@ -141,7 +140,7 @@ class NotificationCallbackTest {
 
     @Test
     void cacheInventoryClient_onClose_statusCode1002_reasonContaining401_triggersRefresh() {
-        CacheInventoryUpdateClient client = new CacheInventoryUpdateClient(configurationRegistry, TENANT);
+        CacheInventoryUpdateClient client = new CacheInventoryUpdateClient(serviceRegistry, TENANT);
 
         // Real-world case: java-websocket wraps HTTP 401 upgrade rejection as 1002 with reason string.
         client.onClose(1002, "Invalid status code received: 401 Status line: HTTP/1.1 401 Unauthorized");
@@ -151,7 +150,7 @@ class NotificationCallbackTest {
 
     @Test
     void cacheInventoryClient_onClose_reasonContaining401ButNot401StatusCode_doesNotTriggerRefresh() {
-        CacheInventoryUpdateClient client = new CacheInventoryUpdateClient(configurationRegistry, TENANT);
+        CacheInventoryUpdateClient client = new CacheInventoryUpdateClient(serviceRegistry, TENANT);
 
         // statusCode is 1000 (normal close), reason happens to contain "401" — should NOT trigger.
         client.onClose(1000, "error 401 Unauthorized");

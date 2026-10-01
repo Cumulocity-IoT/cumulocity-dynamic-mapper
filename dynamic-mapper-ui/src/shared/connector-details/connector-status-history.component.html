@@ -45,8 +45,11 @@
       </div>
       <div class="flex-grow-1" style="min-width: 0;">
         <div class="d-flex a-i-center" style="height: 20px; gap: 6px;">
-          <span class="text-muted text-10" style="white-space: nowrap; min-width: 128px;">{{ entry.date || entry.time }}</span>
+          <span class="text-muted text-10" style="white-space: nowrap; min-width: 128px;">{{ (entry.date || entry.time) | c8yDate: 'medium' }}</span>
           <span class="text-10 label m-0" [ngClass]="getSeverityClass(entry.status)">{{ entry.status }}</span>
+          @if (getElapsedSincePrevious($index); as elapsed) {
+          <span class="text-muted text-10" style="white-space: nowrap;" title="{{ 'Time since previous transition' | translate }}">{{ elapsed }}</span>
+          }
         </div>
         @if (entry.message) {
         <div class="text-10 text-muted" style="padding-bottom: 4px; word-break: break-word;">{{ entry.message }}</div>

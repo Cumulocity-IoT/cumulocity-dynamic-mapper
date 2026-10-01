@@ -33,7 +33,7 @@ import {
   StepperConfigurationContext,
   StepperConfigurationResolver
 } from '../../shared/mapping/stepper-configuration.strategy';
-import { EditorMode } from '../shared/stepper.model';
+import { EditorMode } from '../../shared/mapping/stepper.model';
 import { MappingService } from './mapping.service';
 
 export interface MappingEditData {

@@ -23,7 +23,7 @@ package dynamic.mapper.processor.outbound.processor;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.processor.AbstractJSONataExtractionProcessor;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**

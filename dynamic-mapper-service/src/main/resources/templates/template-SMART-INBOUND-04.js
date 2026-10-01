@@ -1,10 +1,8 @@
+// @ts-check
 /**
  * @name Create either measurement or event
  * @description Create either measurement or event, with persistent state for message counting and error deduplication
  * @templateType INBOUND_SMART_FUNCTION
- * @defaultTemplate false
- * @internal true
- * @readonly true
  *
  * Demonstrates two state use cases:
  * 1. Message counters — count telemetry and error messages across invocations
@@ -29,6 +27,10 @@
  * topic 'flowState/sensor-berlin-01'
 */
 
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
+ */
 function onMessage(msg, context) {
     var payload = msg.payload;
 

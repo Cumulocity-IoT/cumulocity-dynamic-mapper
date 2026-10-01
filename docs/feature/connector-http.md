@@ -59,7 +59,7 @@ Built via `ConnectorSpecificationBuilder.create("HTTP Endpoint", ConnectorType.H
 |---|---|---|---|---|
 | `path` | string, readonly | no | `/service/dynamic-mapper-service/httpConnector` | the fixed receiving endpoint |
 | `supportsWildcardInTopicInbound` | boolean, readonly | no | `true` | |
-| `supportsWildcardInTopicOutbound` | boolean, readonly | no | `false` | |
+| `supportsWildcardInTopicOutbound` | boolean, readonly, **hidden** | no | `false` | Hidden rather than shown disabled — this connector is inbound-only, so there's no outbound direction for it to describe (fixed 2026-09-21) |
 | `cutOffLeadingSlash` | boolean | no | `true` | user-configurable |
 
 `singleton = true` — only one HTTP connector instance is allowed per tenant. There are

@@ -25,7 +25,7 @@ import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.notification.Utils;
 import dynamic.mapper.processor.model.C8YMessage;
@@ -43,13 +43,13 @@ import java.util.concurrent.Future;
 public class UpdateSubscriptionDeviceTypeTask implements Callable<SubscriptionUpdateResult> {
 
     private final C8YMessage c8yMessage;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
 
     public UpdateSubscriptionDeviceTypeTask(
-            ConfigurationRegistry configurationRegistry,
+            ServiceRegistry serviceRegistry,
             C8YMessage c8yMessage) {
         this.c8yMessage = c8yMessage;
-        this.configurationRegistry = configurationRegistry;
+        this.serviceRegistry = serviceRegistry;
     }
 
     @Override
@@ -82,14 +82,14 @@ public class UpdateSubscriptionDeviceTypeTask implements Callable<SubscriptionUp
                     deviceId, deviceName, typeInfo);
 
             // Subscribe the device with API.ALL to receive all notifications for this device
-            Future<NotificationSubscriptionRepresentation> future = configurationRegistry
+            Future<NotificationSubscriptionRepresentation> future = serviceRegistry
                     .getNotificationSubscriber()
                     .subscribeDeviceAndConnect(tenant, newMO, API.ALL, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
 
             // Pre-populate inventory cache for this device to ensure inventory filters work correctly
             log.debug("{} - Pre-populating inventory cache for new device {} of type {}",
                     tenant, deviceId, typeInfo.getType());
-            configurationRegistry.getC8yAgent().getMOFromInventoryCache(tenant, deviceId, false);
+            serviceRegistry.getC8yAgent().getMOFromInventoryCache(tenant, deviceId, false);
 
             log.info("{} - Successfully subscribed new device {} of type {}",
                     tenant, deviceId, typeInfo.getType());

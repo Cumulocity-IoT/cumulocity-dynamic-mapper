@@ -24,7 +24,7 @@ import { FormsModule } from '@angular/forms';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { ALERT_INFO_TIMEOUT, API } from '../../shared';
 import { SubscriptionService } from '../core/subscription.service';
-import { Device } from '../shared/mapping.model';
+import { Device } from '../../shared/mapping/mapping.model';
 
 export type SubscriptionChoice = 'skip' | 'type' | 'group';
 

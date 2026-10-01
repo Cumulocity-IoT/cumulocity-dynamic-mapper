@@ -34,7 +34,7 @@ import { DeviceGridModule, DeviceGridService, GroupDeviceGridColumn, NameDeviceG
   selector: 'd11r-device-selector-table',
   host: { class: 'flex-grow d-col fit-h' },
   templateUrl: 'device-selector-table.component.html',
-  styleUrls: ['../../shared/mapping.style.css'],
+  styleUrls: ['../../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, AssetSelectorModule, DeviceGridModule],

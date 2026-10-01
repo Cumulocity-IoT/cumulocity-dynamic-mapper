@@ -103,9 +103,15 @@ jobs:
           zip ./dynamic-mapper-service/target/dynamic-mapper-service-max-withoutMQTTService.zip ./dynamic-mapper-service/src/main/configuration/cumulocity.json -j
       #Deployment
       - name: deploy
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          # Must satisfy the "engines" range in dynamic-mapper-ui/package.json
+          # (^20.19.0 || ^22.12.0), which is the intersection of what Angular 21,
+          # @c8y/devkit and sharp declare. 22.x also matches local development, so CI and
+          # developers exercise the same runtime.
+          node-version: 22.x
+          cache: npm
+          cache-dependency-path: dynamic-mapper-ui/package-lock.json
       - name: Set npm version
         run: npm version ${{ env.VERSION }} --no-git-tag-version --allow-same-version
         working-directory: ./dynamic-mapper-ui

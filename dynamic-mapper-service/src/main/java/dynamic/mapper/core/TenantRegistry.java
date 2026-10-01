@@ -24,7 +24,7 @@ package dynamic.mapper.core;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.model.ID;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.model.DeviceToClientMapRepresentation;
+import dynamic.mapper.model.device.DeviceToClientMapRepresentation;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -55,7 +55,7 @@ import java.util.stream.Collectors;
  * <p>This class intentionally has no Spring service dependencies so that it can
  * be injected into low-level components without creating circular dependencies.
  * Methods that require C8Y API calls (e.g. device creation) remain in
- * {@link ConfigurationRegistry}, which calls back into this registry for
+ * {@link ServiceRegistry}, which calls back into this registry for
  * cache and lock access.
  */
 @Slf4j

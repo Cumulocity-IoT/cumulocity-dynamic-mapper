@@ -23,7 +23,7 @@ import {
   StepperConfigurationResolver
 } from './stepper-configuration.strategy';
 import { Direction, MappingType, StepperConfiguration, TransformationType } from './mapping.model';
-import { EditorMode } from '../../mapping/shared/stepper.model';
+import { EditorMode } from './stepper.model';
 
 describe('StepperConfigurationResolver', () => {
   describe('resolve', () => {

@@ -24,9 +24,8 @@ package dynamic.mapper.connector.amqp;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
 import jakarta.jms.BytesMessage;
 import jakarta.jms.Destination;
 import jakarta.jms.JMSException;
@@ -66,7 +65,7 @@ public class AMQP10Callback implements MessageListener {
      * Constructor
      *
      * @param tenant               tenant identifier
-     * @param configurationRegistry configuration registry for service lookup
+     * @param serviceRegistry configuration registry for service lookup
      * @param callback             the generic message callback to dispatch to
      * @param connectorIdentifier  connector identifier
      * @param connectorName        connector display name
@@ -74,7 +73,7 @@ public class AMQP10Callback implements MessageListener {
      * @param qos                  the QoS this consumer was subscribed with
      */
     public AMQP10Callback(String tenant,
-            ConfigurationRegistry configurationRegistry,
+            ServiceRegistry serviceRegistry,
             GenericMessageCallback callback,
             String connectorIdentifier,
             String connectorName,
@@ -86,7 +85,7 @@ public class AMQP10Callback implements MessageListener {
         this.connectorName = connectorName;
         this.subscriptionTopic = subscriptionTopic;
         this.qos = qos;
-        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        this.serviceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
     }
 
     @Override

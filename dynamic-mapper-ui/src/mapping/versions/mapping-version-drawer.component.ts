@@ -33,7 +33,7 @@ import { ConfirmationModalComponent, Mapping, SharedModule } from '../../shared'
 import { MappingService } from '../core/mapping.service';
 import { NoteEditCellRendererComponent } from './note-edit-cell-renderer.component';
 import { VersionStateCellRendererComponent } from './version-state-cell.renderer.component';
-import { PublishVersionModalComponent } from './publish-version-modal.component';
+import { MappingPublishService } from './mapping-publish.service';
 
 type VersionState = 'active' | 'published' | 'draft';
 
@@ -49,6 +49,13 @@ interface VersionRow {
   isDraft: boolean;
   /** Injected per-row by the drawer. Absent when canManage=false (makes the cell read-only). */
   onNoteChange?: (note: string) => void;
+  /**
+   * Injected per-row by the drawer, only for published (non-active, non-draft) rows when
+   * canManage=true. Absent for the active row itself (nothing to activate) and for the draft
+   * (must be published first) — VersionStateCellRendererComponent's toggle is disabled
+   * whenever this is absent.
+   */
+  onActivate?: () => void;
 }
 
 const DRAFT_ROW_ID = '__draft__';
@@ -69,9 +76,23 @@ function compareSemVerDesc(a: string | null | undefined, b: string | null | unde
 /**
  * Bottom drawer listing all records of a mapping line in a single c8y-data-grid:
  * every published version plus the current draft, each tagged with a State
- * (active / published / draft). Row actions are contextual — Publish on the draft,
- * Activate / Delete on inactive published versions. The active version (the one
- * whose `version` field matches the mapping's `version`) has no actions.
+ * (active / published / draft).
+ *
+ * The State column doubles as the activation control (VersionStateCellRendererComponent) —
+ * fixed 2026-09-23: a separate "Activate" row action used a toggle-on *icon* next to a
+ * published row while the active row's State badge sat in its own column with no toggle at
+ * all, which read as two disagreeing indicators (a switch that looks "on" for a row that isn't
+ * actually active). Now there is one indicator per row: the active version's toggle is on and
+ * disabled, every published version's toggle is off and clickable to activate it (which
+ * implicitly deactivates whichever was active before), and the draft — not directly
+ * activatable, it must be published first — keeps its plain badge with no toggle. Remaining row
+ * actions are Publish/Discard on the draft and Delete on inactive published versions.
+ *
+ * activate() updates the affected rows in place (applyActivation()) instead of reloading —
+ * activating a version doesn't change the set of versions, their notes, or who created them,
+ * only which one is active, so a full versions/draft/mapping re-fetch (and the loading-state
+ * flicker that comes with it) would be pure overhead. publish()/remove()/removeDraft() do still
+ * reload(), since those genuinely change which rows exist.
  *
  * Notes are edited inline via the Cumulocity "edit on focus" pattern; no modal is shown.
  */
@@ -92,6 +113,7 @@ export class MappingVersionDrawerComponent implements OnInit {
   private readonly mappingService = inject(MappingService);
   private readonly alertService = inject(AlertService);
   private readonly bsModalService = inject(BsModalService);
+  private readonly publishService = inject(MappingPublishService);
 
   /** Emits true if anything changed, so the opener can refresh the mapping grid. */
   closeSubject = new Subject<boolean>();
@@ -127,11 +149,12 @@ export class MappingVersionDrawerComponent implements OnInit {
         .sort((a, b) => compareSemVerDesc(a.version, b.version))
         .map(v => {
           const rowId = v.id ?? `v${v.version}`;
-          return {
+          const state = (v.version === this.mapping.version ? 'active' : 'published') as VersionState;
+          const row: VersionRow = {
             id: rowId,
             version: v.version ?? '',
             versionDisplay: v.version ? `v${v.version}` : '—',
-            state: (v.version === this.mapping.version ? 'active' : 'published') as VersionState,
+            state,
             note: v.note || '',
             updatedDisplay: v.createdAt ? new Date(v.createdAt).toLocaleString() : '—',
             createdBy: v.createdBy || '—',
@@ -140,6 +163,9 @@ export class MappingVersionDrawerComponent implements OnInit {
               ? (note: string) => this.saveVersionNote(rowId, v.version ?? '', note)
               : undefined
           };
+          // Set after `row` exists so the closure can pass the row itself to activate().
+          row.onActivate = this.canManage && state !== 'active' ? () => this.activate(row) : undefined;
+          return row;
         });
 
       const draftNote = draft?.versionNote ?? '';
@@ -182,18 +208,48 @@ export class MappingVersionDrawerComponent implements OnInit {
   }
 
   async activate(row: VersionRow): Promise<void> {
+    if (this.busy) {
+      // The activation toggle in VersionStateCellRendererComponent is only disabled by
+      // updating rows (onActivate absent) after this method sets busy=true and the local
+      // update below completes — there's a window between those two points where a second
+      // click could still reach here. Guarded here too since that race isn't otherwise
+      // prevented at the UI level.
+      return;
+    }
     this.busy = true;
     try {
       await this.mappingService.activateVersion(this.mapping.id, row.version);
       this.alertService.success(`Activated version ${row.version} of ${this.mapping.name}`);
       this.mapping.version = row.version;
       this.changed = true;
-      await this.reload();
+      // Update the existing rows in place rather than reload() — activating a version changes
+      // nothing about the set of versions, their notes, or who created them, just which one is
+      // active, so a full versions/draft/mapping re-fetch (and the loading-state flicker that
+      // comes with it) is unnecessary here.
+      this.applyActivation(row.version);
     } catch (e) {
       this.alertService.danger('Failed to activate version', (e as Error).message);
     } finally {
       this.busy = false;
     }
+  }
+
+  /**
+   * Updates state/onActivate on every non-draft row in place after a successful
+   * activateVersion() call, without re-fetching from the server. Row order is left untouched —
+   * versions are sorted by semver, not by active state, so activating one never changes it.
+   */
+  private applyActivation(activatedVersion: string): void {
+    const rows = this.rows$.getValue();
+    for (const row of rows) {
+      if (row.isDraft) {
+        continue;
+      }
+      const isNowActive = row.version === activatedVersion;
+      row.state = isNowActive ? 'active' : 'published';
+      row.onActivate = this.canManage && !isNowActive ? () => this.activate(row) : undefined;
+    }
+    this.rows$.next([...rows]);
   }
 
   async remove(row: VersionRow): Promise<void> {
@@ -251,38 +307,15 @@ export class MappingVersionDrawerComponent implements OnInit {
   }
 
   async publish(): Promise<void> {
-    // Fetch version suggestions first, then open the publish dialog.
-    let suggestions: { patch: string; minor: string; major: string };
-    try {
-      suggestions = await this.mappingService.suggestNextVersions(this.mapping.id);
-    } catch {
-      suggestions = { patch: '1.0.0', minor: '1.0.0', major: '1.0.0' };
-    }
-
-    const result = await new Promise<{ version: string; note: string } | null>(resolve => {
-      const ref = this.bsModalService.show(PublishVersionModalComponent, {
-        initialState: {
-          mappingName: this.mapping.name,
-          currentVersion: this.mapping.version ?? null,
-          suggestions
-        }
-      });
-      ref.content.closeSubject.pipe(take(1)).subscribe((r: { version: string; note: string } | null) => {
-        resolve(r);
-        ref.hide();
-      });
-    });
-
-    if (!result) return;
-
     this.busy = true;
     try {
-      const mv = await this.mappingService.publishDraft(this.mapping.id, result.version, result.note || undefined);
-      this.alertService.success(`Published version ${mv.version} of ${this.mapping.name}`);
-      this.changed = true;
-      await this.reload();
-    } catch (e) {
-      this.alertService.danger('Failed to publish draft', (e as Error).message);
+      // Shared with the grid's "Publish draft" row action; also offers activation when the
+      // mapping is still inactive. See MappingPublishService.
+      const outcome = await this.publishService.publishDraft(this.mapping);
+      if (outcome.published) {
+        this.changed = true;
+        await this.reload();
+      }
     } finally {
       this.busy = false;
     }
@@ -297,18 +330,14 @@ export class MappingVersionDrawerComponent implements OnInit {
   private buildColumns(): Column[] {
     return [
       {
-        name: 'state',
-        header: 'State',
-        path: 'state',
-        dataType: ColumnDataType.TextShort,
-        gridTrackSize: '7%',
-        cellRendererComponent: VersionStateCellRendererComponent
-      },
-      {
         name: 'versionDisplay',
         header: 'Version',
         path: 'versionDisplay',
         gridTrackSize: '7%',
+        // No sortOrder: the default (newest first, draft pinned to the top) comes from
+        // compareSemVerDesc() sorting the rows in reload() instead — same reasoning as
+        // MappingVersionsCountComponent's 'name' column.
+        sortable: true,
         dataType: ColumnDataType.TextShort
       },
       {
@@ -316,6 +345,7 @@ export class MappingVersionDrawerComponent implements OnInit {
         header: 'Note',
         path: 'note',
         gridTrackSize: '40%',
+        sortable: true,
         dataType: ColumnDataType.TextShort,
         cellRendererComponent: NoteEditCellRendererComponent
       },
@@ -324,6 +354,7 @@ export class MappingVersionDrawerComponent implements OnInit {
         header: 'Updated',
         path: 'updatedDisplay',
         gridTrackSize: '17.5%',
+        sortable: true,
         dataType: ColumnDataType.TextShort
       },
       {
@@ -331,7 +362,20 @@ export class MappingVersionDrawerComponent implements OnInit {
         header: 'By',
         path: 'createdBy',
         gridTrackSize: '21.5%',
+        sortable: true,
         dataType: ColumnDataType.TextShort
+      },
+      {
+        // Second-to-last column, right before the grid's own actions column (Delete) — the
+        // activation toggle reads as the last real decision a user makes about a row before
+        // any destructive action, not as identifying metadata to scan first.
+        name: 'state',
+        header: 'State',
+        path: 'state',
+        sortable: true,
+        dataType: ColumnDataType.TextShort,
+        gridTrackSize: '7%',
+        cellRendererComponent: VersionStateCellRendererComponent
       }
     ];
   }
@@ -351,13 +395,6 @@ export class MappingVersionDrawerComponent implements OnInit {
         icon: 'trash-o',
         callback: () => this.removeDraft(),
         showIf: (row: VersionRow) => this.canManage && row.isDraft && !this.busy
-      },
-      {
-        type: 'ACTIVATE',
-        text: 'Activate',
-        icon: 'toggle-on',
-        callback: (row: VersionRow) => this.activate(row),
-        showIf: (row: VersionRow) => this.canManage && !row.isDraft && row.state !== 'active' && !this.busy
       },
       {
         type: 'DELETE_VERSION',

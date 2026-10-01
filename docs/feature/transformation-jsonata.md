@@ -45,7 +45,7 @@ identical for both directions (`AbstractJSONataExtractionProcessor.java:1-14`, c
 
 ```mermaid
 flowchart LR
-    payload["Deserialized payload\n(PayloadContext)"] --> loop["for each Substitution\nin mapping.substitutions"]
+    payload["Deserialized payload"] --> loop["for each Substitution\nin mapping.substitutions"]
     loop --> extract["expr = jsonata(pathSource)\nexpr.evaluate(payloadObject)"]
     extract --> arr{"Result is array\nand expandArray=true?"}
     arr -- yes --> iter["processSubstitute() per element"]

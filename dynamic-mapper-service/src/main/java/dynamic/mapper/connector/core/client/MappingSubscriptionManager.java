@@ -59,7 +59,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * leave a topic unsubscribed/subscribed inconsistently with the effective mapping set. All
  * mutating operations are therefore additionally serialized on {@link #lock}.
  *
- * @see dynamic.mapper.service.deployment.DeploymentMapService
+ * @see dynamic.mapper.mapping.deployment.DeploymentMapService
  */
 @Slf4j
 public class MappingSubscriptionManager {

@@ -25,7 +25,6 @@ import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.DeviceMessage;
 import dynamic.mapper.processor.model.Message;
-import dynamic.mapper.processor.model.ProcessingContext;
 import org.springframework.stereotype.Component;
 
 /**

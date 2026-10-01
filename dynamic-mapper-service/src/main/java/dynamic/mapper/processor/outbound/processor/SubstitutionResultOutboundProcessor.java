@@ -21,15 +21,12 @@
 
 package dynamic.mapper.processor.outbound.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.camel.Exchange;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.joda.time.DateTime;
 import org.springframework.stereotype.Component;
@@ -42,15 +39,15 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.RepairStrategy;
+import dynamic.mapper.model.DynamicMapperRequest;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
 
@@ -70,10 +67,7 @@ public class SubstitutionResultOutboundProcessor extends BaseProcessor {
         this.mappingService = mappingService;
     }
 
-    @Override
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<?> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
-
+    public void process(ProcessingContext<?> context) throws Exception {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 

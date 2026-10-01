@@ -326,7 +326,9 @@ describe('ConnectorConfigurationDrawerComponent', () => {
       const field = component['createStringField'](mockEntry);
 
       expect(field.fieldGroup?.[0]?.type).toBe('input');
-      expect(field.fieldGroup?.[0]?.props?.label).toBe('testField');
+      // Label goes through the (here mocked) FormatStringPipe rather than showing the raw
+      // camelCase property key verbatim — see mockFormatStringPipe above.
+      expect(field.fieldGroup?.[0]?.props?.label).toBe('Formatted String');
     });
 
     it('should create sensitive string field with password type', () => {
@@ -334,6 +336,8 @@ describe('ConnectorConfigurationDrawerComponent', () => {
       const field = component['createSensitiveStringField'](mockEntry);
 
       expect(field.fieldGroup?.[0]?.props?.type).toBe('password');
+      // Consistent with createSensitiveLargeStringField's explicit sensitive flag.
+      expect(field.fieldGroup?.[0]?.props?.['sensitive']).toBe(true);
     });
 
     it('should create boolean field as switch', () => {

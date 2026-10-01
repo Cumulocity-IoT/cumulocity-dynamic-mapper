@@ -25,9 +25,9 @@ import org.springframework.stereotype.Component;
 
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.model.ExtensionEntry;
+import dynamic.mapper.model.extension.ExtensionEntry;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.AbstractExtensibleProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
@@ -35,11 +35,11 @@ import dynamic.mapper.processor.flow.JavaExtensionContextImpl;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.Message;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.TransformationType;
-import dynamic.mapper.service.ExtensionInboundRegistry;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.cache.FlowStateStore;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.model.TransformationType;
+import dynamic.mapper.core.ExtensionInboundRegistry;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.processor.flow.FlowStateStore;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -53,7 +53,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor {
+public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor<byte[]> {
 
     private final C8YAgent c8yAgent;
 

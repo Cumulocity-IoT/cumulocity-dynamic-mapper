@@ -28,8 +28,6 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Source;
@@ -51,12 +49,12 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.core.InventoryEnrichmentClient;
 import dynamic.mapper.processor.model.DataPrepContext;
-import dynamic.mapper.processor.model.SmartFunctionContext;
-import dynamic.mapper.processor.model.MappingType;
-import dynamic.mapper.processor.model.OutputCollector;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.SmartFunctionContext;
+import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.runtime.OutputCollector;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.core.GraalVMContextService;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -73,12 +71,6 @@ class AbstractFlowProcessorTest {
 
     @Mock
     private GraalVMContextService graalVMContextService;
-
-    @Mock
-    private Exchange exchange;
-
-    @Mock
-    private Message message;
 
     @Mock
     private ServiceConfiguration serviceConfiguration;
@@ -178,8 +170,6 @@ class AbstractFlowProcessorTest {
         processingContext = createProcessingContext();
 
         // Setup basic mocks
-        when(exchange.getIn()).thenReturn(message);
-        when(message.getHeader("processingContext", ProcessingContext.class)).thenReturn(processingContext);
         when(serviceConfiguration.getLogPayload()).thenReturn(false);
     }
 
@@ -262,7 +252,7 @@ class AbstractFlowProcessorTest {
         assertNotNull(processingContext.getGraalContext(), "GraalVM context should exist initially");
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then - Context should be closed after processing
         // Note: The context.close() in AbstractFlowProcessorProcessor closes the ProcessingContext,
@@ -325,7 +315,7 @@ class AbstractFlowProcessorTest {
 
     @Test
     void testLoadSharedCodeWithValidCode() {
-        // Given - Create cached Source object (simulating ConfigurationRegistry behavior)
+        // Given - Create cached Source object (simulating ServiceRegistry behavior)
         String sharedJsCode = "var sharedValue = 'shared';";
         Source sharedSource = Source.newBuilder("js", sharedJsCode, "sharedCode.js")
                 .cached(true)
@@ -464,7 +454,7 @@ class AbstractFlowProcessorTest {
         mapping.setCode(Base64.getEncoder().encodeToString(invalidJsCode.getBytes()));
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         assertTrue(processor.wasHandleErrorCalled(), "Should call handleProcessingError on exception");
@@ -489,7 +479,7 @@ class AbstractFlowProcessorTest {
         mapping.setCode(Base64.getEncoder().encodeToString(errorJsCode.getBytes()));
 
         // When
-        processor.process(exchange);
+        processor.process(processingContext);
 
         // Then
         assertTrue(processor.wasHandleErrorCalled(), "Should call error handler");

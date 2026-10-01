@@ -32,8 +32,8 @@ import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.model.ExternalSource;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.mapping.MappingService;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 

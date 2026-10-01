@@ -21,6 +21,8 @@
 
 package dynamic.mapper.model;
 
+import dynamic.mapper.model.status.LoggingEventType;
+
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -72,7 +74,7 @@ class LoggingEventTypeFrontendSyncTest {
         Arrays.stream(LoggingEventType.values()).map(Enum::name).forEach(backendNames::add);
 
         assertEquals(backendNames, frontendNames,
-                "dynamic.mapper.model.LoggingEventType and the frontend's LoggingEventType enum in "
+                "dynamic.mapper.model.status.LoggingEventType and the frontend's LoggingEventType enum in "
                         + frontendModel + " have drifted apart. Every constant must exist in both, "
                         + "including a matching LoggingEventTypeMap entry on the frontend side, otherwise "
                         + "the Service Events type filter and ?type= deep-links silently break for the "

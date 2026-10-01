@@ -32,7 +32,7 @@ import { AssetSelectorModule } from '@c8y/ngx-components/assets-navigator';
   selector: 'd11r-device-selector-tree',
   host: { class: 'flex-grow d-col fit-h' },
   templateUrl: 'device-selector-tree.component.html',
-  styleUrls: ['../../shared/mapping.style.css'],
+  styleUrls: ['../../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports:[CoreModule, AssetSelectorModule]

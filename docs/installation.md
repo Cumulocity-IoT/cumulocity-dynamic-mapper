@@ -44,8 +44,13 @@ Please assign the roles to the users that should be able to use the dynamic mapp
 
 In your Enterprise Tenant or Tenant navigate to "Administration" App, go to "Ecosystem" -> "Microservices" and click on "Add Microservice" on the top right.
 
-Select the `dynamic-mapper-service-*.zip`.
-Make sure that you subscribe the microservice to your tenant when prompted
+The **Add microservice** dialog opens. Drop the `dynamic-mapper-service-*.zip` onto the upload area, or click it
+to browse for the file — note that the microservice is uploaded as a **`*.zip`**, unlike a processor extension,
+which is a `*.jar`.
+
+<img src="../resources/image/Dynamic_Mapper_Installation_Upload_Microservice.png" style="width: 40%;" />
+
+Make sure that you subscribe the microservice to your tenant when prompted.
 
 ### Web app
 
@@ -55,31 +60,6 @@ The frontend can be deployed in your tenant as a **Blueprint** standalone Applic
 
 The Web App is part of the community store and should be available directly in your tenant under
 "Administration" -> "Ecosystem" -> "Extensions" -> "dynamic-mapper". Here you have the choice to install it as a plugin or as a blueprint app.
-
-> **_NOTE:_** The option to deploy the dynamic mapper as plugin is deprecated.
-##### ~~Plugin~~
-
-> **_NOTE:_** ~~For a plugin we need to clone the Administration app to add the plugin to i~~
-
-~~Go to "All Applications" and click on "Add Application". Select "Duplicate existing application" and afterward "Administration".~~
-
-<p align="center">
-<img src="../resources/image/Dynamic_Mapper_DuplicateApp.png" style="width: 40%;" />
-</p>
-<br/>
-
-~~Now select the cloned Administration App and go to the "Plugin" Tab. Click on "Install Plugin" and select "Dynamic Mapper Widget"~~
-
-<p align="center">
-<img src="../resources/image/Dynamic_Mapper_Installation_Plugin.png" style="width: 50%;" />
-</p>
-<br/>
-
-~~After successfully adding the plugin you need to refresh the Administration App by pressing F5 and you should see a new navigation entry "Dynamic Mapper"~~
-
-<p align="center">
- <img src="../resources/image/Dynamic_Mapper_WebAppPlugin.png" style="width: 40%;" />
-</p>
 
 ##### Blueprint
 

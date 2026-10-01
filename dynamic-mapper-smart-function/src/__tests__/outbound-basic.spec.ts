@@ -28,7 +28,9 @@ describe('Outbound Basic Smart Function', () => {
       },
     });
 
-    const mockContext = createMockRuntimeContext({});
+    // outbound-basic.ts builds the topic from context.getConfig().externalId, so the mock
+    // context has to provide it — otherwise the topic resolves to 'measurements/undefined'.
+    const mockContext = createMockRuntimeContext({ config: { externalId: '12345' } });
 
     // Act
     const result = onMessage(mockMsg, mockContext);
@@ -38,7 +40,7 @@ describe('Outbound Basic Smart Function', () => {
     expect(action.topic).toBe('measurements/12345');
   });
 
-  it('should encode payload as Uint8Array', () => {
+  it('should return a plain JSON object payload', () => {
     // Arrange
     const mockMsg = createMockOutboundMessage({
       source: { id: '12345' },
@@ -50,14 +52,21 @@ describe('Outbound Basic Smart Function', () => {
       },
     });
 
-    const mockContext = createMockRuntimeContext({});
+    // outbound-basic.ts builds the topic from context.getConfig().externalId, so the mock
+    // context has to provide it — otherwise the topic resolves to 'measurements/undefined'.
+    const mockContext = createMockRuntimeContext({ config: { externalId: '12345' } });
 
     // Act
     const result = onMessage(mockMsg, mockContext);
 
     // Assert
     const action = result as DeviceMessage;
-    expect(action.payload).toBeInstanceOf(Uint8Array);
+    // Plain JSON object, not Uint8Array: the runtime serializes objects itself and only binary
+    // protocols (e.g. SparkPlug B) return bytes. See DeviceMessage.payload.
+    expect(ArrayBuffer.isView(action.payload)).toBe(false);
+    expect(action.payload).toEqual(
+      expect.objectContaining({ c8y_Steam: expect.any(Object) })
+    );
   });
 
   it('should contain correct temperature value in payload', () => {
@@ -72,14 +81,19 @@ describe('Outbound Basic Smart Function', () => {
       },
     });
 
-    const mockContext = createMockRuntimeContext({});
+    // outbound-basic.ts builds the topic from context.getConfig().externalId, so the mock
+    // context has to provide it — otherwise the topic resolves to 'measurements/undefined'.
+    const mockContext = createMockRuntimeContext({ config: { externalId: '12345' } });
 
     // Act
     const result = onMessage(mockMsg, mockContext);
 
     // Assert
     const action = result as DeviceMessage;
-    const decodedPayload = JSON.parse(new TextDecoder().decode(action.payload));
+    // The example returns a plain JSON object and lets the runtime serialize it; only binary
+    // protocols hand back a Uint8Array. Decoding here was a leftover from the pre-v2 API when
+    // every payload was bytes.
+    const decodedPayload = action.payload as Record<string, any>;
 
     expect(decodedPayload.c8y_Steam).toBeDefined();
     expect(decodedPayload.c8y_Steam.Temperature.value).toBe(42.5);
@@ -96,14 +110,19 @@ describe('Outbound Basic Smart Function', () => {
       },
     });
 
-    const mockContext = createMockRuntimeContext({});
+    // outbound-basic.ts builds the topic from context.getConfig().externalId, so the mock
+    // context has to provide it — otherwise the topic resolves to 'measurements/undefined'.
+    const mockContext = createMockRuntimeContext({ config: { externalId: '12345' } });
 
     // Act
     const result = onMessage(mockMsg, mockContext);
 
     // Assert
     const action = result as DeviceMessage;
-    const decodedPayload = JSON.parse(new TextDecoder().decode(action.payload));
+    // The example returns a plain JSON object and lets the runtime serialize it; only binary
+    // protocols hand back a Uint8Array. Decoding here was a leftover from the pre-v2 API when
+    // every payload was bytes.
+    const decodedPayload = action.payload as Record<string, any>;
 
     expect(decodedPayload.time).toBeDefined();
     expect(() => new Date(decodedPayload.time)).not.toThrow();

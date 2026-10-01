@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * @name Forward operation to tenant microservice (outbound)
  * @description Demonstrates custom routing: when a Cumulocity operation is received,
@@ -5,7 +6,6 @@
  *              The targetPath must start with /service/ and point to a microservice
  *              that is subscribed to the same Cumulocity tenant.
  * @templateType OUTBOUND_SMART_FUNCTION
- * @direction OUTBOUND
  *
  * Sample Cumulocity operation payload (source):
  * {
@@ -14,13 +14,17 @@
  *     "c8y_Command": { "text": "reboot" }
  * }
  */
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').OutboundMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
+ */
 function onMessage(msg, context) {
     var payload = msg.payload;
     var deviceId = payload["deviceId"] || (payload["source"] && payload["source"]["id"]);
     var command = payload["c8y_Command"] && payload["c8y_Command"]["text"];
 
     // Forward the operation to a custom command-handler microservice via HTTP POST.
-    // targetPath must start w ith /service/ and the microservice must be subscribed to
+    // targetPath must start with /service/ and the microservice must be subscribed to
     // this tenant.  No device identity resolution is performed for custom routing.
     return {
         cumulocityType: "custom",

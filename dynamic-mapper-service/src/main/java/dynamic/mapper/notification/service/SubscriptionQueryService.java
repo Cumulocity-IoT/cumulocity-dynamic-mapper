@@ -31,10 +31,10 @@ import com.cumulocity.sdk.client.QueryParam;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionApi;
 import com.cumulocity.sdk.client.messaging.notifications.NotificationSubscriptionFilter;
 import com.cumulocity.sdk.client.messaging.notifications.PagedNotificationSubscriptionCollectionRepresentation;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
-import dynamic.mapper.model.Device;
-import dynamic.mapper.model.NotificationSubscriptionResponse;
+import dynamic.mapper.model.device.Device;
+import dynamic.mapper.notification.NotificationSubscriptionResponse;
 import dynamic.mapper.notification.Utils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -58,16 +58,16 @@ public class SubscriptionQueryService {
 
     private final NotificationSubscriptionApi subscriptionAPI;
     private final MicroserviceSubscriptionsService subscriptionsService;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
     private final ExecutorService virtualThreadPool;
 
     public SubscriptionQueryService(NotificationSubscriptionApi subscriptionAPI,
                                      MicroserviceSubscriptionsService subscriptionsService,
-                                     @Lazy ConfigurationRegistry configurationRegistry,
+                                     @Lazy ServiceRegistry serviceRegistry,
                                      @Qualifier("virtualThreadPool") ExecutorService virtualThreadPool) {
         this.subscriptionAPI = subscriptionAPI;
         this.subscriptionsService = subscriptionsService;
-        this.configurationRegistry = configurationRegistry;
+        this.serviceRegistry = serviceRegistry;
         this.virtualThreadPool = virtualThreadPool;
     }
 
@@ -524,7 +524,7 @@ public class SubscriptionQueryService {
         device.setId(nsr.getSource().getId().getValue());
 
         try {
-            ManagedObjectRepresentation mor = configurationRegistry.getC8yAgent()
+            ManagedObjectRepresentation mor = serviceRegistry.getC8yAgent()
                     .getManagedObjectForId(tenant, device.getId(), false, true);
             if (mor != null) {
                 device.setName(mor.getName());

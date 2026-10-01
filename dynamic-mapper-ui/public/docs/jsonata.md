@@ -12,11 +12,9 @@ At runtime, these rules are applied to the actual payload received from your bro
 3. Press **Add substitution**.
 4. The substitution is added to the table of existing substitutions.
 
-:::info Understanding JSONata
 JSONata is a powerful query and transformation language for JSON. It supports path expressions, predicates,
 functions, and aggregations. For simple mappings, you can use dot notation (e.g., `sensor.temperature`). For
 complex transformations, explore [JSONata documentation](https://jsonata.org/).
-:::
 
 At runtime, this substitution copies the value at `_TOPIC_LEVEL_[1]` to `source.id` in the target payload.
 
@@ -26,12 +24,12 @@ For more advanced mapping rules, e.g. extracting parts of a string for a name (4
 expressions in JSONata can be used.
 To use this option you have to toggle the button **Toggle expert mode**.
 
-:::info Expert Mode Examples
+#### Expert Mode Examples
+
 - String manipulation: `$split(deviceName, "-")[2]` extracts "device100" from "40404-psid-device100-w2w2"
 - Conditional logic: `temperature > 50 ? "hot" : "normal"`
 - Date formatting: `$now()` for current timestamp
 - Array operations: `sensors[type="temperature"].value`
-:::
 
 ![Defining Substitutions in ExpertMode](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png "Screenshot showing the definition of substitutions in ExpertMode using JSONata.")
 
@@ -58,10 +56,8 @@ already exist in the target template, or the `pathSource` expression evaluates t
   written to `pathTarget` as-is; set the repair strategy to `USE_FIRST_VALUE_OF_ARRAY` or `USE_LAST_VALUE_OF_ARRAY`
   instead if you want to reduce it to a single scalar element.
 
-:::info
 Because expanding into multiple documents already uses every array element, the editor disables
 `USE_FIRST_VALUE_OF_ARRAY` / `USE_LAST_VALUE_OF_ARRAY` whenever **Expand as array** is switched on for a substitution.
-:::
 
 ### How many Cumulocity requests one message produces {#substitution-cardinality}
 
@@ -109,11 +105,9 @@ extracted the most values; a substitution that produced only a single value is r
 request, which is what makes single-device-multi-value and multi-device-single-value work without every
 substitution needing to produce the same number of values.
 
-:::info
 If extracted arrays are of different lengths — for example one substitution returns 2 values and another returns
 3 — the arrays with fewer items are padded by repeating their first value, so every request still gets a value
 for every substitution.
-:::
 
 ### JSONata expression tips {#jsonata-tips}
 

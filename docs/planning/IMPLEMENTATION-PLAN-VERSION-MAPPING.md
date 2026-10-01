@@ -73,7 +73,7 @@ private Integer mappingVersionRetention = 10;  // keep last N versions per line
 ## 2. New persistence + service layer
 
 ### 2.1 `MappingVersionRepository` — new
-Mirror [MappingRepository.java](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/MappingRepository.java)
+Mirror [MappingRepository.java](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingRepository.java)
 patterns (tenant-scoped `inventoryApi` create/update/delete/query). Responsibilities:
 - create/update/delete `d11r_mapping_version` MOs
 - query versions by `identifier` (and the single `isDraft=true` slot per line)
@@ -95,11 +95,11 @@ The lifecycle owner. Methods (sketch):
 ## 3. Changes to existing service/controller flow
 
 ### 3.1 Editing → draft (D-8) — relax the active guard
-File: [MappingRepository.java:148-163](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/MappingRepository.java#L148-L163)
+File: [MappingRepository.java:148-163](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingRepository.java#L148-L163)
 - Today `prepareForUpdate` throws if `!allowUpdateWhenActive && mapping.getActive()`.
 - New behavior: an edit to an active mapping is **routed to the draft** instead of
   rejected. The runnable record is not updated by `PUT /mapping/{id}` anymore.
-- `prepareForDelete` ([:170-180](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/MappingRepository.java#L170-L180))
+- `prepareForDelete` ([:170-180](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingRepository.java#L170-L180))
   is **unchanged** (D-5: active/deployed line still can't be deleted).
 
 File: [MappingController.java:290](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/MappingController.java#L290)
@@ -109,13 +109,13 @@ File: [MappingController.java:290](../../dynamic-mapper-service/src/main/java/dy
 creates the line + its initial draft.
 
 ### 3.2 Activation → version-aware (C-1, FR-6–9)
-File: [MappingService.setActivationMapping():340](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/MappingService.java#L340)
+File: [MappingService.setActivationMapping():340](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java#L340)
 - Extend to accept an optional `versionNumber`.
 - Steps: load target version snapshot → validate → copy snapshot into the runnable
   `d11r_mapping` (set `versionNumber`, `active=true`) → flip prior active off →
   `rebuildMappingCaches` / `updateCacheAfterChange`
-  ([:459](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/MappingService.java#L459),
-  [:472](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/MappingService.java#L472)).
+  ([:459](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java#L459),
+  [:472](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java#L472)).
 - **Atomicity (C-1 / NFR-2):** guard the swap per-line (e.g. per-`identifier` lock)
   so two concurrent activations can't both win; on validation failure leave the
   current active version untouched (FR-9).
@@ -138,7 +138,7 @@ behavior. (No new `Operation` enum value needed —
 [Operation.java](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/Operation.java).)
 
 ### 3.5 Caches — read path unchanged (NFR-3)
-[MappingCacheManager.java](../../dynamic-mapper-service/src/main/java/dynamic/mapper/service/cache/MappingCacheManager.java)
+[MappingCacheManager.java](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/cache/MappingCacheManager.java)
 keeps caching only the runnable `d11r_mapping` objects. Version/draft records are
 **never** loaded into caches. No structural change expected; only activation triggers
 a rebuild, as today.

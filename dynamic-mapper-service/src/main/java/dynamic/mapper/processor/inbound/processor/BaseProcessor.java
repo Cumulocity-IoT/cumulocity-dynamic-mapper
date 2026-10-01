@@ -5,19 +5,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.camel.Exchange;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.CommonProcessor;
-import dynamic.mapper.processor.model.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.model.SubstituteValue;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public abstract class BaseProcessor extends CommonProcessor {
-
-    public abstract void process(Exchange exchange) throws Exception;
 
     protected ProcessingContext<Object> createProcessingContextAsObject(String tenant, Mapping mapping,
             ConnectorMessage connectorMessage, ServiceConfiguration serviceConfiguration, Boolean testing) {

@@ -20,7 +20,7 @@
 
 import { Injectable } from '@angular/core';
 import { FetchClient } from '@c8y/client';
-import { BASE_URL, PATH_EXPLORER_ENDPOINT } from '../../shared/mapping/util';
+import { BASE_URL, PATH_EXPLORER_ENDPOINT } from '../../shared/mapping/mapping.constants';
 
 export interface ExplorerMessage {
   topic: string;

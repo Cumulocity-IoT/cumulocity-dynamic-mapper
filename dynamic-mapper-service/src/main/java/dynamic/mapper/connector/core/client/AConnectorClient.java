@@ -33,20 +33,20 @@ import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
-import dynamic.mapper.model.ConnectorStatus;
-import dynamic.mapper.model.ConnectorStatusEvent;
-import dynamic.mapper.model.ConnectorStatusHistory;
+import dynamic.mapper.model.status.ConnectorStatus;
+import dynamic.mapper.model.status.ConnectorStatusEvent;
+import dynamic.mapper.model.status.ConnectorStatusHistory;
 import dynamic.mapper.model.DeploymentMapEntry;
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.model.LoggingEventType;
+import dynamic.mapper.model.status.LoggingEventType;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.service.ConnectorConfigurationService;
-import dynamic.mapper.service.MappingService;
-import dynamic.mapper.service.ServiceConfigurationService;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.configuration.ConnectorConfigurationService;
+import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.util.CumulocityErrors;
 import lombok.Getter;
 import lombok.Setter;
@@ -88,6 +88,7 @@ public abstract class AConnectorClient {
 
     private static final long SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_SECONDS = 10L;
     private static final long SUBSCRIPTION_INIT_RETRY_MAX_DELAY_SECONDS = 300L;
+    private static final long RECONCILE_RETRY_DELAY_SECONDS = 5L;
 
     public static final String MQTT_PROTOCOL_MQTT = "mqtt://";
     public static final String MQTT_PROTOCOL_MQTTS = "mqtts://";
@@ -145,7 +146,7 @@ public abstract class AConnectorClient {
 
     // Dependencies
     @Getter
-    protected ConfigurationRegistry configurationRegistry;
+    protected ServiceRegistry serviceRegistry;
     @Getter
     protected ConnectorRegistry connectorRegistry;
     @Getter
@@ -284,6 +285,8 @@ public abstract class AConnectorClient {
     private final ReentrantLock connectDisconnectExecutionLock = new ReentrantLock();
     // Guards against scheduling overlapping retry chains for initializeSubscriptionsAfterConnect()
     private final AtomicBoolean subscriptionInitRetryScheduled = new AtomicBoolean(false);
+    // Guards against scheduling overlapping retry chains for reconcileSubscriptions()
+    private final AtomicBoolean reconcileRetryScheduled = new AtomicBoolean(false);
     // When the current subscription-init retry chain started, so the success log can report
     // how long the connector spent in RETRYING before recovering.
     private volatile long subscriptionInitRetryStartedAtMs;
@@ -532,13 +535,13 @@ public abstract class AConnectorClient {
      * Callers must invoke this after {@code this.connectorType} is set (i.e. after the no-arg
      * constructor delegate) and before {@link #initializeManagers()}.
      */
-    protected void wireFromRegistry(ConfigurationRegistry configurationRegistry,
+    protected void wireFromRegistry(ServiceRegistry serviceRegistry,
             ConnectorRegistry connectorRegistry,
             ConnectorConfiguration connectorConfiguration,
             GenericMessageCallback dispatcher,
             String additionalSubscriptionIdTest,
             String tenant) {
-        this.configurationRegistry = configurationRegistry;
+        this.serviceRegistry = serviceRegistry;
         this.connectorRegistry = connectorRegistry;
         this.connectorConfiguration = connectorConfiguration;
         this.connectorName = connectorConfiguration.getName();
@@ -550,13 +553,13 @@ public abstract class AConnectorClient {
         this.tenant = tenant;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
 
-        this.mappingService = configurationRegistry.getMappingService();
-        this.serviceConfigurationService = configurationRegistry.getServiceConfigurationService();
-        this.connectorConfigurationService = configurationRegistry.getConnectorConfigurationService();
-        this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.virtualThreadPool = configurationRegistry.getVirtualThreadPool();
-        this.objectMapper = configurationRegistry.getObjectMapper();
-        this.serviceConfiguration = configurationRegistry.getServiceConfiguration(tenant);
+        this.mappingService = serviceRegistry.getMappingService();
+        this.serviceConfigurationService = serviceRegistry.getServiceConfigurationService();
+        this.connectorConfigurationService = serviceRegistry.getConnectorConfigurationService();
+        this.c8yAgent = serviceRegistry.getC8yAgent();
+        this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
+        this.objectMapper = serviceRegistry.getObjectMapper();
+        this.serviceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
         this.dispatcher = dispatcher;
     }
 
@@ -591,6 +594,17 @@ public abstract class AConnectorClient {
                 connectorName,
                 connectorIdentifier,
                 this::sendConnectorLifecycle, connectorRegistry);
+
+        // This is a fresh client instance — either a genuine microservice restart, or simply this
+        // connector being disabled and re-enabled (ConnectorClientFactory always creates a new
+        // instance) — so connectionStateManager above has no memory of whatever session the
+        // PREVIOUS instance last reported. If that session never reached a clean terminal status
+        // (e.g. the process was killed mid-flap), it would otherwise stay "open" on Cumulocity
+        // forever. Best-effort: failures are logged and swallowed inside the call itself, must
+        // never block/fail connector startup.
+        if (serviceConfiguration.getSendConnectorLifecycle()) {
+            c8yAgent.closeOrphanedConnectorSession(tenant, connectorName, connectorIdentifier);
+        }
 
         this.housekeepingExecutor = new ScheduledThreadPoolExecutor(1, r -> {
             Thread t = new Thread(r, "housekeeping-" + connectorIdentifier);
@@ -731,7 +745,7 @@ public abstract class AConnectorClient {
      * Called by {@link dynamic.mapper.connector.mqtt.AMQTTClient#connect()} when
      * {@code cleanSession=false} so that mapping resolution is ready before the TCP
      * connection is established.  When the broker immediately delivers queued messages
-     * upon reconnect, the {@link dynamic.mapper.service.MappingService} can resolve them
+     * upon reconnect, the {@link dynamic.mapper.mapping.MappingService} can resolve them
      * to their mappings even before {@link #initializeSubscriptionsAfterConnect()} runs.
      */
     public void prepareForPersistentSessionReconnect() {
@@ -915,11 +929,19 @@ public abstract class AConnectorClient {
      * Called when the deployment map changes (a mapping is assigned to / removed from this
      * connector) so that newly deployed mappings are subscribed and un-deployed mappings are
      * unsubscribed live, without requiring a connector reconnect or a manual mappings reload.
+     * <p>
+     * If the connector isn't connected yet (e.g. this races a just-started service that is
+     * still completing its initial broker handshake), the reconcile is deferred and retried
+     * rather than silently dropped — unlike {@link #initializeSubscriptionsAfterConnect()},
+     * which is only invoked once a connect actually succeeds, nothing else would otherwise
+     * re-trigger this reconcile, leaving {@code RELOAD_MAPPINGS} / a deployment change
+     * permanently unapplied until the next full reconnect.
      */
     public void reconcileSubscriptions() {
         if (!isConnected() && !isPassiveReceiver()) {
-            log.debug("{} - Not connected, skipping subscription reconcile for connector: {}",
-                    tenant, connectorName);
+            log.info("{} - Not connected yet, deferring subscription reconcile for connector: {} (retry in {}s)",
+                    tenant, connectorName, RECONCILE_RETRY_DELAY_SECONDS);
+            scheduleReconcileRetry();
             return;
         }
 
@@ -932,6 +954,27 @@ public abstract class AConnectorClient {
         initializeSubscriptionsOutbound(outboundMappings);
 
         log.info("{} - Reconciled subscriptions for connector: {}", tenant, connectorName);
+    }
+
+    /**
+     * Schedules a single retry of {@link #reconcileSubscriptions()} on the housekeeping
+     * executor. At most one retry is in flight at a time; a reconcile call that arrives while
+     * one is already scheduled just relies on that pending retry re-checking current state.
+     * Cancelled automatically on disconnect, since it runs on {@code housekeepingExecutor},
+     * which is shut down in {@link #stopHousekeepingAndClose()}.
+     */
+    private void scheduleReconcileRetry() {
+        if (!reconcileRetryScheduled.compareAndSet(false, true)) {
+            return;
+        }
+        if (housekeepingExecutor == null || housekeepingExecutor.isShutdown()) {
+            reconcileRetryScheduled.set(false);
+            return;
+        }
+        housekeepingExecutor.schedule(() -> {
+            reconcileRetryScheduled.set(false);
+            reconcileSubscriptions();
+        }, RECONCILE_RETRY_DELAY_SECONDS, TimeUnit.SECONDS);
     }
 
     /**
@@ -1100,7 +1143,16 @@ public abstract class AConnectorClient {
      * <p>
      * Currently this means: if the mapping's inbound topic contains MQTT wildcards
      * ({@code #} / {@code +}), the connector must support wildcard subscriptions. Outbound
-     * mappings are always compatible (no broker subscription is performed).
+     * mappings are always compatible: a {@code publishTopic}'s {@code +}/{@code #} characters are
+     * mapping-level placeholders resolved to concrete values before anything is actually
+     * published (see {@code MappingValidator#isWildcardTopic}/
+     * {@code validatePublishTopicAndSampleConsistency}) — no literal wildcard ever reaches the
+     * broker, so a connector's {@code supportsWildcardInTopicOutbound} (a broker *subscription*
+     * capability) has nothing to gate here. An earlier version of this method applied the
+     * outbound capability check to the unresolved {@code publishTopic} template directly, which
+     * wrongly rejected valid outbound mappings on connectors whose `supportsWildcardInTopicOutbound`
+     * defaults to {@code false} (e.g. AMQP, Kafka) even though those connectors only ever publish
+     * the already-resolved topic. Caught in review — reverted 2026-09-21.
      * <p>
      * This is a <em>capability</em> check only. Whether the mapping is actually assigned to
      * this connector is a separate concern handled by {@link #isDeployedInConnector(Mapping)}.
@@ -1108,6 +1160,7 @@ public abstract class AConnectorClient {
     private boolean isMappingCompatibleWithConnector(Mapping mapping) {
         // Wildcards are only relevant for inbound subscriptions; ignore for outbound.
         boolean containsWildcards = mapping.getDirection().equals(Direction.INBOUND)
+                && mapping.getMappingTopic() != null
                 && mapping.getMappingTopic().matches(".*[#+].*");
         boolean compatible = supportsWildcardInTopic(mapping.getDirection()) || !containsWildcards;
 
@@ -1351,7 +1404,7 @@ public abstract class AConnectorClient {
         connectorConfiguration.copyPredefinedValues(getConnectorSpecification());
 
         serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-        configurationRegistry.addServiceConfiguration(tenant, serviceConfiguration);
+        serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
     }
 
     /**

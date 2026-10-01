@@ -26,10 +26,10 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.notification.websocket.NotificationCallback;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import lombok.extern.slf4j.Slf4j;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.notification.websocket.Notification;
 import java.net.URI;
 import java.util.*;
@@ -50,10 +50,10 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
     private final C8YAgent c8yAgent;
     private final NotificationSubscriber notificationSubscriber;
 
-    public CacheInventoryUpdateClient(ConfigurationRegistry configurationRegistry, String tenant) {
+    public CacheInventoryUpdateClient(ServiceRegistry serviceRegistry, String tenant) {
         this.tenant = tenant;
-        this.c8yAgent = configurationRegistry.getC8yAgent();
-        this.notificationSubscriber = configurationRegistry.getNotificationSubscriber();
+        this.c8yAgent = serviceRegistry.getC8yAgent();
+        this.notificationSubscriber = serviceRegistry.getNotificationSubscriber();
         log.info("{} - CacheInventorySubscriptionClient initialized", tenant);
     }
 

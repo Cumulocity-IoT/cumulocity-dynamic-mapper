@@ -29,7 +29,7 @@ import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
 import com.hivemq.client.mqtt.mqtt3.message.auth.Mqtt3SimpleAuth;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -69,12 +69,12 @@ public class MqttPushManager {
     private static final int CONNECTION_TIMEOUT_SECONDS = 30;
 
     private final MicroserviceSubscriptionsService subscriptionsService;
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
 
     public MqttPushManager(MicroserviceSubscriptionsService subscriptionsService,
-                           @Lazy ConfigurationRegistry configurationRegistry) {
+                           @Lazy ServiceRegistry serviceRegistry) {
         this.subscriptionsService = subscriptionsService;
-        this.configurationRegistry = configurationRegistry;
+        this.serviceRegistry = serviceRegistry;
     }
 
     @Value("${C8Y.baseURL}")
@@ -186,7 +186,7 @@ public class MqttPushManager {
 
     public void activatePushConnectivityForDevice(String tenant, ManagedObjectRepresentation mor) {
         try {
-            ExternalIDRepresentation extId = configurationRegistry.getC8yAgent()
+            ExternalIDRepresentation extId = serviceRegistry.getC8yAgent()
                     .resolveGlobalId2ExternalId(tenant, mor.getId(), null, false);
 
             String deviceId = extId != null ? extId.getExternalId() : mor.getId().getValue();
@@ -219,7 +219,7 @@ public class MqttPushManager {
 
     public void deactivatePushConnectivityForDevice(String tenant, ManagedObjectRepresentation mor) {
         try {
-            ExternalIDRepresentation extId = configurationRegistry.getC8yAgent()
+            ExternalIDRepresentation extId = serviceRegistry.getC8yAgent()
                     .resolveGlobalId2ExternalId(tenant, mor.getId(), null, false);
 
             String deviceId = extId != null ? extId.getExternalId() : mor.getId().getValue();

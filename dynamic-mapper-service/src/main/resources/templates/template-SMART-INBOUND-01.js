@@ -1,10 +1,9 @@
+// @ts-check
 /**
  * @name Default template for Smart Function
  * @description Default template for Smart Function, creates one measurement
  * @templateType INBOUND_SMART_FUNCTION
  * @defaultTemplate true
- * @internal true
- * @readonly true
  *
  * Sample payload
  * {
@@ -18,6 +17,10 @@
  * topic 'testSmartInbound/sensor-berlin-01'
 */
 
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
+ */
 function onMessage(msg, context) {
     var payload = msg.payload;
 

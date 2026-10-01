@@ -1,0 +1,266 @@
+/*
+ * Copyright (c) 2025 Cumulocity GmbH.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @authors Christof Strack, Stefan Witschel
+ *
+ */
+
+package dynamic.mapper.ai;
+
+import com.cumulocity.microservice.api.CumulocityClientProperties;
+import com.cumulocity.microservice.context.ContextService;
+import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
+import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
+import com.cumulocity.sdk.client.RestConnector;
+import com.dashjoin.jsonata.json.Json;
+import dynamic.mapper.configuration.ServiceConfiguration;
+
+import dynamic.mapper.configuration.ServiceConfigurationService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.io.support.ResourcePatternResolver;
+import org.springframework.http.*;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+
+import static com.dashjoin.jsonata.Jsonata.jsonata;
+import static dynamic.mapper.model.Substitution.toPrettyJsonString;
+
+@Service
+@Slf4j
+public class AIAgentService {
+
+    private final ContextService<MicroserviceCredentials> contextService;
+
+    private final CumulocityClientProperties clientProperties;
+
+    private final ServiceConfigurationService serviceConfigurationService;
+
+    public AIAgentService(ContextService<MicroserviceCredentials> contextService,
+            MicroserviceSubscriptionsService subscriptionsService,
+            CumulocityClientProperties clientProperties,
+            RestConnector restConnector,
+            ServiceConfigurationService serviceConfigurationService) {
+        this.contextService = contextService;
+        this.clientProperties = clientProperties;
+        this.serviceConfigurationService = serviceConfigurationService;
+    }
+
+    private static final String DEFAULT_JSONATA_AGENT_NAME = "dynamic-mapper-jsonata-agent";
+    private static final String DEFAULT_SMART_FUNCTION_AGENT_NAME = "dynamic-mapper-smart-function-agent";
+    private static final String JSONATA_TOOL_NAME = "evaluateJsonataExpression";
+    private static final String MCP_SERVER_NAME = "dynamic-mapper-mcp-server";
+    private static final String AI_AGENT_MCP_SERVER_PATH = "/service/ai/mcp/servers";
+    private static final String AI_AGENT_PATH = "/service/ai/agent";
+    private static final String AI_AGENT_HEALTH_ENDPOINT = "/service/ai/health";
+
+    public void initializeAIAgents() {
+        if (checkAIAgentAvailable()) {
+            ResponseEntity<AIAgent[]> response = getAIAgents();
+            if (response != null && response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                List<AIAgent> agents = Arrays.asList(response.getBody());
+                if (agents.isEmpty()) {
+                    log.info("{} - No AIAgents found, creating default agents",
+                            contextService.getContext().getTenant());
+                    createDefaultAIAgents();
+                    addingAIAgentsToServiceConfiguration();
+                } else {
+                    if (agents.stream().anyMatch(agent -> agent.getName().equals(DEFAULT_JSONATA_AGENT_NAME)
+                            || agent.getName().equals(DEFAULT_SMART_FUNCTION_AGENT_NAME))) {
+                        log.info("{} - AIAgents already exists, not re-creating them",
+                                contextService.getContext().getTenant());
+                        addingAIAgentsToServiceConfiguration();
+                    } else {
+                        log.info("{} - AIAgents not found, creating AI agents...",
+                                contextService.getContext().getTenant());
+                        createDefaultAIAgents();
+                        addingAIAgentsToServiceConfiguration();
+                    }
+                }
+            } else {
+                log.info("{} - Failed to retrieve AIAgents", contextService.getContext().getTenant());
+            }
+        }
+
+    }
+
+
+    public void addingAIAgentsToServiceConfiguration() {
+        ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(contextService.getContext().getTenant());
+        if(serviceConfiguration != null){
+            if (serviceConfiguration .getJsonataAgent() == null)
+                serviceConfiguration.setJsonataAgent(DEFAULT_JSONATA_AGENT_NAME);
+            if (serviceConfiguration .getSmartFunctionAgent() == null)
+                serviceConfiguration .setSmartFunctionAgent(DEFAULT_SMART_FUNCTION_AGENT_NAME);
+            try {
+                serviceConfigurationService.saveServiceConfiguration(contextService.getContext().getTenant(), serviceConfiguration);
+            } catch (Exception e) {
+                log.error("{} - Failed to update service configuration with AI agents",
+                        contextService.getContext().getTenant(), e);
+            }
+        }
+    }
+
+    public boolean checkAIAgentAvailable() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization",
+                contextService.getContext().toCumulocityCredentials().getAuthenticationString());
+        headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
+        String tenant = contextService.getContext().toCumulocityCredentials().getTenantId();
+        ResponseEntity<String> response = null;
+        try {
+            String serverUrl = clientProperties.getBaseURL() + AI_AGENT_HEALTH_ENDPOINT;
+            RestTemplate restTemplate = new RestTemplate();
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+            response = restTemplate.exchange(serverUrl, HttpMethod.GET, requestEntity, String.class);
+        } catch (Exception e) {
+            log.info("{} - AI Agent Manager is not available. AI capabilities won't be available", tenant);
+            return false;
+        }
+        if (response != null && response.getStatusCode().is2xxSuccessful()) {
+            log.info("{} - AIAgent is available", tenant);
+            return true;
+        } else {
+            log.info("{} - AI Agent Manager is not available. AI capabilities won't be available", tenant);
+            return false;
+        }
+    }
+
+    public void createDefaultAIAgents() {
+        HashMap<String, String> prompts = getAgentPrompts();
+
+        prompts.keySet().forEach(file -> {
+            AIAgent aiAgent = new AIAgent();
+            if (file.equals("jsonata"))
+                aiAgent.setName(DEFAULT_JSONATA_AGENT_NAME);
+            if (file.equals("smartfunction"))
+                aiAgent.setName(DEFAULT_SMART_FUNCTION_AGENT_NAME);
+
+            AIAgentRef agent = new AIAgentRef();
+            //agent.setAvailability("PRIVATE");
+            agent.setSystem(prompts.get(file));
+            aiAgent.setAgent(agent);
+            aiAgent.setType("text");
+            if (aiAgent.getName().equals(DEFAULT_JSONATA_AGENT_NAME)) {
+                MCPUsage tools = new MCPUsage();
+                tools.setServerName(MCP_SERVER_NAME);
+                tools.setTools(new String[] { JSONATA_TOOL_NAME });
+                aiAgent.setMcp(List.of(tools));
+            }
+            ResponseEntity<String> response = createAIAgent(aiAgent);
+            if (!response.getStatusCode().is2xxSuccessful())
+                log.error("{} - Failed to create AIAgent: {}", contextService.getContext().getTenant(),
+                        response.getBody());
+        });
+    }
+
+    private HashMap<String, String> getAgentPrompts() {
+        Resource[] resources;
+        HashMap<String, String> prompts = new HashMap<>();
+        try {
+            ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+            resources = resolver.getResources("classpath:prompts/*.txt");
+            for (Resource resource : resources) {
+                String fileName = resource.getFilename();
+                if (fileName.startsWith("jsonata"))
+                    prompts.put("jsonata",
+                            new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+                if (fileName.startsWith("smartfunction"))
+                    prompts.put("smartfunction",
+                            new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+
+            }
+        } catch (Exception e) {
+            log.error("{} - Failed to load template resources", contextService.getContext().getTenant(), e);
+        }
+        return prompts;
+    }
+
+    public ResponseEntity<String> createAIAgent(AIAgent aiAgent) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization",
+                contextService.getContext().toCumulocityCredentials().getAuthenticationString());
+        headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
+        String tenant = contextService.getContext().toCumulocityCredentials().getTenantId();
+        ResponseEntity<String> response = null;
+        try {
+            String serverUrl = clientProperties.getBaseURL() + AI_AGENT_PATH + "/text";
+            RestTemplate restTemplate = new RestTemplate();
+            HttpEntity<AIAgent> requestEntity = new HttpEntity<>(aiAgent, headers);
+            response = restTemplate.exchange(serverUrl, HttpMethod.POST, requestEntity, String.class);
+        } catch (Exception e) {
+            log.error("{} - AIAgent creation failed", tenant, e);
+        }
+        return response;
+    }
+
+    public ResponseEntity<AIAgent[]> getAIAgents() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization",
+                contextService.getContext().toCumulocityCredentials().getAuthenticationString());
+        headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
+        String tenant = contextService.getContext().toCumulocityCredentials().getTenantId();
+        try {
+            String serverUrl = clientProperties.getBaseURL() + AI_AGENT_PATH;
+            RestTemplate restTemplate = new RestTemplate();
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+            return restTemplate.exchange(serverUrl, HttpMethod.GET, requestEntity, AIAgent[].class);
+        } catch (Exception e) {
+            log.error("{} - AIAgent retrieval failed", tenant, e);
+        }
+        return null;
+    }
+
+    /**
+     * Test a JSONata expression against a JSON string.
+     * 
+     * @param expression JSONata expression to be evaluated against the source JSON
+     * @param sourceJSON JSON string to be used as source for the JSONata expression
+     *                   evaluation
+     * @return The result of the JSONata expression evaluation as a pretty-printed
+     *         JSON string
+     * @throws RuntimeException         if the evaluation fails
+     * @throws IllegalArgumentException if the expression or source JSON is null or
+     *                                  empty
+     */
+    @Tool(name = "evaluateJsonataExpression", description = "Evaluate a JSONata expression against a JSON object")
+    //@McpTool(name = "evaluateJsonataExpression", description = "Evaluate a JSONata expression against a JSON object")
+    public String evaluateJsonataExpression(@ToolParam(description = "JSONata expression to evaluate", required = true) String expression,
+                                            @ToolParam(description = "JSON document to apply the expression on", required = true) String sourceJSON) {
+        if (expression == null || expression.isEmpty())
+            throw new IllegalArgumentException("JSONata expression cannot be null");
+        if (sourceJSON == null || sourceJSON.isEmpty())
+            throw new IllegalArgumentException("Source JSON cannot be null");
+        try {
+            var expr = jsonata(expression);
+            Object parsedJson = Json.parseJson(sourceJSON);
+            Object result = expr.evaluate(parsedJson);
+            return toPrettyJsonString(result);
+        } catch (Exception e) {
+            log.error("Error evaluating JSONata expression: ", e);
+            throw new RuntimeException(e);
+        }
+    }
+}

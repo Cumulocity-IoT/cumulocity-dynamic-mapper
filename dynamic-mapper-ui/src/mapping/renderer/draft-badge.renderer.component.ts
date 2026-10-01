@@ -25,7 +25,9 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
   selector: 'd11r-draft-badge-renderer',
   template: `
     @if (context.value) {
-      <span class="text-12 label label-info" [attr.data-cy]="'dm-versions-draft-' + context.item.id"
+      <!-- label-warning, matching the draft badge everywhere else: a draft is unfinished work,
+           not neutral information. -->
+      <span class="text-12 label label-warning" [attr.data-cy]="'dm-versions-draft-' + context.item.id"
         title="This mapping has an unpublished draft version">draft</span>
     }
   `,

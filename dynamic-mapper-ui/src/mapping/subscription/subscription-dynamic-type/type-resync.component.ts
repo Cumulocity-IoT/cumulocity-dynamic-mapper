@@ -53,7 +53,7 @@ const NOT_SYNCED_YET = 'Not synced yet';
   selector: 'd11r-type-resync',
   host: { class: 'flex-grow d-col fit-h' },
   templateUrl: 'type-resync.component.html',
-  styleUrls: ['../../shared/mapping.style.css'],
+  styleUrls: ['../../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule]

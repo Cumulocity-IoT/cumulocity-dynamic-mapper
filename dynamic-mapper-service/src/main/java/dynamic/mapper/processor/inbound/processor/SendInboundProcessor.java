@@ -1,13 +1,10 @@
 package dynamic.mapper.processor.inbound.processor;
 
-import dynamic.mapper.processor.util.CamelHeaders;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.camel.Exchange;
 import org.joda.time.DateTime;
 import org.springframework.stereotype.Component;
 
@@ -20,16 +17,16 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ConfigurationRegistry;
+import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.IdentityResolutionService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
-import dynamic.mapper.model.MappingStatus;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.ProcessingException;
-import dynamic.mapper.processor.model.DynamicMapperRequest;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.processor.model.ProcessingResultWrapper;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.model.DynamicMapperRequest;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
+import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.processor.inbound.deserializer.SparkPlugBDeserializer;
 import dynamic.mapper.util.Utils;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +37,7 @@ public class SendInboundProcessor extends BaseProcessor {
 
     private final C8YAgent c8yAgent;
 
-    private final ConfigurationRegistry configurationRegistry;
+    private final ServiceRegistry serviceRegistry;
 
     private final IdentityResolutionService identityResolutionService;
 
@@ -48,28 +45,23 @@ public class SendInboundProcessor extends BaseProcessor {
 
     private final MappingService mappingService;
 
-    public SendInboundProcessor(C8YAgent c8yAgent, ConfigurationRegistry configurationRegistry,
+    public SendInboundProcessor(C8YAgent c8yAgent, ServiceRegistry serviceRegistry,
             IdentityResolutionService identityResolutionService, ObjectMapper objectMapper,
             MappingService mappingService) {
         this.c8yAgent = c8yAgent;
-        this.configurationRegistry = configurationRegistry;
+        this.serviceRegistry = serviceRegistry;
         this.identityResolutionService = identityResolutionService;
         this.objectMapper = objectMapper;
         this.mappingService = mappingService;
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public void process(Exchange exchange) throws Exception {
-        ProcessingContext<Object> context = exchange.getIn().getHeader(CamelHeaders.PROCESSING_CONTEXT, ProcessingContext.class);
-
+    public void process(ProcessingContext<Object> context) throws Exception {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
         Boolean testing = context.isTesting();
 
         // Check if processing was cancelled due to timeout
-        ProcessingResultWrapper<?> wrapper = exchange.getIn().getHeader(CamelHeaders.PROCESSING_RESULT_WRAPPER,
-                ProcessingResultWrapper.class);
+        ProcessingResultWrapper<?> wrapper = context.getProcessingResultWrapper();
         if (wrapper != null && wrapper.getCancellationRequested().get()) {
             log.warn("{} - Processing was cancelled (timeout), skipping SendInboundProcessor for mapping: {}",
                     tenant, mapping.getName());
@@ -77,25 +69,29 @@ public class SendInboundProcessor extends BaseProcessor {
         }
 
         try {
-            // Check if we have a single request from parallel processing (body contains split request)
-            DynamicMapperRequest singleRequest = exchange.getIn().getBody(DynamicMapperRequest.class);
-
-            if (singleRequest != null) {
-                // Parallel mode: process single request from body
-                processSingleRequest(context, singleRequest, true);
-            } else {
-                // Sequential mode: collapse multiple measurement requests into one bulk request.
-                bulkMeasurementRequestsIfNeeded(context);
-                // Sequential mode: process all requests in context
-                processAllRequests(context);
-            }
+            // Collapse multiple measurement requests into one bulk request.
+            bulkMeasurementRequestsIfNeeded(context);
+            // Process all requests sequentially. Failures are isolated per-request inside
+            // (never thrown from here), so one failing request never skips the rest.
+            processAllRequests(context);
             // After all requests are processed, store the SparkPlug B birth fragment if applicable.
             // Deliberately outside the INVENTORY request path so it runs even when the Smart Function
             // emits no INVENTORY object (e.g. emits only a MEASUREMENT, or emits nothing at all).
             storeSparkPlugBBirthMessage(context);
             // Update the sparkPlugB_isActive flag: TRUE for BIRTH/DATA, FALSE for DEATH.
             updateSparkPlugBActiveStatus(context);
+
+            // At least one request failed above (recorded via context.addError, not thrown) —
+            // bookkeeping mirrors the catch block below, just for isolated per-request failures.
+            if (context.hasError() && !testing) {
+                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+                mappingStatus.incrementErrors();
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            }
         } catch (Exception e) {
+            // Reached only for failures outside the per-request loop (e.g. bulk-merge,
+            // SparkPlug B birth persistence) — per-request send failures are isolated in
+            // processAllRequests and never propagate here.
             String errorMessage = String.format(
                     "%s - Error in SendInboundProcessor: %s for mapping: %s",
                     tenant, mapping.getName(), e.getMessage());
@@ -116,25 +112,32 @@ public class SendInboundProcessor extends BaseProcessor {
     }
 
     /**
-     * Process all requests sequentially
+     * Process all requests sequentially. A failing request is isolated — recorded via
+     * {@code request.setError(e)}/{@code context.addError(...)} and swallowed rather than
+     * rethrown, so one failing request never aborts the ones after it or skips
+     * {@link #createProcessingAlarms}.
      */
     private void processAllRequests(ProcessingContext<Object> context) throws Exception {
-        try {
-            // Process each C8Y request
-            for (DynamicMapperRequest request : context.getRequests()) {
-                processSingleRequest(context, request, false);
+        String tenant = context.getTenant();
+        // Process each C8Y request
+        for (DynamicMapperRequest request : context.getRequests()) {
+            try {
+                processSingleRequest(context, request);
+            } catch (Exception e) {
+                // processSingleRequest already recorded the error on the request itself
+                // (request.setError(e)); mirror it onto the shared context too so process()'s
+                // hasError() check can detect it and update mapping status once, in aggregate.
+                if (e instanceof ProcessingException) {
+                    context.addError((ProcessingException) e);
+                } else {
+                    context.addError(new ProcessingException(
+                            String.format("%s - Error sending request: %s", tenant, e.getMessage()), e));
+                }
             }
-
-            // Create alarms for any processing issues (after all requests are processed)
-            createProcessingAlarms(context);
-
-        } catch (Exception e) {
-            // Not logged here — rethrown as-is (or wrapped, unchanged) up to process()'s
-            // catch, which is the single place this failure is actually handled (added to
-            // context, mapping status updated) and logged, full stack trace included.
-            // Logging here too just duplicated the same trace under a second message.
-            throw e;
         }
+
+        // Create alarms for any processing issues (after all requests are processed)
+        createProcessingAlarms(context);
     }
 
     /**
@@ -218,13 +221,12 @@ public class SendInboundProcessor extends BaseProcessor {
     }
 
     /**
-     * Process a single request - common logic for both sequential and parallel modes
+     * Process a single request
      *
      * @param context The processing context
      * @param request The request to process
-     * @param isParallelMode True if processing in parallel mode, false for sequential
      */
-    private void processSingleRequest(ProcessingContext<Object> context, DynamicMapperRequest request, boolean isParallelMode) throws Exception {
+    private void processSingleRequest(ProcessingContext<Object> context, DynamicMapperRequest request) throws Exception {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 
@@ -260,11 +262,7 @@ public class SendInboundProcessor extends BaseProcessor {
                         tenant, request.getApi(), request.getRequest());
             }
 
-            // In parallel mode, create alarms for this specific request immediately
-            // In sequential mode, alarms are created after all requests in processAllRequests
-            if (isParallelMode) {
-                createProcessingAlarmsForRequest(context, request);
-            }
+            // Alarms are created after all requests in processAllRequests.
 
         } catch (Exception e) {
             // Not logged here — see the comment in processAllRequests's catch block; this
@@ -294,7 +292,7 @@ public class SendInboundProcessor extends BaseProcessor {
 
                     // Cache the mapping of device to client ID
                     if (context.getClientId() != null) {
-                        configurationRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
+                        serviceRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                                 request.getSourceId());
                     }
                 }
@@ -348,7 +346,7 @@ public class SendInboundProcessor extends BaseProcessor {
 
                     // Cache the mapping of device to client ID
                     if (context.getClientId() != null) {
-                        configurationRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
+                        serviceRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                                 request.getSourceId());
                     }
                 }
@@ -369,27 +367,6 @@ public class SendInboundProcessor extends BaseProcessor {
             context.getCurrentRequest().setError(e);
             request.setError(e);
             throw e;
-        }
-    }
-
-    /**
-     * Create alarms for a specific request (used in parallel mode)
-     */
-    private void createProcessingAlarmsForRequest(ProcessingContext<Object> context, DynamicMapperRequest request) {
-        String tenant = context.getTenant();
-
-        if (request.getSourceId() != null && !context.getAlarms().isEmpty()) {
-            ManagedObjectRepresentation sourceMor = new ManagedObjectRepresentation();
-            sourceMor.setId(new GId(request.getSourceId()));
-
-            context.getAlarms().forEach(alarm -> {
-                try {
-                    c8yAgent.createAlarm("WARNING", alarm, Utils.MAPPER_PROCESSING_ALARM,
-                            new DateTime(), sourceMor, tenant);
-                } catch (Exception e) {
-                    log.warn("{} - Failed to create processing alarm: {}", tenant, e.getMessage());
-                }
-            });
         }
     }
 
@@ -430,7 +407,7 @@ public class SendInboundProcessor extends BaseProcessor {
      */
     @SuppressWarnings("unchecked")
     private void storeSparkPlugBBirthMessage(ProcessingContext<Object> context) {
-        if (!dynamic.mapper.processor.model.MappingType.SPARKPLUGB
+        if (!dynamic.mapper.model.MappingType.SPARKPLUGB
                 .equals(context.getMapping().getMappingType())) {
             return;
         }
@@ -577,7 +554,7 @@ public class SendInboundProcessor extends BaseProcessor {
      * holds the DBIRTH alias maps), not on a separate device MO.
      */
     private void updateSparkPlugBActiveStatus(ProcessingContext<Object> context) {
-        if (!dynamic.mapper.processor.model.MappingType.SPARKPLUGB
+        if (!dynamic.mapper.model.MappingType.SPARKPLUGB
                 .equals(context.getMapping().getMappingType())) {
             return;
         }

@@ -45,12 +45,12 @@ import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.model.ConnectorStatus;
-import dynamic.mapper.model.ConnectorStatusEvent;
+import dynamic.mapper.model.status.ConnectorStatus;
+import dynamic.mapper.model.status.ConnectorStatusEvent;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Qos;
-import dynamic.mapper.processor.model.ProcessingContext;
-import dynamic.mapper.service.MappingService;
+import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.mapping.MappingService;
 
 /**
  * Unit tests for the subscription-init retry/backoff path in

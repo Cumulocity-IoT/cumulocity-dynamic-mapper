@@ -85,8 +85,11 @@
               {{ event.status ? event.status : '-' }}
             </span>
             @if (event.historyCount) {
-            <span class="text-10 label label-default m-l-4" title="{{ 'Number of status transitions bundled into this session' | translate }}">
-              {{ event.historyCount }} {{ event.historyCount === 1 ? 'event' : 'events' }}
+            <span class="text-10 label label-default m-l-4"
+              title="{{ event.statusLog?.historyTruncated
+                ? ('Showing the ' + event.historyCount + ' most recent of ' + (event.historyCount + event.statusLog.historyOmittedCount) + ' status transitions in this session')
+                : ('Number of status transitions bundled into this session' | translate) }}">
+              {{ event.historyCount }}{{ event.statusLog?.historyTruncated ? '+' : '' }} {{ event.historyCount === 1 && !event.statusLog?.historyTruncated ? 'event' : 'events' }}
             </span>
             @if (event.sessionClosed === false) {
             <span class="text-10 label label-info m-l-4" translate>open</span>

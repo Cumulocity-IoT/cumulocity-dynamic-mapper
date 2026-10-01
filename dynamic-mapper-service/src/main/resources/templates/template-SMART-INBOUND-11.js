@@ -1,11 +1,9 @@
+// @ts-check
 /**
  * @name Sample persistent state - per-device running statistics
  * @description Tracks message count and running average temperature per device, using the MQTT
  *              client ID from context (not the payload) as the device identifier.
  * @templateType INBOUND_SMART_FUNCTION
- * @defaultTemplate false
- * @internal true
- * @readonly true
  * @since 6.2
  *
  * Demonstrates per-device state management using composite state keys:
@@ -29,6 +27,10 @@
  *   { "temperature": 23.5 }
 */
 
+/**
+ * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg
+ * @param {import('@c8y/dynamic-mapper-smart-function').SmartFunctionContext} context
+ */
 function onMessage(msg, context) {
     var payload = msg.payload;
     var temperature = payload["temperature"];

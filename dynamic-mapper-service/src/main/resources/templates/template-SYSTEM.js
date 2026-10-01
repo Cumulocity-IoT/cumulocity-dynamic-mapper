@@ -1,10 +1,9 @@
+// @ts-check
 /**
  * @name System code
  * @description System code containing the required definitions of the java classes
  * @templateType SYSTEM
  * @defaultTemplate true
- * @internal true
- * @readonly true
  */
  
 // Polyfill for atob and btoa using Java-Interop
@@ -95,7 +94,7 @@ const TYPE = Java.type('dynamic.mapper.processor.model.SubstituteValue$TYPE');
  * @property {string} REMOVE_IF_MISSING_OR_NULL - Remove the node in the target if the evaluation of the source expression returns undefined or empty; allows for mapping with dynamic content
  * @property {string} CREATE_IF_MISSING - Create the node in the target if it doesn't exist; allows for mapping with dynamic content
  */
-const RepairStrategy = Java.type('dynamic.mapper.processor.model.RepairStrategy');
+const RepairStrategy = Java.type('dynamic.mapper.model.RepairStrategy');
 
 /*
  * Extracts data from the source payload to be used in substitutions during mapping.

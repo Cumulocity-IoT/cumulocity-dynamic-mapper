@@ -1,7 +1,9 @@
 # Dependencies
 node_modules/
 
-# Build output
+# Build output. tsc emits into dist/ (see "outDir" in tsconfig.json), which the first line
+# already covers; the bare patterns below are a belt-and-braces guard against stray in-place
+# builds. They must never swallow hand-written sources — see the exceptions.
 dist/
 *.js
 *.js.map
@@ -11,6 +13,14 @@ dist/
 # Keep configuration files
 !jest.config.js
 !.eslintrc.js
+
+# Keep hand-written sources. src/ contains no build output, so nothing here is generated.
+# graalvm-globals.d.ts in particular is authored by hand: it declares the globals GraalVM injects
+# (Java, atob, btoa) and tsconfig.templates.json includes it by path. Without it the template
+# type-check fails in CI with 11x "Cannot find name 'Java'" while passing on any machine that
+# still has the untracked file on disk.
+!src/**/*.d.ts
+!src/**/*.js
 
 # Testing
 coverage/

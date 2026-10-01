@@ -1,0 +1,470 @@
+# REST Polling Test Environment
+
+Minimal Python/Flask microservice that acts as the **poll target** for the
+Dynamic Mapper's **REST Polling connector** (`connectorType: "REST_POLLING"`,
+inbound only, see `HttpPollingConnector.java`). It serves a synthetic,
+changing reading on every request, and optionally requires Basic or Bearer
+auth so the connector's `authentication` config can be exercised.
+
+**Bearer auth only works when running `app.py` locally** (see the warning in
+step 2) — once deployed as a Cumulocity microservice, Cumulocity's own
+platform gateway sits in front of every `/service/http-polling-mock/...`
+request and requires the `Authorization` header to already be a valid
+Cumulocity credential, before this app's own auth check ever runs. There is
+only one `Authorization` header, so it can't carry both a real Cumulocity
+credential (to pass the gateway) and an arbitrary `Bearer <token>` (to
+satisfy this app). Basic auth works against the deployed microservice,
+*if* `AUTH_USER`/`AUTH_PASSWORD` are set to a real Cumulocity tenant user's
+credentials rather than made-up ones — see step 2.
+
+## Why deploy this as a Cumulocity microservice (not a local Docker container)
+
+Unlike the Kafka/AMQP/Pulsar test environments, this target does not need to
+be reachable *by Cumulocity Cloud* — only by the dynamic-mapper-service
+process itself, whether it runs locally or is deployed. Deploying the mock as
+its own Cumulocity microservice (the same pattern as `../microservice/`)
+means it is reachable at a stable base path —
+`${C8Y_BASEURL}/service/http-polling-mock` — from the mapper **regardless of
+where the mapper runs**, with no RequestBin-style public URL or "create
+disabled, run locally" workaround needed (unlike `../webhook/` and
+`../kafka/`).
+
+## 1. Running locally (quick smoke test, no deploy)
+
+```bash
+cd resources/testing/environments/http-polling
+pip install -r requirements.txt
+python app.py        # starts on port 80 (or SERVER_PORT env var)
+```
+
+```bash
+curl -s http://localhost:80/measurements | jq
+# {"deviceId":"poll-sensor-01","timestamp":"...","temperature":23.47}
+
+curl -s http://localhost:80/requests | jq       # inspect what was received
+curl -s -X DELETE http://localhost:80/requests  # clear the log
+```
+
+Enable auth locally to test the connector's `authentication` handling. This
+is where `AUTH_MODE=bearer` is actually testable end-to-end — running
+locally, there is no Cumulocity gateway in front of `app.py`, so its own
+`Authorization` check is the only one that applies:
+
+```bash
+AUTH_MODE=basic AUTH_USER=poller AUTH_PASSWORD=secret python app.py
+# or
+AUTH_MODE=bearer AUTH_TOKEN=test-token python app.py
+```
+
+An unauthenticated/incorrectly-authenticated request now gets `401`:
+
+```bash
+curl -s -i http://localhost:80/measurements                        # 401
+curl -s -u poller:secret http://localhost:80/measurements | jq     # 200 (basic)
+curl -s -H 'Authorization: Bearer test-token' http://localhost:80/measurements | jq  # 200 (bearer)
+```
+
+To exercise the `REST_POLLING` connector itself against this local instance,
+point its `url` (a base URL — see step 3) at wherever the local process is
+reachable from the dynamic-mapper-service (e.g. `http://localhost:80` if the
+service also runs locally on the same host, with a mapping topic of
+`measurements` to reach `/measurements`) — the same "run locally, create
+the connector disabled, then enable" pattern the Kafka test environment
+uses, since Cumulocity Cloud cannot reach a bare `localhost` port. See
+`../kafka/README.md` for that workflow in full.
+
+## 2. Building and deploying to Cumulocity
+
+```bash
+cd resources/testing/environments/http-polling
+
+# Build Docker image + create ZIP (requires Docker)
+./build.sh
+
+# Build + upload to the connected Cumulocity tenant (requires go-c8y-cli)
+./build.sh --push
+```
+
+The script produces `http-polling-mock.zip`, which can also be uploaded
+manually via Cumulocity Administration → Ecosystem → Microservices.
+
+To enable auth on the deployed instance, set environment variables on the
+microservice (Administration → Ecosystem → Microservices →
+`http-polling-mock` → Variables): `AUTH_MODE` (`none`/`basic`), `AUTH_USER`,
+`AUTH_PASSWORD`.
+
+⚠️ **`AUTH_MODE=bearer` does not work once deployed.** Cumulocity's platform
+gateway requires the `Authorization` header on every
+`/service/http-polling-mock/...` request to already be a valid Cumulocity
+credential before the request reaches this app at all — an arbitrary
+`Bearer <token>` gets rejected by the gateway itself. Use `AUTH_MODE=basic`
+with **real Cumulocity tenant credentials** as `AUTH_USER`/`AUTH_PASSWORD`
+against the deployed microservice (the same credential then satisfies both
+the gateway and this app's own check); reserve `AUTH_MODE=bearer` for
+running `app.py` locally (step 1), where there is no gateway in the way.
+
+### Cross-platform builds (Apple Silicon)
+
+```bash
+BUILD_PLATFORM=linux/amd64 ./build.sh   # default; suitable for Cumulocity
+BUILD_PLATFORM=linux/arm64 ./build.sh   # for ARM-based test environments
+```
+
+## 3. Create the REST Polling connector
+
+Uses [go-c8y-cli](https://goc8ycli.netlify.app/)'s `c8y api`, which authenticates via your
+currently active `c8y` session (`c8y sessions login`) rather than a manually-built `Authorization`
+header — no `C8Y_TENANT`/`C8Y_USER`/`C8Y_PASSWORD` needed. Only the connector's own `url` property
+(the mock's *external* base URL, not the mapper's) still needs the tenant's base URL:
+
+```bash
+export C8Y_BASEURL="https://<your-tenant>.cumulocity.com"
+
+c8y api --method POST --url /service/dynamic-mapper-service/configuration/connector/instance \
+  --header 'Content-Type: application/json' \
+  --data "{
+    \"identifier\": \"test-rest-polling-connector\",
+    \"connectorType\": \"REST_POLLING\",
+    \"name\": \"Test REST Polling Connector\",
+    \"description\": \"http-polling-mock test target\",
+    \"enabled\": true,
+    \"properties\": {
+      \"url\": \"${C8Y_BASEURL}/service/http-polling-mock\",
+      \"pollIntervalSeconds\": 30,
+      \"authentication\": \"None\",
+      \"headers\": {}
+    }
+  }"
+```
+
+`url` is a **base URL** — the mapping's topic gets appended as the request path (step 4), so it
+deliberately does *not* end in `/measurements` here. One connector instance can serve several
+mappings against different paths under this same base, e.g. a topic of `measurements` resolves to
+`GET ${C8Y_BASEURL}/service/http-polling-mock/measurements`.
+
+If the mock was deployed with `AUTH_MODE=basic`, add the matching connector
+properties — `user`/`password` must be a **real Cumulocity tenant user's**
+credentials (see the caution in step 2), not arbitrary ones:
+
+```json
+{
+  "authentication": "Basic",
+  "user": "<tenant>/<user>",
+  "password": "<password>"
+}
+```
+
+`authentication: "Bearer"` only makes sense when the connector's `url`
+points at a **locally-running** `app.py` (step 1) — against the deployed
+microservice it will always fail, rejected by Cumulocity's gateway before
+reaching the mock's own check.
+
+### Connector properties reference
+
+| Property | Required | Notes |
+|----------|----------|-------|
+| `url` | yes | Base URL — each deployed mapping's topic is appended as the request path |
+| `pollIntervalSeconds` | no | Default `60`; **hard minimum `30`** — `isConfigValid` rejects anything lower |
+| `authentication` | no | `None` (default), `Basic`, or `Bearer` |
+| `user` / `password` | only if `authentication: "Basic"` | |
+| `token` | only if `authentication: "Bearer"` | |
+| `headers` | no | Map of additional static headers sent with every poll request |
+
+Connect the connector (only needed if created with `enabled: false`, or after
+a disconnect):
+
+```bash
+c8y api --method POST --url /service/dynamic-mapper-service/operation \
+  --header 'Content-Type: application/json' \
+  --data '{"operation": "CONNECT", "parameter": {"connectorIdentifier": "test-rest-polling-connector"}}'
+```
+
+Check status:
+
+```bash
+c8y api --method GET --url /service/dynamic-mapper-service/monitoring/status/connector/test-rest-polling-connector
+```
+
+## 4. Create an inbound mapping
+
+In the UI: **Mapping → Inbound → Add mapping**, select connector
+`test-rest-polling-connector`, and set the mapping's **topic** to
+`measurements`. Unlike a broker topic, this is appended directly to the
+connector's `url` as the request path — so this mapping polls
+`${C8Y_BASEURL}/service/http-polling-mock/measurements`, matching the mock's
+route. Map the response fields (`deviceId`, `timestamp`, `temperature`) to a
+measurement, using the sample payload below as the source for the mapping
+editor's test step.
+
+Sample response body (what `/measurements` returns):
+```json
+{
+  "deviceId": "poll-sensor-01",
+  "timestamp": "2026-09-21T10:00:00.000Z",
+  "temperature": 23.47
+}
+```
+
+Deploy the mapping to `test-rest-polling-connector`.
+
+## 5. Observe polling
+
+Watch the mock's request log to confirm the connector is polling at the
+configured interval, and that auth headers (if configured) are present:
+
+```bash
+watch -n 5 "c8y api --method GET --url /service/http-polling-mock/requests"
+```
+
+Each entry shows `receivedAt`, the request `headers` (`Authorization` is
+redacted), and whether the request was `authorized`. Use `authorized` to verify
+the configured credentials. Within ~30s (the enforced minimum interval) of connecting, new
+entries should appear; the connector's `Message Explorer` / mapping test
+results should show a new measurement each cycle with a different
+`temperature`.
+
+## 6. Example mappings (API-driven, three connector features at once)
+
+`mappings/sample-mappings.json` is a single array-format file — the same shape the
+Dynamic Mapper UI's mapping import/export uses (see `resources/samples/mappings-*.json`)
+— containing three ready-to-use **Smart Function** mappings that together exercise the
+connector features covered above end to end against this mock: two topics sharing one
+connector instance, and the incremental-fetch cursor feature. Each mapping's `code` is a
+base64-encoded JavaScript `onMessage(msg, context)` function (see `docs/smart-functions.md`)
+rather than JSONata substitutions — required for mapping 3, whose response is a JSON array
+and which builds one Cumulocity event per array item entirely in code. They complement
+step 4 (which shows the equivalent one-mapping UI flow) rather than replace it.
+
+| Mapping (`identifier`) | Topic → mock route | Demonstrates |
+|---|---|---|
+| `httppoll-meas` | `measurements` → `GET /measurements` | Baseline single-topic polling → `MEASUREMENT` |
+| `httppoll-status` | `status` → `GET /status` | **Different topics, same connector**: deployed to the *same* connector instance as `httppoll-meas` — one poll job per topic, both sharing one `url`/credentials |
+| `httppoll-events-cursor` | `events` → `GET /events?since=<cursor>` | **Incremental-fetch cursor**: a *separate* connector instance with `cursorParam`/`cursorExtractionExpression` configured (cursor/pagination settings are connector-level — see `docs/feature/connector-http-polling.md` — so this can't share the plain connector above); the code loops over the response array, building one Cumulocity event per new item |
+
+### 6.1 Create the two connector instances
+
+Same `c8y api` approach as step 3 — only `C8Y_BASEURL` is needed (to fill in the connector's own
+`url` property), authentication comes from your active `c8y` session.
+
+The plain connector (topics `measurements` + `status`, no cursor):
+
+```bash
+export C8Y_BASEURL="https://<your-tenant>.cumulocity.com"
+
+c8y api --method POST --url /service/dynamic-mapper-service/configuration/connector/instance \
+  --header 'Content-Type: application/json' \
+  --data "{
+    \"identifier\": \"demo-rest-polling-connector\",
+    \"connectorType\": \"REST_POLLING\",
+    \"name\": \"Demo REST Polling Connector\",
+    \"description\": \"http-polling-mock — measurements + status, no cursor\",
+    \"enabled\": true,
+    \"properties\": {
+      \"url\": \"${C8Y_BASEURL}/service/http-polling-mock\",
+      \"pollIntervalSeconds\": 30,
+      \"authentication\": \"None\",
+      \"headers\": {}
+    }
+  }"
+```
+
+The cursor-enabled connector (topic `events` only — `cursorParam`/`cursorExtractionExpression`
+apply to every mapping on a connector, so the cursor demo needs its own instance). Note the
+escaped `\$max` — a literal `$` in `--data`'s JSON string must be escaped, or the shell expands it
+as an (empty/undefined) variable reference before `c8y` ever sees the JSON:
+
+```bash
+c8y api --method POST --url /service/dynamic-mapper-service/configuration/connector/instance \
+  --header 'Content-Type: application/json' \
+  --data "{
+    \"identifier\": \"demo-rest-polling-connector-cursor\",
+    \"connectorType\": \"REST_POLLING\",
+    \"name\": \"Demo REST Polling Connector (cursor)\",
+    \"description\": \"http-polling-mock — events, incremental-fetch cursor\",
+    \"enabled\": true,
+    \"properties\": {
+      \"url\": \"${C8Y_BASEURL}/service/http-polling-mock\",
+      \"pollIntervalSeconds\": 30,
+      \"authentication\": \"None\",
+      \"headers\": {},
+      \"cursorParam\": \"since\",
+      \"cursorExtractionExpression\": \"\$max(id)\"
+    }
+  }"
+```
+
+Connect both (only needed if created with `enabled: false`, or after a disconnect):
+
+```bash
+for c in demo-rest-polling-connector demo-rest-polling-connector-cursor; do
+  c8y api --method POST --url /service/dynamic-mapper-service/operation \
+    --header 'Content-Type: application/json' \
+    --data "{\"operation\": \"CONNECT\", \"parameter\": {\"connectorIdentifier\": \"$c\"}}"
+done
+```
+
+### 6.2 Create, deploy, and activate the three mappings
+
+`mappings/sample-mappings.json` can be imported as-is via the UI (**Mapping → Inbound →
+Import**), which deploys nothing by itself — deploy/activate each mapping afterwards as
+usual. To do the whole thing via the REST API instead, each mapping is extracted from the
+array by `identifier`, POSTed individually (`POST /mapping` takes one mapping object, not
+an array), deployed to its connector (`PUT /deployment/defined/{identifier}` — the
+mapping's own `identifier` field, e.g. `httppoll-meas`, not the numeric `id` the response
+also carries), then activated (mappings are always created inactive, per the `POST
+/mapping` contract):
+
+```bash
+create_deploy_activate() {
+  local identifier="$1" connector="$2"
+
+  python3 -c "
+import json
+mappings = json.load(open('mappings/sample-mappings.json'))
+mapping = next(m for m in mappings if m['identifier'] == '$identifier')
+json.dump(mapping, open('/tmp/${identifier}.json', 'w'))
+"
+
+  c8y api --method POST --url /service/dynamic-mapper-service/mapping \
+    --header 'Content-Type: application/json' \
+    --data "$(cat /tmp/${identifier}.json)" > /dev/null
+
+  c8y api --method PUT --url "/service/dynamic-mapper-service/deployment/defined/${identifier}" \
+    --header 'Content-Type: application/json' \
+    --template "[\"${connector}\"]" > /dev/null
+
+  c8y api --method POST --url /service/dynamic-mapper-service/operation \
+    --header 'Content-Type: application/json' \
+    --data "{\"operation\": \"ACTIVATE_MAPPING\", \"parameter\": {\"id\": \"${identifier}\", \"active\": \"true\"}}"
+}
+
+create_deploy_activate httppoll-meas           demo-rest-polling-connector
+create_deploy_activate httppoll-status          demo-rest-polling-connector
+create_deploy_activate httppoll-events-cursor   demo-rest-polling-connector-cursor
+```
+
+`deployment/defined` takes a JSON array of connector identifiers — pass it via `--template` with a
+**literal** array (`--template "[...]"` above), not `--data`; see the "Gotchas" note in
+`docs/feature/connector-http-polling.md` about `PUT /deployment/defined`'s array body getting
+silently mangled under a dynamically-built `--template input.value`-style filter.
+
+### 6.3 Verify
+
+```bash
+# All three poll jobs show up here once connected and deployed:
+c8y api --method GET --url /service/dynamic-mapper-service/monitoring/status/connector/demo-rest-polling-connector
+c8y api --method GET --url /service/dynamic-mapper-service/monitoring/status/connector/demo-rest-polling-connector-cursor
+
+# The mock's request log should show /measurements, /status, and /events(?since=...) interleaved:
+c8y api --method GET --url /service/http-polling-mock/requests
+
+# /events requests should show since= growing across cycles, not stuck at empty/absent —
+# that's the cursor actually advancing.
+c8y api --method GET --url /service/http-polling-mock/requests | jq '[.[] | select(.path == "/events")]'
+```
+
+### 6.4 Sample output: consecutive polls
+
+What healthy, stable polling looks like on `/requests` — captured from a real run, timestamps
+adjusted to the connectors' actual 30s `pollIntervalSeconds` cadence for readability. `query` is
+recorded separately from `path` (Flask's `request.path` excludes the query string), which is what
+makes the cursor's `since=` value visible here rather than only in the mock's own stdout log.
+
+**`demo-rest-polling-connector`** (two independent poll jobs, `measurements` + `status`, both on
+one connector instance — this is the "different topics, same connector" demo):
+
+```json
+[
+  {"path": "/measurements", "query": "", "receivedAt": "2026-09-22T11:00:00.123Z", "authorized": true},
+  {"path": "/status",       "query": "", "receivedAt": "2026-09-22T11:00:00.145Z", "authorized": true},
+  {"path": "/measurements", "query": "", "receivedAt": "2026-09-22T11:00:30.130Z", "authorized": true},
+  {"path": "/status",       "query": "", "receivedAt": "2026-09-22T11:00:30.151Z", "authorized": true},
+  {"path": "/measurements", "query": "", "receivedAt": "2026-09-22T11:01:00.128Z", "authorized": true},
+  {"path": "/status",       "query": "", "receivedAt": "2026-09-22T11:01:00.149Z", "authorized": true}
+]
+```
+
+Both topics fire every ~30s, a few milliseconds apart (they're two independent poll jobs on the
+same connector, not one request doing double duty) — that small, *consistent* offset between them
+on every cycle is expected. `headers` is omitted above for brevity; it carries whatever the
+connector's `authentication`/`headers` properties send, redacting `Authorization`.
+
+**`demo-rest-polling-connector-cursor`** (`events`, cursor advancing each poll):
+
+```json
+[
+  {"path": "/events", "query": "",         "receivedAt": "2026-09-22T11:00:05.200Z", "authorized": true},
+  {"path": "/events", "query": "since=1",  "receivedAt": "2026-09-22T11:00:35.210Z", "authorized": true},
+  {"path": "/events", "query": "since=2",  "receivedAt": "2026-09-22T11:01:05.225Z", "authorized": true}
+]
+```
+
+The first poll has no `since` at all — no cursor is stored yet — and returns every event
+accumulated so far; from the second poll on, `since=<lastId>` climbs by exactly one per cycle,
+because `cursorExtractionExpression` (`$max(id)`) reads back the highest `id` from each response
+and each poll appends exactly one synthetic event. What that second poll's response body actually
+looks like:
+
+```json
+[
+  {"id": 2, "deviceId": "poll-sensor-01", "timestamp": "2026-09-22T11:00:35.212Z", "text": "Synthetic poll event #2"}
+]
+```
+
+A `since=` that stays empty/absent across every poll, or that repeats the same value instead of
+climbing, means the cursor isn't advancing — check `cursorParam`/`cursorExtractionExpression` on
+the connector, and see "Cursor advances only after processing succeeds" in
+`docs/feature/connector-http-polling.md` for what can block it (a mapping processing failure never
+advances the cursor, by design).
+
+## Troubleshooting
+
+### `"... cannot access endpoint: /service/dynamic-mapper-service/..."` / `general/internalError`
+
+This is a platform-gateway error, not an auth failure — a bad credential gets a plain `401`, and
+this message body actually names your correctly-identified tenant/user, proving the gateway parsed
+your credentials fine and simply couldn't route the call. It means `dynamic-mapper-service` itself
+isn't reachable at that moment: check **Administration → Ecosystem → Microservices →
+dynamic-mapper-service** (or `c8y microservices get --id dynamic-mapper-service`) — not subscribed,
+crashed, or still (re)starting all produce this same error. Once it shows `UP`, retry.
+
+### No new entries in `/requests`
+
+- Check connector status is `CONNECTED`
+  (`GET /monitoring/status/connector/test-rest-polling-connector`) — if it's
+  `RETRYING` or `FAILED`, the microservice logs will show the underlying HTTP
+  error (DNS, TLS, non-2xx status).
+- Confirm the mapping is deployed to `test-rest-polling-connector` — a
+  connector with no mappings deployed to it has no poll jobs scheduled at
+  all (`subscribe()` is only called per deployed mapping).
+
+### 401 / connector stuck `RETRYING`, but nothing shows up in `/requests` at all
+
+Against the **deployed** microservice, this means Cumulocity's own gateway
+rejected the request (bad/missing Cumulocity credential in `Authorization`)
+before it ever reached `app.py` — the mock's own auth check never even ran,
+so there's nothing in `/requests` to show. Check the connector's
+`authentication`/`user`/`password` are a real Cumulocity credential (see the
+caution in step 2); `authentication: "Bearer"` against the deployed
+microservice always fails this way.
+
+### `authorized: false` in a `/requests` entry (local run)
+
+Only possible when running `app.py` locally, since a gateway-rejected
+request never reaches this log. Means the connector's
+`authentication`/`user`/`password`/`token` properties don't match the mock's
+own `AUTH_MODE`/`AUTH_USER`/`AUTH_PASSWORD`/`AUTH_TOKEN` env vars — check
+both sides agree.
+
+### `pollIntervalSeconds` rejected / connector never validates
+
+Values below `30` fail `isConfigValid()` outright — the connector config
+save will be rejected (or the connector simply never reaches `CONFIGURED`).
+Use `30` or higher.
+
+## Security Note
+
+⚠️ This mock has no real authentication mechanism (fixed credentials read
+from plain environment variables) — it exists purely to exercise the
+connector's auth code paths in a test tenant. Never point it at real
+credentials or deploy it to a production tenant.

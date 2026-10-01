@@ -23,7 +23,7 @@ import { FormsModule } from '@angular/forms';
 import { BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { Subject } from 'rxjs';
 import { EditorComponent } from '@c8y/ngx-components/editor';
-import { base64ToString, stringToBase64 } from '../../../mapping/shared/util';
+import { base64ToString, stringToBase64 } from '../../mapping/util';
 
 @Component({
   selector: 'd11r-code-editor-drawer',
