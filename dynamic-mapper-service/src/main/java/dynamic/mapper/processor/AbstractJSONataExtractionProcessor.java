@@ -22,6 +22,8 @@
 package dynamic.mapper.processor;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
+
+import com.dashjoin.jsonata.JException;
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
 import java.util.ArrayList;
@@ -200,10 +202,42 @@ public abstract class AbstractJSONataExtractionProcessor extends CommonProcessor
         try {
             var expr = jsonata(substitution.getPathSource());
             return expr.evaluate(payloadObject);
-        } catch (Exception e) {
-            log.error("{} - Exception evaluating JSONata expression: {}, {}: ", context.getTenant(),
-                    substitution.getPathSource(), payloadAsString, e);
+        } catch (JException e) {
+            // JSONata error codes: S = syntax, T = type, D = dynamic/runtime. A syntax error is a
+            // bug in the mapping that fails for EVERY message, so fail loudly with the offending
+            // expression. It used to be logged and swallowed as "no value", and the user then saw
+            // a misleading downstream complaint (missing source, "not in message payload").
+            String description = String.format("JSONata expression '%s' (for target '%s') %s: %s",
+                    substitution.getPathSource(), substitution.getPathTarget(),
+                    isSyntaxError(e) ? "has a syntax error at position " + e.getLocation() : "failed",
+                    e.getMessage());
+            log.error("{} - {}, payload: {}", context.getTenant(), description, payloadAsString, e);
+            if (isSyntaxError(e)) {
+                throw new ExpressionException(description, e);
+            }
+            // A runtime error (e.g. $number("abc")) depends on the data of this one message: keep
+            // going as before — the substitution gets no value — but say so on the context, so it
+            // shows up in test results and the warning counter instead of only in the log.
+            context.getWarnings().add(description);
             return null;
+        } catch (Exception e) {
+            String description = String.format("JSONata expression '%s' (for target '%s') failed: %s",
+                    substitution.getPathSource(), substitution.getPathTarget(), e.getMessage());
+            log.error("{} - {}, payload: {}", context.getTenant(), description, payloadAsString, e);
+            context.getWarnings().add(description);
+            return null;
+        }
+    }
+
+    private static boolean isSyntaxError(JException e) {
+        String code = e.getError();
+        return code != null && code.startsWith("S");
+    }
+
+    /** Unchecked carrier so a syntax error can leave the substitution loop; wrapped into a ProcessingException by the caller. */
+    private static final class ExpressionException extends RuntimeException {
+        ExpressionException(String message, Throwable cause) {
+            super(message, cause);
         }
     }
 

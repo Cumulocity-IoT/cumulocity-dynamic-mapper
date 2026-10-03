@@ -8,6 +8,7 @@ import com.cumulocity.model.ID;
 import com.cumulocity.model.idtype.GId;
 
 import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.model.Mapping;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.processor.model.CumulocityObject;
 import dynamic.mapper.processor.model.DeviceMessage;
@@ -40,26 +41,72 @@ public abstract class CommonProcessor {
     }
 
     /**
-     * Extracts the JavaScript source line number from an exception.
-     * For GraalVM PolyglotException, walks the guest (JS) stack frames to find the
-     * first frame with a source location. Falls back to the Java stack frame line
-     * number for non-polyglot exceptions.
+     * Describes where in the user's JavaScript an exception happened, as {@code " (line L, column C)"},
+     * or an empty string when there is no JavaScript location to report.
+     *
+     * <p>Only a location in guest (JS) code is reported. The old implementation fell back to the line
+     * of the first <em>Java</em> stack frame for any other exception, so a failure on the Java side
+     * was presented as "line 214" of a script that has no such line.
+     *
+     * <p>A syntax error carries its location on the exception itself (it has no stack); a runtime
+     * error carries it on the first guest frame. Both are mapped back to the author's line: in
+     * flat-script mode the mapping code is wrapped in {@code (function() {} + newline, which pushes
+     * every line down by one, so that is taken off again — otherwise every reported line would be
+     * off by one against what the editor shows.
      */
-    protected static int extractJsLineNumber(Exception e) {
-        if (e instanceof PolyglotException) {
-            for (PolyglotException.StackFrame frame : ((PolyglotException) e).getPolyglotStackTrace()) {
-                if (frame.isGuestFrame()) {
-                    SourceSection loc = frame.getSourceLocation();
-                    if (loc != null) {
-                        return loc.getStartLine();
-                    }
+    protected static String describeJsLocation(Throwable e) {
+        PolyglotException pe = findPolyglotException(e);
+        if (pe == null) {
+            return "";
+        }
+        SourceSection loc = pe.isSyntaxError() ? pe.getSourceLocation() : null;
+        if (loc == null) {
+            for (PolyglotException.StackFrame frame : pe.getPolyglotStackTrace()) {
+                if (frame.isGuestFrame() && frame.getSourceLocation() != null) {
+                    loc = frame.getSourceLocation();
+                    break;
                 }
             }
         }
-        if (e.getStackTrace().length > 0) {
-            return e.getStackTrace()[0].getLineNumber();
+        if (loc == null || !loc.isAvailable()) {
+            return "";
         }
-        return 0;
+        int line = loc.getStartLine();
+        String sourceName = loc.getSource().getName();
+        if (sourceName != null && sourceName.startsWith(Mapping.SMART_FUNCTION_NAME + "_")
+                && sourceName.endsWith(".js") && line > 1) {
+            line--;
+        }
+        return String.format(" (line %d, column %d)", line, loc.getStartColumn());
+    }
+
+    /** First {@link PolyglotException} in the cause chain, or {@code null}. */
+    protected static PolyglotException findPolyglotException(Throwable e) {
+        for (int depth = 0; e != null && depth < 10; depth++, e = e.getCause()) {
+            if (e instanceof PolyglotException pe) {
+                return pe;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * A one-line cause for an exception that wraps the real problem: the JavaScript error with its
+     * location when there is one in the chain, otherwise the root cause's message. Loading a Smart
+     * Function fails inside {@code GraalVMContextService} with a generic "Failed to create pooled
+     * GraalVM context" wrapper; reporting only that hid the actual SyntaxError (and its line) from
+     * the mapping's author.
+     */
+    protected static String describeCause(Throwable e) {
+        PolyglotException pe = findPolyglotException(e);
+        if (pe != null) {
+            return pe.getMessage() + describeJsLocation(pe);
+        }
+        Throwable root = e;
+        for (int depth = 0; root.getCause() != null && root.getCause() != root && depth < 10; depth++) {
+            root = root.getCause();
+        }
+        return root.getMessage() != null ? root.getMessage() : root.getClass().getSimpleName();
     }
 
     protected String resolveDeviceIdentifier(CumulocityObject cumulocityMessage, ProcessingContext<?> context,

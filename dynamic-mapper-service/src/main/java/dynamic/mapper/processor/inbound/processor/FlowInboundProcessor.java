@@ -75,7 +75,8 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
     }
 
     @Override
-    protected void processResult(Value result, ProcessingContext<?> context, String tenant) {
+    protected void processResult(Value result, ProcessingContext<?> context, String tenant)
+            throws ProcessingException {
         extractWarnings(context.getFlowContext(), context.getWarnings(), tenant);
         extractLogs(context.getFlowContext(), context.getLogs(), tenant);
 
@@ -97,19 +98,21 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
             } else if (result.hasMembers()) {
                 processSingleObjectResult(result, outputMessages, tenant);
             } else {
-                log.warn("{} - onMessage function returned unexpected result type: {} ({})",
-                        tenant, result.getClass().getSimpleName(), result.getMetaObject());
-                context.getWarnings().add("onMessage function returned unexpected result type: " + result.getMetaObject());
-                context.setFlowResult(new ArrayList<>());
-                context.setIgnoreFurtherProcessing(true);
-                return;
+                // A value that is neither an array nor an object (a string, a number, ...) is a
+                // bug in the function, not "nothing to do": report it as an error. As a warning
+                // plus "ignore" it was counted as a filtered message and the author never learned
+                // that the function returned the wrong shape.
+                throw new ProcessingException(
+                        "onMessage must return a message object or an array of message objects, but returned: "
+                                + result.getMetaObject());
             }
+        } catch (ProcessingException e) {
+            context.setFlowResult(new ArrayList<>());
+            throw e;
         } catch (Exception e) {
             log.error("{} - Error processing onMessage result: {}", tenant, e.getMessage(), e);
-            context.getWarnings().add("Error processing onMessage result: " + e.getMessage());
             context.setFlowResult(new ArrayList<>());
-            context.setIgnoreFurtherProcessing(true);
-            return;
+            throw new ProcessingException("Error processing onMessage result: " + e.getMessage(), e);
         }
 
         // Always set flow result, even if empty
@@ -146,7 +149,8 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
     /**
      * Process an array result from JavaScript function.
      */
-    private void processArrayResult(Value result, List<Object> outputMessages, String tenant) {
+    private void processArrayResult(Value result, List<Object> outputMessages, String tenant)
+            throws ProcessingException {
         long arraySize = result.getArraySize();
 
         if (arraySize == 0) {
@@ -160,7 +164,7 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
             Value element = null;
             try {
                 element = result.getArrayElement(i);
-                processResultElement(element, outputMessages, tenant);
+                processResultElement(element, outputMessages, tenant, i);
             } finally {
                 // CRITICAL FIX: Clear element reference in each iteration
                 element = null;
@@ -171,16 +175,18 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
     /**
      * Process a single object result from JavaScript function.
      */
-    private void processSingleObjectResult(Value result, List<Object> outputMessages, String tenant) {
+    private void processSingleObjectResult(Value result, List<Object> outputMessages, String tenant)
+            throws ProcessingException {
         log.debug("{} - Processing single object result", tenant);
-        processResultElement(result, outputMessages, tenant);
+        processResultElement(result, outputMessages, tenant, 0);
     }
 
     /**
      * Process a single result element and add it to the output list.
      * Handles CumulocityObject types for inbound processing.
      */
-    private void processResultElement(Value element, List<Object> outputMessages, String tenant) {
+    private void processResultElement(Value element, List<Object> outputMessages, String tenant, int index)
+            throws ProcessingException {
         if (element == null || element.isNull()) {
             log.debug("{} - Skipping null element", tenant);
             return;
@@ -192,7 +198,12 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
             log.debug("{} - Processed CumulocityObject: type={}",
                     tenant, cumulocityObj.getCumulocityType());
         } catch (Exception e) {
-            log.error("{} - Error processing result element: {}", tenant, e.getMessage(), e);
+            // Dropping the element and carrying on made a typo in a returned message (unknown
+            // cumulocityType, wrong field shape, ...) look like a successful run that produced
+            // fewer messages. Say which message is wrong and why.
+            log.error("{} - Error processing result element {}: {}", tenant, index, e.getMessage(), e);
+            throw new ProcessingException(
+                    String.format("onMessage returned an invalid message at index %d: %s", index, e.getMessage()), e);
         }
     }
 

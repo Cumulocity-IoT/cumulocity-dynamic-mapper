@@ -167,21 +167,20 @@ public class TestController {
                     result.setWarnings(firstResult.getWarnings());
                     result.setLogs(firstResult.getLogs());
                     result.setKey(firstResult.getKey());
-                    result.setSuccess(firstResult.getErrors().isEmpty());
-                    if (firstResult.getErrors() != null && !firstResult.getErrors().isEmpty()) {
-                        firstResult.getErrors().forEach(e -> {
-                            String msg = e.getMessage() != null ? e.getMessage() : "No message";
-                            Throwable cause = e.getCause();
-                            while (cause != null) {
-                                if (cause.getMessage() != null && !msg.contains(cause.getMessage())) {
-                                    msg += " (caused by: " + cause.getMessage() + ")";
-                                    break;
-                                }
-                                cause = cause.getCause();
+                    // Errors of every result, not just the first: only the first result's requests
+                    // are returned, but a failure in a later one must not make the test look green.
+                    for (var processingContext : processingResult) {
+                        if (processingContext.getErrors() == null) {
+                            continue;
+                        }
+                        for (Exception e : processingContext.getErrors()) {
+                            String msg = describeError(e);
+                            if (!result.getErrors().contains(msg)) {
+                                result.getErrors().add(msg);
                             }
-                            result.getErrors().add(msg);
-                        });
+                        }
                     }
+                    result.setSuccess(result.getErrors().isEmpty());
                     // If filter is configured and no requests were produced, add filter warning.
                     // Warnings from ProcessingContext may not survive the Camel split+stop pipeline,
                     // so we reconstruct the warning here as a reliable fallback.
@@ -192,6 +191,14 @@ public class TestController {
                         }
                     }
                 }
+            }
+            if (!Boolean.TRUE.equals(result.getSuccess()) && result.getErrors().isEmpty()) {
+                // No result came back at all (the pipeline stopped before a context was produced,
+                // or the dispatcher returned nothing). Returning success=false with an empty
+                // error list left the UI with nothing to show; say what is known.
+                result.getErrors().add("The test produced no result. The mapping was not executed; "
+                        + "check that it is valid and that its topic or filter matches the test payload. "
+                        + "The service log has more detail.");
             }
             return new ResponseEntity<>(result, HttpStatus.OK);
 
@@ -397,4 +404,23 @@ public class TestController {
                 .build();
     }
 
+
+    /**
+     * One readable line per error: its message, plus the messages of its causes that add
+     * information (a wrapper often repeats its cause, so identical text is not repeated).
+     * Stops at the root cause. Only the first differing cause used to be appended.
+     */
+    public static String describeError(Throwable error) {
+        StringBuilder msg = new StringBuilder(error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName());
+        Throwable cause = error.getCause();
+        int depth = 0;
+        while (cause != null && cause != cause.getCause() && depth++ < 5) {
+            String causeMessage = cause.getMessage();
+            if (causeMessage != null && !msg.toString().contains(causeMessage)) {
+                msg.append(" (caused by: ").append(causeMessage).append(")");
+            }
+            cause = cause.getCause();
+        }
+        return msg.toString();
+    }
 }

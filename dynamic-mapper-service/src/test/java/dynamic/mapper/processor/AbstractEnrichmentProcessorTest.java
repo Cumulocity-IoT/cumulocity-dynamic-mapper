@@ -495,8 +495,9 @@ class AbstractEnrichmentProcessorTest {
 
         // Then
         assertEquals(1, processingContext.getErrors().size(), "Should have added error to context");
-        assertTrue(processingContext.getErrors().get(0).getMessage().contains("Failed to set up GraalVM context"),
-                "Error message should mention GraalVM context setup");
+        String message = processingContext.getErrors().get(0).getMessage();
+        assertTrue(message.contains("could not be loaded"), "Error message should say the function could not be loaded: " + message);
+        assertTrue(message.contains("GraalVM setup failed"), "Error message should carry the cause: " + message);
         assertEquals(1, mappingStatus.errors, "Should have incremented error count");
         verify(mappingService).increaseAndHandleFailureCount(TEST_TENANT, mapping, mappingStatus);
 
