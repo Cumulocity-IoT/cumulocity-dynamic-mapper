@@ -225,4 +225,54 @@ class MappingStatusTest {
         assertFalse(json.contains("\"unspecified\""), "unexpected field in: " + json);
         assertFalse(json.contains("\"snapshot\""), "unexpected field in: " + json);
     }
+
+    @Test
+    @DisplayName("outcome counters and last-message/last-error are tracked, snapshotted and reset")
+    void outcomeCountersRoundTrip() {
+        MappingStatus st = status();
+
+        st.recordProcessed(1_000L);
+        st.recordFiltered(2_000L);
+        st.recordError(3_000L, "boom");
+
+        assertEquals(1, st.getMessagesProcessed());
+        assertEquals(1, st.getMessagesFiltered());
+        assertEquals(3_000L, st.getLastMessageAt());
+        assertEquals(3_000L, st.getLastErrorAt());
+        assertEquals("boom", st.getLastError());
+
+        MappingStatus copy = st.snapshot();
+        assertEquals(1, copy.getMessagesProcessed());
+        assertEquals("boom", copy.getLastError());
+
+        st.reset();
+        assertEquals(0, st.getMessagesProcessed());
+        assertEquals(0, st.getMessagesFiltered());
+        assertEquals(0, st.getLastMessageAt());
+        assertEquals(0, st.getLastErrorAt());
+        assertNull(st.getLastError());
+        assertEquals("boom", copy.getLastError(), "a snapshot must not follow the live status");
+    }
+
+    @Test
+    @DisplayName("lastError is truncated so a huge exception text cannot bloat the persisted status")
+    void lastErrorIsTruncated() {
+        MappingStatus st = status();
+        st.recordError(1L, "x".repeat(MappingStatus.MAX_LAST_ERROR_LENGTH * 3));
+        assertEquals(MappingStatus.MAX_LAST_ERROR_LENGTH, st.getLastError().length());
+
+        st.recordError(2L, null);
+        assertNull(st.getLastError());
+    }
+
+    @Test
+    @DisplayName("a status persisted before the outcome counters existed still deserializes")
+    void oldJsonStillDeserializes() throws Exception {
+        MappingStatus st = new com.fasterxml.jackson.databind.ObjectMapper().readValue(
+                "{\"identifier\":\"abc\",\"messagesReceived\":5,\"errors\":1,\"currentFailureCount\":0}",
+                MappingStatus.class);
+        assertEquals(5, st.getMessagesReceived());
+        assertEquals(0, st.getMessagesProcessed());
+        assertNull(st.getLastError());
+    }
 }

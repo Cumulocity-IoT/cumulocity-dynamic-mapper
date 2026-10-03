@@ -85,7 +85,8 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     // mapping could be resolved. Filtering strictly by direction hid it from both tabs, so
     // those messages were counted server-side and never shown anywhere.
     map(statuses => statuses.filter(st => st.direction === this.direction || !st.direction)),
-    map(statuses => this.sortWithUnmappedLast(statuses)))
+    map(statuses => this.sortWithUnmappedLast(statuses)),
+    map(statuses => statuses.map(st => this.withDisplayFields(st))))
   readonly isLoading$ = this.state$.pipe(map(state => state.isLoading));
   readonly error$ = this.state$.pipe(map(state => state.error));
 
@@ -102,7 +103,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortable: true,
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: NameRendererComponent,
-      gridTrackSize: '25%',
+      gridTrackSize: '16%',
       visible: true
     },
     {
@@ -131,7 +132,27 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '12.5%'
+      gridTrackSize: '8%'
+    },
+    {
+      header: 'Processed',
+      name: 'messagesProcessed',
+      path: 'messagesProcessed',
+      filterable: true,
+      sortable: true,
+      cellRendererComponent: NumberRendererComponent,
+      dataType: ColumnDataType.Numeric,
+      gridTrackSize: '8%'
+    },
+    {
+      header: 'Filtered',
+      name: 'messagesFiltered',
+      path: 'messagesFiltered',
+      filterable: true,
+      sortable: true,
+      cellRendererComponent: NumberRendererComponent,
+      dataType: ColumnDataType.Numeric,
+      gridTrackSize: '8%'
     },
     {
       header: 'Errors',
@@ -141,17 +162,43 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '12.5%'
+      gridTrackSize: '7%'
     },
     {
-      header: 'Current failures',
-      name: 'currentFailureCount',
-      path: 'currentFailureCount',
-      filterable: true,
-      sortable: true,
-      cellRendererComponent: NumberRendererComponent,
-      dataType: ColumnDataType.Numeric,
-      gridTrackSize: '12.5%'
+      header: 'Error rate',
+      name: 'errorRateDisplay',
+      path: 'errorRateDisplay',
+      filterable: false,
+      sortable: false,
+      dataType: ColumnDataType.TextShort,
+      gridTrackSize: '8%'
+    },
+    {
+      header: 'Status',
+      name: 'healthDisplay',
+      path: 'healthDisplay',
+      filterable: false,
+      sortable: false,
+      dataType: ColumnDataType.TextShort,
+      gridTrackSize: '12%'
+    },
+    {
+      header: 'Last message',
+      name: 'lastMessageDisplay',
+      path: 'lastMessageDisplay',
+      filterable: false,
+      sortable: false,
+      dataType: ColumnDataType.TextShort,
+      gridTrackSize: '13%'
+    },
+    {
+      header: 'Last error',
+      name: 'lastErrorDisplay',
+      path: 'lastErrorDisplay',
+      filterable: false,
+      sortable: false,
+      dataType: ColumnDataType.TextShort,
+      gridTrackSize: '16%'
     }
   ] as const;
 
@@ -235,6 +282,36 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       }
       return this.displayName(a).localeCompare(this.displayName(b), undefined, { sensitivity: 'base' });
     });
+  }
+
+  /**
+   * Adds read-only display strings for the timestamp / last-error columns. Epoch 0 (or absent,
+   * from an older backend) means "never", shown as an empty cell rather than 1970.
+   */
+  private withDisplayFields(status: MappingStatus): MappingStatus & {
+    lastMessageDisplay: string;
+    lastErrorDisplay: string;
+    errorRateDisplay: string;
+    healthDisplay: string;
+  } {
+    const when = (ms?: number) => (ms ? new Date(ms).toLocaleString() : '');
+    const received = status.messagesReceived ?? 0;
+    const errors = status.errors ?? 0;
+    // errors can exceed received (the catch-all row counts failures raised before a message
+    // reaches any mapping), so cap the rate rather than show 250%.
+    const rate = received > 0 ? Math.min(100, (errors / received) * 100) : null;
+    const streak = status.currentFailureCount ?? 0;
+    return {
+      ...status,
+      errorRateDisplay: rate === null ? '' : `${rate < 10 && rate > 0 ? rate.toFixed(1) : Math.round(rate)}%`,
+      // The consecutive-failure streak, not the lifetime error count: it says whether the
+      // mapping is broken *now*, which a lifetime rate cannot (one old burst keeps it high).
+      healthDisplay: streak > 0 ? `Failing (${streak} in a row)` : received > 0 ? 'OK' : 'Idle',
+      lastMessageDisplay: when(status.lastMessageAt),
+      lastErrorDisplay: status.lastError
+        ? `${when(status.lastErrorAt)} - ${status.lastError}`
+        : ''
+    };
   }
 
   /** Mirrors NameRendererComponent: sort by what the user actually reads. */

@@ -83,6 +83,18 @@ public class MappingStatus implements Serializable {
     }
 
     /**
+     * Pre-outcome-counters constructor (the shape with {@code cursor}, before
+     * {@code messagesProcessed} and friends existed). Equivalent to the full constructor with all
+     * outcome counters at zero and no last-message / last-error information.
+     */
+    public MappingStatus(String id, String name, String identifier, Direction direction,
+            String mappingTopic, String publishTopic, long messagesReceived, long errors,
+            long currentFailureCount, String loadingError, String cursor) {
+        this(id, name, identifier, direction, mappingTopic, publishTopic, messagesReceived, errors,
+                currentFailureCount, loadingError, cursor, 0, 0, 0, 0, null);
+    }
+
+    /**
      * Pre-{@code cursor} constructor, kept for every existing caller (test fixtures and any
      * external code) that built a {@code MappingStatus} before this field existed. Equivalent to
      * the full constructor with {@code cursor = null}.
@@ -184,6 +196,39 @@ public class MappingStatus implements Serializable {
     public volatile String cursor;
 
     /**
+     * Messages that went through this mapping and ended without an error and without being
+     * dropped, i.e. the processing leg completed normally. Together with {@link #messagesFiltered}
+     * and {@link #errors} this accounts for {@link #messagesReceived} (up to messages still in
+     * flight): a message that fails is counted in {@code errors} only.
+     */
+    @Schema(description = "Messages that completed processing without error and were not filtered out", example = "1240")
+    public volatile long messagesProcessed = 0;
+
+    /**
+     * Messages that matched the mapping's topic but were deliberately dropped — a
+     * {@code filterMapping} / {@code filterInventory} that did not match, or a Smart Function /
+     * extension that asked to ignore the message. Not an error, so neither {@link #errors} nor
+     * {@link #currentFailureCount} change.
+     */
+    @Schema(description = "Messages dropped on purpose (filter did not match, or the mapping chose to ignore them); not an error", example = "4")
+    public volatile long messagesFiltered = 0;
+
+    /** Epoch millis of the last message that reached the end of this mapping's processing; 0 if none since start/reset. */
+    @Schema(description = "Epoch milliseconds of the last message this mapping finished processing (any outcome); 0 if none", example = "1759478400000")
+    public volatile long lastMessageAt = 0;
+
+    /** Epoch millis of the last failed message; 0 if none since start/reset. */
+    @Schema(description = "Epoch milliseconds of the last error; 0 if none", example = "1759478400000")
+    public volatile long lastErrorAt = 0;
+
+    /** Message of the last error, truncated to {@link #MAX_LAST_ERROR_LENGTH}; {@code null} if none. */
+    @Schema(description = "Message of the most recent error, truncated; null if none", example = "Substitution failed: no value for 'time'")
+    public volatile String lastError;
+
+    /** Caps {@link #lastError}: it is persisted with the status and shown in a table cell. */
+    public static final int MAX_LAST_ERROR_LENGTH = 500;
+
+    /**
      * Identity is the mapping {@code identifier} — the key every status map is keyed by, and
      * the only one that is always populated ({@code id}, the Cumulocity managed-object id, is
      * null for a status created before the mapping was persisted).
@@ -207,6 +252,11 @@ public class MappingStatus implements Serializable {
         messagesReceived = 0;
         errors = 0;
         currentFailureCount = 0;
+        messagesProcessed = 0;
+        messagesFiltered = 0;
+        lastMessageAt = 0;
+        lastErrorAt = 0;
+        lastError = null;
         loadingError = "";
     }
 
@@ -217,7 +267,8 @@ public class MappingStatus implements Serializable {
      */
     public synchronized MappingStatus snapshot() {
         return new MappingStatus(id, name, identifier, direction, mappingTopic, publishTopic,
-                messagesReceived, errors, currentFailureCount, loadingError, cursor);
+                messagesReceived, errors, currentFailureCount, loadingError, cursor,
+                messagesProcessed, messagesFiltered, lastMessageAt, lastErrorAt, lastError);
     }
 
     /**
@@ -230,6 +281,30 @@ public class MappingStatus implements Serializable {
 
     public synchronized void incrementErrors() {
         errors++;
+    }
+
+    /** Records a message that completed normally. */
+    public synchronized void recordProcessed(long now) {
+        messagesProcessed++;
+        lastMessageAt = now;
+    }
+
+    /** Records a message that was deliberately dropped (see {@link #messagesFiltered}). */
+    public synchronized void recordFiltered(long now) {
+        messagesFiltered++;
+        lastMessageAt = now;
+    }
+
+    /**
+     * Records the time and text of a failed message. Does not touch {@link #errors} — that is
+     * incremented at the failure site, which can be reached without a message text.
+     */
+    public synchronized void recordError(long now, String message) {
+        lastMessageAt = now;
+        lastErrorAt = now;
+        lastError = message == null || message.length() <= MAX_LAST_ERROR_LENGTH
+                ? message
+                : message.substring(0, MAX_LAST_ERROR_LENGTH);
     }
 
     public synchronized void incrementFailureCount() {
