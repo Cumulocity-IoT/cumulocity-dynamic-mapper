@@ -91,7 +91,7 @@ public class MappingStatus implements Serializable {
             String mappingTopic, String publishTopic, long messagesReceived, long errors,
             long currentFailureCount, String loadingError, String cursor) {
         this(id, name, identifier, direction, mappingTopic, publishTopic, messagesReceived, errors,
-                currentFailureCount, loadingError, cursor, 0, 0, 0, 0, null);
+                currentFailureCount, loadingError, cursor, 0, 0, 0, 0, null, 0, 0, 0, 0, 0, 0);
     }
 
     /**
@@ -225,6 +225,34 @@ public class MappingStatus implements Serializable {
     @Schema(description = "Message of the most recent error, truncated; null if none", example = "Substitution failed: no value for 'time'")
     public volatile String lastError;
 
+    /**
+     * Requests this mapping produced (Cumulocity API calls inbound, broker publishes outbound),
+     * counted per request, not per message: one message can yield several. Complements
+     * {@link #messagesProcessed}, which says nothing about how much work a message caused.
+     */
+    @Schema(description = "Requests produced by this mapping (Cumulocity calls inbound, broker publishes outbound)", example = "1302")
+    public volatile long requestsCreated = 0;
+
+    /** Subset of {@link #requestsCreated} that ended with an error. */
+    @Schema(description = "Requests that failed", example = "2")
+    public volatile long requestsFailed = 0;
+
+    /** Warnings raised while processing (e.g. filtered-out reasons, ignored substitutions). */
+    @Schema(description = "Warnings raised while processing", example = "4")
+    public volatile long warnings = 0;
+
+    /** Messages included in the processing-time figures below (test runs excluded). */
+    @Schema(description = "Number of messages the processing-time figures are based on", example = "1247")
+    public volatile long timedMessages = 0;
+
+    /** Sum of wall-clock processing time over {@link #timedMessages}, in ms. Average = total / timedMessages. */
+    @Schema(description = "Total processing time in milliseconds over timedMessages", example = "9800")
+    public volatile long processingTimeTotalMs = 0;
+
+    /** Slowest single message, in ms. */
+    @Schema(description = "Slowest single message in milliseconds", example = "420")
+    public volatile long processingTimeMaxMs = 0;
+
     /** Caps {@link #lastError}: it is persisted with the status and shown in a table cell. */
     public static final int MAX_LAST_ERROR_LENGTH = 500;
 
@@ -257,6 +285,12 @@ public class MappingStatus implements Serializable {
         lastMessageAt = 0;
         lastErrorAt = 0;
         lastError = null;
+        requestsCreated = 0;
+        requestsFailed = 0;
+        warnings = 0;
+        timedMessages = 0;
+        processingTimeTotalMs = 0;
+        processingTimeMaxMs = 0;
         loadingError = "";
     }
 
@@ -268,7 +302,9 @@ public class MappingStatus implements Serializable {
     public synchronized MappingStatus snapshot() {
         return new MappingStatus(id, name, identifier, direction, mappingTopic, publishTopic,
                 messagesReceived, errors, currentFailureCount, loadingError, cursor,
-                messagesProcessed, messagesFiltered, lastMessageAt, lastErrorAt, lastError);
+                messagesProcessed, messagesFiltered, lastMessageAt, lastErrorAt, lastError,
+                requestsCreated, requestsFailed, warnings, timedMessages,
+                processingTimeTotalMs, processingTimeMaxMs);
     }
 
     /**
@@ -305,6 +341,21 @@ public class MappingStatus implements Serializable {
         lastError = message == null || message.length() <= MAX_LAST_ERROR_LENGTH
                 ? message
                 : message.substring(0, MAX_LAST_ERROR_LENGTH);
+    }
+
+    /**
+     * Books the work a finished message caused: how long it took, how many requests it produced
+     * (and how many failed) and how many warnings it raised.
+     */
+    public synchronized void recordWork(long durationMs, int requests, int failedRequests, int warningCount) {
+        timedMessages++;
+        processingTimeTotalMs += durationMs;
+        if (durationMs > processingTimeMaxMs) {
+            processingTimeMaxMs = durationMs;
+        }
+        requestsCreated += requests;
+        requestsFailed += failedRequests;
+        warnings += warningCount;
     }
 
     public synchronized void incrementFailureCount() {

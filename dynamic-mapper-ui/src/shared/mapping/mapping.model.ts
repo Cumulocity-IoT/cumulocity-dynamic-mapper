@@ -773,6 +773,18 @@ export interface MappingStatus {
   lastErrorAt?: number;
   /** Text of the last error (truncated server-side); absent if none. */
   lastError?: string;
+  /** Requests produced (C8Y calls inbound, broker publishes outbound); per request, not per message. */
+  requestsCreated?: number;
+  /** Subset of `requestsCreated` that failed. */
+  requestsFailed?: number;
+  /** Warnings raised while processing. */
+  warnings?: number;
+  /** Messages the processing-time figures are based on. */
+  timedMessages?: number;
+  /** Sum of processing time in ms over `timedMessages`; average = total / timedMessages. */
+  processingTimeTotalMs?: number;
+  /** Slowest single message in ms. */
+  processingTimeMaxMs?: number;
   /** Set only when the mapping could not be loaded; not a processing error. */
   loadingError?: string;
 }

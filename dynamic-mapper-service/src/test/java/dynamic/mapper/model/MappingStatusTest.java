@@ -275,4 +275,26 @@ class MappingStatusTest {
         assertEquals(0, st.getMessagesProcessed());
         assertNull(st.getLastError());
     }
+
+    @Test
+    @DisplayName("recordWork accumulates requests, warnings and timing, keeps the max, and resets")
+    void workCountersAccumulate() {
+        MappingStatus st = status();
+
+        st.recordWork(10, 2, 1, 3);
+        st.recordWork(30, 1, 0, 0);
+
+        assertEquals(2, st.getTimedMessages());
+        assertEquals(40, st.getProcessingTimeTotalMs());
+        assertEquals(30, st.getProcessingTimeMaxMs());
+        assertEquals(3, st.getRequestsCreated());
+        assertEquals(1, st.getRequestsFailed());
+        assertEquals(3, st.getWarnings());
+        assertEquals(3, st.snapshot().getRequestsCreated());
+
+        st.reset();
+        assertEquals(0, st.getTimedMessages());
+        assertEquals(0, st.getProcessingTimeMaxMs());
+        assertEquals(0, st.getRequestsCreated());
+    }
 }

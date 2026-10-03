@@ -27,6 +27,7 @@ import org.springframework.stereotype.Component;
 
 import dynamic.mapper.mapping.MappingService;
 
+import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.CommonProcessor;
 import dynamic.mapper.processor.runtime.ProcessingContext;
@@ -81,6 +82,10 @@ public class ConsolidationProcessor extends CommonProcessor {
         }
         MappingStatus status = mappingService.getMappingStatus(context.getTenant(), context.getMapping());
         long now = System.currentTimeMillis();
+        long durationMs = (System.nanoTime() - context.getStartedAtNanos()) / 1_000_000L;
+        List<DynamicMapperRequest> requests = context.getRequests();
+        int failedRequests = (int) requests.stream().filter(DynamicMapperRequest::hasError).count();
+        status.recordWork(durationMs, requests.size(), failedRequests, context.getWarnings().size());
         if (context.hasError()) {
             List<Exception> errors = context.getErrors();
             Exception last = errors.get(errors.size() - 1);

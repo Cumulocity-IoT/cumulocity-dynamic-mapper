@@ -103,8 +103,8 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortable: true,
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: NameRendererComponent,
-      gridTrackSize: '16%',
-      visible: true
+      visible: true,
+      gridTrackSize: 'minmax(150px, 1.2fr)'
     },
     {
       name: 'mappingTopic',
@@ -113,7 +113,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: false,
       sortable: true,
       dataType: ColumnDataType.TextShort,
-      //gridTrackSize: '20%'
+      gridTrackSize: 'minmax(120px, 1fr)'
     },
     {
       name: 'publishTopic',
@@ -122,7 +122,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: false,
       sortable: true,
       dataType: ColumnDataType.TextShort,
-      //gridTrackSize: '20%'
+      gridTrackSize: 'minmax(120px, 1fr)'
     },
     {
       header: 'Received',
@@ -132,7 +132,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '8%'
+      gridTrackSize: '100px'
     },
     {
       header: 'Processed',
@@ -142,7 +142,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '8%'
+      gridTrackSize: '100px'
     },
     {
       header: 'Filtered',
@@ -152,7 +152,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '8%'
+      gridTrackSize: '90px'
     },
     {
       header: 'Errors',
@@ -162,7 +162,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '7%'
+      gridTrackSize: '80px'
     },
     {
       header: 'Error rate',
@@ -171,7 +171,8 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: false,
       sortable: false,
       dataType: ColumnDataType.TextShort,
-      gridTrackSize: '8%'
+      gridTrackSize: '100px',
+      visible: false
     },
     {
       header: 'Status',
@@ -180,7 +181,27 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: false,
       sortable: false,
       dataType: ColumnDataType.TextShort,
-      gridTrackSize: '12%'
+      gridTrackSize: '170px'
+    },
+    {
+      header: 'Requests (failed)',
+      name: 'requestsDisplay',
+      path: 'requestsDisplay',
+      filterable: false,
+      sortable: false,
+      dataType: ColumnDataType.TextShort,
+      gridTrackSize: '150px',
+      visible: false
+    },
+    {
+      header: 'Time avg / max',
+      name: 'processingTimeDisplay',
+      path: 'processingTimeDisplay',
+      filterable: false,
+      sortable: false,
+      dataType: ColumnDataType.TextShort,
+      gridTrackSize: '140px',
+      visible: false
     },
     {
       header: 'Last message',
@@ -189,7 +210,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: false,
       sortable: false,
       dataType: ColumnDataType.TextShort,
-      gridTrackSize: '13%'
+      gridTrackSize: '180px'
     },
     {
       header: 'Last error',
@@ -198,7 +219,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: false,
       sortable: false,
       dataType: ColumnDataType.TextShort,
-      gridTrackSize: '16%'
+      gridTrackSize: 'minmax(160px, 1.5fr)'
     }
   ] as const;
 
@@ -245,9 +266,9 @@ export class MonitoringComponent implements OnInit, OnDestroy {
         operation: Operation.REFRESH_STATUS_MAPPING
       });
 
-      this.alertService.success(
-        gettext('Mapping status refreshed successfully.')
-      );
+      // this.alertService.success(
+      //   gettext('Mapping status refreshed successfully.')
+      // );
     } catch (error) {
       this.handleError('Failed to refresh mapping status', error);
     } finally {
@@ -293,6 +314,8 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     lastErrorDisplay: string;
     errorRateDisplay: string;
     healthDisplay: string;
+    requestsDisplay: string;
+    processingTimeDisplay: string;
   } {
     const when = (ms?: number) => (ms ? new Date(ms).toLocaleString() : '');
     const received = status.messagesReceived ?? 0;
@@ -301,8 +324,15 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     // reaches any mapping), so cap the rate rather than show 250%.
     const rate = received > 0 ? Math.min(100, (errors / received) * 100) : null;
     const streak = status.currentFailureCount ?? 0;
+    const timed = status.timedMessages ?? 0;
+    const created = status.requestsCreated ?? 0;
     return {
       ...status,
+      // Empty rather than 0 when nothing was measured: a mapping that never ran has no latency.
+      requestsDisplay: timed > 0 ? `${created} (${status.requestsFailed ?? 0})` : '',
+      processingTimeDisplay: timed > 0
+        ? `${Math.round((status.processingTimeTotalMs ?? 0) / timed)} / ${status.processingTimeMaxMs ?? 0} ms`
+        : '',
       errorRateDisplay: rate === null ? '' : `${rate < 10 && rate > 0 ? rate.toFixed(1) : Math.round(rate)}%`,
       // The consecutive-failure streak, not the lifetime error count: it says whether the
       // mapping is broken *now*, which a lifetime rate cannot (one old burst keeps it high).
