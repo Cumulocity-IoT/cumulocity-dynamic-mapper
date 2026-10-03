@@ -26,7 +26,6 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { Direction, MAPPING_STATUS_UNSPECIFIED, MappingStatus } from '../../shared';
 import { MonitoringService } from '../shared/monitoring.service';
-import { CHART_COLORS } from './util';
 
 /** Outcome counts of one bucket (a direction, or the catch-all "no mapping" row). */
 interface OutcomeStats {
@@ -56,6 +55,7 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
   private readonly outcomeCategories = ['Inbound', 'Outbound', 'No mapping matched / failed early'];
   private textStyle: { fontSize: number; color: string; fontFamily: string };
+  private colors: { success: string; danger: string; info: string; warning: string; neutral: string };
 
   constructor(
     private readonly el: ElementRef,
@@ -82,6 +82,17 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
   private initializeThemeVariables(): void {
     const root = this.el.nativeElement.ownerDocument.documentElement;
     const computedStyle = getComputedStyle(root);
+    // Series colours come from the Cumulocity design-system palette tokens (codex: Design tokens >
+    // Color tokens), read from the document so the charts follow the active light/dark theme and
+    // any branding. The literals are the light-theme values, used only when a token is missing.
+    const token = (name: string, fallback: string) => computedStyle.getPropertyValue(name).trim() || fallback;
+    this.colors = {
+      success: token('--c8y-palette-status-success', '#71A112'),
+      danger: token('--c8y-palette-status-danger', '#DC5B68'),
+      info: token('--c8y-palette-status-info', '#0092db'),
+      warning: token('--c8y-palette-status-warning', '#E07800'),
+      neutral: token('--c8y-palette-gray-50', '#7D7F82')
+    };
     this.textStyle = {
       fontSize: parseInt(computedStyle.getPropertyValue('--c8y-font-size-base').trim()),
       color: computedStyle.getPropertyValue('--c8y-text-color').trim(),
@@ -185,9 +196,9 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
         axisLabel: textStyle
       },
       series: [
-        { name: 'Processed', type: 'bar', stack: 'outcome', color: CHART_COLORS.green, label, data: undefined },
-        { name: 'Filtered', type: 'bar', stack: 'outcome', color: CHART_COLORS.grey, label, data: undefined },
-        { name: 'Errors', type: 'bar', stack: 'outcome', color: CHART_COLORS.red, label, data: undefined }
+        { name: 'Processed', type: 'bar', stack: 'outcome', color: this.colors.success, label, data: undefined },
+        { name: 'Filtered', type: 'bar', stack: 'outcome', color: this.colors.neutral, label, data: undefined },
+        { name: 'Errors', type: 'bar', stack: 'outcome', color: this.colors.danger, label, data: undefined }
       ]
     };
   }
@@ -205,8 +216,8 @@ export class MonitoringChartComponent implements OnInit, OnDestroy {
       },
       yAxis: { type: 'category', data: [], axisTick: { show: false }, axisLabel: textStyle },
       series: [
-        { name: 'Average', type: 'bar', color: CHART_COLORS.blue, data: undefined },
-        { name: 'Slowest', type: 'bar', color: CHART_COLORS.orange, data: undefined }
+        { name: 'Average', type: 'bar', color: this.colors.info, data: undefined },
+        { name: 'Slowest', type: 'bar', color: this.colors.warning, data: undefined }
       ]
     };
   }
