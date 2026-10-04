@@ -64,6 +64,8 @@ interface FilterExpressionModel {
   };
 }
 
+import { findUncachedFilterAttributes } from './inventory-filter-fragments';
+
 @Component({
   selector: 'd11r-mapping-properties',
   templateUrl: 'mapping-properties.component.html',
@@ -92,6 +94,15 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   sourceSystem: string;
   targetSystem: string;
   filterInventoryModel: FilterExpressionModel;
+
+  private static readonly FILTER_INVENTORY_DESCRIPTION =
+    'The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. <code>type = "lora-device-type"</code>. NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache.';
+
+  /** The Filter Inventory field, kept so its help text can carry the "not cached" warning. */
+  private filterInventoryField?: FormlyFieldConfig;
+
+  /** Attributes of the current filter that are not in the inventory cache configuration. */
+  filterInventoryUncached: string[] = [];
 
   private feature: Feature;
   private readonly destroy$ = new Subject<void>();
@@ -190,17 +201,23 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             className: 'col-lg-6',
             key: 'filterInventory',
             type: 'input',
+            // The project wrapper, not the stock c8y one: it can show the "not in the inventory
+            // cache" warning under the input (templateOptions.warning).
+            wrappers: ['d11r-wrapper-form-field'],
             templateOptions: {
               label: 'Filter Inventory',
               placeholder: `type = "lora_device_type`,
               disabled: this.isFieldDisabled,
-              description:
-                'The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. <code>type = "lora-device-type"</code>. NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache.',
+              description: MappingStepPropertiesComponent.FILTER_INVENTORY_DESCRIPTION,
               required:
                 false
             },
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
+                this.filterInventoryField = field;
+                // An existing mapping opens with its filter already set: check it right away
+                // instead of only after the first edit.
+                void this.refreshFilterInventoryWarning(this.mapping.filterInventory);
                 field.formControl.valueChanges.pipe(
                   debounceTime(1500),
                   distinctUntilChanged(),
@@ -499,7 +516,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
 
   async updateFilterInventoryExpressionResult(path: string) {
     this.clearAlerts();
-    this.stepperService.raiseAlert({ type: 'info', text: 'NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache.' });
+    // The cache note is part of the field's help text, and a missing attribute is reported right
+    // under the field (see refreshFilterInventoryWarning) — not as a toast that disappears.
     try {
       const resultExpression: JSON = await this.mappingService.evaluateExpression(
         JSON.parse('{}'),
@@ -512,6 +530,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       };
       if (path && this.filterInventoryModel.filterExpression.resultType !== 'Boolean') throw Error('The filter expression must return of boolean type');
       this.mapping.filterInventory = path;
+      await this.refreshFilterInventoryWarning(path);
     } catch (error) {
       this.filterInventoryModel.filterExpression.valid = false;
       this.propertyFormly
@@ -520,6 +539,39 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       this.propertyFormly.get('filterInventory').markAsTouched();
     }
     this.filterInventoryModel = { ...this.filterInventoryModel };
+  }
+
+  /**
+   * The filter runs against the cached copy of the inventory object, which only holds the
+   * fragments listed in the service configuration. An attribute that is not listed is simply
+   * absent there, so the filter silently evaluates as if the device did not have it. Say so under
+   * the field. Not an error (the expression is valid, and the cache may be changed later), so it
+   * does not touch the form's validity.
+   */
+  async refreshFilterInventoryWarning(expression: string): Promise<void> {
+    let uncached: string[] = [];
+    try {
+      const configuration = await this.sharedService.getServiceConfiguration();
+      uncached = findUncachedFilterAttributes(expression, configuration?.inventoryFragmentsToCache ?? []);
+    } catch {
+      // Configuration not readable (e.g. missing permission): nothing reliable to warn about.
+      uncached = [];
+    }
+    this.filterInventoryUncached = uncached;
+    const field = this.filterInventoryField;
+    if (field?.templateOptions) {
+      field.templateOptions['warning'] = uncached.length ? this.uncachedWarningText(uncached) : undefined;
+      field.options?.detectChanges?.(field);
+    }
+  }
+
+  private uncachedWarningText(attributes: string[]): string {
+    const single = attributes.length === 1;
+    return (
+      `Not in the inventory cache: ${attributes.join(', ')}. ` +
+      `The filter evaluates as if the device did not have ${single ? 'it' : 'them'}. ` +
+      `Add ${single ? 'it' : 'them'} under Configuration > Service Configuration > Fragments from inventory to cache.`
+    );
   }
 
   onTargetAPIChanged(targetAPI: string): void {
