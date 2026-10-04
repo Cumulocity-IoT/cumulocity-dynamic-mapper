@@ -548,4 +548,21 @@ class GraalVMContextServiceTest {
                 "Expected actionable advice, got: " + cause.getMessage());
     }
 
+    @Test
+    void borrowOrCreateContext_namesTheMappingByLabelNotByInternalIdentifier() {
+        Engine engine = service.peekGraalEngine(TENANT);
+
+        RuntimeException thrown = assertThrows(RuntimeException.class, () -> service.borrowOrCreateContext(
+                "pool:label", TENANT, engine, true, null, null, b64("var x = 1;\n"),
+                "2cb0ddnq", "Axioma Meter [20623140]"));
+
+        Throwable cause = thrown.getCause() != null ? thrown.getCause() : thrown;
+        assertTrue(cause.getMessage().contains("Axioma Meter [20623140]"),
+                "Expected the name and id the UI shows, got: " + cause.getMessage());
+        assertFalse(cause.getMessage().contains("2cb0ddnq"),
+                "The internal identifier means nothing to the user, got: " + cause.getMessage());
+        assertTrue(thrown.getMessage().contains("Axioma Meter [20623140]"),
+                "The wrapper message must use the label too, got: " + thrown.getMessage());
+    }
+
 }

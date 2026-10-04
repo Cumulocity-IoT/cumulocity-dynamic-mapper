@@ -139,7 +139,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 PooledGraalContext pooledCtx = graalVMContextService.borrowOrCreateContext(
                         poolKey, tenant, graalEngine, supportESM,
                         sharedSource, systemSource,
-                        mapping.getCode(), mapping.getIdentifier());
+                        mapping.getCode(), mapping.getIdentifier(), mapping.displayLabel());
 
                 context.setPooledGraalContext(pooledCtx);
                 context.setGraalContext(pooledCtx.getGraalContext());

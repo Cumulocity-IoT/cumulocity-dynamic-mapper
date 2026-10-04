@@ -501,20 +501,20 @@ public class MappingService {
                             String sourceName = Mapping.SMART_FUNCTION_NAME + "_" + identifier + ".js";
                             serviceRegistry.getGraalVMContextService()
                                     .warmupMappingCodes(tenant, Map.of(sourceName, code));
-                            log.info("{} - Pre-compiled SmartFunction code for activated mapping [{}]",
-                                    tenant, identifier);
+                            log.info("{} - Pre-compiled SmartFunction code for activated mapping {} [{}]",
+                                    tenant, mappingName, mappingId);
                         } catch (Exception e) {
                             // This is the only compile a Smart Function ever gets before a real
                             // message hits it: code is persisted unvalidated, and this warm-up runs
                             // after activation already succeeded. Failing silently into a log line
                             // left a mapping that is active in the UI but cannot run — so the
                             // failure is published as a service event the user can actually see.
-                            log.warn("{} - Failed to pre-compile SmartFunction on activation [{}]: {}",
-                                    tenant, identifier, e.getMessage());
+                            log.warn("{} - Failed to pre-compile SmartFunction on activation of mapping {} [{}]: {}",
+                                    tenant, mappingName, mappingId, e.getMessage());
                             serviceRegistry.getC8yAgent().createLoggingEvent(
                                     String.format(
                                             "Mapping %s [%s] is active but its Smart Function code failed to compile: %s",
-                                            mappingName, identifier, e.getMessage()),
+                                            mappingName, mappingId, e.getMessage()),
                                     LoggingEventType.MAPPING_ACTIVATION_ERROR_EVENT_TYPE,
                                     DateTime.now(),
                                     tenant,
@@ -687,7 +687,7 @@ public class MappingService {
                 updateMapping(tenant, runnable, true, true);
                 updateCacheAfterChange(tenant, runnable);
             }
-            log.info("{} - Saved draft for mapping {} [{}]", tenant, runnable.getIdentifier(), id);
+            log.info("{} - Saved draft for mapping {}", tenant, runnable.displayLabel());
             return draft.getSnapshot();
         } finally {
             lock.unlock();
@@ -928,11 +928,11 @@ public class MappingService {
                 // topic would stay subscribed, and every further message would keep failing.
                 notifyDeployedConnectorsOfDeactivation(tenant, deactivated != null ? deactivated : mapping);
                 log.warn("{} - Deactivated mapping {} after {} consecutive failures (maxFailureCount: {})",
-                        tenant, mapping.getIdentifier(), mappingStatus.getCurrentFailureCount(),
+                        tenant, mapping.displayLabel(), mappingStatus.getCurrentFailureCount(),
                         mapping.getMaxFailureCount());
             } catch (Exception e) {
                 log.error("{} - Failed to deactivate mapping {} after exceeding maxFailureCount: {}",
-                        tenant, mapping.getIdentifier(), e.getMessage(), e);
+                        tenant, mapping.displayLabel(), e.getMessage(), e);
             } finally {
                 deactivationsInFlight.remove(key);
             }
@@ -963,7 +963,7 @@ public class MappingService {
                 }
             } catch (Exception e) {
                 log.warn("{} - Could not update subscription on connector {} while deactivating mapping {}: {}",
-                        tenant, connectorId, mapping.getIdentifier(), e.getMessage());
+                        tenant, connectorId, mapping.displayLabel(), e.getMessage());
             }
         }
     }

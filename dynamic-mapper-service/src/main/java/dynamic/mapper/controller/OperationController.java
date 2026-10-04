@@ -577,7 +577,7 @@ public class OperationController {
             // remaining notification subscriptions against Cumulocity failed (e.g. backend
             // temporarily unavailable) - surface this instead of silently reporting success.
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Connector " + connectorIdentifier
+                    "Connector " + (configuration.getName() != null ? configuration.getName() : connectorIdentifier)
                             + " was disconnected, but reconnecting remaining notification subscriptions failed");
         }
 

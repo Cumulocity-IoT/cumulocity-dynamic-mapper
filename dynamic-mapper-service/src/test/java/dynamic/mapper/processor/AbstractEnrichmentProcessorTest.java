@@ -207,7 +207,7 @@ class AbstractEnrichmentProcessorTest {
         Value onMsgFn = poolCtx.getBindings("js").getMember("onMessage");
         pooledContext = new PooledGraalContext(poolCtx, onMsgFn, graalEngine);
         when(graalVMContextService.borrowOrCreateContext(
-                anyString(), anyString(), any(), anyBoolean(), any(), any(), anyString(), anyString()))
+                anyString(), anyString(), any(), anyBoolean(), any(), any(), anyString(), anyString(), anyString()))
                 .thenReturn(pooledContext);
 
         when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
