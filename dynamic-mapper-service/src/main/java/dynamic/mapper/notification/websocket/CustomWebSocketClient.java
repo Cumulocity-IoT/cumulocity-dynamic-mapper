@@ -107,7 +107,7 @@ public class CustomWebSocketClient extends WebSocketClient {
         if (serviceConfiguration.getLogPayload()) {
             log.info(
                     "{} - INITIAL: message on connector InternalWebSocket (notification 2.0) for outbound connector {}, API: {}, Operation: {}",
-                    tenant, connectorId.getIdentifier(), notification.getApi(), notification.getOperation());
+                    tenant, connectorId.displayName(), notification.getApi(), notification.getOperation());
         }
         ProcessingResultWrapper<?> processedResults = this.callback.onNotification(notification);
         if (processedResults == null) {
@@ -143,7 +143,7 @@ public class CustomWebSocketClient extends WebSocketClient {
                                 (long) timeout * MAX_TIMEOUT_ESCALATION_FACTOR);
                         if (attempt > 0) {
                             log.info("{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
-                                    tenant, attempt + 1, effectiveTimeout, timeout, connectorId.getIdentifier());
+                                    tenant, attempt + 1, effectiveTimeout, timeout, connectorId.displayName());
                         }
                         results = processedResults.getProcessingResult().get(effectiveTimeout,
                                 TimeUnit.MILLISECONDS);
@@ -161,7 +161,7 @@ public class CustomWebSocketClient extends WebSocketClient {
                     // so the broker retransmits the unACKed message.
                     if (processedResults.getCancellationRequested().get()) {
                         log.warn("{} - JS CPU timeout fired: processing cancelled before wall-clock timeout, not ACKing. connector: {}",
-                                tenant, connectorId.getIdentifier());
+                                tenant, connectorId.displayName());
                         handleFailureOrRetransmit(notification, messageId);
                         return null;
                     }
@@ -198,7 +198,7 @@ public class CustomWebSocketClient extends WebSocketClient {
                         if (notification.getAckHeader() != null) {
                             log.info(
                                     "{} - END: Sending manual ack for message on Internal WebSocket connector (notification 2.0), API: {}, QoS: {}, Outbound Connector: {}",
-                                    tenant, notification.getApi(), mappingQos, connectorId.getIdentifier());
+                                    tenant, notification.getApi(), mappingQos, connectorId.displayName());
                             send(notification.getAckHeader()); // ack message
                         } else {
                             throw new RuntimeException("No message id found for ack");
@@ -209,7 +209,7 @@ public class CustomWebSocketClient extends WebSocketClient {
                         if (notification.getAckHeader() != null) {
                             log.info(
                                     "{} - END: Sending manual ack for message on Internal WebSocket connector (notification 2.0), API: {}, QoS: {}, Outbound Connector: {}",
-                                    tenant, notification.getApi(), mappingQos, connectorId.getIdentifier());
+                                    tenant, notification.getApi(), mappingQos, connectorId.displayName());
                             send(notification.getAckHeader()); // ack message
                         } else {
                             throw new RuntimeException("No message id found for ack");
@@ -218,7 +218,7 @@ public class CustomWebSocketClient extends WebSocketClient {
                         // Server error (>=500): trigger WebSocket reconnect for retransmission
                         log.warn(
                                 "{} - END: Server error (HTTP {}), triggering WebSocket reconnect for retransmission. API: {}, connector: {}",
-                                tenant, httpStatusCode, notification.getApi(), connectorId.getIdentifier());
+                                tenant, httpStatusCode, notification.getApi(), connectorId.displayName());
                         handleFailureOrRetransmit(notification, messageId);
                     }
                 } catch (InterruptedException | ExecutionException e) {
@@ -261,7 +261,7 @@ public class CustomWebSocketClient extends WebSocketClient {
 
                     log.warn(
                             "{} - END: Processing timed out after {}ms, triggering WebSocket reconnect for retransmission. connector: {}, cancel result: {}, future completed: {}",
-                            tenant, effectiveTimeout, connectorId.getIdentifier(), cancelResult, futureCompleted);
+                            tenant, effectiveTimeout, connectorId.displayName(), cancelResult, futureCompleted);
                     handleFailureOrRetransmit(notification, messageId);
                 } catch (Exception e) {
                     // Handle other exceptions
@@ -278,7 +278,7 @@ public class CustomWebSocketClient extends WebSocketClient {
             if (notification.getAckHeader() != null) {
                 log.debug(
                         "{} - END: Sending manual ack for message on Internal WebSocket connector (notification 2.0), API: {}, QoS: {}, Outbound Connector: {}",
-                        tenant, notification.getApi(), mappingQos, connectorId.getIdentifier());
+                        tenant, notification.getApi(), mappingQos, connectorId.displayName());
                 send(notification.getAckHeader()); // ack message
             } else {
                 throw new RuntimeException("No message id found for ack");
@@ -323,7 +323,7 @@ public class CustomWebSocketClient extends WebSocketClient {
         if (failureCount >= MAX_CONSECUTIVE_FAILURES) {
             log.error("{} - POISON PILL: {} consecutive failures without success — ACKing message to prevent "
                     + "infinite redelivery loop. Message is discarded. messageId: {}, API: {}, connector: {}",
-                    tenant, failureCount, messageId, notification.getApi(), connectorId.getIdentifier());
+                    tenant, failureCount, messageId, notification.getApi(), connectorId.displayName());
             failureCountPerMessage.remove(messageId);
             if (notification.getAckHeader() != null) {
                 send(notification.getAckHeader());
@@ -333,12 +333,12 @@ public class CustomWebSocketClient extends WebSocketClient {
 
         if (failureCount > 1) {
             log.warn("{} - Redelivery attempt {} for messageId: {}, API: {}, connector: {}",
-                    tenant, failureCount, messageId, notification.getApi(), connectorId.getIdentifier());
+                    tenant, failureCount, messageId, notification.getApi(), connectorId.displayName());
         }
 
         // Disconnect WebSocket to trigger Cumulocity to retransmit unACKed messages
         log.info("{} - Reconnecting WebSocket to trigger retransmission for messageId: {}, API: {}, connector: {}",
-                tenant, messageId, notification.getApi(), connectorId.getIdentifier());
+                tenant, messageId, notification.getApi(), connectorId.displayName());
         this.reconnect();
     }
 

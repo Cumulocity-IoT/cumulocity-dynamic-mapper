@@ -512,7 +512,7 @@ public class OperationController {
         AConnectorClient existingClient = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
         Future<?> connectTask;
         if (existingClient != null) {
-            log.info("{} - Client {} already registered, reconnecting existing client", tenant, connectorIdentifier);
+            log.info("{} - Client {} already registered, reconnecting existing client", tenant, configuration.getName());
             connectTask = existingClient.reconnect();
         } else {
             connectTask = bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration,
@@ -526,12 +526,12 @@ public class OperationController {
                 connectTask.get(10, TimeUnit.SECONDS);
             } catch (TimeoutException e) {
                 log.info("{} - Connector {} still connecting after 10s, returning success (async)", tenant,
-                        connectorIdentifier);
+                        configuration.getName());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                log.warn("{} - Interrupted while waiting for connector to connect: {}", tenant, connectorIdentifier);
+                log.warn("{} - Interrupted while waiting for connector to connect: {}", tenant, configuration.getName());
             } catch (Exception e) {
-                log.error("{} - Connector {} failed to connect: {}", tenant, connectorIdentifier, e.getMessage(), e);
+                log.error("{} - Connector {} failed to connect: {}", tenant, configuration.getName(), e.getMessage(), e);
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
             }
         }
@@ -561,7 +561,7 @@ public class OperationController {
         AConnectorClient client = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
         if (client == null) {
             // Connector is not actively running — mark as disabled and return success
-            log.info("{} - Connector {} is not active, marking as disabled", tenant, connectorIdentifier);
+            log.info("{} - Connector {} is not active, marking as disabled", tenant, configuration.getName());
             configuration.setEnabled(false);
             connectorConfigurationService.saveConnectorConfiguration(configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
