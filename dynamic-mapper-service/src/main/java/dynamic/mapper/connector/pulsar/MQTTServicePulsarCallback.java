@@ -69,6 +69,15 @@ public class MQTTServicePulsarCallback extends AbstractPulsarCallback {
         virtualThreadPool.submit(() -> {
             long effectiveTimeout = timeout;
             try {
+                // The dispatcher returns early, without a processing future, for messages it
+                // deliberately skips (null/$SYS topic, null payload, mapping resolution error).
+                // Acknowledge those; otherwise they stay unacknowledged forever.
+                if (processedResults.getProcessingResult() == null) {
+                    log.warn("{} - No processing result for Pulsar message (skipped by dispatcher), acknowledging. topic: [{}], mqtt topic: [{}], connector: {}",
+                            tenant, towardsDeviceTopic, topic, connectorIdentifier);
+                    consumer.acknowledge(message);
+                    return null;
+                }
                 List<? extends ProcessingContext<?>> results;
                 if (timeout > 0) {
                     int attempt = failureCountPerMessage
@@ -141,6 +150,12 @@ public class MQTTServicePulsarCallback extends AbstractPulsarCallback {
             } catch (PulsarClientException e) {
                 log.error("{} - Error acknowledging Pulsar message: topic: [{}], connector: {}",
                         tenant, towardsDeviceTopic, connectorIdentifier, e);
+            } catch (Exception e) {
+                // Anything unexpected must not leave the message silently unacknowledged
+                // (a task submitted to the pool swallows exceptions).
+                log.error("{} - Unexpected error processing Pulsar message, sending negative ack. topic: [{}], connector: {}",
+                        tenant, towardsDeviceTopic, connectorIdentifier, e);
+                handleFailureOrPoisonPill(consumer, message, messageId, towardsDeviceTopic);
             }
             return null;
         });

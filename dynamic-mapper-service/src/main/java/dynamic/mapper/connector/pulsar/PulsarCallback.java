@@ -84,6 +84,15 @@ public class PulsarCallback extends AbstractPulsarCallback {
 
         virtualThreadPool.submit(() -> {
             try {
+                // The dispatcher returns early, without a processing future, for messages it
+                // deliberately skips (null/$SYS topic, null payload, mapping resolution error).
+                // Acknowledge those; otherwise they stay unacknowledged forever.
+                if (processedResults.getProcessingResult() == null) {
+                    log.warn("{} - No processing result for Pulsar message (skipped by dispatcher), acknowledging. topic: [{}], connector: {}",
+                            tenant, topic, connectorIdentifier);
+                    consumer.acknowledge(message);
+                    return null;
+                }
                 List<? extends ProcessingContext<?>> results;
                 // Always bounded: an unbounded get() parks this worker — and leaves the message
                 // unacknowledged — forever if the pipeline blocks in I/O. Mappings without their
@@ -136,6 +145,12 @@ public class PulsarCallback extends AbstractPulsarCallback {
             } catch (PulsarClientException e) {
                 log.error("{} - Error acknowledging Pulsar message: topic: [{}], connector: {}",
                         tenant, topic, connectorIdentifier, e);
+            } catch (Exception e) {
+                // Anything unexpected must not leave the message silently unacknowledged
+                // (a task submitted to the pool swallows exceptions).
+                log.error("{} - Unexpected error processing Pulsar message, sending negative ack. topic: [{}], connector: {}",
+                        tenant, topic, connectorIdentifier, e);
+                handleFailureOrPoisonPill(consumer, message, messageId, topic);
             }
             return null;
         });
