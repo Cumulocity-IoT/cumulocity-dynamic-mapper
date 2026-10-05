@@ -105,7 +105,7 @@
 		<dependency>
 			<groupId>io.opentelemetry</groupId>
 			<artifactId>opentelemetry-api-incubator</artifactId>
-			<version>1.62.0-alpha</version>
+			<version>1.66.0-alpha</version>
 		</dependency>
 
 		<dependency>
