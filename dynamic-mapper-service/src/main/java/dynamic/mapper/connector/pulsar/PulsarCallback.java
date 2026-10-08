@@ -55,11 +55,10 @@ public class PulsarCallback extends AbstractPulsarCallback {
 
     @Override
     public void received(Consumer<byte[]> consumer, Message<byte[]> message) {
-        String topic = message.getProperty(MQTTServicePulsarClient.PULSAR_PROPERTY_CHANNEL);
-        String client = message.getProperty(MQTTServicePulsarClient.PULSAR_PROPERTY_CLIENT_ID);
+        String topic = message.getTopicName();
+        String client = message.getProducerName();
         byte[] payloadBytes = message.getData();
         String messageId = message.getMessageId().toString();
-
         ConnectorMessage connectorMessage = ConnectorMessage.builder()
                 .tenant(tenant)
                 .topic(topic)
