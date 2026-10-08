@@ -1,6 +1,6 @@
 # Cumulocity Dynamic Mapper
 
-Map arbitrary broker payloads to and from the Cumulocity domain model using a graphical editor or JavaScript-based mappings.
+Map arbitrary broker payloads to and from the [Cumulocity](https://www.cumulocity.com) domain model using a graphical editor or JavaScript-based mappings.
 
 ## What It Does
 
