@@ -322,7 +322,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                         .topicsPattern(Pattern.compile(pulsarPattern))
                         .subscriptionName(subscriptionName)
                         .subscriptionType(subscriptionType)
-                        .messageListener(new QoSAwarePulsarCallback(pulsarCallback, qos))
+                        .messageListener(new QoSAwarePulsarCallback(pulsarCallback, qos, topic))
                         .acknowledgmentGroupTime(qos.requiresAcknowledgement() ? 100 : 0, TimeUnit.MILLISECONDS)
                         .subscribe();
                 log.info("{} - Subscribed to pattern: [{}] (MQTT: [{}])", tenant, pulsarPattern, topic);
@@ -333,7 +333,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                         .topic(pulsarTopic)
                         .subscriptionName(subscriptionName)
                         .subscriptionType(subscriptionType)
-                        .messageListener(new QoSAwarePulsarCallback(pulsarCallback, qos))
+                        .messageListener(new QoSAwarePulsarCallback(pulsarCallback, qos, topic))
                         .acknowledgmentGroupTime(qos.requiresAcknowledgement() ? 100 : 0, TimeUnit.MILLISECONDS)
                         .subscribe();
                 log.info("{} - Subscribed to topic: [{}] (MQTT: [{}])", tenant, pulsarTopic, topic);
@@ -903,10 +903,12 @@ public class PulsarConnectorClient extends AConnectorClient {
     protected static class QoSAwarePulsarCallback implements MessageListener<byte[]> {
         private final PulsarCallback delegate;
         private final Qos qos;
+        private final String logicalTopic;
 
-        public QoSAwarePulsarCallback(PulsarCallback delegate, Qos qos) {
+        public QoSAwarePulsarCallback(PulsarCallback delegate, Qos qos, String logicalTopic) {
             this.delegate = delegate;
             this.qos = qos;
+            this.logicalTopic = logicalTopic;
         }
 
         @Override
@@ -919,7 +921,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                 }
             }
 
-            delegate.received(consumer, message);
+            delegate.received(consumer, message, logicalTopic);
         }
     }
 

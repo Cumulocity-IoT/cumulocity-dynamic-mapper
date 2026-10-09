@@ -55,7 +55,10 @@ public class PulsarCallback extends AbstractPulsarCallback {
 
     @Override
     public void received(Consumer<byte[]> consumer, Message<byte[]> message) {
-        String topic = message.getTopicName();
+        received(consumer, message, message.getTopicName());
+    }
+
+    void received(Consumer<byte[]> consumer, Message<byte[]> message, String topic) {
         String client = message.getProducerName();
         byte[] payloadBytes = message.getData();
         String messageId = message.getMessageId().toString();
