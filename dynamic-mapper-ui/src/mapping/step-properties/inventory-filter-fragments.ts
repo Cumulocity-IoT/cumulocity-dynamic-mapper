@@ -72,11 +72,15 @@ export function isFragmentCached(name: string, cachedFragments: string[]): boole
     if (!pattern) {
       return false;
     }
-    if (!pattern.includes('*')) {
+    if (!pattern.includes('*') && !pattern.includes('?')) {
       return pattern === name;
     }
     const regex = new RegExp(
-      '^' + pattern.split('*').map(part => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$'
+      '^' + pattern.split(/([*?])/).map(part => {
+        if (part === '*') return '.*';
+        if (part === '?') return '.';
+        return part.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+      }).join('') + '$'
     );
     return regex.test(name);
   });
