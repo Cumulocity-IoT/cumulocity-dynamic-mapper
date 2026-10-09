@@ -93,30 +93,54 @@
       </div>
       }
       <hr />
-      <!-- Collapsible console header -->
-      <div class="d-flex a-i-center p-t-4 p-b-4" data-cy="dm-mapping-test-console-toggle" (click)="showConsole = !showConsole" style="cursor:pointer">
-        <i [c8yIcon]="showConsole ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>
-        <span translate>Console output</span>
+      <!-- Collapsible console header. A real button (keyboard + screen reader), and it carries the
+           error/warning counts so a collapsed console still shows that something went wrong. -->
+      <div class="d-flex a-i-center p-t-4 p-b-4">
+        <button type="button" class="btn-clean d-flex a-i-center" data-cy="dm-mapping-test-console-toggle"
+          [attr.aria-expanded]="showConsole" aria-controls="dm-mapping-test-console"
+          (click)="showConsole = !showConsole">
+          <i [c8yIcon]="showConsole ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>
+          <span translate>Console output</span>
+        </button>
+        @if (logCounts.errors > 0) {
+        <span class="badge badge-danger m-l-8" data-cy="dm-mapping-test-console-errors">
+          {{ logCounts.errors }} {{ logCounts.errors === 1 ? 'error' : 'errors' }}</span>
+        }
+        @if (logCounts.warnings > 0) {
+        <span class="badge badge-warning m-l-8" data-cy="dm-mapping-test-console-warnings">
+          {{ logCounts.warnings }} {{ logCounts.warnings === 1 ? 'warning' : 'warnings' }}</span>
+        }
+        @if (testingModel.logs?.length) {
+        <button type="button" class="btn btn-link btn-sm m-l-auto" data-cy="dm-mapping-test-console-copy"
+          title="{{ 'Copy console output' | translate }}" (click)="copyConsole()">
+          <i c8yIcon="copy"></i> {{ 'Copy' | translate }}
+        </button>
+        }
       </div>
-      <div class="collapse" [isAnimated]="true" [collapse]="!showConsole">
+      <div class="collapse" id="dm-mapping-test-console" [isAnimated]="true" [collapse]="!showConsole">
         <div>
           <div class="form-group">
-            <div class="console-output">
+            <!-- role="log": screen readers announce lines as they are added. -->
+            <div class="console-output" role="log" aria-live="polite" aria-label="Console output">
               @if (isLoading) {
                 <span class="log-loading">Processing</span>
-                } @else if (testingModel.logs?.length) {
+              } @else if (testingModel.logs?.length) {
                 @for (line of testingModel.logs; track $index) {
-                <div [class]="'log-line log-' + getLogLevel(line)">{{ line }}</div>
+                  @let entry = toLogEntry(line);
+                  <div [class]="'log-line log-' + entry.level">
+                    <span class="log-tag" aria-hidden="true">{{ entry.tag }}</span>
+                    <span class="visually-hidden">{{ entry.level }}: </span>{{ entry.text }}
+                  </div>
                 }
-                } @else if (testingModel.results?.length) {
+              } @else if (testingModel.results?.length) {
                 <span class="log-empty" translate>No console output for this test run</span>
-                } @else {
+              } @else {
                 <span class="log-empty" translate>No output yet</span>
-                }
-              </div>
+              }
             </div>
           </div>
         </div>
+      </div>
 
     </div>
   </div>

@@ -110,8 +110,11 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
             outputMessages = extractOutputMessages(result, tenant);
         } catch (Exception e) {
             log.error("{} - Error extracting output messages: {}", tenant, e.getMessage(), e);
-            context.getWarnings().add("Error extracting output messages: " + e.getMessage());
-            outputMessages = new ArrayList<>();
+            context.setFlowResult(new ArrayList<>());
+            if (e instanceof ProcessingException) {
+                throw (ProcessingException) e;
+            }
+            throw new ProcessingException("Error extracting output messages: " + e.getMessage(), e);
         }
 
         // Always set flow result (even if empty)
@@ -177,7 +180,7 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
      * Extract output messages from the result.
      * Handles both arrays and single items.
      */
-    private List<Object> extractOutputMessages(Value result, String tenant) {
+    private List<Object> extractOutputMessages(Value result, String tenant) throws ProcessingException {
         List<Object> outputMessages = new ArrayList<>();
 
         // Check if result is an array
@@ -187,12 +190,12 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
 
             for (long i = 0; i < arraySize; i++) {
                 Value element = result.getArrayElement(i);
-                processMessageElement(element, outputMessages, tenant);
+                processMessageElement(element, outputMessages, tenant, i);
             }
         } else {
             // Single item - process directly
             log.debug("{} - Processing single item result", tenant);
-            processMessageElement(result, outputMessages, tenant);
+            processMessageElement(result, outputMessages, tenant, 0);
         }
 
         return outputMessages;
@@ -204,7 +207,8 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
      * {@link dynamic.mapper.processor.model.CumulocityObject} (e.g. custom routing);
      * all other objects are treated as {@link dynamic.mapper.processor.model.DeviceMessage}.
      */
-    private void processMessageElement(Value element, List<Object> outputMessages, String tenant) {
+    private void processMessageElement(Value element, List<Object> outputMessages, String tenant, long index)
+            throws ProcessingException {
         if (element == null || element.isNull()) {
             log.debug("{} - Skipping null element", tenant);
             return;
@@ -223,7 +227,11 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
                 log.debug("{} - Processed DeviceMessage: topic={}", tenant, deviceMsg.getTopic());
             }
         } catch (Exception e) {
-            log.error("{} - Error processing message element: {}", tenant, e.getMessage(), e);
+            // See FlowInboundProcessor.processResultElement: dropping a malformed message and
+            // carrying on hid the mistake behind a "successful" run.
+            log.error("{} - Error processing message element {}: {}", tenant, index, e.getMessage(), e);
+            throw new ProcessingException(
+                    String.format("onMessage returned an invalid message at index %d: %s", index, e.getMessage()), e);
         }
     }
 

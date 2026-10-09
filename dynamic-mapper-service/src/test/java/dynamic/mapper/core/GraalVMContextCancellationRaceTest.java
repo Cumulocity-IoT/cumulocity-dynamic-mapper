@@ -332,8 +332,7 @@ class GraalVMContextCancellationRaceTest {
         Exception recorded = context.getErrors().get(context.getErrors().size() - 1);
         Throwable cause = recorded.getCause();
         assertInstanceOf(PolyglotException.class, cause, "Recorded error should wrap the PolyglotException from the killed context");
-        assertTrue(((PolyglotException) cause).isCancelled(),
-                "PolyglotException should be the cancellation flavor, not a generic failure");
+        assertCancellationFlavor((PolyglotException) cause);
 
         // Assertion (finding #1): engine accounting must return to baseline, not leak an
         // in-flight count because both the interrupt path and the cancelAction path tried to
@@ -582,8 +581,7 @@ class GraalVMContextCancellationRaceTest {
         Throwable cause = recorded.getCause();
         assertInstanceOf(PolyglotException.class, cause,
                 "Recorded error should wrap the PolyglotException from the killed context");
-        assertTrue(((PolyglotException) cause).isCancelled(),
-                "PolyglotException should be the cancellation flavor, not a generic failure");
+        assertCancellationFlavor((PolyglotException) cause);
 
         // Direct path has no pool to leak into — the correctness question here is instead
         // "is the Context actually closed", i.e. did close(true) really terminate it. A
@@ -594,5 +592,17 @@ class GraalVMContextCancellationRaceTest {
                 "Directly-closed context must reject further use");
         assertTrue(reuseAttempt instanceof PolyglotException || reuseAttempt instanceof IllegalStateException,
                 "Expected a Polyglot/IllegalState exception on reuse, got: " + reuseAttempt);
+    }
+
+    /**
+     * cancelAndDrain() both interrupts the worker thread and force-closes the context, and
+     * whichever lands first decides the flavour GraalVM reports: Context.close(true) yields
+     * isCancelled(), while a Thread.interrupt() that wins the race yields isInterrupted()
+     * ("Thread was interrupted"). Both are legitimate outcomes of a cancellation; only a
+     * generic guest/internal failure would indicate a real problem.
+     */
+    private static void assertCancellationFlavor(PolyglotException e) {
+        assertTrue(e.isCancelled() || e.isInterrupted(),
+                "PolyglotException should be a cancellation/interrupt, not a generic failure: " + e);
     }
 }

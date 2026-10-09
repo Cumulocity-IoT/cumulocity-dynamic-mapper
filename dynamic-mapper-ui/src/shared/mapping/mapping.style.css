@@ -141,15 +141,33 @@ d11r-mapping-template-step {
 .console-output {
   background-color: #1e1e1e;
   color: #d4d4d4;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
   font-size: 12px;
   padding: 8px 12px;
   border-radius: 4px;
-  height: 300px;
+  /* Grows with the content instead of being a fixed 300px black box that is mostly empty for the
+     usual one or two lines, and pushes the action buttons off screen. */
+  min-height: 72px;
+  max-height: min(300px, 40vh);
   overflow-y: auto;
   white-space: pre-wrap;
-  word-break: break-all;
+  /* Wrap at word boundaries; only a single over-long token (a JSON blob, a URL) is broken.
+     "break-all" split ordinary words mid-way ("is dis|abled"). */
+  overflow-wrap: anywhere;
+  word-break: normal;
   border: 1px solid #333;
+}
+
+/* Level tag: fixed width so the message text of consecutive lines starts at the same column. */
+.log-tag {
+  display: inline-block;
+  min-width: 5.5ch;
+  margin-right: 8px;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+  user-select: none;
 }
 
 .log-line {

@@ -88,6 +88,13 @@ public class ProcessingContext<O> implements AutoCloseable {
     public static final String DEBUG = "debug";
     public static final String GENERIC_DEVICE_IDENTIFIER = "genericDeviceIdentifier";
 
+    /**
+     * {@link System#nanoTime()} at construction, i.e. when the message entered processing — the
+     * start of the interval {@code ConsolidationProcessor} reports as the mapping's processing time.
+     */
+    @Builder.Default
+    private long startedAtNanos = System.nanoTime();
+
     private Mapping mapping;
 
     private String topic;

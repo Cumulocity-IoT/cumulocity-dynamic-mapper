@@ -441,6 +441,40 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     return content['json'];
   }
 
+  /** Error / warning counts for the console header, so they show even while it is collapsed. */
+  get logCounts(): { errors: number; warnings: number } {
+    const logs = this.testingModel?.logs ?? [];
+    let errors = 0;
+    let warnings = 0;
+    for (const line of logs) {
+      const level = this.getLogLevel(line);
+      if (level === 'error') errors++;
+      else if (level === 'warn') warnings++;
+    }
+    return { errors, warnings };
+  }
+
+  /**
+   * Splits a raw console line into level, a short tag and the message. The backend prefixes lines
+   * with their origin ("JS WARN: ", "WARNING: ", ...); showing that prefix on every line is noise
+   * and the colour alone is no use to colour-blind users, so the level becomes a fixed-width tag.
+   */
+  toLogEntry(line: string): { level: string; tag: string; text: string } {
+    const level = this.getLogLevel(line);
+    const tags: Record<string, string> = { error: 'ERROR', warn: 'WARN', debug: 'DEBUG', info: 'INFO', log: 'LOG' };
+    const text = line.replace(/^(JS ERROR|JS WARN|JS DEBUG|JS LOG|ERROR|WARNING|INFO):\s?/, '');
+    return { level, tag: tags[level], text };
+  }
+
+  async copyConsole(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText((this.testingModel.logs ?? []).join('\n'));
+      this.alertService.info('Console output copied to clipboard.');
+    } catch {
+      this.alertService.warning('Could not copy the console output. Select the text and copy it manually.');
+    }
+  }
+
   getLogLevel(line: string): string {
     if (line.startsWith('ERROR:') || line.startsWith('JS ERROR:')) return 'error';
     if (line.startsWith('JS WARN:') || line.startsWith('WARNING:')) return 'warn';

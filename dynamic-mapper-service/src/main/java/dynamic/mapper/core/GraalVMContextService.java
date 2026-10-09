@@ -409,6 +409,25 @@ public class GraalVMContextService {
             Source systemSource,
             String mappingCode,
             String mappingIdentifier) {
+        return borrowOrCreateContext(poolKey, tenant, engine, supportESM, sharedSource, systemSource,
+                mappingCode, mappingIdentifier, mappingIdentifier);
+    }
+
+    /**
+     * Same as above, with {@code mappingLabel} — what the user knows the mapping as (see
+     * {@code Mapping#displayLabel()}) — used in error messages instead of the internal identifier.
+     * Debug logging keeps the identifier, which is what correlates log lines with source names.
+     */
+    public PooledGraalContext borrowOrCreateContext(
+            String poolKey,
+            String tenant,
+            Engine engine,
+            boolean supportESM,
+            Source sharedSource,
+            Source systemSource,
+            String mappingCode,
+            String mappingIdentifier,
+            String mappingLabel) {
 
         Deque<PooledGraalContext> deque =
                 contextPool.computeIfAbsent(poolKey, k -> new ConcurrentLinkedDeque<>());
@@ -498,8 +517,8 @@ public class GraalVMContextService {
                 }
                 ctx.close();
                 throw new IllegalStateException(String.format(
-                        "Function '%s' not found in mapping code for [%s]%s",
-                        Mapping.SMART_FUNCTION_NAME, mappingIdentifier,
+                        "Function '%s' not found in the code of mapping %s%s",
+                        Mapping.SMART_FUNCTION_NAME, mappingLabel,
                         exported.isEmpty()
                                 ? supportESM
                                         ? " - the code exports nothing; add 'export { onMessage };'"
@@ -517,9 +536,9 @@ public class GraalVMContextService {
             return newPooled;
 
         } catch (Exception e) {
-            log.error("{} - Failed to create pooled GraalVM context for mapping [{}]: {}",
-                    tenant, mappingIdentifier, e.getMessage(), e);
-            throw new RuntimeException("Failed to create pooled GraalVM context for mapping " + mappingIdentifier, e);
+            log.error("{} - Failed to create pooled GraalVM context for mapping {}: {}",
+                    tenant, mappingLabel, e.getMessage(), e);
+            throw new RuntimeException("Failed to create pooled GraalVM context for mapping " + mappingLabel, e);
         }
     }
 

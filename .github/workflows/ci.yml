@@ -135,7 +135,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Must satisfy the "engines" range in dynamic-mapper-ui/package.json (^20.19.0 || ^22.12.0).
+      # Must satisfy the "engines" range in dynamic-mapper-ui/package.json (^22.13.0).
       - uses: actions/setup-node@v7
         with:
           node-version: 22.x

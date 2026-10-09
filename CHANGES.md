@@ -103,6 +103,52 @@ not caches.
   from one tenant's context under another tenant's key. It now refuses to cache a mismatch.
 - `ConnectorRegistry` left an empty entry per unsubscribed tenant.
 
+### Clearer errors for Smart Functions and JSONata (behaviour change)
+
+Mistakes that used to be swallowed now fail the message with a specific error, which shows in the
+test console and in `lastError` / the **Errors** counter. A mapping that was silently dropping
+messages may therefore start reporting errors after the upgrade.
+
+- **JSONata syntax error** in a substitution: the message now fails with the expression, the target
+  and the position. Before, it was logged and treated as "no value". A *runtime* JSONata error that
+  depends on one message's data (e.g. `$number("abc")`) still lets the message continue, but is now
+  added to the warnings instead of only the log.
+- **Smart Function returns the wrong shape** (neither an object nor an array) or **an invalid
+  message** inside the returned array: now an error naming the index. Before, the message was
+  dropped with a warning and counted as filtered.
+- **Reported JavaScript location** is now `(line L, column C)` of the author's code, and only for
+  errors that really came from JavaScript. Before, the line was one too high in flat-script mode,
+  and a Java-side failure was reported with a Java source line.
+- **A Smart Function that cannot be loaded** (syntax error, missing `onMessage`) now reports the real
+  cause with its line and column, instead of only "Failed to create pooled GraalVM context".
+- **A Smart Function that is stopped for running too long** reports the limit that was hit
+  (`maxCPUTimeMS` or the pipeline timeout) and where it was stopped, instead of GraalVM's generic
+  "cancelled" text.
+- Result processors printed the mapping name where the error message belonged
+  (`Error in X: <mapping name> for mapping: <message>`); fixed.
+- **Test endpoint**: errors of every result are returned, not only the first; the full cause chain
+  is shown; and a test that produced no result at all now says so instead of returning
+  `success=false` with no error text.
+
+### Richer mapping statistics
+
+The mapping status now says what happened to a message, not only that it arrived. All additions
+are additive fields on the `d11r_mapping` status fragment and the status REST payload; existing
+fields are unchanged and older persisted statuses still load.
+
+- New counters per mapping: `messagesProcessed`, `messagesFiltered` (dropped by a filter or by the
+  mapping on purpose — not an error), `requestsCreated` / `requestsFailed`, `warnings`, and
+  processing time (`timedMessages`, `processingTimeTotalMs`, `processingTimeMaxMs`).
+- New per-mapping `lastMessageAt`, `lastErrorAt` and `lastError` for triage without the service events.
+- **Monitoring → Statistic processed** gains Processed, Filtered, Status, Last message and Last error
+  columns; Error rate, Requests and Time avg / max are available from the column menu. The
+  **Current failures** column is replaced by **Status** (OK / Failing (N in a row) / Idle), which is
+  the same consecutive-failure streak shown as a state.
+- **Monitoring → Chart processed** shows messages by outcome (processed / filtered / errors) and the
+  slowest mappings by average processing time. Failures raised before a mapping is resolved now have
+  their own bar instead of being added to Inbound.
+- Test runs from the mapping editor do not change these counters.
+
 ### Mapping status reporting
 
 - Messages arriving on a topic that no mapping covers are now counted on the catch-all status

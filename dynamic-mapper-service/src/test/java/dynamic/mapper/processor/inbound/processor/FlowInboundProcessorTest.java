@@ -22,6 +22,8 @@
 package dynamic.mapper.processor.inbound.processor;
 
 import static org.junit.jupiter.api.Assertions.*;
+
+import dynamic.mapper.processor.ProcessingException;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -442,12 +444,15 @@ class FlowInboundProcessorTest {
         // array elements nor members), exercising the "unexpected result type" path
         Value result = graal.eval("42");
 
-        // When
-        invokeProcessResult(result);
+        // When - a wrong return shape is a bug in the function, so it is an error, not an "ignore":
+        // as a warning it was counted as a filtered message and the author never learned of it.
+        Exception thrown = assertThrows(Exception.class, () -> invokeProcessResult(result));
 
-        // Then - Verify processing is ignored
-        assertTrue(processingContext.isIgnoreFurtherProcessing(),
-                "Should ignore further processing for non-array result");
+        // Then
+        Throwable cause = thrown.getCause() != null ? thrown.getCause() : thrown;
+        assertTrue(cause instanceof ProcessingException, "Should be a ProcessingException: " + cause);
+        assertTrue(cause.getMessage().contains("must return a message object or an array"),
+                "Message should explain the expected shape: " + cause.getMessage());
 
         log.info("Successfully validated non-array flow result handling");
     }

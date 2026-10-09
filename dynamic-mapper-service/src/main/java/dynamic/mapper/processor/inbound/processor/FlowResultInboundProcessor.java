@@ -114,10 +114,10 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
 
     @Override
     protected void handleProcessingError(Exception e, ProcessingContext<?> context, String tenant, Mapping mapping) {
-        int lineNumber = extractJsLineNumber(e);
+        String location = describeJsLocation(e);
         String errorMessage = String.format(
-                "%s - Error in FlowResultInboundProcessor: %s for mapping: %s, line %s",
-                tenant, mapping.getName(), e.getMessage(), lineNumber);
+                "%s - Error in FlowResultInboundProcessor for mapping %s: %s%s",
+                tenant, mapping.getName(), e.getMessage(), location);
         log.error(errorMessage, e);
 
         if (e instanceof ProcessingException) {
@@ -164,7 +164,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             // Get the API from the cumulocityType using unified API derivation
             if(cumulocityMessage.getCumulocityType() == null){
                 String warnMsg = String.format(
-                        "CumulocityObject missing cumulocityType, cannot derive API for mapping '%s', skipping message", mapping.getIdentifier());
+                        "CumulocityObject missing cumulocityType, cannot derive API for mapping %s, skipping message", mapping.displayLabel());
                 log.warn("{} - {}", tenant, warnMsg);
                 context.getWarnings().add(warnMsg);
                 return;

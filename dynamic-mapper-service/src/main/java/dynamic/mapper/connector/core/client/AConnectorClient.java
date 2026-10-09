@@ -1086,15 +1086,15 @@ public abstract class AConnectorClient {
             // Single source of truth: manager handles effective-mapping removal,
             // reference-count decrement and broker unsubscribe when count reaches zero.
             mappingSubscriptionManager.removeSubscriptionInbound(mapping);
-            log.info("{} - Deleted inbound subscription for mapping: {}", tenant, mapping.getIdentifier());
+            log.info("{} - Deleted inbound subscription for mapping: {}", tenant, mapping.displayLabel());
         } catch (Exception e) {
-            log.error("{} - Error deleting inbound subscription for mapping: {}", tenant, mapping.getIdentifier(), e);
+            log.error("{} - Error deleting inbound subscription for mapping: {}", tenant, mapping.displayLabel(), e);
         }
     }
 
     private void deleteOutboundSubscription(Mapping mapping) {
         mappingSubscriptionManager.removeSubscriptionOutbound(mapping.getIdentifier());
-        log.info("{} - Deleted outbound subscription for mapping: {}", tenant, mapping.getIdentifier());
+        log.info("{} - Deleted outbound subscription for mapping: {}", tenant, mapping.displayLabel());
     }
 
     /**

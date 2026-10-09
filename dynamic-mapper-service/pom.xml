@@ -206,6 +206,15 @@
             <groupId>org.apache.pulsar</groupId>
             <artifactId>pulsar-common</artifactId>
             <exclusions>
+                <!-- The shaded pulsar-client jar already bundles com.scurrilous.circe (unrelocated,
+                     built against the shaded netty ByteBuf). This unshaded copy has the same class
+                     names against the plain netty ByteBuf; whichever comes first on the classpath
+                     wins, and the wrong one makes every received message fail checksum
+                     verification with NoSuchMethodError (consumer reconnect loop, nothing acked). -->
+                <exclusion>
+                    <groupId>org.apache.bookkeeper</groupId>
+                    <artifactId>circe-checksum</artifactId>
+                </exclusion>
                 <exclusion>
                     <groupId>com.fasterxml.jackson.core</groupId>
                     <artifactId>jackson-databind</artifactId>
@@ -471,12 +480,32 @@
                 <artifactId>flatten-maven-plugin</artifactId>
             </plugin>
 
+            <!-- Resolves the mockito-core jar path into ${org.mockito:mockito-core:jar} so it can be
+                 passed to the test JVMs as an explicit -javaagent (see argLine below). Without
+                 this, Mockito's inline mock maker self-attaches its ByteBuddy agent at runtime,
+                 which JDK 21+ warns about and which fails outright in the forked failsafe JVM
+                 on CI ("Could not self-attach to current VM using external process"). -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>mockito-agent-path</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- Surefire Plugin for Unit Tests -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.6</version>
                 <configuration>
+                    <argLine>-javaagent:${org.mockito:mockito-core:jar}</argLine>
 
                     <!-- Run fast unit tests by default -->
                     <includes>
@@ -500,8 +529,9 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>3.5.6</version>
+                <version>3.6.0</version>
                 <configuration>
+                    <argLine>-javaagent:${org.mockito:mockito-core:jar}</argLine>
                     <!-- Sequential execution for integration tests -->
                     <parallel>none</parallel>
                 </configuration>

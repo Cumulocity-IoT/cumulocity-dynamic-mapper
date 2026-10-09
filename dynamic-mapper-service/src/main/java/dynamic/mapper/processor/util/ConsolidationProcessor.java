@@ -20,11 +20,15 @@
  */
 package dynamic.mapper.processor.util;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.mapping.MappingService;
 
+import dynamic.mapper.model.DynamicMapperRequest;
+import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.CommonProcessor;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 
@@ -61,7 +65,35 @@ public class ConsolidationProcessor extends CommonProcessor {
             if (!context.hasError() && !context.isTesting() && context.getMapping() != null) {
                 mappingService.resetFailureCountOnSuccess(context.getTenant(), context.getMapping());
             }
+            recordOutcome(context);
             context.close();
+        }
+    }
+
+    /**
+     * Books the leg's outcome on the mapping's status, so the statistics can tell "processed"
+     * from "filtered" from "failed" instead of only counting what arrived. An error wins over
+     * the ignore flag: a leg that fails and then stops is a failure, not a filtered message.
+     * Test runs are skipped — they must never change a mapping's runtime status.
+     */
+    private void recordOutcome(ProcessingContext<?> context) {
+        if (context.isTesting() || context.getMapping() == null || context.getTenant() == null) {
+            return;
+        }
+        MappingStatus status = mappingService.getMappingStatus(context.getTenant(), context.getMapping());
+        long now = System.currentTimeMillis();
+        long durationMs = (System.nanoTime() - context.getStartedAtNanos()) / 1_000_000L;
+        List<DynamicMapperRequest> requests = context.getRequests();
+        int failedRequests = (int) requests.stream().filter(DynamicMapperRequest::hasError).count();
+        status.recordWork(durationMs, requests.size(), failedRequests, context.getWarnings().size());
+        if (context.hasError()) {
+            List<Exception> errors = context.getErrors();
+            Exception last = errors.get(errors.size() - 1);
+            status.recordError(now, last.getMessage());
+        } else if (context.isIgnoreFurtherProcessing()) {
+            status.recordFiltered(now);
+        } else {
+            status.recordProcessed(now);
         }
     }
 }

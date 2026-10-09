@@ -298,6 +298,17 @@ public class Mapping implements Serializable {
 
     public static final String SMART_FUNCTION_NAME = "onMessage";
 
+    /**
+     * How a mapping is identified in messages meant for people: its name and, once it is persisted,
+     * its id in square brackets ({@code Axioma Meter [20623140]}) — the two things the mapping
+     * list shows. NOT the {@link #identifier}: that is an internal key (hidden in the UI) that
+     * means nothing to the user reading the message. Not a bean property, so it is not serialized.
+     */
+    public String displayLabel() {
+        String label = name != null && !name.isBlank() ? name : "(unnamed mapping)";
+        return id != null && !id.isBlank() ? label + " [" + id + "]" : label;
+    }
+
     @Override
     public boolean equals(Object m) {
         return (m instanceof Mapping) && id.equals(((Mapping) m).id);

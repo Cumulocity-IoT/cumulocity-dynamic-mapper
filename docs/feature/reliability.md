@@ -450,8 +450,20 @@ exposes, so what each one counts — and when it resets — matters.
 |---|---|---|
 | `messagesReceived` | Messages that reached this mapping's processing. Counted **per mapping**: one broker message matching three mappings increments three counters, so the sum across mappings is not the number of messages the broker delivered. | `reset()` only |
 | `errors` | Failed messages, for the lifetime of the mapping. Deliberately **not** reset by a successful message, so it stays usable as an error-rate indicator. | `reset()` only |
+| `messagesProcessed` | Messages whose processing leg ended without an error and without being dropped. | `reset()` only |
+| `messagesFiltered` | Messages deliberately dropped — a non-matching `filterMapping` / `filterInventory`, or a Smart Function / extension that set "ignore further processing". Not an error; neither `errors` nor `currentFailureCount` change. | `reset()` only |
+| `requestsCreated` / `requestsFailed` | Requests the mapping produced (Cumulocity calls inbound, broker publishes outbound) and how many of them failed. Per request, so one message can add several. | `reset()` only |
+| `warnings` | Warnings raised on the processing context. | `reset()` only |
+| `timedMessages`, `processingTimeTotalMs`, `processingTimeMaxMs` | Wall-clock processing time from when the message context is created to the end of the leg. Average = total / `timedMessages`. Excludes connector and broker time. | `reset()` only |
+| `lastMessageAt`, `lastErrorAt`, `lastError` | Epoch millis of the last finished message and last error (0 = none), and the last error's message (truncated to 500 characters). | `reset()` only |
 | `currentFailureCount` | The **consecutive** failure streak driving `maxFailureCount`. | the first message that processes without an error, and (re)activation |
 | `loadingError` | Set when the mapping could not be loaded from the inventory at all. Not a processing error — such a mapping never runs. | `reset()` |
+
+`messagesProcessed`, `messagesFiltered`, the request/warning/timing counters and the last-message /
+last-error fields are all booked in one place, `ConsolidationProcessor.recordOutcome`, which runs at
+the end of every inbound and outbound leg. An error wins over the ignore flag, so a leg that fails and
+then stops counts as an error, not as filtered. Test runs are skipped. Outcome accounting:
+`messagesReceived` ≈ `messagesProcessed` + `messagesFiltered` + failed legs.
 
 Counters are incremented under the instance monitor (so concurrent Camel threads cannot lose
 an update) and declared `volatile` (so the reporting thread, which reads them without taking
@@ -514,6 +526,10 @@ are ignored, and `ensureUnspecifiedStatus()` uses `computeIfAbsent`, so a persis
 entry is reused rather than replaced with a zeroed one. Covered by
 [`MappingStatusPersistenceCompatibilityTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/mapping/status/MappingStatusPersistenceCompatibilityTest.java).
 
+The outcome, request, timing and last-error fields were added later and are additive: a status
+persisted before they existed deserializes with all of them at zero / `null`, and an older UI simply
+ignores them.
+
 A status whose mapping is no longer in the cache is omitted from the push (not from memory), so
 counters can briefly disappear from the fragment if a push happens before the mappings are
 loaded; the next housekeeping cycle restores them.
@@ -525,8 +541,12 @@ loaded; the next housekeeping cycle restores them.
   startup unless the tenant is initialised with `reset=true`.
 - **`messagesReceived` counts per mapping, not per message.** Do not sum it across mappings
   to get broker throughput.
-- **A filtered-out message is not an error and not a failure**, but it *is* counted in
-  `messagesReceived` — it reached the mapping, `filterMapping` just rejected it.
+- **A filtered-out message is not an error and not a failure**: it is counted in
+  `messagesReceived` (it reached the mapping) and in `messagesFiltered`, not in `messagesProcessed`.
+  A rising `messagesFiltered` with no errors means the data arrives and the filter rejects it.
+- **Processing time is not end-to-end latency.** It starts when the message context is created
+  and ends when the leg finishes, so it covers enrichment, transformation and sending, but not
+  time spent in the connector or broker.
 - **`errors` and `currentFailureCount` move together on a failure**, but only the streak
   moves back on success. If `currentFailureCount` is 0 while `errors` is large, the mapping
   is working now but has a history worth investigating.

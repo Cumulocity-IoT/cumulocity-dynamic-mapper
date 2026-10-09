@@ -60,6 +60,13 @@
             {{ props.description | translate }}
         </div>
     }
+    <!-- Non-blocking warning under the input (plain text; the field stays valid). Used e.g. by the
+         Filter Inventory field for attributes that are not in the inventory cache. -->
+    @if (props['warning']) {
+        <div class="help-block text-warning" role="alert" data-cy="dm-formly-field-warning">
+            <i c8yIcon="warning" class="m-r-4"></i>{{ props['warning'] }}
+        </div>
+    }
     @if (props['customMessage'] | async) {
         <div class="text-12 text-info">
             {{ props['customMessage'] | async }}

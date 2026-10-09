@@ -139,7 +139,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 PooledGraalContext pooledCtx = graalVMContextService.borrowOrCreateContext(
                         poolKey, tenant, graalEngine, supportESM,
                         sharedSource, systemSource,
-                        mapping.getCode(), mapping.getIdentifier());
+                        mapping.getCode(), mapping.getIdentifier(), mapping.displayLabel());
 
                 context.setPooledGraalContext(pooledCtx);
                 context.setGraalContext(pooledCtx.getGraalContext());
@@ -228,8 +228,10 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
             ProcessingContext<?> context) {
         MappingStatus mappingStatus = mappingService
                 .getMappingStatus(tenant, mapping);
-        String errorMessage = String.format("Tenant %s - Failed to set up GraalVM context: %s",
-                tenant, e.getMessage());
+        // e is usually a generic "Failed to create pooled GraalVM context" wrapper; the useful part
+        // (a syntax error in the mapping code and where, a missing onMessage function) is its cause.
+        String errorMessage = String.format("Tenant %s - Smart Function of mapping %s could not be loaded: %s",
+                tenant, mapping.getName(), describeCause(e));
         log.error(errorMessage, e);
         context.addError(new ProcessingException(errorMessage, e));
         mappingStatus.incrementErrors();

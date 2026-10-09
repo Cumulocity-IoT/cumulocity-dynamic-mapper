@@ -85,7 +85,8 @@ export class MonitoringComponent implements OnInit, OnDestroy {
     // mapping could be resolved. Filtering strictly by direction hid it from both tabs, so
     // those messages were counted server-side and never shown anywhere.
     map(statuses => statuses.filter(st => st.direction === this.direction || !st.direction)),
-    map(statuses => this.sortWithUnmappedLast(statuses)))
+    map(statuses => this.sortWithUnmappedLast(statuses)),
+    map(statuses => statuses.map(st => this.withDisplayFields(st))))
   readonly isLoading$ = this.state$.pipe(map(state => state.isLoading));
   readonly error$ = this.state$.pipe(map(state => state.error));
 
@@ -102,8 +103,8 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortable: true,
       dataType: ColumnDataType.TextShort,
       cellRendererComponent: NameRendererComponent,
-      gridTrackSize: '25%',
-      visible: true
+      visible: true,
+      gridTrackSize: 'minmax(150px, 1.2fr)'
     },
     {
       name: 'mappingTopic',
@@ -112,7 +113,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: false,
       sortable: true,
       dataType: ColumnDataType.TextShort,
-      //gridTrackSize: '20%'
+      gridTrackSize: 'minmax(120px, 1fr)'
     },
     {
       name: 'publishTopic',
@@ -121,7 +122,7 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       filterable: false,
       sortable: true,
       dataType: ColumnDataType.TextShort,
-      //gridTrackSize: '20%'
+      gridTrackSize: 'minmax(120px, 1fr)'
     },
     {
       header: 'Received',
@@ -131,7 +132,27 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '12.5%'
+      gridTrackSize: '100px'
+    },
+    {
+      header: 'Processed',
+      name: 'messagesProcessed',
+      path: 'messagesProcessed',
+      filterable: true,
+      sortable: true,
+      cellRendererComponent: NumberRendererComponent,
+      dataType: ColumnDataType.Numeric,
+      gridTrackSize: '100px'
+    },
+    {
+      header: 'Filtered',
+      name: 'messagesFiltered',
+      path: 'messagesFiltered',
+      filterable: true,
+      sortable: true,
+      cellRendererComponent: NumberRendererComponent,
+      dataType: ColumnDataType.Numeric,
+      gridTrackSize: '90px'
     },
     {
       header: 'Errors',
@@ -141,17 +162,64 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       sortable: true,
       cellRendererComponent: NumberRendererComponent,
       dataType: ColumnDataType.Numeric,
-      gridTrackSize: '12.5%'
+      gridTrackSize: '80px'
     },
     {
-      header: 'Current failures',
-      name: 'currentFailureCount',
-      path: 'currentFailureCount',
-      filterable: true,
-      sortable: true,
-      cellRendererComponent: NumberRendererComponent,
-      dataType: ColumnDataType.Numeric,
-      gridTrackSize: '12.5%'
+      header: 'Error rate',
+      name: 'errorRateDisplay',
+      path: 'errorRateDisplay',
+      filterable: false,
+      sortable: false,
+      dataType: ColumnDataType.TextShort,
+      gridTrackSize: '100px',
+      visible: false
+    },
+    {
+      header: 'Status',
+      name: 'healthDisplay',
+      path: 'healthDisplay',
+      filterable: false,
+      sortable: false,
+      dataType: ColumnDataType.TextShort,
+      gridTrackSize: '170px'
+    },
+    {
+      header: 'Requests (failed)',
+      name: 'requestsDisplay',
+      path: 'requestsDisplay',
+      filterable: false,
+      sortable: false,
+      dataType: ColumnDataType.TextShort,
+      gridTrackSize: '150px',
+      visible: false
+    },
+    {
+      header: 'Time avg / max',
+      name: 'processingTimeDisplay',
+      path: 'processingTimeDisplay',
+      filterable: false,
+      sortable: false,
+      dataType: ColumnDataType.TextShort,
+      gridTrackSize: '140px',
+      visible: false
+    },
+    {
+      header: 'Last message',
+      name: 'lastMessageDisplay',
+      path: 'lastMessageDisplay',
+      filterable: false,
+      sortable: false,
+      dataType: ColumnDataType.TextShort,
+      gridTrackSize: '180px'
+    },
+    {
+      header: 'Last error',
+      name: 'lastErrorDisplay',
+      path: 'lastErrorDisplay',
+      filterable: false,
+      sortable: false,
+      dataType: ColumnDataType.TextShort,
+      gridTrackSize: 'minmax(160px, 1.5fr)'
     }
   ] as const;
 
@@ -198,9 +266,9 @@ export class MonitoringComponent implements OnInit, OnDestroy {
         operation: Operation.REFRESH_STATUS_MAPPING
       });
 
-      this.alertService.success(
-        gettext('Mapping status refreshed successfully.')
-      );
+      // this.alertService.success(
+      //   gettext('Mapping status refreshed successfully.')
+      // );
     } catch (error) {
       this.handleError('Failed to refresh mapping status', error);
     } finally {
@@ -235,6 +303,45 @@ export class MonitoringComponent implements OnInit, OnDestroy {
       }
       return this.displayName(a).localeCompare(this.displayName(b), undefined, { sensitivity: 'base' });
     });
+  }
+
+  /**
+   * Adds read-only display strings for the timestamp / last-error columns. Epoch 0 (or absent,
+   * from an older backend) means "never", shown as an empty cell rather than 1970.
+   */
+  private withDisplayFields(status: MappingStatus): MappingStatus & {
+    lastMessageDisplay: string;
+    lastErrorDisplay: string;
+    errorRateDisplay: string;
+    healthDisplay: string;
+    requestsDisplay: string;
+    processingTimeDisplay: string;
+  } {
+    const when = (ms?: number) => (ms ? new Date(ms).toLocaleString() : '');
+    const received = status.messagesReceived ?? 0;
+    const errors = status.errors ?? 0;
+    // errors can exceed received (the catch-all row counts failures raised before a message
+    // reaches any mapping), so cap the rate rather than show 250%.
+    const rate = received > 0 ? Math.min(100, (errors / received) * 100) : null;
+    const streak = status.currentFailureCount ?? 0;
+    const timed = status.timedMessages ?? 0;
+    const created = status.requestsCreated ?? 0;
+    return {
+      ...status,
+      // Empty rather than 0 when nothing was measured: a mapping that never ran has no latency.
+      requestsDisplay: timed > 0 ? `${created} (${status.requestsFailed ?? 0})` : '',
+      processingTimeDisplay: timed > 0
+        ? `${Math.round((status.processingTimeTotalMs ?? 0) / timed)} / ${status.processingTimeMaxMs ?? 0} ms`
+        : '',
+      errorRateDisplay: rate === null ? '' : `${rate < 10 && rate > 0 ? rate.toFixed(1) : Math.round(rate)}%`,
+      // The consecutive-failure streak, not the lifetime error count: it says whether the
+      // mapping is broken *now*, which a lifetime rate cannot (one old burst keeps it high).
+      healthDisplay: streak > 0 ? `Failing (${streak} in a row)` : received > 0 ? 'OK' : 'Idle',
+      lastMessageDisplay: when(status.lastMessageAt),
+      lastErrorDisplay: status.lastError
+        ? `${when(status.lastErrorAt)} - ${status.lastError}`
+        : ''
+    };
   }
 
   /** Mirrors NameRendererComponent: sort by what the user actually reads. */
