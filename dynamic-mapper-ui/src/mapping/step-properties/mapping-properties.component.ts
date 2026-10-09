@@ -202,7 +202,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             key: 'filterInventory',
             type: 'input',
             // The project wrapper, not the stock c8y one: it can show the "not in the inventory
-            // cache" warning under the input (templateOptions.warning).
+            // cache" warning under the input (props.warning).
             wrappers: ['d11r-wrapper-form-field'],
             templateOptions: {
               label: 'Filter Inventory',
@@ -559,8 +559,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     }
     this.filterInventoryUncached = uncached;
     const field = this.filterInventoryField;
-    if (field?.templateOptions) {
-      field.templateOptions['warning'] = uncached.length ? this.uncachedWarningText(uncached) : undefined;
+    if (field?.props) {
+      field.props['warning'] = uncached.length ? this.uncachedWarningText(uncached) : undefined;
       field.options?.detectChanges?.(field);
     }
   }

@@ -123,7 +123,7 @@ describe('MappingStepPropertiesComponent', () => {
     /** A stand-in for the formly field, which is not rendered in these template-less specs. */
     async function componentWithField() {
       const component = await createComponent();
-      const field: any = { templateOptions: {}, options: { detectChanges: jasmine.createSpy('detectChanges') } };
+      const field: any = { props: {}, options: { detectChanges: jasmine.createSpy('detectChanges') } };
       (component as any).filterInventoryField = field;
       return { component, field };
     }
@@ -135,7 +135,7 @@ describe('MappingStepPropertiesComponent', () => {
       await component.updateFilterInventoryExpressionResult('type = "a" and c8y_Hardware.model = "x"');
 
       expect(component.filterInventoryUncached).toEqual(['c8y_Hardware']);
-      expect(field.templateOptions.warning).toContain('Not in the inventory cache: c8y_Hardware');
+      expect(field.props.warning).toContain('Not in the inventory cache: c8y_Hardware');
       expect(field.options.detectChanges).toHaveBeenCalledWith(field);
     });
 
@@ -146,7 +146,7 @@ describe('MappingStepPropertiesComponent', () => {
       await component.updateFilterInventoryExpressionResult('type = "a"');
 
       expect(component.filterInventoryUncached).toEqual([]);
-      expect(field.templateOptions.warning).toBeUndefined();
+      expect(field.props.warning).toBeUndefined();
     });
 
     it('honours glob entries of the cache configuration', async () => {
@@ -175,10 +175,10 @@ describe('MappingStepPropertiesComponent', () => {
       const { component, field } = await componentWithField();
 
       await component.updateFilterInventoryExpressionResult('name = "x"');
-      expect(field.templateOptions.warning).toContain('Not in the inventory cache');
+      expect(field.props.warning).toContain('Not in the inventory cache');
 
       await component.updateFilterInventoryExpressionResult('type = "x"');
-      expect(field.templateOptions.warning).toBeUndefined();
+      expect(field.props.warning).toBeUndefined();
       expect(component.filterInventoryUncached).toEqual([]);
     });
 
@@ -190,7 +190,7 @@ describe('MappingStepPropertiesComponent', () => {
       await component.updateFilterInventoryExpressionResult('name = "x"');
 
       expect(component.filterInventoryUncached).toEqual([]);
-      expect(field.templateOptions.warning).toBeUndefined();
+      expect(field.props.warning).toBeUndefined();
     });
 
     it('names every missing attribute, pluralised', async () => {
@@ -199,8 +199,8 @@ describe('MappingStepPropertiesComponent', () => {
 
       await component.updateFilterInventoryExpressionResult('ty = "1" and name = "x"');
 
-      expect(field.templateOptions.warning).toContain('Not in the inventory cache: ty, name.');
-      expect(field.templateOptions.warning).toContain('as if the device did not have them');
+      expect(field.props.warning).toContain('Not in the inventory cache: ty, name.');
+      expect(field.props.warning).toContain('as if the device did not have them');
     });
 
     it('does not warn for an expression that is not valid', async () => {

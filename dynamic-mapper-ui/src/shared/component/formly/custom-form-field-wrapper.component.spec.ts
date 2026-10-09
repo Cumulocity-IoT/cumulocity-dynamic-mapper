@@ -37,7 +37,7 @@ class HostComponent {
       key: 'filterInventory',
       type: 'test-input',
       wrappers: ['d11r-wrapper-form-field'],
-      templateOptions: { label: 'Filter Inventory', description: 'x'.repeat(100) }
+      props: { label: 'Filter Inventory', description: 'x'.repeat(100) }
     }
   ];
 }
@@ -62,9 +62,9 @@ describe('WrapperCustomFormField', () => {
     return root.querySelector('[data-cy="dm-formly-field-warning"]');
   }
 
-  it('shows templateOptions.warning as an inline line under the input, even with a long (popover) description', () => {
+  it('shows props.warning as an inline line under the input, even with a long (popover) description', () => {
     const fixture = TestBed.createComponent(HostComponent);
-    fixture.componentInstance.fields[0].templateOptions!['warning'] = 'Not in the inventory cache: ty.';
+    fixture.componentInstance.fields[0].props!['warning'] = 'Not in the inventory cache: ty.';
     fixture.detectChanges();
 
     const warning = warningElement(fixture.nativeElement);
@@ -86,14 +86,14 @@ describe('WrapperCustomFormField', () => {
     expect(warningElement(fixture.nativeElement)).toBeNull();
     const field = fixture.componentInstance.fields[0];
 
-    // formly-form is OnPush: a changed templateOptions is picked up through options.detectChanges,
+    // formly-form is OnPush: a changed props value is picked up through options.detectChanges,
     // which is exactly what MappingStepPropertiesComponent.refreshFilterInventoryWarning calls.
-    field.templateOptions!['warning'] = 'late warning';
+    field.props!['warning'] = 'late warning';
     field.options!.detectChanges!(field);
     fixture.detectChanges();
     expect(warningElement(fixture.nativeElement)?.textContent).toContain('late warning');
 
-    field.templateOptions!['warning'] = undefined;
+    field.props!['warning'] = undefined;
     field.options!.detectChanges!(field);
     fixture.detectChanges();
     expect(warningElement(fixture.nativeElement)).toBeNull();
