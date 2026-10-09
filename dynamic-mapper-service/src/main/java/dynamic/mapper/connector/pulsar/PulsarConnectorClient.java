@@ -883,17 +883,6 @@ public class PulsarConnectorClient extends AConnectorClient {
                         .order(15)
                         .defaultValue("default"))
 
-                // Sparkplug Host support
-                .property("isSparkplugHost", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(16)
-                        .defaultValue(false)
-                        .description("Enable Sparkplug Host mode to publish Birth/Death certificates on connection/disconnection"))
-
-                .property("sparkplugHostId", ConnectorPropertyBuilder.optionalString()
-                        .order(17)
-                        .description("Sparkplug Host ID (used for Birth/Death certificates)")
-                        .condition("isSparkplugHost", "true"))
-
                 .build();
     }
 

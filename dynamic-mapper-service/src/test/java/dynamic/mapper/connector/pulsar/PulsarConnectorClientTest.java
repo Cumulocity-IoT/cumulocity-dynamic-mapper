@@ -22,6 +22,7 @@ import org.apache.pulsar.client.api.MessageId;
 import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.ProducerBuilder;
 import org.apache.pulsar.client.api.PulsarClient;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -39,6 +40,14 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class PulsarConnectorClientTest {
+
+    @Test
+    void sparkplugHostPropertiesAreNotAvailableForApachePulsar() {
+        var properties = new PulsarConnectorClient().getConnectorSpecification().getProperties();
+
+        assertFalse(properties.containsKey("isSparkplugHost"));
+        assertFalse(properties.containsKey("sparkplugHostId"));
+    }
 
     @ParameterizedTest
     @ValueSource(strings = {

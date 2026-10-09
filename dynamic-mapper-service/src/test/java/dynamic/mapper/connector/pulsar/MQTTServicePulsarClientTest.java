@@ -641,6 +641,8 @@ class MQTTServicePulsarClientTest {
         assertTrue(spec.getProperties().containsKey("serviceUrl"));
         assertTrue(spec.getProperties().containsKey("enableTls"));
         assertTrue(spec.getProperties().containsKey("authenticationMethod"));
+        assertTrue(spec.getProperties().containsKey("isSparkplugHost"));
+        assertTrue(spec.getProperties().containsKey("sparkplugHostId"));
     }
 
 }
