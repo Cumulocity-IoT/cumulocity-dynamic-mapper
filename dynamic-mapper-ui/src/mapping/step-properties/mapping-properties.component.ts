@@ -552,7 +552,11 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     let uncached: string[] = [];
     try {
       const configuration = await this.sharedService.getServiceConfiguration();
-      uncached = findUncachedFilterAttributes(expression, configuration?.inventoryFragmentsToCache ?? []);
+      const cachedFragments = [...(configuration?.inventoryFragmentsToCache ?? [])];
+      if (configuration?.cacheAliasMaps) {
+        cachedFragments.push('sparkPlugB_NBIRTH', 'sparkPlugB_DBIRTH_*');
+      }
+      uncached = findUncachedFilterAttributes(expression, cachedFragments);
     } catch {
       // Configuration not readable (e.g. missing permission): nothing reliable to warn about.
       uncached = [];
