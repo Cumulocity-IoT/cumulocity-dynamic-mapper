@@ -2,7 +2,7 @@
   "name": "dynamic-mapper",
   "version": "6.5.3",
   "engines": {
-    "node": "^20.19.0 || ^22.12.0",
+    "node": "^22.13.0",
     "npm": ">=10"
   },
   "packageManager": "npm@10.9.8",
