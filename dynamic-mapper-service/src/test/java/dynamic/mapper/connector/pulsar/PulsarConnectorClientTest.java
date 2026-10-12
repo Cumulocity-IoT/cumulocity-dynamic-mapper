@@ -24,6 +24,7 @@ import org.apache.pulsar.client.api.ProducerBuilder;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
@@ -83,30 +84,51 @@ class PulsarConnectorClientTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {
-            "device/temperature",
-            "sensors/+/data",
-            "sensors/#"
+    @CsvSource({
+            // subscription, pulsar topic name, expected topic handed to the dispatcher
+            "device/temperature, persistent://public/default/device-temperature, device/temperature",
+            "sensors/+/data, persistent://public/default/sensors-device1-data, sensors/device1/data",
+            "sensors/#, persistent://public/default/sensors-a-b-partition-2, sensors/a/b",
+            "sensors/+/data, persistent://public/default/other-topic, other-topic"
     })
-    void subscriptionListenerDispatchesUsingLogicalTopic(String logicalTopic) {
+    void subscriptionListenerDispatchesUsingTopicOfMessage(String subscription, String pulsarTopic,
+            String expected) {
         ServiceRegistry registry = mock(ServiceRegistry.class);
         GenericMessageCallback dispatcher = mock(GenericMessageCallback.class);
         Consumer<byte[]> consumer = mock();
         Message<byte[]> message = mock();
         when(registry.getServiceConfiguration("tenant")).thenReturn(new ServiceConfiguration());
         when(registry.getVirtualThreadPool()).thenReturn(mock(ExecutorService.class));
-        when(message.getTopicName()).thenReturn("persistent://public/default/sensors-device-temperature-data");
+        when(message.getTopicName()).thenReturn(pulsarTopic);
         when(message.getData()).thenReturn("{}".getBytes(StandardCharsets.UTF_8));
         when(message.getMessageId()).thenReturn(MessageId.earliest);
         doReturn(ProcessingResultWrapper.builder().build()).when(dispatcher).onMessage(any());
 
         PulsarCallback callback = new PulsarCallback("tenant", registry, dispatcher, "pulsar", "Pulsar");
-        new PulsarConnectorClient.QoSAwarePulsarCallback(callback, Qos.AT_LEAST_ONCE, logicalTopic)
+        new PulsarConnectorClient.QoSAwarePulsarCallback(callback, Qos.AT_LEAST_ONCE, subscription)
                 .received(consumer, message);
 
         ArgumentCaptor<ConnectorMessage> captured = ArgumentCaptor.forClass(ConnectorMessage.class);
         verify(dispatcher).onMessage(captured.capture());
-        assertEquals(logicalTopic, captured.getValue().getTopic());
+        assertEquals(expected, captured.getValue().getTopic());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "sensors/+/data, persistent://public/default/sensors-device1-data, true",
+            "sensors/+/data, persistent://public/default/sensors-data, false",
+            "sensors/+/data, persistent://public/default/sensors-a-b-data, false",
+            "sensors/+/+/data, persistent://public/default/sensors-a-b-data, true",
+            "sensors/#, persistent://public/default/sensors, true",
+            "sensors/#, persistent://public/default/sensors-a-b, true",
+            "sensors/#, persistent://public/default/other-a, false",
+            "#, persistent://public/default/anything-at-all, true",
+            "v1.0/+, persistent://public/default/v1.0-x, true",
+            "v1.0/+, persistent://public/default/v1x0-x, false"
+    })
+    void wildcardFilterIsTranslatedToMatchingPulsarRegex(String filter, String pulsarTopic, boolean matches) {
+        String regex = PulsarConnectorClient.buildPulsarTopicRegex(filter, "public", "default");
+        assertEquals(matches, java.util.regex.Pattern.compile(regex).matcher(pulsarTopic).matches(), regex);
     }
 
     @ParameterizedTest
