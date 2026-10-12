@@ -190,6 +190,10 @@ export default {
         to: 'image/Dynamic_Mapper_Monitoring.png'
       },
       {
+        from: '../resources/image-optimized/Dynamic_Mapper_Monitoring_Chart.png',
+        to: 'image/Dynamic_Mapper_Monitoring_Chart.png'
+      },
+      {
         from: '../resources/image-optimized/Dynamic_Mapper_Monitoring_Tree.png',
         to: 'image/Dynamic_Mapper_Monitoring_Tree.png'
       },
