@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import {
     BreadcrumbModule,
     C8yTranslateModule,
@@ -29,6 +29,16 @@ import { KpiDetails } from '../../shared/monitoring.service';
 })
 export class KpListComponent {
     @Input() kpis: KpiDetails[];
+    /** Whether the user may clear caches; disables the per-row clear buttons. */
+    @Input() canClear = false;
+    /** Domains (e.g. `inboundIdCache`) that offer a clear action. */
+    @Input() clearableDomains: string[] = [];
+    /** Emits the domain of the row whose clear button was clicked. */
+    @Output() clear = new EventEmitter<string>();
+
+    isClearable(domain: string): boolean {
+        return this.clearableDomains.includes(domain);
+    }
 
     get kpisByDomain(): Map<string, KpiDetails[]> {
         if (!this.kpis) {
