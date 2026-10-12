@@ -28,8 +28,7 @@ package dynamic.mapper.model.validation;
  * error code is a naming trap, not documentation. See the class-level checks:
  * {@code validateMappingTopic}, {@code validateMappingTopicAndSampleConsistency},
  * {@code validatePublishTopicAndSampleConsistency}, {@code validateSubstitutions},
- * {@code validateJSONTemplates}, {@code validateFilterOutboundUniqueness},
- * {@code validateTransformationType}, {@code validateExtension},
+ * {@code validateJSONTemplates}, {@code validateTransformationType}, {@code validateExtension},
  * {@code validateMappingTypeConstraints}.
  */
 public enum ValidationError {
@@ -43,7 +42,6 @@ public enum ValidationError {
   MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
   PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name,
   PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name,
-  FilterOutbound_Must_Be_Unique,
   Wrong_Transformation_Type_Array_In_Source_Template_Or_Target_Template_Requires_Transformation_Type_Smart_Function,
   Extension_Must_Be_Defined_For_Extension_Java_Mapping,
   Unparsed_MappingType_Requires_Smart_Function_Transformation_Type,

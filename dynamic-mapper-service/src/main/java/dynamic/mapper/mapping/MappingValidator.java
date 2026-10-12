@@ -45,8 +45,6 @@ package dynamic.mapper.mapping;
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
-import com.cumulocity.sdk.client.inventory.InventoryFilter;
-import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.*;
 import dynamic.mapper.model.validation.ValidationError;
@@ -64,7 +62,6 @@ import org.springframework.stereotype.Component;
 
 import jakarta.validation.constraints.NotNull;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Validates mapping configurations against business rules
@@ -106,15 +103,6 @@ public class MappingValidator {
             errors.addAll(validateExtension(mapping));
             errors.addAll(validateMappingTypeConstraints(mapping));
 
-            // Duplicate checks against mappings already persisted for this tenant/direction
-            if (mapping.getDirection() == Direction.OUTBOUND) {
-                String filter = mapping.getFilterMapping();
-                if (filter != null && !filter.isBlank() && !"true".equals(filter)) {
-                    List<Mapping> existingMappings = findExistingMappings(tenant, mapping.getDirection(), excludeMappingId);
-                    errors.addAll(validateFilterOutboundUniqueness(existingMappings, mapping));
-                }
-            }
-
             errors.stream().map(ValidationIssue::of).forEach(issues::add);
 
             if (!issues.isEmpty()) {
@@ -124,19 +112,6 @@ public class MappingValidator {
 
             return issues;
         });
-    }
-
-    /**
-     * Loads all persisted mappings for the given direction, excluding the mapping being
-     * updated (if any). Used by the duplicate-topic / duplicate-filter checks below.
-     */
-    private List<Mapping> findExistingMappings(String tenant, Direction direction, String excludeMappingId) {
-        InventoryFilter inventoryFilter = new InventoryFilter();
-        inventoryFilter.byType(MappingRepresentation.MAPPING_TYPE);
-        ManagedObjectCollection moc = inventoryApi.getManagedObjectsByFilter(inventoryFilter, false);
-        return mappingRepository.findAll(tenant, direction, moc).stream()
-                .filter(m -> excludeMappingId == null || !m.getId().equals(excludeMappingId))
-                .collect(Collectors.toList());
     }
 
     private Collection<? extends ValidationError> validateTransformationType(Mapping mapping) {
@@ -470,36 +445,6 @@ public class MappingValidator {
                 && !TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
             errors.add(ValidationError.Unparsed_MappingType_Requires_Smart_Function_Transformation_Type);
         }
-        return errors;
-    }
-
-    /**
-     * Validates that filterOutbound is unique across outbound mappings
-     */
-    public List<ValidationError> validateFilterOutboundUniqueness(
-            List<Mapping> existingMappings, Mapping mapping) {
-
-        List<ValidationError> errors = new ArrayList<>();
-
-        // Only validate for outbound mappings with filters
-        if (mapping.getDirection() != Direction.OUTBOUND ||
-                mapping.getFilterMapping() == null ||
-                mapping.getFilterMapping().isEmpty()) {
-            return errors;
-        }
-
-        String filterMapping = mapping.getFilterMapping();
-
-        // Check if any other mapping has the same filter
-        boolean hasDuplicate = existingMappings.stream()
-                .filter(m -> m.getDirection() == Direction.OUTBOUND)
-                .filter(m -> !m.getId().equals(mapping.getId()))
-                .anyMatch(m -> filterMapping.equals(m.getFilterMapping()));
-
-        if (hasDuplicate) {
-            errors.add(ValidationError.FilterOutbound_Must_Be_Unique);
-        }
-
         return errors;
     }
 

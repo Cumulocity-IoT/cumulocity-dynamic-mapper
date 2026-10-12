@@ -1013,9 +1013,6 @@ export const ValidationFormlyError = {
       message:
         'PublishTopic and PublishTopicSample do not have same structure in the Topic Name.'
     },
-  FilterOutbound_Must_Be_Unique: {
-    message: 'filterMapping must be unique within all outbound mappings.'
-  },
   Wrong_Transformation_Type_Array_In_Source_Template_Or_Target_Template_Requires_Transformation_Type_Smart_Function:
     {
       message:
