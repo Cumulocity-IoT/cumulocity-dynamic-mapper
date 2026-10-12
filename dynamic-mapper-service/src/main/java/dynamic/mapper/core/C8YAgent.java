@@ -975,6 +975,18 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
      * @param testing  routing flag forwarded to the inventory/identity facades
      * @return the created managed object representation
      */
+    private static final String EXTERNAL_ID_BINDING_HINT = "Device creation failed: the option "
+            + "'External ID binding during MO creation' is enabled in the service configuration, but this "
+            + "Cumulocity tenant/platform does not support it (platform release May 2026 or later required; "
+            + "e.g. Cumulocity Edge does not). Disable this option under Configuration > Service configuration >"
+            + " General and retry.";
+
+    /** True if the platform rejected the atomic {@code externalIds} directive in the MO creation body. */
+    private static boolean isExternalIdBindingRejected(SDKException e) {
+        return e.getHttpStatus() == 422 && e.getMessage() != null
+                && e.getMessage().contains("Cannot add externalIds through Inventory API");
+    }
+
     private ManagedObjectRepresentation createWithExternalIdBinding(
             ManagedObjectRepresentation mor, ID identity, Boolean testing, boolean supportsExternalIdBinding) {
         if (Boolean.TRUE.equals(testing)) {
@@ -1121,6 +1133,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             log.info("{} - Device {} updated.", tenant, mor.getId().getValue());
                     }
                 } catch (SDKException s) {
+                    if (isExternalIdBindingRejected(s)) {
+                        log.error("{} - {}", tenant, EXTERNAL_ID_BINDING_HINT);
+                        pe.set(new ProcessingException(
+                                EXTERNAL_ID_BINDING_HINT + " Payload: " + targetAPI + "/"
+                                        + currentRequest.getRequest(),
+                                s));
+                        return mor;
+                    }
                     log.error("{} - Could not sent payload to c8y: {}: ", tenant, currentRequest.getRequest(),
                             s);
                     pe.set(new ProcessingException(
