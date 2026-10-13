@@ -34,11 +34,14 @@ import { TestingDeviceService } from '../testing.service';
 import { ActivatedRoute } from '@angular/router';
 import { Feature } from '../../shared';
 
+import { provideGridPersistence } from '../../shared/misc/grid-persistence';
+
 @Component({
   selector: 'd11r-mapping-testing-grid',
   templateUrl: 'testing.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   standalone: true,
+  providers: [...provideGridPersistence('test-device')],
   imports: [CoreModule]
 })
 export class TestingComponent implements OnInit {

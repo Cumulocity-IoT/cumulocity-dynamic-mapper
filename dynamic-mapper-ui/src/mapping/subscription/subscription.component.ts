@@ -69,6 +69,8 @@ import { TypeResyncComponent } from './subscription-dynamic-type/type-resync.com
 import { DeviceSelectorTableComponent } from './subscription-static-table/device-selector-table.component';
 import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
 
+import { provideGridPersistence } from '../../shared/misc/grid-persistence';
+
 @Component({
   selector: 'd11r-mapping-subscription-grid',
   templateUrl: 'subscription.component.html',
@@ -77,6 +79,7 @@ import { ConfirmationModalService } from '../../shared/service/confirmation-moda
   standalone: true,
   imports: [CoreModule, CommonModule, SharedModule, PopoverModule, DeviceSelectorTreeComponent, DeviceSelectorTableComponent, GroupSelectorComponent, TypeSelectorComponent, TypeResyncComponent],
   providers: [
+    ...provideGridPersistence('subscription'),
     DataGridService]
 
 })

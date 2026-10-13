@@ -55,12 +55,15 @@ interface VersionCountRow {
   mapping: Mapping;
 }
 
+import { provideGridPersistence } from '../../shared/misc/grid-persistence';
+
 @Component({
   selector: 'd11r-mapping-versions-count',
   templateUrl: './mapping-versions-count.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  providers: [...provideGridPersistence('mapping-versions-count')],
   imports: [CoreModule, CommonModule]
 })
 export class MappingVersionsCountComponent implements OnInit, OnDestroy {

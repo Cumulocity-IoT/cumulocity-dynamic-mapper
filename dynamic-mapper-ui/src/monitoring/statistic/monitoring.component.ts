@@ -50,12 +50,15 @@ interface MonitoringComponentState {
   isLoading: boolean;
   error: string | null;
 }
+import { provideGridPersistence } from '../../shared/misc/grid-persistence';
+
 @Component({
   selector: 'd11r-mapping-monitoring-grid',
   templateUrl: 'monitoring.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  providers: [...provideGridPersistence('monitoring-statistic')],
   imports: [CoreModule, CommonModule]
 })
 export class MonitoringComponent implements OnInit, OnDestroy {

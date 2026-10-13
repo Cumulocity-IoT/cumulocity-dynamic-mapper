@@ -63,12 +63,15 @@ import {
   MessageExplorerPayloadRendererComponent
 } from './message-explorer-payload.renderer.component';
 
+import { provideGridPersistence } from '../../shared/misc/grid-persistence';
+
 @Component({
   selector: 'd11r-message-explorer',
   templateUrl: './message-explorer.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  providers: [...provideGridPersistence('message-explorer')],
   imports: [CoreModule, CommonModule, ReactiveFormsModule]
 })
 export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestroy {

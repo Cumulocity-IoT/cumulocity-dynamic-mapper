@@ -105,6 +105,8 @@ import {
 } from '../service/mapping-stepper.service';
 import { DeprecationNoticeModalComponent } from '../deprecation-notice/deprecation-notice-modal.component';
 import { DEPRECATION_NOTICE_VERSION } from '../../shared';
+import { provideGridPersistence } from '../../shared/misc/grid-persistence';
+
 @Component({
   selector: 'd11r-mapping-mapping-grid',
   templateUrl: 'mapping.component.html',
@@ -115,7 +117,10 @@ import { DEPRECATION_NOTICE_VERSION } from '../../shared';
   // The grid owns the persistence half of the stepper's commit (the child owns the editing half),
   // so it needs its own MappingStepperService — the child provides its own instance for its
   // editing state, and commitMapping() keeps none.
-  providers: [MappingStepperService],
+  providers: [
+    ...provideGridPersistence((url) => (url.includes('/mappings/inbound') ? 'mapping-inbound' : 'mapping-outbound')),
+    MappingStepperService
+  ],
 })
 export class MappingComponent implements OnInit, OnDestroy {
   @ViewChild('mappingGrid') mappingGrid!: DataGridComponent;
