@@ -166,6 +166,17 @@ describe('MappingStepTestingComponent – device does not exist', () => {
     expect(component.testingModel.logs).toContain(`ERROR: ${MARKER}`);
   });
 
+  it('does not open the dialog when createNonExistingDevice is already enabled (it could not fix the failure)', async () => {
+    component.testMapping.createNonExistingDevice = true;
+    testingService.testMapping.and.returnValue(Promise.resolve(notFoundAsError));
+
+    await component.onTestTransformation();
+
+    expect(modalService.show).not.toHaveBeenCalled();
+    expect(testingService.testMapping).toHaveBeenCalledTimes(1);
+    expect(component.testingModel.logs).toContain(`ERROR: ${MARKER}`);
+  });
+
   it('does not open the dialog when the result does not mention the marker', async () => {
     testingService.testMapping.and.returnValue(
       Promise.resolve({ success: false, requests: [], errors: ['some other failure'] } as TestResult));

@@ -372,7 +372,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     const deviceNotFound = [...(result.warnings ?? []), ...(result.errors ?? [])].some(m =>
       m.includes('createNonExistingDevice is disabled')
     );
-    if (deviceNotFound) {
+    // Already enabled: the failure has another cause and re-running with the flag set cannot fix it.
+    if (deviceNotFound && !this.testMapping.createNonExistingDevice) {
       // A dry run only needs the mock to pretend the device exists; a real send would create it.
       const confirmed = await (sendPayload
         ? this.showConfirmation(
