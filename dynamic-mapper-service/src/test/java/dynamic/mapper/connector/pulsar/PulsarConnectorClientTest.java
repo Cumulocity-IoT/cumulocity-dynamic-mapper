@@ -182,6 +182,48 @@ class PulsarConnectorClientTest {
         requests.forEach(request -> assertNull(request.getError()));
     }
 
+    @ParameterizedTest
+    @EnumSource(Qos.class)
+    @SuppressWarnings("unchecked")
+    void outboundSetsMessageKeyFromContext(Qos qos) throws Exception {
+        PulsarClient pulsarClient = mock(PulsarClient.class);
+        ProducerBuilder<byte[]> producerBuilder = mock();
+        Producer<byte[]> producer = mock();
+        org.apache.pulsar.client.api.TypedMessageBuilder<byte[]> message = mock(
+                org.apache.pulsar.client.api.TypedMessageBuilder.class, RETURNS_SELF);
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "pulsarTenant", "public", "pulsarNamespace", "default"));
+        when(pulsarClient.newProducer()).thenReturn(producerBuilder);
+        when(producerBuilder.topic(anyString())).thenReturn(producerBuilder);
+        when(producerBuilder.sendTimeout(anyInt(), any())).thenReturn(producerBuilder);
+        when(producerBuilder.create()).thenReturn(producer);
+        when(producer.isConnected()).thenReturn(true);
+        when(producer.newMessage()).thenReturn(message);
+        when(message.sendAsync()).thenReturn(CompletableFuture.completedFuture(MessageId.earliest));
+
+        String payload = "{\"command\":\"start\"}";
+        ProcessingContext<Object> context = ProcessingContext.builder()
+                .mapping(Mapping.builder().name("outbound").debug(false).build())
+                .qos(qos)
+                .resolvedPublishTopic("device/commands")
+                .requests(List.of(DynamicMapperRequest.builder().request(payload).build()))
+                .build();
+        context.setKey("device-1");
+
+        new TestPulsarConnectorClient(pulsarClient, configuration).publishMEAO(context);
+
+        verify(message).key("device-1");
+        verify(message).value(aryEq(payload.getBytes(StandardCharsets.UTF_8)));
+        if (qos == Qos.AT_MOST_ONCE) {
+            verify(message).sendAsync();
+        } else {
+            verify(message).send();
+        }
+        verify(producer, never()).send(any(byte[].class));
+        assertTrue(context.getErrors().isEmpty());
+    }
+
     private static class TestPulsarConnectorClient extends PulsarConnectorClient {
         TestPulsarConnectorClient(PulsarClient client, ConnectorConfiguration configuration) {
             pulsarClient = client;

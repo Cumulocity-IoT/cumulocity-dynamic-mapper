@@ -69,6 +69,7 @@ public class PulsarCallback extends AbstractPulsarCallback {
                 .sendPayload(true)
                 .connectorIdentifier(connectorIdentifier)
                 .payload(payloadBytes)
+                .key(message.hasKey() ? message.getKey() : null)
                 .build();
 
         if (serviceConfiguration.getLogPayload()) {

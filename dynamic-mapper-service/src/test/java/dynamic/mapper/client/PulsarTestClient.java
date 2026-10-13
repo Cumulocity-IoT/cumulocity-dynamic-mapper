@@ -27,15 +27,16 @@ import java.util.regex.Pattern;
 import org.apache.pulsar.client.api.Consumer;
 import org.apache.pulsar.client.api.Message;
 import org.apache.pulsar.client.api.MessageListener;
-import org.apache.pulsar.client.api.Producer;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.SubscriptionType;
 
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Pulsar test client that consumes messages matching a topic pattern and
- * optionally publishes test measurement payloads.
+ * Pulsar test client for the local environment in
+ * {@code resources/testing/environments/pulsar}. It sends one inbound test message
+ * (key = DEVICE_ID; matches the {@code pulsar-test-in} Smart Function mapping) and consumes the topics the
+ * outbound mapping {@code pulsar-test-out} publishes to.
  *
  * <h3>Environment variables</h3>
  * <pre>
@@ -43,8 +44,12 @@ import lombok.extern.slf4j.Slf4j;
  *   AUTH_NAME           (default "none"; see AbstractPulsarTestClient)
  *   AUTH_PARAMS         (required when AUTH_NAME != "none")
  *   SUBSCRIPTION_NAME   (default "pulsar-test-subscription")
- *   TOPIC               (default "persistent://public/default/measurement-kobu-webhook-001")
- *   TOPIC_PATTERN       (default "persistent://public/default/measurement-kobu-webhook-[0-9]{3}")
+ *   TOPIC               (default "persistent://t2050305588/mqtt/pulsar-test-inbound")
+ *   TOPIC_PATTERN       (default "persistent://t2050305588/mqtt/pulsar-test-outbound-.*")
+ *   DEVICE_ID           (default "pulsar-dev-001", external ID in the inbound payload)
+ *   TEMPERATURE         (default "21.5")
+ *   SEND                (default "true"; "false" = consume only)
+ *   CONSUME_SECONDS     (default "60"; 0 = do not consume, exit after sending)
  * </pre>
  */
 @Slf4j
@@ -53,9 +58,13 @@ public class PulsarTestClient extends AbstractPulsarTestClient {
     static final String SUBSCRIPTION_NAME = System.getenv().getOrDefault("SUBSCRIPTION_NAME",
             "pulsar-test-subscription");
     static final String TOPIC = System.getenv().getOrDefault("TOPIC",
-            "persistent://public/default/measurement-kobu-webhook-001");
+            "persistent://t2050305588/mqtt/pulsar-test-inbound");
     static final String TOPIC_PATTERN = System.getenv().getOrDefault("TOPIC_PATTERN",
-            "persistent://public/default/measurement-kobu-webhook-[0-9]{3}");
+            "persistent://t2050305588/mqtt/pulsar-test-outbound-.*");
+    static final String DEVICE_ID = System.getenv().getOrDefault("DEVICE_ID", "pulsar-dev-001");
+    static final String TEMPERATURE = System.getenv().getOrDefault("TEMPERATURE", "21.5");
+    static final boolean SEND = Boolean.parseBoolean(System.getenv().getOrDefault("SEND", "true"));
+    static final int CONSUME_SECONDS = Integer.parseInt(System.getenv().getOrDefault("CONSUME_SECONDS", "60"));
 
     // ── Entry point ────────────────────────────────────────────────────────
 
@@ -70,11 +79,16 @@ public class PulsarTestClient extends AbstractPulsarTestClient {
         PulsarTestClient testClient = new PulsarTestClient();
         try {
             testClient.initialize();
-            testClient.startConsumer();
-            // testClient.testSendMeasurement();
-
-            log.info("Consumer running — press Ctrl+C to stop");
-            Thread.sleep(60_000);
+            if (CONSUME_SECONDS > 0) {
+                testClient.startConsumer();
+            }
+            if (SEND) {
+                testClient.sendInboundMessage();
+            }
+            if (CONSUME_SECONDS > 0) {
+                log.info("Consumer running for {}s — press Ctrl+C to stop", CONSUME_SECONDS);
+                Thread.sleep(CONSUME_SECONDS * 1000L);
+            }
         } catch (Exception e) {
             log.error("Fatal error in Pulsar test client", e);
         } finally {
@@ -99,8 +113,7 @@ public class PulsarTestClient extends AbstractPulsarTestClient {
 
     // ── Producer ───────────────────────────────────────────────────────────
 
-    @SuppressWarnings("unused")
-    private void testSendMeasurement() throws PulsarClientException {
+    private void sendInboundMessage() throws PulsarClientException {
         log.info("Publishing message on topic: {}", TOPIC);
 
         producer = client.newProducer()
@@ -108,47 +121,14 @@ public class PulsarTestClient extends AbstractPulsarTestClient {
                 .sendTimeout(30, TimeUnit.SECONDS)
                 .create();
 
-        String payload = String.format(
-                "{ \"deviceId\": \"863859042393327\", \"version\": \"1\", \"deviceType\": \"20\","
-                + " \"deviceTimestamp\": \"%d\", \"deviceStatus\": \"BTR\", \"temperature\": 90 }",
-                System.currentTimeMillis());
+        String payload = String.format("{\"deviceId\": \"%s\", \"temperature\": %s}", DEVICE_ID, TEMPERATURE);
 
-        producer.send(payload.getBytes());
-        log.info("Message published: {}", payload);
-
-        sendAdditionalTestMessages();
+        producer.newMessage().key(DEVICE_ID).value(payload.getBytes()).send();
+        log.info("Message published: key={} payload={}", DEVICE_ID, payload);
 
         producer.close();
         producer = null;
         log.info("Producer closed");
-    }
-
-    private void sendAdditionalTestMessages() throws PulsarClientException {
-        log.info("Sending additional test messages...");
-
-        String[] deviceIds = {"001", "002", "003", "123", "999"};
-        for (String deviceId : deviceIds) {
-            String testTopic = "persistent://public/default/measurement-kobu-webhook-" + deviceId;
-
-            try (Producer<byte[]> testProducer = client.newProducer()
-                    .topic(testTopic)
-                    .sendTimeout(10, TimeUnit.SECONDS)
-                    .create()) {
-
-                String payload = String.format(
-                        "{ \"deviceId\": \"86385904239332%s\", \"version\": \"1\", \"deviceType\": \"20\","
-                        + " \"deviceTimestamp\": \"%d\", \"deviceStatus\": \"BTR\", \"temperature\": %d }",
-                        deviceId, System.currentTimeMillis(), 20 + Integer.parseInt(deviceId));
-
-                testProducer.send(payload.getBytes());
-                log.info("Sent message to topic: {}", testTopic);
-
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
-            }
-        }
     }
 
     // ── Message listener ───────────────────────────────────────────────────

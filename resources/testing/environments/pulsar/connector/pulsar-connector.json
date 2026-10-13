@@ -1,0 +1,22 @@
+[
+  [
+    {
+      "identifier": "test-pulsar-connector",
+      "connectorType": "PULSAR",
+      "name": "Local Pulsar (test)",
+      "description": "Local Pulsar standalone from resources/testing/environments/pulsar",
+      "enabled": false,
+      "properties": {
+        "serviceUrl": "pulsar://localhost:6650",
+        "enableTls": false,
+        "authenticationMethod": "none",
+        "connectionTimeoutSeconds": 30,
+        "operationTimeoutSeconds": 30,
+        "keepAliveIntervalSeconds": 30,
+        "subscriptionType": "Shared",
+        "pulsarTenant": "t2050305588",
+        "pulsarNamespace": "mqtt"
+      }
+    }
+  ]
+]
