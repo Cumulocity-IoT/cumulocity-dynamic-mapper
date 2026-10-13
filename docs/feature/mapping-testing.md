@@ -54,9 +54,9 @@ path from the UI is `${BASE_URL}/test/mapping` — see
 | `mapping` | `Mapping` | The full mapping definition to test (not looked up by ID — the UI sends the in-progress, possibly-unsaved edit). |
 | `payload` | `String` | The JSON (or raw, for HEX/FLAT_FILE) payload to run through the mapping as a string. |
 | `send` | `Boolean` | `false` (default) = dry-run only; `true` = actually publish/create the result. |
-| `createTestDevice` | `Boolean` | Inbound only; when `send=true`, create a throwaway device in C8Y inventory before dispatching so identity resolution has something real to attach to. |
+| `createTestDevice` | `Boolean` | **Deprecated, ignored.** A live test (`send=true`) of an inbound mapping always runs against a test device. Kept so existing clients that still send it keep working. |
 
-In the UI this is a send *mode* of a split button, modelled on *Save / Save and close* in the AI Agent Manager: the chevron opens a menu with **Send with Existing Device** (to the device already in the tenant; if it is missing, the mapping's *Create device* setting decides) and **Send with Test Device** (create a throwaway device first; it is tagged `d11r_testDevice`, not removed automatically, and listed under *Monitoring → Test device* for cleanup). If a device with the external ID already exists it is used as is and deliberately **not** tagged, so a real device is never offered for cleanup; `TestResult.testDeviceCreated` tells the UI which case happened and the confirmation says so. The main button's label follows the chosen mode, and the help popover explains the difference. It is a send mode, not a free-floating option, because a dry run never creates a device. Outbound mappings have a single mode and get a plain button.
+In the UI the two test types are **Mock Test** (`send=false`: mocked identity and inventory, nothing written) and **Live Test** (`send=true`: really sends). A Live Test of an inbound mapping always runs against a **test device**: created and tagged `d11r_testDevice` if the external ID is unknown, otherwise the existing device with that external ID is used as is and deliberately **not** tagged, so a real device is never offered for cleanup. `TestResult.testDeviceCreated` tells the UI which case happened and the success alert says so. There is no way to live-test against an arbitrary real device, and a Live Test never offers the "assume the device exists" dialog (that would create a real, untagged device through `createNonExistingDevice`); a Mock Test does. If the test device cannot be provided the live test is not run and `success=false` is returned with the reason.
 
 `TestResult` ([`TestResult.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/TestResult.java)):
 
@@ -67,7 +67,8 @@ In the UI this is a send *mode* of a split button, modelled on *Save / Save and 
 | `warnings` | `List<String>` | E.g. a filter-mismatch warning. |
 | `logs` | `List<String>` | Free-form log lines emitted during processing (including from Smart Function `console.log`-style output). |
 | `success` | `Boolean` | `true` iff the resulting `ProcessingContext` had no errors. |
-| `testDeviceId` | `String` | Set only when `createTestDevice=true` and a device was actually created. |
+| `testDeviceId` | `String` | Set for a live test of an inbound mapping: the test device that was created or reused. |
+| `testDeviceCreated` | `Boolean` | `true`: created by this test (tagged, listed under *Monitoring → Test device*); `false`: already existed and was used as is (not tagged, not listed). |
 | `key` | `String` | The broker message key the transformation produced (e.g. mapped to `_CONTEXT_DATA_.key`), context-level rather than per-request. |
 
 ### What is simulated vs. real
@@ -94,7 +95,7 @@ device to resolve against even when actually sending.
 [`MockIdentity`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/mock/MockIdentity.java)
 via [`IdentityFacade`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/facade/IdentityFacade.java#L62-L100)
 — an in-memory, per-tenant `ConcurrentHashMap`-backed store, not real Cumulocity API calls.
-The UI clears this mock state before each test run and on "Reset Transformation" by calling
+The UI clears this mock state before each test run and on "Reset Mock Test" by calling
 `resetMockCache()`, which dispatches two `CLEAR_CACHE` operations (`MOCK_IDENTITY_CACHE`,
 `MOCK_INVENTORY_CACHE`) handled in `OperationController`. Without this reset, resolution
 results from a previous test run (e.g. an implicitly-created mock device) would leak into
@@ -102,8 +103,9 @@ the next one.
 
 #### Inbound `send=true`: test device creation
 
-When `send=true`, `createTestDevice=true`, and the mapping is `INBOUND`, `testMapping()`
-creates a real throwaway device in inventory before dispatching
+When `send=true` and the mapping is `INBOUND`, `testMapping()` ensures a test device
+(`C8YAgent.ensureTestDevice`: reuse the device with that external ID, otherwise create and tag one)
+before dispatching
 ([`TestController.java:108-129`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/TestController.java#L108-L129)),
 so real identity resolution has something to find. The external ID to register it under is
 determined, in order of preference:
@@ -181,6 +183,6 @@ Key interactions in `MappingStepTestingComponent`:
 ### Known gotchas
 
 - **Only the first result is shown** when a mapping fans out to multiple `DynamicMapperRequest`s (see above) — the backend logs a warning but the UI has no indication beyond that server log.
-- **Outbound `useExternalId` requirement**: `disableTestSending()` in the UI disables "Send Test Message" unless `testMapping.useExternalId` is set, since outbound test payloads have no real external ID to resolve otherwise.
+- **Outbound `useExternalId` requirement**: `disableTestSending()` in the UI disables "Live Test" unless `testMapping.useExternalId` is set, since outbound test payloads have no real external ID to resolve otherwise.
 - **HEX/FLAT_FILE mappings**: `requiresRawPayload()` changes what is sent as `payload` (reads `sourceTemplate['payload']` instead of the whole JSON template) and seeds a static log line warning that whitespace/line-ending parsing may differ from a real device.
 - **Mock cache must be reset between unrelated test runs** — `ngOnInit()` and `onResetTransformation()` both call `resetMockCache()`, but a test run that fails before reaching the reset step can leave stale mock identity/inventory state for the next attempt within the same session.

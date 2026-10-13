@@ -45,7 +45,6 @@ export interface TestContext {
   mapping: Mapping;
   payload: string;
   send?: boolean;
-  createTestDevice?: boolean;
 }
 
 export interface TestResult {

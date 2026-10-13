@@ -60,7 +60,7 @@ function makeMapping(): Mapping {
 }
 
 function makeTestContext(): TestContext {
-  return { mapping: makeMapping(), payload: '{}', send: false, createTestDevice: false };
+  return { mapping: makeMapping(), payload: '{}', send: false };
 }
 
 // ---------------------------------------------------------------------------

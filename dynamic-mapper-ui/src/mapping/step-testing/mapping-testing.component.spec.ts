@@ -37,7 +37,7 @@ import { EditorMode } from '../../shared/mapping/stepper.model';
  * "createNonExistingDevice is disabled". The dialog must open in both cases, and its wording must
  * make clear that a real send creates a real device while a dry run only assumes one.
  */
-describe('MappingStepTestingComponent – device does not exist', () => {
+describe('MappingStepTestingComponent – device does not exist (Mock Test)', () => {
   const MARKER = 'Device with externalId \'x\' (type \'c8y_Serial\') not found in inventory and createNonExistingDevice is disabled';
 
   let component: MappingStepTestingComponent;
@@ -109,7 +109,7 @@ describe('MappingStepTestingComponent – device does not exist', () => {
     await component.ngOnInit();
   });
 
-  it('opens the dialog for a missing device reported as a WARNING (dry run) and offers to assume it exists', async () => {
+  it('opens the dialog for a missing device reported as a WARNING (Mock Test) and offers to assume it exists', async () => {
     testingService.testMapping.and.returnValues(Promise.resolve(notFoundAsWarning), Promise.resolve(ok));
 
     await component.onTestTransformation();
@@ -141,18 +141,25 @@ describe('MappingStepTestingComponent – device does not exist', () => {
     expect(second.mapping.createNonExistingDevice).toBeTrue();
   });
 
-  it('on a real send, warns that a real device will be created', async () => {
-    testingService.testMapping.and.returnValues(Promise.resolve(notFoundAsWarning), Promise.resolve(ok));
+  it('a Live Test never offers to create a real device, it just reports the failure', async () => {
+    testingService.testMapping.and.returnValue(Promise.resolve(notFoundAsError));
 
     await component.onSendTest();
 
-    expect(modalService.show).toHaveBeenCalledTimes(1);
-    expect(shownModal().message).toContain('create the device in your tenant and send the message');
-    expect(shownModal().message).not.toContain('assume for this test');
-    expect(shownModal().labels.ok).toBe('Create device and send');
-    const second = testingService.testMapping.calls.argsFor(1)[0] as TestContext;
-    expect(second.send).toBeTrue();
-    expect(second.mapping.createNonExistingDevice).toBeTrue();
+    expect(modalService.show).not.toHaveBeenCalled();
+    expect(testingService.testMapping).toHaveBeenCalledTimes(1);
+    expect(component.testMapping.createNonExistingDevice).toBeFalse();
+    expect(component.testingModel.logs).toContain(`ERROR: ${MARKER}`);
+  });
+
+  it('does not send a createTestDevice flag any more: a Live Test always uses a test device', async () => {
+    testingService.testMapping.and.returnValue(Promise.resolve(ok));
+
+    await component.onSendTest();
+
+    const sent = testingService.testMapping.calls.argsFor(0)[0] as TestContext;
+    expect(sent.send).toBeTrue();
+    expect('createTestDevice' in sent).toBeFalse();
   });
 
   it('on cancel, does not re-run and keeps the error visible in the console', async () => {
@@ -206,19 +213,19 @@ describe('MappingStepTestingComponent – device does not exist', () => {
         api: 'ALARM', sourceId: '491713288', externalIdType: 'c8y_Serial', externalId: '862524060507262',
         response: '{"id":"1684457"}'
       }));
-      expect(text).toBe('Sent successfully: created alarm 1684457 on device 491713288 (c8y_Serial 862524060507262).');
+      expect(text).toBe('Live test successful: created alarm 1684457 on device 491713288 (c8y_Serial 862524060507262).');
     });
 
     it('describes an inventory send as the device itself', () => {
       const text = component.describeSendResult(sent({
         api: 'INVENTORY', externalIdType: 'c8y_Serial', externalId: '862', response: { id: '491713288' }
       }));
-      expect(text).toBe('Sent successfully: device 491713288 (c8y_Serial 862) created or updated.');
+      expect(text).toBe('Live test successful: device 491713288 (c8y_Serial 862) created or updated.');
     });
 
     it('still reads well when the response carries no id', () => {
       const text = component.describeSendResult(sent({ api: 'MEASUREMENT', sourceId: '42' }));
-      expect(text).toBe('Sent successfully: created measurement on device 42.');
+      expect(text).toBe('Live test successful: created measurement on device 42.');
     });
 
     it('mentions further requests and the test device', () => {
@@ -235,7 +242,7 @@ describe('MappingStepTestingComponent – device does not exist', () => {
       const text = component.describeSendResult(sent(
         { api: 'ALARM', sourceId: '491713288', response: { id: '1' } },
         { testDeviceId: '491713288', testDeviceCreated: false }));
-      expect(text).toContain('Device 491713288 already existed and was used as is');
+      expect(text).toContain('Existing device 491713288 was used as is');
       expect(text).toContain('not listed under Monitoring > Test device');
       expect(text).not.toContain('Test device 491713288 created');
     });

@@ -271,14 +271,13 @@ class TestControllerTest {
     }
 
     @Test
-    void testMapping_sendWithTestDevice_reportsWhetherTheDeviceWasCreatedOrReused() throws Exception {
+    void testMapping_liveTest_reportsWhetherTheTestDeviceWasCreatedOrReused() throws Exception {
         stubDispatcherResult(ProcessingContext.builder().mapping(makeInboundMapping()).build());
         when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
                 .thenReturn(new C8YAgent.TestDevice("77", false));
 
         TestContext ctx = dryRunContext();
         ctx.setSend(true);
-        ctx.setCreateTestDevice(true);
         TestResult reused = controller.testMapping(ctx).getBody();
 
         assertEquals("77", reused.getTestDeviceId());
@@ -291,6 +290,46 @@ class TestControllerTest {
 
         assertEquals("78", created.getTestDeviceId());
         assertEquals(Boolean.TRUE, created.getTestDeviceCreated());
+    }
+
+    @Test
+    void testMapping_liveTest_alwaysUsesATestDevice_evenWhenTheLegacyFlagIsOff() throws Exception {
+        stubDispatcherResult(ProcessingContext.builder().mapping(makeInboundMapping()).build());
+        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
+                .thenReturn(new C8YAgent.TestDevice("77", true));
+
+        TestContext ctx = dryRunContext();
+        ctx.setSend(true);
+        ctx.setCreateTestDevice(false); // deprecated, ignored
+
+        controller.testMapping(ctx);
+
+        verify(c8YAgent).ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void testMapping_dryRun_neverTouchesTestDevices() throws Exception {
+        stubDispatcherResult(ProcessingContext.builder().mapping(makeInboundMapping()).build());
+
+        controller.testMapping(dryRunContext());
+
+        verify(c8YAgent, org.mockito.Mockito.never()).ensureTestDevice(anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void testMapping_liveTest_failsWithoutSendingWhenTheTestDeviceCannotBeProvided() throws Exception {
+        stubDispatcherResult(ProcessingContext.builder().mapping(makeInboundMapping()).build());
+        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString())).thenReturn(null);
+
+        TestContext ctx = dryRunContext();
+        ctx.setSend(true);
+        TestResult result = controller.testMapping(ctx).getBody();
+
+        assertTrue(!result.getSuccess());
+        assertTrue(result.getErrors().get(0).contains("could not be created or found"));
+        // Only the dry run that derives the external ID ran; the live message was never dispatched, so
+        // the mapping did not get the chance to create a device itself.
+        verify(dispatcher, times(1)).onTestMessage(any(ConnectorMessage.class), any(Mapping.class));
     }
 
     @Test

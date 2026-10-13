@@ -3807,7 +3807,7 @@
           },
           "createTestDevice" : {
             "type" : "boolean",
-            "description" : "Create a test device in C8Y inventory before sending (tagged with d11r_testDevice)"
+            "description" : "Ignored. A live test (send=true) of an inbound mapping always uses a test device: created if missing (tagged with d11r_testDevice), otherwise the existing device with the same external ID."
           }
         },
         "required" : [ "mapping", "payload" ]
@@ -4057,7 +4057,7 @@
           },
           "testDeviceId" : {
             "type" : "string",
-            "description" : "ID of the test device created in C8Y inventory (only set when createTestDevice=true)"
+            "description" : "ID of the test device used by a live test (send=true) of an inbound mapping: created in C8Y inventory, or the existing device with the same external ID"
           }
         },
         "required" : [ "errors", "logs", "requests", "success", "warnings" ]

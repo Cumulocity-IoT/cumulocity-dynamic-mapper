@@ -48,7 +48,6 @@ import { DynamicMapperRequest, TestResult, TestContext, MappingTokens } from '..
 import { TestingService } from '../core/testing.service';
 import { patchC8YTemplateForTesting, sortObjectKeys } from '../../shared/mapping/util';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
-import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { CommonModule } from '@angular/common';
 
@@ -65,7 +64,7 @@ interface TestingModel {
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, BsDropdownModule, JsonEditorComponent]
+  imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, JsonEditorComponent]
 
 
 })
@@ -111,7 +110,6 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   // State
   testingModel: TestingModel = { results: [] };
-  createTestDevice = false;
   testMapping!: Mapping;
   sourceTemplate: any;
   sourceSystem = '';
@@ -189,26 +187,22 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       && !this.stepperConfiguration?.allowTestSending;
   }
 
-  /** Label of the main Send button; follows the mode chosen in its dropdown. */
-  get sendButtonText(): string {
-    return this.createTestDevice ? 'Send with Test Device' : 'Send with Existing Device';
+  get liveTestTitle(): string {
+    return this.mapping?.direction === Direction.OUTBOUND
+      ? 'Publish the result to the connected broker'
+      : 'Send to Cumulocity using a test device';
   }
 
-  get sendButtonTitle(): string {
-    return this.createTestDevice
-      ? 'Create a test device in your tenant first, then send'
-      : 'Send to the device that already exists in your tenant';
-  }
-
-  get sendHelpText(): string {
-    const base = 'Sending is only supported for mappings that use an external id.';
+  get testHelpText(): string {
+    const live = 'Live Test is only supported for mappings that use an external id.';
     if (this.mapping?.direction === Direction.OUTBOUND) {
-      return base;
+      return 'Mock Test transforms the message without sending anything. ' + live;
     }
-    return base + ' "Send with Existing Device" sends to the device that is already in your tenant. '
-      + '"Send with Test Device" first creates a throwaway device (tagged d11r_testDevice) so the send also '
-      + 'works when no real device exists. If a device with that external ID already exists it is used as is '
-      + 'and not tagged. Remove test devices under Monitoring > Test device.';
+    return 'Mock Test transforms the message against mocked data; nothing is written to your tenant. '
+      + live + ' Live Test really sends the result to Cumulocity, always using a test device: '
+      + 'a device tagged d11r_testDevice is created if the external ID is unknown, otherwise the existing '
+      + 'device with that external ID is used as is (and not tagged). Remove test devices under '
+      + 'Monitoring > Test device.';
   }
 
   disableTestSending(): boolean {
@@ -304,7 +298,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         this.testingModel.response = sortObjectKeys(result.response);
       } else {
         this.testingModel.response = {};
-        const testModeMsg = 'INFO No response in test mode. Data operations (MEASUREMENT, EVENT, ALARM) are prepared but not executed. Use one of the Send buttons to get actual responses.';
+        const testModeMsg = 'INFO No response in test mode. Data operations (MEASUREMENT, EVENT, ALARM) are prepared but not executed. Use "Live Test" to get actual responses.';
         if (!this.testingModel.logs) {
           this.testingModel.logs = [];
         }
@@ -372,8 +366,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     const testContext: TestContext = {
       mapping: this.testMapping,
       payload: extractedPayload,
-      send: sendPayload,
-      createTestDevice: sendPayload && this.createTestDevice
+      send: sendPayload
     };
 
     const result = await this.testingService.testMapping(testContext);
@@ -391,27 +384,21 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   private async handleTestResult(result: TestResult, sendPayload: boolean): Promise<void> {
     // A device that does not exist is reported either as a warning (flow / extension mappings
     // produce no request) or as an error (substitution mappings fail resolving the source id).
-    // Both carry the same marker, so offer to re-run assuming the device exists in either case.
+    // Both carry the same marker. For a Mock Test, offer to re-run assuming the device exists.
+    // A Live Test never offers this: it runs against a test device, and creating a real device
+    // through createNonExistingDevice would leave an untagged device behind.
     const deviceNotFound = [...(result.warnings ?? []), ...(result.errors ?? [])].some(m =>
       m.includes('createNonExistingDevice is disabled')
     );
     // Already enabled: the failure has another cause and re-running with the flag set cannot fix it.
-    if (deviceNotFound && !this.testMapping.createNonExistingDevice) {
-      // A dry run only needs the mock to pretend the device exists; a real send would create it.
-      const confirmed = await (sendPayload
-        ? this.showConfirmation(
-            'Device does not exist',
-            'The referenced device does not exist and createNonExistingDevice is disabled for this mapping. '
-              + 'Do you want to create the device in your tenant and send the message?',
-            { ok: 'Create device and send', cancel: 'Cancel' }
-          )
-        : this.showConfirmation(
-            'Device does not exist',
-            'The referenced device does not exist and createNonExistingDevice is disabled for this mapping. '
-              + 'Do you want to assume for this test that the device exists?',
-            { ok: 'Assume device exists', cancel: 'Cancel' }
-          ));
-      if (confirmed) {
+    if (deviceNotFound && !sendPayload && !this.testMapping.createNonExistingDevice) {
+      const assumeDeviceExists = await this.showConfirmation(
+        'Device does not exist',
+        'The referenced device does not exist and createNonExistingDevice is disabled for this mapping. '
+          + 'Do you want to assume for this test that the device exists?',
+        { ok: 'Assume device exists', cancel: 'Cancel' }
+      );
+      if (assumeDeviceExists) {
         this.testMapping.createNonExistingDevice = true;
         await this.executeTest(sendPayload);
         return;
@@ -431,7 +418,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   /**
    * Says what a successful send created and for which device, e.g.
-   * "Sent successfully: created alarm 1684457 on device 491713288 (c8y_Serial 862524060507262)."
+   * "Live test successful: created alarm 1684457 on device 491713288 (c8y_Serial 862524060507262)."
    * The bare id alone does not tell the user whether it is an alarm, an event or the device itself.
    */
   describeSendResult(result: TestResult): string {
@@ -449,15 +436,15 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       // The created or updated object is the device itself.
       const deviceId = createdId ?? first?.sourceId;
       text = deviceId
-        ? `Sent successfully: device ${deviceId}${externalId} created or updated.`
-        : 'Sent successfully: device created or updated.';
+        ? `Live test successful: device ${deviceId}${externalId} created or updated.`
+        : 'Live test successful: device created or updated.';
     } else {
       const noun = api ? api.toLowerCase() : 'object';
       const deviceId = first?.sourceId;
       const what = createdId ? `created ${noun} ${createdId}` : `created ${noun}`;
       text = deviceId
-        ? `Sent successfully: ${what} on device ${deviceId}${externalId}.`
-        : `Sent successfully: ${what}.`;
+        ? `Live test successful: ${what} on device ${deviceId}${externalId}.`
+        : `Live test successful: ${what}.`;
     }
 
     const more = (result.requests?.length ?? 0) - 1;
@@ -466,7 +453,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     }
     if (result.testDeviceId) {
       text += result.testDeviceCreated === false
-        ? ` Device ${result.testDeviceId} already existed and was used as is; it is not tagged as a test device,`
+        ? ` Existing device ${result.testDeviceId} was used as is; it is not tagged as a test device,`
           + ' so it is not listed under Monitoring > Test device.'
         : ` Test device ${result.testDeviceId} created; remove it under Monitoring > Test device.`;
     }

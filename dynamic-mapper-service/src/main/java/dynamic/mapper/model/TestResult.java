@@ -55,7 +55,7 @@ public class TestResult {
     @NotNull
     private Boolean success = false;
 
-    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "ID of the test device created in C8Y inventory (only set when createTestDevice=true)")
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "ID of the test device used by a live test (send=true) of an inbound mapping: created in C8Y inventory, or the existing device with the same external ID")
     private String testDeviceId;
 
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Whether the test device was created by this test (true) or already existed and was used as is (false). An existing device is not tagged d11r_testDevice and is not listed under Monitoring > Test device. Only set when testDeviceId is set.")

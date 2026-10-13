@@ -93,8 +93,8 @@ public class TestController {
             @ApiResponse(responseCode = "500", description = "Test execution failed")
     })
     // Same roles as creating or updating a mapping: the caller supplies a complete Mapping in the
-    // request body, and with send=true the result is dispatched to Cumulocity for real (and with
-    // createTestDevice=true a managed object is created) using the microservice's own elevated
+    // request body, and with send=true the result is dispatched to Cumulocity for real (for inbound
+    // mappings against a test device, which is created if missing) using the microservice's own elevated
     // credentials. Without this, any authenticated tenant user could write measurements, events,
     // alarms and devices without holding any Dynamic Mapper role.
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
@@ -116,11 +116,13 @@ public class TestController {
             AConnectorClient connectorClient = connectorRegistry
                     .getClientForTenant(tenant, TestClient.TEST_CONNECTOR_IDENTIFIER);
 
-            // Create test device in C8Y inventory before dispatching (INBOUND + send only).
+            // A live test (send=true) of an inbound mapping only ever runs against a test device:
+            // created if the external ID is unknown, otherwise the existing device is used. It must
+            // not create devices through the mapping's createNonExistingDevice setting, which would
+            // leave an untagged real device behind.
             // Run a dry-run first so we can extract the actual externalId produced by the
             // mapping's substitution, rather than guessing from the static source template.
-            if (Boolean.TRUE.equals(send) && Boolean.TRUE.equals(context.getCreateTestDevice())
-                    && mapping.getDirection().equals(Direction.INBOUND)) {
+            if (Boolean.TRUE.equals(send) && mapping.getDirection().equals(Direction.INBOUND)) {
                 String externalId = resolveExternalIdViaDryRun(tenant, connectorClient, mapping, payload);
                 if (externalId == null) {
                     externalId = extractIdentityFromSourceTemplate(mapping.getSourceTemplate());
@@ -131,6 +133,12 @@ public class TestController {
                 String externalIdType = (mapping.getExternalIdType() != null && !mapping.getExternalIdType().isEmpty())
                         ? mapping.getExternalIdType()
                         : "c8y_Serial";
+                if (externalId == null) {
+                    return liveTestFailure(result, tenant,
+                            "The external ID for the test device could not be determined from the mapping, "
+                                    + "so the live test was not run. Add an external ID to the source template "
+                                    + "or the sample topic.");
+                }
                 C8YAgent.TestDevice testDevice = c8YAgent.ensureTestDevice(tenant, externalId, externalId,
                         externalIdType);
                 if (testDevice != null) {
@@ -139,6 +147,10 @@ public class TestController {
                     log.info("{} - {} test device: id={}, externalId={}, type={}", tenant,
                             testDevice.created() ? "Created" : "Reusing existing", testDevice.id(), externalId,
                             externalIdType);
+                } else {
+                    return liveTestFailure(result, tenant,
+                            "The test device for external ID '" + externalId + "' could not be created or found, "
+                                    + "so the live test was not run.");
                 }
             }
 
@@ -230,6 +242,14 @@ public class TestController {
             // must not be found by the next one, and the mock should not hold memory between runs.
             clearMockCaches(tenant);
         }
+    }
+
+    /** A live test must not fall through to the mapping creating devices itself: report and stop. */
+    private ResponseEntity<TestResult> liveTestFailure(TestResult result, String tenant, String message) {
+        log.warn("{} - {}", tenant, message);
+        result.setSuccess(false);
+        result.getErrors().add(message);
+        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     private void clearMockCaches(String tenant) {

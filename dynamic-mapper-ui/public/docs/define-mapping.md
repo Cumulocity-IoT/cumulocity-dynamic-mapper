@@ -140,30 +140,30 @@ The **Inbound Mappings** / **Outbound Mappings** table is the entry point for wo
 Before activating a mapping, use the **Testing** step of the wizard (or reopen an existing mapping) to verify the
 transformation without waiting for a real device message:
 
-- **Transform Test Message** — applies the mapping's substitutions (or Smart Function / Java Extension code) to
-  the sample source payload and shows the resulting Cumulocity request. A single test payload can produce more
+- **Mock Test** — applies the mapping's substitutions (or Smart Function / Java Extension code) to
+  the sample source payload and shows the resulting Cumulocity request. Nothing is written to your tenant: device
+  lookups run against mocked data. If the device does not exist and **Create device** is off, the test says so and
+  offers to re-run assuming the device exists. A single test payload can produce more
   than one request — e.g. a measurement for a device that does not exist yet and is implicitly created also
   produces an inventory request. Use **Show Next Test Result** to step through all of them.
 
-![Transform test message](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Test_Transformation.png "The Testing step showing the result of Transform Test Message.")
-- **Reset Transform** — clears the test results and lets you run the transformation again, e.g. after editing the
+![Mock Test](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Test_Transformation.png "The Testing step showing the result of a Mock Test.")
+- **Reset Mock Test** — clears the test results and lets you run the Mock Test again, e.g. after editing the
   source payload or a substitution.
-- **Send with Existing Device** / **Send with Test Device** — sends the transformed result(s) to Cumulocity for
-  real. This requires the mapping to use an external ID (it is disabled otherwise). It is one split button: the
-  chevron next to it chooses the mode and the button's label follows.
-  - **Send with Existing Device** sends to the device that is already in your tenant. If it does not exist, the
-    mapping setting **Create device** decides whether it is created or the send fails.
-  - **Send with Test Device** first creates a real device in inventory, so the send also works when no real
-    device exists. It is tagged with the fragment `d11r_testDevice` so it can be identified and cleaned up
-    afterwards. If a device with the same external ID already exists, it is used as is and **not** tagged —
-    labelling a real device as a test device would offer it for cleanup — so it does not appear under
-    **Monitoring → Test device**. The confirmation says which of the two happened.
+- **Live Test** — sends the transformed result(s) to Cumulocity for real. This requires the mapping to use an
+  external ID (it is disabled otherwise). An inbound Live Test always runs against a **test device**: if no device
+  with the message's external ID exists, one is created in inventory and tagged with the fragment
+  `d11r_testDevice`, so it can be identified and cleaned up afterwards. If a device with that external ID already
+  exists, it is used as is and **not** tagged — labelling a real device as a test device would offer it for
+  cleanup — so it does not appear under **Monitoring → Test device**. The confirmation says which of the two
+  happened. A Live Test never creates a device through the mapping's **Create device** setting, so it cannot leave
+  an untagged real device behind.
 
-![Send test message](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Send_TestMessage.png "Sending a transformed test message to a test device in Cumulocity.")
+![Live Test](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Send_TestMessage.png "A Live Test sending a transformed test message to a test device in Cumulocity.")
 
 ##### Testing a Smart Function and reading its console output {#testing-smart-function}
 
-A Smart Function is ordinary JavaScript, so it is tested the same way: **Transform Test Message** executes your
+A Smart Function is ordinary JavaScript, so it is tested the same way: **Mock Test** executes your
 `onMessage()` function against the source payload and shows what it returned. You do not have to publish a real
 broker message, or even activate the mapping, to find out whether the code works.
 
@@ -202,11 +202,11 @@ or otherwise sensitive data once it is running in production.
 
 #### Managing test devices {#test-devices}
 
-Every time you use **Send with Test Device**, the mapper creates a real managed
+Every time a **Live Test** needs a new device, the mapper creates a real managed
 object in inventory tagged with the fragment `d11r_testDevice`. Over a few testing sessions these accumulate, so
 the mapper keeps them in one place: **Monitoring → Test device**.
 
-![Test devices](../../../resources/image/Dynamic_Mapper_Monitoring_TestDevices.png "The Test device page under Monitoring, listing the devices created by Send with Test Device.")
+![Test devices](../../../resources/image/Dynamic_Mapper_Monitoring_TestDevices.png "The Test device page under Monitoring, listing the devices created by Live Test.")
 
 The page lists only devices carrying that fragment — never your production devices — with their **ID**, **Name**,
 **Date Created** and **Type**. ID, Name and Type are filterable and sortable, so you can narrow a long list down

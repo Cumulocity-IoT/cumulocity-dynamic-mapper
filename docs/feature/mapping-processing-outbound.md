@@ -243,5 +243,5 @@ Outbound tests reuse the same dispatcher: `onTestNotification()` builds a synthe
 and calls `processNotification()` with `testing=true` unconditionally — unlike inbound, where
 `testing` depends on `sendPayload`. This is because the outbound source payload is always a
 synthetic template, never a real Cumulocity object, so there is nothing to resolve against
-real inventory even when "Send Test Message" is used. See
+real inventory even when "Live Test" is used. See
 [`mapping-testing.md`](mapping-testing.md) for the full testing flow.

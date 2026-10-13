@@ -230,7 +230,7 @@ public class SendOutboundProcessor extends BaseProcessor {
 
     /**
      * Publish to all real (non-TEST) connectors that have the mapping deployed and are connected.
-     * Used for outbound "Send Test Message" so the payload reaches the actual broker.
+     * Used for an outbound live test so the payload reaches the actual broker.
      */
     private void publishToRealConnectors(ProcessingContext<Object> context, String tenant) {
         Mapping mapping = context.getMapping();
