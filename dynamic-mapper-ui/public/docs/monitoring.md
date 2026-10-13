@@ -57,6 +57,8 @@ The Chart view shows two charts, both built from the same live counters as the s
 
 Both show totals since the last reset, not a trend over time. They update live as messages arrive.
 
+![Chart processed](../../../resources/image/Dynamic_Mapper_Monitoring_Chart.png "The Chart processed view with messages by outcome and processing time per mapping.")
+
 #### Cache statistic
 
 The Cache statistic view shows three cache panels side by side, each displaying two KPI cards:

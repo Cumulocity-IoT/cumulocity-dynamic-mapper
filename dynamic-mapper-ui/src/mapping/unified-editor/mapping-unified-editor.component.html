@@ -96,13 +96,13 @@
       [filterFormly]="filterFormly"
       [filterFormlyFields]="filterFormlyFields"
       (targetTemplateChange)="targetTemplate = $event">
-      @if (stepperViewModel.showExtensionSelectors) {
+      @if (stepperViewModel?.showExtensionSelectors) {
       <ng-container extensionSource>
         <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
         </ng-container>
       </ng-container>
       }
-      @if (stepperViewModel.showExtensionSelectors) {
+      @if (stepperViewModel?.showExtensionSelectors) {
       <ng-container extensionTarget>
         <ng-container *ngTemplateOutlet="extensionTemplateTarget; context: { form: templateForm }">
         </ng-container>
@@ -120,7 +120,7 @@
       [codeEditorLabel]="codeEditorLabel" [codeEditorHelp]="codeEditorHelp" [isBeforeSubstitutionStep]="currentStepIndex < TAB_DEFINE_TRANSFORMATION"
       (mappingCodeChange)="mappingCode = $event">
 
-      @if (stepperViewModel.showCodeEditorSection) {
+      @if (stepperViewModel?.showCodeEditorSection) {
       <ng-container codeEditor>
         <ng-container *ngTemplateOutlet="extensionTemplateSourceGraals; context: { form: templateForm }">
         </ng-container>
@@ -178,7 +178,7 @@
 <!-- Extension selector ng-templates (same as stepper) -->
 
 <ng-template #extensionTemplateSource let-form="form">
-  @if (stepperViewModel.showExtensionSelectorsSource) {
+  @if (stepperViewModel?.showExtensionSelectorsSource) {
   <div [formGroup]="form">
     <div class="form-group p-b-8"
       [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
@@ -208,7 +208,7 @@
     }
   </div>
   }
-  @if (stepperViewModel.showInternalExtensionNote) {
+  @if (stepperViewModel?.showInternalExtensionNote) {
   <div class="p-t-48">
     <small class="text-muted">{{ 'No template to edit — the payload structure comes from the Protobuf schema in the selected extension.' | translate }}</small>
   </div>
@@ -216,7 +216,7 @@
 </ng-template>
 
 <ng-template #extensionTemplateTarget let-form="form">
-  @if (stepperViewModel.showExtensionSelectorsTarget) {
+  @if (stepperViewModel?.showExtensionSelectorsTarget) {
   <div [formGroup]="form">
     <div class="form-group p-b-8"
       [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
@@ -246,7 +246,7 @@
     }
   </div>
   }
-  @if (stepperViewModel.showInternalExtensionNote) {
+  @if (stepperViewModel?.showInternalExtensionNote) {
   <div class="p-t-48">
     <small class="text-muted">{{ 'No template to edit — the payload structure comes from the Protobuf schema in the selected extension.' | translate }}</small>
   </div>
@@ -273,7 +273,7 @@
           data-cy="dm-unified-editor-generate-with-ai"
           (click)="openGenerateSubstitutionDrawer()"
           title="{{ (stepperConfiguration.editorMode === EditorMode.UPDATE ? 'Review / Refine with AI' : 'Generate with AI') | translate }}"
-          [disabled]="!stepperViewModel.config.showEditorSource || stepperViewModel.config.editorMode === EditorMode.READ_ONLY || !aiAgentDeployed">
+          [disabled]="!stepperViewModel?.config.showEditorSource || stepperViewModel?.config.editorMode === EditorMode.READ_ONLY || !aiAgentDeployed">
           <span>{{ stepperConfiguration.editorMode === EditorMode.UPDATE ? 'Review / Refine with AI' : 'Generate with AI' }}</span>
         </button>
         @if (!aiAgentDeployed) {
@@ -304,7 +304,7 @@
     </c8y-editor>
     }
   </div>
-  @if (stepperViewModel.showInternalExtensionNote) {
+  @if (stepperViewModel?.showInternalExtensionNote) {
   <div class="p-t-48">
     <small class="text-muted">{{ 'No template to edit — the payload structure comes from the Protobuf schema in the selected extension.' | translate }}</small>
   </div>

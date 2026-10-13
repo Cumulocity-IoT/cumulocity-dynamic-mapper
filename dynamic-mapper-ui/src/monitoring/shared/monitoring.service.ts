@@ -108,9 +108,9 @@ export class MonitoringService {
       const outboundLimit = (config && typeof config.outboundExternalIdCacheSize === 'number') ? config.outboundExternalIdCacheSize : 0;
 
       return [
-        { domain: 'inventoryCache', id: 'inventoryCacheRaw', name: 'Inventory cache', value: inventorySize ?? 0, itemName: 'Entries', icon: 'hashtag', domainIcon: 'more-details', limit: inventoryLimit },
-        { domain: 'inboundIdCache', id: 'inboundIdCacheRaw', name: 'Inbound ID cache', value: inboundSize ?? 0, itemName: 'Entries', icon: 'hashtag', domainIcon: 'pin-code', limit: inboundLimit },
-        { domain: 'outboundIdCache', id: 'outboundIdCacheRaw', name: 'Outbound ID cache', value: outboundSize ?? 0, itemName: 'Entries', icon: 'hashtag', domainIcon: 'pin-code', limit: outboundLimit }
+        { domain: 'inventoryCache', id: 'inventoryCacheRaw', name: 'Inventory cache', value: inventorySize ?? 0, itemName: 'Entries', icon: 'hashtag', domainIcon: 'database', limit: inventoryLimit },
+        { domain: 'inboundIdCache', id: 'inboundIdCacheRaw', name: 'Inbound ID cache', value: inboundSize ?? 0, itemName: 'Entries', icon: 'hashtag', domainIcon: 'download', limit: inboundLimit },
+        { domain: 'outboundIdCache', id: 'outboundIdCacheRaw', name: 'Outbound ID cache', value: outboundSize ?? 0, itemName: 'Entries', icon: 'hashtag', domainIcon: 'upload', limit: outboundLimit }
       ];
     } catch (err) {
       console.error('Failed to get KPIs details', err);

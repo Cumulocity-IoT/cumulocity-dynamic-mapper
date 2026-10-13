@@ -47,6 +47,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -550,16 +551,30 @@ public class PulsarConnectorClient extends AConnectorClient {
 
         byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
 
-        if (qos == Qos.AT_MOST_ONCE) {
+        // The message key comes from the mapping ('key' transport field / _CONTEXT_DATA_.key)
+        String key = context.getKey();
+        boolean async = qos == Qos.AT_MOST_ONCE;
+        CompletableFuture<?> result = null;
+        if (key != null) {
+            TypedMessageBuilder<byte[]> message = producer.newMessage().key(key).value(payloadBytes);
+            if (async) {
+                result = message.sendAsync();
+            } else {
+                message.send();
+            }
+        } else if (async) {
+            result = producer.sendAsync(payloadBytes);
+        } else {
+            // Wait for acknowledgment
+            producer.send(payloadBytes);
+        }
+        if (result != null) {
             // Fire and forget
-            producer.sendAsync(payloadBytes).exceptionally(throwable -> {
+            result.exceptionally(throwable -> {
                 log.debug("{} - AT_MOST_ONCE send failed (expected): {}",
                         tenant, throwable.getMessage());
                 return null;
             });
-        } else {
-            // Wait for acknowledgment
-            producer.send(payloadBytes);
         }
 
         if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
@@ -830,7 +845,11 @@ public class PulsarConnectorClient extends AConnectorClient {
         return ConnectorSpecificationBuilder
                 .create("Apache Pulsar", ConnectorType.PULSAR)
                 .description("Connector for connecting to Apache Pulsar message broker. " +
-                        "Supports QoS levels, wildcards, and MQTT-style topic format conversion.")
+                        "Supports QoS levels, wildcards, and MQTT-style topic format conversion.\n" +
+                        "Inbound Smart Functions and Java extensions read the message key from the message's transport fields ('key'), " +
+                        "JSONata mappings from '_CONTEXT_DATA_.key'. In outbound mappings the key is set from the transport field 'key' " +
+                        "or the string mapped to '_CONTEXT_DATA_.key'.")
+                .supportsMessageContext(true)
                 .supportedDirections(supportedDirections())
 
                 // Connection settings

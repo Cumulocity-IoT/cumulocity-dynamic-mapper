@@ -260,9 +260,9 @@ For **inbound** mappings, your Smart Function should return an array of objects 
 
 | Property | Description |
 |---|---|
-| `msg.transportFields` | Transport-specific fields of the received broker message. For **Kafka**, `key` holds the record key (the key, *not* a header); absent when the record has no key. For **MQTT 5**, user properties. Empty object when the transport carries none. |
+| `msg.transportFields` | Transport-specific fields of the received broker message. For **Kafka**, `key` holds the record key (the key, *not* a header); absent when the record has no key. For **Pulsar**, `key` holds the message key (absent when the message has none; Pulsar message properties are not exposed). For **MQTT 5**, user properties. Empty object when the transport carries none. |
 
-The key is delivered **out-of-band — it is not part of `msg.payload`**, so it does not appear in the mapping's source template. A Kafka record key is frequently the device identifier, which makes it a good source for the external ID:
+The key is delivered **out-of-band — it is not part of `msg.payload`**, so it does not appear in the mapping's source template. A Kafka record key or Pulsar message key is frequently the device identifier, which makes it a good source for the external ID:
 
 ```javascript
 function onMessage(msg, context) {
@@ -501,7 +501,7 @@ properties:
 | `externalSource` | No | Array specifying the external ID type: `[{type: "c8y_Serial"}]`. Defines which external ID type should be used to resolve the device identity for `_externalId_` token replacement in the broker topic. Ignored when `sourceId` is set explicitly. |
 | `sourceId` | No | Explicitly sets the Cumulocity internal managed object ID for this message, overriding the device that triggered the mapping. **Default behavior (omitted):** The mapper uses the internal ID of the device that triggered the outbound mapping. For external broker connectors, it additionally resolves the external ID (e.g. LoRa EUI, serial) via `externalSource` for `_externalId_` token replacement in the broker topic. **When set:** The provided ID is used as the internal C8Y managed object ID for the Cumulocity REST API call (`source.id`) and also for broker topic routing. The `externalSource` lookup is skipped. **Use case:** Cross-device routing — when data from one device should be associated with a different device in Cumulocity. For example, a gateway device triggers the mapping but the resulting measurement should be stored under a child device: `sourceId: childDeviceInternalId`. **Note:** This must be a Cumulocity *internal* numeric managed object ID, not an external identifier like a serial number or LoRa EUI. |
 | `targetPath` | No* | Required when `cumulocityType: "custom"` is set. Relative REST path of the tenant-local microservice to call, e.g. `/service/my-processor/ingest`. Must start with `/service/`. The mapper validates this at runtime and rejects requests that do not match. Ignored for all other `cumulocityType` values. |
-| `transportFields` | No | Object with transport-specific fields: `key` (the Kafka record key — the key, not a header; for Kafka connectors), `method` (HTTP method like `"POST"`, `"PUT"`, for Webhook connectors), `retain` (boolean to set MQTT retained message flag, for MQTT connectors). The same field is also populated **inbound** on `msg.transportFields` — see *Metadata Properties for Inbound Smart Functions*. |
+| `transportFields` | No | Object with transport-specific fields: `key` (the Kafka record key — the key, not a header — or the Pulsar message key; for Kafka and Pulsar connectors), `method` (HTTP method like `"POST"`, `"PUT"`, for Webhook connectors), `retain` (boolean to set MQTT retained message flag, for MQTT connectors). The same field is also populated **inbound** on `msg.transportFields` — see *Metadata Properties for Inbound Smart Functions*. |
 
 **Context Properties — available via `context.getConfig()`**
 
@@ -604,7 +604,7 @@ function onMessage(msg, context) {
       "time": new Date().toISOString(),
       "c8y_Steam": { "Temperature": { "unit": "C", "value": payload["c8y_TemperatureMeasurement"]["T"]["value"] } }
     },
-    transportFields: { "key": payload["source"]["id"] }  // Set Kafka partition key
+    transportFields: { "key": payload["source"]["id"] }  // Set Kafka record key / Pulsar message key
   }];
 }
 ```

@@ -1,57 +1,47 @@
-version: '3.8'
 services:
   pulsar:
-    image: apachepulsar/pulsar:4.0.6
+    image: apachepulsar/pulsar:${PULSAR_VERSION:-4.0.6}
     container_name: pulsar-standalone
     ports:
-      - "6650:6650"
-      - "8080:8080"
+      - "6650:6650"   # broker (pulsar://localhost:6650)
+      - "8080:8080"   # admin / REST (http://localhost:8080)
     environment:
-      - PULSAR_STANDALONE_USE_ZOOKEEPER=1
+      # keep the standalone JVMs small enough for a dev laptop
+      - PULSAR_MEM=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=512m
     volumes:
+      # data only: mounting /pulsar/conf would pin stale config across image upgrades
       - pulsardata:/pulsar/data
-      - pulsarconf:/pulsar/conf
     command: bin/pulsar standalone
     healthcheck:
-      test: ["CMD", "bin/pulsar-admin", "brokers", "healthcheck"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      test: ["CMD-SHELL", "curl -fs http://localhost:8080/admin/v2/brokers/health | grep -q ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
 
   pulsar-init:
-    image: apachepulsar/pulsar:4.0.6
+    image: apachepulsar/pulsar:${PULSAR_VERSION:-4.0.6}
     depends_on:
       pulsar:
         condition: service_healthy
+    restart: "no"
     environment:
       - TENANT=${TENANT:-t2050305588}
+    # $$ escapes compose interpolation so the container's own TENANT is used
     command: >
       bash -c '
-        set +e
-        echo "Waiting for Pulsar to be ready..." &&
-        sleep 10 &&
-        
-        echo "Creating tenant $TENANT..." &&
-        bin/pulsar-admin --admin-url http://pulsar:8080 tenants create $TENANT --admin-roles admin --allowed-clusters standalone
-        if [ $? -eq 0 ]; then
-          echo "Tenant $TENANT created successfully"
-        else
-          echo "Tenant $TENANT already exists or creation failed, continuing..."
-        fi
-        
-        echo "Creating namespace $TENANT/mqtt..." &&
-        bin/pulsar-admin --admin-url http://pulsar:8080 namespaces create $TENANT/mqtt
-        if [ $? -eq 0 ]; then
-          echo "Namespace $TENANT/mqtt created successfully"
-        else
-          echo "Namespace $TENANT/mqtt already exists or creation failed, continuing..."
-        fi
-        
-        echo "Setup completed successfully!"
-        exit 0
+        admin="bin/pulsar-admin --admin-url http://pulsar:8080"
+
+        echo "Creating tenant $$TENANT..."
+        $$admin tenants create $$TENANT --admin-roles admin --allowed-clusters standalone \
+          || echo "Tenant $$TENANT already exists, continuing..."
+
+        echo "Creating namespace $$TENANT/mqtt..."
+        $$admin namespaces create $$TENANT/mqtt \
+          || echo "Namespace $$TENANT/mqtt already exists, continuing..."
+
+        echo "Setup completed"
       '
 
 volumes:
   pulsardata:
-  pulsarconf:

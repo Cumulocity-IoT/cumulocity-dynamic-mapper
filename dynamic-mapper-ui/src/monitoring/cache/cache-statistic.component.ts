@@ -36,6 +36,12 @@ import { ActivatedRoute } from '@angular/router';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { KpListComponent } from './kpi/kpi-list.component';
 import { HttpStatusCode } from '@angular/common/http';
+const CACHE_IDS_BY_DOMAIN: Record<string, string> = {
+  inboundIdCache: 'INBOUND_ID_CACHE',
+  outboundIdCache: 'OUTBOUND_ID_CACHE',
+  inventoryCache: 'INVENTORY_CACHE'
+};
+
 @Component({
   selector: 'd11r-cache-grid',
   templateUrl: 'cache-statistic.component.html',
@@ -57,6 +63,7 @@ export class CacheStatisticComponent implements OnInit, OnDestroy {
   feature: Feature;
   kpis: KpiDetails[];
   loading = true;
+  readonly clearableDomains = Object.keys(CACHE_IDS_BY_DOMAIN);
 
   async ngOnInit(): Promise<void> {
     this.feature = this.route.snapshot.data['feature'];
@@ -69,18 +76,10 @@ export class CacheStatisticComponent implements OnInit, OnDestroy {
     this.monitoringService.stopMonitoring();
   }
 
-  async clickedClearInboundExternalIdCache() {
-    await this.clearCache('INBOUND_ID_CACHE');
-    await this.reload();
-  }
-
-  async clickedClearOutboundExternalIdCache() {
-    await this.clearCache('OUTBOUND_ID_CACHE');
-    await this.reload();
-  }
-
-  async clickedClearInventoryCache() {
-    await this.clearCache('INVENTORY_CACHE');
+  async clickedClearCache(domain: string) {
+    const cacheId = CACHE_IDS_BY_DOMAIN[domain];
+    if (!cacheId) return;
+    await this.clearCache(cacheId);
     await this.reload();
   }
 

@@ -96,12 +96,15 @@ function compareSemVerDesc(a: string | null | undefined, b: string | null | unde
  *
  * Notes are edited inline via the Cumulocity "edit on focus" pattern; no modal is shown.
  */
+import { provideGridPersistence } from '../../shared/misc/grid-persistence';
+
 @Component({
   selector: 'd11r-mapping-version-drawer',
   host: { class: 'flex-grow d-col fit-h' },
   templateUrl: './mapping-version-drawer.component.html',
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  providers: [...provideGridPersistence('mapping-versions')],
   imports: [CoreModule, SharedModule]
 })
 export class MappingVersionDrawerComponent implements OnInit {

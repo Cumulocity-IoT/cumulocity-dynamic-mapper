@@ -49,7 +49,7 @@ Each captured message appears as a row in the message list with the following co
 | 2 | **Received at** | Timestamp when the backend captured the message. |
 | 3 | **Connector** | Name of the connector that delivered the message. |
 | 4 | **Client ID** | The publishing client's ID, read from the MQTT 5 user property `clientId`. Shown only when a captured message carries one, so the column is hidden for transports without a per-message publisher identity (Kafka, MQTT 3.1.1, HTTP, AMQP). |
-| 5 | **Key** | The broker message key — for Kafka, the record key. Shown only when a captured message carries one, so the column is hidden for transports that have no key concept. |
+| 5 | **Key** | The broker message key — the record key for Kafka, the message key for Pulsar. Shown only when a captured message carries one, so the column is hidden for transports that have no key concept. |
 | 6 | **Topic** | The exact broker topic the message arrived on (wildcards resolved). |
 | 7 | **Payload** | Truncated payload preview. Click **show more** to expand the row and view the full payload in a formatted JSON editor. Binary payloads are flagged with a "binary (base64)" badge. |
 | 8 | **Create mapping** | The button opens the **Add Mapping** wizard pre-filled with the captured payload as the source template. This is the fastest way to build a mapping from real device data. |
