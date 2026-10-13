@@ -281,7 +281,6 @@ public class ProcessingResultHelper {
                 .api(api)
                 .externalIdType(mapping.getExternalIdType()) // External ID type from mapping
                 .externalId(context.getExternalId())
-                .sourceId(context.getSourceId())
                 .request(payloadJson) // JSON payload
                 .build();
 

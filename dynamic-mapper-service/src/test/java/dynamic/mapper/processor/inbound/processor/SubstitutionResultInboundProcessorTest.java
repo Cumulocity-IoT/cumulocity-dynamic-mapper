@@ -266,7 +266,28 @@ class SubstitutionResultInboundProcessorTest {
     }
 
     @Test
-    void testProcessWithExternalIdNotFound_stopsProcessing() throws Exception {
+    void testProcessWithCreateNonExistingDevice_creationFails_doesNotClaimTheFlagIsDisabled() throws Exception {
+        // Given: the flag is on, but creating the device yields nothing. The UI offers to enable
+        // the flag whenever it sees the "disabled" marker; here that would loop forever.
+        mapping.setCreateNonExistingDevice(true);
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class)))
+                .thenReturn(null);
+        when(identityResolutionService.getOrCreateDeviceThreadSafe(any(), any(), any(), any(), any()))
+                .thenReturn(null);
+
+        // When
+        processor.process(processingContext);
+
+        // Then
+        assertTrue(processingContext.hasError());
+        assertTrue(processingContext.getErrors().stream()
+                .anyMatch(e -> e.getMessage().contains("creating the implicit device failed")));
+        assertTrue(processingContext.getErrors().stream()
+                .noneMatch(e -> e.getMessage().contains("createNonExistingDevice is disabled")));
+    }
+
+    @Test
+    void testProcessWithExternalIdNotFound_failsWithoutRequests() throws Exception {
         // Given
         mapping.setCreateNonExistingDevice(false);
         when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class)))
@@ -277,7 +298,6 @@ class SubstitutionResultInboundProcessorTest {
 
         // Then
         assertTrue(processingContext.hasError());
-        assertTrue(processingContext.isIgnoreFurtherProcessing());
         assertTrue(processingContext.getRequests().isEmpty());
     }
 

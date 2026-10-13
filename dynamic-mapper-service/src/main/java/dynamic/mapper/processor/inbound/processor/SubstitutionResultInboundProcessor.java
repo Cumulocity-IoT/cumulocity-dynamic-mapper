@@ -78,10 +78,6 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
             validateProcessingCache(context);
             substituteInTargetAndCreateRequests(context);
 
-            if (context.getRequests().isEmpty()) {
-                context.setIgnoreFurtherProcessing(true);
-            }
-
             // Check inventory filter condition if specified
             // if (mapping.getFilterInventory() != null &&
             // !mapping.getCreateNonExistingDevice()) {
@@ -112,7 +108,6 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 mappingStatus.incrementErrors();
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             }
-            context.setIgnoreFurtherProcessing(true);
         }
 
     }
@@ -200,9 +195,15 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 }
 
                 if (sourceId.getValue() == null) {
+                    // The "createNonExistingDevice is disabled" marker is what the UI keys its
+                    // "assume the device exists" dialog on, so it must only appear when the flag is
+                    // really off — otherwise confirming the dialog could never resolve the failure.
+                    String reason = mapping.getCreateNonExistingDevice()
+                            ? "creating the implicit device failed"
+                            : "device not found in inventory and createNonExistingDevice is disabled";
                     throw new ProcessingException(
-                            String.format("Device resolution failed for externalId '%s' (type '%s'): device not found in inventory and createNonExistingDevice is disabled",
-                                    externalId, identity.getType()));
+                            String.format("Device resolution failed for externalId '%s' (type '%s'): %s",
+                                    externalId, identity.getType(), reason));
                 }
 
                 SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,

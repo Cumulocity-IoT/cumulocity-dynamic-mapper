@@ -323,44 +323,44 @@ public class SendInboundProcessor extends BaseProcessor {
         try {
             // Resolve external ID if needed and add source to payload
             if (request.getExternalId() != null) {
-                if (request.getSourceId() == null || request.getSourceId().equals(request.getExternalId())) {
-                    ID identity = new ID(request.getExternalIdType(), request.getExternalId());
-                    ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity,
-                            context.isTesting());
+                ID identity = new ID(request.getExternalIdType(), request.getExternalId());
+                ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity,
+                        context.isTesting());
 
-                    if (sourceId != null) {
-                        request.setSourceId(sourceId.getManagedObject().getId().getValue());
+                if (sourceId != null) {
+                    request.setSourceId(sourceId.getManagedObject().getId().getValue());
 
-                        // Add source field to payload JSON — but only for non-MEASUREMENT collection payloads.
-                        // MEASUREMENT payloads are already wrapped in { "measurements": [...] } by
-                        // FlowResultInboundProcessor, with source.id injected inside each individual
-                        // measurement. Adding source at the collection root would create a spurious outer
-                        // "source" key that the C8Y API does not expect.
-                        String payloadJson = request.getRequest();
-                        Map<String, Object> payloadMap = objectMapper.readValue(payloadJson, new TypeReference<Map<String, Object>>() {});
-                        if (!payloadMap.containsKey("measurements")) {
-                            Map<String, Object> source = new HashMap<>();
-                            source.put("id", request.getSourceId());
-                            payloadMap.put("source", source);
-                            request.setRequest(objectMapper.writeValueAsString(payloadMap));
-                        }
-
-                        // Cache the mapping of device to client ID
-                        if (!context.isTesting() && context.getClientId() != null) {
-                            serviceRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
-                                    request.getSourceId());
-                        }
-                    } else {
-                        throw new ProcessingException(String.format(
-                                "%s - Cannot send %s request: externalId '%s' (type '%s') not found in inventory",
-                                tenant, request.getApi(), request.getExternalId(), request.getExternalIdType()));
+                    // Add source field to payload JSON — but only for non-MEASUREMENT collection payloads.
+                    // MEASUREMENT payloads are already wrapped in { "measurements": [...] } by
+                    // FlowResultInboundProcessor, with source.id injected inside each individual
+                    // measurement. Adding source at the collection root would create a spurious outer
+                    // "source" key that the C8Y API does not expect.
+                    String payloadJson = request.getRequest();
+                    Map<String, Object> payloadMap = objectMapper.readValue(payloadJson, new TypeReference<Map<String, Object>>() {});
+                    if (!payloadMap.containsKey("measurements")) {
+                        Map<String, Object> source = new HashMap<>();
+                        source.put("id", request.getSourceId());
+                        payloadMap.put("source", source);
+                        request.setRequest(objectMapper.writeValueAsString(payloadMap));
                     }
-                } else {
+
                     // Cache the mapping of device to client ID
                     if (!context.isTesting() && context.getClientId() != null) {
                         serviceRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                                 request.getSourceId());
                     }
+                } else {
+                    // A request without a resolvable source would be rejected by the Cumulocity API
+                    // anyway; fail it here with a message that says why. The marker is what the UI
+                    // keys its "assume the device exists" dialog on, so it must only appear when the
+                    // flag is really off.
+                    String reason = context.getMapping().getCreateNonExistingDevice()
+                            ? "not found in inventory"
+                            : "not found in inventory and createNonExistingDevice is disabled";
+                    throw new ProcessingException(String.format(
+                            "%s - Cannot send %s request: externalId '%s' (type '%s') %s",
+                            tenant, request.getApi(), request.getExternalId(), request.getExternalIdType(),
+                            reason));
                 }
             }
 

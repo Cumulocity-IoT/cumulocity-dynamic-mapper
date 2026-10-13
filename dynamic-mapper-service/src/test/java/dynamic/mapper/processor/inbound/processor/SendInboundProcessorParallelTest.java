@@ -194,8 +194,9 @@ class SendInboundProcessorParallelTest {
         log.info("One failing request did not abort siblings or skip finalization");
     }
 
-    @Test
-    void testExternalIdUnresolved_failsRequestWithoutCallingCreateMEAO() throws Exception {
+    private DynamicMapperRequest processUnresolvedRequest(boolean createNonExistingDevice, boolean testing)
+            throws Exception {
+        mapping.setCreateNonExistingDevice(createNonExistingDevice);
         DynamicMapperRequest request = DynamicMapperRequest.builder()
                 .predecessor(-1)
                 .method(org.springframework.web.bind.annotation.RequestMethod.POST)
@@ -205,24 +206,52 @@ class SendInboundProcessorParallelTest {
                 .request("{\"severity\":\"MAJOR\",\"status\":\"ACTIVE\",\"text\":\"Test Alarm\",\"type\":\"c8y_TestAlarm\"}")
                 .sourceId(null)
                 .build();
-
         List<DynamicMapperRequest> requests = new ArrayList<>();
         requests.add(request);
         processingContext.setRequests(requests);
         processingContext.setExternalId("unresolvable-external-id");
         processingContext.setSourceId(null);
-
+        processingContext.setTesting(testing);
         when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(), anyBoolean())).thenReturn(null);
 
         assertDoesNotThrow(() -> processor.process(processingContext));
+        return request;
+    }
 
-        // Must not call createMEAO
+    @Test
+    void testExternalIdUnresolved_failsRequestWithoutCallingCreateMEAO() throws Exception {
+        DynamicMapperRequest request = processUnresolvedRequest(false, false);
+
         verify(c8yAgent, never()).createMEAO(any(), anyInt());
-
         assertNotNull(request.getError(), "Request must have an error set");
         assertTrue(request.getError().getMessage().contains("not found in inventory"));
         assertTrue(processingContext.hasError(), "ProcessingContext must have an error");
         verify(mappingService, times(1)).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), any());
+    }
+
+    @Test
+    void testExternalIdUnresolved_createDisabled_errorCarriesTheDialogMarker() throws Exception {
+        DynamicMapperRequest request = processUnresolvedRequest(false, true);
+
+        assertTrue(request.getError().getMessage().contains("createNonExistingDevice is disabled"));
+    }
+
+    @Test
+    void testExternalIdUnresolved_createEnabled_errorDoesNotClaimTheFlagIsDisabled() throws Exception {
+        DynamicMapperRequest request = processUnresolvedRequest(true, true);
+
+        assertTrue(request.getError().getMessage().contains("not found in inventory"));
+        assertFalse(request.getError().getMessage().contains("createNonExistingDevice is disabled"),
+                "the UI offers to enable the flag when it sees this marker; it must not when already enabled");
+    }
+
+    @Test
+    void testExternalIdUnresolved_inDryRun_doesNotTouchClientRelations() throws Exception {
+        processingContext.setClientId("client-1");
+
+        processUnresolvedRequest(false, true);
+
+        verify(serviceRegistry, never()).addOrUpdateClientRelation(any(), any(), any());
     }
 
     // ---- helpers ----
