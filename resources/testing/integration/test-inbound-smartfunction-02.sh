@@ -23,8 +23,29 @@ NON_VOLTAGE_EXT_ID="sensor-berlin-02-$(date +%s)"
 MAPPING_ID=""
 DEVICE_ID=""
 NON_VOLTAGE_DEVICE_ID=""
+ORIGINAL_INVENTORY_FRAGMENTS=""
+INVENTORY_FRAGMENTS_CHANGED=false
 
 dm_parse_args "$@"
+
+restore_inventory_fragments() {
+    if [ "$INVENTORY_FRAGMENTS_CHANGED" != "true" ]; then
+        return 0
+    fi
+
+    local _restore_body _restored_fragments
+    _restore_body=$(jq -cn --argjson fragments "$ORIGINAL_INVENTORY_FRAGMENTS" \
+        '{inventoryFragmentsToCache: $fragments}')
+    dm_api PUT /configuration/service "$_restore_body" >/dev/null
+    _restored_fragments=$(dm_api GET /configuration/service \
+        | jq -c '.inventoryFragmentsToCache // empty' 2>/dev/null || printf '')
+    if [ "$_restored_fragments" = "$ORIGINAL_INVENTORY_FRAGMENTS" ]; then
+        INVENTORY_FRAGMENTS_CHANGED=false
+        dm_info "Restored inventory cache fragments"
+    else
+        dm_warn "Could not verify restoration of inventory cache fragments"
+    fi
+}
 
 cleanup() {
     dm_info "Cleaning up test resources ..."
@@ -37,16 +58,50 @@ cleanup() {
         c8y identity delete --name "$NON_VOLTAGE_EXT_ID" --type "c8y_Serial" 2>/dev/null || true
         c8y inventory delete --id "$NON_VOLTAGE_DEVICE_ID" 2>/dev/null || true
     fi
+    restore_inventory_fragments
     dm_info "Cleanup complete"
 }
 
 dm_register_cleanup cleanup
+
+# Restore tenant-wide cache configuration even with --keep, which only retains
+# this test's mapping and inventory objects.
+test_exit() {
+    local _exit_code=$?
+    trap - EXIT
+    restore_inventory_fragments
+    _dm_on_exit
+    exit "$_exit_code"
+}
+trap test_exit EXIT
 
 dm_banner "$TEST_TITLE"
 
 dm_step 1 "Validating environment"
 dm_test_setup_and_validate
 dm_validate_only_exit
+
+dm_step 1b "Including c8y_Sensor in inventory cache for the filter"
+SERVICE_CONFIG=$(dm_api GET /configuration/service)
+ORIGINAL_INVENTORY_FRAGMENTS=$(printf '%s' "$SERVICE_CONFIG" \
+    | jq -ce '.inventoryFragmentsToCache | select(type == "array")' 2>/dev/null || printf '')
+if [ -z "$ORIGINAL_INVENTORY_FRAGMENTS" ]; then
+    dm_error "Could not read inventoryFragmentsToCache from service configuration"
+fi
+if ! printf '%s' "$ORIGINAL_INVENTORY_FRAGMENTS" | jq -e 'index("c8y_Sensor") != null' >/dev/null; then
+    INVENTORY_FRAGMENTS_CHANGED=true
+    UPDATED_INVENTORY_FRAGMENTS=$(printf '%s' "$ORIGINAL_INVENTORY_FRAGMENTS" \
+        | jq -c '. + ["c8y_Sensor"]')
+    SERVICE_CONFIG_UPDATE=$(jq -cn --argjson fragments "$UPDATED_INVENTORY_FRAGMENTS" \
+        '{inventoryFragmentsToCache: $fragments}')
+    dm_api PUT /configuration/service "$SERVICE_CONFIG_UPDATE" >/dev/null
+    CACHED_INVENTORY_FRAGMENTS=$(dm_api GET /configuration/service \
+        | jq -c '.inventoryFragmentsToCache // empty' 2>/dev/null || printf '')
+    if ! printf '%s' "$CACHED_INVENTORY_FRAGMENTS" | jq -e 'index("c8y_Sensor") != null' >/dev/null; then
+        dm_error "Failed to add c8y_Sensor to inventoryFragmentsToCache"
+    fi
+fi
+dm_success "Inventory cache includes c8y_Sensor"
 
 dm_step 2 "Creating sensor device with type filter"
 DEVICE=$(c8y inventory create \
@@ -114,8 +169,8 @@ function onMessage(msg, context) {
         action: "create",
         payload: {
             type: "c8y_VoltageMeasurement",
-            c8y_VoltageMeasurement: {
-                U: {
+            c8y_Voltage: {
+                voltage: {
                     value: payload.sensorData.val,
                     unit: "V"
                 }
@@ -193,7 +248,7 @@ dm_info "Resolved device for $EXT_ID: ${RESOLVED_DEVICE_ID:-<none>}"
 VOLTAGE=""
 for _i in 1 2 3 4 5 6 7 8; do
     MEASUREMENT=$(dm_get_latest_measurement "$EXT_ID" "c8y_Serial" "c8y_VoltageMeasurement")
-    VOLTAGE=$(echo "$MEASUREMENT" | jq -r '.c8y_VoltageMeasurement.U.value // empty')
+    VOLTAGE=$(echo "$MEASUREMENT" | jq -r '.c8y_Voltage.voltage.value // empty')
     [ -n "$VOLTAGE" ] && break
     sleep 3
 done
@@ -220,8 +275,9 @@ dm_mqtt_publish "testSmartInbound/$NON_VOLTAGE_EXT_ID" "$NEG_PAYLOAD" 1
 dm_wait 8 "for the filtered message to be (not) processed"
 
 NEG_MEASUREMENT=$(dm_get_latest_measurement "$NON_VOLTAGE_EXT_ID" "c8y_Serial" "c8y_VoltageMeasurement")
-NEG_VOLTAGE=$(echo "$NEG_MEASUREMENT" | jq -r '.c8y_VoltageMeasurement.U.value // empty')
+NEG_VOLTAGE=$(echo "$NEG_MEASUREMENT" | jq -r '.c8y_Voltage.voltage.value // empty')
 dm_assert_eq "Non-voltage sensor filtered (no measurement created)" "" "$NEG_VOLTAGE"
 
+restore_inventory_fragments
 dm_done "$TEST_TITLE"
 dm_print_summary
