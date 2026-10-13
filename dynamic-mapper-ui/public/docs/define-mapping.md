@@ -148,10 +148,14 @@ transformation without waiting for a real device message:
 ![Transform test message](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Test_Transformation.png "The Testing step showing the result of Transform Test Message.")
 - **Reset Transform** — clears the test results and lets you run the transformation again, e.g. after editing the
   source payload or a substitution.
-- **Send Test Message** — sends the transformed result(s) to Cumulocity for real. This requires the mapping to
-  use an external ID (it is disabled otherwise). Enable **Create test device** to have the mapper create a real
-  device in inventory first, tagged with the fragment `d11r_testDevice` so it can be identified and cleaned up
-  afterwards.
+- **Send with Existing Device** / **Send with Test Device** — sends the transformed result(s) to Cumulocity for
+  real. This requires the mapping to use an external ID (it is disabled otherwise). It is one split button: the
+  chevron next to it chooses the mode and the button's label follows.
+  - **Send with Existing Device** sends to the device that is already in your tenant. If it does not exist, the
+    mapping setting **Create device** decides whether it is created or the send fails.
+  - **Send with Test Device** first creates a real device in inventory, or reuses it if it already exists, so the
+    send also works when no real device exists. It is tagged with the fragment `d11r_testDevice` so it can be
+    identified and cleaned up afterwards.
 
 ![Send test message](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Send_TestMessage.png "Sending a transformed test message to a test device in Cumulocity.")
 
@@ -196,11 +200,11 @@ or otherwise sensitive data once it is running in production.
 
 #### Managing test devices {#test-devices}
 
-Every time you use **Send Test Message** with **Create test device** enabled, the mapper creates a real managed
+Every time you use **Send with Test Device**, the mapper creates a real managed
 object in inventory tagged with the fragment `d11r_testDevice`. Over a few testing sessions these accumulate, so
 the mapper keeps them in one place: **Monitoring → Test device**.
 
-![Test devices](../../../resources/image/Dynamic_Mapper_Monitoring_TestDevices.png "The Test device page under Monitoring, listing the devices created by Send Test Message.")
+![Test devices](../../../resources/image/Dynamic_Mapper_Monitoring_TestDevices.png "The Test device page under Monitoring, listing the devices created by Send with Test Device.")
 
 The page lists only devices carrying that fragment — never your production devices — with their **ID**, **Name**,
 **Date Created** and **Type**. ID, Name and Type are filterable and sortable, so you can narrow a long list down

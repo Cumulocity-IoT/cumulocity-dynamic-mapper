@@ -56,6 +56,8 @@ path from the UI is `${BASE_URL}/test/mapping` — see
 | `send` | `Boolean` | `false` (default) = dry-run only; `true` = actually publish/create the result. |
 | `createTestDevice` | `Boolean` | Inbound only; when `send=true`, create a throwaway device in C8Y inventory before dispatching so identity resolution has something real to attach to. |
 
+In the UI this is a send *mode* of a split button, modelled on *Save / Save and close* in the AI Agent Manager: the chevron opens a menu with **Send with Existing Device** (to the device already in the tenant; if it is missing, the mapping's *Create device* setting decides) and **Send with Test Device** (create or reuse a throwaway device first; it is tagged `d11r_testDevice`, not removed automatically, and listed under *Monitoring → Test device* for cleanup). The main button's label follows the chosen mode, and the help popover explains the difference. It is a send mode, not a free-floating option, because a dry run never creates a device. Outbound mappings have a single mode and get a plain button.
+
 `TestResult` ([`TestResult.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/TestResult.java)):
 
 | Field | Type | Meaning |

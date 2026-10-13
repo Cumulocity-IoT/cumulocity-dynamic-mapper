@@ -174,22 +174,48 @@
         [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length == 0">
         Reset Transform
       </button>
+      <!-- Split button, same pattern as "Save / Save and close" in the AI Agent Manager: the menu
+           chooses the send mode, the main part sends in that mode and its label follows. Whether a
+           test device is created first only matters when sending, so it is a send mode rather than
+           a free-floating checkbox. Outbound mappings have a single mode, hence a plain button. -->
+      @if (mapping.direction !== Direction.OUTBOUND) {
+      <div role="group" dropdown [dropup]="true" [isDisabled]="disableTestSending() || isLoading"
+        class="btn-group dropdown" data-cy="dm-mapping-test-send-group">
+        <button type="button" class="btn btn-default btn-sm" data-cy="dm-mapping-test-send"
+          [disabled]="disableTestSending() || isLoading" (click)="onSendTest()"
+          [title]="sendButtonTitle | translate">
+          @if (isLoading && !isSubstitutionsAsCode(mapping) && !requiresRawPayload()) {
+          <i class="fa fa-circle-o-notch fa-spin m-r-4"></i>
+          }
+          {{ sendButtonText | translate }}
+        </button>
+        <button type="button" dropdownToggle class="btn btn-default btn-sm" style="min-width: auto"
+          data-cy="dm-mapping-test-send-options-toggle" aria-haspopup="true"
+          [attr.aria-label]="'Send options' | translate" [title]="'Send options' | translate">
+          <i [c8yIcon]="'chevron-up'"></i>
+        </button>
+        <ul class="dropdown-menu" *dropdownMenu data-cy="dm-mapping-test-send-options">
+          <li>
+            <a data-cy="dm-mapping-test-send-mode-plain" (click)="createTestDevice = false"
+              [title]="'Send to the device that already exists in your tenant. If it does not exist, the mapping setting Create device decides.' | translate">{{ 'Send with Existing Device' | translate }}</a>
+          </li>
+          <li>
+            <a data-cy="dm-mapping-test-send-mode-test-device" (click)="createTestDevice = true"
+              [title]="'First create a throwaway device (tagged d11r_testDevice) in your tenant, or reuse it if it exists. Remove it later under Monitoring > Test device.' | translate">{{ 'Send with Test Device' | translate }}</a>
+          </li>
+        </ul>
+      </div>
+      } @else {
       <button type="button" class="btn btn-default btn-sm" data-cy="dm-mapping-test-send" [disabled]="disableTestSending() || isLoading" (click)="onSendTest()">
         @if (isLoading && !isSubstitutionsAsCode(mapping) && !requiresRawPayload()) {
         <i class="fa fa-circle-o-notch fa-spin m-r-4"></i>
         }
         Send Test Message
       </button>
-      <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-        popover="{{'Send Test Message is only supported for mappings that use an external id!'}}" triggers="focus"
-        type="button" container="body" allow></button>
-      @if (mapping.direction !== Direction.OUTBOUND) {
-      <label class="c8y-checkbox m-l-16 m-b-0" title="Create a real device in C8Y inventory before sending (tagged d11r_testDevice)">
-        <input type="checkbox" data-cy="dm-mapping-test-create-device-toggle" [(ngModel)]="createTestDevice" [disabled]="disableTestSending()" />
-        <span></span>
-        <span translate>Create test device</span>
-      </label>
       }
+      <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+        popover="{{sendHelpText}}" triggers="focus"
+        type="button" container="body" allow></button>
     </div>
     }
   </div>

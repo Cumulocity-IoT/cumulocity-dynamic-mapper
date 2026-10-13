@@ -26,7 +26,7 @@ import { of, ReplaySubject } from 'rxjs';
 import { MappingStepTestingComponent } from './mapping-testing.component';
 import { TestingService } from '../core/testing.service';
 import { Direction, Mapping, MappingType, Qos, StepperConfiguration, TransformationType } from '../../shared';
-import { TestContext, TestResult } from '../../shared/mapping/processor/processor.model';
+import { DynamicMapperRequest, TestContext, TestResult } from '../../shared/mapping/processor/processor.model';
 import { EditorMode } from '../../shared/mapping/stepper.model';
 
 /**
@@ -194,5 +194,40 @@ describe('MappingStepTestingComponent – device does not exist', () => {
     await component.onTestTransformation();
 
     expect(modalService.show).not.toHaveBeenCalled();
+  });
+
+  describe('describeSendResult', () => {
+    const sent = (req: Partial<DynamicMapperRequest>, extra: Partial<TestResult> = {}): TestResult => ({
+      success: true, errors: [], requests: [req as DynamicMapperRequest], ...extra
+    });
+
+    it('names the created alarm and the device it belongs to', () => {
+      const text = component.describeSendResult(sent({
+        api: 'ALARM', sourceId: '491713288', externalIdType: 'c8y_Serial', externalId: '862524060507262',
+        response: '{"id":"1684457"}'
+      }));
+      expect(text).toBe('Sent successfully: created alarm 1684457 on device 491713288 (c8y_Serial 862524060507262).');
+    });
+
+    it('describes an inventory send as the device itself', () => {
+      const text = component.describeSendResult(sent({
+        api: 'INVENTORY', externalIdType: 'c8y_Serial', externalId: '862', response: { id: '491713288' }
+      }));
+      expect(text).toBe('Sent successfully: device 491713288 (c8y_Serial 862) created or updated.');
+    });
+
+    it('still reads well when the response carries no id', () => {
+      const text = component.describeSendResult(sent({ api: 'MEASUREMENT', sourceId: '42' }));
+      expect(text).toBe('Sent successfully: created measurement on device 42.');
+    });
+
+    it('mentions further requests and the test device', () => {
+      const result = sent({ api: 'EVENT', sourceId: '7', response: { id: '9' } }, { testDeviceId: '7' });
+      result.requests.push({ api: 'EVENT' } as DynamicMapperRequest);
+      const text = component.describeSendResult(result);
+      expect(text).toContain('created event 9 on device 7');
+      expect(text).toContain('1 more request sent');
+      expect(text).toContain('Test device: 7.');
+    });
   });
 });

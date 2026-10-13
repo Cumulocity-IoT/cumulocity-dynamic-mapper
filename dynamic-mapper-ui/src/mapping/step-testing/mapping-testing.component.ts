@@ -48,6 +48,7 @@ import { DynamicMapperRequest, TestResult, TestContext, MappingTokens } from '..
 import { TestingService } from '../core/testing.service';
 import { patchC8YTemplateForTesting, sortObjectKeys } from '../../shared/mapping/util';
 import { CollapseModule } from 'ngx-bootstrap/collapse';
+import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { CommonModule } from '@angular/common';
 
@@ -64,7 +65,7 @@ interface TestingModel {
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, JsonEditorComponent]
+  imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, BsDropdownModule, JsonEditorComponent]
 
 
 })
@@ -188,6 +189,28 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       && !this.stepperConfiguration?.allowTestSending;
   }
 
+  /** Label of the main Send button; follows the mode chosen in its dropdown. */
+  get sendButtonText(): string {
+    return this.createTestDevice ? 'Send with Test Device' : 'Send with Existing Device';
+  }
+
+  get sendButtonTitle(): string {
+    return this.createTestDevice
+      ? 'Create a test device in your tenant first, then send'
+      : 'Send to the device that already exists in your tenant';
+  }
+
+  get sendHelpText(): string {
+    const base = 'Sending is only supported for mappings that use an external id.';
+    if (this.mapping?.direction === Direction.OUTBOUND) {
+      return base;
+    }
+    return base + ' "Send with Existing Device" sends to the device that is already in your tenant. '
+      + '"Send with Test Device" first creates a throwaway device (tagged d11r_testDevice), or reuses it '
+      + 'if it already exists, so the send also works when no real device exists. '
+      + 'Remove test devices under Monitoring > Test device.';
+  }
+
   disableTestSending(): boolean {
     return !this.stepperConfiguration.allowTestSending ||
       this.testingModel.results.length === 0 ||
@@ -281,7 +304,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         this.testingModel.response = sortObjectKeys(result.response);
       } else {
         this.testingModel.response = {};
-        const testModeMsg = 'INFO No response in test mode. Data operations (MEASUREMENT, EVENT, ALARM) are prepared but not executed. Use "Send Test Message" to get actual responses.';
+        const testModeMsg = 'INFO No response in test mode. Data operations (MEASUREMENT, EVENT, ALARM) are prepared but not executed. Use one of the Send buttons to get actual responses.';
         if (!this.testingModel.logs) {
           this.testingModel.logs = [];
         }
@@ -402,12 +425,56 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     }
 
     if (sendPayload) {
-      const rawResponse = result.requests?.[0]?.response;
-      const parsedResponse = typeof rawResponse === 'string' ? JSON.parse(rawResponse) : rawResponse;
-      const responseId = parsedResponse?.id;
-      const responseLabel = responseId ?? result.requests?.[0]?.sourceId ?? 'unknown';
-      const deviceInfo = result.testDeviceId ? `, test device: ${result.testDeviceId}` : '';
-      this.alertService.add({ text: `Sending mapping result was successful: ${responseLabel}${deviceInfo}`, type: 'info', timeout: ALERT_INFO_TIMEOUT });
+      this.alertService.add({ text: this.describeSendResult(result), type: 'info', timeout: ALERT_INFO_TIMEOUT });
+    }
+  }
+
+  /**
+   * Says what a successful send created and for which device, e.g.
+   * "Sent successfully: created alarm 1684457 on device 491713288 (c8y_Serial 862524060507262)."
+   * The bare id alone does not tell the user whether it is an alarm, an event or the device itself.
+   */
+  describeSendResult(result: TestResult): string {
+    const first = result.requests?.[0];
+    const rawResponse = first?.response;
+    const response = typeof rawResponse === 'string' ? this.tryParse(rawResponse) : rawResponse;
+    const createdId = response?.id;
+    const api = (first?.api ?? '').toUpperCase();
+    const externalId = first?.externalId
+      ? ` (${first.externalIdType ? first.externalIdType + ' ' : ''}${first.externalId})`
+      : '';
+
+    let text: string;
+    if (api === 'INVENTORY') {
+      // The created or updated object is the device itself.
+      const deviceId = createdId ?? first?.sourceId;
+      text = deviceId
+        ? `Sent successfully: device ${deviceId}${externalId} created or updated.`
+        : 'Sent successfully: device created or updated.';
+    } else {
+      const noun = api ? api.toLowerCase() : 'object';
+      const deviceId = first?.sourceId;
+      const what = createdId ? `created ${noun} ${createdId}` : `created ${noun}`;
+      text = deviceId
+        ? `Sent successfully: ${what} on device ${deviceId}${externalId}.`
+        : `Sent successfully: ${what}.`;
+    }
+
+    const more = (result.requests?.length ?? 0) - 1;
+    if (more > 0) {
+      text += ` ${more} more request${more === 1 ? '' : 's'} sent; see "Show Next Test Result".`;
+    }
+    if (result.testDeviceId) {
+      text += ` Test device: ${result.testDeviceId}.`;
+    }
+    return text;
+  }
+
+  private tryParse(value: string): any {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return undefined;
     }
   }
 
