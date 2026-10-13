@@ -90,7 +90,7 @@ class DeserializationInboundProcessorErrorHandlingTest {
         // Use reflection to replace the deserializer with a mock that throws
         // IOException
         replaceDeserializerWithMock(MappingType.JSON);
-        when(mockDeserializer.deserializePayload(eq(mapping), eq(connectorMessage)))
+        when(mockDeserializer.deserializePayload(eq(mapping), eq(connectorMessage), anyBoolean()))
                 .thenThrow(new IOException("Test IO Exception"));
         // When
         processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
@@ -98,7 +98,7 @@ class DeserializationInboundProcessorErrorHandlingTest {
         // Then
         verify(mappingService).getMappingStatus(TEST_TENANT, mapping);
         verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
-        verify(mockDeserializer).deserializePayload(eq(mapping), eq(connectorMessage));
+        verify(mockDeserializer).deserializePayload(eq(mapping), eq(connectorMessage), anyBoolean());
         assertEquals(1, (int) mappingStatus.errors);
     }
 
@@ -111,7 +111,7 @@ class DeserializationInboundProcessorErrorHandlingTest {
         // Use reflection to replace the deserializer with a mock that throws
         // IOException
         replaceDeserializerWithMock(MappingType.PROTOBUF_INTERNAL);
-        when(mockDeserializer.deserializePayload(eq(mapping), eq(connectorMessage)))
+        when(mockDeserializer.deserializePayload(eq(mapping), eq(connectorMessage), anyBoolean()))
                 .thenThrow(new IOException("Test IO Exception"));
         // When
         processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
@@ -119,7 +119,7 @@ class DeserializationInboundProcessorErrorHandlingTest {
         // Then
         verify(mappingService).getMappingStatus(TEST_TENANT, mapping);
         verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
-        verify(mockDeserializer).deserializePayload(eq(mapping), eq(connectorMessage));
+        verify(mockDeserializer).deserializePayload(eq(mapping), eq(connectorMessage), anyBoolean());
         assertEquals(1, mappingStatus.errors);
     }
 

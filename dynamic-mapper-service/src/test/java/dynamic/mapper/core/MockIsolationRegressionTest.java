@@ -25,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -32,8 +34,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Semaphore;
 
@@ -55,7 +59,12 @@ import com.cumulocity.sdk.client.identity.ExternalIDCollection;
 import com.cumulocity.sdk.client.identity.IdentityApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.cache.InboundExternalIdCache;
+import dynamic.mapper.core.cache.InventoryCache;
+import dynamic.mapper.core.cache.OutboundExternalIdCache;
+import dynamic.mapper.core.cache.OutboundIdKey;
+import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.core.mock.MockIdentity;
@@ -250,5 +259,132 @@ class MockIsolationRegressionTest {
         when(subscriptionsService.getTenant()).thenReturn(OTHER_TENANT);
         assertNotNull(mockIdentity.getExternalId(id2), "External ID on OTHER_TENANT must remain intact");
         assertNotNull(mockInventory.get(created2.getId()), "ManagedObject on OTHER_TENANT must remain intact");
+    }
+
+    // ── Outbound identity cache ───────────────────────────────────────────
+
+    private C8YAgent agentWith(IdentityFacade identityFacade, CacheManager cm) {
+        return new C8YAgent(
+                null, null, identityFacade, null, null, null, null, null,
+                subscriptionsService, null, null, null, null,
+                new ObjectMapper(), tenantRegistry, null, cm, null, null, null, null,
+                "1.0.0", 10);
+    }
+
+    private ExternalIDRepresentation liveExternalId(String internalId) {
+        ExternalIDRepresentation rep = new ExternalIDRepresentation();
+        ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
+        mor.setId(new GId(internalId));
+        rep.setManagedObject(mor);
+        rep.setType(EXTERNAL_ID_TYPE);
+        rep.setExternalId(EXTERNAL_ID_VAL);
+        return rep;
+    }
+
+    @Test
+    void testC8YAgentResolveGlobalId2ExternalId_testingTrue_skipsOutboundCache() {
+        OutboundExternalIdCache outboundCache = mock(OutboundExternalIdCache.class);
+        when(cacheManager.getOutboundExternalIdCache(TEST_TENANT)).thenReturn(outboundCache);
+        when(outboundCache.getExternalIdForSource(any())).thenReturn(liveExternalId(REAL_INTERNAL_ID));
+
+        IdentityFacade identityFacade = mock(IdentityFacade.class);
+        when(identityFacade.resolveGlobalId2ExternalId(any(), any(), eq(true), any())).thenReturn(null);
+
+        ExternalIDRepresentation result = agentWith(identityFacade, cacheManager)
+                .resolveGlobalId2ExternalId(TEST_TENANT, new GId(REAL_INTERNAL_ID), EXTERNAL_ID_TYPE, true);
+
+        assertNull(result, "a dry run must not be served from the live outbound cache");
+        verify(outboundCache, never()).getExternalIdForSource(any());
+        verify(outboundCache, never()).putExternalIdForSource(any(), any());
+    }
+
+    @Test
+    void testC8YAgentResolveGlobalId2ExternalId_production_stillUsesOutboundCache() {
+        OutboundExternalIdCache outboundCache = mock(OutboundExternalIdCache.class);
+        when(cacheManager.getOutboundExternalIdCache(TEST_TENANT)).thenReturn(outboundCache);
+        ExternalIDRepresentation cached = liveExternalId(REAL_INTERNAL_ID);
+        when(outboundCache.getExternalIdForSource(any())).thenReturn(cached);
+
+        ExternalIDRepresentation result = agentWith(mock(IdentityFacade.class), cacheManager)
+                .resolveGlobalId2ExternalId(TEST_TENANT, new GId(REAL_INTERNAL_ID), EXTERNAL_ID_TYPE, false);
+
+        assertSame(cached, result);
+    }
+
+    // ── End to end: dry run with warmed live caches ───────────────────────
+
+    @Test
+    void testDryRun_withWarmedLiveCaches_isDecidedByMockAndLeavesLiveCachesUntouched() throws Exception {
+        when(subscriptionsService.getTenant()).thenReturn(TEST_TENANT);
+
+        // Real caches and real mocks; only the platform edges are faked.
+        NotificationSubscriber notificationSubscriber = mock(NotificationSubscriber.class);
+        CacheManager realCacheManager = new CacheManager(mock(C8YAgent.class), notificationSubscriber);
+        realCacheManager.initializeInboundExternalIdCache(TEST_TENANT, 100);
+        realCacheManager.initializeOutboundExternalIdCache(TEST_TENANT, 100);
+        realCacheManager.initializeInventoryCache(TEST_TENANT, 100);
+        tenantRegistry.addServiceConfiguration(TEST_TENANT, new ServiceConfiguration());
+
+        MockIdentity mockIdentity = new MockIdentity(subscriptionsService);
+        MockInventory mockInventory = new MockInventory(subscriptionsService);
+        IdentityFacade identityFacade = new IdentityFacade(mockIdentity, identityApi);
+        InventoryFacade inventoryFacade = new InventoryFacade(mockInventory,
+                mock(com.cumulocity.sdk.client.inventory.InventoryApi.class),
+                mock(com.cumulocity.sdk.client.Platform.class));
+        C8YAgent agent = agentWith(identityFacade, realCacheManager);
+
+        // Warm every live cache with device REAL_INTERNAL_ID.
+        ID identity = new ID(EXTERNAL_ID_TYPE, EXTERNAL_ID_VAL);
+        ExternalIDRepresentation liveInbound = liveExternalId(REAL_INTERNAL_ID);
+        ExternalIDRepresentation liveOutbound = liveExternalId(REAL_INTERNAL_ID);
+        OutboundIdKey outboundKey = new OutboundIdKey(REAL_INTERNAL_ID, EXTERNAL_ID_TYPE);
+        Map<String, Object> liveMO = Map.of("name", "real device", "type", "real_type");
+        String cacheKey = TEST_TENANT + "|" + EXTERNAL_ID_TYPE + "|" + EXTERNAL_ID_VAL;
+        realCacheManager.getInboundExternalIdCache(TEST_TENANT).putIdForExternalId(identity, liveInbound);
+        realCacheManager.getOutboundExternalIdCache(TEST_TENANT).putExternalIdForSource(outboundKey, liveOutbound);
+        realCacheManager.getInventoryCache(TEST_TENANT).putMO(REAL_INTERNAL_ID, liveMO);
+        tenantRegistry.cacheExternalId(cacheKey, REAL_INTERNAL_ID);
+
+        // The resolver the enrichment service uses: the agent for identity, the mock for inventory.
+        IdentityResolver resolver = mock(IdentityResolver.class);
+        when(resolver.resolveExternalId2GlobalId(any(), any(), any())).thenAnswer(
+                inv -> agent.resolveExternalId2GlobalId(inv.getArgument(0), inv.getArgument(1), inv.getArgument(2)));
+        when(resolver.getManagedObjectForId(any(), any(), any(), anyBoolean())).thenAnswer(
+                inv -> inventoryFacade.get(GId.asGId((String) inv.getArgument(1)), inv.getArgument(2),
+                        inv.getArgument(3)));
+        InventoryCacheEnrichmentService enrichment = new InventoryCacheEnrichmentService(
+                realCacheManager, tenantRegistry, notificationSubscriber);
+        IdentityResolutionService resolution = new IdentityResolutionService(agent, tenantRegistry,
+                new ObjectMapper());
+
+        ProcessingContext<Object> dryRun = ProcessingContext.<Object>builder()
+                .tenant(TEST_TENANT)
+                .mapping(Mapping.builder().createNonExistingDevice(false).build())
+                .testing(true)
+                .build();
+
+        // When: a dry run asks every question that could be answered from a live cache
+        assertNull(resolution.getOrCreateDeviceThreadSafe(
+                TEST_TENANT, EXTERNAL_ID_TYPE, EXTERNAL_ID_VAL, identity, dryRun),
+                "createNonExistingDevice=false + empty mock => not found, although the live device exists");
+        assertNull(agent.resolveExternalId2GlobalId(TEST_TENANT, identity, true));
+        assertNull(agent.resolveGlobalId2ExternalId(TEST_TENANT, new GId(REAL_INTERNAL_ID), EXTERNAL_ID_TYPE, true));
+        assertNull(enrichment.getMOFromInventoryCacheByExternalId(TEST_TENANT,
+                new dynamic.mapper.processor.model.ExternalId(EXTERNAL_ID_VAL, EXTERNAL_ID_TYPE), true, resolver));
+        Map<String, Object> dryRunMO = enrichment.getMOFromInventoryCache(TEST_TENANT, REAL_INTERNAL_ID, true, resolver);
+        assertTrue(dryRunMO.isEmpty(), "a dry run must not see the live managed object's fragments");
+
+        // Then: every live cache is exactly as it was, and no real subscription was opened
+        assertSame(liveInbound, realCacheManager.getInboundExternalIdCache(TEST_TENANT).getIdByExternalId(identity));
+        assertSame(liveOutbound,
+                realCacheManager.getOutboundExternalIdCache(TEST_TENANT).getExternalIdForSource(outboundKey));
+        assertSame(liveMO, realCacheManager.getInventoryCache(TEST_TENANT).getMOBySource(REAL_INTERNAL_ID));
+        assertEquals(REAL_INTERNAL_ID, tenantRegistry.getCachedExternalId(cacheKey));
+        verifyNoInteractions(notificationSubscriber);
+
+        // Control: the same question in production mode IS answered from the live cache,
+        // proving the caches above really were warm.
+        assertSame(liveInbound, agent.resolveExternalId2GlobalId(TEST_TENANT, identity, false));
+        assertSame(liveMO, enrichment.getMOFromInventoryCache(TEST_TENANT, REAL_INTERNAL_ID, false, resolver));
     }
 }

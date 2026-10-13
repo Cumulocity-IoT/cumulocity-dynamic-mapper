@@ -32,6 +32,7 @@ decided against rather than forgotten.
 | [mapping-validation.md](mapping-validation.md) | The rules a mapping is checked against |
 | [mapping-versioning.md](mapping-versioning.md) | Drafts, publishing, rollback, retention |
 | [mapping-testing.md](mapping-testing.md) | Testing a mapping without a device |
+| [mapping-testing-isolation.md](mapping-testing-isolation.md) | Keeping the test mock and live caches apart; clearing state between runs |
 | [identity-resolution.md](identity-resolution.md) | External ID ↔ managed object, implicit device creation |
 | [reliability.md](reliability.md) | QoS, processing timeouts, failure handling, status counters |
 

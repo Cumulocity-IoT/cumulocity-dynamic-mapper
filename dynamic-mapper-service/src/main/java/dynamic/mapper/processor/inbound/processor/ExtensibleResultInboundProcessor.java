@@ -269,28 +269,6 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
                         context.setExternalId(externalSource.getExternalId());
                         ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, sourceId);
                     }
-                } else if (context.isTesting()) {
-                    ExternalId externalSource = externalSources.get(0);
-                    String testDeviceId = (context.getSourceId() != null && !context.getSourceId().isEmpty())
-                            ? context.getSourceId()
-                            : "909090";
-                    resolvedDeviceId = testDeviceId;
-                    context.setSourceId(resolvedDeviceId);
-                    if (externalSource != null) {
-                        externalIdInfo = ExternalIdInfo.builder()
-                                .externalType(externalSource.getType())
-                                .externalId(externalSource.getExternalId())
-                                .build();
-                        context.setExternalId(externalSource.getExternalId());
-                    }
-                    ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
-                    String logMsg = String.format(
-                            "INFO: Device with externalId '%s' (type '%s') does not exist yet. Using test device internal ID '%s' for testing.",
-                            externalSource != null ? externalSource.getExternalId() : "unknown",
-                            externalSource != null ? externalSource.getType() : "unknown",
-                            resolvedDeviceId);
-                    log.info("{} - {}", tenant, logMsg);
-                    output.addLog(logMsg);
                 } else {
                     // No device ID and not creating implicit devices - skip this message
                     ExternalId externalSource = externalSources.get(0);

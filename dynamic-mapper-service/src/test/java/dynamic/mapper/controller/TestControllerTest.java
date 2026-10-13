@@ -27,7 +27,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -37,6 +41,7 @@ import java.util.concurrent.ExecutionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -216,6 +221,53 @@ class TestControllerTest {
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> controller.testMapping(ctx));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
+    }
+
+    // ── Mock cache lifecycle (isolation requirement 2: clear between runs) ──
+
+    private TestContext dryRunContext() {
+        TestContext ctx = new TestContext();
+        ctx.setMapping(makeInboundMapping());
+        ctx.setPayload("{}");
+        ctx.setSend(false);
+        return ctx;
+    }
+
+    @Test
+    void testMapping_clearsMockCachesBeforeAndAfterTheRun() throws Exception {
+        stubDispatcherResult(ProcessingContext.builder().mapping(makeInboundMapping()).build());
+
+        controller.testMapping(dryRunContext());
+
+        InOrder order = inOrder(c8YAgent, dispatcher);
+        order.verify(c8YAgent).clearMockIdentityCache(TENANT);
+        order.verify(c8YAgent).clearMockInventoryCache(TENANT);
+        order.verify(dispatcher).onTestMessage(any(ConnectorMessage.class), any(Mapping.class));
+        order.verify(c8YAgent).clearMockIdentityCache(TENANT);
+        order.verify(c8YAgent).clearMockInventoryCache(TENANT);
+    }
+
+    @Test
+    void testMapping_clearsMockCachesAfterAFailedRun() throws Exception {
+        when(connectorRegistry.getClientForTenant(eq(TENANT), anyString()))
+                .thenThrow(new ConnectorRegistryException("no test connector registered"));
+
+        assertThrows(ResponseStatusException.class, () -> controller.testMapping(dryRunContext()));
+
+        // once on entry, once in the finally block — a failed run must not leave state behind
+        verify(c8YAgent, times(2)).clearMockIdentityCache(TENANT);
+        verify(c8YAgent, times(2)).clearMockInventoryCache(TENANT);
+    }
+
+    @Test
+    void testMapping_failingCleanupDoesNotMaskTheResult() throws Exception {
+        stubDispatcherResult(ProcessingContext.builder().mapping(makeInboundMapping()).build());
+        doThrow(new IllegalStateException("No tenant context available"))
+                .when(c8YAgent).clearMockIdentityCache(TENANT);
+
+        ResponseEntity<TestResult> response = controller.testMapping(dryRunContext());
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
     @Test

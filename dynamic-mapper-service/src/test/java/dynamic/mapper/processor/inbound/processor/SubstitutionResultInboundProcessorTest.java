@@ -282,25 +282,22 @@ class SubstitutionResultInboundProcessorTest {
     }
 
     @Test
-    void testProcessWithExternalIdNotFound_whenTesting_usesTestDeviceIdAndLogs() throws Exception {
-        // Given
+    void testProcessWithExternalIdNotFound_whenTesting_reportsCreateNonExistingDeviceDisabled() throws Exception {
+        // Given: a dry run must not invent a device — the UI relies on this message to offer
+        // "assume the device exists for this test"
         mapping.setCreateNonExistingDevice(false);
         processingContext.setTesting(true);
         when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), eq(true)))
-                .thenReturn(null); // Simulate device not found in test mode
+                .thenReturn(null);
 
         // When
         processor.process(processingContext);
 
         // Then
-        assertFalse(processingContext.hasError());
-        assertFalse(processingContext.isIgnoreFurtherProcessing());
-        assertEquals("909090", processingContext.getSourceId());
-        assertEquals(1, processingContext.getRequests().size());
-        assertEquals("909090", processingContext.getRequests().get(0).getSourceId());
-        assertTrue(processingContext.getRequests().get(0).getRequest().contains("\"id\":\"909090\""));
-        assertTrue(processingContext.getLogs().stream()
-                .anyMatch(l -> l.contains("does not exist yet") && l.contains("909090")));
+        assertTrue(processingContext.hasError());
+        assertTrue(processingContext.getRequests().isEmpty());
+        assertTrue(processingContext.getErrors().stream()
+                .anyMatch(e -> e.getMessage().contains("createNonExistingDevice is disabled")));
     }
 
     @Test

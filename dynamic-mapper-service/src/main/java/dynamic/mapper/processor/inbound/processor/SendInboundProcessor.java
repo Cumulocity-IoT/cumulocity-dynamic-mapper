@@ -350,24 +350,6 @@ public class SendInboundProcessor extends BaseProcessor {
                             serviceRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                                     request.getSourceId());
                         }
-                    } else if (context.isTesting()) {
-                        String testDeviceId = (context.getSourceId() != null && !context.getSourceId().isEmpty())
-                                ? context.getSourceId()
-                                : "909090";
-                        request.setSourceId(testDeviceId);
-                        String payloadJson = request.getRequest();
-                        Map<String, Object> payloadMap = objectMapper.readValue(payloadJson, new TypeReference<Map<String, Object>>() {});
-                        if (!payloadMap.containsKey("measurements")) {
-                            Map<String, Object> source = new HashMap<>();
-                            source.put("id", request.getSourceId());
-                            payloadMap.put("source", source);
-                            request.setRequest(objectMapper.writeValueAsString(payloadMap));
-                        }
-                        String logMsg = String.format(
-                                "INFO: Device with externalId '%s' (type '%s') does not exist yet. Using test device internal ID '%s' for testing.",
-                                request.getExternalId(), request.getExternalIdType(), testDeviceId);
-                        log.info("{} - {}", tenant, logMsg);
-                        context.getLogs().add(logMsg);
                     } else {
                         throw new ProcessingException(String.format(
                                 "%s - Cannot send %s request: externalId '%s' (type '%s') not found in inventory",

@@ -366,28 +366,38 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private async handleTestResult(result: TestResult, sendPayload: boolean): Promise<void> {
+    // A device that does not exist is reported either as a warning (flow / extension mappings
+    // produce no request) or as an error (substitution mappings fail resolving the source id).
+    // Both carry the same marker, so offer to re-run assuming the device exists in either case.
+    const deviceNotFound = [...(result.warnings ?? []), ...(result.errors ?? [])].some(m =>
+      m.includes('createNonExistingDevice is disabled')
+    );
+    if (deviceNotFound) {
+      // A dry run only needs the mock to pretend the device exists; a real send would create it.
+      const confirmed = await (sendPayload
+        ? this.showConfirmation(
+            'Device does not exist',
+            'The referenced device does not exist and createNonExistingDevice is disabled for this mapping. '
+              + 'Do you want to create the device in your tenant and send the message?',
+            { ok: 'Create device and send', cancel: 'Cancel' }
+          )
+        : this.showConfirmation(
+            'Device does not exist',
+            'The referenced device does not exist and createNonExistingDevice is disabled for this mapping. '
+              + 'Do you want to assume for this test that the device exists?',
+            { ok: 'Assume device exists', cancel: 'Cancel' }
+          ));
+      if (confirmed) {
+        this.testMapping.createNonExistingDevice = true;
+        await this.executeTest(sendPayload);
+        return;
+      }
+    }
+
     if (!result.success) {
       const errorLogs = (result.errors ?? []).map(e => `ERROR: ${e}`);
       this.testingModel.logs = [...(this.testingModel.logs ?? []), ...errorLogs];
       return;
-    }
-
-    if (result.warnings?.length > 0) {
-      const createDeviceWarning = result.warnings.find(w =>
-        w.includes('createNonExistingDevice is disabled')
-      );
-      if (createDeviceWarning) {
-        const shouldEnable = await this.showConfirmation(
-          'Enable device creation during testing',
-          'Do you want to set createNonExistingDevice during testing to true?',
-          { ok: 'Enable', cancel: 'Cancel' }
-        );
-        if (shouldEnable) {
-          this.testMapping.createNonExistingDevice = true;
-          await this.executeTest(sendPayload);
-          return;
-        }
-      }
     }
 
     if (sendPayload) {

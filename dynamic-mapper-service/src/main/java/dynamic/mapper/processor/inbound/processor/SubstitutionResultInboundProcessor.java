@@ -200,21 +200,9 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 }
 
                 if (sourceId.getValue() == null) {
-                    if (context.isTesting()) {
-                        String testDeviceId = (context.getSourceId() != null && !context.getSourceId().isEmpty())
-                                ? context.getSourceId()
-                                : "909090";
-                        sourceId.setValue(testDeviceId);
-                        String logMsg = String.format(
-                                "INFO: Device with externalId '%s' (type '%s') does not exist yet. Using test device internal ID '%s' for testing.",
-                                externalId, identity.getType(), testDeviceId);
-                        log.info("{} - {}", tenant, logMsg);
-                        context.getLogs().add(logMsg);
-                    } else {
-                        throw new ProcessingException(
-                                String.format("Device resolution failed for externalId '%s' (type '%s')",
-                                        externalId, identity.getType()));
-                    }
+                    throw new ProcessingException(
+                            String.format("Device resolution failed for externalId '%s' (type '%s'): device not found in inventory and createNonExistingDevice is disabled",
+                                    externalId, identity.getType()));
                 }
 
                 SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,

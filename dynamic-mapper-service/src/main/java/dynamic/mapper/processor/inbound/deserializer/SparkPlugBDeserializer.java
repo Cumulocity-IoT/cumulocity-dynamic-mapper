@@ -146,6 +146,12 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
 
     @Override
     public Object deserializePayload(Mapping mapping, ConnectorMessage message) throws IOException {
+        return deserializePayload(mapping, message, false);
+    }
+
+    @Override
+    public Object deserializePayload(Mapping mapping, ConnectorMessage message, boolean testing)
+            throws IOException {
         byte[] bytes = message.getPayload();
         String topic = message.getTopic();
         String tenant = message.getTenant();
@@ -174,7 +180,7 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
             // ExternalId for an Edge Node is [Group ID]_[Edge Node ID]
             String edgeNodeExternalId = sparkplugTopic.getGroupId() + "_" + sparkplugTopic.getEdgeNodeId();
             aliasToMetricDef = loadAliasMap(tenant, mapping, edgeNodeExternalId,
-                    SPARKPLUGB_NBIRTH_FRAGMENT);
+                    SPARKPLUGB_NBIRTH_FRAGMENT, testing);
         } else if ("DDATA".equals(msgType) || "DCMD".equals(msgType)) {
             // Device ID must be present for device-level messages.
             // Per new design: DBIRTH alias maps are stored on the NODE MO with a device-specific
@@ -184,7 +190,7 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
                 // ExternalId for the Edge Node is [Group ID]_[Edge Node ID]
                 String edgeNodeExternalId = sparkplugTopic.getGroupId() + "_" + sparkplugTopic.getEdgeNodeId();
                 aliasToMetricDef = loadAliasMap(tenant, mapping, edgeNodeExternalId,
-                        getDbBirthFragmentKey(devId));
+                        getDbBirthFragmentKey(devId), testing);
             } else {
                 log.warn("{} - DDATA/DCMD message on topic '{}' has no Device ID; alias resolution skipped",
                         tenant, topic);
@@ -262,7 +268,8 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
      * @return alias→definition map, or {@code null} if the fragment cannot be found
      */
     private Map<Long, Map<String, Object>> loadAliasMap(String tenant, Mapping mapping,
-                                                        String externalIdValue, String fragmentKey) {
+                                                        String externalIdValue, String fragmentKey,
+                                                        boolean testing) {
         String externalIdType = mapping.getExternalIdType();
         if (externalIdType == null || externalIdType.isEmpty()) {
             externalIdType = "c8y_Serial";
@@ -270,7 +277,7 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
 
         try {
             ID identity = new ID(externalIdType, externalIdValue);
-            ExternalIDRepresentation extIdRep = c8yAgent.resolveExternalId2GlobalId(tenant, identity, false);
+            ExternalIDRepresentation extIdRep = c8yAgent.resolveExternalId2GlobalId(tenant, identity, testing);
             if (extIdRep == null) {
                 log.debug("{} - No managed object found for externalId={} (type={}); alias resolution skipped",
                         tenant, externalIdValue, externalIdType);
@@ -279,16 +286,19 @@ public class SparkPlugBDeserializer implements PayloadDeserializer<Object> {
 
             String sourceId = extIdRep.getManagedObject().getId().getValue();
 
-            // Try to get from inventory cache first
-            Map<Long, Map<String, Object>> cachedFragment = loadFragmentFromCache(tenant, sourceId, fragmentKey);
-            if (cachedFragment != null) {
-                log.info("{} - Loaded '{}' fragment from cache for sourceId={}", tenant, fragmentKey, sourceId);
-                return cachedFragment;
+            // Try to get from inventory cache first. Skipped in test mode: the cache holds live
+            // managed objects and a dry run must be decided by the mock alone.
+            if (!testing) {
+                Map<Long, Map<String, Object>> cachedFragment = loadFragmentFromCache(tenant, sourceId, fragmentKey);
+                if (cachedFragment != null) {
+                    log.info("{} - Loaded '{}' fragment from cache for sourceId={}", tenant, fragmentKey, sourceId);
+                    return cachedFragment;
+                }
             }
 
             log.info("{} - '{}' fragment not found in cache for sourceId={}, falling back to direct retrieval", tenant, fragmentKey, sourceId);
             // Fallback to direct retrieval from C8YAgent
-            ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, sourceId, false);
+            ManagedObjectRepresentation mor = c8yAgent.getManagedObjectForId(tenant, sourceId, testing);
             if (mor == null) {
                 return null;
             }

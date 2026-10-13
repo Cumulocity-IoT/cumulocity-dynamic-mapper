@@ -110,8 +110,7 @@ public class TestController {
                 payload);
 
         // Reset mock caches for this tenant so state from previous test runs does not leak
-        c8YAgent.clearMockIdentityCache(tenant);
-        c8YAgent.clearMockInventoryCache(tenant);
+        clearMockCaches(tenant);
 
         try {
             AConnectorClient connectorClient = connectorRegistry
@@ -223,6 +222,20 @@ public class TestController {
         } catch (Exception ex) {
             log.error("{} - Error transforming payload: {}", tenant, ex.getMessage(), ex);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
+        } finally {
+            // Leave nothing behind, whatever the outcome: devices created in the mock by this run
+            // must not be found by the next one, and the mock should not hold memory between runs.
+            clearMockCaches(tenant);
+        }
+    }
+
+    private void clearMockCaches(String tenant) {
+        try {
+            c8YAgent.clearMockIdentityCache(tenant);
+            c8YAgent.clearMockInventoryCache(tenant);
+        } catch (Exception e) {
+            // Never let cleanup mask the test result (or turn a result into an error).
+            log.warn("{} - Failed to clear mock caches: {}", tenant, e.getMessage());
         }
     }
 

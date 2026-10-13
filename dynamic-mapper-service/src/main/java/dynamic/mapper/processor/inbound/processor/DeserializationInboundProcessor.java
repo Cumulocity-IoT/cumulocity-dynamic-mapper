@@ -64,7 +64,8 @@ public class DeserializationInboundProcessor extends BaseProcessor {
                 return context; // Return context with error
             }
             try {
-                byte[] deserializedPayload = deserializer.deserializePayload(mapping, connectorMessage);
+                byte[] deserializedPayload = deserializer.deserializePayload(mapping, connectorMessage,
+                        Boolean.TRUE.equals(testing));
                 context.setPayload(deserializedPayload);
                 return context;
             } catch (IOException e) {
@@ -83,7 +84,8 @@ public class DeserializationInboundProcessor extends BaseProcessor {
             }
 
             try {
-                Object deserializedPayload = deserializer.deserializePayload(mapping, connectorMessage);
+                Object deserializedPayload = deserializer.deserializePayload(mapping, connectorMessage,
+                        Boolean.TRUE.equals(testing));
                 context.setPayload(deserializedPayload);
                 return context;
             } catch (IOException e) {
