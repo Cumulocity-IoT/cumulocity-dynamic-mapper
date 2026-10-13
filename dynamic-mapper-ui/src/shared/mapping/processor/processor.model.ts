@@ -55,6 +55,8 @@ export interface TestResult {
   warnings?: string[];
   logs?: string[];
   testDeviceId?: string;
+  /** true: created by this test (tagged, listed under Monitoring > Test device); false: already existed and was used as is (not tagged, not listed). */
+  testDeviceCreated?: boolean;
   /**
    * Broker message key produced by the transformation (e.g. the Kafka record key). Context-level
    * rather than per-request, since one publish call reads a single key for the whole message —

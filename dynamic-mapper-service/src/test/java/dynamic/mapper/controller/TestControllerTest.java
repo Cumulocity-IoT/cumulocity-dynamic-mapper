@@ -271,6 +271,29 @@ class TestControllerTest {
     }
 
     @Test
+    void testMapping_sendWithTestDevice_reportsWhetherTheDeviceWasCreatedOrReused() throws Exception {
+        stubDispatcherResult(ProcessingContext.builder().mapping(makeInboundMapping()).build());
+        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
+                .thenReturn(new C8YAgent.TestDevice("77", false));
+
+        TestContext ctx = dryRunContext();
+        ctx.setSend(true);
+        ctx.setCreateTestDevice(true);
+        TestResult reused = controller.testMapping(ctx).getBody();
+
+        assertEquals("77", reused.getTestDeviceId());
+        assertEquals(Boolean.FALSE, reused.getTestDeviceCreated(),
+                "an existing device is used as is and must not be reported as a created test device");
+
+        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
+                .thenReturn(new C8YAgent.TestDevice("78", true));
+        TestResult created = controller.testMapping(ctx).getBody();
+
+        assertEquals("78", created.getTestDeviceId());
+        assertEquals(Boolean.TRUE, created.getTestDeviceCreated());
+    }
+
+    @Test
     void testMapping_executionExceptionDuringDispatch_yields500() throws Exception {
         when(connectorRegistry.getClientForTenant(TENANT, TestClient.TEST_CONNECTOR_IDENTIFIER))
                 .thenReturn(connectorClient);

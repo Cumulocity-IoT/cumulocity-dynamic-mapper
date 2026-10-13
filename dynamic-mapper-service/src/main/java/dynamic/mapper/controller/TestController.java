@@ -131,11 +131,14 @@ public class TestController {
                 String externalIdType = (mapping.getExternalIdType() != null && !mapping.getExternalIdType().isEmpty())
                         ? mapping.getExternalIdType()
                         : "c8y_Serial";
-                String testDeviceId = c8YAgent.createTestDevice(tenant, externalId, externalId, externalIdType);
-                if (testDeviceId != null) {
-                    result.setTestDeviceId(testDeviceId);
-                    log.info("{} - Created test device: id={}, externalId={}, type={}", tenant, testDeviceId,
-                            externalId, externalIdType);
+                C8YAgent.TestDevice testDevice = c8YAgent.ensureTestDevice(tenant, externalId, externalId,
+                        externalIdType);
+                if (testDevice != null) {
+                    result.setTestDeviceId(testDevice.id());
+                    result.setTestDeviceCreated(testDevice.created());
+                    log.info("{} - {} test device: id={}, externalId={}, type={}", tenant,
+                            testDevice.created() ? "Created" : "Reusing existing", testDevice.id(), externalId,
+                            externalIdType);
                 }
             }
 

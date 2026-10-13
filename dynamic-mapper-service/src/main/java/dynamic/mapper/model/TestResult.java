@@ -58,6 +58,9 @@ public class TestResult {
     @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "ID of the test device created in C8Y inventory (only set when createTestDevice=true)")
     private String testDeviceId;
 
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Whether the test device was created by this test (true) or already existed and was used as is (false). An existing device is not tagged d11r_testDevice and is not listed under Monitoring > Test device. Only set when testDeviceId is set.")
+    private Boolean testDeviceCreated;
+
     /**
      * Context-level, not per-request: a single {@code publishMEAO(context)} call reads one key for
      * the whole message, so it is not part of {@link DynamicMapperRequest} the way publishTopic is.

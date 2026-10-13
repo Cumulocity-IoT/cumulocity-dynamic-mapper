@@ -1035,6 +1035,25 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
      * @return the internal C8Y ID of the created managed object, or {@code null} on failure
      */
     public String createTestDevice(String tenant, String deviceName, String externalId, String externalIdType) {
+        TestDevice device = ensureTestDevice(tenant, deviceName, externalId, externalIdType);
+        return device == null ? null : device.id();
+    }
+
+    /**
+     * Outcome of {@link #ensureTestDevice}: the device's internal ID, and whether this call created
+     * it. A device that already existed is used as is — it is not tagged {@code d11r_testDevice}
+     * (that would label a real device as a test device and offer it for cleanup), so it does not
+     * appear in the Test Devices grid.
+     */
+    public record TestDevice(String id, boolean created) {
+    }
+
+    /**
+     * Like {@link #createTestDevice} but reports whether the device was created or already existed.
+     *
+     * @return the device, or {@code null} on failure
+     */
+    public TestDevice ensureTestDevice(String tenant, String deviceName, String externalId, String externalIdType) {
         String resolvedType = (externalIdType != null && !externalIdType.isEmpty()) ? externalIdType : "c8y_Serial";
         // Upsert: if the externalId is already registered, return the existing device ID
         ID id = new ID();
@@ -1045,7 +1064,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             String existingId = existing.getManagedObject().getId().getValue();
             log.info("{} - Test device with externalId={} already exists: id={}, reusing it", tenant, externalId,
                     existingId);
-            return existingId;
+            return new TestDevice(existingId, false);
         }
 
         boolean supportsExternalIdBinding = Boolean.TRUE.equals(
@@ -1061,7 +1080,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     c8ySemaphore.acquire();
                     mor = createWithExternalIdBinding(mor, id, false, supportsExternalIdBinding);
                     log.info("{} - Test device created: id={}, name={}", tenant, mor.getId().getValue(), deviceName);
-                    return mor.getId().getValue();
+                    return new TestDevice(mor.getId().getValue(), true);
                 } catch (InterruptedException e) {
                     log.error("{} - Failed to acquire semaphore for creating test device", tenant, e);
                     Thread.currentThread().interrupt();
