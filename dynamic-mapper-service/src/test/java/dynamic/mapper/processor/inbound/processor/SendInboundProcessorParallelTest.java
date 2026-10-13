@@ -194,6 +194,37 @@ class SendInboundProcessorParallelTest {
         log.info("One failing request did not abort siblings or skip finalization");
     }
 
+    @Test
+    void testExternalIdUnresolved_failsRequestWithoutCallingCreateMEAO() throws Exception {
+        DynamicMapperRequest request = DynamicMapperRequest.builder()
+                .predecessor(-1)
+                .method(org.springframework.web.bind.annotation.RequestMethod.POST)
+                .api(API.ALARM)
+                .externalId("unresolvable-external-id")
+                .externalIdType("c8y_Serial")
+                .request("{\"severity\":\"MAJOR\",\"status\":\"ACTIVE\",\"text\":\"Test Alarm\",\"type\":\"c8y_TestAlarm\"}")
+                .sourceId(null)
+                .build();
+
+        List<DynamicMapperRequest> requests = new ArrayList<>();
+        requests.add(request);
+        processingContext.setRequests(requests);
+        processingContext.setExternalId("unresolvable-external-id");
+        processingContext.setSourceId(null);
+
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(), anyBoolean())).thenReturn(null);
+
+        assertDoesNotThrow(() -> processor.process(processingContext));
+
+        // Must not call createMEAO
+        verify(c8yAgent, never()).createMEAO(any(), anyInt());
+
+        assertNotNull(request.getError(), "Request must have an error set");
+        assertTrue(request.getError().getMessage().contains("not found in inventory"));
+        assertTrue(processingContext.hasError(), "ProcessingContext must have an error");
+        verify(mappingService, times(1)).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), any());
+    }
+
     // ---- helpers ----
 
     private DynamicMapperRequest buildMeasurementRequest(String payloadJson) {

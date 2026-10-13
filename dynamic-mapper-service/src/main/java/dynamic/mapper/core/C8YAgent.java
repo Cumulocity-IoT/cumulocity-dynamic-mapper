@@ -79,6 +79,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import c8y.IsDevice;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.client.Certificate;
+import dynamic.mapper.core.cache.InboundExternalIdCache;
 import dynamic.mapper.core.cache.InventoryCache;
 import dynamic.mapper.core.cache.OutboundExternalIdCache;
 import dynamic.mapper.core.cache.OutboundIdKey;
@@ -104,7 +105,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import static com.cumulocity.rest.representation.measurement.MeasurementMediaType.MEASUREMENT_COLLECTION;
 import static com.cumulocity.rest.representation.event.EventMediaType.EVENT;
-import static com.cumulocity.rest.representation.alarm.AlarmMediaType.ALARM;;
+import static com.cumulocity.rest.representation.alarm.AlarmMediaType.ALARM;
 
 @Slf4j
 @Component
@@ -219,14 +220,17 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         }
         ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             try {
-                ExternalIDRepresentation resultInner = cacheManager.getInboundExternalIdCache(tenant)
-                        .getIdByExternalId(identity);
+                InboundExternalIdCache inboundCache = cacheManager.getInboundExternalIdCache(tenant);
+                ExternalIDRepresentation resultInner = null;
+                if (inboundCache != null && !Boolean.TRUE.equals(testing)) {
+                    resultInner = inboundCache.getIdByExternalId(identity);
+                }
                 Counter.builder("dynmapper_inbound_identity_requests_total").tag("tenant", tenant)
                         .register(Metrics.globalRegistry).increment();
                 if (resultInner == null) {
                     resultInner = identityApi.resolveExternalId2GlobalId(identity, testing, c8ySemaphore);
-                    if (!testing) {
-                        cacheManager.getInboundExternalIdCache(tenant).putIdForExternalId(identity,
+                    if (inboundCache != null && !Boolean.TRUE.equals(testing)) {
+                        inboundCache.putIdForExternalId(identity,
                                 resultInner);
                     }
 
@@ -243,6 +247,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             return null;
         });
         return result;
+    }
+
+    public void clearMockIdentityCache(String tenant) {
+        identityApi.clearMockIdentityCache(tenant);
+    }
+
+    public void clearMockInventoryCache(String tenant) {
+        inventoryApi.clearInventoryCache(tenant);
     }
 
     public ExternalIDRepresentation resolveGlobalId2ExternalId(String tenant, GId gid, String idType,

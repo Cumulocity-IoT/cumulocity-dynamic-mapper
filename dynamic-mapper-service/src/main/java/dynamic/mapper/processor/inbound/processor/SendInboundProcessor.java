@@ -323,29 +323,59 @@ public class SendInboundProcessor extends BaseProcessor {
         try {
             // Resolve external ID if needed and add source to payload
             if (request.getExternalId() != null) {
-                ID identity = new ID(request.getExternalIdType(), request.getExternalId());
-                ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity,
-                        context.isTesting());
+                if (request.getSourceId() == null || request.getSourceId().equals(request.getExternalId())) {
+                    ID identity = new ID(request.getExternalIdType(), request.getExternalId());
+                    ExternalIDRepresentation sourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity,
+                            context.isTesting());
 
-                if (sourceId != null) {
-                    request.setSourceId(sourceId.getManagedObject().getId().getValue());
+                    if (sourceId != null) {
+                        request.setSourceId(sourceId.getManagedObject().getId().getValue());
 
-                    // Add source field to payload JSON — but only for non-MEASUREMENT collection payloads.
-                    // MEASUREMENT payloads are already wrapped in { "measurements": [...] } by
-                    // FlowResultInboundProcessor, with source.id injected inside each individual
-                    // measurement. Adding source at the collection root would create a spurious outer
-                    // "source" key that the C8Y API does not expect.
-                    String payloadJson = request.getRequest();
-                    Map<String, Object> payloadMap = objectMapper.readValue(payloadJson, new TypeReference<Map<String, Object>>() {});
-                    if (!payloadMap.containsKey("measurements")) {
-                        Map<String, Object> source = new HashMap<>();
-                        source.put("id", request.getSourceId());
-                        payloadMap.put("source", source);
-                        request.setRequest(objectMapper.writeValueAsString(payloadMap));
+                        // Add source field to payload JSON — but only for non-MEASUREMENT collection payloads.
+                        // MEASUREMENT payloads are already wrapped in { "measurements": [...] } by
+                        // FlowResultInboundProcessor, with source.id injected inside each individual
+                        // measurement. Adding source at the collection root would create a spurious outer
+                        // "source" key that the C8Y API does not expect.
+                        String payloadJson = request.getRequest();
+                        Map<String, Object> payloadMap = objectMapper.readValue(payloadJson, new TypeReference<Map<String, Object>>() {});
+                        if (!payloadMap.containsKey("measurements")) {
+                            Map<String, Object> source = new HashMap<>();
+                            source.put("id", request.getSourceId());
+                            payloadMap.put("source", source);
+                            request.setRequest(objectMapper.writeValueAsString(payloadMap));
+                        }
+
+                        // Cache the mapping of device to client ID
+                        if (!context.isTesting() && context.getClientId() != null) {
+                            serviceRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
+                                    request.getSourceId());
+                        }
+                    } else if (context.isTesting()) {
+                        String testDeviceId = (context.getSourceId() != null && !context.getSourceId().isEmpty())
+                                ? context.getSourceId()
+                                : "909090";
+                        request.setSourceId(testDeviceId);
+                        String payloadJson = request.getRequest();
+                        Map<String, Object> payloadMap = objectMapper.readValue(payloadJson, new TypeReference<Map<String, Object>>() {});
+                        if (!payloadMap.containsKey("measurements")) {
+                            Map<String, Object> source = new HashMap<>();
+                            source.put("id", request.getSourceId());
+                            payloadMap.put("source", source);
+                            request.setRequest(objectMapper.writeValueAsString(payloadMap));
+                        }
+                        String logMsg = String.format(
+                                "INFO: Device with externalId '%s' (type '%s') does not exist yet. Using test device internal ID '%s' for testing.",
+                                request.getExternalId(), request.getExternalIdType(), testDeviceId);
+                        log.info("{} - {}", tenant, logMsg);
+                        context.getLogs().add(logMsg);
+                    } else {
+                        throw new ProcessingException(String.format(
+                                "%s - Cannot send %s request: externalId '%s' (type '%s') not found in inventory",
+                                tenant, request.getApi(), request.getExternalId(), request.getExternalIdType()));
                     }
-
+                } else {
                     // Cache the mapping of device to client ID
-                    if (context.getClientId() != null) {
+                    if (!context.isTesting() && context.getClientId() != null) {
                         serviceRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                                 request.getSourceId());
                     }
@@ -364,7 +394,9 @@ public class SendInboundProcessor extends BaseProcessor {
             }
 
         } catch (Exception e) {
-            context.getCurrentRequest().setError(e);
+            if (context.getCurrentRequest() != null) {
+                context.getCurrentRequest().setError(e);
+            }
             request.setError(e);
             throw e;
         }

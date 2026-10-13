@@ -284,6 +284,28 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
                             return; // Don't create a request
                         }
                     }
+                } else if (context.isTesting()) {
+                    ExternalId externalId = externalSources.get(0);
+                    String testDeviceId = (context.getSourceId() != null && !context.getSourceId().isEmpty())
+                            ? context.getSourceId()
+                            : "909090";
+                    resolvedDeviceId = testDeviceId;
+                    context.setSourceId(resolvedDeviceId);
+                    if (externalId != null) {
+                        externalIdInfo = ExternalIdInfo.builder()
+                                .externalType(externalId.getType())
+                                .externalId(externalId.getExternalId())
+                                .build();
+                        context.setExternalId(externalId.getExternalId());
+                    }
+                    ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
+                    String logMsg = String.format(
+                            "INFO: Device with externalId '%s' (type '%s') does not exist yet. Using test device internal ID '%s' for testing.",
+                            externalId != null ? externalId.getExternalId() : "unknown",
+                            externalId != null ? externalId.getType() : "unknown",
+                            resolvedDeviceId);
+                    log.info("{} - {}", tenant, logMsg);
+                    context.getLogs().add(logMsg);
                 } else {
                     // No device ID and not creating implicit devices - skip this message
                     ExternalId externalId = externalSources.get(0);

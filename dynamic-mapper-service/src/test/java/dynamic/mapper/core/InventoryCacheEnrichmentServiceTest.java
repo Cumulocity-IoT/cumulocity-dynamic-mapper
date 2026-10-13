@@ -110,4 +110,43 @@ class InventoryCacheEnrichmentServiceTest {
 
         assertNull(tenantRegistry.getCachedExternalId(TENANT + "|c8y_Serial|dmtest"));
     }
+
+    @Test
+    void getMOFromInventoryCache_testingMode_doesNotEvictRealCacheNorSubscribeNotifications() {
+        // In test mode, device not found in mock must NOT evict the real cache entry nor subscribe
+        when(identityResolver.getManagedObjectForId(TENANT, SOURCE_ID, true, false)).thenReturn(null);
+
+        Map<String, Object> result = service.getMOFromInventoryCache(TENANT, SOURCE_ID, true, identityResolver);
+
+        assertTrue(result.isEmpty());
+        // Real cache entry in tenantRegistry must remain untouched!
+        assertEquals(SOURCE_ID, tenantRegistry.getCachedExternalId(TENANT + "|c8y_Serial|dmtest"),
+                "testing mode must never evict the production external-ID cache");
+
+        // Notification subscription must NOT be invoked in testing mode
+        org.mockito.Mockito.verify(notificationSubscriber, org.mockito.Mockito.never())
+                .subscribeMOForInventoryCacheUpdates(anyString(), any());
+
+        // Production inventory cache must NOT be populated in testing mode
+        assertNull(cacheManager.getInventoryCache(TENANT).getMOBySource(SOURCE_ID),
+                "testing mode must not write mock results to production inventory cache");
+    }
+
+    @Test
+    void getMOFromInventoryCache_testingMode_doesNotReadFromProductionInventoryCache() {
+        // Pre-populate production inventory cache with a real device
+        Map<String, Object> realMO = new HashMap<>();
+        realMO.put("name", "Real Device In Production Cache");
+        cacheManager.getInventoryCache(TENANT).putMO(SOURCE_ID, realMO);
+
+        // Mock resolver returns a mock device
+        ManagedObjectRepresentation mockDevice = new ManagedObjectRepresentation();
+        mockDevice.setName("Mock Device");
+        when(identityResolver.getManagedObjectForId(TENANT, SOURCE_ID, true, false)).thenReturn(mockDevice);
+
+        Map<String, Object> result = service.getMOFromInventoryCache(TENANT, SOURCE_ID, true, identityResolver);
+
+        // Must return the mock device attribute, not the real cached one
+        assertEquals("Mock Device", result.get("name"));
+    }
 }

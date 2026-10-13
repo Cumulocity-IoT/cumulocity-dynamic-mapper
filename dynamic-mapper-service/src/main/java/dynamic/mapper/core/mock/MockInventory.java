@@ -818,7 +818,16 @@ public class MockInventory {
      */
     public void clear() {
         String tenant = subscriptionsService.getTenant();
+        clear(tenant);
+    }
 
+    /**
+     * Clear all objects from mock storage for a specific tenant.
+     * Useful for test cleanup.
+     *
+     * @param tenant The tenant identifier
+     */
+    public void clear(String tenant) {
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }

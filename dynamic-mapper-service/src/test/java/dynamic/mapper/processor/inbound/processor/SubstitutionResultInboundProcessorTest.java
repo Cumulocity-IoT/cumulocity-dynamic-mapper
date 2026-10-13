@@ -251,13 +251,56 @@ class SubstitutionResultInboundProcessorTest {
         mapping.setCreateNonExistingDevice(true);
         when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class)))
                 .thenReturn(null); // Simulate device not found
+        when(identityResolutionService.getOrCreateDeviceThreadSafe(any(), any(), any(), any(), any()))
+                .thenReturn("created-device-id");
 
         // When
         processor.process(processingContext);
 
         // Then - Just verify the method was called
         verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class));
+        verify(identityResolutionService).getOrCreateDeviceThreadSafe(any(), any(), any(), any(), any());
+        assertEquals("created-device-id", processingContext.getSourceId());
+        assertFalse(processingContext.isIgnoreFurtherProcessing());
         log.info("CreateNonExistingDevice test completed");
+    }
+
+    @Test
+    void testProcessWithExternalIdNotFound_stopsProcessing() throws Exception {
+        // Given
+        mapping.setCreateNonExistingDevice(false);
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class)))
+                .thenReturn(null); // Simulate device not found
+
+        // When
+        processor.process(processingContext);
+
+        // Then
+        assertTrue(processingContext.hasError());
+        assertTrue(processingContext.isIgnoreFurtherProcessing());
+        assertTrue(processingContext.getRequests().isEmpty());
+    }
+
+    @Test
+    void testProcessWithExternalIdNotFound_whenTesting_usesTestDeviceIdAndLogs() throws Exception {
+        // Given
+        mapping.setCreateNonExistingDevice(false);
+        processingContext.setTesting(true);
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), eq(true)))
+                .thenReturn(null); // Simulate device not found in test mode
+
+        // When
+        processor.process(processingContext);
+
+        // Then
+        assertFalse(processingContext.hasError());
+        assertFalse(processingContext.isIgnoreFurtherProcessing());
+        assertEquals("909090", processingContext.getSourceId());
+        assertEquals(1, processingContext.getRequests().size());
+        assertEquals("909090", processingContext.getRequests().get(0).getSourceId());
+        assertTrue(processingContext.getRequests().get(0).getRequest().contains("\"id\":\"909090\""));
+        assertTrue(processingContext.getLogs().stream()
+                .anyMatch(l -> l.contains("does not exist yet") && l.contains("909090")));
     }
 
     @Test

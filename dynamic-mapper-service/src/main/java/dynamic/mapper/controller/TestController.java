@@ -108,6 +108,11 @@ public class TestController {
         String tenant = contextService.getContext().getTenant();
         log.info("{} - Test mapping: {}, {}, {}, {}", tenant, mapping.getName(), mapping.getId(), send,
                 payload);
+
+        // Reset mock caches for this tenant so state from previous test runs does not leak
+        c8YAgent.clearMockIdentityCache(tenant);
+        c8YAgent.clearMockInventoryCache(tenant);
+
         try {
             AConnectorClient connectorClient = connectorRegistry
                     .getClientForTenant(tenant, TestClient.TEST_CONNECTOR_IDENTIFIER);
