@@ -406,6 +406,9 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-inbound-multi-device` | Array payload → multiple devices |
 | `test-inbound-alarm` | JSON / DEFAULT → ALARM |
 | `test-inbound-operation` | JSON / DEFAULT → OPERATION |
+| `test-inbound-alarm-dedup-upsert` | Two messages, same source+type → exactly one alarm; with `DM_EXPECT_ALARM_UPSERT=true` also asserts upsert refresh (#522, not yet implemented) |
+| `test-inbound-deployment-reconcile` | Un-deploy / re-deploy via `PUT /deployment/defined/{id}` takes effect live (no reconnect); unknown connector rejected |
+| `test-inbound-rest-polling` | REST_POLLING connector polls the http-polling-mock → MEASUREMENT; un-deploy stops polling (~2 min, 30s minimum poll interval) |
 | `test-inbound-inventory` | JSON / DEFAULT → INVENTORY — updates **device metadata** (type + custom fragment) on an existing managed object (`updateExistingDevice: true`) |
 
 ### Inbound (Smart Function patterns)
@@ -437,12 +440,30 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-outbound-json-smartfunction` | Smart Function: Measurement → MQTT JSON |
 | `test-outbound-smartfunction-externalsource` | Smart Function `externalSource` resolves the `_externalId_` topic token — verified by a real broker round-trip (`mosquitto_sub -v`) |
 | `test-outbound-smartfunction-molookup` | Smart Function `getManagedObjectByExternalId` — a C8Y measurement notification is enriched with managed-object properties before publishing |
+| `test-outbound-webhook` | C8Y Measurement → WEB_HOOK connector; asserts the http-polling-mock **received** the POST (path + JSON body) |
 | `test-outbound-static-subscription` | Static subscription management |
 | `test-outbound-type-subscription` | Dynamic type subscription |
+| `test-outbound-type-subscription-resync` | `POST /subscription/type/resync/{type}` backfills pre-existing devices; idempotent; unconfigured type rejected |
 | `test-outbound-group-subscription` | Dynamic group subscription |
 | `test-outbound-group-subscription-removal` | Group subscription removal |
 | `test-outbound-subscription-persistence` | Subscription persistence after restart |
 | `test-outbound-extension-alarm-to-sparkplugb` | Extension: Alarm → Sparkplug B DCMD |
+
+### Log save prompt before a restart
+
+`test-outbound-subscription-persistence` disables and re-enables the microservice, which
+discards its logs. It stops with a "SAVE THE LOGS NOW" prompt (`dm_pause_for_log_save`,
+reads from `/dev/tty`) so you can download them first. Without a terminal it only warns;
+set `DM_SKIP_LOG_PAUSE=1` to skip the prompt (e.g. unattended runs).
+
+### Tests needing the http-polling-mock
+
+`test-inbound-rest-polling` and `test-outbound-webhook` use the mock microservice in
+`../environments/http-polling` (deploy with `build.sh --push`; the webhook test needs the
+version with the `/webhook` receiver). Because the mock sits behind the Cumulocity gateway,
+the connector under test authenticates with the c8y session's credentials: export
+`C8Y_HOST` plus `C8Y_TOKEN` (or `C8Y_USER`/`C8Y_PASSWORD`), or set `DM_MOCK_BASE_URL`.
+The tests **skip** (exit 42) when the mock or credentials are missing.
 
 ### Reliability
 | Test | Purpose |

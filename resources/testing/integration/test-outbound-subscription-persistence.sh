@@ -95,6 +95,7 @@ dm_api GET /subscription/type | jq -r '
 
 # Step 4: Restart the microservice
 dm_step 4 "Restart microservice by disabling and re-enabling"
+dm_pause_for_log_save "Disabling/re-enabling '$DM_MICROSERVICE_NAME' restarts it"
 dm_info "Disabling microservice '$DM_MICROSERVICE_NAME' ..."
 c8y microservices disable --id "$DM_MICROSERVICE_NAME" --force
 dm_wait 5 "service shutdown"

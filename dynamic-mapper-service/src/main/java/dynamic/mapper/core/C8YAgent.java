@@ -699,7 +699,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         log.error("{} - Could not map payload: {} {}", tenant, targetAPI, payload);
                         error.append("Could not map payload: " + targetAPI + "/" + payload);
                     } catch (SDKException s) {
-                        log.error("{} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s);
+                        log.error("{} - Could not send payload to c8y: {} {}: HTTP {} - {}", tenant, targetAPI, payload,
+                                s.getHttpStatus(), s.getMessage(), s);
                         error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s);
                     }
                     return rt;
@@ -936,8 +937,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     pe.set(new ProcessingException("Could not map payload: " + targetAPI + "/" + payload, e));
                     // error.append("Could not map payload: " + targetAPI + "/" + payload);
                 } catch (SDKException s) {
-                    log.error("{} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload,
-                            s.getMessage());
+                    log.error("{} - Could not send payload to c8y: {} {}: HTTP {} - {}", tenant, targetAPI, payload,
+                            s.getHttpStatus(), s.getMessage(), s);
                     pe.set(new ProcessingException("Could not sent payload to c8y: " + targetAPI + "/" + payload, s));
 
                     // Remove device from Cache
@@ -1141,8 +1142,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                 s));
                         return mor;
                     }
-                    log.error("{} - Could not sent payload to c8y: {}: ", tenant, currentRequest.getRequest(),
-                            s);
+                    log.error("{} - Could not send payload to c8y: {}: HTTP {} - {}", tenant, currentRequest.getRequest(),
+                            s.getHttpStatus(), s.getMessage(), s);
                     pe.set(new ProcessingException(
                             "Could not sent payload to c8y: " + targetAPI + "/" + currentRequest.getRequest(), s));
                     // error.append("Could not sent payload to c8y: " + currentRequest.getRequest()

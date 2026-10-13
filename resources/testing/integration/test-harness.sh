@@ -2288,3 +2288,115 @@ dm_assert_mo_field_eventually() {  # <label> <device_id> <jq_filter> <expected> 
         dm_fail "[$_label] ${_filter} expected='$_expected' actual='$_actual' after ${_timeout}s"
     fi
 }
+
+# ── http-polling-mock helpers (REST_POLLING inbound / WEB_HOOK outbound) ───────
+# The mock (resources/testing/environments/http-polling) is deployed as a
+# Cumulocity microservice, so every call to it passes the platform gateway and
+# needs real Cumulocity credentials — for the connector under test as well as for
+# the test's own inspection calls (which reuse the c8y session).
+#
+# Environment:
+#   DM_MOCK_BASE_URL   Full base URL of the mock
+#                      (default: ${C8Y_HOST}/service/http-polling-mock)
+#   C8Y_TOKEN          Bearer token of the c8y session (preferred), or
+#   C8Y_USER + C8Y_PASSWORD (+ C8Y_TENANT)  for Basic auth
+DM_MOCK_PATH="${DM_MOCK_PATH:-/service/http-polling-mock}"
+
+dm_mock_base_url() {
+    if [ -n "${DM_MOCK_BASE_URL:-}" ]; then
+        printf '%s' "${DM_MOCK_BASE_URL%/}"
+    elif [ -n "${C8Y_HOST:-}" ]; then
+        local _h="${C8Y_HOST%/}"
+        case "$_h" in http*) ;; *) _h="https://${_h}" ;; esac
+        printf '%s%s' "$_h" "$DM_MOCK_PATH"
+    fi
+}
+
+# Connector auth properties (JSON object) the mapper needs to reach the mock.
+dm_mock_auth_props() {
+    if [ -n "${C8Y_TOKEN:-}" ]; then
+        jq -cn --arg t "$C8Y_TOKEN" '{authentication:"Bearer", token:$t}'
+    elif [ -n "${C8Y_USER:-}" ] && [ -n "${C8Y_PASSWORD:-}" ]; then
+        jq -cn --arg u "${C8Y_TENANT:+${C8Y_TENANT}/}${C8Y_USER}" --arg p "$C8Y_PASSWORD" \
+            '{authentication:"Basic", user:$u, password:$p}'
+    else
+        return 1
+    fi
+}
+
+# Skip the test unless the mock is deployed and the credentials are available.
+dm_require_mock() {
+    [ -n "$(dm_mock_base_url)" ] \
+        || dm_skip_exit "Cannot determine the mock URL — export C8Y_HOST or DM_MOCK_BASE_URL."
+    dm_mock_auth_props >/dev/null \
+        || dm_skip_exit "No Cumulocity credentials for the connector — export C8Y_TOKEN or C8Y_USER/C8Y_PASSWORD."
+    c8y api --method GET --url "${DM_MOCK_PATH}/health" --force --output json </dev/null >/dev/null 2>&1 \
+        || dm_skip_exit "http-polling-mock is not deployed/UP at ${DM_MOCK_PATH}." \
+                        "Build and push it: resources/testing/environments/http-polling/build.sh --push"
+}
+
+# GET a JSON array from the mock, normalised to one array on stdout.
+dm_mock_get_array() {   # <path e.g. /requests>
+    c8y api --method GET --url "${DM_MOCK_PATH}$1" --force --output json </dev/null 2>/dev/null \
+        | jq -sc '[ .[] | if type == "array" then .[] else . end ]' 2>/dev/null || printf '[]'
+}
+
+dm_mock_clear() {   # <path e.g. /requests>
+    c8y api --method DELETE --url "${DM_MOCK_PATH}$1" --force --output json </dev/null >/dev/null 2>&1 || true
+}
+
+# Create a connector from its spec defaults + overrides, enable and connect it.
+dm_create_connector_with_props() {   # <identifier> <type> <name> <props_override_json>
+    local _id=$1 _type=$2 _name=$3 _over=$4 _props
+    _props=$(dm_connector_default_properties "$_type" | jq -c --argjson o "$_over" '. + $o')
+    dm_api_must POST /configuration/connector/instance "$(jq -cn \
+        --arg id "$_id" --arg t "$_type" --arg n "$_name" --argjson p "$_props" \
+        '{identifier:$id, connectorType:$t, name:$n, description:"integration test", enabled:true, properties:$p}')" >/dev/null
+    dm_info "Created connector ${_id} (${_type})"
+}
+
+# Remove a mapping's deployment from every connector (live reconcile).
+dm_undeploy_mapping() {   # <mapping_id_or_identifier>
+    local _ref=$1 _key
+    _key=$(dm_api GET "/mapping/${_ref}" 2>/dev/null | jq -r '.identifier // empty' 2>/dev/null)
+    _key=${_key:-$_ref}
+    c8y api --method PUT --url "${DM_SERVICE}/deployment/defined/${_key}" \
+        --template '[]' --header 'Content-Type: application/json' \
+        --force --output rawResponse </dev/null >/dev/null \
+        || dm_error "Undeploy PUT failed for ${_key}"
+    dm_info "Undeployed mapping ${_ref} (key=${_key})"
+}
+
+# Stop before an action that discards the microservice's logs (disable/enable restarts the
+# service and the previous run's log is lost) so the user can save them first.
+# Reads from the terminal (/dev/tty) because tests run with stdin redirected.
+# Without a terminal (CI) it only warns and continues; DM_SKIP_LOG_PAUSE=1 skips it entirely.
+dm_pause_for_log_save() {   # [reason]
+    local _reason="${1:-the microservice is about to be restarted}"
+    [ "${DM_SKIP_LOG_PAUSE:-0}" = "1" ] && return 0
+    printf "\n${_C_YELLOW}══ SAVE THE LOGS NOW ══${_C_RESET}\n" >&2
+    printf "%s — the microservice log of this and earlier runs will be lost.\n" "$_reason" >&2
+    printf "Download it first (Administration → Ecosystem → Microservices → %s → Logs).\n" \
+        "${DM_MICROSERVICE_NAME:-dynamic-mapper-service}" >&2
+    if [ -r /dev/tty ] && { : </dev/tty; } 2>/dev/null; then
+        printf "Press ENTER to continue (Ctrl-C to abort) ... " >&2
+        read -r _ </dev/tty || true
+        printf "\n" >&2
+    else
+        dm_warn "No terminal available — continuing without waiting (set DM_SKIP_LOG_PAUSE=1 to silence)"
+    fi
+}
+
+# Notification 2.0 subscriptions of a device via the raw REST response ({"subscriptions":[...]}).
+# Prints a JSON array of {id, subscription, context}; '[]' on error. Unlike
+# dm_count_subscriptions it does not depend on how the c8y CLI renders a list
+# (array vs. NDJSON vs. a single bare object).
+dm_device_subscriptions_json() {   # <device_id>
+    c8y api --method GET --url "/notification2/subscriptions?source=$1&pageSize=100" \
+        --force --raw </dev/null 2>/dev/null \
+        | jq -c '[ .subscriptions[]? | {id, subscription, context} ]' 2>/dev/null || printf '[]'
+}
+
+dm_device_subscription_count() {   # <device_id>
+    dm_device_subscriptions_json "$1" | jq 'length' 2>/dev/null || printf '0'
+}

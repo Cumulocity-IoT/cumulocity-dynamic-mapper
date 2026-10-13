@@ -265,7 +265,7 @@ public class MappingRepository {
                 && !TransformationType.JSONATA.equals(mapping.getTransformationType())
                 && !TransformationType.DEFAULT.equals(mapping.getTransformationType())
                 && (mapping.getTargetTemplate() == null || !mapping.getTargetTemplate().equals("{}"))) {
-            log.info("{} - Migrating mapping {} ({}): resetting targetTemplate to '{}' for transformationType {}",
+            log.info("{} - Migrating mapping {} ({}): resetting targetTemplate to an empty object for transformationType {}",
                     tenant, moId, mapping.getName(), mapping.getTransformationType());
             mapping.setTargetTemplate("{}");
             return new Migration(String.format(
