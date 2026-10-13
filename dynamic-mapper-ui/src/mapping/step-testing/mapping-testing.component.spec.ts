@@ -222,12 +222,22 @@ describe('MappingStepTestingComponent – device does not exist', () => {
     });
 
     it('mentions further requests and the test device', () => {
-      const result = sent({ api: 'EVENT', sourceId: '7', response: { id: '9' } }, { testDeviceId: '7' });
+      const result = sent({ api: 'EVENT', sourceId: '7', response: { id: '9' } },
+        { testDeviceId: '7', testDeviceCreated: true });
       result.requests.push({ api: 'EVENT' } as DynamicMapperRequest);
       const text = component.describeSendResult(result);
       expect(text).toContain('created event 9 on device 7');
       expect(text).toContain('1 more request sent');
-      expect(text).toContain('Test device: 7.');
+      expect(text).toContain('Test device 7 created; remove it under Monitoring > Test device.');
+    });
+
+    it('does not call a reused device a test device: it is not tagged and not listed', () => {
+      const text = component.describeSendResult(sent(
+        { api: 'ALARM', sourceId: '491713288', response: { id: '1' } },
+        { testDeviceId: '491713288', testDeviceCreated: false }));
+      expect(text).toContain('Device 491713288 already existed and was used as is');
+      expect(text).toContain('not listed under Monitoring > Test device');
+      expect(text).not.toContain('Test device 491713288 created');
     });
   });
 });

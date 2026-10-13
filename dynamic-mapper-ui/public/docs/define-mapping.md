@@ -153,9 +153,11 @@ transformation without waiting for a real device message:
   chevron next to it chooses the mode and the button's label follows.
   - **Send with Existing Device** sends to the device that is already in your tenant. If it does not exist, the
     mapping setting **Create device** decides whether it is created or the send fails.
-  - **Send with Test Device** first creates a real device in inventory, or reuses it if it already exists, so the
-    send also works when no real device exists. It is tagged with the fragment `d11r_testDevice` so it can be
-    identified and cleaned up afterwards.
+  - **Send with Test Device** first creates a real device in inventory, so the send also works when no real
+    device exists. It is tagged with the fragment `d11r_testDevice` so it can be identified and cleaned up
+    afterwards. If a device with the same external ID already exists, it is used as is and **not** tagged —
+    labelling a real device as a test device would offer it for cleanup — so it does not appear under
+    **Monitoring → Test device**. The confirmation says which of the two happened.
 
 ![Send test message](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Send_TestMessage.png "Sending a transformed test message to a test device in Cumulocity.")
 

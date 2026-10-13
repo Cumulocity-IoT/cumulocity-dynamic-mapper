@@ -201,7 +201,7 @@
           </li>
           <li>
             <a data-cy="dm-mapping-test-send-mode-test-device" (click)="createTestDevice = true"
-              [title]="'First create a throwaway device (tagged d11r_testDevice) in your tenant, or reuse it if it exists. Remove it later under Monitoring > Test device.' | translate">{{ 'Send with Test Device' | translate }}</a>
+              [title]="'First create a throwaway device (tagged d11r_testDevice) in your tenant. If a device with that external ID already exists it is used as is and not tagged. Remove test devices under Monitoring > Test device.' | translate">{{ 'Send with Test Device' | translate }}</a>
           </li>
         </ul>
       </div>

@@ -206,9 +206,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       return base;
     }
     return base + ' "Send with Existing Device" sends to the device that is already in your tenant. '
-      + '"Send with Test Device" first creates a throwaway device (tagged d11r_testDevice), or reuses it '
-      + 'if it already exists, so the send also works when no real device exists. '
-      + 'Remove test devices under Monitoring > Test device.';
+      + '"Send with Test Device" first creates a throwaway device (tagged d11r_testDevice) so the send also '
+      + 'works when no real device exists. If a device with that external ID already exists it is used as is '
+      + 'and not tagged. Remove test devices under Monitoring > Test device.';
   }
 
   disableTestSending(): boolean {
@@ -465,7 +465,10 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       text += ` ${more} more request${more === 1 ? '' : 's'} sent; see "Show Next Test Result".`;
     }
     if (result.testDeviceId) {
-      text += ` Test device: ${result.testDeviceId}.`;
+      text += result.testDeviceCreated === false
+        ? ` Device ${result.testDeviceId} already existed and was used as is; it is not tagged as a test device,`
+          + ' so it is not listed under Monitoring > Test device.'
+        : ` Test device ${result.testDeviceId} created; remove it under Monitoring > Test device.`;
     }
     return text;
   }
