@@ -1380,6 +1380,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             inventoryCache.removeMO(sourceId);
         }
         tenantRegistry.removeFromExternalIdCacheByInternalId(tenant, sourceId);
+        cacheManager.removeSourceIdFromExternalIdCaches(tenant, sourceId);
     }
 
     /**

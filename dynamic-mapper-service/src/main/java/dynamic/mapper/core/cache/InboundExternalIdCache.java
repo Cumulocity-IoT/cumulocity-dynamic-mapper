@@ -56,4 +56,19 @@ public class InboundExternalIdCache extends MetricLRUCache<ID, ExternalIDReprese
     public void removeIdForExternalId(ID key) {
         cache.remove(key);
     }
+
+    /**
+     * Removes every entry resolving to the given Cumulocity source id (e.g. after the
+     * managed object was deleted). The cache is keyed by external ID, so this scans.
+     */
+    public void removeBySourceId(String sourceId) {
+        if (sourceId == null) {
+            return;
+        }
+        synchronized (cache) {
+            cache.values().removeIf(rep -> rep != null && rep.getManagedObject() != null
+                    && rep.getManagedObject().getId() != null
+                    && sourceId.equals(rep.getManagedObject().getId().getValue()));
+        }
+    }
 }

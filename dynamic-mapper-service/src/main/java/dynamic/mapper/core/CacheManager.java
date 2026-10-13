@@ -161,6 +161,18 @@ public class CacheManager {
         log.info("{} - Removed device {} from InboundExternalIdCache", tenant, identity.getValue());
     }
 
+    /** Evicts all inbound and outbound external-ID cache entries pointing at a (deleted) source id. */
+    public void removeSourceIdFromExternalIdCaches(String tenant, String sourceId) {
+        InboundExternalIdCache inbound = inboundExternalIdCaches.get(tenant);
+        if (inbound != null) {
+            inbound.removeBySourceId(sourceId);
+        }
+        OutboundExternalIdCache outbound = outboundExternalIdCaches.get(tenant);
+        if (outbound != null) {
+            outbound.removeBySourceId(sourceId);
+        }
+    }
+
     public int getSizeInboundExternalIdCache(String tenant) {
         InboundExternalIdCache inboundExternalIdCache = inboundExternalIdCaches.get(tenant);
         if (inboundExternalIdCache != null) {

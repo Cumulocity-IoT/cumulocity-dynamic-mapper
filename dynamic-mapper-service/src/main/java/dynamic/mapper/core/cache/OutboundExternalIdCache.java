@@ -58,4 +58,14 @@ public class OutboundExternalIdCache extends MetricLRUCache<OutboundIdKey, Exter
     public void removeExternalIdForSource(OutboundIdKey key) {
         cache.remove(key);
     }
+
+    /** Removes all entries for the given source id, whatever the external id type. */
+    public void removeBySourceId(String sourceId) {
+        if (sourceId == null) {
+            return;
+        }
+        synchronized (cache) {
+            cache.keySet().removeIf(key -> sourceId.equals(key.sourceId()));
+        }
+    }
 }
