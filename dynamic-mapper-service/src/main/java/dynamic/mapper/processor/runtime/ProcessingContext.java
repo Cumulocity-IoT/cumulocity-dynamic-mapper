@@ -74,6 +74,12 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 public class ProcessingContext<O> implements AutoCloseable {
 
     public static final String CREATE_NON_EXISTING_DEVICE = "createNonExistingDevice";
+
+    /**
+     * A live test must never write to the real device that owns an external ID: its test device is
+     * registered under this prefix + the external ID the mapping produces.
+     */
+    public static final String TEST_EXTERNAL_ID_PREFIX = "d11r_liveTest_";
     public static final String SOURCE_ID = "source.id";
     public static final String DEVICE_NAME = "deviceName";
     public static final String DEVICE_TYPE = "deviceType";
@@ -145,6 +151,9 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     @Builder.Default
     private boolean sendPayload = false;
+
+    /** Prefix of external IDs in a live test, see {@link #TEST_EXTERNAL_ID_PREFIX}; null otherwise. */
+    private String testExternalIdPrefix;
 
     @Builder.Default
     private boolean testing = false;
@@ -233,6 +242,14 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     @Builder.Default
     private BinaryInfo binaryInfo = new BinaryInfo();
+
+    /**
+     * The external ID to look up or register for this message: unchanged normally, prefixed in a live
+     * test so the test device never shares an external ID with a real device.
+     */
+    public String liveTestId(String externalId) {
+        return (testExternalIdPrefix == null || externalId == null) ? externalId : testExternalIdPrefix + externalId;
+    }
 
     public boolean hasError() {
         return !errors.isEmpty();

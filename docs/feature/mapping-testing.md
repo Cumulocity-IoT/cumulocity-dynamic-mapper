@@ -56,7 +56,7 @@ path from the UI is `${BASE_URL}/test/mapping` — see
 | `send` | `Boolean` | `false` (default) = dry-run only; `true` = actually publish/create the result. |
 | `createTestDevice` | `Boolean` | **Deprecated, ignored.** A live test (`send=true`) of an inbound mapping always runs against a test device. Kept so existing clients that still send it keep working. |
 
-In the UI the two test types are **Dry Run** (`send=false`: mocked identity and inventory, nothing written) and **Live Test** (`send=true`: really sends). A Live Test of an inbound mapping always runs against a **test device**: created and tagged `d11r_testDevice` if the external ID is unknown, otherwise the existing device with that external ID is used as is and deliberately **not** tagged, so a real device is never offered for cleanup. `TestResult.testDeviceCreated` tells the UI which case happened and the success alert says so. There is no way to live-test against an arbitrary real device, and a Live Test never offers the "assume the device exists" dialog (that would create a real, untagged device through `createNonExistingDevice`); a Dry Run does. If the test device cannot be provided the live test is not run and `success=false` is returned with the reason.
+In the UI the two test types are **Dry Run** (`send=false`: mocked identity and inventory, nothing written) and **Live Test** (`send=true`: really sends). A Live Test of an inbound mapping always runs against a **test device** registered under the external ID **`d11r_liveTest_` + the external ID the mapping produces**, never under the mapping's own external ID: once the real device sends its first message, that message would otherwise be written to the test device. If no device with that prefixed ID exists it is created and tagged `d11r_testDevice` (listed under *Monitoring → Test device* for cleanup), otherwise it is reused as is. `TestResult.testDeviceCreated` and `testDeviceExternalId` tell the UI which case happened and under which ID, and the success alert says so. There is no way to live-test against an arbitrary real device, and a Live Test never offers the "assume the device exists" dialog (that would create a real, untagged device through `createNonExistingDevice`); a Dry Run does. If the test device cannot be provided the live test is not run and `success=false` is returned with the reason.
 
 `TestResult` ([`TestResult.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/TestResult.java)):
 
@@ -68,7 +68,8 @@ In the UI the two test types are **Dry Run** (`send=false`: mocked identity and 
 | `logs` | `List<String>` | Free-form log lines emitted during processing (including from Smart Function `console.log`-style output). |
 | `success` | `Boolean` | `true` iff the resulting `ProcessingContext` had no errors. |
 | `testDeviceId` | `String` | Set for a live test of an inbound mapping: the test device that was created or reused. |
-| `testDeviceCreated` | `Boolean` | `true`: created by this test (tagged, listed under *Monitoring → Test device*); `false`: already existed and was used as is (not tagged, not listed). |
+| `testDeviceCreated` | `Boolean` | `true`: created by this test (tagged, listed under *Monitoring → Test device*); `false`: reused from an earlier live test. |
+| `testDeviceExternalId` | `String` | `d11r_liveTest_` + the mapping's external ID: the external ID the test device is registered under. |
 | `key` | `String` | The broker message key the transformation produced (e.g. mapped to `_CONTEXT_DATA_.key`), context-level rather than per-request. |
 
 ### What is simulated vs. real
@@ -104,7 +105,7 @@ the next one.
 #### Inbound `send=true`: test device creation
 
 When `send=true` and the mapping is `INBOUND`, `testMapping()` ensures a test device
-(`C8YAgent.ensureTestDevice`: reuse the device with that external ID, otherwise create and tag one)
+(`C8YAgent.ensureTestDevice`: reuse the device registered under `d11r_liveTest_` + the external ID, otherwise create and tag one)
 before dispatching
 ([`TestController.java:108-129`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/TestController.java#L108-L129)),
 so real identity resolution has something to find. The external ID to register it under is

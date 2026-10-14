@@ -48,6 +48,13 @@ public class ConnectorMessage {
 
     private Boolean sendPayload;
 
+    /**
+     * Set only for a live test (send=true) of an inbound mapping: prefix added to every external ID
+     * the mapping produces, so the test runs against a device registered under "d11r_liveTest_" + externalId and
+     * can never write to the real device that owns the unprefixed external ID.
+     */
+    private String testExternalIdPrefix;
+
     /** C8Y source device ID carried for outbound explorer filtering. */
     private String sourceId;
 }

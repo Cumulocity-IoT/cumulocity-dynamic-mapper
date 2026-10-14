@@ -333,6 +333,42 @@ class TestControllerTest {
     }
 
     @Test
+    void testMapping_liveTest_registersTheTestDeviceUnderAPrefixedExternalId() throws Exception {
+        stubDispatcherResult(ProcessingContext.builder().mapping(makeInboundMapping()).build());
+        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
+                .thenReturn(new C8YAgent.TestDevice("77", true));
+
+        TestContext ctx = dryRunContext();
+        ctx.setSend(true);
+        controller.testMapping(ctx);
+
+        // The device must not own the external ID the real device will use, or the real device's
+        // first message would be written to the test device.
+        org.mockito.ArgumentCaptor<String> externalId = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(c8YAgent).ensureTestDevice(eq(TENANT), externalId.capture(), externalId.capture(), anyString());
+        externalId.getAllValues().forEach(v -> assertTrue(v.startsWith(ProcessingContext.TEST_EXTERNAL_ID_PREFIX), v));
+
+        // ...and the live message is processed against that same prefix
+        org.mockito.ArgumentCaptor<ConnectorMessage> sent = org.mockito.ArgumentCaptor.forClass(ConnectorMessage.class);
+        verify(dispatcher, times(2)).onTestMessage(sent.capture(), any(Mapping.class));
+        ConnectorMessage live = sent.getAllValues().get(1);
+        assertEquals(ProcessingContext.TEST_EXTERNAL_ID_PREFIX, live.getTestExternalIdPrefix());
+        // the dry run that derives the external ID runs unprefixed against the mock
+        assertEquals(null, sent.getAllValues().get(0).getTestExternalIdPrefix());
+    }
+
+    @Test
+    void testMapping_dryRun_carriesNoExternalIdPrefix() throws Exception {
+        stubDispatcherResult(ProcessingContext.builder().mapping(makeInboundMapping()).build());
+
+        controller.testMapping(dryRunContext());
+
+        org.mockito.ArgumentCaptor<ConnectorMessage> sent = org.mockito.ArgumentCaptor.forClass(ConnectorMessage.class);
+        verify(dispatcher).onTestMessage(sent.capture(), any(Mapping.class));
+        assertEquals(null, sent.getValue().getTestExternalIdPrefix());
+    }
+
+    @Test
     void testMapping_executionExceptionDuringDispatch_yields500() throws Exception {
         when(connectorRegistry.getClientForTenant(TENANT, TestClient.TEST_CONNECTOR_IDENTIFIER))
                 .thenReturn(connectorClient);

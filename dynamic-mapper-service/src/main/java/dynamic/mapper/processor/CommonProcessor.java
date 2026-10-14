@@ -109,6 +109,22 @@ public abstract class CommonProcessor {
         return root.getMessage() != null ? root.getMessage() : root.getClass().getSimpleName();
     }
 
+    /**
+     * In a live test, prefixes the external IDs the Smart Function / extension produced, once per
+     * message and in place: every later lookup, implicit creation and request reads the same objects,
+     * so the whole message runs against the test device and never the real one.
+     */
+    protected void applyLiveTestExternalIdPrefix(List<ExternalId> externalSources, ProcessingContext<?> context) {
+        if (externalSources == null || context.getTestExternalIdPrefix() == null) {
+            return;
+        }
+        for (ExternalId externalId : externalSources) {
+            if (externalId != null) {
+                externalId.setExternalId(context.liveTestId(externalId.getExternalId()));
+            }
+        }
+    }
+
     protected String resolveDeviceIdentifier(CumulocityObject cumulocityMessage, ProcessingContext<?> context,
             String tenant) throws ProcessingException {
 

@@ -42,6 +42,17 @@ caches in front of it were shared with production (see [Defects found and fixed]
    - Concurrent tests by different tenants do not see each other's mock state.
    - Accepted limitation: two simultaneous tests for the *same* tenant clear each other's mock.
 
+3. **A Live Test never touches the real device.**
+   - A live test (`send = true`) of an inbound mapping registers its test device under the external ID
+     `d11r_liveTest_` + the external ID the mapping produces, and every lookup, implicit creation and request of
+     that message uses the prefixed ID. The real device's external ID is never resolved, so a message
+     is never written to the real device, and — the reason for the prefix — the real device's first
+     message later is never written to the test device.
+   - The prefix is applied wherever the mapping's external ID enters the pipeline: JSONata substitutions,
+     Smart Function / extension results, and the SparkPlug B NBIRTH/DBIRTH paths.
+   - Known gap: the SparkPlug B deserializer still reads the alias map of the *unprefixed* node during
+     a live test (read-only), so a live test of NDATA/DDATA metrics may be decoded without alias names.
+
 **Non-goals.** Dry runs do not simulate a *populated* tenant; a user who wants a device to exist
 seeds it (or lets the test create it). Mock behaviour is not required to match every nuance of the
 real Cumulocity API.

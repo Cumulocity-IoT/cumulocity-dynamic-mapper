@@ -455,7 +455,7 @@ public class SendInboundProcessor extends BaseProcessor {
             // context.getSourceId() is set when the Smart Function returned an INVENTORY object.
             String resolvedId = context.getSourceId();
             if (resolvedId == null) {
-                String externalIdValue = parts[1] + "_" + parts[3]; // [Group ID]_[Edge Node ID]
+                String externalIdValue = context.liveTestId(parts[1] + "_" + parts[3]); // [Group ID]_[Edge Node ID]
                 com.cumulocity.model.ID identity = new com.cumulocity.model.ID(externalIdType, externalIdValue);
                 com.cumulocity.rest.representation.identity.ExternalIDRepresentation resolved =
                         c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());
@@ -501,7 +501,7 @@ public class SendInboundProcessor extends BaseProcessor {
             }
             String sparkplugDeviceId = parts[4];
             // Always resolve the NODE's external ID: [Group ID]_[Edge Node ID]
-            String nodeExternalIdValue = parts[1] + "_" + parts[3];
+            String nodeExternalIdValue = context.liveTestId(parts[1] + "_" + parts[3]);
             com.cumulocity.model.ID nodeIdentity = new com.cumulocity.model.ID(externalIdType, nodeExternalIdValue);
             com.cumulocity.rest.representation.identity.ExternalIDRepresentation resolved =
                     c8yAgent.resolveExternalId2GlobalId(tenant, nodeIdentity, context.isTesting());
@@ -612,7 +612,7 @@ public class SendInboundProcessor extends BaseProcessor {
             }
             String sparkplugDeviceId = parts[4];
             // Resolve the NODE MO: [Group ID]_[Edge Node ID]
-            String nodeExternalIdValue = parts[1] + "_" + parts[3];
+            String nodeExternalIdValue = context.liveTestId(parts[1] + "_" + parts[3]);
             ID nodeIdentity = new ID(externalIdType, nodeExternalIdValue);
             ExternalIDRepresentation resolved =
                     c8yAgent.resolveExternalId2GlobalId(tenant, nodeIdentity, context.isTesting());
@@ -635,7 +635,7 @@ public class SendInboundProcessor extends BaseProcessor {
 
             if (nodeMoId == null) {
                 // Derive NODE external ID from topic: [Group ID]_[Edge Node ID]
-                String externalIdValue = parts[1] + "_" + parts[3];
+                String externalIdValue = context.liveTestId(parts[1] + "_" + parts[3]);
                 ID identity = new ID(externalIdType, externalIdValue);
                 ExternalIDRepresentation resolved =
                         c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());

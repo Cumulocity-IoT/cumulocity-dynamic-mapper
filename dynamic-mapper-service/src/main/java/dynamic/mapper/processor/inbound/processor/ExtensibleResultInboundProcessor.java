@@ -234,6 +234,7 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
             // Check if sourceId is explicitly set in CumulocityObject
             String resolvedDeviceId;
             List<ExternalId> externalSources = c8yObj.getExternalSource();
+            applyLiveTestExternalIdPrefix(externalSources, context);
             ExternalIdInfo externalIdInfo = ExternalIdInfo.from(externalSources);
 
             if (externalIdInfo.isPresent()) {

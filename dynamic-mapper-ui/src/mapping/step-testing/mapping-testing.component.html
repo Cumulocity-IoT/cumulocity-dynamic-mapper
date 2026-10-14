@@ -176,7 +176,7 @@
         Reset Dry Run
       </button>
       <!-- Live Test really sends. For inbound mappings it always runs against a test device (created
-           if the external ID is unknown, otherwise the existing device is used); there is no way to
+           if unknown, registered as "d11r_liveTest_" + the external ID, otherwise reused); there is no way to
            send to an arbitrary real device from here. -->
       <button type="button" class="btn btn-default btn-sm" data-cy="dm-mapping-test-send"
         [disabled]="disableTestSending() || isLoading" (click)="onSendTest()"

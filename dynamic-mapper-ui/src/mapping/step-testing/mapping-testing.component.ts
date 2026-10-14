@@ -200,7 +200,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         + 'Live Test publishes the result to the connected broker and ' + needsExternalId;
     }
     return 'Dry Run runs the mapping without writing anything to your tenant. '
-      + 'Live Test sends the result to Cumulocity using a test device and ' + needsExternalId
+      + 'Live Test sends the result to Cumulocity using a test device registered as "d11r_liveTest_" + the external id, '
+      + 'so the real device is never touched, and ' + needsExternalId
       + ' Test devices are listed under Monitoring > Test device.';
   }
 
@@ -451,10 +452,13 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       text += ` ${more} more request${more === 1 ? '' : 's'} sent; see "Show Next Test Result".`;
     }
     if (result.testDeviceId) {
+      const testIdType = first?.externalIdType ? first.externalIdType + ' ' : '';
+      const testDevice = result.testDeviceExternalId
+        ? `${result.testDeviceId} (${testIdType}${result.testDeviceExternalId})`
+        : result.testDeviceId;
       text += result.testDeviceCreated === false
-        ? ` Existing device ${result.testDeviceId} was used as is; it is not tagged as a test device,`
-          + ' so it is not listed under Monitoring > Test device.'
-        : ` Test device ${result.testDeviceId} created; remove it under Monitoring > Test device.`;
+        ? ` Reused test device ${testDevice} from an earlier Live Test.`
+        : ` Test device ${testDevice} created; remove it under Monitoring > Test device.`;
     }
     return text;
   }

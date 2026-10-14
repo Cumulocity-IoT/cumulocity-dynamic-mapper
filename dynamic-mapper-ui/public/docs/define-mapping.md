@@ -151,13 +151,13 @@ transformation without waiting for a real device message:
 - **Reset Dry Run** — clears the test results and lets you run the Dry Run again, e.g. after editing the
   source payload or a substitution.
 - **Live Test** — sends the transformed result(s) to Cumulocity for real. This requires the mapping to use an
-  external ID (it is disabled otherwise). An inbound Live Test always runs against a **test device**: if no device
-  with the message's external ID exists, one is created in inventory and tagged with the fragment
-  `d11r_testDevice`, so it can be identified and cleaned up afterwards. If a device with that external ID already
-  exists, it is used as is and **not** tagged — labelling a real device as a test device would offer it for
-  cleanup — so it does not appear under **Monitoring → Test device**. The confirmation says which of the two
-  happened. A Live Test never creates a device through the mapping's **Create device** setting, so it cannot leave
-  an untagged real device behind.
+  external ID (it is disabled otherwise). An inbound Live Test always runs against a **test device**, never against
+  the real device that owns the message's external ID. The test device is registered under the external ID
+  `d11r_liveTest_` + the mapping's external ID (for example `d11r_liveTest_862524060507262`), so when the real device later sends its
+  first message, that message is not written to the test device. If no such device exists yet, it is created in
+  inventory and tagged with the fragment `d11r_testDevice`, so it can be identified and cleaned up afterwards; on
+  the next Live Test it is reused. The confirmation says which of the two happened. A Live Test never creates a
+  device through the mapping's **Create device** setting, so it cannot leave an untagged real device behind.
 
 ![Live Test](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Send_TestMessage.png "A Live Test sending a transformed test message to a test device in Cumulocity.")
 

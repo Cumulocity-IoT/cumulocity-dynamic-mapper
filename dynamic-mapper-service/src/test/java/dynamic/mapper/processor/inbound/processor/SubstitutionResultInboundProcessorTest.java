@@ -266,6 +266,20 @@ class SubstitutionResultInboundProcessorTest {
     }
 
     @Test
+    void testLiveTest_looksUpThePrefixedExternalId() throws Exception {
+        // A live test registers its device under "d11r_liveTest_" + externalId, so the mapping must resolve that
+        // one — resolving the real external ID would write the test message to the real device.
+        processingContext.setTestExternalIdPrefix(ProcessingContext.TEST_EXTERNAL_ID_PREFIX);
+
+        processor.process(processingContext);
+
+        verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT),
+                org.mockito.ArgumentMatchers.argThat(id -> id.getValue().equals(ProcessingContext.TEST_EXTERNAL_ID_PREFIX + "test-external-id")),
+                any(Boolean.class));
+        assertEquals(ProcessingContext.TEST_EXTERNAL_ID_PREFIX + "test-external-id", processingContext.getExternalId());
+    }
+
+    @Test
     void testProcessWithCreateNonExistingDevice_creationFails_doesNotClaimTheFlagIsDisabled() throws Exception {
         // Given: the flag is on, but creating the device yields nothing. The UI offers to enable
         // the flag whenever it sees the "disabled" marker; here that would loop forever.

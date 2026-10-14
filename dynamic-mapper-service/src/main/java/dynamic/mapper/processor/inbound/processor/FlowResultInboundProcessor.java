@@ -238,6 +238,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             // Check if sourceId is explicitly set in CumulocityObject
             String resolvedDeviceId;
             List<ExternalId> externalSources = cumulocityMessage.getExternalSource();
+            applyLiveTestExternalIdPrefix(externalSources, context);
             ExternalIdInfo externalIdInfo = ExternalIdInfo.from(externalSources);
 
             if (externalIdInfo.isPresent()) {

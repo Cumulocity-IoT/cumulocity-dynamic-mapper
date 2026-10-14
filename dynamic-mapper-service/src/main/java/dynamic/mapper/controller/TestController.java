@@ -139,17 +139,21 @@ public class TestController {
                                     + "so the live test was not run. Add an external ID to the source template "
                                     + "or the sample topic.");
                 }
-                C8YAgent.TestDevice testDevice = c8YAgent.ensureTestDevice(tenant, externalId, externalId,
+                // Never register the test device under the mapping's own external ID: once the real
+                // device sends its first message, that message would be written to the test device.
+                String testExternalId = ProcessingContext.TEST_EXTERNAL_ID_PREFIX + externalId;
+                C8YAgent.TestDevice testDevice = c8YAgent.ensureTestDevice(tenant, testExternalId, testExternalId,
                         externalIdType);
                 if (testDevice != null) {
                     result.setTestDeviceId(testDevice.id());
                     result.setTestDeviceCreated(testDevice.created());
+                    result.setTestDeviceExternalId(testExternalId);
                     log.info("{} - {} test device: id={}, externalId={}, type={}", tenant,
-                            testDevice.created() ? "Created" : "Reusing existing", testDevice.id(), externalId,
+                            testDevice.created() ? "Created" : "Reusing existing", testDevice.id(), testExternalId,
                             externalIdType);
                 } else {
                     return liveTestFailure(result, tenant,
-                            "The test device for external ID '" + externalId + "' could not be created or found, "
+                            "The test device for external ID '" + testExternalId + "' could not be created or found, "
                                     + "so the live test was not run.");
                 }
             }
@@ -158,6 +162,9 @@ public class TestController {
             if (mapping.getDirection().equals(Direction.INBOUND)) {
                 ConnectorMessage testMessage = createTestMessage(tenant, connectorClient,
                         mapping.getMappingTopicSample(), send, payload);
+                if (Boolean.TRUE.equals(send)) {
+                    testMessage.setTestExternalIdPrefix(ProcessingContext.TEST_EXTERNAL_ID_PREFIX);
+                }
                 processingResultWrapper = connectorClient.getDispatcher().onTestMessage(
                         testMessage,
                         mapping);

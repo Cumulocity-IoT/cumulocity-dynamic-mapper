@@ -1041,7 +1041,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
     /**
      * Outcome of {@link #ensureTestDevice}: the device's internal ID, and whether this call created
-     * it. A device that already existed is used as is — it is not tagged {@code d11r_testDevice}
+     * it. A device that already existed under that external ID is reused as is — it is not re-tagged {@code d11r_testDevice}
      * (that would label a real device as a test device and offer it for cleanup), so it does not
      * appear in the Test Devices grid.
      */

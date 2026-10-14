@@ -166,7 +166,8 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
             if (substitute.getValue() == null) {
                 throw new IllegalArgumentException("External ID substitution produced null value");
             }
-            String externalId = substitute.getValue().toString();
+            // In a live test the external ID is prefixed so the test device is never the real one.
+            String externalId = context.liveTestId(substitute.getValue().toString());
             context.setExternalId(externalId);
             ID identity = new ID(mapping.getExternalIdType(), externalId);
             SubstituteValue sourceId = new SubstituteValue(null,
