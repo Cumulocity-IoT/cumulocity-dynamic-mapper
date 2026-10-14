@@ -155,6 +155,6 @@ Removing the guards in `C8YAgent` or the `finally` clear makes five of these fai
 `MappingStepTestingComponent.handleTestResult()` looks for the `createNonExistingDevice is disabled`
 marker in the result's warnings **and** errors — flow and extension mappings report it as a warning,
 substitution mappings as an error — and asks whether to assume, for this test, that the device
-exists. Confirming sets `testMapping.createNonExistingDevice = true` and re-runs.
+exists. Confirming re-runs with a per-run mapping copy whose `createNonExistingDevice` is `true`; it does not modify `testMapping`.
 
 The dialog is a **Dry Run** feature: it offers to *assume the device exists* (the mock creates a throwaway device). A **Live Test** never offers it, because it always runs against a test device and confirming would create a real, untagged device through `createNonExistingDevice`.

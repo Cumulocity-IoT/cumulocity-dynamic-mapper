@@ -30,7 +30,7 @@ The following screen offers two ways to define subscriptions:
   created explicitly for the chosen devices and are not updated automatically when devices are added or removed
   from a group.
 
-  ![Static subscription device picker](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Outbound_Subscription.png "Selecting individual devices for a static outbound subscription.")
+  ![Static subscription device picker](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Outbound_subscription.png "Selecting individual devices for a static outbound subscription.")
 - **Subscription dynamic → Manage subscriptions (by device groups)**: Specify device groups. When a group is added, subscriptions for all
   assigned devices are created. When a device is added to or removed from a chosen group, the subscription is
   automatically created or deleted. The filter applies to child assets and child devices.
