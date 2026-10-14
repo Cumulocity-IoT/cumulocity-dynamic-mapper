@@ -79,6 +79,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import c8y.IsDevice;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.client.Certificate;
+import dynamic.mapper.core.cache.InboundExternalIdCache;
 import dynamic.mapper.core.cache.InventoryCache;
 import dynamic.mapper.core.cache.OutboundExternalIdCache;
 import dynamic.mapper.core.cache.OutboundIdKey;
@@ -104,7 +105,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import static com.cumulocity.rest.representation.measurement.MeasurementMediaType.MEASUREMENT_COLLECTION;
 import static com.cumulocity.rest.representation.event.EventMediaType.EVENT;
-import static com.cumulocity.rest.representation.alarm.AlarmMediaType.ALARM;;
+import static com.cumulocity.rest.representation.alarm.AlarmMediaType.ALARM;
 
 @Slf4j
 @Component
@@ -219,14 +220,19 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         }
         ExternalIDRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
             try {
-                ExternalIDRepresentation resultInner = cacheManager.getInboundExternalIdCache(tenant)
-                        .getIdByExternalId(identity);
-                Counter.builder("dynmapper_inbound_identity_requests_total").tag("tenant", tenant)
-                        .register(Metrics.globalRegistry).increment();
+                InboundExternalIdCache inboundCache = cacheManager.getInboundExternalIdCache(tenant);
+                ExternalIDRepresentation resultInner = null;
+                if (inboundCache != null && !Boolean.TRUE.equals(testing)) {
+                    resultInner = inboundCache.getIdByExternalId(identity);
+                }
+                if (!Boolean.TRUE.equals(testing)) { // a dry run's mock lookups are not identity requests
+                    Counter.builder("dynmapper_inbound_identity_requests_total").tag("tenant", tenant)
+                            .register(Metrics.globalRegistry).increment();
+                }
                 if (resultInner == null) {
                     resultInner = identityApi.resolveExternalId2GlobalId(identity, testing, c8ySemaphore);
-                    if (!testing) {
-                        cacheManager.getInboundExternalIdCache(tenant).putIdForExternalId(identity,
+                    if (inboundCache != null && !Boolean.TRUE.equals(testing)) {
+                        inboundCache.putIdForExternalId(identity,
                                 resultInner);
                     }
 
@@ -243,6 +249,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             return null;
         });
         return result;
+    }
+
+    public void clearMockIdentityCache(String tenant) {
+        identityApi.clearMockIdentityCache(tenant);
+    }
+
+    public void clearMockInventoryCache(String tenant) {
+        inventoryApi.clearInventoryCache(tenant);
     }
 
     public ExternalIDRepresentation resolveGlobalId2ExternalId(String tenant, GId gid, String idType,
@@ -699,7 +713,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         log.error("{} - Could not map payload: {} {}", tenant, targetAPI, payload);
                         error.append("Could not map payload: " + targetAPI + "/" + payload);
                     } catch (SDKException s) {
-                        log.error("{} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload, s);
+                        log.error("{} - Could not send payload to c8y: {} {}: HTTP {} - {}", tenant, targetAPI, payload,
+                                s.getHttpStatus(), s.getMessage(), s);
                         error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s);
                     }
                     return rt;
@@ -936,8 +951,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     pe.set(new ProcessingException("Could not map payload: " + targetAPI + "/" + payload, e));
                     // error.append("Could not map payload: " + targetAPI + "/" + payload);
                 } catch (SDKException s) {
-                    log.error("{} - Could not sent payload to c8y: {} {}: ", tenant, targetAPI, payload,
-                            s.getMessage());
+                    log.error("{} - Could not send payload to c8y: {} {}: HTTP {} - {}", tenant, targetAPI, payload,
+                            s.getHttpStatus(), s.getMessage(), s);
                     pe.set(new ProcessingException("Could not sent payload to c8y: " + targetAPI + "/" + payload, s));
 
                     // Remove device from Cache
@@ -975,6 +990,38 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
      * @param testing  routing flag forwarded to the inventory/identity facades
      * @return the created managed object representation
      */
+    private static final String EXTERNAL_ID_BINDING_HINT = "Device creation failed: the option "
+            + "'External ID binding during MO creation' is enabled in the service configuration, but this "
+            + "Cumulocity tenant/platform does not support it (platform release May 2026 or later required; "
+            + "e.g. Cumulocity Edge does not). Disable this option under Configuration > Service configuration >"
+            + " General and retry.";
+
+    /** True if the platform rejected the atomic {@code externalIds} directive in the MO creation body. */
+    private static boolean isExternalIdBindingRejected(SDKException e) {
+        return e.getHttpStatus() == 422 && e.getMessage() != null
+                && e.getMessage().contains("Cannot add externalIds through Inventory API");
+    }
+
+    /** Another creator bound the external ID first (HTTP 409); resolve the winner once the semaphore is released. */
+    private static final class ExternalIdConflictException extends RuntimeException {
+        ExternalIdConflictException(SDKException cause) {
+            super(cause);
+        }
+
+        SDKException sdkException() {
+            return (SDKException) getCause();
+        }
+    }
+
+    private static boolean isExternalIdDuplicate(SDKException e) {
+        return e.getHttpStatus() == 409;
+    }
+
+    /**
+     * Must be called holding {@code c8ySemaphore}. Throws {@link ExternalIdConflictException} on a lost
+     * race; the caller resolves the winner via {@link #resolveExistingDevice} after releasing the semaphore
+     * (the lookup acquires it again).
+     */
     private ManagedObjectRepresentation createWithExternalIdBinding(
             ManagedObjectRepresentation mor, ID identity, Boolean testing, boolean supportsExternalIdBinding) {
         if (Boolean.TRUE.equals(testing)) {
@@ -993,15 +1040,48 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             mor.setProperty("externalIds",
                     List.of(Map.of("type", idType, "externalId", identity.getValue())));
             log.debug("Creating MO with atomic externalIds binding");
-            return inventoryApi.create(mor, false);
+            try {
+                return inventoryApi.create(mor, false);
+            } catch (SDKException e) {
+                if (isExternalIdDuplicate(e)) {
+                    throw new ExternalIdConflictException(e);
+                }
+                throw e;
+            }
         }
 
         // Legacy path (platforms < May 2026, e.g. Cumulocity Edge): create MO first,
         // then bind the external ID via a separate Identity API call.
         log.debug("Creating MO + external ID binding via two separate calls (legacy platform path)");
         ManagedObjectRepresentation created = inventoryApi.create(mor, false);
-        identityApi.create(created, identity, false);
+        try {
+            identityApi.create(created, identity, false);
+        } catch (SDKException e) {
+            if (!isExternalIdDuplicate(e)) {
+                throw e;
+            }
+            // Lost a race: drop our unbound MO (otherwise it stays behind as a device without external ID).
+            try {
+                inventoryApi.delete(created.getId(), false);
+            } catch (Exception de) {
+                log.warn("Could not remove orphaned device {}", created.getId().getValue(), de);
+            }
+            throw new ExternalIdConflictException(e);
+        }
         return created;
+    }
+
+    /** Looks up the device that won the external-ID race; rethrows the original 409 if it cannot be found. */
+    private ManagedObjectRepresentation resolveExistingDevice(String tenant, ID identity,
+            ExternalIdConflictException conflict) {
+        evictExternalIdFromCaches(tenant, identity);
+        ExternalIDRepresentation existing = resolveExternalId2GlobalId(tenant, identity, false);
+        if (existing == null) {
+            throw conflict.sdkException();
+        }
+        log.warn("{} - External ID {} was bound concurrently, using existing device {}", tenant,
+                identity.getValue(), existing.getManagedObject().getId().getValue());
+        return existing.getManagedObject();
     }
 
     /**
@@ -1011,17 +1091,71 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
      * @return the internal C8Y ID of the created managed object, or {@code null} on failure
      */
     public String createTestDevice(String tenant, String deviceName, String externalId, String externalIdType) {
+        TestDevice device = ensureTestDevice(tenant, deviceName, externalId, externalIdType);
+        return device == null ? null : device.id();
+    }
+
+    /**
+     * Outcome of {@link #ensureTestDevice}: the device's internal ID, and whether this call created
+     * it. A device that already existed under that external ID is reused as is — it is not re-tagged. Only a device already
+     * tagged {@code d11r_testDevice} is reused; any other object owning the external ID is refused
+     * (the result is {@code null}), so a live test never writes to a real device.
+     */
+    public record TestDevice(String id, boolean created) {
+    }
+
+    /**
+     * Drops an external ID from the inbound external-ID cache and the implicit-device-creation cache,
+     * so the next lookup asks the platform. Used when a cached device ID is known or suspected to be
+     * stale (the managed object was deleted).
+     */
+    public void evictExternalIdFromCaches(String tenant, ID identity) {
+        cacheManager.removeDeviceFromInboundExternalIdCache(tenant, identity);
+        tenantRegistry.removeFromExternalIdCache(tenant, identity);
+    }
+
+    /** True if the managed object carries the {@code d11r_testDevice} tag; false if not or if it cannot be read. */
+    private boolean isMapperTestDevice(String tenant, String deviceId) {
+        return Boolean.TRUE.equals(subscriptionsService.callForTenant(tenant, () -> {
+            try {
+                ManagedObjectRepresentation mor = inventoryApi.get(GId.asGId(deviceId), false);
+                return mor != null && (MAPPING_TEST_DEVICE_TYPE.equals(mor.getType())
+                        || mor.hasProperty(MAPPING_TEST_DEVICE_TYPE));
+            } catch (Exception e) {
+                log.warn("{} - Could not read device {} to verify it is a test device: {}", tenant, deviceId,
+                        e.getMessage());
+                return false;
+            }
+        }));
+    }
+
+    /**
+     * Like {@link #createTestDevice} but reports whether the device was created or already existed.
+     *
+     * @return the device, or {@code null} on failure
+     */
+    public TestDevice ensureTestDevice(String tenant, String deviceName, String externalId, String externalIdType) {
         String resolvedType = (externalIdType != null && !externalIdType.isEmpty()) ? externalIdType : "c8y_Serial";
         // Upsert: if the externalId is already registered, return the existing device ID
         ID id = new ID();
         id.setType(resolvedType);
         id.setValue(externalId);
+        // A test device is deleted by hand from time to time, and nothing evicts a deleted test device
+        // from the external-ID caches (it is not subscribed for inventory updates). Never trust a cached
+        // answer here: ask the platform, and let the lookup below repopulate the caches.
+        evictExternalIdFromCaches(tenant, id);
         ExternalIDRepresentation existing = resolveExternalId2GlobalId(tenant, id, false);
         if (existing != null) {
             String existingId = existing.getManagedObject().getId().getValue();
+            if (!isMapperTestDevice(tenant, existingId)) {
+                // Never write live-test data to a device the mapper did not create for testing.
+                log.error("{} - Object {} owns external ID {} but is not a mapper test device, refusing to reuse it",
+                        tenant, existingId, externalId);
+                return null;
+            }
             log.info("{} - Test device with externalId={} already exists: id={}, reusing it", tenant, externalId,
                     existingId);
-            return existingId;
+            return new TestDevice(existingId, false);
         }
 
         boolean supportsExternalIdBinding = Boolean.TRUE.equals(
@@ -1032,19 +1166,27 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
                 mor.setName(deviceName);
                 mor.set(new IsDevice());
+                // Both the fragment (what the Test Devices grid queries) and the object type, so the device
+                // is recognisable as a test device in the inventory as well.
+                mor.setType(MAPPING_TEST_DEVICE_TYPE);
                 mor.set(new HashMap<String, String>(), MAPPING_TEST_DEVICE_TYPE);
+                ExternalIdConflictException conflict;
                 try {
                     c8ySemaphore.acquire();
                     mor = createWithExternalIdBinding(mor, id, false, supportsExternalIdBinding);
                     log.info("{} - Test device created: id={}, name={}", tenant, mor.getId().getValue(), deviceName);
-                    return mor.getId().getValue();
+                    return new TestDevice(mor.getId().getValue(), true);
                 } catch (InterruptedException e) {
                     log.error("{} - Failed to acquire semaphore for creating test device", tenant, e);
                     Thread.currentThread().interrupt();
                     return null;
+                } catch (ExternalIdConflictException e) {
+                    conflict = e;
                 } finally {
                     c8ySemaphore.release();
                 }
+                // Semaphore released: the lookup acquires it again.
+                return new TestDevice(resolveExistingDevice(tenant, id, conflict).getId().getValue(), false);
             });
         });
     }
@@ -1090,6 +1232,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             // when creating a mock inventory object for testing set a predefined source id
                             mor.setId(new GId(context.getSourceId()));
                         }
+                        ExternalIdConflictException conflict = null;
                         try {
                             c8ySemaphore.acquire();
                             mor = createWithExternalIdBinding(mor, identity, testing,
@@ -1101,8 +1244,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                 log.info("{} - New device created with Id {}", tenant, mor.getId().getValue());
                         } catch (InterruptedException e) {
                             log.error("{} - Failed to acquire semaphore for creating Device", tenant, e);
+                        } catch (ExternalIdConflictException e) {
+                            conflict = e;
                         } finally {
                             c8ySemaphore.release();
+                        }
+                        if (conflict != null) {
+                            // Semaphore released: the lookup acquires it again.
+                            mor = resolveExistingDevice(tenant, identity, conflict);
                         }
                     } else {
                         // Device exists - update needed
@@ -1121,8 +1270,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             log.info("{} - Device {} updated.", tenant, mor.getId().getValue());
                     }
                 } catch (SDKException s) {
-                    log.error("{} - Could not sent payload to c8y: {}: ", tenant, currentRequest.getRequest(),
-                            s);
+                    if (isExternalIdBindingRejected(s)) {
+                        log.error("{} - {}", tenant, EXTERNAL_ID_BINDING_HINT);
+                        pe.set(new ProcessingException(
+                                EXTERNAL_ID_BINDING_HINT + " Payload: " + targetAPI + "/"
+                                        + currentRequest.getRequest(),
+                                s));
+                        return mor;
+                    }
+                    log.error("{} - Could not send payload to c8y: {}: HTTP {} - {}", tenant, currentRequest.getRequest(),
+                            s.getHttpStatus(), s.getMessage(), s);
                     pe.set(new ProcessingException(
                             "Could not sent payload to c8y: " + targetAPI + "/" + currentRequest.getRequest(), s));
                     // error.append("Could not sent payload to c8y: " + currentRequest.getRequest()
@@ -1348,6 +1505,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             inventoryCache.removeMO(sourceId);
         }
         tenantRegistry.removeFromExternalIdCacheByInternalId(tenant, sourceId);
+        cacheManager.removeSourceIdFromExternalIdCaches(tenant, sourceId);
     }
 
     /**

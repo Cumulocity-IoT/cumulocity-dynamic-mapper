@@ -196,7 +196,7 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
                     return;
                 }
                 // Test mode: source is synthetic, so use sourceId as fallback to keep topic templates resolvable.
-                String fallbackExternalId = sourceId.toString();
+                String fallbackExternalId = context.liveTestId(sourceId.toString());
                 log.warn("{} - External id for device '{}' with type '{}' not found — using fallback '{}' in JS context",
                         tenant, sourceId, mapping.getExternalIdType(), fallbackExternalId);
                 identityFragment.put("externalId", fallbackExternalId);
@@ -231,8 +231,10 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
         log.error(errorMessage, e);
         context.addError(new ProcessingException(errorMessage, e));
         context.setIgnoreFurtherProcessing(true);
-        mappingStatus.incrementErrors();
-        mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        if (context.affectsMappingStatus()) {
+            mappingStatus.incrementErrors();
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        }
     }
 
     /**

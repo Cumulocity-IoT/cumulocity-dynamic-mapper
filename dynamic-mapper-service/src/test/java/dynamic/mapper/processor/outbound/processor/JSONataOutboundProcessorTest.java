@@ -364,30 +364,17 @@ class JSONataOutboundProcessorTest {
         assertDoesNotThrow(() -> processor.process(processingContext),
                 "Processor should handle invalid JSONata expression gracefully");
 
-        // Then - Check error handling
-        Map<String, List<SubstituteValue>> processingCache = processingContext.getProcessingCache();
-
-        // The processor handles the error gracefully by:
-        // 1. Logging the error (as seen in console output)
-        // 2. Adding a null/empty entry to the processing cache
-        // 3. Continuing processing without throwing exception
-
-        assertTrue(processingCache.containsKey("testTarget"),
-                "Should have entry for testTarget even with invalid JSONata");
-
-        List<SubstituteValue> values = processingCache.get("testTarget");
-        assertNotNull(values, "Should have values list");
-
-        // The value will be null since the expression failed to evaluate
-        if (!values.isEmpty()) {
-            SubstituteValue value = values.get(0);
-            assertNull(value.getValue(),
-                    "Value should be null for invalid JSONata expression");
-        }
+        // Then - a syntax error is a bug in the mapping that fails for every message, so it is
+        // reported as an error naming the expression and target, instead of being swallowed as a
+        // null value (which surfaced later as a misleading "missing source" complaint).
+        assertTrue(processingContext.hasError(), "A syntax error must be recorded as an error");
+        String message = processingContext.getErrors().get(0).getMessage();
+        assertTrue(message.contains("$invalid syntax that will fail to parse}"),
+                "Error should name the offending expression, was: " + message);
+        assertTrue(message.contains("testTarget"), "Error should name the target, was: " + message);
+        assertTrue(message.contains("syntax error"), "Error should say it is a syntax error, was: " + message);
 
         log.info("✅ Invalid JSONata expression test passed - error was handled gracefully");
-        log.info("   - Processing cache size: {}", processingCache.size());
-        log.info("   - Error was logged but processing continued");
     }
 
     @Test
@@ -411,13 +398,12 @@ class JSONataOutboundProcessorTest {
         assertDoesNotThrow(() -> processor.process(processingContext),
                 "Should handle invalid JSONata syntax gracefully");
 
-        // The processor logs the error but doesn't add it to
-        // processingContext.getErrors()
-        // Instead, it adds a null value to the processing cache
-        assertTrue(processingContext.getProcessingCache().containsKey("invalidSyntax"),
-                "Should have entry in processing cache even for invalid syntax");
+        // A syntax error is recorded on the context, not swallowed as a null value.
+        assertTrue(processingContext.hasError(), "Invalid syntax should be recorded as an error");
+        assertTrue(processingContext.getErrors().get(0).getMessage().contains("syntax error"),
+                "Error should say it is a syntax error");
 
-        log.info("   ✓ Invalid syntax handled gracefully (error logged, null value in cache)");
+        log.info("   ✓ Invalid syntax handled gracefully (recorded as error with expression and target)");
 
         // Test 2: Missing path (most common real-world scenario)
         log.info("Testing missing path...");

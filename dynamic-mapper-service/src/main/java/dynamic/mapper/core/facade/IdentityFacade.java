@@ -77,7 +77,7 @@ public class IdentityFacade {
 
     public ExternalIDRepresentation resolveGlobalId2ExternalId(GId gid, String externalIdType,
             Boolean testing, Semaphore c8ySemaphore) {
-        if (!testing) {
+        if (!Boolean.TRUE.equals(testing)) {
             MutableObject<ExternalIDRepresentation> result = new MutableObject<ExternalIDRepresentation>(null);
             try {
                 c8ySemaphore.acquire();
@@ -101,6 +101,10 @@ public class IdentityFacade {
 
     public void clearMockIdentityCache() {
         identityMock.clear();
+    }
+
+    public void clearMockIdentityCache(String tenant) {
+        identityMock.clear(tenant);
     }
 
 }

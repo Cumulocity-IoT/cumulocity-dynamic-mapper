@@ -211,8 +211,15 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                 }
             }
 
-            int lineNumber = extractJsLineNumber(e);
-            String errorMessage = String.format("%s, line %s", e.getMessage(), lineNumber);
+            // GraalVM's own text for a killed context ("Execution got cancelled.") says nothing
+            // about why; name the limit that was hit and where the code was when it was stopped.
+            String errorMessage = isKilled
+                    ? String.format("Smart Function was stopped because it ran too long "
+                            + "(CPU budget %d ms, see maxCPUTimeMS in the service configuration, "
+                            + "or the processing pipeline timeout)%s. "
+                            + "Check for endless loops or slow calls.",
+                            context.getServiceConfiguration().getEffectiveMaxCPUTimeMS(), describeJsLocation(e))
+                    : e.getMessage() + describeJsLocation(e);
 
             if (isKilled) {
                 log.warn("{} - JS execution forcibly stopped in {} for mapping {}: {}",

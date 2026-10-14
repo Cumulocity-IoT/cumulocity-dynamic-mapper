@@ -21,7 +21,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="39. Connector disconnect / reconnect cycle"
+TEST_TITLE="Connector disconnect / reconnect cycle"
 
 CONNECTOR_ID="${DM_CONNECTOR_ID:-}"
 
@@ -35,7 +35,7 @@ dm_wait_for_service
 dm_validate_only_exit
 
 if [ -z "$CONNECTOR_ID" ]; then
-    dm_step "DM_CONNECTOR_ID not set — discovering first MQTT connector ..."
+    dm_step "DM_CONNECTOR_ID not set — discovering a CONNECTED MQTT connector ..."
     # /monitoring/status/connectors may be a JSON array, a single status object,
     # or a map keyed by connector id — and c8y may emit it as NDJSON. Slurp (-s)
     # and normalize to a flat array of status objects before selecting.
@@ -45,15 +45,21 @@ if [ -z "$CONNECTOR_ID" ]; then
             elif (type == "object" and (.connectorIdentifier // "") != "" and (.status // "") != "") then .
             elif type == "object" then (to_entries[] | .value)
             else empty end ]' 2>/dev/null || echo '[]')
-    # Prefer a connector whose type/name looks like MQTT; else take the first one.
+    # Only a connector that is CONNECTED right now can be cycled meaningfully: a disabled or
+    # never-connected one (status UNKNOWN) fails the "initially CONNECTED" check regardless of
+    # the mapper's behaviour. Prefer a broker connector (MQTT-like) over e.g. the built-in HTTP one.
     CONNECTOR_ID=$(printf '%s' "$CONNECTORS" | jq -r '
-        ( [ .[] | select(
-              ((.connectorType // "") | ascii_upcase | contains("MQTT"))
-              or ((.name // .connectorName // "") | ascii_upcase | contains("MQTT"))
-          ) ][0] // .[0] )
+        [ .[] | select((.status // "") == "CONNECTED") ] as $up
+        | ( [ $up[] | select(
+                (((.connectorType // "") | ascii_upcase | contains("MQTT"))
+                 or ((.name // .connectorName // "") | ascii_upcase | contains("MQTT")))
+                and ((.connectorIdentifier // "") != "HTTP_CONNECTOR_IDENTIFIER")
+            ) ][0]
+            // [ $up[] | select((.connectorIdentifier // "") != "HTTP_CONNECTOR_IDENTIFIER") ][0]
+            // $up[0] )
         | (.connectorIdentifier // .name // .connectorName // empty)' 2>/dev/null || echo "")
     if [ -z "$CONNECTOR_ID" ]; then
-        dm_skip_exit "No connectors found — cannot run reconnect test."
+        dm_skip_exit "No CONNECTED connector found — cannot run reconnect test (set DM_CONNECTOR_ID to pick one)."
     fi
     dm_info "Using connector: $CONNECTOR_ID"
 fi

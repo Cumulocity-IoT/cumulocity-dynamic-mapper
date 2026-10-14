@@ -68,6 +68,9 @@ declare -a TESTS=(
     "inbound|test-inbound-alarm|JSON / DEFAULT → ALARM"
     "inbound|test-inbound-operation|JSON / DEFAULT → OPERATION"
     "inbound|test-inbound-inventory|JSON / DEFAULT → INVENTORY (device metadata update)"
+    "inbound|test-inbound-alarm-dedup-upsert|Repeated ALARM (same source+type) → one alarm; upsert semantics via DM_EXPECT_ALARM_UPSERT=true"
+    "inbound|test-inbound-deployment-reconcile|Deployment change applies live (un-deploy / re-deploy, no reconnect)"
+    "inbound|test-inbound-rest-polling|REST_POLLING connector → MEASUREMENT (needs http-polling-mock)"
     # ── Inbound (Smart Function patterns) ──────────────────────────────────────
     "smartfunction|test-inbound-smartfunction-02|Inbound: Pattern 02: Topic-based external ID + sensor filter"
     "smartfunction|test-inbound-smartfunction-03|Inbound: Pattern 03: getManagedObjectByExternalId — MO enrichment"
@@ -91,8 +94,10 @@ declare -a TESTS=(
     "outbound|test-outbound-smartfunction-externalsource|Smart Function externalSource → _externalId_ topic (broker round-trip)"
     "outbound|test-outbound-smartfunction-molookup|Smart Function outbound: Pattern 03 — getManagedObjectByExternalId — MO enrichment"
     # ── Outbound (subscription management) ────────────────────────────────────
+    "outbound|test-outbound-webhook|C8Y Measurement → WEB_HOOK connector (needs http-polling-mock)"
     "outbound|test-outbound-static-subscription|Static subscription management"
     "outbound|test-outbound-type-subscription|Dynamic type subscription"
+    "outbound|test-outbound-type-subscription-resync|Type subscription resync (backfill of pre-existing devices)"
     "outbound|test-outbound-group-subscription|Dynamic group subscription"
     "outbound|test-outbound-group-subscription-removal|Group subscription removal"
     "outbound|test-outbound-subscription-persistence|Subscription persistence after restart"

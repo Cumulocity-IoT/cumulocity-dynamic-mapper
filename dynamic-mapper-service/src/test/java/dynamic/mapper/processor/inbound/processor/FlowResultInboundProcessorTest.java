@@ -221,6 +221,69 @@ class FlowResultInboundProcessorTest {
     }
 
     @Test
+    void testLiveTest_resolvesAndRecordsThePrefixedExternalId() throws Exception {
+        // Given - a live test: the test device lives under "d11r_liveTest_" + the mapping's external ID
+        List<String> seenByResolver = new ArrayList<>();
+        processor.withDeviceResolver((msg, ctx, tenant) -> {
+            seenByResolver.add(msg.getExternalSource().get(0).getExternalId());
+            return TEST_DEVICE_ID;
+        });
+        processingContext.setTestExternalIdPrefix(ProcessingContext.TEST_EXTERNAL_ID_PREFIX);
+        processingContext.setFlowResult(createCumulocityObject());
+
+        // When
+        processor.process(processingContext);
+
+        // Then - the real device's external ID is never resolved
+        assertEquals(List.of(ProcessingContext.TEST_EXTERNAL_ID_PREFIX + TEST_EXTERNAL_ID), seenByResolver);
+        assertEquals(ProcessingContext.TEST_EXTERNAL_ID_PREFIX + TEST_EXTERNAL_ID, processingContext.getRequests().get(0).getExternalId());
+    }
+
+    @Test
+    void testLiveTest_refusesToAddressARealDeviceByCumulocityId() throws Exception {
+        // The prefix only protects external IDs: a Smart Function that names the device by its
+        // Cumulocity ID would write the message to that real device.
+        processingContext.setTestExternalIdPrefix(ProcessingContext.TEST_EXTERNAL_ID_PREFIX);
+        CumulocityObject message = createCumulocityObject();
+        message.setSourceId("4711");
+        processingContext.setFlowResult(message);
+
+        processor.process(processingContext);
+
+        assertTrue(processingContext.hasError());
+        assertTrue(processingContext.getErrors().stream()
+                .anyMatch(e -> e.getMessage().contains(ProcessingContext.LIVE_TEST_C8Y_ID_ERROR)),
+                String.valueOf(processingContext.getErrors()));
+        assertTrue(processingContext.getRequests().isEmpty(), "nothing may be sent");
+    }
+
+    @Test
+    void testProduction_stillAcceptsAnExplicitCumulocityId() throws Exception {
+        CumulocityObject message = createCumulocityObject();
+        message.setSourceId("4711");
+        processingContext.setFlowResult(message);
+
+        processor.process(processingContext);
+
+        assertEquals("4711", processingContext.getRequests().get(0).getSourceId());
+    }
+
+    @Test
+    void testProduction_keepsTheExternalIdUnchanged() throws Exception {
+        List<String> seenByResolver = new ArrayList<>();
+        processor.withDeviceResolver((msg, ctx, tenant) -> {
+            seenByResolver.add(msg.getExternalSource().get(0).getExternalId());
+            return TEST_DEVICE_ID;
+        });
+        processingContext.setFlowResult(createCumulocityObject());
+
+        processor.process(processingContext);
+
+        assertEquals(List.of(TEST_EXTERNAL_ID), seenByResolver);
+        assertEquals(TEST_EXTERNAL_ID, processingContext.getRequests().get(0).getExternalId());
+    }
+
+    @Test
     void testProcessMultipleCumulocityObjects() throws Exception {
         // Given - List of CumulocityObjects
         List<CumulocityObject> messages = new ArrayList<>();

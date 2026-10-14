@@ -763,6 +763,28 @@ export interface MappingStatus {
   messagesReceived: number;
   /** Consecutive failures; reset by the first successful message. See `Mapping.maxFailureCount`. */
   currentFailureCount: number;
+  /** Completed without error and not dropped. Absent on statuses from an older backend. */
+  messagesProcessed?: number;
+  /** Dropped on purpose (filter did not match / mapping chose to ignore); not an error. */
+  messagesFiltered?: number;
+  /** Epoch millis of the last message this mapping finished processing; 0 or absent if none. */
+  lastMessageAt?: number;
+  /** Epoch millis of the last error; 0 or absent if none. */
+  lastErrorAt?: number;
+  /** Text of the last error (truncated server-side); absent if none. */
+  lastError?: string;
+  /** Requests produced (C8Y calls inbound, broker publishes outbound); per request, not per message. */
+  requestsCreated?: number;
+  /** Subset of `requestsCreated` that failed. */
+  requestsFailed?: number;
+  /** Warnings raised while processing. */
+  warnings?: number;
+  /** Messages the processing-time figures are based on. */
+  timedMessages?: number;
+  /** Sum of processing time in ms over `timedMessages`; average = total / timedMessages. */
+  processingTimeTotalMs?: number;
+  /** Slowest single message in ms. */
+  processingTimeMaxMs?: number;
   /** Set only when the mapping could not be loaded; not a processing error. */
   loadingError?: string;
 }
@@ -991,9 +1013,6 @@ export const ValidationFormlyError = {
       message:
         'PublishTopic and PublishTopicSample do not have same structure in the Topic Name.'
     },
-  FilterOutbound_Must_Be_Unique: {
-    message: 'filterMapping must be unique within all outbound mappings.'
-  },
   Wrong_Transformation_Type_Array_In_Source_Template_Or_Target_Template_Requires_Transformation_Type_Smart_Function:
     {
       message:

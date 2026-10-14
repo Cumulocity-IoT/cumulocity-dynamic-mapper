@@ -106,7 +106,7 @@ their outbound dispatchers:
 - `getConnectorSpecification(ConnectorType)` / `getConnectorSpecifications()` — the
   schema registry the configuration UI queries.
 - `addSubscriber` / `getDispatcher(tenant, identifier)` — associates each connector
-  instance with its `CamelDispatcherOutbound`, so outbound Cumulocity notifications know
+  instance with its `OutboundMessageDispatcher`, so outbound Cumulocity notifications know
   which connector(s) to publish through.
 
 ### Message flow
@@ -114,10 +114,10 @@ their outbound dispatchers:
 ```mermaid
 flowchart LR
     broker(["Broker\n(MQTT/Kafka/HTTP/...)"]) -- "onMessage()" --> callback["GenericMessageCallback\n(connector's message listener)"]
-    callback --> dispatchIn["CamelDispatcherInbound"]
-    dispatchIn --> route["Camel route:\ndeserialize → enrich →\nsubstitute/eval → emit to C8Y"]
+    callback --> dispatchIn["InboundMessageDispatcher"]
+    dispatchIn --> route["InboundMessageRouter:\ndeserialize → enrich → filter →\nsubstitute/eval → emit to C8Y"]
 
-    c8y(["Cumulocity\n(notification)"]) --> dispatchOut["CamelDispatcherOutbound"]
+    c8y(["Cumulocity\n(notification)"]) --> dispatchOut["OutboundMessageDispatcher"]
     dispatchOut -- "publishMEAO()" --> conn["AConnectorClient\n(concrete connector)"]
     conn -- publish --> broker
 ```
@@ -136,14 +136,14 @@ public interface GenericMessageCallback {
 }
 ```
 
-[`CamelDispatcherInbound`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/CamelDispatcherInbound.java) implements this interface and is the concrete
+[`InboundMessageDispatcher`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/InboundMessageDispatcher.java) implements this interface and is the concrete
 callback every inbound connector message is routed through: it notifies any live
-topic-explorer listeners, then hands the message to the Camel route (deserialize →
-enrich → substitute/eval → emit) via a `ProducerTemplate` against the shared
-`CamelContext`, tracked with Micrometer timers/counters
+topic-explorer listeners, then resolves the mappings, submits the message to the `InboundMessageRouter` (deserialize →
+enrich → filter → substitute/eval → emit) on a virtual thread, and returns a
+`ProcessingResultWrapper` holding the `Future`. It is tracked with Micrometer timer/counter
 (`dynmapper_inbound_processing_time`, `dynmapper_inbound_message_total`).
 
-[`CamelDispatcherOutbound`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/CamelDispatcherOutbound.java) is the mirror for the outbound direction: it
+[`OutboundMessageDispatcher`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/OutboundMessageDispatcher.java) is the mirror for the outbound direction: it
 subscribes to Cumulocity notifications (`NotificationSubscriber`/`NotificationCallback`)
 and, for each connector registered against a mapping, calls that connector's
 `publishMEAO(ProcessingContext<?>)` to actually put the transformed message on the wire.
@@ -160,7 +160,7 @@ and, for each connector registered against a mapping, calls that connector's
    wires up specifications at startup; instances are registered per tenant as
    configurations are created).
 4. Route broker messages into `GenericMessageCallback.onMessage(...)` so
-   `CamelDispatcherInbound` picks them up.
+   `InboundMessageDispatcher` picks them up.
 
 See [`docs/backend/conventions.md`](../backend/conventions.md) for the condensed version
 of this checklist.

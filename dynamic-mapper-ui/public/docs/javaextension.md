@@ -263,7 +263,7 @@ Beyond `payload(...)`, the `DeviceMessage` builder offers:
 |---|---|
 | `topic(...)` / `DeviceMessage.forTopic(...)` | The topic to publish to. |
 | `retain(true\|false)` | MQTT retain flag. |
-| `transportField(key, value)` | One transport-specific field, e.g. `transportField("qos", "1")`, or the Kafka record key — see [Accessing the broker message key](#broker-message-key). |
+| `transportField(key, value)` | One transport-specific field, e.g. `transportField("qos", "1")`, or the Kafka record key / Pulsar message key — see [Accessing the broker message key](#broker-message-key). |
 | `transportFields(map)` | Several at once. |
 | `clientId(...)` / `transportId(...)` | Override the publishing client or transport. |
 | `time(...)` | Message timestamp. |
@@ -354,7 +354,7 @@ In addition to `parameter`, the map returned by `getConfigAsMap()` also contains
 ##### Accessing the broker message key {#broker-message-key}
 
 `message.getTransportFields()` returns the transport-specific fields of the received broker message. For Kafka,
-`key` holds the record key — the key, not a header:
+`key` holds the record key — the key, not a header. For Pulsar, `key` holds the message key (absent when the message has none):
 
 ```java
 @Override
@@ -366,7 +366,7 @@ public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContex
 ```
 
 The key is delivered **out-of-band — it is not part of the payload**, so it never appears in the mapping's source
-template. A Kafka record key is frequently the device identifier, which makes it a useful source for the external
+template. A Kafka record key or Pulsar message key is frequently the device identifier, which makes it a useful source for the external
 ID. The map is never `null`; it is empty when the transport carries no such fields.
 
 This mirrors `msg.transportFields["key"]` in Smart Functions and `_CONTEXT_DATA_.key` in JSONata mappings.
@@ -377,7 +377,7 @@ For **outbound** mappings, set the field on the returned `DeviceMessage` to defi
 return new DeviceMessage[] {
     DeviceMessage.forTopic(context.getMapping().getPublishTopic())
         .payload(customJson)
-        .transportField("key", externalId)   // sets the Kafka record key
+        .transportField("key", externalId)   // sets the Kafka record key / Pulsar message key
         .build()
 };
 ```

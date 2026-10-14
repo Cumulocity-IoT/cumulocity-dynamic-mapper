@@ -356,7 +356,7 @@ v2 section for the original design discussion — both part A (cross-poll cursor
 
 #### Cursor advances only after processing succeeds — FIXED 2026-09-21
 
-`dispatcher.onMessage(...)` starts Camel processing asynchronously and returns a
+`dispatcher.onMessage(...)` starts processing asynchronously (on a virtual thread, via `InboundMessageRouter`) and returns a
 `ProcessingResultWrapper` immediately — a `Future` that has merely *completed* says nothing about
 whether every mapping that matched actually succeeded. An earlier version of this code either
 ignored the wrapper entirely, or (a later partial fix) blocked on the future without inspecting
@@ -510,7 +510,7 @@ doc before the connector was built).
 ### Message Explorer
 
 Works with no connector-specific code: `executePoll()` dispatches every successful poll via
-`dispatcher.onMessage(...)` (`CamelDispatcherInbound`), which unconditionally calls
+`dispatcher.onMessage(...)` (`InboundMessageDispatcher`), which unconditionally calls
 `connectorClient.notifyExplorerListeners(message)` — the same path every other inbound
 connector uses, so a session sees every poll response automatically. Starting a session
 relies on `AConnectorClient`'s default `subscribeExplorer()`/`unsubscribeExplorer()`, which

@@ -211,6 +211,11 @@ public class OutboundMessageDispatcher implements NotificationCallback {
 
         // Convert Notification to C8YMessage
         C8YMessage c8yMessage = convertNotificationToC8YMessage(notification, tenant, send);
+        if (testMapping != null && send) {
+            // Live test: the identity is mocked, but the message is published to the real broker.
+            // Prefix the external ID the mock hands out so the topic can never address a real device.
+            c8yMessage.setTestExternalIdPrefix(ProcessingContext.TEST_EXTERNAL_ID_PREFIX);
+        }
 
         // Process the message
         return processMessage(c8yMessage, testMapping, testing);
@@ -269,7 +274,9 @@ public class OutboundMessageDispatcher implements NotificationCallback {
                     connectorClient.getConnectorName(),
                     c8yMessage.getMessageId());
         }
-        this.outboundProcessingCounter.increment();
+        if (testMapping == null) { // test traffic is not operational traffic
+            this.outboundProcessingCounter.increment();
+        }
 
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
         ProcessingResultWrapper<?> result = ProcessingResultWrapper.builder()
@@ -371,7 +378,9 @@ public class OutboundMessageDispatcher implements NotificationCallback {
                 log.error("{} - Error processing outbound message: {}", tenant, e.getMessage(), e);
                 throw new RuntimeException("Outbound processing failed", e);
             } finally {
-                timer.stop(outboundProcessingTimer);
+                if (testMapping == null) {
+                    timer.stop(outboundProcessingTimer);
+                }
                 result.markWorkerCompleted();
             }
         });

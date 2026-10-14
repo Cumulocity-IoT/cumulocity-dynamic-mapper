@@ -222,7 +222,7 @@ public class MappingStatusService {
         validateMapping(mapping);
         if (status == null) {
             log.error("{} - Cannot increment failure count: status is null for mapping {}",
-                     tenant, mapping.getIdentifier());
+                     tenant, mapping.displayLabel());
             return false;
         }
 
@@ -445,7 +445,7 @@ public class MappingStatusService {
     private void handleFailureThresholdExceeded(String tenant, Mapping mapping, MappingStatus status) {
         String message = String.format(
                 "Mapping %s deactivated due to exceeded failure count: %d",
-                mapping.getId(), status.getCurrentFailureCount());
+                mapping.displayLabel(), status.getCurrentFailureCount());
 
         log.warn("{} - {}", tenant, message);
 

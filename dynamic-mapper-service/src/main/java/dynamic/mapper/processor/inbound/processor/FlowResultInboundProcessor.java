@@ -114,10 +114,10 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
 
     @Override
     protected void handleProcessingError(Exception e, ProcessingContext<?> context, String tenant, Mapping mapping) {
-        int lineNumber = extractJsLineNumber(e);
+        String location = describeJsLocation(e);
         String errorMessage = String.format(
-                "%s - Error in FlowResultInboundProcessor: %s for mapping: %s, line %s",
-                tenant, mapping.getName(), e.getMessage(), lineNumber);
+                "%s - Error in FlowResultInboundProcessor for mapping %s: %s%s",
+                tenant, mapping.getName(), e.getMessage(), location);
         log.error(errorMessage, e);
 
         if (e instanceof ProcessingException) {
@@ -126,7 +126,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             context.addError(new ProcessingException(errorMessage, e));
         }
 
-        if (!context.isTesting()) {
+        if (context.affectsMappingStatus()) {
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             mappingStatus.incrementErrors();
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
@@ -164,7 +164,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             // Get the API from the cumulocityType using unified API derivation
             if(cumulocityMessage.getCumulocityType() == null){
                 String warnMsg = String.format(
-                        "CumulocityObject missing cumulocityType, cannot derive API for mapping '%s', skipping message", mapping.getIdentifier());
+                        "CumulocityObject missing cumulocityType, cannot derive API for mapping %s, skipping message", mapping.displayLabel());
                 log.warn("{} - {}", tenant, warnMsg);
                 context.getWarnings().add(warnMsg);
                 return;
@@ -238,6 +238,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             // Check if sourceId is explicitly set in CumulocityObject
             String resolvedDeviceId;
             List<ExternalId> externalSources = cumulocityMessage.getExternalSource();
+            applyLiveTestExternalIdPrefix(externalSources, context);
             ExternalIdInfo externalIdInfo = ExternalIdInfo.from(externalSources);
 
             if (externalIdInfo.isPresent()) {
@@ -245,6 +246,9 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             }
 
             if (cumulocityMessage.getSourceId() != null && !cumulocityMessage.getSourceId().isEmpty()) {
+                if (context.getTestExternalIdPrefix() != null) {
+                    throw new ProcessingException(ProcessingContext.LIVE_TEST_C8Y_ID_ERROR);
+                }
                 // Use explicitly provided sourceId
                 resolvedDeviceId = cumulocityMessage.getSourceId();
                 context.setSourceId(resolvedDeviceId);

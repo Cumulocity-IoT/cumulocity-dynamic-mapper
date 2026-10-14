@@ -23,16 +23,36 @@
 
 <div class="card">
   <div class="card-header p-l-32 separator">
-    <h4 class="card-title" translate>Messages processed</h4>
+    <h4 class="card-title" translate>Messages by outcome</h4>
   </div>
   <div class="card-block">
     <div class="col-lg-10 col-lg-offset-1">
       <div
         echarts
-        [options]="echartOptions"
-        [merge]="echartUpdateOptions"
+        [options]="outcomeOptions"
+        [merge]="outcomeUpdateOptions"
         class="bar-chart"
         (chartInit)="onChartInit($event)"
+      ></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header p-l-32 separator">
+    <h4 class="card-title" translate>Processing time per mapping (slowest first)</h4>
+  </div>
+  <div class="card-block">
+    <div class="col-lg-10 col-lg-offset-1">
+      <p *ngIf="!hasLatencyData" class="text-muted p-t-16" translate>
+        No timing data yet. It appears once a mapping has processed a message.
+      </p>
+      <div
+        *ngIf="hasLatencyData"
+        echarts
+        [options]="latencyOptions"
+        [merge]="latencyUpdateOptions"
+        class="bar-chart"
       ></div>
     </div>
   </div>

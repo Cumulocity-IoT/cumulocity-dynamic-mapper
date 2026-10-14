@@ -70,8 +70,9 @@ describe('MappingStepPropertiesComponent', () => {
   let mockConnectorConfigurationService: jasmine.SpyObj<ConnectorConfigurationService>;
 
   beforeEach(() => {
-    mockSharedService = jasmine.createSpyObj<SharedService>('SharedService', ['getFeatures']);
+    mockSharedService = jasmine.createSpyObj<SharedService>('SharedService', ['getFeatures', 'getServiceConfiguration']);
     mockSharedService.getFeatures.and.resolveTo({ userHasMappingAdminRole: true } as any);
+    mockSharedService.getServiceConfiguration.and.resolveTo({ inventoryFragmentsToCache: ['type'] } as any);
 
     mockMappingService = jasmine.createSpyObj<MappingService>('MappingService', ['evaluateExpression']);
 
@@ -118,6 +119,101 @@ describe('MappingStepPropertiesComponent', () => {
     });
   });
 
+  describe('filter inventory: attributes missing from the inventory cache', () => {
+    /** A stand-in for the formly field, which is not rendered in these template-less specs. */
+    async function componentWithField() {
+      const component = await createComponent();
+      const field: any = { props: {}, options: { detectChanges: jasmine.createSpy('detectChanges') } };
+      (component as any).filterInventoryField = field;
+      return { component, field };
+    }
+
+    it('warns under the field about an attribute that is not cached', async () => {
+      mockMappingService.evaluateExpression.and.resolveTo(true as any);
+      const { component, field } = await componentWithField();
+
+      await component.updateFilterInventoryExpressionResult('type = "a" and c8y_Hardware.model = "x"');
+
+      expect(component.filterInventoryUncached).toEqual(['c8y_Hardware']);
+      expect(field.props.warning).toContain('Not in the inventory cache: c8y_Hardware');
+      expect(field.options.detectChanges).toHaveBeenCalledWith(field);
+    });
+
+    it('does not warn when every attribute is cached', async () => {
+      mockMappingService.evaluateExpression.and.resolveTo(true as any);
+      const { component, field } = await componentWithField();
+
+      await component.updateFilterInventoryExpressionResult('type = "a"');
+
+      expect(component.filterInventoryUncached).toEqual([]);
+      expect(field.props.warning).toBeUndefined();
+    });
+
+    it('honours glob entries of the cache configuration', async () => {
+      mockSharedService.getServiceConfiguration.and.resolveTo({ inventoryFragmentsToCache: ['type', 'c8y_*'] } as any);
+      mockMappingService.evaluateExpression.and.resolveTo(true as any);
+      const { component } = await componentWithField();
+
+      await component.updateFilterInventoryExpressionResult('c8y_Hardware.model = "x"');
+
+      expect(component.filterInventoryUncached).toEqual([]);
+    });
+
+    it('shows the warning inside the field and not as a toast', async () => {
+      mockMappingService.evaluateExpression.and.resolveTo(true as any);
+      const { component } = await componentWithField();
+
+      await component.updateFilterInventoryExpressionResult('name = "x"');
+
+      expect(component.filterInventoryUncached).toEqual(['name']);
+      expect(mockStepperService.raiseAlert).not.toHaveBeenCalled();
+      expect(mockAlertService.add).not.toHaveBeenCalled();
+    });
+
+    it('removes the warning again once the expression only uses cached attributes', async () => {
+      mockMappingService.evaluateExpression.and.resolveTo(true as any);
+      const { component, field } = await componentWithField();
+
+      await component.updateFilterInventoryExpressionResult('name = "x"');
+      expect(field.props.warning).toContain('Not in the inventory cache');
+
+      await component.updateFilterInventoryExpressionResult('type = "x"');
+      expect(field.props.warning).toBeUndefined();
+      expect(component.filterInventoryUncached).toEqual([]);
+    });
+
+    it('is silent when the service configuration cannot be read', async () => {
+      mockSharedService.getServiceConfiguration.and.rejectWith(new Error('403'));
+      mockMappingService.evaluateExpression.and.resolveTo(true as any);
+      const { component, field } = await componentWithField();
+
+      await component.updateFilterInventoryExpressionResult('name = "x"');
+
+      expect(component.filterInventoryUncached).toEqual([]);
+      expect(field.props.warning).toBeUndefined();
+    });
+
+    it('names every missing attribute, pluralised', async () => {
+      mockMappingService.evaluateExpression.and.resolveTo(true as any);
+      const { component, field } = await componentWithField();
+
+      await component.updateFilterInventoryExpressionResult('ty = "1" and name = "x"');
+
+      expect(field.props.warning).toContain('Not in the inventory cache: ty, name.');
+      expect(field.props.warning).toContain('as if the device did not have them');
+    });
+
+    it('does not warn for an expression that is not valid', async () => {
+      mockMappingService.evaluateExpression.and.rejectWith(new Error('Unexpected end of expression'));
+      const { component } = await componentWithField();
+      component.propertyFormly.addControl('filterInventory', new (await import('@angular/forms')).FormControl(''));
+
+      await component.updateFilterInventoryExpressionResult('name = ');
+
+      expect(component.filterInventoryUncached).toEqual([]);
+    });
+  });
+
   describe('filter inventory evaluation', () => {
     it('accepts a boolean-valued expression, stores the result, and sets mapping.filterInventory', async () => {
       mockMappingService.evaluateExpression.and.resolveTo(true as any);
@@ -144,15 +240,13 @@ describe('MappingStepPropertiesComponent', () => {
       expect(component.mapping.filterInventory).toBeUndefined();
     });
 
-    it('delegates to the shared MappingStepperService.raiseAlert rather than a duplicated local implementation', async () => {
+    it('does not raise the "fragments to cache" note as a toast: it is part of the field help text', async () => {
       mockMappingService.evaluateExpression.and.resolveTo(true as any);
       const component = await createComponent();
 
       await component.updateFilterInventoryExpressionResult('type = "x"');
 
-      expect(mockStepperService.raiseAlert).toHaveBeenCalledWith(
-        jasmine.objectContaining({ type: 'info' })
-      );
+      expect(mockStepperService.raiseAlert).not.toHaveBeenCalled();
     });
   });
 

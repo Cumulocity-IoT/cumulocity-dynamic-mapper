@@ -21,28 +21,6 @@
 
 <c8y-title translate>Cache statistic</c8y-title>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Clear inbound external ID cache' | translate }}"
-    (click)="clickedClearInboundExternalIdCache()" [disabled]="!feature?.userHasMappingAdminRole">
-    <i c8yIcon="clear"></i>
-    {{ 'Clear inbound external ID cache' | translate }}
-  </button>
-</c8y-action-bar-item>
-<c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Clear outbound external ID cache' | translate }}"
-    (click)="clickedClearOutboundExternalIdCache()" [disabled]="!feature?.userHasMappingAdminRole">
-    <i c8yIcon="clear"></i>
-    {{ 'Clear outbound external ID cache' | translate }}
-  </button>
-</c8y-action-bar-item>
-<c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Clear inventory cache' | translate }}" (click)="clickedClearInventoryCache()"
-    [disabled]="!feature?.userHasMappingAdminRole">
-    <i c8yIcon="clear"></i>
-    {{ 'Clear inventory cache' | translate }}
-  </button>
-</c8y-action-bar-item>
-
-<c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Reload' | translate }}" (click)="reload()">
     <i c8yIcon="refresh" [ngClass]="{ 'icon-spin': loading }"></i>
     {{ 'Reload' | translate }}
@@ -51,7 +29,8 @@
 
 <div class="card">
     @if (!loading) {
-    <d11r-kpi-list [kpis]="kpis"></d11r-kpi-list>
+    <d11r-kpi-list [kpis]="kpis" [canClear]="!!feature?.userHasMappingAdminRole"
+      [clearableDomains]="clearableDomains" (clear)="clickedClearCache($event)"></d11r-kpi-list>
     } @else {
     <c8y-loading></c8y-loading>
     }

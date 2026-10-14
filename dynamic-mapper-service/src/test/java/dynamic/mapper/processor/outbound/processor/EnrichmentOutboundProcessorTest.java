@@ -119,6 +119,8 @@ class EnrichmentOutboundProcessorTest {
         when(processingContext.getMapping()).thenReturn(mapping);
         when(processingContext.getPayload()).thenReturn("test payload");
         when(processingContext.getTopic()).thenReturn("test/topic");
+        // a mocked context answers false for everything; this is a regular (non-test) run
+        when(processingContext.affectsMappingStatus()).thenReturn(true);
 
         // Setup focused context mocks
         when(processingContext.getRoutingContext()).thenReturn(routingContext);

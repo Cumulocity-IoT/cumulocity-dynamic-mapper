@@ -212,7 +212,7 @@ Then continue at [Step 5](#step-5) and write the Smart Function exactly as descr
 
 :::info
 The captured payload arrives as the device really sends it, including fields the main path's tidy example leaves
-out. If a message carries a broker **key** — a Kafka record key, for instance — that is carried across too. See
+out. If a message carries a broker **key** — a Kafka record key or a Pulsar message key, for instance — that is carried across too. See
 [Message Explorer](/c8y-pkg-dynamic-mapper/introduction/message-explorer) for the details, and for capturing
 **outbound** Cumulocity objects the same way.
 :::

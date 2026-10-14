@@ -39,12 +39,15 @@ import { ConnectorConfigurationDrawerComponent } from './edit/connector-configur
 import { ImportConnectorsComponent } from './import/import-connectors-modal.component';
 import { gettext } from '@c8y/ngx-components/gettext';
 
+import { provideGridPersistence } from '../misc/grid-persistence';
+
 @Component({
   selector: 'd11r-mapping-connector-grid',
   styleUrls: ['./connector-grid.component.style.css'],
   templateUrl: 'connector-grid.component.html',
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  providers: [...provideGridPersistence((url) => (url.includes('/mappings/') ? 'connectors-select' : 'connectors'))],
   imports: [
     CoreModule,
   ]

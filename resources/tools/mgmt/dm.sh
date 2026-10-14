@@ -69,7 +69,8 @@ MAPPINGS
 
 CONNECTORS
   connectors list   [--type <TYPE>] [--raw]
-  connectors delete [--type <TYPE>] [--force]                Delete connectors, optionally filtered by connectorType
+  connectors delete [--type <TYPE>] [--force]                Delete connectors. Without --type works directly on the tenant
+                                                          options (no microservice needed); --type needs the microservice
                                                           (e.g. MQTT, CUMULOCITY_MQTT_SERVICE, KAFKA, HTTP, WEB_HOOK)
   connectors reset-http [--force]                        Force-delete the default HTTP connector's tenant option
                                                           directly (bypasses the app's delete protection). It is
@@ -260,13 +261,27 @@ function connectors_delete() {
   [ -n "$type" ] && scope="connector configurations of type '$type'"
   [ "$force" = false ] && confirm_destructive "This will permanently delete $scope."
 
+  # Without --type every connector goes, so the microservice is not needed: the configurations
+  # are tenant options and are deleted directly. That is what makes this usable to clean up a
+  # tenant whose microservice is not deployed (or not running). With --type the type lives
+  # inside the option value, which is stored encrypted ("credentials." options), so only the
+  # service can read it and it has to be reachable.
   local identifiers
+  local via_service=false
   if [ -n "$type" ]; then
-    identifiers=$(c8y api --method GET --url "/service/dynamic-mapper-service/configuration/connector/instance" 2>/dev/null \
-      | jq -r --arg type "$type" '.[] | select(.connectorType == $type) | .identifier' || true)
+    via_service=true
+    local response
+    if ! response=$(c8y api --method GET --url "/service/dynamic-mapper-service/configuration/connector/instance" 2>&1); then
+      echo "Error: --type needs the dynamic-mapper-service microservice to read each connector's type," >&2
+      echo "but it could not be reached. Run without --type to delete all connectors directly." >&2
+      echo "$response" | head -n 3 >&2
+      exit 1
+    fi
+    identifiers=$(echo "$response" | jq -r --arg type "$type" '.[] | select(.connectorType == $type) | .identifier')
   else
-    identifiers=$(c8y api --method GET --url "/service/dynamic-mapper-service/configuration/connector/instance" 2>/dev/null \
-      | jq -r '.[].identifier' || true)
+    identifiers=$(c8y tenantoptions getForCategory --category "$TENANT_OPTIONS_CATEGORY" --raw \
+      | jq -r 'keys[] | select(test("^(credentials\\.)?connection\\.configuration\\."))
+               | sub("^(credentials\\.)?connection\\.configuration\\."; "")')
   fi
 
   if [ -z "$identifiers" ]; then
@@ -282,12 +297,28 @@ function connectors_delete() {
         echo "Skipped connector '$id': the default HTTP connector cannot be deleted." >&2
         continue
       fi
-      if c8y api --method DELETE --url "/service/dynamic-mapper-service/configuration/connector/instance/$id" >/dev/null 2>&1; then
+      local ok=false
+      if [ "$via_service" = true ]; then
+        c8y api --method DELETE --url "/service/dynamic-mapper-service/configuration/connector/instance/$id" >/dev/null 2>&1 && ok=true
+      else
+        # Tenant options whose key starts with "credentials." are stored encrypted, and which
+        # spelling the API accepts for them (with or without the prefix) differs between
+        # platform versions - so try both and keep the last error to show on failure.
+        local key err=""
+        for key in "credentials.connection.configuration.$id" "connection.configuration.$id"; do
+          if err=$(c8y tenantoptions delete --category "$TENANT_OPTIONS_CATEGORY" --key "$key" --force 2>&1); then
+            ok=true
+            break
+          fi
+        done
+      fi
+      if [ "$ok" = true ]; then
         echo "Deleted connector '$id'."
-        ((success_count++))
+        ((success_count++)) || true
       else
         echo "Error: failed to delete connector '$id'." >&2
-        ((fail_count++))
+        [ -n "${err:-}" ] && echo "$err" | head -n 3 >&2
+        ((fail_count++)) || true
       fi
     done <<< "$identifiers"
 

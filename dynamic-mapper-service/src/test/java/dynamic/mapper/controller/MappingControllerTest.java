@@ -185,13 +185,13 @@ class MappingControllerTest {
 
     @Test
     void publishDraft_letsValidationExceptionPropagateUnwrapped() {
-        MappingValidationException ex = new MappingValidationException(List.of(ValidationError.FilterOutbound_Must_Be_Unique));
+        MappingValidationException ex = new MappingValidationException(List.of(ValidationError.Only_One_Multi_Level_Wildcard));
         when(mappingService.publishDraft(anyString(), anyString(), anyString(), any())).thenThrow(ex);
 
         MappingValidationException thrown = assertThrows(MappingValidationException.class,
                 () -> controller.publishDraft("m1", "1.0.0", null));
 
-        assertEquals(List.of(ValidationError.FilterOutbound_Must_Be_Unique), thrown.getErrors());
+        assertEquals(List.of(ValidationError.Only_One_Multi_Level_Wildcard), thrown.getErrors());
     }
 
     // ========== GET /{id}/draft ==========

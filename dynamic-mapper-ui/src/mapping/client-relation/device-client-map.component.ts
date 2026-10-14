@@ -54,12 +54,15 @@ import { CommonModule } from '@angular/common';
 import { ClientRelationStepperComponent } from './client-relation-stepper.component';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 
+import { provideGridPersistence } from '../../shared/misc/grid-persistence';
+
 @Component({
   selector: 'd11r-mapping-device-client-map',
   templateUrl: 'device-client-map.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  providers: [...provideGridPersistence('device-client-map')],
   imports: [CoreModule, CommonModule, PopoverModule, ClientRelationStepperComponent]
 
 })

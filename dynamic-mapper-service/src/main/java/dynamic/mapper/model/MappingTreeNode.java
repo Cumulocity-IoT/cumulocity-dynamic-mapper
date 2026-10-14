@@ -52,6 +52,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @ToString
 @AllArgsConstructor
 @Builder(toBuilder = true)
+@tools.jackson.databind.annotation.JsonSerialize(using = MappingTreeNodeJackson3Serializer.class)
 @Schema(description = "Node in the hierarchical mapping tree, used to resolve MQTT topic patterns to mappings")
 public class MappingTreeNode {
     // Constants

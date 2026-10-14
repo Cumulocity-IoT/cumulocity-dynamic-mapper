@@ -123,6 +123,7 @@ public class KafkaTestClient {
 
         double temperature = ThreadLocalRandom.current().nextDouble(15.0, 35.0);
         String payload = String.format(
+                java.util.Locale.US,
                 "{ \"deviceId\": \"%s\", \"version\": \"1\", \"deviceType\": \"20\","
                 + " \"deviceTimestamp\": \"%d\", \"deviceStatus\": \"BTR\", \"temperature\": %.1f }",
                 serialNumber, System.currentTimeMillis(), temperature);

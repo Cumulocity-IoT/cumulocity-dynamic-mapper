@@ -199,16 +199,18 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
     @Override
     protected void handleProcessingError(Exception e, ProcessingContext<?> context, String tenant, Mapping mapping) {
-        int lineNumber = extractJsLineNumber(e);
+        String location = describeJsLocation(e);
         String errorMessage = String.format(
-                "Tenant %s - Error in FlowResultOutboundProcessor: %s for mapping: %s, line %s",
-                tenant, mapping.getName(), e.getMessage(), lineNumber);
+                "Tenant %s - Error in FlowResultOutboundProcessor for mapping %s: %s%s",
+                tenant, mapping.getName(), e.getMessage(), location);
         log.error(errorMessage, e);
 
-        MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
         context.addError(new ProcessingException(errorMessage, e));
-        mappingStatus.incrementErrors();
-        mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        if (context.affectsMappingStatus()) {
+            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+            mappingStatus.incrementErrors();
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        }
     }
 
     private void processDeviceMessage(
@@ -491,10 +493,11 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
                 // Use resolved device ID from externalSource — do NOT write back to context
                 ProcessingResultHelper.setHierarchicalValue(payload, targetAPI.identifier, resolvedDeviceId);
             } else if (externalIdInfo.isPresent()) {
-                // No device ID and not creating implicit devices - skip this message
+                // The device of the message's externalSource could not be resolved - skip this message.
+                // (createNonExistingDevice is an inbound setting and plays no role for outbound mappings.)
                 log.warn(
-                        "{} - Cannot process message: no device ID resolved and createNonExistingDevice is false for mapping {}",
-                        tenant, mapping.getIdentifier());
+                        "{} - Cannot process message: the device for externalSource '{}' could not be resolved for mapping {}",
+                        tenant, externalIdInfo.getExternalId(), mapping.getIdentifier());
                 return; // Don't create a request
             } else {
                 log.warn("{} - Cannot process message: no external source provided for mapping {}",

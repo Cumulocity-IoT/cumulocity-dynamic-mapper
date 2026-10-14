@@ -175,6 +175,69 @@ class SparkplugBDeserializerTest {
         assertFalse(decodedMetrics.isEmpty(), "Metrics must still be decoded even without alias map");
     }
 
+    // ── Dry run (testing=true) must not touch live state ──────────────────
+
+    private ConnectorMessage ndataMessage() throws IOException {
+        List<SparkplugBMqttTestClient.Metric> metrics = List.of(
+                SparkplugBMqttTestClient.Metric.ofFloat("pressure", 1013.25f));
+        when(connectorMessage.getTopic()).thenReturn("spBv1.0/" + GROUP_ID + "/NDATA/" + EDGE_NODE_ID);
+        when(connectorMessage.getPayload()).thenReturn(
+                SparkplugBMqttTestClient.buildSparkplugPayload(System.currentTimeMillis(), 1L, metrics));
+        return connectorMessage;
+    }
+
+    private com.cumulocity.rest.representation.identity.ExternalIDRepresentation liveDevice(String id) {
+        var mor = new com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation();
+        mor.setId(new com.cumulocity.model.idtype.GId(id));
+        var rep = new com.cumulocity.rest.representation.identity.ExternalIDRepresentation();
+        rep.setManagedObject(mor);
+        return rep;
+    }
+
+    @Test
+    void ndata_dryRun_resolvesAgainstMockAndNeverReadsLiveInventoryCache() throws IOException {
+        // The mock knows nothing; a live device with the same external ID exists and is cached.
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TENANT), any(), eq(true))).thenReturn(null);
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TENANT), any(), eq(false))).thenReturn(liveDevice("4711"));
+        dynamic.mapper.core.cache.InventoryCache liveCache = mock(dynamic.mapper.core.cache.InventoryCache.class);
+        when(cacheManager.getInventoryCache(anyString())).thenReturn(liveCache);
+
+        Object result = deserializer.deserializePayload(buildMapping(), ndataMessage(), true);
+
+        assertNotNull(result, "dry run must still decode the metrics");
+        verify(c8yAgent, never()).resolveExternalId2GlobalId(any(), any(), eq(false));
+        verify(c8yAgent, never()).getManagedObjectForId(any(), any(), eq(false));
+        verifyNoInteractions(liveCache);
+        verify(cacheManager, never()).getInventoryCache(anyString());
+    }
+
+    @Test
+    void ndata_dryRun_fetchesBirthFragmentFromTheMockNotFromLive() throws IOException {
+        // The mock device exists but carries no alias map: the dry run must go to the mock
+        // inventory (testing=true), not to the live managed object.
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TENANT), any(), eq(true))).thenReturn(liveDevice("10000"));
+        when(c8yAgent.getManagedObjectForId(TENANT, "10000", true))
+                .thenReturn(new com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation());
+
+        deserializer.deserializePayload(buildMapping(), ndataMessage(), true);
+
+        verify(c8yAgent).getManagedObjectForId(TENANT, "10000", true);
+        verify(c8yAgent, never()).getManagedObjectForId(any(), any(), eq(false));
+    }
+
+    @Test
+    void ndata_production_stillResolvesAgainstLiveServices() throws IOException {
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TENANT), any(), eq(false))).thenReturn(liveDevice("4711"));
+        when(c8yAgent.getManagedObjectForId(TENANT, "4711", false))
+                .thenReturn(new com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation());
+
+        deserializer.deserializePayload(buildMapping(), ndataMessage());
+
+        verify(c8yAgent).resolveExternalId2GlobalId(eq(TENANT), any(), eq(false));
+        verify(cacheManager).getInventoryCache(TENANT);
+        verify(c8yAgent).getManagedObjectForId(TENANT, "4711", false);
+    }
+
     // ── Error cases ───────────────────────────────────────────────────────
 
     @Test

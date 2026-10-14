@@ -47,6 +47,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -322,7 +323,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                         .topicsPattern(Pattern.compile(pulsarPattern))
                         .subscriptionName(subscriptionName)
                         .subscriptionType(subscriptionType)
-                        .messageListener(new QoSAwarePulsarCallback(pulsarCallback, qos))
+                        .messageListener(new QoSAwarePulsarCallback(pulsarCallback, qos, topic))
                         .acknowledgmentGroupTime(qos.requiresAcknowledgement() ? 100 : 0, TimeUnit.MILLISECONDS)
                         .subscribe();
                 log.info("{} - Subscribed to pattern: [{}] (MQTT: [{}])", tenant, pulsarPattern, topic);
@@ -333,7 +334,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                         .topic(pulsarTopic)
                         .subscriptionName(subscriptionName)
                         .subscriptionType(subscriptionType)
-                        .messageListener(new QoSAwarePulsarCallback(pulsarCallback, qos))
+                        .messageListener(new QoSAwarePulsarCallback(pulsarCallback, qos, topic))
                         .acknowledgmentGroupTime(qos.requiresAcknowledgement() ? 100 : 0, TimeUnit.MILLISECONDS)
                         .subscribe();
                 log.info("{} - Subscribed to topic: [{}] (MQTT: [{}])", tenant, pulsarTopic, topic);
@@ -550,16 +551,30 @@ public class PulsarConnectorClient extends AConnectorClient {
 
         byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
 
-        if (qos == Qos.AT_MOST_ONCE) {
+        // The message key comes from the mapping ('key' transport field / _CONTEXT_DATA_.key)
+        String key = context.getKey();
+        boolean async = qos == Qos.AT_MOST_ONCE;
+        CompletableFuture<?> result = null;
+        if (key != null) {
+            TypedMessageBuilder<byte[]> message = producer.newMessage().key(key).value(payloadBytes);
+            if (async) {
+                result = message.sendAsync();
+            } else {
+                message.send();
+            }
+        } else if (async) {
+            result = producer.sendAsync(payloadBytes);
+        } else {
+            // Wait for acknowledgment
+            producer.send(payloadBytes);
+        }
+        if (result != null) {
             // Fire and forget
-            producer.sendAsync(payloadBytes).exceptionally(throwable -> {
+            result.exceptionally(throwable -> {
                 log.debug("{} - AT_MOST_ONCE send failed (expected): {}",
                         tenant, throwable.getMessage());
                 return null;
             });
-        } else {
-            // Wait for acknowledgment
-            producer.send(payloadBytes);
         }
 
         if (context.getMapping().getDebug() || serviceConfiguration.getLogPayload()) {
@@ -706,12 +721,41 @@ public class PulsarConnectorClient extends AConnectorClient {
         }
 
         validateMqttWildcards(mqttTopic);
-        String escaped = escapeRegexCharacters(mqttTopic);
-        String pulsarRegex = escaped
-                .replace("+", "[^/]+")
-                .replace("#", ".*");
+        if (mqttTopic.startsWith("persistent://") || mqttTopic.startsWith("non-persistent://")) {
+            // Already a full Pulsar name: only the wildcards need translating
+            return escapeRegexCharacters(mqttTopic).replace("+", "[^/]+").replace("#", ".*");
+        }
+        String pulsarTenant = (String) connectorConfiguration.getProperties().getOrDefault("pulsarTenant", "public");
+        String namespace = (String) connectorConfiguration.getProperties().getOrDefault("pulsarNamespace", "default");
+        return buildPulsarTopicRegex(mqttTopic, pulsarTenant, namespace);
+    }
 
-        return ensurePulsarTopicFormat(pulsarRegex);
+    /**
+     * Builds the regex matching the Pulsar topics an MQTT-style filter stands for. Literal levels
+     * are flattened exactly like {@link #convertMqttTopicToPulsarTopicName} does ({@code /} becomes
+     * {@code -}); the wildcards are translated afterwards, so they are not mangled by that
+     * flattening. {@code +} matches exactly one level (no {@code -} or {@code /}), {@code #} the remaining levels.
+     */
+    static String buildPulsarTopicRegex(String mqttTopic, String pulsarTenant, String namespace) {
+        String[] levels = mqttTopic.split("/", -1);
+        StringBuilder local = new StringBuilder();
+        for (int i = 0; i < levels.length; i++) {
+            String level = levels[i];
+            if ("#".equals(level)) {
+                local.append(i == 0 ? ".*" : "(-.*)?");
+                continue;
+            }
+            if (i > 0) {
+                local.append('-');
+            }
+            if ("+".equals(level)) {
+                local.append("[^/-]+");
+            } else {
+                local.append(level.replace(" ", "_").replaceAll("[^a-zA-Z0-9._-]", "_").replace(".", "\\."));
+            }
+        }
+        return "persistent://" + pulsarTenant.replace(".", "\\.") + "/" + namespace.replace(".", "\\.")
+                + "/" + local;
     }
 
     /**
@@ -801,7 +845,11 @@ public class PulsarConnectorClient extends AConnectorClient {
         return ConnectorSpecificationBuilder
                 .create("Apache Pulsar", ConnectorType.PULSAR)
                 .description("Connector for connecting to Apache Pulsar message broker. " +
-                        "Supports QoS levels, wildcards, and MQTT-style topic format conversion.")
+                        "Supports QoS levels, wildcards, and MQTT-style topic format conversion.\n" +
+                        "Inbound Smart Functions and Java extensions read the message key from the message's transport fields ('key'), " +
+                        "JSONata mappings from '_CONTEXT_DATA_.key'. In outbound mappings the key is set from the transport field 'key' " +
+                        "or the string mapped to '_CONTEXT_DATA_.key'.")
+                .supportsMessageContext(true)
                 .supportedDirections(supportedDirections())
 
                 // Connection settings
@@ -883,17 +931,6 @@ public class PulsarConnectorClient extends AConnectorClient {
                         .order(15)
                         .defaultValue("default"))
 
-                // Sparkplug Host support
-                .property("isSparkplugHost", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(16)
-                        .defaultValue(false)
-                        .description("Enable Sparkplug Host mode to publish Birth/Death certificates on connection/disconnection"))
-
-                .property("sparkplugHostId", ConnectorPropertyBuilder.optionalString()
-                        .order(17)
-                        .description("Sparkplug Host ID (used for Birth/Death certificates)")
-                        .condition("isSparkplugHost", "true"))
-
                 .build();
     }
 
@@ -903,10 +940,12 @@ public class PulsarConnectorClient extends AConnectorClient {
     protected static class QoSAwarePulsarCallback implements MessageListener<byte[]> {
         private final PulsarCallback delegate;
         private final Qos qos;
+        private final String subscriptionTopic;
 
-        public QoSAwarePulsarCallback(PulsarCallback delegate, Qos qos) {
+        public QoSAwarePulsarCallback(PulsarCallback delegate, Qos qos, String subscriptionTopic) {
             this.delegate = delegate;
             this.qos = qos;
+            this.subscriptionTopic = subscriptionTopic;
         }
 
         @Override
@@ -919,7 +958,51 @@ public class PulsarConnectorClient extends AConnectorClient {
                 }
             }
 
-            delegate.received(consumer, message);
+            delegate.received(consumer, message, resolveMessageTopic(message.getTopicName(), subscriptionTopic));
+        }
+
+        /**
+         * Derives the topic used for mapping resolution from the topic the message was actually
+         * received on (not from the subscription, which may contain wildcards).
+         *
+         * <p>The Pulsar name {@code persistent://tenant/namespace/local-name[-partition-N]} is
+         * reduced to its local name. Because {@code /} is flattened to {@code -} when an MQTT-style
+         * topic is mapped to a Pulsar topic, the MQTT-style form is restored when it can be
+         * verified against the subscription filter; otherwise the local name is used as is.
+         */
+        static String resolveMessageTopic(String pulsarTopicName, String subscriptionTopic) {
+            if (pulsarTopicName == null) {
+                return subscriptionTopic;
+            }
+            String localName = pulsarTopicName.replaceFirst("^(?:non-)?persistent://[^/]+/[^/]+/", "")
+                    .replaceFirst("-partition-\\d+$", "");
+
+            if (subscriptionTopic == null || localName.isEmpty()) {
+                return localName;
+            }
+            boolean wildcard = subscriptionTopic.contains("+") || subscriptionTopic.contains("#");
+            if (!wildcard) {
+                String flattened = subscriptionTopic.replace("/", "-").replace(" ", "_")
+                        .replaceAll("[^a-zA-Z0-9._-]", "_").replaceAll("^[._-]+|[._-]+$", "");
+                return flattened.equals(localName) ? subscriptionTopic : localName;
+            }
+            String mqttStyle = localName.contains("/") ? localName : localName.replace("-", "/");
+            return mqttTopicMatches(subscriptionTopic, mqttStyle) ? mqttStyle : localName;
+        }
+
+        /** MQTT-style filter matching: {@code +} is one level, {@code #} the remaining levels. */
+        static boolean mqttTopicMatches(String filter, String topic) {
+            String[] f = filter.split("/", -1);
+            String[] t = topic.split("/", -1);
+            for (int i = 0; i < f.length; i++) {
+                if ("#".equals(f[i])) {
+                    return true;
+                }
+                if (i >= t.length || (!"+".equals(f[i]) && !f[i].equals(t[i]))) {
+                    return false;
+                }
+            }
+            return f.length == t.length;
         }
     }
 

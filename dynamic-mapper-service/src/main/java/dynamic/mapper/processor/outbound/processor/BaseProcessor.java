@@ -59,6 +59,7 @@ public abstract class BaseProcessor extends CommonProcessor {
                 .mappingType(mapping.getMappingType())
                 .mapping(mapping)
                 .sendPayload(message.getSendPayload())
+                .testExternalIdPrefix(message.getTestExternalIdPrefix())
                 .testing(testing)
                 .tenant(tenant)
                 .qos(mapping.getQos())

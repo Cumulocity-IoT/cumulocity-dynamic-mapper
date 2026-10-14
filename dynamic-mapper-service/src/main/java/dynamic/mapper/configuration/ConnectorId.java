@@ -44,6 +44,15 @@ public class ConnectorId  {
 
     public ConnectorType connectorType;
 
+    /**
+     * How the connector is named in messages meant for people: the connector's name, which is what
+     * the connector list shows. The identifier is an internal key (hidden in the UI by default), so
+     * it is only the fallback for a connector without a name.
+     */
+    public String displayName() {
+        return name != null && !name.isBlank() ? name : identifier;
+    }
+
     static public ConnectorId INTERNAL = new ConnectorId("INTERNAL", "INTERNAL");
 
 }

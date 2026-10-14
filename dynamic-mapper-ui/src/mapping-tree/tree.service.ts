@@ -31,7 +31,7 @@ export class MappingTreeService {
 
   constructor(
     protected inventoryService: InventoryService,
-    alert: AlertService,
+    private alert: AlertService,
     private client: FetchClient
   ) {}
 
@@ -51,7 +51,17 @@ export class MappingTreeService {
     if (response.status != HttpStatusCode.Ok) {
       return undefined;
     }
-    let tree = (await response.json()) as JSON;
+    let tree: JSON;
+    try {
+      tree = (await response.json()) as JSON;
+    } catch (error) {
+      // the backend can return a truncated/invalid body if serializing the tree fails
+      console.error('Failed to parse mapping tree response', error);
+      this.alert.danger(
+        'Failed to load the mapping tree: the server returned an invalid response. Check the microservice logs.'
+      );
+      return undefined;
+    }
     // ignore first level of the object, as it does not contain any information
     // if (tree?.["childNodes"]) {
     //   tree = tree?.["childNodes"];

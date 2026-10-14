@@ -27,11 +27,12 @@ decided against rather than forgotten.
 | Page | Covers |
 |---|---|
 | [mapping-processing-inbound.md](mapping-processing-inbound.md) | Broker → Cumulocity pipeline |
-| [inbound-flow-diagram.md](inbound-flow-diagram.md) | Supporting diagram: the inbound Camel processor chain end to end |
+| [inbound-flow-diagram.md](inbound-flow-diagram.md) | Supporting diagram: the inbound processor chain end to end |
 | [mapping-processing-outbound.md](mapping-processing-outbound.md) | Cumulocity → broker pipeline |
 | [mapping-validation.md](mapping-validation.md) | The rules a mapping is checked against |
 | [mapping-versioning.md](mapping-versioning.md) | Drafts, publishing, rollback, retention |
-| [mapping-testing.md](mapping-testing.md) | Testing a mapping without a device |
+| [mapping-testing.md](mapping-testing.md) | Dry Run and Live Test of a mapping, test devices |
+| [mapping-testing-isolation.md](mapping-testing-isolation.md) | Keeping tests apart from live state: caches, mapping status, Smart Function state, real devices |
 | [identity-resolution.md](identity-resolution.md) | External ID ↔ managed object, implicit device creation |
 | [reliability.md](reliability.md) | QoS, processing timeouts, failure handling, status counters |
 

@@ -251,13 +251,121 @@ class SubstitutionResultInboundProcessorTest {
         mapping.setCreateNonExistingDevice(true);
         when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class)))
                 .thenReturn(null); // Simulate device not found
+        when(identityResolutionService.getOrCreateDeviceThreadSafe(any(), any(), any(), any(), any()))
+                .thenReturn("created-device-id");
 
         // When
         processor.process(processingContext);
 
         // Then - Just verify the method was called
         verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class));
+        verify(identityResolutionService).getOrCreateDeviceThreadSafe(any(), any(), any(), any(), any());
+        assertEquals("created-device-id", processingContext.getSourceId());
+        assertFalse(processingContext.isIgnoreFurtherProcessing());
         log.info("CreateNonExistingDevice test completed");
+    }
+
+    @Test
+    void testLiveTest_looksUpThePrefixedExternalId() throws Exception {
+        // A live test registers its device under "d11r_liveTest_" + externalId, so the mapping must resolve that
+        // one — resolving the real external ID would write the test message to the real device.
+        processingContext.setTestExternalIdPrefix(ProcessingContext.TEST_EXTERNAL_ID_PREFIX);
+
+        processor.process(processingContext);
+
+        verify(c8yAgent).resolveExternalId2GlobalId(eq(TEST_TENANT),
+                org.mockito.ArgumentMatchers.argThat(id -> id.getValue().equals(ProcessingContext.TEST_EXTERNAL_ID_PREFIX + "test-external-id")),
+                any(Boolean.class));
+        assertEquals(ProcessingContext.TEST_EXTERNAL_ID_PREFIX + "test-external-id", processingContext.getExternalId());
+    }
+
+    private ProcessingContext<Object> contextAddressingTheDeviceByCumulocityId() {
+        ProcessingContext<Object> context = createProcessingContext();
+        // the externalId entry stays: it defines the device entries of the mapping; the Cumulocity ID is
+        // an additional identity substitution
+        context.getProcessingCache().put("_IDENTITY_.c8ySourceId",
+                List.of(new SubstituteValue("4711", SubstituteValue.TYPE.TEXTUAL, RepairStrategy.DEFAULT, false)));
+        return context;
+    }
+
+    @Test
+    void testLiveTest_refusesToAddressARealDeviceByCumulocityId() throws Exception {
+        // The d11r_liveTest_ prefix only covers external IDs; a mapping that names the device by its
+        // Cumulocity ID would write the message to that real device.
+        ProcessingContext<Object> live = contextAddressingTheDeviceByCumulocityId();
+        live.setTestExternalIdPrefix(ProcessingContext.TEST_EXTERNAL_ID_PREFIX);
+
+        processor.process(live);
+
+        assertTrue(live.hasError());
+        assertTrue(live.getErrors().stream()
+                .anyMatch(e -> e.getMessage().contains(ProcessingContext.LIVE_TEST_C8Y_ID_ERROR)),
+                String.valueOf(live.getErrors()));
+        assertTrue(live.getRequests().isEmpty(), "nothing may be sent");
+    }
+
+    @Test
+    void testProduction_stillAcceptsACumulocityIdFromThePayload() throws Exception {
+        ProcessingContext<Object> real = contextAddressingTheDeviceByCumulocityId();
+
+        processor.process(real);
+
+        assertFalse(real.hasError(), String.valueOf(real.getErrors()));
+    }
+
+    @Test
+    void testProcessWithCreateNonExistingDevice_creationFails_doesNotClaimTheFlagIsDisabled() throws Exception {
+        // Given: the flag is on, but creating the device yields nothing. The UI offers to enable
+        // the flag whenever it sees the "disabled" marker; here that would loop forever.
+        mapping.setCreateNonExistingDevice(true);
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class)))
+                .thenReturn(null);
+        when(identityResolutionService.getOrCreateDeviceThreadSafe(any(), any(), any(), any(), any()))
+                .thenReturn(null);
+
+        // When
+        processor.process(processingContext);
+
+        // Then
+        assertTrue(processingContext.hasError());
+        assertTrue(processingContext.getErrors().stream()
+                .anyMatch(e -> e.getMessage().contains("creating the implicit device failed")));
+        assertTrue(processingContext.getErrors().stream()
+                .noneMatch(e -> e.getMessage().contains("createNonExistingDevice is disabled")));
+    }
+
+    @Test
+    void testProcessWithExternalIdNotFound_failsWithoutRequests() throws Exception {
+        // Given
+        mapping.setCreateNonExistingDevice(false);
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), any(Boolean.class)))
+                .thenReturn(null); // Simulate device not found
+
+        // When
+        processor.process(processingContext);
+
+        // Then
+        assertTrue(processingContext.hasError());
+        assertTrue(processingContext.getRequests().isEmpty());
+    }
+
+    @Test
+    void testProcessWithExternalIdNotFound_whenTesting_reportsCreateNonExistingDeviceDisabled() throws Exception {
+        // Given: a dry run must not invent a device — the UI relies on this message to offer
+        // "assume the device exists for this test"
+        mapping.setCreateNonExistingDevice(false);
+        processingContext.setTesting(true);
+        when(c8yAgent.resolveExternalId2GlobalId(eq(TEST_TENANT), any(ID.class), eq(true)))
+                .thenReturn(null);
+
+        // When
+        processor.process(processingContext);
+
+        // Then
+        assertTrue(processingContext.hasError());
+        assertTrue(processingContext.getRequests().isEmpty());
+        assertTrue(processingContext.getErrors().stream()
+                .anyMatch(e -> e.getMessage().contains("createNonExistingDevice is disabled")));
     }
 
     @Test

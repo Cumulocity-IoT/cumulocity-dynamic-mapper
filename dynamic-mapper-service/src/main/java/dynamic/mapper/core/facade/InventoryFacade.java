@@ -173,4 +173,8 @@ public class InventoryFacade {
     public void clearInventoryCache() {
         inventoryMock.clear();
     }
+
+    public void clearInventoryCache(String tenant) {
+        inventoryMock.clear(tenant);
+    }
 }

@@ -90,7 +90,7 @@ class DeserializationInboundProcessorErrorHandlingTest {
         // Use reflection to replace the deserializer with a mock that throws
         // IOException
         replaceDeserializerWithMock(MappingType.JSON);
-        when(mockDeserializer.deserializePayload(eq(mapping), eq(connectorMessage)))
+        when(mockDeserializer.deserializePayload(eq(mapping), eq(connectorMessage), anyBoolean()))
                 .thenThrow(new IOException("Test IO Exception"));
         // When
         processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
@@ -98,7 +98,7 @@ class DeserializationInboundProcessorErrorHandlingTest {
         // Then
         verify(mappingService).getMappingStatus(TEST_TENANT, mapping);
         verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
-        verify(mockDeserializer).deserializePayload(eq(mapping), eq(connectorMessage));
+        verify(mockDeserializer).deserializePayload(eq(mapping), eq(connectorMessage), anyBoolean());
         assertEquals(1, (int) mappingStatus.errors);
     }
 
@@ -111,7 +111,7 @@ class DeserializationInboundProcessorErrorHandlingTest {
         // Use reflection to replace the deserializer with a mock that throws
         // IOException
         replaceDeserializerWithMock(MappingType.PROTOBUF_INTERNAL);
-        when(mockDeserializer.deserializePayload(eq(mapping), eq(connectorMessage)))
+        when(mockDeserializer.deserializePayload(eq(mapping), eq(connectorMessage), anyBoolean()))
                 .thenThrow(new IOException("Test IO Exception"));
         // When
         processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
@@ -119,11 +119,28 @@ class DeserializationInboundProcessorErrorHandlingTest {
         // Then
         verify(mappingService).getMappingStatus(TEST_TENANT, mapping);
         verify(mappingService).increaseAndHandleFailureCount(eq(TEST_TENANT), eq(mapping), eq(mappingStatus));
-        verify(mockDeserializer).deserializePayload(eq(mapping), eq(connectorMessage));
+        verify(mockDeserializer).deserializePayload(eq(mapping), eq(connectorMessage), anyBoolean());
         assertEquals(1, mappingStatus.errors);
     }
 
     @SuppressWarnings("unchecked")
+    @Test
+    void testLiveTestRun_deserializationError_doesNotCountAgainstTheMapping() throws Exception {
+        // A Live Test uses real services (testing=false) but is still a test run: a broken payload typed
+        // into the editor must not bump the error counters or the failure streak that auto-deactivates.
+        mapping.setMappingType(MappingType.JSON);
+        when(connectorMessage.getTestRun()).thenReturn(true);
+        replaceDeserializerWithMock(MappingType.JSON);
+        when(mockDeserializer.deserializePayload(eq(mapping), eq(connectorMessage), anyBoolean()))
+                .thenThrow(new IOException("Test IO Exception"));
+
+        processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
+
+        verify(mappingService, never()).increaseAndHandleFailureCount(any(), any(), any());
+        // not even looked up: that would create a status entry for a mapping that may not be saved yet
+        verify(mappingService, never()).getMappingStatus(TEST_TENANT, mapping);
+    }
+
     private void replaceDeserializerWithMock(MappingType mappingType) throws Exception {
         Field deserializersField = DeserializationInboundProcessor.class.getDeclaredField("deserializers");
         deserializersField.setAccessible(true);

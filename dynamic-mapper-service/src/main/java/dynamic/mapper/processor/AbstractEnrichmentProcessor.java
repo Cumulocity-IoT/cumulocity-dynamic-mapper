@@ -83,7 +83,10 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
         Mapping mapping = context.getMapping();
 
         ServiceConfiguration serviceConfiguration = context.getServiceConfiguration();
-        MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+        // Only a real run has a status to update; looking it up creates the entry, which a test of a
+        // new or edited mapping must not do.
+        MappingStatus mappingStatus = context.affectsMappingStatus()
+                ? mappingService.getMappingStatus(tenant, mapping) : null;
 
         // Hook for subclass-specific setup (e.g., QoS determination)
         performPreEnrichmentSetup(context, connectorIdentifier);
@@ -139,15 +142,22 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 PooledGraalContext pooledCtx = graalVMContextService.borrowOrCreateContext(
                         poolKey, tenant, graalEngine, supportESM,
                         sharedSource, systemSource,
-                        mapping.getCode(), mapping.getIdentifier());
+                        mapping.getCode(), mapping.getIdentifier(), mapping.displayLabel());
 
                 context.setPooledGraalContext(pooledCtx);
                 context.setGraalContext(pooledCtx.getGraalContext());
                 context.setFlowState(new HashMap<String, Object>());
-                Map<String, Object> initialState = flowStateStore.loadState(tenant, mapping.getIdentifier());
+                // A test run must neither read nor overwrite the state production traffic keeps under
+                // this mapping's key (counters, dedup windows, ...): it gets a throw-away state and no
+                // store to write back to.
+                boolean isolateState = !context.affectsMappingStatus();
+                Map<String, Object> initialState = isolateState
+                        ? new HashMap<String, Object>()
+                        : flowStateStore.loadState(tenant, mapping.getIdentifier());
                 context.setFlowContext(new SmartFunctionContext(pooledCtx.getGraalContext(), tenant,
                         (InventoryEnrichmentClient) serviceRegistry.getC8yAgent(),
-                        context.isTesting(), flowStateStore, mapping.getIdentifier(), initialState));
+                        context.isTesting(), isolateState ? null : flowStateStore, mapping.getIdentifier(),
+                        initialState));
 
                 // engineReleaseAction returns the borrowed context to the pool (or closes it if
                 // killed) AND decrements the engine's in-flight counter.
@@ -159,7 +169,9 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
             }
         }
 
-        mappingStatus.incrementMessagesReceived();
+        if (context.affectsMappingStatus()) {
+            mappingStatus.incrementMessagesReceived();
+        }
         logMessageReceived(tenant, mapping, connectorIdentifier, context, serviceConfiguration);
 
         // Now call the enrichment logic
@@ -226,14 +238,17 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
      */
     protected void handleGraalVMError(String tenant, Mapping mapping, Exception e,
             ProcessingContext<?> context) {
-        MappingStatus mappingStatus = mappingService
-                .getMappingStatus(tenant, mapping);
-        String errorMessage = String.format("Tenant %s - Failed to set up GraalVM context: %s",
-                tenant, e.getMessage());
+        // e is usually a generic "Failed to create pooled GraalVM context" wrapper; the useful part
+        // (a syntax error in the mapping code and where, a missing onMessage function) is its cause.
+        String errorMessage = String.format("Tenant %s - Smart Function of mapping %s could not be loaded: %s",
+                tenant, mapping.getName(), describeCause(e));
         log.error(errorMessage, e);
         context.addError(new ProcessingException(errorMessage, e));
-        mappingStatus.incrementErrors();
-        mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        if (context.affectsMappingStatus()) {
+            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+            mappingStatus.incrementErrors();
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        }
     }
 
     /**

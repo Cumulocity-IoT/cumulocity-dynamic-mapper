@@ -417,6 +417,18 @@ the connector, and see "Cursor advances only after processing succeeds" in
 `docs/feature/connector-http-polling.md` for what can block it (a mapping processing failure never
 advances the cursor, by design).
 
+## Webhook receiver (outbound target)
+
+The mock also records requests of the mapper's **WEB_HOOK** connector, used by
+`../../integration/test-outbound-webhook.sh`. Set the connector's `baseUrl` to
+`${C8Y_BASEURL}/service/http-polling-mock/webhook`; a mapping's publish topic is appended
+as the path. POST/PUT/PATCH/DELETE under `/webhook/**` answer 200 and are logged.
+
+```bash
+c8y api --method GET    --url /service/http-polling-mock/received   # method, path, query, body
+c8y api --method DELETE --url /service/http-polling-mock/received   # clear
+```
+
 ## Troubleshooting
 
 ### `"... cannot access endpoint: /service/dynamic-mapper-service/..."` / `general/internalError`

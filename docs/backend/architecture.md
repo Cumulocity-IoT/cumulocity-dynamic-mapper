@@ -11,8 +11,9 @@ Under `dynamic-mapper-service/src/main/java/dynamic/mapper/`:
 | `connector/` | Broker connector implementations (`mqtt/`, `kafka/`, `http/`, `amqp/`, `pulsar/`, `webhook/`) |
 | `connector/core/client/AConnectorClient.java` | Abstract base for all connectors |
 | `connector/core/ConnectorSpecification.java` | Declares connector properties/configuration schema |
-| `processor/inbound/CamelDispatcherInbound.java` | Apache Camel entry point for Broker → C8Y |
-| `processor/outbound/CamelDispatcherOutbound.java` | Entry point for C8Y → Broker |
+| `processor/inbound/InboundMessageDispatcher.java` | Entry point for Broker → C8Y; resolves mappings, applies the pipeline timeout, submits to `InboundMessageRouter` on a virtual thread |
+| `processor/inbound/InboundMessageRouter.java` | Per-mapping inbound processor chain |
+| `processor/outbound/OutboundMessageDispatcher.java` | Entry point for C8Y → Broker (with `OutboundMessageRouter`) |
 | `processor/runtime/ProcessingContext.java` | Per-message processing state (see [conventions.md](conventions.md)) |
 | `processor/flow/JavaScriptProcessor.java` | GraalVM JS execution for Smart Functions |
 | `core/C8YAgent.java` | Cumulocity REST API client (inventory, measurements, events, alarms) |
@@ -24,10 +25,10 @@ Under `dynamic-mapper-service/src/main/java/dynamic/mapper/`:
 **Inbound** (Broker → C8Y):
 
 ```
-AConnectorClient → CamelDispatcherInbound → deserialize → enrich → substitute/eval → emit to C8Y
+AConnectorClient → InboundMessageDispatcher → InboundMessageRouter → deserialize → enrich → substitute/eval → emit to C8Y
 ```
 
-**Outbound** (C8Y → Broker): entry point is `CamelDispatcherOutbound`.
+**Outbound** (C8Y → Broker): entry point is `OutboundMessageDispatcher` (hands off to `OutboundMessageRouter`).
 
 Abstract processor hierarchy:
 `AbstractEnrichmentProcessor` → `AbstractFlowProcessor` / `AbstractJSONataExtractionProcessor` / `AbstractExtensibleProcessor`

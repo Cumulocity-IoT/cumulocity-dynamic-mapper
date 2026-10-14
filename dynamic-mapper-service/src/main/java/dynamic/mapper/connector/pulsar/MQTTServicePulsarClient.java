@@ -123,6 +123,17 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     }
 
     /**
+     * The platform's /etc/&lt;service&gt;-logging.xml pins org.apache.pulsar.client to ERROR after Spring
+     * has applied logging.level.*, so neither logback-spring.xml nor application properties can
+     * raise it. Without INFO there is no trace of connects, subscribes or broker-side closes.
+     */
+    private static void enablePulsarClientInfoLogging() {
+        if (org.slf4j.LoggerFactory.getLogger("org.apache.pulsar.client") instanceof ch.qos.logback.classic.Logger pulsarLogger) {
+            pulsarLogger.setLevel(ch.qos.logback.classic.Level.INFO);
+        }
+    }
+
+    /**
      * Configure for Cumulocity internal MQTT Service
      */
     private void configureCumulocityMqttService() {
@@ -163,6 +174,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     @Override
     public boolean initialize() {
         loadConfiguration();
+        enablePulsarClientInfoLogging();
 
         try {
             // Build Pulsar client
@@ -441,6 +453,9 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
             deviceProducer = pulsarClient.newProducer()
                     .topic(towardsDeviceTopic)
+                    // Same as the consumer: the periodic partition lookup uses PIP-344, which this
+                    // broker rejects (FeatureNotSupportedException logged every interval).
+                    .autoUpdatePartitions(false)
                     .create();
 
             log.info("{} - Created producer for device topic: [{}]", tenant, towardsDeviceTopic);

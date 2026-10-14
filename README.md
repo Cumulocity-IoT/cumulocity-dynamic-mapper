@@ -1,6 +1,6 @@
 # Cumulocity Dynamic Mapper
 
-Map arbitrary broker payloads to and from the Cumulocity domain model using a graphical editor or JavaScript-based mappings.
+Map arbitrary broker payloads to and from the [Cumulocity](https://www.cumulocity.com) domain model using a graphical editor or JavaScript-based mappings.
 
 ## What It Does
 
@@ -38,6 +38,7 @@ It supports zero-code mapping, code-based mapping, and AI-assisted mapping sugge
 | Cumulocity MQTT Service | Use Cumulocity's built-in MQTT broker with device isolation |
 | Google Cloud Pub/Sub | Publish/subscribe data via a Google Cloud Pub/Sub topic and subscription, e.g. for ingestion into Google's Manufacturing Data Engine (MDE) |
 | HTTP Connector | Receive payloads via REST endpoints |
+| Polling REST Connector | Fetch data from REST endpoints at regular intervals |
 | MQTT Broker | Connect to third-party MQTT brokers (HiveMQ, Mosquitto, etc.) |
 | Webhook | Forward data to external REST APIs |
 

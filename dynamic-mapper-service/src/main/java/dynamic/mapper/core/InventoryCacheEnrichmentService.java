@@ -71,8 +71,7 @@ public class InventoryCacheEnrichmentService {
 
     public Map<String, Object> updateMOInInventoryCache(String tenant, String sourceId, Map<String, Object> updates,
             Boolean testing, IdentityResolver identityResolver) {
-        InventoryCache inventoryCache = cacheManager.getInventoryCache(tenant);
-
+        boolean isTesting = Boolean.TRUE.equals(testing);
         final Map<String, Object> newMO = new HashMap<>();
 
         ServiceConfiguration serviceConfiguration = tenantRegistry.getServiceConfiguration(tenant);
@@ -89,19 +88,24 @@ public class InventoryCacheEnrichmentService {
             effectiveFragments.forEach(frag -> {
                 processFragment(frag.trim(), sourceId, device, attrs, newMO);
             });
-        } else {
+        } else if (!isTesting) {
             // sourceId no longer resolves in inventory (e.g. the managed object was deleted) —
             // drop any external-ID cache entry still pointing at it so the next message for the
             // same external ID re-resolves instead of reusing this stale, deleted id forever.
             tenantRegistry.removeFromExternalIdCacheByInternalId(tenant, sourceId);
         }
 
-        // Publish the fully-populated map only once it is complete. Putting a placeholder
-        // before the (blocking) fetch above would let a concurrent getMOFromInventoryCache()
+        // Publish the fully-populated map only once it is complete, and only in production.
+        // Putting a placeholder before the (blocking) fetch above would let a concurrent getMOFromInventoryCache()
         // read the still-empty map — e.g. a JSONata filterInventory check would then see no
         // "type" fragment and evaluate to false — instead of falling back to the previous,
         // still-valid cached entry.
-        inventoryCache.putMO(sourceId, newMO);
+        if (!isTesting) {
+            InventoryCache inventoryCache = cacheManager.getInventoryCache(tenant);
+            if (inventoryCache != null) {
+                inventoryCache.putMO(sourceId, newMO);
+            }
+        }
 
         return newMO;
     }
@@ -112,17 +116,24 @@ public class InventoryCacheEnrichmentService {
             return null;
         }
 
-        InventoryCache inventoryCache = cacheManager.getInventoryCache(tenant);
-        Map<String, Object> result = inventoryCache.getMOBySource(sourceId);
-        if (result != null) {
-            return result;
+        boolean isTesting = Boolean.TRUE.equals(testing);
+        if (!isTesting) {
+            InventoryCache inventoryCache = cacheManager.getInventoryCache(tenant);
+            if (inventoryCache != null) {
+                Map<String, Object> result = inventoryCache.getMOBySource(sourceId);
+                if (result != null) {
+                    return result;
+                }
+            }
         }
 
         // Subscribe BEFORE fetching so update notifications that arrive while the
-        // REST call is in flight are not missed.
-        ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
-        mor.setId(new GId(sourceId));
-        notificationSubscriber.subscribeMOForInventoryCacheUpdates(tenant, mor);
+        // REST call is in flight are not missed. Only subscribe in production mode.
+        if (!isTesting) {
+            ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
+            mor.setId(new GId(sourceId));
+            notificationSubscriber.subscribeMOForInventoryCacheUpdates(tenant, mor);
+        }
 
         ServiceConfiguration serviceConfiguration = tenantRegistry.getServiceConfiguration(tenant);
         List<String> effectiveFragments = buildEffectiveFragmentList(serviceConfiguration);
@@ -138,17 +149,22 @@ public class InventoryCacheEnrichmentService {
             effectiveFragments.forEach(frag -> {
                 processFragment(frag.trim(), sourceId, device, attrs, newMO);
             });
-        } else {
+        } else if (!isTesting) {
             // sourceId no longer resolves in inventory (e.g. the managed object was deleted) —
             // drop any external-ID cache entry still pointing at it so the next message for the
             // same external ID re-resolves instead of reusing this stale, deleted id forever.
             tenantRegistry.removeFromExternalIdCacheByInternalId(tenant, sourceId);
         }
 
-        // Store the fully-populated map. A concurrent thread that resolved the same
+        // Store the fully-populated map only in production. A concurrent thread that resolved the same
         // sourceId may already have stored its own copy — the last write wins, but
         // both contain equivalent data so correctness is preserved.
-        inventoryCache.putMO(sourceId, newMO);
+        if (!isTesting) {
+            InventoryCache inventoryCache = cacheManager.getInventoryCache(tenant);
+            if (inventoryCache != null) {
+                inventoryCache.putMO(sourceId, newMO);
+            }
+        }
         return newMO;
     }
 

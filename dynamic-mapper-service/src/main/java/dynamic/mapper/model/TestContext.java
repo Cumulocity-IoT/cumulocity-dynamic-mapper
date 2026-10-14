@@ -44,6 +44,12 @@ public class TestContext {
     @NotNull
     private Boolean send = false;
 
-    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = "Create a test device in C8Y inventory before sending (tagged with d11r_testDevice)")
+    /**
+     * @deprecated Ignored. A live test (send=true) of an inbound mapping always runs against a test
+     *             device: one is created (tagged d11r_testDevice), or the existing device with the
+     *             same external ID is used. Kept so existing clients that still send the field keep working.
+     */
+    @Deprecated
+    @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, deprecated = true, description = "Ignored. A live test (send=true) of an inbound mapping always uses a test device: created if missing (tagged with d11r_testDevice), otherwise the existing device with the same external ID.")
     private Boolean createTestDevice = false;
 }

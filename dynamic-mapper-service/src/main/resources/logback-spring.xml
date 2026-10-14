@@ -55,7 +55,7 @@
     <springProfile name="prod">
         <logger name="com.cumulocity" level="INFO" />
         <logger name="dynamic.mapper" level="INFO" />
-        <logger name="org.apache.pulsar.client" level="ERROR" />
+        <logger name="org.apache.pulsar.client" level="INFO" />
     </springProfile>
 
     <appender name="OpenTelemetry"

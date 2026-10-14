@@ -1,5 +1,34 @@
 # Dynamic Mapper Service for Cumulocity
 
+## Release 6.5.3
+
+### Mapping testing: Dry Run and Live Test (behaviour change)
+
+The two test buttons of the mapping editor are renamed and their behaviour is tightened. Persisted data and
+REST payloads are unchanged; `TestResult` gains optional fields.
+
+- **Names.** *Transform Test Message* is now **Dry Run** (*Reset Transform* → **Reset Dry Run**), *Send Test
+  Message* is now **Live Test**. The *Create test device* checkbox is gone.
+- **An inbound Live Test always runs against a test device**, registered under the external ID
+  `d11r_liveTest_` + the external ID the mapping produces — never under the mapping's own external ID, so the
+  real device's first message later is not written to the test device. The device is created with the type and
+  fragment `d11r_testDevice` if missing and reused afterwards. `TestContext.createTestDevice` is **deprecated and
+  ignored**. A Live Test is refused for a mapping that names its device by Cumulocity ID (`_IDENTITY_.c8ySourceId`,
+  a Smart Function `sourceId`) or does not identify it by an external ID; use a Dry Run for those.
+- **An outbound Live Test** publishes to the real brokers with a mock external ID carrying the same
+  `d11r_liveTest_` prefix, so the topic cannot address a real device.
+- **A test run no longer changes the mapping's runtime state.** Before, an inbound Live Test (which uses real
+  services) and several error paths counted as real failures: error counters and the consecutive-failure streak
+  moved, and a failing test could deactivate a mapping with `maxFailureCount > 0`. Tests now leave the counters,
+  statistics, failure streak, Smart Function state, processing alarms and the inbound/outbound message metrics
+  untouched. A new `ProcessingContext.testRun` flag carries this (`affectsMappingStatus()`).
+- **Dry Run isolation.** A Dry Run no longer reads or writes the production external-ID caches, the inventory
+  cache or Notification 2.0 subscriptions, and the mock is cleared on the server before and after every run.
+- A deleted test device is re-created by the next Live Test; a stale cached ID is evicted and the send retried once.
+- A test that does not finish within the pipeline timeout is cancelled and answered with `504`.
+- `TestResult` gains `testDeviceCreated`, `testDeviceExternalId` (new, optional) and documents `key`.
+- Known limit: a Live Test of SparkPlug B NDATA/DDATA reads the alias map of the unprefixed node.
+
 ## Release 6.5.2
 
 ### Persisted data and REST payloads are unchanged
@@ -102,6 +131,52 @@ not caches.
   unsubscribe, and `executeWithProcessingMode(mode, tenant, …)` could cache a connector built
   from one tenant's context under another tenant's key. It now refuses to cache a mismatch.
 - `ConnectorRegistry` left an empty entry per unsubscribed tenant.
+
+### Clearer errors for Smart Functions and JSONata (behaviour change)
+
+Mistakes that used to be swallowed now fail the message with a specific error, which shows in the
+test console and in `lastError` / the **Errors** counter. A mapping that was silently dropping
+messages may therefore start reporting errors after the upgrade.
+
+- **JSONata syntax error** in a substitution: the message now fails with the expression, the target
+  and the position. Before, it was logged and treated as "no value". A *runtime* JSONata error that
+  depends on one message's data (e.g. `$number("abc")`) still lets the message continue, but is now
+  added to the warnings instead of only the log.
+- **Smart Function returns the wrong shape** (neither an object nor an array) or **an invalid
+  message** inside the returned array: now an error naming the index. Before, the message was
+  dropped with a warning and counted as filtered.
+- **Reported JavaScript location** is now `(line L, column C)` of the author's code, and only for
+  errors that really came from JavaScript. Before, the line was one too high in flat-script mode,
+  and a Java-side failure was reported with a Java source line.
+- **A Smart Function that cannot be loaded** (syntax error, missing `onMessage`) now reports the real
+  cause with its line and column, instead of only "Failed to create pooled GraalVM context".
+- **A Smart Function that is stopped for running too long** reports the limit that was hit
+  (`maxCPUTimeMS` or the pipeline timeout) and where it was stopped, instead of GraalVM's generic
+  "cancelled" text.
+- Result processors printed the mapping name where the error message belonged
+  (`Error in X: <mapping name> for mapping: <message>`); fixed.
+- **Test endpoint**: errors of every result are returned, not only the first; the full cause chain
+  is shown; and a test that produced no result at all now says so instead of returning
+  `success=false` with no error text.
+
+### Richer mapping statistics
+
+The mapping status now says what happened to a message, not only that it arrived. All additions
+are additive fields on the `d11r_mapping` status fragment and the status REST payload; existing
+fields are unchanged and older persisted statuses still load.
+
+- New counters per mapping: `messagesProcessed`, `messagesFiltered` (dropped by a filter or by the
+  mapping on purpose — not an error), `requestsCreated` / `requestsFailed`, `warnings`, and
+  processing time (`timedMessages`, `processingTimeTotalMs`, `processingTimeMaxMs`).
+- New per-mapping `lastMessageAt`, `lastErrorAt` and `lastError` for triage without the service events.
+- **Monitoring → Statistic processed** gains Processed, Filtered, Status, Last message and Last error
+  columns; Error rate, Requests and Time avg / max are available from the column menu. The
+  **Current failures** column is replaced by **Status** (OK / Failing (N in a row) / Idle), which is
+  the same consecutive-failure streak shown as a state.
+- **Monitoring → Chart processed** shows messages by outcome (processed / filtered / errors) and the
+  slowest mappings by average processing time. Failures raised before a mapping is resolved now have
+  their own bar instead of being added to Inbound.
+- Test runs from the mapping editor do not change these counters.
 
 ### Mapping status reporting
 

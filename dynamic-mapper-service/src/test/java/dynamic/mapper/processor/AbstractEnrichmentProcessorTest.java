@@ -207,7 +207,7 @@ class AbstractEnrichmentProcessorTest {
         Value onMsgFn = poolCtx.getBindings("js").getMember("onMessage");
         pooledContext = new PooledGraalContext(poolCtx, onMsgFn, graalEngine);
         when(graalVMContextService.borrowOrCreateContext(
-                anyString(), anyString(), any(), anyBoolean(), any(), any(), anyString(), anyString()))
+                anyString(), anyString(), any(), anyBoolean(), any(), any(), anyString(), anyString(), anyString()))
                 .thenReturn(pooledContext);
 
         when(serviceRegistry.getC8yAgent()).thenReturn(c8yAgent);
@@ -339,6 +339,38 @@ class AbstractEnrichmentProcessorTest {
         assertEquals(1L, mappingStatus.messagesReceived, "Should have incremented messages received");
 
         log.info("✅ Successfully incremented messagesReceived counter");
+    }
+
+    @Test
+    void testRealRun_loadsTheSmartFunctionStateFromTheStore() throws Exception {
+        processor.process(processingContext, "test-connector");
+
+        verify(flowStateStore).loadState(TEST_TENANT, mapping.getIdentifier());
+    }
+
+    @Test
+    void testTestRun_neitherLoadsNorOverwritesTheLiveSmartFunctionState() throws Exception {
+        // A Dry Run / Live Test of a stateful Smart Function must not start from the production counter
+        // or write its increment back: it gets a throw-away state and no store.
+        processingContext.setTestRun(true);
+
+        processor.process(processingContext, "test-connector");
+        processingContext.close(); // close() is what writes the state back for a real run
+
+        verify(flowStateStore, never()).loadState(any(), any());
+        verify(flowStateStore, never()).saveState(any(), any(), any());
+    }
+
+    @Test
+    void testTestRun_doesNotCreateOrUpdateTheMappingStatus() throws Exception {
+        // Looking the status up creates its entry: testing a new or edited mapping must not add a phantom
+        // row to the monitoring page.
+        processingContext.setTestRun(true);
+
+        processor.process(processingContext, "test-connector");
+
+        verify(mappingService, never()).getMappingStatus(any(), any(Mapping.class));
+        assertEquals(0L, mappingStatus.messagesReceived);
     }
 
     @Test
@@ -495,8 +527,9 @@ class AbstractEnrichmentProcessorTest {
 
         // Then
         assertEquals(1, processingContext.getErrors().size(), "Should have added error to context");
-        assertTrue(processingContext.getErrors().get(0).getMessage().contains("Failed to set up GraalVM context"),
-                "Error message should mention GraalVM context setup");
+        String message = processingContext.getErrors().get(0).getMessage();
+        assertTrue(message.contains("could not be loaded"), "Error message should say the function could not be loaded: " + message);
+        assertTrue(message.contains("GraalVM setup failed"), "Error message should carry the cause: " + message);
         assertEquals(1, mappingStatus.errors, "Should have incremented error count");
         verify(mappingService).increaseAndHandleFailureCount(TEST_TENANT, mapping, mappingStatus);
 

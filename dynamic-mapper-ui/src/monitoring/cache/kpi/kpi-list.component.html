@@ -6,7 +6,16 @@
         <i class="m-b-8 icon-40 c8y-icon-duocolor" [c8yIcon]="kpisByDomain.get(domain)[0].domainIcon"></i>
         <span class="tag tag--info">Cache</span>
       </div>
-      <span class="h4">{{ getDomainDisplayName(domain) }}</span>
+      <div class="d-col gap-8 a-i-start">
+        <span class="h4">{{ getDomainDisplayName(domain) }}</span>
+        @if (isClearable(domain)) {
+        <button type="button" class="btn btn-default btn-sm" [disabled]="!canClear"
+          title="{{ 'Clear cache' | translate }}" (click)="clear.emit(domain)">
+          <i c8yIcon="clear"></i>
+          {{ 'Clear cache' | translate }}
+        </button>
+        }
+      </div>
     </div>
     @for (kpi of kpisByDomain.get(domain); track kpi.id) {
     <div class="col-sm-3 m-b-24 col-xs-12 a-i-stretch d-flex">

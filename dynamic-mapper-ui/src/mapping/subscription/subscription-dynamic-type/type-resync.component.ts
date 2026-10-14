@@ -49,6 +49,8 @@ const BACKFILL_EVENT_TYPE = 'd11r_backfillSubscriptionEvent';
 const BACKFILL_FRAGMENT = 'd11r_subscription';
 const NOT_SYNCED_YET = 'Not synced yet';
 
+import { provideGridPersistence } from '../../../shared/misc/grid-persistence';
+
 @Component({
   selector: 'd11r-type-resync',
   host: { class: 'flex-grow d-col fit-h' },
@@ -56,6 +58,7 @@ const NOT_SYNCED_YET = 'Not synced yet';
   styleUrls: ['../../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
+  providers: [...provideGridPersistence('type-resync')],
   imports: [CoreModule]
 })
 export class TypeResyncComponent implements OnInit {

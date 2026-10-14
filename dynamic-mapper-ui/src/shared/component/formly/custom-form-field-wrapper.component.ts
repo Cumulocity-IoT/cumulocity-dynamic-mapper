@@ -49,7 +49,7 @@ export class WrapperCustomFormField extends FieldWrapper implements OnInit {
       this.field.type === 'typeahead' ||
       (this.props.description &&
         this.props.description.length > this.maxHelpBlockLength);
-    // Get the custom class from the field's templateOptions
+    // Get the custom class from the field's props
     this.customWrapperClass = this.field.props?.['customWrapperClass'] || '';
     this.classes = `form-group ${this.customWrapperClass}`;
   }

@@ -140,24 +140,45 @@ The **Inbound Mappings** / **Outbound Mappings** table is the entry point for wo
 Before activating a mapping, use the **Testing** step of the wizard (or reopen an existing mapping) to verify the
 transformation without waiting for a real device message:
 
-- **Transform Test Message** — applies the mapping's substitutions (or Smart Function / Java Extension code) to
-  the sample source payload and shows the resulting Cumulocity request. A single test payload can produce more
+- **Dry Run** — applies the mapping's substitutions (or Smart Function / Java Extension code) to
+  the sample source payload and shows the resulting Cumulocity request. Nothing is written to your tenant: device
+  lookups run against mocked data. If the device does not exist and **Create device** is off, the test says so and
+  offers to re-run assuming the device exists. A single test payload can produce more
   than one request — e.g. a measurement for a device that does not exist yet and is implicitly created also
   produces an inventory request. Use **Show Next Test Result** to step through all of them.
 
-![Transform test message](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Test_Transformation.png "The Testing step showing the result of Transform Test Message.")
-- **Reset Transform** — clears the test results and lets you run the transformation again, e.g. after editing the
-  source payload or a substitution.
-- **Send Test Message** — sends the transformed result(s) to Cumulocity for real. This requires the mapping to
-  use an external ID (it is disabled otherwise). Enable **Create test device** to have the mapper create a real
-  device in inventory first, tagged with the fragment `d11r_testDevice` so it can be identified and cleaned up
-  afterwards.
+![Dry Run](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_DryRun.png "The Testing step showing the result of a Dry Run.")
 
-![Send test message](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Send_TestMessage.png "Sending a transformed test message to a test device in Cumulocity.")
+If the device named in the message does not exist and the mapping setting **Create device** is off, the Dry Run
+does not invent one silently. It reports that the device does not exist and asks whether to **assume for this test
+that the device exists**. Confirm to run the test again with a throwaway device in the mock; nothing is created in
+your tenant. The choice applies to that one run only: the next Dry Run asks again, and a Live Test is never offered
+this choice, because it runs against a test device (see below).
+
+![Device does not exist](../../../resources/image/Dynamic_Mapper_Mapping_Editor_DryRun_Confirm.png "The confirmation a Dry Run offers when the device does not exist and Create device is off.")
+
+- **Reset Dry Run** — clears the test results and lets you run the Dry Run again, e.g. after editing the
+  source payload or a substitution.
+- **Live Test** — sends the transformed result(s) to Cumulocity for real. This requires the mapping to use an
+  external ID (it is disabled otherwise). An inbound Live Test always runs against a **test device**, never against
+  the real device that owns the message's external ID. The test device is registered under the external ID
+  `d11r_liveTest_` + the mapping's external ID (for example `d11r_liveTest_862524060507262`), so when the real device later sends its
+  first message, that message is not written to the test device. If no such device exists yet, it is created in
+  inventory with the type and the fragment `d11r_testDevice`, so it can be identified and cleaned up afterwards; on
+  the next Live Test it is reused. The confirmation says which of the two happened. A Live Test never creates a
+  device through the mapping's **Create device** setting, so it cannot leave an untagged real device behind.
+  For an **outbound** mapping, Live Test publishes the result to the topics of all connected, non-test connectors
+  that deploy the mapping. No device is created: the identity is mocked, and the external ID in the topic carries the
+  prefix `d11r_liveTest_`, so the message can never reach a real device. A test run never changes the mapping's
+  statistics, error counters or failure streak, so a failing test cannot deactivate the mapping.
+  SparkPlug B: a Live Test of NDATA/DDATA messages reads the alias map of the real node, so metrics may be shown
+  without alias names; a Dry Run never finds an alias map, because it only sees mocked data.
+
+![Live Test](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_LiveTest.png "A Live Test sending a transformed test message to a test device in Cumulocity.")
 
 ##### Testing a Smart Function and reading its console output {#testing-smart-function}
 
-A Smart Function is ordinary JavaScript, so it is tested the same way: **Transform Test Message** executes your
+A Smart Function is ordinary JavaScript, so it is tested the same way: **Dry Run** executes your
 `onMessage()` function against the source payload and shows what it returned. You do not have to publish a real
 broker message, or even activate the mapping, to find out whether the code works.
 
@@ -166,7 +187,7 @@ It is collapsed by default — click the header to expand it. This is the quicke
 actually received and how far it got: print the incoming payload, an intermediate value or a device lookup result,
 run the test, and read it back.
 
-![Testing a Smart Function](../../../resources/image/Dynamic_Mapper_Mapping_Editor_Test_Transformation.png "The Testing tab: broker payload on the left, resulting Cumulocity request on the right, and the Console output panel showing the JS LOG lines written by the Smart Function.")
+![Testing a Smart Function](../../../resources/image/Dynamic_Mapper_Mapping_Editor_DryRun.png "The Testing tab: broker payload on the left, resulting Cumulocity request on the right, and the Console output panel showing the JS LOG lines written by the Smart Function.")
 
 Each line is prefixed with the level it was logged at, and colour-coded accordingly:
 
@@ -196,11 +217,15 @@ or otherwise sensitive data once it is running in production.
 
 #### Managing test devices {#test-devices}
 
-Every time you use **Send Test Message** with **Create test device** enabled, the mapper creates a real managed
+You can delete a test device at any time. The next **Live Test** looks it up fresh, so it creates a new one; if a
+send still fails because the deleted device's ID was cached, the Live Test evicts it, re-creates the device and
+retries once. Only if that fails too does it ask you to clear the **Inbound ID cache** (Monitoring → Cache statistic).
+
+Every time a **Live Test** needs a new device, the mapper creates a real managed
 object in inventory tagged with the fragment `d11r_testDevice`. Over a few testing sessions these accumulate, so
 the mapper keeps them in one place: **Monitoring → Test device**.
 
-![Test devices](../../../resources/image/Dynamic_Mapper_Monitoring_TestDevices.png "The Test device page under Monitoring, listing the devices created by Send Test Message.")
+![Test devices](../../../resources/image/Dynamic_Mapper_Monitoring_TestDevices.png "The Test device page under Monitoring, listing the devices created by Live Test.")
 
 The page lists only devices carrying that fragment — never your production devices — with their **ID**, **Name**,
 **Date Created** and **Type**. ID, Name and Type are filterable and sortable, so you can narrow a long list down
@@ -211,8 +236,9 @@ To clean up, delete a single device from its row menu, or tick several rows and 
 is ordinary inventory deletion — the device and its data are removed from the tenant.
 
 :::info
-Test devices are real devices. They count towards your tenant's device inventory, and any mapping whose topic
-filter matches will process messages for them just like any other device. Deleting them when a test round is
-finished keeps both your inventory and your monitoring statistics clean.
+Test devices are real devices. They count towards your tenant's device inventory. They are registered under
+`d11r_liveTest_` + the real device's external ID, so messages from the real device never reach them. Deleting
+them when a test round is finished keeps your inventory clean; the test itself never changes your mapping's
+statistics.
 :::
 

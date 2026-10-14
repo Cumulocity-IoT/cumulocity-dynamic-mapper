@@ -309,17 +309,9 @@ number of levels, and every non-wildcard segment must match.
 | `PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name` | `publishTopic: "out/+/temp"`, `publishTopicSample: "out/berlin/west/temp"` (3 vs 4 levels) | `publishTopic: "out/+/temp"`, `publishTopicSample: "out/berlin/temp"` |
 | `PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name` | `publishTopic: "out/berlin/temp"`, `publishTopicSample: "out/hamburg/temp"` | `publishTopic: "out/+/temp"`, `publishTopicSample: "out/hamburg/temp"` |
 
-#### 9. `filterMapping` must be unique across OUTBOUND mappings
+#### 9. `filterMapping` is not required to be unique
 
-Two outbound mappings must not have the **exact same** `filterMapping` expression — a
-duplicate filter means both mappings would fire for the same Cumulocity notification
-with no way to tell them apart. (Only checked when `filterMapping` is set; mappings
-using the default `"true"` filter but different `targetAPI`/topics are not compared
-here — only the filter string itself.)
-
-| Error code | Fails | Passes |
-|---|---|---|
-| `FilterOutbound_Must_Be_Unique` | Existing mapping has `filterMapping: "$.temp > 30"`, new mapping also has `filterMapping: "$.temp > 30"` | New mapping has `filterMapping: "$.temp > 50"` (different expression) |
+Several outbound mappings may share the same `filterMapping`; all matching mappings fire for a notification (fan-out). There is no duplicate check.
 
 ---
 
