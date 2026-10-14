@@ -158,6 +158,10 @@ transformation without waiting for a real device message:
   inventory with the type and the fragment `d11r_testDevice`, so it can be identified and cleaned up afterwards; on
   the next Live Test it is reused. The confirmation says which of the two happened. A Live Test never creates a
   device through the mapping's **Create device** setting, so it cannot leave an untagged real device behind.
+  For an **outbound** mapping, Live Test publishes the result to the topics of all connected, non-test connectors
+  that deploy the mapping. No device is created: the identity is mocked, and the external ID in the topic carries the
+  prefix `d11r_liveTest_`, so the message can never reach a real device. A test run never changes the mapping's
+  statistics, error counters or failure streak, so a failing test cannot deactivate the mapping.
 
 ![Live Test](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Send_TestMessage.png "A Live Test sending a transformed test message to a test device in Cumulocity.")
 

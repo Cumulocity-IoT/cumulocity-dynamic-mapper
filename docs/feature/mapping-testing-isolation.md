@@ -53,6 +53,14 @@ caches in front of it were shared with production (see [Defects found and fixed]
    - Known gap: the SparkPlug B deserializer still reads the alias map of the *unprefixed* node during
      a live test (read-only), so a live test of NDATA/DDATA metrics may be decoded without alias names.
 
+4. **A test never changes the mapping's runtime status.** Neither a Dry Run nor a Live Test updates the
+   message and error counters, the processing statistics, or the consecutive-failure streak — and so a
+   failing test can never auto-deactivate the mapping. This holds for the inbound Live Test as well, which
+   uses real services and therefore cannot be recognised by the mock flag alone.
+5. **An outbound Live Test never addresses a real device.** The identity is mocked, but the result is
+   published to the real broker, so the external ID the mock hands out carries the `d11r_liveTest_`
+   prefix and the topic built from it cannot match a real device.
+
 **Non-goals.** Dry runs do not simulate a *populated* tenant; a user who wants a device to exist
 seeds it (or lets the test create it). Mock behaviour is not required to match every nuance of the
 real Cumulocity API.
@@ -118,6 +126,8 @@ repeat it. The regression tests below are the safety net for that.
 | `TestControllerTest` | Clear before and after a run, after a failed run, and that a failing cleanup does not mask the result |
 | `SubstitutionResultInboundProcessorTest` | A dry run with an unknown device and `createNonExistingDevice = false` fails with the marker instead of inventing an ID |
 | `mapping-testing.component.spec.ts` (UI) | A Dry Run opens the dialog for the marker as a warning and as an error and re-runs with `createNonExistingDevice = true` on confirm; a Live Test never opens it; the dialog does nothing on cancel, without the marker, or when the flag is already on |
+| `ProcessingContextLiveTestIdTest`, `ConsolidationProcessorTestRunTest`, `OutboundTestRunAccountingTest`, `DeserializationInboundProcessorErrorHandlingTest` | A test run (Dry Run or inbound Live Test) never counts toward the mapping status; a real run does |
+| `CommonProcessorLiveTestIdTest` | An outbound live test registers the mock device under the prefixed external ID; a dry run keeps it unchanged |
 | `TestControllerTest` (live test) | A live test always provides a test device (created or reused), ignores the deprecated flag, fails without sending when none can be provided, and a Dry Run never touches test devices |
 
 Removing the guards in `C8YAgent` or the `finally` clear makes five of these fail.

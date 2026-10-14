@@ -119,6 +119,13 @@ determined, in order of preference:
 3. `deriveExternalIdFromTopic()` — last resort: the last non-wildcard segment of
    `mapping.getMappingTopicSample()`.
 
+### Test runs and the mapping status
+
+Every message from the test panel carries `ConnectorMessage.testRun = true`, which becomes
+`ProcessingContext.testRun`. `ProcessingContext.affectsMappingStatus()` (`!testing && !testRun`) guards every
+place that updates the mapping's counters, statistics or failure streak. `testing` alone is not enough: it only
+means "use the mock services" and is off for an inbound Live Test.
+
 ### Dispatch reuse
 
 Testing does not have its own processing pipeline — it calls the same dispatcher entry
