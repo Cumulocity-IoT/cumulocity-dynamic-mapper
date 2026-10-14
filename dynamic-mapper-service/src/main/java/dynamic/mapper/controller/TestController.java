@@ -503,10 +503,11 @@ public class TestController {
     /**
      * Runs the mapping in dry-run mode (testing=true, sendPayload=false) and returns
      * the externalId that the substitution actually produces at runtime. Returns null
-     * if the dry-run fails or produces no externalId.
+     * if the dry-run fails or produces no externalId. A timeout or interruption is propagated
+     * so the caller reports it instead of falling back and performing the real send.
      */
     private String resolveExternalIdViaDryRun(String tenant, AConnectorClient connectorClient,
-            Mapping mapping, String payload) {
+            Mapping mapping, String payload) throws InterruptedException, TimeoutException {
         try {
             ConnectorMessage dryRunMessage = createTestMessage(tenant, connectorClient,
                     mapping.getMappingTopicSample(), false, payload);
@@ -519,9 +520,8 @@ public class TestController {
             if (dryRunContexts != null && !dryRunContexts.isEmpty()) {
                 return dryRunContexts.get(0).getExternalId();
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.warn("{} - Dry-run for externalId resolution interrupted", tenant);
+        } catch (InterruptedException | TimeoutException e) {
+            throw e;
         } catch (Exception e) {
             log.warn("{} - Dry-run for externalId resolution failed, falling back to static extraction: {}",
                     tenant, e.getMessage());
