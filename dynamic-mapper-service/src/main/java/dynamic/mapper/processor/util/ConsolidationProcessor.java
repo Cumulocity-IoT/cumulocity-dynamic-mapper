@@ -62,7 +62,7 @@ public class ConsolidationProcessor extends CommonProcessor {
         if (context != null) {
             // A clean leg ends the failure streak. Skipped for test runs, which must never
             // change the runtime status of a mapping.
-            if (!context.hasError() && !context.isTesting() && context.getMapping() != null) {
+            if (!context.hasError() && context.affectsMappingStatus() && context.getMapping() != null) {
                 mappingService.resetFailureCountOnSuccess(context.getTenant(), context.getMapping());
             }
             recordOutcome(context);
@@ -77,7 +77,7 @@ public class ConsolidationProcessor extends CommonProcessor {
      * Test runs are skipped — they must never change a mapping's runtime status.
      */
     private void recordOutcome(ProcessingContext<?> context) {
-        if (context.isTesting() || context.getMapping() == null || context.getTenant() == null) {
+        if (!context.affectsMappingStatus() || context.getMapping() == null || context.getTenant() == null) {
             return;
         }
         MappingStatus status = mappingService.getMappingStatus(context.getTenant(), context.getMapping());

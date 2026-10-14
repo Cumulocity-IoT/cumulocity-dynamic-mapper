@@ -190,7 +190,7 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor<byte
             context.addError(new ProcessingException("Extensible inbound processing failed: " + e.getMessage(), e));
         }
 
-        if (!testing) {
+        if (context.affectsMappingStatus()) {
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             mappingStatus.incrementErrors();
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);

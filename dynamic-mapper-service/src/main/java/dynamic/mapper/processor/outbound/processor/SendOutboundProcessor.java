@@ -103,7 +103,7 @@ public class SendOutboundProcessor extends BaseProcessor {
             // itself throws before the normal FAILED/SUCCESSFUL ack above is reached.
             autoAckOperation(context, tenant, mapping, OperationStatus.FAILED);
 
-            if (!testing) {
+            if (context.affectsMappingStatus()) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 mappingStatus.incrementErrors();
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);

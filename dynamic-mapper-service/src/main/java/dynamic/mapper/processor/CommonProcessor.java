@@ -201,7 +201,9 @@ public abstract class CommonProcessor {
             if (externalSource.getExternalId() == null || externalSource.getExternalId().isEmpty()) {
                 externalSource.setExternalId("implicit-device-" + Utils.createCustomUuid());
             }
-            String externalIdValue = externalSource.getExternalId();
+            // Live test: register the mock device under the prefixed external ID, computed per call and
+            // never written back, so the topic built from it can't address a real device.
+            String externalIdValue = context.liveTestId(externalSource.getExternalId());
             String type = externalSources.get(0).getType();
             ProcessingResultHelper.createImplicitDevice(
                     new ID(type, externalIdValue),
@@ -217,7 +219,7 @@ public abstract class CommonProcessor {
             var externalId = c8yAgent.resolveGlobalId2ExternalId(tenant, gid,
                     externalSource.getType(),
                     context.isTesting());
-            context.setExternalId(externalSource.getExternalId());
+            context.setExternalId(context.liveTestId(externalSource.getExternalId()));
 
             if (externalId != null) {
                 return externalId.getExternalId();

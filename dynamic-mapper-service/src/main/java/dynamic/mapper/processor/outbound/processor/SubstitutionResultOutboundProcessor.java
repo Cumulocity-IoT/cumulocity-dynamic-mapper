@@ -79,8 +79,10 @@ public class SubstitutionResultOutboundProcessor extends BaseProcessor {
             log.error(errorMessage, e);
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             context.addError(new ProcessingException(errorMessage, e));
-            mappingStatus.incrementErrors();
-            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            if (context.affectsMappingStatus()) {
+                mappingStatus.incrementErrors();
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            }
         }
 
     }

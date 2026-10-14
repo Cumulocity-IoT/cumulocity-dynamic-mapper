@@ -48,6 +48,9 @@ public class ConnectorMessage {
 
     private Boolean sendPayload;
 
+    /** True for a message created by the mapping editor's test panel (Dry Run or Live Test). */
+    private Boolean testRun;
+
     /**
      * Set only for a live test (send=true) of an inbound mapping: prefix added to every external ID
      * the mapping produces, so the test runs against a device registered under "d11r_liveTest_" + externalId and

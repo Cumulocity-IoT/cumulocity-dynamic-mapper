@@ -124,6 +124,23 @@ class DeserializationInboundProcessorErrorHandlingTest {
     }
 
     @SuppressWarnings("unchecked")
+    @Test
+    void testLiveTestRun_deserializationError_doesNotCountAgainstTheMapping() throws Exception {
+        // A Live Test uses real services (testing=false) but is still a test run: a broken payload typed
+        // into the editor must not bump the error counters or the failure streak that auto-deactivates.
+        mapping.setMappingType(MappingType.JSON);
+        when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
+        when(connectorMessage.getTestRun()).thenReturn(true);
+        replaceDeserializerWithMock(MappingType.JSON);
+        when(mockDeserializer.deserializePayload(eq(mapping), eq(connectorMessage), anyBoolean()))
+                .thenThrow(new IOException("Test IO Exception"));
+
+        processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
+
+        verify(mappingService, never()).increaseAndHandleFailureCount(any(), any(), any());
+        assertEquals(0, mappingStatus.getErrors());
+    }
+
     private void replaceDeserializerWithMock(MappingType mappingType) throws Exception {
         Field deserializersField = DeserializationInboundProcessor.class.getDeclaredField("deserializers");
         deserializersField.setAccessible(true);

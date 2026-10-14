@@ -62,8 +62,10 @@ public class InternalProtobufProcessor extends BaseProcessor {
             else
                 context.addError(new ProcessingException("InternalProtobufProcessor processing failed: " + e.getMessage(), e));
 
-            mappingStatus.incrementErrors();
-            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            if (context.affectsMappingStatus()) {
+                mappingStatus.incrementErrors();
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            }
         }
 
     }

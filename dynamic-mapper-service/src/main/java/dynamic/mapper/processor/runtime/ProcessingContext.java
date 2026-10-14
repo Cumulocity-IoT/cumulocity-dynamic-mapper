@@ -152,6 +152,14 @@ public class ProcessingContext<O> implements AutoCloseable {
     @Builder.Default
     private boolean sendPayload = false;
 
+    /**
+     * True for any run started from the mapping editor's test panel (Dry Run or Live Test). Unlike
+     * {@link #testing}, which only means "use the mock services" and is off for an inbound Live Test,
+     * this is on for both, and is what keeps a test from touching the mapping's runtime status.
+     */
+    @Builder.Default
+    private boolean testRun = false;
+
     /** Prefix of external IDs in a live test, see {@link #TEST_EXTERNAL_ID_PREFIX}; null otherwise. */
     private String testExternalIdPrefix;
 
@@ -249,6 +257,15 @@ public class ProcessingContext<O> implements AutoCloseable {
      */
     public String liveTestId(String externalId) {
         return (testExternalIdPrefix == null || externalId == null) ? externalId : testExternalIdPrefix + externalId;
+    }
+
+    /**
+     * Whether this run may change the mapping's runtime status: message and error counters, the
+     * consecutive-failure streak (which can auto-deactivate the mapping) and the processing statistics.
+     * False for every test run, including an inbound Live Test that uses real services.
+     */
+    public boolean affectsMappingStatus() {
+        return !testing && !testRun;
     }
 
     public boolean hasError() {

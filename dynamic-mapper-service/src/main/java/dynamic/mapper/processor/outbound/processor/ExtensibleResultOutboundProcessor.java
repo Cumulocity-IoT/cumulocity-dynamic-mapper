@@ -128,8 +128,10 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
 
         MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
         context.addError(new ProcessingException(errorMessage, e));
-        mappingStatus.incrementErrors();
-        mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        if (context.affectsMappingStatus()) {
+            mappingStatus.incrementErrors();
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        }
     }
 
     /**

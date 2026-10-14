@@ -173,7 +173,7 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
             context.addError(new ProcessingException(errorMessage, e));
         }
 
-        if (!context.isTesting()) {
+        if (context.affectsMappingStatus()) {
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             mappingStatus.incrementErrors();
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);

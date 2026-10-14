@@ -159,7 +159,9 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
             }
         }
 
-        mappingStatus.incrementMessagesReceived();
+        if (context.affectsMappingStatus()) {
+            mappingStatus.incrementMessagesReceived();
+        }
         logMessageReceived(tenant, mapping, connectorIdentifier, context, serviceConfiguration);
 
         // Now call the enrichment logic
@@ -234,8 +236,10 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 tenant, mapping.getName(), describeCause(e));
         log.error(errorMessage, e);
         context.addError(new ProcessingException(errorMessage, e));
-        mappingStatus.incrementErrors();
-        mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        if (context.affectsMappingStatus()) {
+            mappingStatus.incrementErrors();
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        }
     }
 
     /**

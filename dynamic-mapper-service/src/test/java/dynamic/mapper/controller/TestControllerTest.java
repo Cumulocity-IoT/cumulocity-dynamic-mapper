@@ -366,6 +366,23 @@ class TestControllerTest {
         org.mockito.ArgumentCaptor<ConnectorMessage> sent = org.mockito.ArgumentCaptor.forClass(ConnectorMessage.class);
         verify(dispatcher).onTestMessage(sent.capture(), any(Mapping.class));
         assertEquals(null, sent.getValue().getTestExternalIdPrefix());
+        // ...but it is a test run, so it must not count against the mapping's status
+        assertTrue(sent.getValue().getTestRun());
+    }
+
+    @Test
+    void testMapping_liveTest_isMarkedAsATestRunEvenThoughItUsesRealServices() throws Exception {
+        stubDispatcherResult(ProcessingContext.builder().mapping(makeInboundMapping()).build());
+        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
+                .thenReturn(new C8YAgent.TestDevice("77", true));
+
+        TestContext ctx = dryRunContext();
+        ctx.setSend(true);
+        controller.testMapping(ctx);
+
+        org.mockito.ArgumentCaptor<ConnectorMessage> sent = org.mockito.ArgumentCaptor.forClass(ConnectorMessage.class);
+        verify(dispatcher, times(2)).onTestMessage(sent.capture(), any(Mapping.class));
+        sent.getAllValues().forEach(m -> assertTrue(m.getTestRun()));
     }
 
     private ProcessingContext<Object> contextFailingWithDeletedDevice() {

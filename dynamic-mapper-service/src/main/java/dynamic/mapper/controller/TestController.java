@@ -506,6 +506,7 @@ public class TestController {
                 .tenant(tenant)
                 .topic(topic)
                 .sendPayload(sendPayload)
+                .testRun(true)
                 .connectorIdentifier(connectorClient.getConnectorIdentifier())
                 .payload(payloadMessage.getBytes())
                 .build();

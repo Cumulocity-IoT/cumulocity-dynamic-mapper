@@ -103,7 +103,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 context.addError(new ProcessingException(errorMessage, e));
             }
 
-            if (!testing) {
+            if (context.affectsMappingStatus()) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 mappingStatus.incrementErrors();
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);

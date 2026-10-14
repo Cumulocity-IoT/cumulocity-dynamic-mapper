@@ -83,7 +83,7 @@ public class SendInboundProcessor extends BaseProcessor {
 
             // At least one request failed above (recorded via context.addError, not thrown) —
             // bookkeeping mirrors the catch block below, just for isolated per-request failures.
-            if (context.hasError() && !testing) {
+            if (context.hasError() && context.affectsMappingStatus()) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 mappingStatus.incrementErrors();
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
@@ -102,7 +102,7 @@ public class SendInboundProcessor extends BaseProcessor {
             else
                 context.addError(new ProcessingException(errorMessage, e));
 
-            if (!testing) {
+            if (context.affectsMappingStatus()) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 mappingStatus.incrementErrors();
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
