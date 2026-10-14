@@ -387,4 +387,49 @@ class MockIsolationRegressionTest {
         assertSame(liveInbound, agent.resolveExternalId2GlobalId(TEST_TENANT, identity, false));
         assertSame(liveMO, enrichment.getMOFromInventoryCache(TEST_TENANT, REAL_INTERNAL_ID, false, resolver));
     }
+
+    // ── Test device ───────────────────────────────────────────────────────
+
+    @Test
+    void testEnsureTestDevice_createsADeviceOfTypeD11rTestDeviceTaggedWithTheFragment() throws Exception {
+        InventoryFacade inventoryFacade = mock(InventoryFacade.class);
+        IdentityFacade identityFacade = mock(IdentityFacade.class);
+        com.cumulocity.microservice.context.ContextService<com.cumulocity.microservice.context.credentials.MicroserviceCredentials> contextService =
+                mock(com.cumulocity.microservice.context.ContextService.class);
+        com.cumulocity.microservice.context.credentials.MicroserviceCredentials credentials =
+                new com.cumulocity.microservice.context.credentials.MicroserviceCredentials(TEST_TENANT, "u", "p", null, null, null, null);
+        when(contextService.getContext()).thenReturn(credentials);
+        when(contextService.callWithinContext(any(), any())).thenAnswer(inv -> {
+            Callable<?> callable = inv.getArgument(1);
+            return callable.call();
+        });
+        // no device registered under the test external ID yet
+        when(identityFacade.resolveExternalId2GlobalId(any(), eq(false), any())).thenReturn(null);
+        when(inventoryFacade.create(any(ManagedObjectRepresentation.class), eq(false))).thenAnswer(inv -> {
+            ManagedObjectRepresentation created = inv.getArgument(0);
+            created.setId(new GId("4711"));
+            return created;
+        });
+        when(cacheManager.getInboundExternalIdCache(TEST_TENANT)).thenReturn(mock(InboundExternalIdCache.class));
+        ServiceConfiguration configuration = new ServiceConfiguration();
+        configuration.setExternalIdBinding(false);
+        tenantRegistry.addServiceConfiguration(TEST_TENANT, configuration);
+
+        C8YAgent agent = new C8YAgent(
+                null, inventoryFacade, identityFacade, null, null, null, null, null,
+                subscriptionsService, contextService, null, null, null,
+                new ObjectMapper(), tenantRegistry, null, cacheManager, null, null, null, null,
+                "1.0.0", 10);
+
+        C8YAgent.TestDevice device = agent.ensureTestDevice(TEST_TENANT, "d11r_liveTest_x", "d11r_liveTest_x", "c8y_Serial");
+
+        assertEquals("4711", device.id());
+        assertEquals(true, device.created());
+        org.mockito.ArgumentCaptor<ManagedObjectRepresentation> created =
+                org.mockito.ArgumentCaptor.forClass(ManagedObjectRepresentation.class);
+        verify(inventoryFacade).create(created.capture(), eq(false));
+        assertEquals("d11r_testDevice", created.getValue().getType(), "the managed object type");
+        assertNotNull(created.getValue().get("d11r_testDevice"), "the fragment the Test Devices grid queries");
+        assertEquals("d11r_liveTest_x", created.getValue().getName());
+    }
 }

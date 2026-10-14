@@ -1075,6 +1075,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 ManagedObjectRepresentation mor = new ManagedObjectRepresentation();
                 mor.setName(deviceName);
                 mor.set(new IsDevice());
+                // Both the fragment (what the Test Devices grid queries) and the object type, so the device
+                // is recognisable as a test device in the inventory as well.
+                mor.setType(MAPPING_TEST_DEVICE_TYPE);
                 mor.set(new HashMap<String, String>(), MAPPING_TEST_DEVICE_TYPE);
                 try {
                     c8ySemaphore.acquire();

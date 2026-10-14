@@ -155,7 +155,7 @@ transformation without waiting for a real device message:
   the real device that owns the message's external ID. The test device is registered under the external ID
   `d11r_liveTest_` + the mapping's external ID (for example `d11r_liveTest_862524060507262`), so when the real device later sends its
   first message, that message is not written to the test device. If no such device exists yet, it is created in
-  inventory and tagged with the fragment `d11r_testDevice`, so it can be identified and cleaned up afterwards; on
+  inventory with the type and the fragment `d11r_testDevice`, so it can be identified and cleaned up afterwards; on
   the next Live Test it is reused. The confirmation says which of the two happened. A Live Test never creates a
   device through the mapping's **Create device** setting, so it cannot leave an untagged real device behind.
 
