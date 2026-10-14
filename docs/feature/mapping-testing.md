@@ -204,7 +204,7 @@ failure in a later one cannot make the test look green.
 |---|---|---|
 | `TestingService` | [`mapping/core/testing.service.ts`](../../dynamic-mapper-ui/src/mapping/core/testing.service.ts) | HTTP client: `testMapping()` POSTs to `/test/mapping`; `resetMockCache()` clears the two mock caches. |
 | `MappingStepTestingComponent` | [`mapping/step-testing/mapping-testing.component.ts`](../../dynamic-mapper-ui/src/mapping/step-testing/mapping-testing.component.ts) | The stepper step (`d11r-mapping-testing`): payload editor, request/response viewers, console panel, the buttons. |
-| Test device page | [`test-device/`](../../dynamic-mapper-ui/src/test-device/) | *Monitoring → Test device*: lists devices carrying the fragment `d11r_testDevice`, with bulk and row deletion. |
+| Test device page | [`test-device/`](../../dynamic-mapper-ui/src/test-device/) | *Monitoring → Test device*: lists devices carrying the fragment `d11r_testDevice`. The header total counts test devices only. Deleting (row or bulk) is offered to mapping admins only; the outcome alert appears after the deletes have finished, reports partial failures, and the grid is refreshed either way. |
 
 Key interactions in `MappingStepTestingComponent`:
 
@@ -213,12 +213,15 @@ Key interactions in `MappingStepTestingComponent`:
   template (`patchC8YTemplateForTesting`), clears the results and the mock.
 - `handleTestResult()` looks for `createNonExistingDevice is disabled` in the result's warnings **and** errors
   (flow/extension mappings report it as a warning, substitution mappings as an error). For a **Dry Run** with the
-  flag off it asks whether to assume, for this test, that the device exists and re-runs with the flag set. It never
-  asks for a Live Test.
+  flag off it asks whether to assume, for this test, that the device exists and re-runs with the flag set **for that
+  one run** (`executeTest(send, assumeDeviceExists)`); it is not written into `testMapping`, so the next Dry Run asks
+  again and a Live Test never carries it. It never asks for a Live Test.
 - After a successful Live Test, `describeSendResult()` builds the alert: what was created, on which device, and
   whether the test device was created or reused.
-- `disableTestSending()` disables *Live Test* unless the mapping uses an external ID, sending is allowed for the
-  mapping, and a Dry Run has produced a result.
+- `disableTestSending()` disables *Live Test* unless sending is allowed for the mapping, the mapping uses an external
+  ID and a Dry Run has produced a result; `liveTestDisabledReason` is the button's tooltip, so the user is told which
+  of the three applies. *Dry Run* is disabled while a result is shown (tooltip: use *Reset Dry Run*). Only the button
+  that started a test shows the spinner (`runningTest`).
 - HEX/FLAT_FILE mappings send `sourceTemplate['payload']` instead of the whole JSON template
   (`requiresRawPayload()`) and the console carries a note that whitespace/line-ending parsing may differ from a device.
 
@@ -230,5 +233,8 @@ Key interactions in `MappingStepTestingComponent`:
 - **Operational metrics:** an inbound Live Test still counts its identity lookups in
   `dynmapper_inbound_identity_requests_total`.
 - **Same tenant, two tests at once** share the tenant's mock and clear each other's.
-- **Live Test needs a Dry Run first** in the UI (it is disabled until a result exists), and it can be clicked
-  repeatedly, sending again each time.
+- **Live Test needs a Dry Run first** in the UI (it is disabled until a result exists; the tooltip says so), and it
+  can be clicked repeatedly, sending again each time.
+- **The editor's source template** receives the test payload patch (a random id) because the testing step emits it
+  to the stepper; whether that patch ends up in the saved mapping is determined by the stepper's commit
+  (`reduceSourceTemplate` removes only the `_IDENTITY_`, `_CONTEXT_DATA_` and `_TOPIC_LEVEL_` tokens).

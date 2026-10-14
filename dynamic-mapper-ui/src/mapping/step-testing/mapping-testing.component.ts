@@ -116,6 +116,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   targetSystem = '';
   selectedResult$ = new BehaviorSubject<number>(-1);
   isLoading = false; // Tracks whether a test request is in progress
+  /** Which button started the running test, so only that one shows the spinner. */
+  runningTest: 'dryRun' | 'liveTest' | undefined;
   showResponse = false; // Controls collapsible response section
   showConsole = true; // Controls collapsible console section (expanded by default)
   currentApi: string | undefined;
@@ -194,7 +196,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   get testHelpText(): string {
-    const needsExternalId = 'needs a mapping that uses an external id.';
+    const needsExternalId = 'needs a mapping that uses an external id and a Dry Run result.';
     if (this.mapping?.direction === Direction.OUTBOUND) {
       return 'Dry Run runs the mapping without sending anything. '
         + 'Live Test publishes the result to the connected broker and ' + needsExternalId;
@@ -206,9 +208,32 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   disableTestSending(): boolean {
-    return !this.stepperConfiguration.allowTestSending ||
-      this.testingModel.results.length === 0 ||
-      !this.testMapping.useExternalId;
+    return this.liveTestDisabledReason !== undefined;
+  }
+
+  /**
+   * Why Live Test cannot be clicked right now, or undefined when it can. Shown as the button's tooltip:
+   * a disabled button with no explanation leaves the user guessing (a Dry Run that produced no request
+   * keeps it disabled for good).
+   */
+  get liveTestDisabledReason(): string | undefined {
+    if (!this.stepperConfiguration.allowTestSending) {
+      return 'Live Test is not available for this combination of payload type and transformation type';
+    }
+    if (!this.testMapping.useExternalId) {
+      return 'Live Test needs a mapping that uses an external ID';
+    }
+    if (this.testingModel.results.length === 0) {
+      return 'Run a Dry Run first; Live Test needs its result';
+    }
+    return undefined;
+  }
+
+  /** Dry Run is disabled while a result is shown; say how to get it back. */
+  get dryRunTitle(): string {
+    return this.testingModel.results.length > 0
+      ? 'Use Reset Dry Run to run it again'
+      : 'Runs the mapping without writing anything to your tenant';
   }
 
   // ===== PRIVATE METHODS =====
@@ -314,11 +339,12 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     this.updateEditors();
   }
 
-  private async executeTest(sendPayload: boolean): Promise<void> {
+  private async executeTest(sendPayload: boolean, assumeDeviceExists = false): Promise<void> {
     this.isLoading = true;
+    this.runningTest = sendPayload ? 'liveTest' : 'dryRun';
     try {
-      const result = await this.performTest(sendPayload);
-      await this.handleTestResult(result, sendPayload);
+      const result = await this.performTest(sendPayload, assumeDeviceExists);
+      await this.handleTestResult(result, sendPayload, assumeDeviceExists);
 
       if (this.testingModel.results.length > 0) {
         this.displayTestResult(0);
@@ -327,6 +353,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       this.handleError('Test execution failed', error);
     } finally {
       this.isLoading = false;
+      this.runningTest = undefined;
     }
   }
 
@@ -353,7 +380,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     this.sourceTemplateChanged.emit(parsedContent);
   }
 
-  private async performTest(sendPayload: boolean): Promise<TestResult> {
+  private async performTest(sendPayload: boolean, assumeDeviceExists = false): Promise<TestResult> {
     // Always read directly from the editor to capture the latest content,
     // regardless of whether onChange fired (tree-mode edits may not always trigger it)
     this.syncPayload(this.editorTestingPayload?.get() ?? this.sourceTemplate);
@@ -364,7 +391,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
     // Create test context and call remote testing endpoint
     const testContext: TestContext = {
-      mapping: this.testMapping,
+      // "Assume the device exists" applies to this one run only. It used to be written into testMapping,
+      // so every later Dry Run (and a Live Test) silently carried it and the dialog never came back.
+      mapping: assumeDeviceExists ? { ...this.testMapping, createNonExistingDevice: true } : this.testMapping,
       payload: extractedPayload,
       send: sendPayload
     };
@@ -381,7 +410,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     return result;
   }
 
-  private async handleTestResult(result: TestResult, sendPayload: boolean): Promise<void> {
+  private async handleTestResult(result: TestResult, sendPayload: boolean, assumeDeviceExists = false): Promise<void> {
     // A device that does not exist is reported either as a warning (flow / extension mappings
     // produce no request) or as an error (substitution mappings fail resolving the source id).
     // Both carry the same marker. For a Dry Run, offer to re-run assuming the device exists.
@@ -391,16 +420,15 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       m.includes('createNonExistingDevice is disabled')
     );
     // Already enabled: the failure has another cause and re-running with the flag set cannot fix it.
-    if (deviceNotFound && !sendPayload && !this.testMapping.createNonExistingDevice) {
-      const assumeDeviceExists = await this.showConfirmation(
+    if (deviceNotFound && !sendPayload && !assumeDeviceExists && !this.testMapping.createNonExistingDevice) {
+      const confirmed = await this.showConfirmation(
         'Device does not exist',
         'The referenced device does not exist and createNonExistingDevice is disabled for this mapping. '
           + 'Do you want to assume for this test that the device exists?',
         { ok: 'Assume device exists', cancel: 'Cancel' }
       );
-      if (assumeDeviceExists) {
-        this.testMapping.createNonExistingDevice = true;
-        await this.executeTest(sendPayload);
+      if (confirmed) {
+        await this.executeTest(sendPayload, true);
         return;
       }
     }
@@ -472,19 +500,6 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private async handleError(message: string, error: unknown): Promise<void> {
-    if (typeof error === 'object' && error !== null && 'possibleIgnoreErrorNonExisting' in error) {
-      const shouldIgnore = await this.showConfirmation(
-        'Ignore error non existing device',
-        'The testing resulted in an error, that the referenced device does not exist! Would you like to test again and ignore this error?',
-        { ok: 'Ignore', cancel: 'Cancel' }
-      );
-      if (shouldIgnore) {
-        this.testMapping.createNonExistingDevice = true;
-        await this.executeTest(false);
-        return;
-      }
-    }
-
     const errorMsg = this.extractErrorMessage(error);
     this.alertService.danger(errorMsg ? `${message}: ${errorMsg}` : message);
   }

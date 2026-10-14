@@ -245,4 +245,107 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
       expect(text).toContain('Reused test device 491713288 (c8y_Serial d11r_liveTest_862) from an earlier Live Test.');
     });
   });
+
+  describe('the "assume device exists" choice is per run', () => {
+    it('is not written into testMapping, so it does not stick', async () => {
+      testingService.testMapping.and.returnValues(Promise.resolve(notFoundAsError), Promise.resolve(ok));
+
+      await component.onTestTransformation();
+
+      expect(component.testMapping.createNonExistingDevice).toBeFalse();
+    });
+
+    it('asks again on the next Dry Run, and a Live Test never carries it', async () => {
+      testingService.testMapping.and.returnValues(
+        Promise.resolve(notFoundAsError), Promise.resolve(ok), // first Dry Run: asked, confirmed, re-run
+        Promise.resolve(notFoundAsError), Promise.resolve(ok), // second Dry Run: asked again
+        Promise.resolve(ok)); // Live Test
+
+      await component.onTestTransformation();
+      await component.onResetTransformation();
+      await component.onTestTransformation();
+      expect(modalService.show).toHaveBeenCalledTimes(2);
+
+      await component.onSendTest();
+      const live = testingService.testMapping.calls.mostRecent().args[0] as TestContext;
+      expect(live.send).toBeTrue();
+      expect(live.mapping.createNonExistingDevice).toBeFalse();
+    });
+  });
+
+  describe('Live Test availability', () => {
+    beforeEach(() => {
+      component.stepperConfiguration.allowTestSending = true;
+      component.testMapping.useExternalId = true;
+    });
+
+    it('explains that a Dry Run result is needed first', () => {
+      expect(component.liveTestDisabledReason).toContain('Run a Dry Run first');
+      expect(component.disableTestSending()).toBeTrue();
+    });
+
+    it('is available once a Dry Run produced a result', () => {
+      component.testingModel.results = [{ api: 'ALARM' } as DynamicMapperRequest];
+
+      expect(component.liveTestDisabledReason).toBeUndefined();
+      expect(component.disableTestSending()).toBeFalse();
+    });
+
+    it('explains that the mapping must use an external ID', () => {
+      component.testMapping.useExternalId = false;
+      component.testingModel.results = [{ api: 'ALARM' } as DynamicMapperRequest];
+
+      expect(component.liveTestDisabledReason).toContain('external ID');
+    });
+
+    it('explains when sending is not allowed for the payload/transformation combination', () => {
+      component.stepperConfiguration.allowTestSending = false;
+
+      expect(component.liveTestDisabledReason).toContain('not available');
+    });
+
+    it('tells the user how to get the Dry Run button back', () => {
+      expect(component.dryRunTitle).toContain('without writing anything');
+      component.testingModel.results = [{ api: 'ALARM' } as DynamicMapperRequest];
+      expect(component.dryRunTitle).toContain('Reset Dry Run');
+    });
+  });
+
+  describe('running state', () => {
+    it('marks which button is running and clears it afterwards', async () => {
+      let release!: (r: TestResult) => void;
+      testingService.testMapping.and.returnValue(new Promise<TestResult>(resolve => (release = resolve)));
+
+      const running = component.onSendTest();
+      expect(component.isLoading).toBeTrue();
+      expect(component.runningTest).toBe('liveTest');
+
+      release(ok);
+      await running;
+      expect(component.isLoading).toBeFalse();
+      expect(component.runningTest).toBeUndefined();
+    });
+
+    it('reports a failing request as an alert instead of opening a dialog', async () => {
+      testingService.testMapping.and.rejectWith(new Error('boom'));
+
+      await component.onTestTransformation();
+
+      expect(alertService.danger).toHaveBeenCalledWith('Test execution failed: boom');
+      expect(modalService.show).not.toHaveBeenCalled();
+      expect(component.isLoading).toBeFalse();
+    });
+  });
+
+  describe('help texts', () => {
+    it('describe the broker for an outbound mapping and the test device for an inbound one', () => {
+      expect(component.testHelpText).toContain('test device');
+      expect(component.liveTestTitle).toContain('test device');
+
+      component.mapping.direction = Direction.OUTBOUND;
+      expect(component.testHelpText).toContain('connected broker');
+      expect(component.testHelpText).not.toContain('d11r_liveTest_');
+      expect(component.liveTestTitle).toContain('broker');
+    });
+  });
 });
