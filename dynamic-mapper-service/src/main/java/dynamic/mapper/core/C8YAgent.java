@@ -1097,9 +1097,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
     /**
      * Outcome of {@link #ensureTestDevice}: the device's internal ID, and whether this call created
-     * it. A device that already existed under that external ID is reused as is — it is not re-tagged {@code d11r_testDevice}
-     * (that would label a real device as a test device and offer it for cleanup), so it does not
-     * appear in the Test Devices grid.
+     * it. A device that already existed under that external ID is reused as is — it is not re-tagged. Only a device already
+     * tagged {@code d11r_testDevice} is reused; any other object owning the external ID is refused
+     * (the result is {@code null}), so a live test never writes to a real device.
      */
     public record TestDevice(String id, boolean created) {
     }
@@ -1112,6 +1112,21 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     public void evictExternalIdFromCaches(String tenant, ID identity) {
         cacheManager.removeDeviceFromInboundExternalIdCache(tenant, identity);
         tenantRegistry.removeFromExternalIdCache(tenant, identity);
+    }
+
+    /** True if the managed object carries the {@code d11r_testDevice} tag; false if not or if it cannot be read. */
+    private boolean isMapperTestDevice(String tenant, String deviceId) {
+        return Boolean.TRUE.equals(subscriptionsService.callForTenant(tenant, () -> {
+            try {
+                ManagedObjectRepresentation mor = inventoryApi.get(GId.asGId(deviceId), false);
+                return mor != null && (MAPPING_TEST_DEVICE_TYPE.equals(mor.getType())
+                        || mor.hasProperty(MAPPING_TEST_DEVICE_TYPE));
+            } catch (Exception e) {
+                log.warn("{} - Could not read device {} to verify it is a test device: {}", tenant, deviceId,
+                        e.getMessage());
+                return false;
+            }
+        }));
     }
 
     /**
@@ -1132,6 +1147,12 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         ExternalIDRepresentation existing = resolveExternalId2GlobalId(tenant, id, false);
         if (existing != null) {
             String existingId = existing.getManagedObject().getId().getValue();
+            if (!isMapperTestDevice(tenant, existingId)) {
+                // Never write live-test data to a device the mapper did not create for testing.
+                log.error("{} - Object {} owns external ID {} but is not a mapper test device, refusing to reuse it",
+                        tenant, existingId, externalId);
+                return null;
+            }
             log.info("{} - Test device with externalId={} already exists: id={}, reusing it", tenant, externalId,
                     existingId);
             return new TestDevice(existingId, false);
