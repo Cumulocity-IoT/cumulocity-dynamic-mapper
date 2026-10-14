@@ -20,7 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE=" 1. JSON / DEFAULT → MEASUREMENT"
+TEST_TITLE="JSON / DEFAULT → MEASUREMENT"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 DEVICE_NAME="dmtest-json-default-$(date +%s)"

@@ -223,6 +223,53 @@ def events():
 
 
 # ---------------------------------------------------------------------------
+# /webhook/**  (target of the mapper's WEB_HOOK connector — outbound counterpart
+# of the poll endpoints above; used by the integration test
+# test-outbound-webhook.sh)
+# ---------------------------------------------------------------------------
+
+_MAX_RECEIVED = 200
+_received_log: deque = deque(maxlen=_MAX_RECEIVED)
+
+
+@app.route("/webhook/", defaults={"subpath": ""}, methods=["POST", "PUT", "PATCH", "DELETE"])
+@app.route("/webhook/<path:subpath>", methods=["POST", "PUT", "PATCH", "DELETE"])
+def webhook_receive(subpath):
+    """Records every request the WEB_HOOK connector sends (method, path, query, body)
+    and answers 200, so a test can assert on exactly what was delivered via
+    `GET /received`. Same auth rules as the poll endpoints."""
+    if not _authorized():
+        logger.warning("%s /webhook/%s – rejected, bad/missing %s credentials",
+                       request.method, subpath, AUTH_MODE)
+        return jsonify({"error": "Unauthorized"}), 401
+
+    entry = {
+        "method": request.method,
+        "path": "/" + subpath,
+        "query": request.query_string.decode(),
+        "receivedAt": _now(),
+        "contentType": request.content_type,
+        "body": request.get_data(as_text=True),
+    }
+    _received_log.append(entry)
+    logger.info("%s /webhook/%s – recorded %d byte(s)", request.method, subpath, len(entry["body"]))
+    return jsonify({"status": "received"}), 200
+
+
+@app.route("/received", methods=["GET"])
+def get_received():
+    """Returns the log of webhook deliveries, most recent last."""
+    return jsonify(list(_received_log)), 200
+
+
+@app.route("/received", methods=["DELETE"])
+def clear_received():
+    count = len(_received_log)
+    _received_log.clear()
+    return jsonify({"status": "ok", "removed": count}), 200
+
+
+# ---------------------------------------------------------------------------
 # /requests  (inspection endpoint — not called by the mapper)
 # ---------------------------------------------------------------------------
 

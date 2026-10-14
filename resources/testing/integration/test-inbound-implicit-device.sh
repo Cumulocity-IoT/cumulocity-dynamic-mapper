@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE=" 7. Implicit device auto-creation"
+TEST_TITLE="Implicit device auto-creation"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 # Use a unique external id that certainly does not exist yet
