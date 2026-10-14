@@ -56,13 +56,13 @@ public class InternalProtobufProcessor extends BaseProcessor {
         } catch (Exception e) {
             log.error("Error in InternalProtobufProcessor for mapping: {}",
                     context.getMapping().getName(), e);
-            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             if(e instanceof ProcessingException)
                 context.addError((ProcessingException) e);
             else
                 context.addError(new ProcessingException("InternalProtobufProcessor processing failed: " + e.getMessage(), e));
 
             if (context.affectsMappingStatus()) {
+                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 mappingStatus.incrementErrors();
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
             }
