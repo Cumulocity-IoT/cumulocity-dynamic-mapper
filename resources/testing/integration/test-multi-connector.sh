@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="Multiple connector status check"
+TEST_TITLE="43. Multiple connector status check"
 
 dm_parse_args "$@"   # supports --validate-only (read-only test, no cleanup needed)
 

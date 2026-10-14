@@ -190,8 +190,8 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Outbound_subscription.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Monitoring.png',
-        to: 'image/Dynamic_Mapper_Monitoring.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Monitoring_Statistic.png',
+        to: 'image/Dynamic_Mapper_Monitoring_Statistic.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Monitoring_Chart.png',
