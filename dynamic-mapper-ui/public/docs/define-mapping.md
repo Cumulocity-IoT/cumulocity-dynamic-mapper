@@ -140,15 +140,15 @@ The **Inbound Mappings** / **Outbound Mappings** table is the entry point for wo
 Before activating a mapping, use the **Testing** step of the wizard (or reopen an existing mapping) to verify the
 transformation without waiting for a real device message:
 
-- **Mock Test** — applies the mapping's substitutions (or Smart Function / Java Extension code) to
+- **Dry Run** — applies the mapping's substitutions (or Smart Function / Java Extension code) to
   the sample source payload and shows the resulting Cumulocity request. Nothing is written to your tenant: device
   lookups run against mocked data. If the device does not exist and **Create device** is off, the test says so and
   offers to re-run assuming the device exists. A single test payload can produce more
   than one request — e.g. a measurement for a device that does not exist yet and is implicitly created also
   produces an inventory request. Use **Show Next Test Result** to step through all of them.
 
-![Mock Test](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Test_Transformation.png "The Testing step showing the result of a Mock Test.")
-- **Reset Mock Test** — clears the test results and lets you run the Mock Test again, e.g. after editing the
+![Dry Run](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Test_Transformation.png "The Testing step showing the result of a Dry Run.")
+- **Reset Dry Run** — clears the test results and lets you run the Dry Run again, e.g. after editing the
   source payload or a substitution.
 - **Live Test** — sends the transformed result(s) to Cumulocity for real. This requires the mapping to use an
   external ID (it is disabled otherwise). An inbound Live Test always runs against a **test device**: if no device
@@ -163,7 +163,7 @@ transformation without waiting for a real device message:
 
 ##### Testing a Smart Function and reading its console output {#testing-smart-function}
 
-A Smart Function is ordinary JavaScript, so it is tested the same way: **Mock Test** executes your
+A Smart Function is ordinary JavaScript, so it is tested the same way: **Dry Run** executes your
 `onMessage()` function against the source payload and shows what it returned. You do not have to publish a real
 broker message, or even activate the mapping, to find out whether the code works.
 

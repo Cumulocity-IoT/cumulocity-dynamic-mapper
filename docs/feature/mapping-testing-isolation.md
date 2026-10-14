@@ -106,8 +106,8 @@ repeat it. The regression tests below are the safety net for that.
 | `SparkplugBDeserializerTest` | D9: a dry run never resolves live, never touches the live cache, and fetches from the mock; production is unchanged |
 | `TestControllerTest` | Clear before and after a run, after a failed run, and that a failing cleanup does not mask the result |
 | `SubstitutionResultInboundProcessorTest` | A dry run with an unknown device and `createNonExistingDevice = false` fails with the marker instead of inventing an ID |
-| `mapping-testing.component.spec.ts` (UI) | A Mock Test opens the dialog for the marker as a warning and as an error and re-runs with `createNonExistingDevice = true` on confirm; a Live Test never opens it; the dialog does nothing on cancel, without the marker, or when the flag is already on |
-| `TestControllerTest` (live test) | A live test always provides a test device (created or reused), ignores the deprecated flag, fails without sending when none can be provided, and a Mock Test never touches test devices |
+| `mapping-testing.component.spec.ts` (UI) | A Dry Run opens the dialog for the marker as a warning and as an error and re-runs with `createNonExistingDevice = true` on confirm; a Live Test never opens it; the dialog does nothing on cancel, without the marker, or when the flag is already on |
+| `TestControllerTest` (live test) | A live test always provides a test device (created or reused), ignores the deprecated flag, fails without sending when none can be provided, and a Dry Run never touches test devices |
 
 Removing the guards in `C8YAgent` or the `finally` clear makes five of these fail.
 
@@ -118,4 +118,4 @@ marker in the result's warnings **and** errors — flow and extension mappings r
 substitution mappings as an error — and asks whether to assume, for this test, that the device
 exists. Confirming sets `testMapping.createNonExistingDevice = true` and re-runs.
 
-The dialog is a **Mock Test** feature: it offers to *assume the device exists* (the mock creates a throwaway device). A **Live Test** never offers it, because it always runs against a test device and confirming would create a real, untagged device through `createNonExistingDevice`.
+The dialog is a **Dry Run** feature: it offers to *assume the device exists* (the mock creates a throwaway device). A **Live Test** never offers it, because it always runs against a test device and confirming would create a real, untagged device through `createNonExistingDevice`.

@@ -157,11 +157,12 @@
     } @else {
     <div class="btn-group">
       <button type="button" class="btn btn-default btn-sm m-r-8" data-cy="dm-mapping-test-transform" (click)="onTestTransformation()"
+        title="{{ 'Runs the mapping without writing anything to your tenant' | translate }}"
         [disabled]="!stepperConfiguration.allowTestTransformation || (testingModel.results.length > 0) || isLoading">
         @if (isLoading && !isSubstitutionsAsCode(mapping) && !requiresRawPayload()) {
         <i class="fa fa-circle-o-notch fa-spin m-r-4"></i>
         }
-        Mock Test
+        Dry Run
       </button>
       <button type="button" class="btn btn-default btn-sm m-r-8" data-cy="dm-mapping-test-next-result" (click)="onNextTestResult()"
         [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length <= 1">
@@ -172,7 +173,7 @@
       </button>
       <button type="button" class="btn btn-default btn-sm m-r-8" data-cy="dm-mapping-test-reset" (click)="onResetTransformation()"
         [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length == 0">
-        Reset Mock Test
+        Reset Dry Run
       </button>
       <!-- Live Test really sends. For inbound mappings it always runs against a test device (created
            if the external ID is unknown, otherwise the existing device is used); there is no way to

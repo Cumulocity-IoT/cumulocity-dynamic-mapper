@@ -56,7 +56,7 @@ path from the UI is `${BASE_URL}/test/mapping` — see
 | `send` | `Boolean` | `false` (default) = dry-run only; `true` = actually publish/create the result. |
 | `createTestDevice` | `Boolean` | **Deprecated, ignored.** A live test (`send=true`) of an inbound mapping always runs against a test device. Kept so existing clients that still send it keep working. |
 
-In the UI the two test types are **Mock Test** (`send=false`: mocked identity and inventory, nothing written) and **Live Test** (`send=true`: really sends). A Live Test of an inbound mapping always runs against a **test device**: created and tagged `d11r_testDevice` if the external ID is unknown, otherwise the existing device with that external ID is used as is and deliberately **not** tagged, so a real device is never offered for cleanup. `TestResult.testDeviceCreated` tells the UI which case happened and the success alert says so. There is no way to live-test against an arbitrary real device, and a Live Test never offers the "assume the device exists" dialog (that would create a real, untagged device through `createNonExistingDevice`); a Mock Test does. If the test device cannot be provided the live test is not run and `success=false` is returned with the reason.
+In the UI the two test types are **Dry Run** (`send=false`: mocked identity and inventory, nothing written) and **Live Test** (`send=true`: really sends). A Live Test of an inbound mapping always runs against a **test device**: created and tagged `d11r_testDevice` if the external ID is unknown, otherwise the existing device with that external ID is used as is and deliberately **not** tagged, so a real device is never offered for cleanup. `TestResult.testDeviceCreated` tells the UI which case happened and the success alert says so. There is no way to live-test against an arbitrary real device, and a Live Test never offers the "assume the device exists" dialog (that would create a real, untagged device through `createNonExistingDevice`); a Dry Run does. If the test device cannot be provided the live test is not run and `success=false` is returned with the reason.
 
 `TestResult` ([`TestResult.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/TestResult.java)):
 
@@ -95,7 +95,7 @@ device to resolve against even when actually sending.
 [`MockIdentity`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/mock/MockIdentity.java)
 via [`IdentityFacade`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/facade/IdentityFacade.java#L62-L100)
 — an in-memory, per-tenant `ConcurrentHashMap`-backed store, not real Cumulocity API calls.
-The UI clears this mock state before each test run and on "Reset Mock Test" by calling
+The UI clears this mock state before each test run and on "Reset Dry Run" by calling
 `resetMockCache()`, which dispatches two `CLEAR_CACHE` operations (`MOCK_IDENTITY_CACHE`,
 `MOCK_INVENTORY_CACHE`) handled in `OperationController`. Without this reset, resolution
 results from a previous test run (e.g. an implicitly-created mock device) would leak into

@@ -37,7 +37,7 @@ import { EditorMode } from '../../shared/mapping/stepper.model';
  * "createNonExistingDevice is disabled". The dialog must open in both cases, and its wording must
  * make clear that a real send creates a real device while a dry run only assumes one.
  */
-describe('MappingStepTestingComponent – device does not exist (Mock Test)', () => {
+describe('MappingStepTestingComponent – device does not exist (Dry Run)', () => {
   const MARKER = 'Device with externalId \'x\' (type \'c8y_Serial\') not found in inventory and createNonExistingDevice is disabled';
 
   let component: MappingStepTestingComponent;
@@ -109,7 +109,7 @@ describe('MappingStepTestingComponent – device does not exist (Mock Test)', ()
     await component.ngOnInit();
   });
 
-  it('opens the dialog for a missing device reported as a WARNING (Mock Test) and offers to assume it exists', async () => {
+  it('opens the dialog for a missing device reported as a WARNING (Dry Run) and offers to assume it exists', async () => {
     testingService.testMapping.and.returnValues(Promise.resolve(notFoundAsWarning), Promise.resolve(ok));
 
     await component.onTestTransformation();

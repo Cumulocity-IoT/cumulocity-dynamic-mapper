@@ -189,20 +189,19 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   get liveTestTitle(): string {
     return this.mapping?.direction === Direction.OUTBOUND
-      ? 'Publish the result to the connected broker'
-      : 'Send to Cumulocity using a test device';
+      ? 'Publishes the result to the connected broker'
+      : 'Sends the result to Cumulocity using a test device';
   }
 
   get testHelpText(): string {
-    const live = 'Live Test is only supported for mappings that use an external id.';
+    const needsExternalId = 'needs a mapping that uses an external id.';
     if (this.mapping?.direction === Direction.OUTBOUND) {
-      return 'Mock Test transforms the message without sending anything. ' + live;
+      return 'Dry Run runs the mapping without sending anything. '
+        + 'Live Test publishes the result to the connected broker and ' + needsExternalId;
     }
-    return 'Mock Test transforms the message against mocked data; nothing is written to your tenant. '
-      + live + ' Live Test really sends the result to Cumulocity, always using a test device: '
-      + 'a device tagged d11r_testDevice is created if the external ID is unknown, otherwise the existing '
-      + 'device with that external ID is used as is (and not tagged). Remove test devices under '
-      + 'Monitoring > Test device.';
+    return 'Dry Run runs the mapping without writing anything to your tenant. '
+      + 'Live Test sends the result to Cumulocity using a test device and ' + needsExternalId
+      + ' Test devices are listed under Monitoring > Test device.';
   }
 
   disableTestSending(): boolean {
@@ -384,7 +383,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   private async handleTestResult(result: TestResult, sendPayload: boolean): Promise<void> {
     // A device that does not exist is reported either as a warning (flow / extension mappings
     // produce no request) or as an error (substitution mappings fail resolving the source id).
-    // Both carry the same marker. For a Mock Test, offer to re-run assuming the device exists.
+    // Both carry the same marker. For a Dry Run, offer to re-run assuming the device exists.
     // A Live Test never offers this: it runs against a test device, and creating a real device
     // through createNonExistingDevice would leave an untagged device behind.
     const deviceNotFound = [...(result.warnings ?? []), ...(result.errors ?? [])].some(m =>
