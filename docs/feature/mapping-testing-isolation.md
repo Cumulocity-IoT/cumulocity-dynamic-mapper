@@ -120,8 +120,10 @@ dry run's state into live processing, because a cache sat in front of the mock a
 holds one. Without it the metrics are decoded but not alias-resolved. Before the fix the test
 silently used a real device's alias map.
 
-**Not changed, deliberately.** `C8YAgent.createTestDevice` resolves with `testing=false`: it belongs
-to the `send=true` flow, which uses real services by design.
+**Not changed, deliberately.** The test-device lookup in `C8YAgent.ensureTestDevice` resolves with
+`testing=false`: it belongs to the inbound Live Test, which uses real services by design. It evicts the
+external ID from the caches first, so it never trusts a cached answer. (`createTestDevice` is a deprecated
+wrapper around it.)
 
 ### Where the guard lives
 

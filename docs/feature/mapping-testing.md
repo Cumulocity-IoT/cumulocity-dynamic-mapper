@@ -1,33 +1,70 @@
-# Mapping Testing (Dry-Run and Send Test)
+# Mapping Testing (Dry Run and Live Test)
 
-Mapping testing lets a user validate a mapping's transformation logic against a sample
-payload — either as a pure dry-run (no data reaches Cumulocity or the broker) or as a real
-send (the transformed result is actually published/created). It exists so mappings can be
-iterated on and debugged from the mapping editor without needing a live device, a connected
-broker, or risking side effects on production data. Both inbound and outbound mappings share
-the same backend endpoint and dispatcher entry points used for live processing — testing is
-not a separate code path re-implementing the pipeline, it reuses
-[`mapping-processing-inbound.md`](mapping-processing-inbound.md) /
-[`mapping-processing-outbound.md`](mapping-processing-outbound.md) with mocked identity and
-inventory services swapped in.
+Mapping testing lets a user check what a mapping does to a sample payload from the mapping editor, without
+waiting for a real device and without risking production data. There are two kinds of test:
+
+| Test | Button | What it does |
+|---|---|---|
+| **Dry Run** | *Dry Run* | Runs the mapping against mocked identity and inventory. Nothing is written to the tenant and nothing is published to a broker. |
+| **Live Test** | *Live Test* | Really sends the result: an inbound mapping writes to Cumulocity (always against a **test device**), an outbound mapping publishes to the connected brokers. |
+
+Both inbound and outbound mappings use the same endpoint and the same processing pipeline as live traffic
+([`mapping-processing-inbound.md`](mapping-processing-inbound.md),
+[`mapping-processing-outbound.md`](mapping-processing-outbound.md)); a test is not a second implementation of it.
+How tests are kept apart from live state is specified in [`mapping-testing-isolation.md`](mapping-testing-isolation.md).
 
 ---
 
 ## Requirements
 
-**What it is for.** Finding out what a mapping does to a payload without a device, a broker, or
-data being written into the tenant.
+**What it is for.** Finding out what a mapping does to a payload without a device, a broker, or data being
+written into the tenant — and, when wanted, seeing the real object being created.
 
-- **A test takes a payload and returns what the mapping produced** — the resulting Cumulocity
-  objects, or the error with enough detail to fix the mapping.
-- **A dry run writes nothing.** Identity lookups are mocked and no object is created; the tenant's
-  data is untouched.
-- **A test can optionally be run for real** against a test device, when the user wants to see the
-  object actually created.
-- **Testing never changes the mapping's runtime state** — no message counters, no failure streaks,
-  no auto-deactivation.
-- **An inactive or draft mapping must be testable**; testing is how you check it before activating.
-- **Test devices are identifiable and removable**, so a tenant can clean up what testing created.
+**Result**
+- A test takes a payload and returns what the mapping produced — the resulting Cumulocity objects (inbound) or
+  broker messages (outbound) — or the errors, with enough detail to fix the mapping.
+- A mapping that fans out to several requests returns all of them; the editor steps through them.
+- An inactive or draft mapping, and a mapping that has not been saved yet, must be testable; testing is how you
+  check a mapping before activating it.
+
+**Dry Run**
+- A Dry Run writes nothing. Identity lookups are mocked and no object is created; the tenant's data, caches and
+  subscriptions are untouched.
+- If the device does not exist and the mapping's *Create device* setting is off, the Dry Run says so and offers to
+  re-run *assuming the device exists* (the mock creates a throwaway device). It never invents a device silently.
+
+**Live Test**
+- A Live Test needs the mapping to use an external ID.
+- An inbound Live Test always runs against a **test device**: a device registered under the external ID
+  `d11r_liveTest_` + the external ID the mapping produces — never under the mapping's own external ID, so a real
+  device's first message later is not written to the test device. It is created with the type and the fragment
+  `d11r_testDevice` if it does not exist, and reused on the next Live Test.
+- A Live Test never writes to a real device: it does not create devices through the mapping's *Create device*
+  setting, it never offers the "assume the device exists" dialog, and it is refused for a mapping that names its
+  device by Cumulocity ID (`_IDENTITY_.c8ySourceId`, a Smart Function `sourceId`) or does not identify it by an
+  external ID at all — use a Dry Run for those.
+- An outbound Live Test publishes to the topics of all connected, non-test connectors that deploy the mapping. No
+  device is created: the identity is mocked, and the external ID in the topic carries the prefix
+  `d11r_liveTest_`, so the message cannot reach a real device.
+- The result says what was created, for which device, and whether the test device was created or reused.
+- A test device that was deleted by hand is handled without user action (see *Deleted test devices* below).
+
+**What a test does not change**
+- Neither test changes the mapping's runtime state: message and error counters, the processing statistics, the
+  consecutive-failure streak (and so auto-deactivation) stay as they were.
+- Neither test reads or overwrites the Smart Function's persisted state, raises processing alarms, or counts as
+  operational traffic in the message metrics.
+- A test that does not finish within the pipeline timeout is cancelled and answered with a timeout error.
+
+**Cleanup and permissions**
+- Test devices are identifiable (type and fragment `d11r_testDevice`, external ID prefix) and removable from
+  *Monitoring → Test device*. They are not removed automatically.
+- Testing requires `ROLE_DYNAMIC_MAPPER_ADMIN` or `ROLE_DYNAMIC_MAPPER_CREATE`: with *Live Test* the result is
+  written with the microservice's own credentials, so it must not be open to any authenticated user.
+
+**Non-goals.** A Live Test does not target an arbitrary existing device. Test devices are not deleted
+automatically. Two simultaneous tests of the same tenant are not isolated from each other (they share, and clear,
+the tenant's mock).
 
 ---
 
@@ -37,13 +74,12 @@ data being written into the tenant.
 
 | Endpoint | Class | Description |
 |---|---|---|
-| `POST /test/mapping` | [`TestController.testMapping()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/TestController.java#L94-L207) | Executes one mapping against one payload and returns the generated request(s), warnings, errors, and logs. |
+| `POST /test/mapping` | [`TestController.testMapping()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/TestController.java) | Executes one mapping against one payload and returns the generated request(s), warnings, errors and logs. |
 | `POST /webhook/echo/**` | `TestController.echoInput()` | Accepts any POST body and returns it unchanged — a scratch target for testing outbound webhook mappings against something other than a real endpoint. |
 | `GET /webhook` | `TestController.echoHealth()` | Health check for the echo endpoint. |
 
-The frontend calls this through `PATH_TESTING_ENDPOINT` (resolved to `/test`), so the full
-path from the UI is `${BASE_URL}/test/mapping` — see
-[`TestingService.testMapping()`](../../dynamic-mapper-ui/src/mapping/core/testing.service.ts#L44-L59).
+The UI reaches it through `PATH_TESTING_ENDPOINT` (`/test`) in
+[`TestingService.testMapping()`](../../dynamic-mapper-ui/src/mapping/core/testing.service.ts).
 
 #### Request/response shape
 
@@ -53,150 +89,146 @@ path from the UI is `${BASE_URL}/test/mapping` — see
 |---|---|---|
 | `mapping` | `Mapping` | The full mapping definition to test (not looked up by ID — the UI sends the in-progress, possibly-unsaved edit). |
 | `payload` | `String` | The JSON (or raw, for HEX/FLAT_FILE) payload to run through the mapping as a string. |
-| `send` | `Boolean` | `false` (default) = dry-run only; `true` = actually publish/create the result. |
-| `createTestDevice` | `Boolean` | **Deprecated, ignored.** A live test (`send=true`) of an inbound mapping always runs against a test device. Kept so existing clients that still send it keep working. |
-
-In the UI the two test types are **Dry Run** (`send=false`: mocked identity and inventory, nothing written) and **Live Test** (`send=true`: really sends). A Live Test of an inbound mapping always runs against a **test device** registered under the external ID **`d11r_liveTest_` + the external ID the mapping produces**, never under the mapping's own external ID: once the real device sends its first message, that message would otherwise be written to the test device. If no device with that prefixed ID exists it is created with the managed-object type and the fragment `d11r_testDevice` (listed under *Monitoring → Test device* for cleanup), otherwise it is reused as is. `TestResult.testDeviceCreated` and `testDeviceExternalId` tell the UI which case happened and under which ID, and the success alert says so. A deleted test device is handled without user action: `ensureTestDevice` first evicts the external ID from the inbound external-ID cache and the implicit-device-creation cache and asks the platform (nothing else evicts a deleted test device, because it is not subscribed for inventory updates); if the send nevertheless fails with `404 No managedObject for id`, the controller evicts, re-ensures the device and retries once, and only then reports an error telling the user to clear the Inbound ID cache. There is no way to live-test against an arbitrary real device, and a Live Test never offers the "assume the device exists" dialog (that would create a real, untagged device through `createNonExistingDevice`); a Dry Run does. If the test device cannot be provided the live test is not run and `success=false` is returned with the reason.
+| `send` | `Boolean` | `false` (default) = Dry Run; `true` = Live Test. |
+| `createTestDevice` | `Boolean` | **Deprecated, ignored.** An inbound Live Test always uses a test device. Kept so clients that still send it keep working. |
 
 `TestResult` ([`TestResult.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/TestResult.java)):
 
 | Field | Type | Meaning |
 |---|---|---|
-| `requests` | `List<DynamicMapperRequest>` | The Cumulocity/broker request(s) the transformation produced (per-device fan-out for inbound, one for outbound). |
+| `requests` | `List<DynamicMapperRequest>` | The Cumulocity/broker request(s) the transformation produced. |
 | `errors` | `List<String>` | Flattened error messages, including causes joined in as `"... (caused by: ...)"`. |
 | `warnings` | `List<String>` | E.g. a filter-mismatch warning. |
-| `logs` | `List<String>` | Free-form log lines emitted during processing (including from Smart Function `console.log`-style output). |
-| `success` | `Boolean` | `true` iff the resulting `ProcessingContext` had no errors. |
-| `testDeviceId` | `String` | Set for a live test of an inbound mapping: the test device that was created or reused. |
-| `testDeviceCreated` | `Boolean` | `true`: created by this test (tagged, listed under *Monitoring → Test device*); `false`: reused from an earlier live test. |
+| `logs` | `List<String>` | Free-form log lines emitted during processing (including Smart Function console output). |
+| `success` | `Boolean` | `true` iff no context had an error. |
+| `testDeviceId` | `String` | Inbound Live Test: the test device that was created or reused. |
+| `testDeviceCreated` | `Boolean` | `true`: created by this test (listed under *Monitoring → Test device*); `false`: reused from an earlier Live Test. |
 | `testDeviceExternalId` | `String` | `d11r_liveTest_` + the mapping's external ID: the external ID the test device is registered under. |
-| `key` | `String` | The broker message key the transformation produced (e.g. mapped to `_CONTEXT_DATA_.key`), context-level rather than per-request. |
+| `key` | `String` | The broker message key the transformation produced, context-level rather than per-request. |
 
 ### What is simulated vs. real
 
-| Condition | Identity/inventory resolution | Publish/create side effects |
+| Test | Identity/inventory resolution | Publish/create side effects |
 |---|---|---|
-| Inbound, `send=false` | Mocked (`MockIdentity`, mock inventory) — see below | None |
-| Inbound, `send=true` | **Real** Cumulocity services | Real device upsert + real MEAO creation |
-| Outbound, `send=false` | Mocked, always | None |
-| Outbound, `send=true` | Mocked, always (see below) | Published via every connected non-TEST connector that has the mapping deployed |
+| Inbound Dry Run (`send=false`) | Mocked ([`MockIdentity`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/mock/MockIdentity.java), [`MockInventory`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/mock/MockInventory.java)) | None |
+| Inbound Live Test (`send=true`) | **Real** Cumulocity services, against the test device | Real MEAO creation on the test device |
+| Outbound Dry Run | Mocked | None |
+| Outbound Live Test | Mocked, always | Published via every connected non-TEST connector that has the mapping deployed |
 
-Inbound and outbound differ here. `CamelDispatcherInbound.processMessage()` computes
-`testing = testMapping != null && !sendPayload`
-([`CamelDispatcherInbound.java:97-98`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/CamelDispatcherInbound.java#L97-L98)):
-once `send=true`, the source topic really is a device sending real data, so identity
-resolution switches to real C8Y services. `CamelDispatcherOutbound.processNotification()`
-instead sets `testing = testMapping != null` unconditionally
-([`CamelDispatcherOutbound.java:187`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/CamelDispatcherOutbound.java#L187),
-with the accompanying comment explaining why) — an outbound test's source payload is always
-a synthetic template typed into the UI, never a real Cumulocity object, so there is no real
-device to resolve against even when actually sending.
+The inbound dispatcher computes `testing = testMapping != null && !sendPayload`
+(`InboundMessageDispatcher.processMessage()`): once `send=true` the identity lookups go to the real services,
+because the test device really exists. The outbound dispatcher sets `testing = testMapping != null` unconditionally
+(`OutboundMessageDispatcher.processNotification()`): an outbound test's source payload is a synthetic template typed
+into the UI, never a real Cumulocity object, so there is no real device to resolve even when actually sending.
 
-`testing=true` routes identity lookups to
-[`MockIdentity`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/mock/MockIdentity.java)
-via [`IdentityFacade`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/facade/IdentityFacade.java#L62-L100)
-— an in-memory, per-tenant `ConcurrentHashMap`-backed store, not real Cumulocity API calls.
-The UI clears this mock state before each test run and on "Reset Dry Run" by calling
-`resetMockCache()`, which dispatches two `CLEAR_CACHE` operations (`MOCK_IDENTITY_CACHE`,
-`MOCK_INVENTORY_CACHE`) handled in `OperationController`. Without this reset, resolution
-results from a previous test run (e.g. an implicitly-created mock device) would leak into
-the next one.
+`testing=true` routes lookups through [`IdentityFacade`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/facade/IdentityFacade.java)
+and [`InventoryFacade`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/facade/InventoryFacade.java)
+to the in-memory, per-tenant mocks. `testing` only means "use the mocks", and an inbound Live Test has it off.
+What keeps a test away from the mapping's runtime state is the separate **`testRun`** flag
+(see *Test runs and the mapping status*).
 
-#### Inbound `send=true`: test device creation
+**Mock lifecycle.** `TestController.testMapping()` clears both mocks of the tenant before **and after** every run
+(`clearMockCaches()`, the second in a `finally`), so a device created in the mock by one run is never found by the
+next, and a failed or abandoned run leaves nothing behind. The UI also calls `resetMockCache()` on opening the step
+and on *Reset Dry Run* (the `MOCK_IDENTITY_CACHE` / `MOCK_INVENTORY_CACHE` `CLEAR_CACHE` operations); that is now
+redundant but harmless.
 
-When `send=true` and the mapping is `INBOUND`, `testMapping()` ensures a test device
-(`C8YAgent.ensureTestDevice`: reuse the device registered under `d11r_liveTest_` + the external ID, otherwise create and tag one)
-before dispatching
-([`TestController.java:108-129`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/TestController.java#L108-L129)),
-so real identity resolution has something to find. The external ID to register it under is
-determined, in order of preference:
+### Inbound Live Test: the test device
 
-1. `resolveExternalIdViaDryRun()` — actually runs the mapping once in dry-run mode
-   (`send=false`) first, and reads the `externalId` the substitution logic produced at
-   runtime, rather than guessing statically.
-2. `extractIdentityFromSourceTemplate()` — falls back to reading `_IDENTITY_.externalId`
-   directly out of the static `sourceTemplate` JSON.
-3. `deriveExternalIdFromTopic()` — last resort: the last non-wildcard segment of
-   `mapping.getMappingTopicSample()`.
+For `send=true` and an `INBOUND` mapping, `testMapping()` first finds the external ID the mapping produces:
+
+1. `resolveExternalIdViaDryRun()` runs the mapping once as a Dry Run and reads the `externalId` the substitution
+   produced at runtime.
+2. `extractIdentityFromSourceTemplate()` falls back to `_IDENTITY_.externalId` in the static `sourceTemplate`.
+3. If neither yields one, the Live Test stops (`liveTestFailure`) — it does not guess from the topic.
+
+It then calls `C8YAgent.ensureTestDevice()` with `d11r_liveTest_` + that ID. `ensureTestDevice` first evicts the ID
+from the inbound external-ID cache and the implicit-device-creation cache
+(`C8YAgent.evictExternalIdFromCaches()`) so it never trusts a cached answer, looks the device up, and creates it
+(type and fragment `d11r_testDevice`) if missing. The live message is then processed with
+`ConnectorMessage.testExternalIdPrefix` set, which becomes `ProcessingContext.testExternalIdPrefix`;
+`ProcessingContext.liveTestId()` applies it where the mapping's external ID enters the pipeline:
+`SubstitutionResultInboundProcessor` (JSONata), `FlowResultInboundProcessor` / `ExtensibleResultInboundProcessor` via
+`CommonProcessor.applyLiveTestExternalIdPrefix()` (Smart Functions and extensions, once per message, in place) and
+the SparkPlug B paths in `SendInboundProcessor`. For an outbound Live Test the prefix is set by
+`OutboundMessageDispatcher` and applied in `CommonProcessor.resolveGlobalId2ExternalId()` and the enrichment
+fallback in `EnrichmentOutboundProcessor`.
+
+A mapping that names its device by Cumulocity ID is refused in the pipeline
+(`ProcessingContext.LIVE_TEST_C8Y_ID_ERROR`): the prefix only covers external IDs.
+
+#### Deleted test devices
+
+A deleted test device is not subscribed for inventory updates, so nothing evicts it from the caches. Two layers:
+`ensureTestDevice` never trusts the cache (above); and if the send still fails with `404 No managedObject for id`,
+the controller evicts the ID, re-ensures the device and retries **once**. If that fails too, the result carries an
+error telling the user to clear the *Inbound ID cache* (*Monitoring → Cache statistic*, mapping admins only).
 
 ### Test runs and the mapping status
 
 Every message from the test panel carries `ConnectorMessage.testRun = true`, which becomes
-`ProcessingContext.testRun`. `ProcessingContext.affectsMappingStatus()` (`!testing && !testRun`) guards every
-place that updates the mapping's counters, statistics or failure streak. `testing` alone is not enough: it only
-means "use the mock services" and is off for an inbound Live Test.
+`ProcessingContext.testRun`. `ProcessingContext.affectsMappingStatus()` (`!testing && !testRun`) guards every place
+that updates the mapping's counters, statistics, failure streak (`MappingService.increaseAndHandleFailureCount`,
+which can auto-deactivate the mapping) and the streak reset in `ConsolidationProcessor`.
 
 The same switch keeps a test run away from the other shared, per-mapping state: the Smart Function state store
-(`FlowStateStore`) is not read or written, no processing alarms are raised, and looking the mapping status up is
-skipped because that would create an entry for a mapping that may not be saved yet. A Live Test of a mapping that
-names its device by Cumulocity ID is refused (`ProcessingContext.LIVE_TEST_C8Y_ID_ERROR`), and the controller waits
-for the pipeline only up to its timeout (`TestController.awaitContexts`) before cancelling it.
+(`FlowStateStore`) is not read or written (the run gets a throw-away state), no processing alarms are raised, and the
+mapping status is not even looked up, because that creates an entry for a mapping that may not be saved yet.
+The inbound/outbound message counters and timers skip dispatches that carry a `testMapping`; the identity-request
+counter skips Dry Runs (an inbound Live Test still counts its few lookups there).
+
+`TestController` waits for the pipeline only up to its timeout (`awaitContexts()`: the pipeline timeout plus a
+margin), then cancels it and answers `504`.
 
 ### Dispatch reuse
 
-Testing does not have its own processing pipeline — it calls the same dispatcher entry
-points used for live traffic, with a `testMapping` argument:
+A test calls the same dispatcher entry points as live traffic, with a `testMapping` argument:
 
 - Inbound: `connectorClient.getDispatcher().onTestMessage(testMessage, mapping)` →
-  `CamelDispatcherInbound.onTestMessage()` → the same `processMessage()` used by
-  `onMessage()`. The synthetic `ConnectorMessage` is built by `createTestMessage()`, using
-  `mapping.getMappingTopicSample()` as the topic.
-- Outbound: `connectorRegistry.getDispatcher(tenant, TestClient.TEST_CONNECTOR_IDENTIFIER)
-  .onTestNotification(testNotification, mapping, send)` → `CamelDispatcherOutbound
-  .onTestNotification()` → `processNotification()`. The synthetic `Notification` is built by
-  `createTestNotification()`, which constructs Notification 2.0-style headers
-  (`/{tenant}/{apiPath}`, operation `CREATE`) and parses them with `Notification.parse()`.
+  `InboundMessageDispatcher.onTestMessage()` → the same `processMessage()` used by `onMessage()` → `InboundMessageRouter`.
+  The synthetic `ConnectorMessage` is built by `createTestMessage()` from `mapping.getMappingTopicSample()`.
+- Outbound: `connectorRegistry.getDispatcher(tenant, TestClient.TEST_CONNECTOR_IDENTIFIER).onTestNotification(testNotification, mapping, send)` →
+  `OutboundMessageDispatcher.onTestNotification()` → `processNotification()` → `OutboundMessageRouter`. The synthetic
+  `Notification` is built by `createTestNotification()` (Notification 2.0-style headers, operation `CREATE`).
 
-Because both paths run the real Camel routes, a test result reflects the actual pipeline —
-including filters (`filterMapping`/`filterInventory`), identity resolution, and the
-transformation dispatch described in the two processing-pipeline docs — not a simplified
-approximation.
+Because tests run the real processor chain, a result reflects the actual pipeline — filters (`filterMapping`,
+`filterInventory`), identity resolution and the transformation — not an approximation.
 
-`TestController` waits synchronously on the returned `Future`
-(`processingResultWrapper.getProcessingResult().get()`) and takes only the first resulting
-`ProcessingContext` — a mapping that fans out to multiple devices (inbound, multiple
-`expandArray` substitutions) will log a warning that only the first result is returned to
-the UI.
+`TestController` takes only the first resulting `ProcessingContext` for `requests`, `warnings`, `logs` and `key`
+(a mapping that fans out to several devices logs a warning), but it merges the **errors of every context**, so a
+failure in a later one cannot make the test look green.
 
 ### Frontend
 
 | Component/service | File | Role |
 |---|---|---|
-| `TestingService` | [`mapping/core/testing.service.ts`](../../dynamic-mapper-ui/src/mapping/core/testing.service.ts) | Thin HTTP client: `testMapping()` POSTs to `/test/mapping`; `resetMockCache()` clears the two mock caches via `SharedService.runOperation(CLEAR_CACHE, ...)`. |
-| `MappingStepTestingComponent` | [`mapping/step-testing/mapping-testing.component.ts`](../../dynamic-mapper-ui/src/mapping/step-testing/mapping-testing.component.ts) | The mapping-editor stepper step (`d11r-mapping-testing`) that drives testing: payload editor, request/response viewers, console log panel. |
-
-Both class names match what is recorded in project memory. Confirmed against current code
-— `MappingStepTestingComponent` (not a generically-named `MappingTestingComponent`) is the
-selector `d11r-mapping-testing`.
+| `TestingService` | [`mapping/core/testing.service.ts`](../../dynamic-mapper-ui/src/mapping/core/testing.service.ts) | HTTP client: `testMapping()` POSTs to `/test/mapping`; `resetMockCache()` clears the two mock caches. |
+| `MappingStepTestingComponent` | [`mapping/step-testing/mapping-testing.component.ts`](../../dynamic-mapper-ui/src/mapping/step-testing/mapping-testing.component.ts) | The stepper step (`d11r-mapping-testing`): payload editor, request/response viewers, console panel, the buttons. |
+| Test device page | [`test-device/`](../../dynamic-mapper-ui/src/test-device/) | *Monitoring → Test device*: lists devices carrying the fragment `d11r_testDevice`, with bulk and row deletion. |
 
 Key interactions in `MappingStepTestingComponent`:
 
-- `onTestTransformation()` / `onSendTest()` both call `executeTest(sendPayload)`, which calls
-  `performTest()` (builds the `TestContext` and posts it) then `handleTestResult()`.
-- `onResetTransformation()` re-patches the source template for testing
-  (`patchC8YTemplateForTesting`), calls `resetTestingModel()`, and re-clears the mock caches.
-- `resetTestingModel()`
-  ([`mapping-testing.component.ts:240-249`](../../dynamic-mapper-ui/src/mapping/step-testing/mapping-testing.component.ts#L240-L249))
-  clears `testingModel` (`results`, `request`, `response`, `logs`) and the selected-result
-  index. **Confirmed present in current code** — this is the fix referenced in project
-  memory for the "empty payload editor" issue: without calling it after a mapping update, the
-  previous test's request/response could remain displayed against a new mapping/payload.
-- `displayTestResult(index)`
-  ([`mapping-testing.component.ts:270-298`](../../dynamic-mapper-ui/src/mapping/step-testing/mapping-testing.component.ts#L270-L298))
-  calls `sortObjectKeys()` on both `result.request` and `result.response` before handing them
-  to the JSON editors. **Confirmed present in current code** — this is the fix referenced in
-  project memory for "stale response in test results": without sorting, the tree editor can
-  appear to show a previous result's key ordering/structure until the user notices the values
-  changed.
-- A result with `createNonExistingDevice is disabled` in its warnings triggers a confirmation
-  modal offering to flip `testMapping.createNonExistingDevice = true` and re-run the test
-  automatically.
-- Errors carrying `possibleIgnoreErrorNonExisting` similarly offer to re-run with
-  `createNonExistingDevice = true`.
+- *Dry Run* and *Live Test* call `executeTest(sendPayload)` → `performTest()` (builds the `TestContext`) →
+  `handleTestResult()`. *Show Next Test Result* steps through the requests; *Reset Dry Run* re-patches the source
+  template (`patchC8YTemplateForTesting`), clears the results and the mock.
+- `handleTestResult()` looks for `createNonExistingDevice is disabled` in the result's warnings **and** errors
+  (flow/extension mappings report it as a warning, substitution mappings as an error). For a **Dry Run** with the
+  flag off it asks whether to assume, for this test, that the device exists and re-runs with the flag set. It never
+  asks for a Live Test.
+- After a successful Live Test, `describeSendResult()` builds the alert: what was created, on which device, and
+  whether the test device was created or reused.
+- `disableTestSending()` disables *Live Test* unless the mapping uses an external ID, sending is allowed for the
+  mapping, and a Dry Run has produced a result.
+- HEX/FLAT_FILE mappings send `sourceTemplate['payload']` instead of the whole JSON template
+  (`requiresRawPayload()`) and the console carries a note that whitespace/line-ending parsing may differ from a device.
 
-### Known gotchas
+### Known gotchas and limits
 
-- **Only the first result is shown** when a mapping fans out to multiple `DynamicMapperRequest`s (see above) — the backend logs a warning but the UI has no indication beyond that server log.
-- **Outbound `useExternalId` requirement**: `disableTestSending()` in the UI disables "Live Test" unless `testMapping.useExternalId` is set, since outbound test payloads have no real external ID to resolve otherwise.
-- **HEX/FLAT_FILE mappings**: `requiresRawPayload()` changes what is sent as `payload` (reads `sourceTemplate['payload']` instead of the whole JSON template) and seeds a static log line warning that whitespace/line-ending parsing may differ from a real device.
-- **Mock cache must be reset between unrelated test runs** — `ngOnInit()` and `onResetTransformation()` both call `resetMockCache()`, but a test run that fails before reaching the reset step can leave stale mock identity/inventory state for the next attempt within the same session.
+- **`Mapping.tested`** is deprecated and ignored; testing sets and reads nothing on the mapping.
+- **SparkPlug B:** an inbound Live Test of NDATA/DDATA reads the alias map of the *unprefixed* node (read-only), so
+  metrics may be decoded without alias names. A Dry Run never finds an alias map: it only sees the mock, and nothing is stored in a Dry Run.
+- **Operational metrics:** an inbound Live Test still counts its identity lookups in
+  `dynmapper_inbound_identity_requests_total`.
+- **Same tenant, two tests at once** share the tenant's mock and clear each other's.
+- **Live Test needs a Dry Run first** in the UI (it is disabled until a result exists), and it can be clicked
+  repeatedly, sending again each time.

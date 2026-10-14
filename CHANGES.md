@@ -1,5 +1,34 @@
 # Dynamic Mapper Service for Cumulocity
 
+## Release 6.5.3
+
+### Mapping testing: Dry Run and Live Test (behaviour change)
+
+The two test buttons of the mapping editor are renamed and their behaviour is tightened. Persisted data and
+REST payloads are unchanged; `TestResult` gains optional fields.
+
+- **Names.** *Transform Test Message* is now **Dry Run** (*Reset Transform* → **Reset Dry Run**), *Send Test
+  Message* is now **Live Test**. The *Create test device* checkbox is gone.
+- **An inbound Live Test always runs against a test device**, registered under the external ID
+  `d11r_liveTest_` + the external ID the mapping produces — never under the mapping's own external ID, so the
+  real device's first message later is not written to the test device. The device is created with the type and
+  fragment `d11r_testDevice` if missing and reused afterwards. `TestContext.createTestDevice` is **deprecated and
+  ignored**. A Live Test is refused for a mapping that names its device by Cumulocity ID (`_IDENTITY_.c8ySourceId`,
+  a Smart Function `sourceId`) or does not identify it by an external ID; use a Dry Run for those.
+- **An outbound Live Test** publishes to the real brokers with a mock external ID carrying the same
+  `d11r_liveTest_` prefix, so the topic cannot address a real device.
+- **A test run no longer changes the mapping's runtime state.** Before, an inbound Live Test (which uses real
+  services) and several error paths counted as real failures: error counters and the consecutive-failure streak
+  moved, and a failing test could deactivate a mapping with `maxFailureCount > 0`. Tests now leave the counters,
+  statistics, failure streak, Smart Function state, processing alarms and the inbound/outbound message metrics
+  untouched. A new `ProcessingContext.testRun` flag carries this (`affectsMappingStatus()`).
+- **Dry Run isolation.** A Dry Run no longer reads or writes the production external-ID caches, the inventory
+  cache or Notification 2.0 subscriptions, and the mock is cleared on the server before and after every run.
+- A deleted test device is re-created by the next Live Test; a stale cached ID is evicted and the send retried once.
+- A test that does not finish within the pipeline timeout is cancelled and answered with `504`.
+- `TestResult` gains `testDeviceCreated`, `testDeviceExternalId` (new, optional) and documents `key`.
+- Known limit: a Live Test of SparkPlug B NDATA/DDATA reads the alias map of the unprefixed node.
+
 ## Release 6.5.2
 
 ### Persisted data and REST payloads are unchanged

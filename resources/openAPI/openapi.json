@@ -3807,6 +3807,7 @@
           },
           "createTestDevice" : {
             "type" : "boolean",
+            "deprecated" : true,
             "description" : "Ignored. A live test (send=true) of an inbound mapping always uses a test device: created if missing (tagged with d11r_testDevice), otherwise the existing device with the same external ID."
           }
         },
@@ -4058,6 +4059,18 @@
           "testDeviceId" : {
             "type" : "string",
             "description" : "ID of the test device used by a live test (send=true) of an inbound mapping: created in C8Y inventory, or the existing device with the same external ID"
+          },
+          "testDeviceCreated" : {
+            "type" : "boolean",
+            "description" : "Whether the test device was created by this test (true) or already existed and was used as is (false). An existing device is not re-tagged d11r_testDevice. Only set when testDeviceId is set."
+          },
+          "testDeviceExternalId" : {
+            "type" : "string",
+            "description" : "External ID the test device is registered under: \"d11r_liveTest_\" + the external ID the mapping produces, so a live test never uses the external ID of the real device. Only set when testDeviceId is set."
+          },
+          "key" : {
+            "type" : "string",
+            "description" : "Broker message key produced by the transformation, e.g. the Kafka record key mapped to _CONTEXT_DATA_.key or set via transportFields.key. Null when the mapping produces no key."
           }
         },
         "required" : [ "errors", "logs", "requests", "success", "warnings" ]

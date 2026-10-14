@@ -162,6 +162,8 @@ transformation without waiting for a real device message:
   that deploy the mapping. No device is created: the identity is mocked, and the external ID in the topic carries the
   prefix `d11r_liveTest_`, so the message can never reach a real device. A test run never changes the mapping's
   statistics, error counters or failure streak, so a failing test cannot deactivate the mapping.
+  SparkPlug B: a Live Test of NDATA/DDATA messages reads the alias map of the real node, so metrics may be shown
+  without alias names; a Dry Run never finds an alias map, because it only sees mocked data.
 
 ![Live Test](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Send_TestMessage.png "A Live Test sending a transformed test message to a test device in Cumulocity.")
 
@@ -225,8 +227,9 @@ To clean up, delete a single device from its row menu, or tick several rows and 
 is ordinary inventory deletion — the device and its data are removed from the tenant.
 
 :::info
-Test devices are real devices. They count towards your tenant's device inventory, and any mapping whose topic
-filter matches will process messages for them just like any other device. Deleting them when a test round is
-finished keeps both your inventory and your monitoring statistics clean.
+Test devices are real devices. They count towards your tenant's device inventory. They are registered under
+`d11r_liveTest_` + the real device's external ID, so messages from the real device never reach them. Deleting
+them when a test round is finished keeps your inventory clean; the test itself never changes your mapping's
+statistics.
 :::
 
