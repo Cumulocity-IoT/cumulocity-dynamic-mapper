@@ -25,7 +25,7 @@ flowchart TD
         deser --> enrich["EnrichmentInboundProcessor"]
         enrich --> filter["FilterInboundProcessor"]
         filter --> ign1{"ignoreFurtherProcessing?"}
-        ign1 -- yes --> consol
+        ign1 -- yes --> consolidation
         ign1 -- no --> branch{"Branch by type"}
 
         branch -- "PROTOBUF_INTERNAL" --> pb["InternalProtobufProcessor"]
@@ -43,18 +43,18 @@ flowchart TD
         ign4 -- no --> flowres["FlowResultInboundProcessor"]
         subst --> ign5{"ignoreFurtherProcessing?"}
 
-        ign2 -- yes --> consol
-        ign3 -- yes --> consol
-        ign4 -- yes --> consol
-        ign5 -- yes --> consol
+        ign2 -- yes --> consolidation
+        ign3 -- yes --> consolidation
+        ign4 -- yes --> consolidation
+        ign5 -- yes --> consolidation
         ign3 -- no --> send
         ign5 -- no --> send
         flowres --> send["SendInboundProcessor\nresolve ids, create requests, call Cumulocity"]
-        send --> consol["ConsolidationProcessor\nbook outcome, close GraalVM context"]
+        send --> consolidation["ConsolidationProcessor\nbook outcome, close GraalVM context"]
     end
 
-    errors["Any exception in the per-mapping pipeline:\nlog, add error to context, consolidate"] -.-> consol
-    consol --> done["Return ProcessingContext to dispatcher\n422 handling and optional single resend"]
+    errors["Any exception in the per-mapping pipeline:\nlog, add error to context, consolidate"] -.-> consolidation
+    consolidation --> done["Return ProcessingContext to dispatcher\n422 handling and optional single resend"]
 ```
 
 Notes:

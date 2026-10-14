@@ -49,7 +49,7 @@ object; there is no message/exchange wrapper around it.
 | Deserialize | [`DeserializationOutboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/processor/DeserializationOutboundProcessor.java) | Builds the `ProcessingContext` from the already-parsed `C8YMessage`. |
 | Enrich | [`EnrichmentOutboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/processor/EnrichmentOutboundProcessor.java) (extends [`AbstractEnrichmentProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractEnrichmentProcessor.java)) | Extracts the source device ID, resolves the external ID, prepares the identity data for the transformation. |
 | Transform | JSONata: [`JSONataOutboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/processor/JSONataOutboundProcessor.java) + [`SubstitutionResultOutboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/processor/SubstitutionResultOutboundProcessor.java); Smart Function: [`FlowOutboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/processor/FlowOutboundProcessor.java) + [`FlowResultOutboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/processor/FlowResultOutboundProcessor.java); Java extension: [`ExtensibleOutboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/processor/ExtensibleOutboundProcessor.java) + [`ExtensibleResultOutboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/processor/ExtensibleResultOutboundProcessor.java) | Chosen per mapping by `TransformationType` (see below). Each variant ends with the target request(s) in the context. |
-| Send | [`SendOutboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/processor/SendOutboundProcessor.java) | Acknowledges OPERATIONs, routes `API.CUSTOM` requests to `C8YAgent`, publishes the rest through the connector's `publishMEAO()`. |
+| Send | [`SendOutboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/outbound/processor/SendOutboundProcessor.java) | Acknowledges operations, routes `API.CUSTOM` requests to `C8YAgent`, publishes the rest through the connector's `publishMEAO()`. |
 | Terminal step | [`ConsolidationProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/util/ConsolidationProcessor.java) | Last step of every leg: clears the mapping's failure streak on a clean leg, books the outcome (processed / filtered / failed) on the mapping status, closes the context and its GraalVM resources. The name is historical. |
 
 ### End-to-end flow
@@ -57,9 +57,9 @@ object; there is no message/exchange wrapper around it.
 ```mermaid
 flowchart TD
     N["Notification 2.0 over WebSocket"] --> D["OutboundMessageDispatcher.onNotification"]
-    D --> OPF{"CREATE or UPDATE?"}
-    OPF -- no --> DROP0["ignored"]
-    OPF -- yes --> OPU{"UPDATE of an operation?"}
+    D --> notificationFilter{"CREATE or UPDATE?"}
+    notificationFilter -- no --> DROP0["ignored"]
+    notificationFilter -- yes --> OPU{"UPDATE of an operation?"}
     OPU -- yes --> DROP0
     OPU -- no --> CONV["convert notification to C8YMessage: parse payload, extract source id"]
     CONV --> RES["resolveOutbound: active, targetAPI, filterMapping, filterInventory"]
