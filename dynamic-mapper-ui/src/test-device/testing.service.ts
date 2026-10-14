@@ -23,7 +23,6 @@ import { transform } from 'lodash-es';
 import {
   IManagedObject,
   InventoryService,
-  IResult,
   QueriesUtil
 } from '@c8y/client';
 import {
@@ -41,15 +40,10 @@ import { DeviceIdCellRendererComponent } from './grid/type-data-grid-column/devi
 import { MAPPING_TEST_DEVICE_TYPE, SharedService } from '../shared';
 
 /** Model for custom type filtering form. */
-export interface TypeFilteringModel {
-  group?: boolean;
-  device?: boolean;
-}
 
 /**
- * This is the example service for a data grid:
- * provides the list of columns, initial pagination object, actions;
- * as well as performs the query for data based on the current grid setup.
+ * Data source of the Test device page: provides the columns, the pagination and the delete actions, and queries the
+ * inventory for devices carrying the `d11r_testDevice` fragment (the ones created by a Live Test).
  */
 @Injectable({ providedIn: 'root' })
 export class TestingDeviceService {
@@ -124,7 +118,6 @@ export class TestingDeviceService {
   /** Returns an array of individual row actions. */
   getActionControls(): ActionControl[] {
     return [
-      // { type: BuiltInActionType.Delete, callback: (item) => console.dir(item) },
       {
         type: BuiltInActionType.Delete,
         callback: (item) => this.onItemDelete(item)
@@ -162,46 +155,17 @@ export class TestingDeviceService {
     return (await this.inventoryService.list(filters)).paging.totalPages;
   }
 
-  /** Returns the total number of items (with no filters). */
+  /**
+   * Returns the total number of test devices — the fixed `d11r_testDevice` filter only, without the column
+   * filters. (It used to count every managed object of the tenant, so the header read e.g. "3 of 5977".)
+   */
   async getTotal(): Promise<number> {
     const filters = {
+      ...this.getFilters([], this.getPagination()),
       pageSize: 1,
-      withTotalPages: true
+      currentPage: 1
     };
     return (await this.inventoryService.list(filters)).paging.totalPages;
-  }
-
-  /** Returns an icon and label representing the type of the managed object. */
-  getTypeIconAndLabel(mo: IManagedObject): { icon: string; label: string } {
-    let icon: string = 'question';
-    let label: string = 'Other';
-
-    if (mo['type'] === 'c8y_DeviceGroup') {
-      icon = 'c8y-group';
-      label = 'Group';
-    }
-
-    if (mo['c8y_IsDevice'] !== undefined) {
-      icon = 'exchange';
-      label = 'Device';
-    }
-
-    return { icon, label };
-  }
-
-  /** Returns a query object for given settings of filtering by type. */
-  getTypeQuery(model: TypeFilteringModel): any {
-    let query: any = {};
-
-    if (model.group) {
-      query = this.queriesUtil.addOrFilter(query, { type: 'c8y_DeviceGroup' });
-    }
-
-    if (model.device) {
-      query = this.queriesUtil.addOrFilter(query, { __has: 'c8y_IsDevice' });
-    }
-
-    return query;
   }
 
   /** Returns filters for given columns and pagination setup. */
@@ -271,25 +235,32 @@ export class TestingDeviceService {
   }
 
   async onItemDelete(m: Partial<IManagedObject>): Promise<void> {
-    const params: any = {
-      cascade: true
-    };
-    await this.inventoryService.delete(m.id, params);
-    this.refreshData$.next(true);
-    this.alert.success('Test devices are deleted!');
+    await this.deleteTestDevices([m.id as string]);
   }
 
   async onItemsDelete(ms: string[]): Promise<void> {
+    await this.deleteTestDevices(ms);
+  }
+
+  /**
+   * Deletes the devices one by one so a single failure does not hide the others, reports what actually
+   * happened (the success alert used to appear before any delete had finished), and always refreshes the grid.
+   */
+  private async deleteTestDevices(ids: string[]): Promise<void> {
     const params: any = {
       cascade: true
     };
-    const deletePromises: Promise<IResult<any>>[] = [];
-    ms.forEach(async (m) => {
-      deletePromises.push(this.inventoryService.delete(m, params));
-    });
-    Promise.all(deletePromises).then(() => {
-      this.refreshData$.next(true);
-    });
-    this.alert.success('Test devices are deleted!');
+    const results = await Promise.allSettled(ids.map((id) => this.inventoryService.delete(id, params)));
+    const failed = results.filter((r) => r.status === 'rejected');
+    this.refreshData$.next(true);
+    if (failed.length === 0) {
+      this.alert.success(ids.length === 1 ? 'Test device deleted.' : `${ids.length} test devices deleted.`);
+    } else {
+      const reason = (failed[0] as PromiseRejectedResult).reason;
+      this.alert.danger(
+        `${failed.length} of ${ids.length} test devices could not be deleted`
+          + (reason?.message ? `: ${reason.message}` : '.')
+      );
+    }
   }
 }
