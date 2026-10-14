@@ -96,13 +96,13 @@ public class DeserializationInboundProcessor extends BaseProcessor {
     }
 
     private void handleMissingProcessor(String tenant, Mapping mapping, ProcessingContext<?> context) {
-        MappingStatus mappingStatusUnspecified = mappingService
-                .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
         String errorMessage = String.format("%s - No processor for MessageType: %s registered",
                 tenant, mapping.getMappingType());
         log.error(errorMessage);
         context.addError(new ProcessingException(errorMessage));
         if (context.affectsMappingStatus()) {
+            MappingStatus mappingStatusUnspecified = mappingService
+                    .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             mappingStatus.incrementErrors();
             mappingStatusUnspecified.incrementErrors();
