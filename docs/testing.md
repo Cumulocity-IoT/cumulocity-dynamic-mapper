@@ -57,13 +57,13 @@ These tests exercise individual processor steps in isolation using Mockito mocks
 | `DeserializationInboundProcessorTest` | JSON, FlatFile, Hex deserialization; encoding variants |
 | `DeserializationInboundProcessorErrorHandlingTest` | Null payload, malformed JSON, unknown format |
 | `EnrichmentInboundProcessorTest` | Device lookup, topic-level extraction, `_IDENTITY_` resolution |
-| `FlowInboundProcessorTest` | Camel route dispatch, mapping lookup by topic |
+| `FlowInboundProcessorTest` | Inbound flow-processor dispatch, mapping lookup by topic |
 | `FlowResultInboundProcessorTest` | Result collection, error accumulation |
 | `JSONataInboundProcessorTest` | JSONata expression evaluation on source payload |
 | `SubstitutionResultInboundProcessorTest` | Substitution application to target template |
 | `DeserializationOutboundProcessorTest` | C8Y notification deserialization |
 | `EnrichmentOutboundProcessorTest` | External ID resolution, `_IDENTITY_` outbound |
-| `FlowOutboundProcessorTest` | Outbound Camel route dispatch |
+| `FlowOutboundProcessorTest` | Outbound flow-processor dispatch |
 | `FlowResultOutboundProcessorTest` | Outbound result collection |
 | `JSONataOutboundProcessorTest` | JSONata on C8Y payload, `filterMapping` evaluation |
 | `AbstractEnrichmentProcessorTest` (`processor/`) | Shared enrichment: status counters, GraalVM context acquisition, error handling |
@@ -104,13 +104,13 @@ and `MultiTenancyIsolationTest`; what a runaway function does to the *pipeline* 
 
 ### 1.4 Integration Tests — Full Pipeline (Mocked C8Y)
 
-These wire the full Apache Camel pipeline with a mocked `C8YAgent`.
+These start at the dispatcher entry point (`InboundMessageDispatcher.onMessage()` / `OutboundMessageDispatcher`) with a mocked `C8YAgent`. `InboundPipelineIntegrationTest` mocks `InboundMessageRouter` (router processing runs asynchronously on a virtual thread), so it covers the dispatcher's own behaviour; processor-chain execution is covered by the execution/transformation tests below.
 
 #### Inbound
 
 | Test Class / Method | What it verifies |
 |--------------------|-----------------|
-| `CamelPipelineInboundIntegrationTest` | |
+| `InboundPipelineIntegrationTest` | |
 | `testDispatcherOnMessage_SimpleJSON` | JSON message → measurement |
 | `testDispatcherOnMessage_FlatFile` | FlatFile message → measurement |
 | `testDispatcherOnMessage_SmartFunction` | Smart Function execution end-to-end |
@@ -148,7 +148,7 @@ These wire the full Apache Camel pipeline with a mocked `C8YAgent`.
 
 | Test Class / Method | What it verifies |
 |--------------------|-----------------|
-| `CamelPipelineOutboundIntegrationTest` | |
+| `OutboundPipelineIntegrationTest` | |
 | `testDispatcherOnNotification_MeasurementCreate` | Measurement → broker |
 | `testDispatcherOnNotification_EventCreate` | Event → broker |
 | `testDispatcherOnNotification_AlarmCreate` | Alarm → broker |
@@ -278,7 +278,7 @@ multi-tenancy isolation, connector retry, Kafka producer configuration — are a
 | SMART_FUNCTION over FLAT_FILE / HEX inbound | The coverage matrix marks these ⬜; only DEFAULT and JSONATA are exercised for those payload types |
 | SPARKPLUGB inbound via SMART_FUNCTION | Outbound is covered (`SmartFunctionOutboundTest`), inbound is not |
 | Connector unit tests for Kafka, Pulsar, AMQP 1.0, HTTP | Only MQTT 3, MQTT Service, AMQP 0.9.1, Pub/Sub and WebHook have a client-level test |
-| `CamelDispatcherInbound` / `CamelDispatcherOutbound` error paths | Resolution failure and the 422-resend path are only reached indirectly |
+| `InboundMessageDispatcher` / `OutboundMessageDispatcher` error paths | Resolution failure and the 422-resend path are only reached indirectly |
 | Outbound Smart Function + `filterInventory` | The partial-notification pitfall documented in `docs/feature/mapping-processing-outbound.md` has no regression test |
 
 ---
@@ -346,7 +346,7 @@ not regressions; treat the current count as the baseline when judging a change.
 | Create outbound mapping | `filterMapping` required, publishTopic field |
 | Import / export mappings | Upload JSON → rows appear; download → valid JSON |
 | Substitution modal | `expandArray`, `repairStrategy`, `resolveToExternalId` |
-| Test transformation / send test message | Results and error messages surfaced; test device created |
+| Dry Run / Live Test | Results and error messages surfaced; a Live Test creates (or reuses) a `d11r_liveTest_…` test device |
 | Monitoring | Processed/error counts; the "Unmapped messages" row pinned last |
 | Mapping tree / Message Explorer | Tree renders; live message list updates |
 | Service configuration | Save/load; the `pipelineTimeoutMS > maxCPUTimeMS` validation |

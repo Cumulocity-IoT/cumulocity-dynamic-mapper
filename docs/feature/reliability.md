@@ -203,7 +203,7 @@ the UI offers.
 |---|---|
 | QoS metadata (labels, per-level description, `clampQos`) | [`shared/mapping/mapping.model.ts`](../../dynamic-mapper-ui/src/shared/mapping/mapping.model.ts) |
 | QoS column in the mapping grid | [`mapping/renderer/qos.renderer.component.ts`](../../dynamic-mapper-ui/src/mapping/renderer/qos.renderer.component.ts) |
-| QoS picker in the mapping *Properties* step | [`mapping/step-property/mapping-properties.component.ts`](../../dynamic-mapper-ui/src/mapping/step-property/mapping-properties.component.ts) |
+| QoS picker in the mapping *Properties* step | [`mapping/step-property/mapping-properties.component.ts`](../../dynamic-mapper-ui/src/mapping/step-properties/mapping-properties.component.ts) |
 | Connector capability in the specification model | [`shared/connector-configuration/connector.model.ts`](../../dynamic-mapper-ui/src/shared/connector-configuration/connector.model.ts) |
 
 `QOS_OPTIONS` is the frontend counterpart of the backend enum — one entry per level with
@@ -383,7 +383,7 @@ The failure that makes `currentFailureCount >= maxFailureCount` triggers, via
    message would keep failing.
 
 The deactivation runs **asynchronously** on the virtual-thread pool: this code path is on a
-Camel processing thread, where taking the per-mapping activation lock and doing a blocking
+message-processing (virtual) thread, where taking the per-mapping activation lock and doing a blocking
 Cumulocity round-trip would stall the pipeline. A `deactivationsInFlight` guard collapses
 the burst of failures that typically arrives together — in-flight messages all failing for
 the same reason — into a single deactivation.
@@ -465,7 +465,7 @@ the end of every inbound and outbound leg. An error wins over the ignore flag, s
 then stops counts as an error, not as filtered. Test runs are skipped. Outcome accounting:
 `messagesReceived` ≈ `messagesProcessed` + `messagesFiltered` + failed legs.
 
-Counters are incremented under the instance monitor (so concurrent Camel threads cannot lose
+Counters are incremented under the instance monitor (so concurrent processing threads cannot lose
 an update) and declared `volatile` (so the reporting thread, which reads them without taking
 that monitor, sees current, non-torn values).
 
