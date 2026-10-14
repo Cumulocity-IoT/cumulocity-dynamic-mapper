@@ -21,6 +21,7 @@
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AlertService } from '@c8y/ngx-components';
+import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { of, ReplaySubject } from 'rxjs';
 import { MappingStepTestingComponent } from './mapping-testing.component';
@@ -97,7 +98,15 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
       providers: [
         { provide: TestingService, useValue: testingService },
         { provide: AlertService, useValue: alertService },
-        { provide: BsModalService, useValue: modalService }
+        { provide: BsModalService, useValue: modalService },
+        // The app's missing-translation handler returns the key with its {{placeholders}} filled; do the same.
+        {
+          provide: TranslateService,
+          useValue: {
+            instant: (key: string, params?: Record<string, unknown>) =>
+              key.replace(/\{\{\s*(\w+)\s*\}\}/g, (_m: string, name: string) => String(params?.[name] ?? ''))
+          }
+        }
       ]
     }).compileComponents();
 
@@ -346,6 +355,110 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
       expect(component.testHelpText).toContain('connected broker');
       expect(component.testHelpText).not.toContain('d11r_liveTest_');
       expect(component.liveTestTitle).toContain('broker');
+    });
+  });
+
+  describe('behaviour around the buttons', () => {
+    it('shows an explanation instead of dead buttons when neither test is permitted', () => {
+      component.stepperConfiguration.allowTestTransformation = false;
+      component.stepperConfiguration.allowTestSending = false;
+      expect(component.testingUnavailable).toBeTrue();
+
+      component.stepperConfiguration.allowTestTransformation = true;
+      expect(component.testingUnavailable).toBeFalse();
+    });
+
+    it('steps through the results, skips hidden ones and wraps around', () => {
+      component.testingModel.results = [
+        { api: 'ALARM', request: {} },
+        { api: 'ALARM', request: {}, hidden: true },
+        { api: 'ALARM', request: {} }
+      ] as DynamicMapperRequest[];
+      component.selectedResult$.next(0);
+
+      component.onNextTestResult();
+      expect(component.selectedResult$.getValue()).toBe(2); // 1 is hidden
+
+      component.onNextTestResult();
+      expect(component.selectedResult$.getValue()).toBe(0); // wrapped
+    });
+
+    it('Reset Dry Run clears the results and the mock, so the Dry Run is available again', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve({
+        ...ok, requests: [{ api: 'ALARM', request: '{}' } as DynamicMapperRequest]
+      }));
+      await component.onTestTransformation();
+      expect(component.testingModel.results.length).toBe(1);
+      testingService.resetMockCache.calls.reset();
+
+      await component.onResetTransformation();
+
+      expect(component.testingModel.results).toEqual([]);
+      expect(testingService.resetMockCache).toHaveBeenCalledTimes(1);
+    });
+
+    it('opening the step reports a failing mock reset instead of failing silently', async () => {
+      testingService.resetMockCache.and.rejectWith(new Error('no connection'));
+
+      await component.ngOnInit();
+
+      expect(alertService.danger).toHaveBeenCalledWith('Failed to clear cache: no connection');
+    });
+
+    it('a successful Live Test raises the alert that says what was created', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve({
+        success: true, errors: [], warnings: [],
+        requests: [{ api: 'ALARM', sourceId: '4711', response: '{"id":"99"}' } as DynamicMapperRequest]
+      }));
+
+      await component.onSendTest();
+
+      expect(alertService.add).toHaveBeenCalledTimes(1);
+      const alert = alertService.add.calls.mostRecent().args[0] as { text: string; type: string };
+      expect(alert.type).toBe('info');
+      expect(alert.text).toContain('created alarm 99 on device 4711');
+    });
+
+    it('a Dry Run raises no success alert', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve(ok));
+
+      await component.onTestTransformation();
+
+      expect(alertService.add).not.toHaveBeenCalled();
+    });
+
+    it('counts errors and warnings for the console header, whatever the prefix style', () => {
+      component.testingModel.logs = ['ERROR: a', 'JS ERROR: b', 'WARNING: c', 'INFO d', 'LOG e'];
+
+      expect(component.logCounts.errors).toBe(2);
+      expect(component.logCounts.warnings).toBe(1);
+    });
+  });
+
+  describe('translation', () => {
+    it('sends every user-facing message through the TranslateService, with its placeholders as parameters', () => {
+      const translate = TestBed.inject(TranslateService);
+      const instant = spyOn(translate, 'instant').and.callFake((key: string) => `<${key}>`);
+
+      const text = component.describeSendResult({
+        success: true, errors: [], warnings: [],
+        requests: [{ api: 'ALARM', sourceId: '4711', response: { id: '99' } } as DynamicMapperRequest]
+      });
+
+      expect(text).toBe('<Live test successful: created {{noun}} {{id}} on device {{deviceId}}{{externalId}}.>');
+      expect(instant).toHaveBeenCalledWith(
+        'Live test successful: created {{noun}} {{id}} on device {{deviceId}}{{externalId}}.',
+        jasmine.objectContaining({ noun: '<alarm>', id: '99', deviceId: '4711' }));
+    });
+
+    it('translates the title and text of an error alert but keeps the technical reason as is', async () => {
+      const translate = TestBed.inject(TranslateService);
+      spyOn(translate, 'instant').and.callFake((key: string) => `<${key}>`);
+      testingService.testMapping.and.rejectWith(new Error('boom'));
+
+      await component.onTestTransformation();
+
+      expect(alertService.danger).toHaveBeenCalledWith('<Test execution failed>: boom');
     });
   });
 });

@@ -30,6 +30,8 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import { AlertService, CoreModule } from '@c8y/ngx-components';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, firstValueFrom, ReplaySubject, Subject, takeUntil } from 'rxjs';
 import { Content } from 'vanilla-jsoneditor';
@@ -106,7 +108,16 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   private readonly testingService = inject(TestingService);
   private readonly alertService = inject(AlertService);
   private readonly bsModalService = inject(BsModalService);
+  private readonly translateService = inject(TranslateService);
   private readonly destroy$ = new Subject<void>();
+
+  /**
+   * Translates a message and fills its {{placeholders}}. Every key is wrapped in gettext() at the call site, so
+   * the extractor finds it; the key is the English text (the app's missing-translation handler interpolates it).
+   */
+  private t(key: string, params?: Record<string, unknown>): string {
+    return this.translateService.instant(key, params);
+  }
 
   // State
   testingModel: TestingModel = { results: [] };
@@ -130,7 +141,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     try {
       await this.testingService.resetMockCache();
     } catch (error) {
-      this.handleError('Failed to clear cache', error);
+      this.handleError(gettext('Failed to clear cache'), error);
     }
     this.setupSubscriptions();
   }
@@ -164,7 +175,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
       await this.testingService.resetMockCache();
     } catch (error) {
-      this.handleError('Failed to reset transformation', error);
+      this.handleError(gettext('Failed to reset transformation'), error);
     }
   }
 
@@ -191,20 +202,19 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   get liveTestTitle(): string {
     return this.mapping?.direction === Direction.OUTBOUND
-      ? 'Publishes the result to the connected broker'
-      : 'Sends the result to Cumulocity using a test device';
+      ? gettext('Publishes the result to the connected broker')
+      : gettext('Sends the result to Cumulocity using a test device');
   }
 
   get testHelpText(): string {
-    const needsExternalId = 'needs a mapping that uses an external id and a Dry Run result.';
+    const dryRun = this.t(gettext('Dry Run runs the mapping without writing anything to your tenant.'));
     if (this.mapping?.direction === Direction.OUTBOUND) {
-      return 'Dry Run runs the mapping without sending anything. '
-        + 'Live Test publishes the result to the connected broker and ' + needsExternalId;
+      return this.t(gettext('Dry Run runs the mapping without sending anything.'))
+        + ' ' + this.t(gettext('Live Test publishes the result to the connected broker and needs a mapping that uses an external id and a Dry Run result.'));
     }
-    return 'Dry Run runs the mapping without writing anything to your tenant. '
-      + 'Live Test sends the result to Cumulocity using a test device registered as "d11r_liveTest_" + the external id, '
-      + 'so the real device is never touched, and ' + needsExternalId
-      + ' Test devices are listed under Monitoring > Test device.';
+    return dryRun + ' '
+      + this.t(gettext('Live Test sends the result to Cumulocity using a test device registered as "d11r_liveTest_" + the external id, so the real device is never touched, and needs a mapping that uses an external id and a Dry Run result.'))
+      + ' ' + this.t(gettext('Test devices are listed under Monitoring > Test device.'));
   }
 
   disableTestSending(): boolean {
@@ -218,13 +228,13 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
    */
   get liveTestDisabledReason(): string | undefined {
     if (!this.stepperConfiguration.allowTestSending) {
-      return 'Live Test is not available for this combination of payload type and transformation type';
+      return gettext('Live Test is not available for this combination of payload type and transformation type');
     }
     if (!this.testMapping.useExternalId) {
-      return 'Live Test needs a mapping that uses an external ID';
+      return gettext('Live Test needs a mapping that uses an external ID');
     }
     if (this.testingModel.results.length === 0) {
-      return 'Run a Dry Run first; Live Test needs its result';
+      return gettext('Run a Dry Run first; Live Test needs its result');
     }
     return undefined;
   }
@@ -232,8 +242,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   /** Dry Run is disabled while a result is shown; say how to get it back. */
   get dryRunTitle(): string {
     return this.testingModel.results.length > 0
-      ? 'Use Reset Dry Run to run it again'
-      : 'Runs the mapping without writing anything to your tenant';
+      ? gettext('Use Reset Dry Run to run it again')
+      : gettext('Runs the mapping without writing anything to your tenant');
   }
 
   // ===== PRIVATE METHODS =====
@@ -275,13 +285,13 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         sortObjectKeys(this.sourceTemplate);
       }
     } catch (error) {
-      this.handleError('Failed to update test mapping', error);
+      this.handleError(gettext('Failed to update test mapping'), error);
     }
   }
 
   private resetTestingModel(): void {
     const logs: string[] = this.requiresRawPayload()
-      ? ['INFO Validate the mapping logic with real payloads. The specific parsing of whitespace and line terminators (CR/LF) may differ from the test environment, potentially altering the results.']
+      ? ['INFO ' + this.t(gettext('Validate the mapping logic with real payloads. The specific parsing of whitespace and line terminators (CR/LF) may differ from the test environment, potentially altering the results.'))]
       : [];
     this.testingModel = { results: [], request: {}, response: {}, logs };
     this.selectedResult$.next(-1);
@@ -323,7 +333,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         this.testingModel.response = sortObjectKeys(result.response);
       } else {
         this.testingModel.response = {};
-        const testModeMsg = 'INFO No response in test mode. Data operations (MEASUREMENT, EVENT, ALARM) are prepared but not executed. Use "Live Test" to get actual responses.';
+        const testModeMsg = 'INFO ' + this.t(gettext('No response in test mode. Data operations (MEASUREMENT, EVENT, ALARM) are prepared but not executed. Use "Live Test" to get actual responses.'));
         if (!this.testingModel.logs) {
           this.testingModel.logs = [];
         }
@@ -350,7 +360,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         this.displayTestResult(0);
       }
     } catch (error) {
-      this.handleError('Test execution failed', error);
+      this.handleError(gettext('Test execution failed'), error);
     } finally {
       this.isLoading = false;
       this.runningTest = undefined;
@@ -422,10 +432,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     // Already enabled: the failure has another cause and re-running with the flag set cannot fix it.
     if (deviceNotFound && !sendPayload && !assumeDeviceExists && !this.testMapping.createNonExistingDevice) {
       const confirmed = await this.showConfirmation(
-        'Device does not exist',
-        'The referenced device does not exist and createNonExistingDevice is disabled for this mapping. '
-          + 'Do you want to assume for this test that the device exists?',
-        { ok: 'Assume device exists', cancel: 'Cancel' }
+        gettext('Device does not exist'),
+        gettext('The referenced device does not exist and createNonExistingDevice is disabled for this mapping. Do you want to assume for this test that the device exists?'),
+        { ok: gettext('Assume device exists'), cancel: gettext('Cancel') }
       );
       if (confirmed) {
         await this.executeTest(sendPayload, true);
@@ -453,7 +462,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     const first = result.requests?.[0];
     const rawResponse = first?.response;
     const response = typeof rawResponse === 'string' ? this.tryParse(rawResponse) : rawResponse;
-    const createdId = response?.id;
+    const id = response?.id;
     const api = (first?.api ?? '').toUpperCase();
     const externalId = first?.externalId
       ? ` (${first.externalIdType ? first.externalIdType + ' ' : ''}${first.externalId})`
@@ -462,33 +471,51 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     let text: string;
     if (api === 'INVENTORY') {
       // The created or updated object is the device itself.
-      const deviceId = createdId ?? first?.sourceId;
+      const deviceId = id ?? first?.sourceId;
       text = deviceId
-        ? `Live test successful: device ${deviceId}${externalId} created or updated.`
-        : 'Live test successful: device created or updated.';
+        ? this.t(gettext('Live test successful: device {{deviceId}}{{externalId}} created or updated.'), { deviceId, externalId })
+        : this.t(gettext('Live test successful: device created or updated.'));
     } else {
-      const noun = api ? api.toLowerCase() : 'object';
+      const noun = this.t(this.nounOf(api));
       const deviceId = first?.sourceId;
-      const what = createdId ? `created ${noun} ${createdId}` : `created ${noun}`;
-      text = deviceId
-        ? `Live test successful: ${what} on device ${deviceId}${externalId}.`
-        : `Live test successful: ${what}.`;
+      if (id && deviceId) {
+        text = this.t(gettext('Live test successful: created {{noun}} {{id}} on device {{deviceId}}{{externalId}}.'), { noun, id, deviceId, externalId });
+      } else if (deviceId) {
+        text = this.t(gettext('Live test successful: created {{noun}} on device {{deviceId}}{{externalId}}.'), { noun, deviceId, externalId });
+      } else if (id) {
+        text = this.t(gettext('Live test successful: created {{noun}} {{id}}.'), { noun, id });
+      } else {
+        text = this.t(gettext('Live test successful: created {{noun}}.'), { noun });
+      }
     }
 
     const more = (result.requests?.length ?? 0) - 1;
     if (more > 0) {
-      text += ` ${more} more request${more === 1 ? '' : 's'} sent; see "Show Next Test Result".`;
+      text += ' ' + (more === 1
+        ? this.t(gettext('1 more request sent; see "Show Next Test Result".'))
+        : this.t(gettext('{{count}} more requests sent; see "Show Next Test Result".'), { count: more }));
     }
     if (result.testDeviceId) {
       const testIdType = first?.externalIdType ? first.externalIdType + ' ' : '';
       const testDevice = result.testDeviceExternalId
         ? `${result.testDeviceId} (${testIdType}${result.testDeviceExternalId})`
         : result.testDeviceId;
-      text += result.testDeviceCreated === false
-        ? ` Reused test device ${testDevice} from an earlier Live Test.`
-        : ` Test device ${testDevice} created; remove it under Monitoring > Test device.`;
+      text += ' ' + (result.testDeviceCreated === false
+        ? this.t(gettext('Reused test device {{testDevice}} from an earlier Live Test.'), { testDevice })
+        : this.t(gettext('Test device {{testDevice}} created; remove it under Monitoring > Test device.'), { testDevice }));
     }
     return text;
+  }
+
+  /** The (translatable) noun for the kind of object a request creates. */
+  private nounOf(api: string): string {
+    switch (api) {
+      case 'ALARM': return gettext('alarm');
+      case 'EVENT': return gettext('event');
+      case 'MEASUREMENT': return gettext('measurement');
+      case 'OPERATION': return gettext('operation');
+      default: return gettext('object');
+    }
   }
 
   private tryParse(value: string): any {
@@ -501,7 +528,8 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   private async handleError(message: string, error: unknown): Promise<void> {
     const errorMsg = this.extractErrorMessage(error);
-    this.alertService.danger(errorMsg ? `${message}: ${errorMsg}` : message);
+    const translated = this.t(message);
+    this.alertService.danger(errorMsg ? `${translated}: ${errorMsg}` : translated);
   }
 
   private showConfirmation(title: string, message: string, labels: { ok: string; cancel: string }): Promise<boolean> {
@@ -555,9 +583,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   async copyConsole(): Promise<void> {
     try {
       await navigator.clipboard.writeText((this.testingModel.logs ?? []).join('\n'));
-      this.alertService.info('Console output copied to clipboard.');
+      this.alertService.info(gettext('Console output copied to clipboard.'));
     } catch {
-      this.alertService.warning('Could not copy the console output. Select the text and copy it manually.');
+      this.alertService.warning(gettext('Could not copy the console output. Select the text and copy it manually.'));
     }
   }
 
