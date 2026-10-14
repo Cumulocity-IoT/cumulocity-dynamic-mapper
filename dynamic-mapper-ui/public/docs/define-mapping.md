@@ -147,7 +147,7 @@ transformation without waiting for a real device message:
   than one request — e.g. a measurement for a device that does not exist yet and is implicitly created also
   produces an inventory request. Use **Show Next Test Result** to step through all of them.
 
-![Dry Run](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Test_Transformation.png "The Testing step showing the result of a Dry Run.")
+![Dry Run](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_DryRun.png "The Testing step showing the result of a Dry Run.")
 - **Reset Dry Run** — clears the test results and lets you run the Dry Run again, e.g. after editing the
   source payload or a substitution.
 - **Live Test** — sends the transformed result(s) to Cumulocity for real. This requires the mapping to use an
@@ -165,7 +165,7 @@ transformation without waiting for a real device message:
   SparkPlug B: a Live Test of NDATA/DDATA messages reads the alias map of the real node, so metrics may be shown
   without alias names; a Dry Run never finds an alias map, because it only sees mocked data.
 
-![Live Test](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Send_TestMessage.png "A Live Test sending a transformed test message to a test device in Cumulocity.")
+![Live Test](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_LiveTest.png "A Live Test sending a transformed test message to a test device in Cumulocity.")
 
 ##### Testing a Smart Function and reading its console output {#testing-smart-function}
 
