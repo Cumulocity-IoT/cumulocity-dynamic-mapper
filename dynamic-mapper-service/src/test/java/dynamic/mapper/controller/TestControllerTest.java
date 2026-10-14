@@ -368,6 +368,74 @@ class TestControllerTest {
         assertEquals(null, sent.getValue().getTestExternalIdPrefix());
     }
 
+    private ProcessingContext<Object> contextFailingWithDeletedDevice() {
+        ProcessingContext<Object> failed = ProcessingContext.builder().mapping(makeInboundMapping()).build();
+        failed.addError(new dynamic.mapper.processor.ProcessingException("Could not sent payload to c8y",
+                new com.cumulocity.sdk.client.SDKException(404,
+                        "Finding device data from database failed : No managedObject for id '581685638'!")));
+        return failed;
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private ProcessingResultWrapper wrapperOf(ProcessingContext<?> context) {
+        return ProcessingResultWrapper.builder()
+                .processingResult(CompletableFuture.completedFuture(List.of((ProcessingContext) context))).build();
+    }
+
+    @Test
+    void testMapping_liveTest_staleDeletedTestDevice_evictsReEnsuresAndRetriesOnce() throws Exception {
+        stubDispatcherResult(ProcessingContext.builder().mapping(makeInboundMapping()).build());
+        // dry run (derives the external ID), live send fails on the deleted device, retry succeeds
+        when(dispatcher.onTestMessage(any(ConnectorMessage.class), any(Mapping.class))).thenReturn(
+                wrapperOf(ProcessingContext.builder().mapping(makeInboundMapping()).build()),
+                wrapperOf(contextFailingWithDeletedDevice()),
+                wrapperOf(ProcessingContext.builder().mapping(makeInboundMapping()).build()));
+        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
+                .thenReturn(new C8YAgent.TestDevice("old", false), new C8YAgent.TestDevice("new", true));
+
+        TestContext ctx = dryRunContext();
+        ctx.setSend(true);
+        TestResult result = controller.testMapping(ctx).getBody();
+
+        assertTrue(result.getSuccess(), String.valueOf(result.getErrors()));
+        assertEquals("new", result.getTestDeviceId());
+        assertEquals(Boolean.TRUE, result.getTestDeviceCreated());
+        verify(c8YAgent).evictExternalIdFromCaches(eq(TENANT), any(com.cumulocity.model.ID.class));
+        verify(c8YAgent, times(2)).ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString());
+        verify(dispatcher, times(3)).onTestMessage(any(ConnectorMessage.class), any(Mapping.class));
+    }
+
+    @Test
+    void testMapping_liveTest_staleTestDeviceThatStaysStale_givesAnActionableMessage() throws Exception {
+        stubDispatcherResult(ProcessingContext.builder().mapping(makeInboundMapping()).build());
+        when(dispatcher.onTestMessage(any(ConnectorMessage.class), any(Mapping.class))).thenReturn(
+                wrapperOf(ProcessingContext.builder().mapping(makeInboundMapping()).build()),
+                wrapperOf(contextFailingWithDeletedDevice()),
+                wrapperOf(contextFailingWithDeletedDevice()));
+        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
+                .thenReturn(new C8YAgent.TestDevice("old", false));
+
+        TestContext ctx = dryRunContext();
+        ctx.setSend(true);
+        TestResult result = controller.testMapping(ctx).getBody();
+
+        assertTrue(!result.getSuccess());
+        // retried once, not forever
+        verify(dispatcher, times(3)).onTestMessage(any(ConnectorMessage.class), any(Mapping.class));
+        assertTrue(result.getErrors().stream().anyMatch(e -> e.contains("Clear the Inbound ID cache")),
+                String.valueOf(result.getErrors()));
+    }
+
+    @Test
+    void testMapping_dryRunAndOtherErrors_neverTriggerTheStaleDeviceRecovery() throws Exception {
+        stubDispatcherResult(contextFailingWithDeletedDevice());
+
+        controller.testMapping(dryRunContext());
+
+        verify(c8YAgent, org.mockito.Mockito.never()).evictExternalIdFromCaches(anyString(), any());
+        verify(dispatcher, times(1)).onTestMessage(any(ConnectorMessage.class), any(Mapping.class));
+    }
+
     @Test
     void testMapping_executionExceptionDuringDispatch_yields500() throws Exception {
         when(connectorRegistry.getClientForTenant(TENANT, TestClient.TEST_CONNECTOR_IDENTIFIER))

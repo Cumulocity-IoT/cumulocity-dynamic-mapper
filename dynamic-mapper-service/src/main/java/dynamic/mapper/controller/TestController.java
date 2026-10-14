@@ -21,6 +21,8 @@
 
 package dynamic.mapper.controller;
 
+import com.cumulocity.sdk.client.SDKException;
+import com.cumulocity.model.ID;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -115,6 +117,8 @@ public class TestController {
         try {
             AConnectorClient connectorClient = connectorRegistry
                     .getClientForTenant(tenant, TestClient.TEST_CONNECTOR_IDENTIFIER);
+            // Set for a live test of an inbound mapping: used to recover from a stale cached device ID.
+            ID liveTestIdentity = null;
 
             // A live test (send=true) of an inbound mapping only ever runs against a test device:
             // created if the external ID is unknown, otherwise the existing device is used. It must
@@ -142,6 +146,7 @@ public class TestController {
                 // Never register the test device under the mapping's own external ID: once the real
                 // device sends its first message, that message would be written to the test device.
                 String testExternalId = ProcessingContext.TEST_EXTERNAL_ID_PREFIX + externalId;
+                liveTestIdentity = new ID(externalIdType, testExternalId);
                 C8YAgent.TestDevice testDevice = c8YAgent.ensureTestDevice(tenant, testExternalId, testExternalId,
                         externalIdType);
                 if (testDevice != null) {
@@ -180,8 +185,33 @@ public class TestController {
 
             if (processingResultWrapper != null && processingResultWrapper.getProcessingResult() != null) {
                 // Wait for the future to complete and get the result
-                var processingResult = (List<? extends ProcessingContext<?>>) processingResultWrapper
+                List<? extends ProcessingContext<?>> processingResult = (List<? extends ProcessingContext<?>>) processingResultWrapper
                         .getProcessingResult().get();
+
+                // The test device was deleted but its ID is still cached somewhere: the send fails with
+                // "No managedObject for id". Evict, re-ensure the device and retry once.
+                boolean staleTestDevice = false;
+                if (liveTestIdentity != null && containsDeviceNotFound(processingResult)) {
+                    log.warn("{} - Live test hit a deleted test device ({}), evicting the cached ID and retrying once",
+                            tenant, liveTestIdentity.getValue());
+                    c8YAgent.evictExternalIdFromCaches(tenant, liveTestIdentity);
+                    C8YAgent.TestDevice recreated = c8YAgent.ensureTestDevice(tenant, liveTestIdentity.getValue(),
+                            liveTestIdentity.getValue(), liveTestIdentity.getType());
+                    if (recreated != null) {
+                        result.setTestDeviceId(recreated.id());
+                        result.setTestDeviceCreated(recreated.created());
+                        ConnectorMessage retryMessage = createTestMessage(tenant, connectorClient,
+                                mapping.getMappingTopicSample(), send, payload);
+                        retryMessage.setTestExternalIdPrefix(ProcessingContext.TEST_EXTERNAL_ID_PREFIX);
+                        ProcessingResultWrapper<?> retryWrapper = connectorClient.getDispatcher()
+                                .onTestMessage(retryMessage, mapping);
+                        if (retryWrapper != null && retryWrapper.getProcessingResult() != null) {
+                            processingResult = (List<? extends ProcessingContext<?>>) retryWrapper
+                                    .getProcessingResult().get();
+                        }
+                    }
+                    staleTestDevice = containsDeviceNotFound(processingResult);
+                }
 
                 if (processingResult != null && !processingResult.isEmpty()) {
                     if (processingResult.size() > 1) {
@@ -205,6 +235,11 @@ public class TestController {
                                 result.getErrors().add(msg);
                             }
                         }
+                    }
+                    if (staleTestDevice) {
+                        result.getErrors().add("The test device '" + liveTestIdentity.getValue() + "' no longer "
+                                + "exists but its ID is still cached, and re-creating it did not help. Clear the "
+                                + "Inbound ID cache (Monitoring > Cache statistic) and run the Live Test again.");
                     }
                     result.setSuccess(result.getErrors().isEmpty());
                     // If filter is configured and no requests were produced, add filter warning.
@@ -257,6 +292,30 @@ public class TestController {
         result.setSuccess(false);
         result.getErrors().add(message);
         return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+
+    /** True if any context failed because a managed object (a cached, since deleted device) is gone. */
+    static boolean containsDeviceNotFound(List<? extends ProcessingContext<?>> contexts) {
+        if (contexts == null) {
+            return false;
+        }
+        for (ProcessingContext<?> processingContext : contexts) {
+            if (processingContext == null || processingContext.getErrors() == null) {
+                continue;
+            }
+            for (Exception error : processingContext.getErrors()) {
+                Throwable cause = error;
+                for (int depth = 0; cause != null && depth < 10; depth++, cause = cause.getCause()) {
+                    if (cause instanceof SDKException sdk && sdk.getHttpStatus() == 404) {
+                        return true;
+                    }
+                    if (cause.getMessage() != null && cause.getMessage().contains("No managedObject for id")) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private void clearMockCaches(String tenant) {

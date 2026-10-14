@@ -1049,6 +1049,16 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     /**
+     * Drops an external ID from the inbound external-ID cache and the implicit-device-creation cache,
+     * so the next lookup asks the platform. Used when a cached device ID is known or suspected to be
+     * stale (the managed object was deleted).
+     */
+    public void evictExternalIdFromCaches(String tenant, ID identity) {
+        cacheManager.removeDeviceFromInboundExternalIdCache(tenant, identity);
+        tenantRegistry.removeFromExternalIdCache(tenant, identity);
+    }
+
+    /**
      * Like {@link #createTestDevice} but reports whether the device was created or already existed.
      *
      * @return the device, or {@code null} on failure
@@ -1059,6 +1069,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         ID id = new ID();
         id.setType(resolvedType);
         id.setValue(externalId);
+        // A test device is deleted by hand from time to time, and nothing evicts a deleted test device
+        // from the external-ID caches (it is not subscribed for inventory updates). Never trust a cached
+        // answer here: ask the platform, and let the lookup below repopulate the caches.
+        evictExternalIdFromCaches(tenant, id);
         ExternalIDRepresentation existing = resolveExternalId2GlobalId(tenant, id, false);
         if (existing != null) {
             String existingId = existing.getManagedObject().getId().getValue();

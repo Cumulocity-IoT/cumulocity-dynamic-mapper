@@ -432,4 +432,41 @@ class MockIsolationRegressionTest {
         assertNotNull(created.getValue().get("d11r_testDevice"), "the fragment the Test Devices grid queries");
         assertEquals("d11r_liveTest_x", created.getValue().getName());
     }
+
+    @Test
+    void testEnsureTestDevice_neverTrustsAStaleCachedIdOfADeletedTestDevice() throws Exception {
+        String externalId = "d11r_liveTest_x";
+        String key = TEST_TENANT + "|c8y_Serial|" + externalId;
+        tenantRegistry.cacheExternalId(key, "581685638"); // device was deleted, the entry was not
+
+        InventoryFacade inventoryFacade = mock(InventoryFacade.class);
+        IdentityFacade identityFacade = mock(IdentityFacade.class);
+        com.cumulocity.microservice.context.ContextService<com.cumulocity.microservice.context.credentials.MicroserviceCredentials> contextService =
+                mock(com.cumulocity.microservice.context.ContextService.class);
+        when(contextService.getContext()).thenReturn(
+                new com.cumulocity.microservice.context.credentials.MicroserviceCredentials(TEST_TENANT, "u", "p", null, null, null, null));
+        when(contextService.callWithinContext(any(), any())).thenAnswer(inv -> ((Callable<?>) inv.getArgument(1)).call());
+        when(identityFacade.resolveExternalId2GlobalId(any(), eq(false), any())).thenReturn(null); // truly gone
+        when(inventoryFacade.create(any(ManagedObjectRepresentation.class), eq(false))).thenAnswer(inv -> {
+            ManagedObjectRepresentation created = inv.getArgument(0);
+            created.setId(new GId("4711"));
+            return created;
+        });
+        when(cacheManager.getInboundExternalIdCache(TEST_TENANT)).thenReturn(mock(InboundExternalIdCache.class));
+        ServiceConfiguration configuration = new ServiceConfiguration();
+        configuration.setExternalIdBinding(false);
+        tenantRegistry.addServiceConfiguration(TEST_TENANT, configuration);
+        C8YAgent agent = new C8YAgent(
+                null, inventoryFacade, identityFacade, null, null, null, null, null,
+                subscriptionsService, contextService, null, null, null,
+                new ObjectMapper(), tenantRegistry, null, cacheManager, null, null, null, null,
+                "1.0.0", 10);
+
+        C8YAgent.TestDevice device = agent.ensureTestDevice(TEST_TENANT, externalId, externalId, "c8y_Serial");
+
+        assertEquals("4711", device.id());
+        assertEquals(true, device.created(), "the stale cached id must not make a deleted device look reused");
+        assertNull(tenantRegistry.getCachedExternalId(key), "the stale cache entry must be evicted");
+        verify(cacheManager).removeDeviceFromInboundExternalIdCache(eq(TEST_TENANT), any(ID.class));
+    }
 }
