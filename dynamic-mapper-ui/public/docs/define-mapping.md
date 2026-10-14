@@ -148,6 +148,15 @@ transformation without waiting for a real device message:
   produces an inventory request. Use **Show Next Test Result** to step through all of them.
 
 ![Dry Run](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_DryRun.png "The Testing step showing the result of a Dry Run.")
+
+If the device named in the message does not exist and the mapping setting **Create device** is off, the Dry Run
+does not invent one silently. It reports that the device does not exist and asks whether to **assume for this test
+that the device exists**. Confirm to run the test again with a throwaway device in the mock; nothing is created in
+your tenant. The choice applies to that one run only: the next Dry Run asks again, and a Live Test is never offered
+this choice, because it runs against a test device (see below).
+
+![Device does not exist](../../../resources/image/Dynamic_Mapper_Mapping_Editor_DryRun_Confirm.png "The confirmation a Dry Run offers when the device does not exist and Create device is off.")
+
 - **Reset Dry Run** — clears the test results and lets you run the Dry Run again, e.g. after editing the
   source payload or a substitution.
 - **Live Test** — sends the transformed result(s) to Cumulocity for real. This requires the mapping to use an
@@ -178,7 +187,7 @@ It is collapsed by default — click the header to expand it. This is the quicke
 actually received and how far it got: print the incoming payload, an intermediate value or a device lookup result,
 run the test, and read it back.
 
-![Testing a Smart Function](../../../resources/image/Dynamic_Mapper_Mapping_Editor_Test_Transformation.png "The Testing tab: broker payload on the left, resulting Cumulocity request on the right, and the Console output panel showing the JS LOG lines written by the Smart Function.")
+![Testing a Smart Function](../../../resources/image/Dynamic_Mapper_Mapping_Editor_DryRun.png "The Testing tab: broker payload on the left, resulting Cumulocity request on the right, and the Console output panel showing the JS LOG lines written by the Smart Function.")
 
 Each line is prefixed with the level it was logged at, and colour-coded accordingly:
 

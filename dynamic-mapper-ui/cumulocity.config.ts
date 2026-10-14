@@ -138,8 +138,12 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_DryRun.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Editor_Test_Transformation.png',
-        to: 'image/Dynamic_Mapper_Mapping_Editor_Test_Transformation.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Editor_DryRun.png',
+        to: 'image/Dynamic_Mapper_Mapping_Editor_DryRun.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Editor_DryRun_Confirm.png',
+        to: 'image/Dynamic_Mapper_Mapping_Editor_DryRun_Confirm.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_LiveTest.png',
