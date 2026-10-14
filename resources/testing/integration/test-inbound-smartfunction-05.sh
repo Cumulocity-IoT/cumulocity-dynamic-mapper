@@ -18,7 +18,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="Inbound: Pattern 11: Per-device running statistics (device ID from context)"
+TEST_TITLE="19. Inbound: Pattern 11: Per-device running statistics (device ID from context)"
 
 TS=$(date +%s)
 EXT_ID_A="dmtest-sf11-a-${TS}"

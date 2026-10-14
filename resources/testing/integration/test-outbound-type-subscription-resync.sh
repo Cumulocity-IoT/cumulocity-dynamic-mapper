@@ -21,7 +21,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="Type subscription resync (backfill)"
+TEST_TITLE="38. Type subscription resync (backfill)"
 
 DEVICE_TYPE="dmtest-resync-type-$$"
 UNCONFIGURED_TYPE="dmtest-unconfigured-type-$$"

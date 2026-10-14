@@ -44,7 +44,7 @@ Counters accumulate since the last reset (or since microservice startup). Use th
 the action bar to zero all counters — useful for measuring throughput during a specific time window. Test runs
 from the mapping editor are not counted.
 
-![Statistic processed](../../../resources/image/Dynamic_Mapper_Monitoring.png "The Statistic processed (Inbound) view listing received/error counts per mapping.")
+![Statistic processed](../../../resources/image/Dynamic_Mapper_Monitoring_Statistic.png "The Statistic processed (Inbound) view listing received/error counts per mapping.")
 
 #### Chart processed
 
