@@ -61,6 +61,19 @@ caches in front of it were shared with production (see [Defects found and fixed]
    published to the real broker, so the external ID the mock hands out carries the `d11r_liveTest_`
    prefix and the topic built from it cannot match a real device.
 
+6. **A test never touches the Smart Function's state.** A Dry Run or Live Test of a Smart Function or Java
+   extension starts from an empty state and writes nothing back, so a counter, average or dedup window kept in
+   `context.setState` in production is neither read nor overwritten by testing.
+7. **A Live Test only ever uses its test device.** A mapping that names a device by its Cumulocity ID
+   (`_IDENTITY_.c8ySourceId`, or a Smart Function emitting `sourceId`) cannot be live-tested: the test is
+   refused with an explanation instead of writing to that real device. The same applies to a mapping that does
+   not identify its device by an external ID at all.
+8. **A test raises no alarms and no operational metrics.** Processing-issue alarms are not created for a test
+   run, and the inbound/outbound message counters and timers do not count test traffic. (An inbound Live Test
+   still counts its handful of identity lookups in the identity-request counter.)
+9. **A test cannot hang the request.** A test that does not finish within the pipeline timeout is cancelled and
+   answered with a timeout error.
+
 **Non-goals.** Dry runs do not simulate a *populated* tenant; a user who wants a device to exist
 seeds it (or lets the test create it). Mock behaviour is not required to match every nuance of the
 real Cumulocity API.

@@ -126,6 +126,12 @@ Every message from the test panel carries `ConnectorMessage.testRun = true`, whi
 place that updates the mapping's counters, statistics or failure streak. `testing` alone is not enough: it only
 means "use the mock services" and is off for an inbound Live Test.
 
+The same switch keeps a test run away from the other shared, per-mapping state: the Smart Function state store
+(`FlowStateStore`) is not read or written, no processing alarms are raised, and looking the mapping status up is
+skipped because that would create an entry for a mapping that may not be saved yet. A Live Test of a mapping that
+names its device by Cumulocity ID is refused (`ProcessingContext.LIVE_TEST_C8Y_ID_ERROR`), and the controller waits
+for the pipeline only up to its timeout (`TestController.awaitContexts`) before cancelling it.
+
 ### Dispatch reuse
 
 Testing does not have its own processing pipeline — it calls the same dispatcher entry
