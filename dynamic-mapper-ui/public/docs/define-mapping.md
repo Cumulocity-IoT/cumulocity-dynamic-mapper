@@ -202,6 +202,10 @@ or otherwise sensitive data once it is running in production.
 
 #### Managing test devices {#test-devices}
 
+You can delete a test device at any time. The next **Live Test** looks it up fresh, so it creates a new one; if a
+send still fails because the deleted device's ID was cached, the Live Test evicts it, re-creates the device and
+retries once. Only if that fails too does it ask you to clear the **Inbound ID cache** (Monitoring → Cache statistic).
+
 Every time a **Live Test** needs a new device, the mapper creates a real managed
 object in inventory tagged with the fragment `d11r_testDevice`. Over a few testing sessions these accumulate, so
 the mapper keeps them in one place: **Monitoring → Test device**.
