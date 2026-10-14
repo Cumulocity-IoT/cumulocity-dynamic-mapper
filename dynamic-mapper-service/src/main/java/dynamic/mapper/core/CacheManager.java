@@ -21,11 +21,9 @@
 
 package dynamic.mapper.core;
 
-import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -54,23 +52,18 @@ public class CacheManager {
         this.notificationSubscriber = notificationSubscriber;
     }
 
-    // Entries of the inbound/outbound external-ID caches expire after this long, bounding staleness
-    // for changes Notification 2.0 cannot report (external IDs moved/removed on a living device).
-    @Value("${APP.externalIdCacheTtl:PT1H}")
-    private Duration externalIdCacheTtl = Duration.ofHours(1);
-
     private Map<String, InboundExternalIdCache> inboundExternalIdCaches = new ConcurrentHashMap<>();
     private Map<String, OutboundExternalIdCache> outboundExternalIdCaches = new ConcurrentHashMap<>();
     private Map<String, InventoryCache> inventoryCaches = new ConcurrentHashMap<>();
 
     public void initializeInboundExternalIdCache(String tenant, int inboundExternalIdCacheSize) {
         log.info("{} - Initialize inboundExternalIdCache {}", tenant, inboundExternalIdCacheSize);
-        inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant, externalIdCacheTtl));
+        inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
     }
 
     public void initializeOutboundExternalIdCache(String tenant, int outboundExternalIdCacheSize) {
         log.info("{} - Initialize outboundExternalIdCache {}", tenant, outboundExternalIdCacheSize);
-        outboundExternalIdCaches.put(tenant, new OutboundExternalIdCache(outboundExternalIdCacheSize, tenant, externalIdCacheTtl));
+        outboundExternalIdCaches.put(tenant, new OutboundExternalIdCache(outboundExternalIdCacheSize, tenant));
     }
 
     public void initializeInventoryCache(String tenant, int inventoryCacheSize) {
@@ -139,7 +132,7 @@ public class CacheManager {
                 // meter bound to the discarded map.
                 inboundExternalIdCaches.remove(tenant);
                 inboundExternalIdCache.close();
-                inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant, externalIdCacheTtl));
+                inboundExternalIdCaches.put(tenant, new InboundExternalIdCache(inboundExternalIdCacheSize, tenant));
             } else {
                 inboundExternalIdCache.clearCache();
             }
@@ -202,7 +195,7 @@ public class CacheManager {
                 // meter bound to the discarded map.
                 outboundExternalIdCaches.remove(tenant);
                 outboundExternalIdCache.close();
-                outboundExternalIdCaches.put(tenant, new OutboundExternalIdCache(outboundExternalIdCacheSize, tenant, externalIdCacheTtl));
+                outboundExternalIdCaches.put(tenant, new OutboundExternalIdCache(outboundExternalIdCacheSize, tenant));
             } else {
                 outboundExternalIdCache.clearCache();
             }

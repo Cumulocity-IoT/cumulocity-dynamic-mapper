@@ -1,6 +1,6 @@
 {
   "name": "dynamic-mapper",
-  "version": "6.5.3",
+  "version": "6.5.4",
   "engines": {
     "node": "^22.13.0",
     "npm": ">=10"
