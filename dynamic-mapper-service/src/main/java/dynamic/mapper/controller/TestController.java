@@ -195,8 +195,18 @@ public class TestController {
 
                 // The test device was deleted but its ID is still cached somewhere: the send fails with
                 // "No managedObject for id". Evict, re-ensure the device and retry once.
+                // Siblings of the failed request may already have been created (the pipeline continues after
+                // a failure), so a retry would duplicate them: only retry if nothing was sent successfully.
                 boolean staleTestDevice = false;
-                if (liveTestIdentity != null && containsDeviceNotFound(processingResult)) {
+                boolean retrySkipped = false;
+                boolean deviceNotFound = liveTestIdentity != null && containsDeviceNotFound(processingResult);
+                if (deviceNotFound && anyRequestSucceeded(processingResult)) {
+                    log.warn("{} - Live test hit a deleted test device ({}), but other requests already succeeded: "
+                            + "not retrying to avoid duplicates", tenant, liveTestIdentity.getValue());
+                    c8YAgent.evictExternalIdFromCaches(tenant, liveTestIdentity);
+                    retrySkipped = true;
+                    staleTestDevice = true;
+                } else if (deviceNotFound) {
                     log.warn("{} - Live test hit a deleted test device ({}), evicting the cached ID and retrying once",
                             tenant, liveTestIdentity.getValue());
                     c8YAgent.evictExternalIdFromCaches(tenant, liveTestIdentity);
@@ -242,8 +252,12 @@ public class TestController {
                     }
                     if (staleTestDevice) {
                         result.getErrors().add("The test device '" + liveTestIdentity.getValue() + "' no longer "
-                                + "exists but its ID is still cached, and re-creating it did not help. Clear the "
-                                + "Inbound ID cache (Monitoring > Cache statistic) and run the Live Test again.");
+                                + "exists but its ID is still cached, and "
+                                + (retrySkipped
+                                        ? "some requests already succeeded, so the test was not retried automatically (the cached ID was evicted). "
+                                        : "re-creating it did not help. ")
+                                + (retrySkipped ? "Run the Live Test again."
+                                        : "Clear the Inbound ID cache (Monitoring > Cache statistic) and run the Live Test again."));
                     }
                     result.setSuccess(result.getErrors().isEmpty());
                     // If filter is configured and no requests were produced, add filter warning.
@@ -326,6 +340,24 @@ public class TestController {
         result.setSuccess(false);
         result.getErrors().add(message);
         return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+
+    /** True if any request was sent without error, i.e. re-dispatching the payload would send it twice. */
+    static boolean anyRequestSucceeded(List<? extends ProcessingContext<?>> contexts) {
+        if (contexts == null) {
+            return false;
+        }
+        for (ProcessingContext<?> processingContext : contexts) {
+            if (processingContext == null || processingContext.getRequests() == null) {
+                continue;
+            }
+            for (var request : processingContext.getRequests()) {
+                if (request != null && !request.hasError()) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** True if any context failed because a managed object (a cached, since deleted device) is gone. */

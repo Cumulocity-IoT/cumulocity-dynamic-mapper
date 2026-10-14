@@ -1002,6 +1002,26 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 && e.getMessage().contains("Cannot add externalIds through Inventory API");
     }
 
+    /** Another creator bound the external ID first (HTTP 409); resolve the winner once the semaphore is released. */
+    private static final class ExternalIdConflictException extends RuntimeException {
+        ExternalIdConflictException(SDKException cause) {
+            super(cause);
+        }
+
+        SDKException sdkException() {
+            return (SDKException) getCause();
+        }
+    }
+
+    private static boolean isExternalIdDuplicate(SDKException e) {
+        return e.getHttpStatus() == 409;
+    }
+
+    /**
+     * Must be called holding {@code c8ySemaphore}. Throws {@link ExternalIdConflictException} on a lost
+     * race; the caller resolves the winner via {@link #resolveExistingDevice} after releasing the semaphore
+     * (the lookup acquires it again).
+     */
     private ManagedObjectRepresentation createWithExternalIdBinding(
             ManagedObjectRepresentation mor, ID identity, Boolean testing, boolean supportsExternalIdBinding) {
         if (Boolean.TRUE.equals(testing)) {
@@ -1020,15 +1040,48 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             mor.setProperty("externalIds",
                     List.of(Map.of("type", idType, "externalId", identity.getValue())));
             log.debug("Creating MO with atomic externalIds binding");
-            return inventoryApi.create(mor, false);
+            try {
+                return inventoryApi.create(mor, false);
+            } catch (SDKException e) {
+                if (isExternalIdDuplicate(e)) {
+                    throw new ExternalIdConflictException(e);
+                }
+                throw e;
+            }
         }
 
         // Legacy path (platforms < May 2026, e.g. Cumulocity Edge): create MO first,
         // then bind the external ID via a separate Identity API call.
         log.debug("Creating MO + external ID binding via two separate calls (legacy platform path)");
         ManagedObjectRepresentation created = inventoryApi.create(mor, false);
-        identityApi.create(created, identity, false);
+        try {
+            identityApi.create(created, identity, false);
+        } catch (SDKException e) {
+            if (!isExternalIdDuplicate(e)) {
+                throw e;
+            }
+            // Lost a race: drop our unbound MO (otherwise it stays behind as a device without external ID).
+            try {
+                inventoryApi.delete(created.getId(), false);
+            } catch (Exception de) {
+                log.warn("Could not remove orphaned device {}", created.getId().getValue(), de);
+            }
+            throw new ExternalIdConflictException(e);
+        }
         return created;
+    }
+
+    /** Looks up the device that won the external-ID race; rethrows the original 409 if it cannot be found. */
+    private ManagedObjectRepresentation resolveExistingDevice(String tenant, ID identity,
+            ExternalIdConflictException conflict) {
+        evictExternalIdFromCaches(tenant, identity);
+        ExternalIDRepresentation existing = resolveExternalId2GlobalId(tenant, identity, false);
+        if (existing == null) {
+            throw conflict.sdkException();
+        }
+        log.warn("{} - External ID {} was bound concurrently, using existing device {}", tenant,
+                identity.getValue(), existing.getManagedObject().getId().getValue());
+        return existing.getManagedObject();
     }
 
     /**
@@ -1096,6 +1149,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 // is recognisable as a test device in the inventory as well.
                 mor.setType(MAPPING_TEST_DEVICE_TYPE);
                 mor.set(new HashMap<String, String>(), MAPPING_TEST_DEVICE_TYPE);
+                ExternalIdConflictException conflict;
                 try {
                     c8ySemaphore.acquire();
                     mor = createWithExternalIdBinding(mor, id, false, supportsExternalIdBinding);
@@ -1105,9 +1159,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     log.error("{} - Failed to acquire semaphore for creating test device", tenant, e);
                     Thread.currentThread().interrupt();
                     return null;
+                } catch (ExternalIdConflictException e) {
+                    conflict = e;
                 } finally {
                     c8ySemaphore.release();
                 }
+                // Semaphore released: the lookup acquires it again.
+                return new TestDevice(resolveExistingDevice(tenant, id, conflict).getId().getValue(), false);
             });
         });
     }
@@ -1153,6 +1211,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             // when creating a mock inventory object for testing set a predefined source id
                             mor.setId(new GId(context.getSourceId()));
                         }
+                        ExternalIdConflictException conflict = null;
                         try {
                             c8ySemaphore.acquire();
                             mor = createWithExternalIdBinding(mor, identity, testing,
@@ -1164,8 +1223,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                 log.info("{} - New device created with Id {}", tenant, mor.getId().getValue());
                         } catch (InterruptedException e) {
                             log.error("{} - Failed to acquire semaphore for creating Device", tenant, e);
+                        } catch (ExternalIdConflictException e) {
+                            conflict = e;
                         } finally {
                             c8ySemaphore.release();
+                        }
+                        if (conflict != null) {
+                            // Semaphore released: the lookup acquires it again.
+                            mor = resolveExistingDevice(tenant, identity, conflict);
                         }
                     } else {
                         // Device exists - update needed
