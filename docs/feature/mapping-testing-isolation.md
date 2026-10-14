@@ -5,8 +5,8 @@ inventory services instead of the tenant's real ones. This page is the contract 
 worlds apart: nothing a dry run does may be visible to live processing, nothing live may change what
 a dry run reports, and one dry run may not influence the next.
 
-It exists because the separation was found to be incomplete: the mock itself is isolated, but the
-caches in front of it are shared with production (see [Known defects](#known-defects-found-by-review)).
+It exists because the separation was found to be incomplete: the mock itself was isolated, but the
+caches in front of it were shared with production (see [Defects found and fixed](#defects-found-and-fixed)).
 
 ---
 
@@ -20,8 +20,13 @@ caches in front of it are shared with production (see [Known defects](#known-def
    - A dry run leaves live processing untouched: no entry is added to, changed in, or evicted from
      any production cache; no real subscription (Notification 2.0) is opened; no real object is
      read or written.
-   - Identifiers produced by the mock can never be mistaken for real ones. A mock device ID must
-     not be able to collide with, or be served in place of, a real managed object ID.
+   - A device the mock does not know is reported as not found. The test never invents a device on
+     the user's behalf: with `createNonExistingDevice = false` the result carries the
+     `createNonExistingDevice is disabled` marker (as a warning or an error), and the UI offers to
+     re-run *assuming the device exists*. Only the user's confirmation switches the test to
+     `createNonExistingDevice = true`.
+   - Mock IDs cannot be mistaken for real ones because no live cache is consulted or written in test
+     mode, so an ID collision has no effect.
    - The isolation holds for inbound and outbound tests alike, and for every transformation type.
    - Isolation applies to `send = false` only where the mock is in use. A `send = true` inbound test
      deliberately uses the real services (see [`mapping-testing.md`](mapping-testing.md)) and is
@@ -30,18 +35,44 @@ caches in front of it are shared with production (see [Known defects](#known-def
 2. **Clear caches between runs.**
    - Each test run starts from an empty mock: devices implicitly created by an earlier run
      (`createNonExistingDevice = true`) are not found by a later run.
-   - The reset happens on the server side as part of running a test. It does not depend on the UI
-     remembering to call it, and a run that failed or was abandoned part-way does not leave state
-     behind for the next one.
+   - The reset happens on the server side, before **and** after every run, including a failed one.
+     It does not depend on the UI remembering to call it.
    - Clearing the mock never touches production caches, and clearing production caches never
      touches the mock.
    - Concurrent tests by different tenants do not see each other's mock state.
+   - Accepted limitation: two simultaneous tests for the *same* tenant clear each other's mock.
 
-3. **Open — requirement not yet specified.** The request listed a third requirement without
-   stating it. Candidates raised by the review, to be confirmed or replaced:
-   - a regression suite pinning requirements 1 and 2, so the separation cannot silently regress;
-   - a visible indicator in the test result when the outcome came from the mock, so a user can tell
-     "not found in the mock" from "not found in the tenant".
+3. **A Live Test never touches the real device.**
+   - A live test (`send = true`) of an inbound mapping registers its test device under the external ID
+     `d11r_liveTest_` + the external ID the mapping produces, and every lookup, implicit creation and request of
+     that message uses the prefixed ID. The real device's external ID is never resolved, so a message
+     is never written to the real device, and — the reason for the prefix — the real device's first
+     message later is never written to the test device.
+   - The prefix is applied wherever the mapping's external ID enters the pipeline: JSONata substitutions,
+     Smart Function / extension results, and the SparkPlug B NBIRTH/DBIRTH paths.
+   - Known gap: the SparkPlug B deserializer still reads the alias map of the *unprefixed* node during
+     a live test (read-only), so a live test of NDATA/DDATA metrics may be decoded without alias names.
+
+4. **A test never changes the mapping's runtime status.** Neither a Dry Run nor a Live Test updates the
+   message and error counters, the processing statistics, or the consecutive-failure streak — and so a
+   failing test can never auto-deactivate the mapping. This holds for the inbound Live Test as well, which
+   uses real services and therefore cannot be recognised by the mock flag alone.
+5. **An outbound Live Test never addresses a real device.** The identity is mocked, but the result is
+   published to the real broker, so the external ID the mock hands out carries the `d11r_liveTest_`
+   prefix and the topic built from it cannot match a real device.
+
+6. **A test never touches the Smart Function's state.** A Dry Run or Live Test of a Smart Function or Java
+   extension starts from an empty state and writes nothing back, so a counter, average or dedup window kept in
+   `context.setState` in production is neither read nor overwritten by testing.
+7. **A Live Test only ever uses its test device.** A mapping that names a device by its Cumulocity ID
+   (`_IDENTITY_.c8ySourceId`, or a Smart Function emitting `sourceId`) cannot be live-tested: the test is
+   refused with an explanation instead of writing to that real device. The same applies to a mapping that does
+   not identify its device by an external ID at all.
+8. **A test raises no alarms and no operational metrics.** Processing-issue alarms are not created for a test
+   run, and the inbound/outbound message counters and timers do not count test traffic. (An inbound Live Test
+   still counts its handful of identity lookups in the identity-request counter.)
+9. **A test cannot hang the request.** A test that does not finish within the pipeline timeout is cancelled and
+   answered with a timeout error.
 
 **Non-goals.** Dry runs do not simulate a *populated* tenant; a user who wants a device to exist
 seeds it (or lets the test create it). Mock behaviour is not required to match every nuance of the
@@ -66,55 +97,64 @@ from `10000` per tenant ([`MockInventory.java:91`](../../dynamic-mapper-service/
 The mock layer is isolated. The defects are in the **caches that sit in front of it**, which are
 shared with production and are not keyed by `testing`.
 
-### Known defects (found by review)
+### Defects found and fixed
 
-| # | Where | Defect | Direction |
-|---|---|---|---|
-| D1 | [`C8YAgent.resolveExternalId2GlobalId`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/C8YAgent.java#L215-L246) | Reads the production `InboundExternalIdCache` **before** consulting `testing`; only the *write* is guarded with `if (!testing)`. A real device in that cache is returned to a dry run. | live → test |
-| D2 | [`IdentityResolutionService.getOrCreateDeviceThreadSafe`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/IdentityResolutionService.java#L69) | Reads `tenantRegistry.getCachedExternalId` before checking `context.isTesting()`; only writes are guarded. | live → test |
-| D3 | [`InventoryCacheEnrichmentService.getMOFromInventoryCache`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/InventoryCacheEnrichmentService.java#L111-L153) and `updateMOInInventoryCache` | Reads and writes the shared per-tenant `InventoryCache` keyed by `sourceId` regardless of `testing`. After D1 returns a real ID, the mock misses it and an **empty map is stored under the real ID**, which makes `filterInventory` evaluate false for the live device. Mock MOs (ID `10000+`) are likewise stored under IDs a real device can own. | both |
-| D4 | same methods | On a mock miss, calls `tenantRegistry.removeFromExternalIdCacheByInternalId(tenant, sourceId)`, evicting a **real** external-ID cache entry. | test → live |
-| D5 | same method | Calls `notificationSubscriber.subscribeMOForInventoryCacheUpdates` for the (possibly mock) ID — a real Notification 2.0 subscription opened by a dry run. | test → live |
-| D6 | `MockIdentity` / `MockInventory` | State persists across runs; it is cleared only by the `MOCK_IDENTITY_CACHE` / `MOCK_INVENTORY_CACHE` `CLEAR_CACHE` operations, which the UI triggers. Server-side, nothing resets it per run. | test → test |
-| D7 | [`IdentityFacade.resolveGlobalId2ExternalId`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/facade/IdentityFacade.java) | Uses `!testing` on a `Boolean`; `null` throws, while every sibling method treats `null` as production. | consistency |
+All of these are fixed on branch `fix/properIDHandling`. Each one let live state into a dry run, or a
+dry run's state into live processing, because a cache sat in front of the mock and was not keyed by
+`testing`.
 
-Also worth checking, not confirmed as defects: `C8YAgent.java:1032` and
-`SparkPlugBDeserializer.java:273` call `resolveExternalId2GlobalId(..., false)` explicitly.
+| # | Where | Defect | Direction | Fix |
+|---|---|---|---|---|
+| D1 | `C8YAgent.resolveExternalId2GlobalId` | Read the production `InboundExternalIdCache` before consulting `testing`; only the write was guarded. | live → test | Cache is neither read nor written when `testing`. |
+| D2 | `IdentityResolutionService.getOrCreateDeviceThreadSafe` | Read the `TenantRegistry` external-ID cache before checking `context.isTesting()`. | live → test | Reads skipped when testing. |
+| D3 | `InventoryCacheEnrichmentService` | Read and wrote the shared `InventoryCache` by `sourceId`. A mock miss stored an empty map under a real device's ID, so `filterInventory` evaluated false for the live device. | both | No read or write of the live `InventoryCache` when testing. |
+| D4 | same | A mock miss evicted a real external-ID cache entry. | test → live | Eviction only in production. |
+| D5 | same | Opened a real Notification 2.0 subscription for the (possibly mock) ID. | test → live | Subscribe only in production. |
+| D6 | `MockIdentity` / `MockInventory` | State persisted across runs; only the UI cleared it. | test → test | `TestController` clears both mocks for the tenant before and after every run. |
+| D7 | `IdentityFacade.resolveGlobalId2ExternalId` | `!testing` on a `Boolean` threw on `null`. | consistency | `Boolean.TRUE.equals(testing)`. |
+| D8 | `C8YAgent.resolveGlobalId2ExternalId` | Same read-before-check pattern on the `OutboundExternalIdCache`. | live → test | Cache bypassed when testing. |
+| D9 | `SparkPlugBDeserializer.loadAliasMap` | Hard-coded `resolveExternalId2GlobalId(..., false)` and read the live `InventoryCache`; the method had no testing flag. | live → test | `testing` is passed through a new `PayloadDeserializer.deserializePayload(mapping, message, testing)` overload; the dry run resolves and fetches through the mock. |
+| D10 | `addOrUpdateClientRelation` (client-relation cache) | Updated by dry runs. | test → live | Skipped when testing. |
 
-### Proposed design
+**Consequence for SparkPlug.** A dry run of NDATA/NCMD/DDATA/DCMD only finds an alias map if the mock
+holds one. Without it the metrics are decoded but not alias-resolved. Before the fix the test
+silently used a real device's alias map.
 
-**R1 — isolate.**
-- When `testing` is true, bypass every production cache on both read and write: the
-  `InboundExternalIdCache` in `C8YAgent`, the `TenantRegistry` external-ID cache in
-  `IdentityResolutionService`, and the `InventoryCache` plus `removeFromExternalIdCacheByInternalId`
-  and the notification subscription in `InventoryCacheEnrichmentService`.
-- Do not add a second cache for tests unless profiling shows the mock is too slow; the mock is
-  already an in-memory map, so a cache in front of it buys nothing.
-- Make the decision once, at the facade/service boundary, rather than guarding each call site —
-  the current bug is exactly the result of guarding writes in some places and forgetting reads.
-- Normalise `testing` to a primitive (`Boolean.TRUE.equals(...)`) in one helper to remove D7.
+**Not changed, deliberately.** The test-device lookup in `C8YAgent.ensureTestDevice` resolves with
+`testing=false`: it belongs to the inbound Live Test, which uses real services by design. It evicts the
+external ID from the caches first, so it never trusts a cached answer. (`createTestDevice` is a deprecated
+wrapper around it.)
 
-**R2 — clear between runs.**
-- Clear both mocks for the tenant at the start of `TestController.testMapping()` for dry runs,
-  instead of relying on `TestingService.resetMockCache()`. Keep the UI call (cheap, harmless) but
-  do not depend on it.
-- `MockIdentity.clear()` and `MockInventory.clear()` are already per-tenant
-  (`subscriptionsService.getTenant()`); verify that `clearAll()` is not what the endpoint calls.
-- Two tests for the same tenant running concurrently would clear each other's mock. If that is a
-  real use, scope the mock by test-run ID instead of clearing by tenant; otherwise serialise
-  tests per tenant. Decide before implementing.
+### Where the guard lives
 
-### Verification
+The rule is "when `testing`, no production cache is read, written, evicted or subscribed to". It is
+applied at each cache access, not once at a boundary, so a new cache added in front of a facade must
+repeat it. The regression tests below are the safety net for that.
 
-A regression test should, for each of inbound and outbound:
+### Tests
 
-1. Warm the real caches with device X (external-ID cache, inventory cache).
-2. Run a dry run with `createNonExistingDevice = false` for X; assert "not found" and the
-   `createNonExistingDevice is disabled` warning.
-3. Assert the real caches are byte-for-byte unchanged and no subscription was opened.
-4. Run a dry run with `createNonExistingDevice = true`, then another with `false`; assert the
-   second does not find the device the first created.
+| Test | Pins |
+|---|---|
+| `MockIsolationRegressionTest` | D1, D2, D7, D8, per-tenant clear, and an end-to-end dry run with every live cache warmed: the answer comes from the mock, every live cache is identical afterwards, and no subscription is opened. A production-mode control proves the caches were warm. |
+| `InventoryCacheEnrichmentServiceTest` | D3–D5 |
+| `SparkplugBDeserializerTest` | D9: a dry run never resolves live, never touches the live cache, and fetches from the mock; production is unchanged |
+| `TestControllerTest` | Clear before and after a run, after a failed run, and that a failing cleanup does not mask the result |
+| `SubstitutionResultInboundProcessorTest` | A dry run with an unknown device and `createNonExistingDevice = false` fails with the marker instead of inventing an ID |
+| `mapping-testing.component.spec.ts` (UI) | A Dry Run opens the dialog for the marker as a warning and as an error and re-runs with `createNonExistingDevice = true` on confirm; a Live Test never opens it; the dialog does nothing on cancel, without the marker, or when the flag is already on |
+| `ProcessingContextLiveTestIdTest`, `ConsolidationProcessorTestRunTest`, `OutboundTestRunAccountingTest`, `DeserializationInboundProcessorErrorHandlingTest` | A test run (Dry Run or inbound Live Test) never counts toward the mapping status; a real run does |
+| `CommonProcessorLiveTestIdTest` | An outbound live test registers the mock device under the prefixed external ID; a dry run keeps it unchanged |
+| `TestRunGuardCoverageTest` | Architecture check: every `increaseAndHandleFailureCount` and `resetFailureCountOnSuccess` call site under `processor/` carries an `affectsMappingStatus()` guard, so a new call site that forgets it fails the build |
+| `SubstitutionResultInboundProcessorTest`, `FlowResultInboundProcessorTest` | A Live Test is refused for a device named by Cumulocity ID; production still accepts it |
+| `InboundPipelineIntegrationTest`, `OutboundPipelineIntegrationTest` | Test traffic does not move the message counters while regular traffic does; an outbound Live Test routes with the prefix, a Dry Run without |
+| `TestControllerTest` (live test) | A live test always provides a test device (created or reused), ignores the deprecated flag, fails without sending when none can be provided, and a Dry Run never touches test devices |
 
-Existing test scaffolding to build on:
-[`InventoryCacheEnrichmentServiceTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/core/InventoryCacheEnrichmentServiceTest.java),
-[`TenantRegistryIsolationTest`](../../dynamic-mapper-service/src/test/java/dynamic/mapper/core/TenantRegistryIsolationTest.java).
+Removing the guards in `C8YAgent` or the `finally` clear makes five of these fail.
+
+### UI
+
+`MappingStepTestingComponent.handleTestResult()` looks for the `createNonExistingDevice is disabled`
+marker in the result's warnings **and** errors — flow and extension mappings report it as a warning,
+substitution mappings as an error — and asks whether to assume, for this test, that the device
+exists. Confirming re-runs with a per-run mapping copy whose `createNonExistingDevice` is `true`; it does not modify `testMapping`.
+
+The dialog is a **Dry Run** feature: it offers to *assume the device exists* (the mock creates a throwaway device). A **Live Test** never offers it, because it always runs against a test device and confirming would create a real, untagged device through `createNonExistingDevice`.

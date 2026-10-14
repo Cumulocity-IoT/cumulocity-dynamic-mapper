@@ -103,7 +103,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 context.addError(new ProcessingException(errorMessage, e));
             }
 
-            if (!testing) {
+            if (context.affectsMappingStatus()) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 mappingStatus.incrementErrors();
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
@@ -158,7 +158,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
     }
 
     private void prepareAndSubstituteInPayload(ProcessingContext<Object> context, DocumentContext payloadTarget,
-            String pathTarget, SubstituteValue substitute) {
+            String pathTarget, SubstituteValue substitute) throws ProcessingException {
         Mapping mapping = context.getMapping();
         String tenant = context.getTenant();
 
@@ -166,10 +166,11 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
             if (substitute.getValue() == null) {
                 throw new IllegalArgumentException("External ID substitution produced null value");
             }
-            String externalId = substitute.getValue().toString();
+            // In a live test the external ID is prefixed so the test device is never the real one.
+            String externalId = context.liveTestId(substitute.getValue().toString());
             context.setExternalId(externalId);
             ID identity = new ID(mapping.getExternalIdType(), externalId);
-            SubstituteValue sourceId = new SubstituteValue(substitute.getValue(),
+            SubstituteValue sourceId = new SubstituteValue(null,
                     TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
             if (!context.getApi().equals(API.INVENTORY)) {
                 var resolvedSourceId = c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());
@@ -184,7 +185,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                                     context);
                             sourceId.setValue(createdOrResolvedId);
                         } catch (Exception e) {
-                            throw new IllegalStateException(
+                            throw new ProcessingException(
                                     String.format("Failed to resolve/create implicit device for externalId '%s' (type '%s')",
                                             externalId, identity.getType()),
                                     e);
@@ -195,9 +196,15 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 }
 
                 if (sourceId.getValue() == null) {
-                    throw new IllegalStateException(
-                            String.format("Device resolution failed for externalId '%s' (type '%s')",
-                                    externalId, identity.getType()));
+                    // The "createNonExistingDevice is disabled" marker is what the UI keys its
+                    // "assume the device exists" dialog on, so it must only appear when the flag is
+                    // really off — otherwise confirming the dialog could never resolve the failure.
+                    String reason = mapping.getCreateNonExistingDevice()
+                            ? "creating the implicit device failed"
+                            : "device not found in inventory and createNonExistingDevice is disabled";
+                    throw new ProcessingException(
+                            String.format("Device resolution failed for externalId '%s' (type '%s'): %s",
+                                    externalId, identity.getType(), reason));
                 }
 
                 SubstituteValue.substituteValueInPayload(sourceId, payloadTarget,
@@ -205,7 +212,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 context.setSourceId(sourceId.getValue().toString());
                 // DO NOT REMOVE DeviceIsolationMQTTService feature
                 // cache the mapping of device to client ID
-                if (context.getClientId() != null
+                if (!context.isTesting() && context.getClientId() != null
                         && context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled()) {
                     serviceRegistry.addOrUpdateClientRelation(tenant,
                             context.getClientId(),
@@ -214,6 +221,9 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 substitute.setRepairStrategy(RepairStrategy.CREATE_IF_MISSING);
             }
         } else if ((Mapping.TOKEN_IDENTITY + ".c8ySourceId").equals(pathTarget)) {
+            if (context.getTestExternalIdPrefix() != null) {
+                throw new ProcessingException(ProcessingContext.LIVE_TEST_C8Y_ID_ERROR);
+            }
             SubstituteValue sourceId = new SubstituteValue(substitute.getValue(),
                     TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
             // in this case the device needs to exists beforehand
@@ -222,7 +232,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
             context.setSourceId(sourceId.getValue().toString());
             // DO NOT REMOVE DeviceIsolationMQTTService feature
             // cache the mapping of device to client ID
-            if (context.getClientId() != null && context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled()) {
+            if (!context.isTesting() && context.getClientId() != null && context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled()) {
                 serviceRegistry.addOrUpdateClientRelation(tenant,
                         context.getClientId(),
                         sourceId.getValue().toString());

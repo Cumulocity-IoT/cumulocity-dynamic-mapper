@@ -32,7 +32,7 @@ default for simple field-to-field mappings.
 
 Extraction logic lives in
 [`AbstractJSONataExtractionProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractJSONataExtractionProcessor.java),
-shared identically by inbound and outbound. Each direction wires up its own thin Camel
+shared identically by inbound and outbound. Each direction wires up its own thin
 processor bean:
 
 - [`JSONataInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/JSONataInboundProcessor.java) — broker payload → Cumulocity object.
@@ -151,5 +151,5 @@ for OPERATION) before the mapping's normal substitution/extraction logic runs.
 | Processor class | `AbstractJSONataExtractionProcessor` (+ `JSONataInboundProcessor`/`JSONataOutboundProcessor`) | `AbstractFlowProcessor` (+ flow processors), see [transformation-smart-functions.md](transformation-smart-functions.md) | `AbstractExtensibleProcessor` (+ extensible processors), see [transformation-java-extensions.md](transformation-java-extensions.md) |
 
 See [`docs/backend/architecture.md`](../backend/architecture.md) for how these three
-processor families sit under the shared `AbstractEnrichmentProcessor` step in the Camel
-route.
+processor families sit under the shared `AbstractEnrichmentProcessor` step in the
+processor chain.

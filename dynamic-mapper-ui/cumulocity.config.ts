@@ -134,16 +134,20 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Table_Import.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Test_Transformation.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Test_Transformation.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_DryRun.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_DryRun.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Editor_Test_Transformation.png',
-        to: 'image/Dynamic_Mapper_Mapping_Editor_Test_Transformation.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Editor_DryRun.png',
+        to: 'image/Dynamic_Mapper_Mapping_Editor_DryRun.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Send_TestMessage.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Send_TestMessage.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Editor_DryRun_Confirm.png',
+        to: 'image/Dynamic_Mapper_Mapping_Editor_DryRun_Confirm.png'
+      },
+      {
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_LiveTest.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_LiveTest.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Connector_Overview.png',

@@ -58,6 +58,9 @@ public class C8YMessage {
     @NotNull
     private String tenant; 
 
+    /** Set only for an outbound live test: prefix for the external ID the mock identity hands out. */
+    private String testExternalIdPrefix;
+
     @NotNull
     private Boolean sendPayload;
 

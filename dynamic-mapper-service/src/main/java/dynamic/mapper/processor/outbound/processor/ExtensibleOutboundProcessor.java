@@ -188,7 +188,7 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor<Obj
             context.addError(new ProcessingException("Extensible outbound processing failed: " + e.getMessage(), e));
         }
 
-        if (!testing) {
+        if (context.affectsMappingStatus()) {
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             mappingStatus.incrementErrors();
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);

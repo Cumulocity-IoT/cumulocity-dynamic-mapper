@@ -45,7 +45,6 @@ export interface TestContext {
   mapping: Mapping;
   payload: string;
   send?: boolean;
-  createTestDevice?: boolean;
 }
 
 export interface TestResult {
@@ -55,6 +54,10 @@ export interface TestResult {
   warnings?: string[];
   logs?: string[];
   testDeviceId?: string;
+  /** true: created by this test (tagged, listed under Monitoring > Test device); false: already existed and was used as is (not tagged, not listed). */
+  testDeviceCreated?: boolean;
+  /** "d11r_liveTest_" + the mapping's external ID: the external ID the test device is registered under. */
+  testDeviceExternalId?: string;
   /**
    * Broker message key produced by the transformation (e.g. the Kafka record key). Context-level
    * rather than per-request, since one publish call reads a single key for the whole message —

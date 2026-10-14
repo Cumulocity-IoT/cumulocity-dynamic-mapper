@@ -27,7 +27,7 @@
         <div class="column-right-border p-r-2">
           <div class="form-group  m-b-0">
             <div style="display: flex">
-              <label for="testResult" translate>{{ sourceSystem }} Payload&nbsp;</label>
+              <label>{{ sourceSystem | translate }} {{ 'Payload' | translate }}&nbsp;</label>
             </div>
             <d11r-mapping-json-editor [options]="editorOptionsSource" (contentChanged)="onSourceTemplateChanged($event)"
               [data]="sourceTemplate" [class]="'jse-main-tiny'" #editorTestingPayload id="editorTestingPayload">
@@ -37,7 +37,7 @@
         <div class="column-left-border p-l-2">
           <div class="form-group  m-b-0">
             <div style="display: flex">
-              <label for="testResult" translate>{{ targetSystem }} Request&nbsp;</label>
+              <label>{{ targetSystem | translate }} {{ 'Request' | translate }}&nbsp;</label>
               @if ((selectedResult$ | async) >= 0) {
               <ng-container class="m-r-8">
                 <div class="m-l-auto">
@@ -72,14 +72,18 @@
       }
       @if (mapping.direction !== Direction.OUTBOUND && !isSubstitutionsAsCode(mapping)) {
       <!-- Collapsible response header -->
-      <div class="d-flex a-i-center p-t-4 p-b-4" data-cy="dm-mapping-test-response-toggle" (click)="showResponse = !showResponse" style="cursor:pointer">
-        <i [c8yIcon]="showResponse ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>
-        <span translate>{{ targetSystem }} Response</span>
+      <div class="d-flex a-i-center p-t-4 p-b-4">
+        <button type="button" class="btn-clean d-flex a-i-center" data-cy="dm-mapping-test-response-toggle"
+          [attr.aria-expanded]="showResponse" aria-controls="dm-mapping-test-response"
+          (click)="showResponse = !showResponse">
+          <i [c8yIcon]="showResponse ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>
+          <span>{{ targetSystem | translate }} {{ 'Response' | translate }}</span>
+        </button>
         @if ((selectedResult$ | async) >= 0) {
         <span class="badge badge-success m-l-8">{{ (selectedResult$ | async) + 1 }}</span>
         }
       </div>
-      <div class="collapse" [isAnimated]="true" [collapse]="!showResponse">
+      <div class="collapse" id="dm-mapping-test-response" [isAnimated]="true" [collapse]="!showResponse">
         <div class="d-grid grid__col--6-6 gap-4">
           <div></div>
           <div class="column-left-border p-l-2">
@@ -123,7 +127,7 @@
             <!-- role="log": screen readers announce lines as they are added. -->
             <div class="console-output" role="log" aria-live="polite" aria-label="Console output">
               @if (isLoading) {
-                <span class="log-loading">Processing</span>
+                <span class="log-loading">{{ 'Processing' | translate }}</span>
               } @else if (testingModel.logs?.length) {
                 @for (line of testingModel.logs; track $index) {
                   @let entry = toLogEntry(line);
@@ -157,39 +161,38 @@
     } @else {
     <div class="btn-group">
       <button type="button" class="btn btn-default btn-sm m-r-8" data-cy="dm-mapping-test-transform" (click)="onTestTransformation()"
+        [title]="dryRunTitle | translate"
         [disabled]="!stepperConfiguration.allowTestTransformation || (testingModel.results.length > 0) || isLoading">
-        @if (isLoading && !isSubstitutionsAsCode(mapping) && !requiresRawPayload()) {
+        @if (runningTest === 'dryRun' && !isSubstitutionsAsCode(mapping) && !requiresRawPayload()) {
         <i class="fa fa-circle-o-notch fa-spin m-r-4"></i>
         }
-        Transform Test Message
+        {{ 'Dry Run' | translate }}
       </button>
       <button type="button" class="btn btn-default btn-sm m-r-8" data-cy="dm-mapping-test-next-result" (click)="onNextTestResult()"
         [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length <= 1">
-        Show Next Test Result&nbsp;@if (testingModel.results.length > 0) {
+        {{ 'Show Next Test Result' | translate }}&nbsp;@if (testingModel.results.length > 0) {
         <span class="badge badge-success">
-          total {{ testingModel.results.length }}</span>
+          {{ 'total' | translate }} {{ testingModel.results.length }}</span>
         }
       </button>
       <button type="button" class="btn btn-default btn-sm m-r-8" data-cy="dm-mapping-test-reset" (click)="onResetTransformation()"
         [disabled]="!stepperConfiguration.allowTestTransformation || testingModel.results.length == 0">
-        Reset Transform
+        {{ 'Reset Dry Run' | translate }}
       </button>
-      <button type="button" class="btn btn-default btn-sm" data-cy="dm-mapping-test-send" [disabled]="disableTestSending() || isLoading" (click)="onSendTest()">
-        @if (isLoading && !isSubstitutionsAsCode(mapping) && !requiresRawPayload()) {
+      <!-- Live Test really sends. For inbound mappings it always runs against a test device (created
+           if unknown, registered as "d11r_liveTest_" + the external ID, otherwise reused); there is no way to
+           send to an arbitrary real device from here. When it is disabled, the tooltip says why. -->
+      <button type="button" class="btn btn-default btn-sm" data-cy="dm-mapping-test-send"
+        [disabled]="disableTestSending() || isLoading" (click)="onSendTest()"
+        [title]="(liveTestDisabledReason ?? liveTestTitle) | translate">
+        @if (runningTest === 'liveTest' && !isSubstitutionsAsCode(mapping) && !requiresRawPayload()) {
         <i class="fa fa-circle-o-notch fa-spin m-r-4"></i>
         }
-        Send Test Message
+        {{ 'Live Test' | translate }}
       </button>
-      <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-        popover="{{'Send Test Message is only supported for mappings that use an external id!'}}" triggers="focus"
-        type="button" container="body" allow></button>
-      @if (mapping.direction !== Direction.OUTBOUND) {
-      <label class="c8y-checkbox m-l-16 m-b-0" title="Create a real device in C8Y inventory before sending (tagged d11r_testDevice)">
-        <input type="checkbox" data-cy="dm-mapping-test-create-device-toggle" [(ngModel)]="createTestDevice" [disabled]="disableTestSending()" />
-        <span></span>
-        <span translate>Create test device</span>
-      </label>
-      }
+      <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate" [title]="'Help' | translate"
+        [popover]="testHelpText | translate" triggers="mouseenter:mouseleave focus"
+        type="button" container="body"></button>
     </div>
     }
   </div>

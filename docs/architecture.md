@@ -44,8 +44,8 @@ Custom connectors can be added by extending `AConnectorClient` — see [extensio
 Handles received messages and maps them to Cumulocity domain objects. Supports multiple payload formats and transformation types (see below).
 
 Key classes:
-- `processor/inbound/CamelDispatcherInbound.java` — Apache Camel entry point for Broker → C8Y
-- `processor/outbound/CamelDispatcherOutbound.java` — entry point for C8Y → Broker
+- `processor/inbound/InboundMessageDispatcher.java` — entry point for Broker → C8Y (`onMessage()` / `onTestMessage()`), hands off to `InboundMessageRouter`
+- `processor/outbound/OutboundMessageDispatcher.java` — entry point for C8Y → Broker, hands off to `OutboundMessageRouter`
 - `processor/runtime/ProcessingContext.java` — per-message processing state
 
 ### C8Y Client
@@ -103,7 +103,7 @@ The mapper processes messages in both directions:
 Inbound processing pipeline:
 
 ```
-AConnectorClient → CamelDispatcherInbound → deserialize → enrich → substitute/eval → emit to C8Y
+AConnectorClient → InboundMessageDispatcher → InboundMessageRouter → deserialize → enrich → substitute/eval → emit to C8Y
 ```
 
 See [feature/mapping-processing-inbound.md](feature/mapping-processing-inbound.md) and
@@ -117,7 +117,7 @@ per-step breakdown and a worked example end to end.
 Exact versions are pinned in the root `pom.xml` / `dynamic-mapper-ui/package.json` — check those
 before quoting a version elsewhere, this list is a pointer, not a second source of truth:
 
-- **Java 25**, **Spring Boot 4.0.7**, **Apache Camel 4.x** (internal message routing)
+- **Java 25**, **Spring Boot 4.0.7**
 - **GraalVM polyglot** (`org.graalvm.polyglot`) — sandboxed JS execution for Smart Functions
 - **JSONata** (`com.dashjoin:jsonata`) — expression language for substitutions
 - **Cumulocity Microservice SDK** (`c8y.version` in `pom.xml`) — multi-tenancy, REST client, notification subscriptions

@@ -64,7 +64,8 @@ public class DeserializationInboundProcessor extends BaseProcessor {
                 return context; // Return context with error
             }
             try {
-                byte[] deserializedPayload = deserializer.deserializePayload(mapping, connectorMessage);
+                byte[] deserializedPayload = deserializer.deserializePayload(mapping, connectorMessage,
+                        Boolean.TRUE.equals(testing));
                 context.setPayload(deserializedPayload);
                 return context;
             } catch (IOException e) {
@@ -83,7 +84,8 @@ public class DeserializationInboundProcessor extends BaseProcessor {
             }
 
             try {
-                Object deserializedPayload = deserializer.deserializePayload(mapping, connectorMessage);
+                Object deserializedPayload = deserializer.deserializePayload(mapping, connectorMessage,
+                        Boolean.TRUE.equals(testing));
                 context.setPayload(deserializedPayload);
                 return context;
             } catch (IOException e) {
@@ -94,30 +96,32 @@ public class DeserializationInboundProcessor extends BaseProcessor {
     }
 
     private void handleMissingProcessor(String tenant, Mapping mapping, ProcessingContext<?> context) {
-        MappingStatus mappingStatusUnspecified = mappingService
-                .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
-        MappingStatus mappingStatus = mappingService
-                .getMappingStatus(tenant, mapping);
         String errorMessage = String.format("%s - No processor for MessageType: %s registered",
                 tenant, mapping.getMappingType());
         log.error(errorMessage);
         context.addError(new ProcessingException(errorMessage));
-        mappingStatus.incrementErrors();
-        mappingStatusUnspecified.incrementErrors();
-        mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        if (context.affectsMappingStatus()) {
+            MappingStatus mappingStatusUnspecified = mappingService
+                    .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
+            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+            mappingStatus.incrementErrors();
+            mappingStatusUnspecified.incrementErrors();
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        }
     }
 
     private void handleDeserializationError(String tenant, Mapping mapping, Exception e,
             ProcessingContext<?> context) {
-        MappingStatus mappingStatus = mappingService
-                .getMappingStatus(tenant, mapping);
         String errorMessage = String.format("%s - Failed to deserialize payload: %s",
                 tenant, e.getMessage());
         log.warn(errorMessage);
         log.debug("{} - Deserialization error details:", tenant, e);
         context.addError(new ProcessingException(errorMessage, e));
-        mappingStatus.incrementErrors();
-        mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        if (context.affectsMappingStatus()) {
+            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+            mappingStatus.incrementErrors();
+            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+        }
     }
 
 }

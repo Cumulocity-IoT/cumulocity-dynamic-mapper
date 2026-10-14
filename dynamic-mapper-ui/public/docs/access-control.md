@@ -34,7 +34,7 @@ shared code templates.
 | Create / edit / delete a mapping | – | ✓ | ✓ |
 | Activate / deactivate a mapping | – | ✓ | ✓ |
 | Debug a mapping, apply a mapping filter | – | ✓ | ✓ |
-| Test a mapping (including *Send Test Message*) | – | ✓ | ✓ |
+| Test a mapping (including *Live Test*) | – | ✓ | ✓ |
 | Drafts, versions, publish, version notes | – | ✓ | ✓ |
 | Update a mapping's transformation code | – | ✓ | ✓ |
 | Add sample mappings, reload mappings, refresh mapping status | – | ✓ | ✓ |

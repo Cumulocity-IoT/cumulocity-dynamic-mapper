@@ -14,4 +14,14 @@ public interface PayloadDeserializer<T> {
      * @throws IOException if deserialization fails
      */
     T deserializePayload(Mapping mapping, ConnectorMessage message) throws IOException;
+
+    /**
+     * Same as {@link #deserializePayload(Mapping, ConnectorMessage)}, but tells the deserializer
+     * whether this is a mapping test (dry-run). Deserializers that read tenant state (inventory,
+     * identity) must use the mock services when {@code testing} is {@code true}; all others can
+     * ignore it, which is what this default does.
+     */
+    default T deserializePayload(Mapping mapping, ConnectorMessage message, boolean testing) throws IOException {
+        return deserializePayload(mapping, message);
+    }
 }

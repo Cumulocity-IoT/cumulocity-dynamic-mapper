@@ -173,7 +173,7 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
             context.addError(new ProcessingException(errorMessage, e));
         }
 
-        if (!context.isTesting()) {
+        if (context.affectsMappingStatus()) {
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             mappingStatus.incrementErrors();
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
@@ -234,6 +234,7 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
             // Check if sourceId is explicitly set in CumulocityObject
             String resolvedDeviceId;
             List<ExternalId> externalSources = c8yObj.getExternalSource();
+            applyLiveTestExternalIdPrefix(externalSources, context);
             ExternalIdInfo externalIdInfo = ExternalIdInfo.from(externalSources);
 
             if (externalIdInfo.isPresent()) {
@@ -241,6 +242,9 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
             }
 
             if (c8yObj.getSourceId() != null && !c8yObj.getSourceId().isEmpty()) {
+                if (context.getTestExternalIdPrefix() != null) {
+                    throw new ProcessingException(ProcessingContext.LIVE_TEST_C8Y_ID_ERROR);
+                }
                 // Use explicitly provided sourceId
                 resolvedDeviceId = c8yObj.getSourceId();
                 context.setSourceId(resolvedDeviceId);

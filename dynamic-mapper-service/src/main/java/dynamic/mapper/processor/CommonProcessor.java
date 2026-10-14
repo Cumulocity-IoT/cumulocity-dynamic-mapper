@@ -109,6 +109,22 @@ public abstract class CommonProcessor {
         return root.getMessage() != null ? root.getMessage() : root.getClass().getSimpleName();
     }
 
+    /**
+     * In a live test, prefixes the external IDs the Smart Function / extension produced, once per
+     * message and in place: every later lookup, implicit creation and request reads the same objects,
+     * so the whole message runs against the test device and never the real one.
+     */
+    protected void applyLiveTestExternalIdPrefix(List<ExternalId> externalSources, ProcessingContext<?> context) {
+        if (externalSources == null || context.getTestExternalIdPrefix() == null) {
+            return;
+        }
+        for (ExternalId externalId : externalSources) {
+            if (externalId != null) {
+                externalId.setExternalId(context.liveTestId(externalId.getExternalId()));
+            }
+        }
+    }
+
     protected String resolveDeviceIdentifier(CumulocityObject cumulocityMessage, ProcessingContext<?> context,
             String tenant) throws ProcessingException {
 
@@ -185,7 +201,9 @@ public abstract class CommonProcessor {
             if (externalSource.getExternalId() == null || externalSource.getExternalId().isEmpty()) {
                 externalSource.setExternalId("implicit-device-" + Utils.createCustomUuid());
             }
-            String externalIdValue = externalSource.getExternalId();
+            // Live test: register the mock device under the prefixed external ID, computed per call and
+            // never written back, so the topic built from it can't address a real device.
+            String externalIdValue = context.liveTestId(externalSource.getExternalId());
             String type = externalSources.get(0).getType();
             ProcessingResultHelper.createImplicitDevice(
                     new ID(type, externalIdValue),
@@ -201,7 +219,7 @@ public abstract class CommonProcessor {
             var externalId = c8yAgent.resolveGlobalId2ExternalId(tenant, gid,
                     externalSource.getType(),
                     context.isTesting());
-            context.setExternalId(externalSource.getExternalId());
+            context.setExternalId(context.liveTestId(externalSource.getExternalId()));
 
             if (externalId != null) {
                 return externalId.getExternalId();

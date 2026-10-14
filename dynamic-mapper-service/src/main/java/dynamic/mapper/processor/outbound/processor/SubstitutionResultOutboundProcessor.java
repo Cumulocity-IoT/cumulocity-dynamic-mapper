@@ -77,10 +77,12 @@ public class SubstitutionResultOutboundProcessor extends BaseProcessor {
             String errorMessage = String.format("Tenant %s - Error in substitution processor for mapping: %s: %s",
                     tenant, mapping.getName(), e.getMessage());
             log.error(errorMessage, e);
-            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             context.addError(new ProcessingException(errorMessage, e));
-            mappingStatus.incrementErrors();
-            mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            if (context.affectsMappingStatus()) {
+                MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
+                mappingStatus.incrementErrors();
+                mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
+            }
         }
 
     }
@@ -235,7 +237,9 @@ public class SubstitutionResultOutboundProcessor extends BaseProcessor {
                     1);
         }
         // Create alarms for messages reported during processing substitutions
-        if (context.getSourceId() != null && !context.getAlarms().isEmpty()) {
+        // A test run raises no processing alarms: the problem is in the test result already, and the
+        // source may be a real device (an outbound test's source id comes from the test payload).
+        if (context.affectsMappingStatus() && context.getSourceId() != null && !context.getAlarms().isEmpty()) {
             ManagedObjectRepresentation sourceMor = new ManagedObjectRepresentation();
             sourceMor.setId(new GId(context.getSourceId()));
             context.getAlarms()

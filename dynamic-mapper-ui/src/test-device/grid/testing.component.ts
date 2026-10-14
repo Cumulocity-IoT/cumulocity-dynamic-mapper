@@ -50,18 +50,17 @@ export class TestingComponent implements OnInit {
   ) {
     // we're setting up `serverSideDataCallback` to execute a method from this component with bound `this`
     this.serverSideDataCallback = this.onDataSourceModifier.bind(this);
-    // we're setting up `onRefreshClick` to be executed on refresh event
-    this.refresh.subscribe(() => this.onRefreshClick());
     this.service.refreshData$.subscribe(() => {
       this.deviceGrid.reload();
     });
     this.columns = this.service.getColumns();
     this.pagination = this.service.getPagination();
-    this.actionControls = this.service.getActionControls();
   }
   async ngOnInit(): Promise<void> {
     this.feature = await this.route.snapshot.data['feature'];
+    // Deleting a test device is an admin action, for a single row as well as in bulk.
     if (this.feature?.userHasMappingAdminRole) {
+      this.actionControls = this.service.getActionControls();
       this.bulkActionControls = this.service.getBulkActionControls();
     }
   }
@@ -85,7 +84,7 @@ export class TestingComponent implements OnInit {
   infiniteScroll: LoadMoreMode = 'auto';
   serverSideDataCallback: any;
   selectable: boolean = true;
-  actionControls: ActionControl[];
+  actionControls: ActionControl[] = [];
   bulkActionControls: BulkActionControl[];
 
   refresh: EventEmitter<any> = new EventEmitter<any>();
@@ -118,10 +117,5 @@ export class TestingComponent implements OnInit {
     };
 
     return serverSideDataResult;
-  }
-
-  /** Executes an action on refresh event. */
-  onRefreshClick() {
-    // console.log('refresh clicked');
   }
 }

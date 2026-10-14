@@ -139,7 +139,7 @@ flowchart LR
 ([`ExtensibleInboundProcessor.java:104-158`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/ExtensibleInboundProcessor.java#L104-L158)) is the concrete
 inbound flow: it validates the extension's declared direction matches the processing
 direction, builds a `JavaExtensionContextImpl`, invokes `onMessage`, and either stores the
-returned `CumulocityObject[]` on the `ProcessingContext` for the next Camel step, or — if
+returned `CumulocityObject[]` on the `ProcessingContext` for the next processor, or — if
 the extension returns `null`/empty — raises a `ProcessingException` and sets
 `ignoreFurtherProcessing`. A distinct `AbstractMethodError` catch block detects the
 specific case of an extension JAR compiled against an older `ProcessorExtensionInbound`

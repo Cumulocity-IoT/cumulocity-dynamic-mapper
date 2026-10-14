@@ -64,9 +64,10 @@ public class IdentityResolutionService {
     public String getOrCreateDeviceThreadSafe(String tenant, String externalIdType, String externalIdValue,
             ID identity, ProcessingContext<?> context) throws Exception {
         String cacheKey = tenant + "|" + externalIdType + "|" + externalIdValue;
+        boolean isTesting = Boolean.TRUE.equals(context.isTesting());
 
-        // First check: quick cache hit
-        String cached = tenantRegistry.getCachedExternalId(cacheKey);
+        // First check: quick cache hit (skip in test mode to avoid leaking real devices into tests)
+        String cached = isTesting ? null : tenantRegistry.getCachedExternalId(cacheKey);
         if (cached != null) {
             log.debug("{} - Device cache hit for {}: {}", tenant, cacheKey, cached);
             return cached;
@@ -77,7 +78,7 @@ public class IdentityResolutionService {
 
         synchronized (lock) {
             // Double-check after acquiring lock: another thread may have created it
-            cached = tenantRegistry.getCachedExternalId(cacheKey);
+            cached = isTesting ? null : tenantRegistry.getCachedExternalId(cacheKey);
             if (cached != null) {
                 log.debug("{} - Device found in cache after lock acquired for {}: {}", tenant, cacheKey, cached);
                 return cached;
@@ -91,7 +92,7 @@ public class IdentityResolutionService {
                 // Only cache the resolved ID in production — during dry-run tests
                 // resolveExternalId2GlobalId routes to MockIdentity and returns a
                 // synthetic ID (e.g. "10000") that must never enter the production cache.
-                if (!Boolean.TRUE.equals(context.isTesting())) {
+                if (!isTesting) {
                     tenantRegistry.cacheExternalId(cacheKey, internalId);
                 }
                 log.debug("{} - Device exists in C8Y for {}: {}", tenant, cacheKey, internalId);

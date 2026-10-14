@@ -114,7 +114,11 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor<byte
 
         // 2. Create JavaExtensionContext with persistent native state
         Mapping mapping = context.getMapping();
-        java.util.Map<String, Object> initialState = flowStateStore.loadState(tenant, mapping.getIdentifier());
+        // A test run neither reads nor overwrites the state production traffic keeps for this mapping.
+        boolean isolateState = !context.affectsMappingStatus();
+        java.util.Map<String, Object> initialState = isolateState
+                ? new java.util.HashMap<String, Object>()
+                : flowStateStore.loadState(tenant, mapping.getIdentifier());
         JavaExtensionContext prepContext = new JavaExtensionContextImpl(
             context.getFlowContext(),
             c8yAgent,
@@ -122,7 +126,7 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor<byte
             context.isTesting(),
             mapping,
             context,
-            flowStateStore,
+            isolateState ? null : flowStateStore,
             initialState
         );
 
@@ -190,7 +194,7 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor<byte
             context.addError(new ProcessingException("Extensible inbound processing failed: " + e.getMessage(), e));
         }
 
-        if (!testing) {
+        if (context.affectsMappingStatus()) {
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             mappingStatus.incrementErrors();
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);

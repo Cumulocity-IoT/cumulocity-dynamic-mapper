@@ -21,9 +21,12 @@
 
 package dynamic.mapper.controller;
 
+import com.cumulocity.model.ID;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
@@ -93,8 +96,8 @@ public class TestController {
             @ApiResponse(responseCode = "500", description = "Test execution failed")
     })
     // Same roles as creating or updating a mapping: the caller supplies a complete Mapping in the
-    // request body, and with send=true the result is dispatched to Cumulocity for real (and with
-    // createTestDevice=true a managed object is created) using the microservice's own elevated
+    // request body, and with send=true the result is dispatched to Cumulocity for real (for inbound
+    // mappings against a test device, which is created if missing) using the microservice's own elevated
     // credentials. Without this, any authenticated tenant user could write measurements, events,
     // alarms and devices without holding any Dynamic Mapper role.
     @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
@@ -104,34 +107,65 @@ public class TestController {
         TestResult result = new TestResult();
         Mapping mapping = context.getMapping();
         String payload = context.getPayload();
-        Boolean send = context.getSend();
+        // @Valid is not enforced on the body, so check what the rest of the method dereferences: a missing
+        // field used to surface as a NullPointerException (a 500, or a 400 without a message).
+        if (mapping == null || mapping.getDirection() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A test needs a mapping with a direction.");
+        }
+        if (payload == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A test needs a payload.");
+        }
+        Boolean send = Boolean.TRUE.equals(context.getSend()); // absent means Dry Run
         String tenant = contextService.getContext().getTenant();
         log.info("{} - Test mapping: {}, {}, {}, {}", tenant, mapping.getName(), mapping.getId(), send,
                 payload);
+
+        // Reset mock caches for this tenant so state from previous test runs does not leak
+        clearMockCaches(tenant);
+
         try {
             AConnectorClient connectorClient = connectorRegistry
                     .getClientForTenant(tenant, TestClient.TEST_CONNECTOR_IDENTIFIER);
+            // Set for a live test of an inbound mapping: used to recover from a stale cached device ID.
+            ID liveTestIdentity = null;
 
-            // Create test device in C8Y inventory before dispatching (INBOUND + send only).
+            // A live test (send=true) of an inbound mapping only ever runs against a test device:
+            // created if the external ID is unknown, otherwise the existing device is used. It must
+            // not create devices through the mapping's createNonExistingDevice setting, which would
+            // leave an untagged real device behind.
             // Run a dry-run first so we can extract the actual externalId produced by the
             // mapping's substitution, rather than guessing from the static source template.
-            if (Boolean.TRUE.equals(send) && Boolean.TRUE.equals(context.getCreateTestDevice())
-                    && mapping.getDirection().equals(Direction.INBOUND)) {
+            if (Boolean.TRUE.equals(send) && mapping.getDirection().equals(Direction.INBOUND)) {
                 String externalId = resolveExternalIdViaDryRun(tenant, connectorClient, mapping, payload);
                 if (externalId == null) {
                     externalId = extractIdentityFromSourceTemplate(mapping.getSourceTemplate());
                 }
-                if (externalId == null) {
-                    externalId = deriveExternalIdFromTopic(mapping.getMappingTopicSample());
-                }
                 String externalIdType = (mapping.getExternalIdType() != null && !mapping.getExternalIdType().isEmpty())
                         ? mapping.getExternalIdType()
                         : "c8y_Serial";
-                String testDeviceId = c8YAgent.createTestDevice(tenant, externalId, externalId, externalIdType);
-                if (testDeviceId != null) {
-                    result.setTestDeviceId(testDeviceId);
-                    log.info("{} - Created test device: id={}, externalId={}, type={}", tenant, testDeviceId,
-                            externalId, externalIdType);
+                if (externalId == null) {
+                    return liveTestFailure(result, tenant,
+                            "The mapping does not identify its device by an external ID, so a Live Test cannot "
+                                    + "provide a test device for it and was not run. Identify the device by external "
+                                    + "ID, or use a Dry Run.");
+                }
+                // Never register the test device under the mapping's own external ID: once the real
+                // device sends its first message, that message would be written to the test device.
+                String testExternalId = ProcessingContext.TEST_EXTERNAL_ID_PREFIX + externalId;
+                liveTestIdentity = new ID(externalIdType, testExternalId);
+                C8YAgent.TestDevice testDevice = c8YAgent.ensureTestDevice(tenant, testExternalId, testExternalId,
+                        externalIdType);
+                if (testDevice != null) {
+                    result.setTestDeviceId(testDevice.id());
+                    result.setTestDeviceCreated(testDevice.created());
+                    result.setTestDeviceExternalId(testExternalId);
+                    log.info("{} - {} test device: id={}, externalId={}, type={}", tenant,
+                            testDevice.created() ? "Created" : "Reusing existing", testDevice.id(), testExternalId,
+                            externalIdType);
+                } else {
+                    return liveTestFailure(result, tenant,
+                            "The test device for external ID '" + testExternalId + "' could not be created or found, "
+                                    + "so the live test was not run.");
                 }
             }
 
@@ -139,6 +173,9 @@ public class TestController {
             if (mapping.getDirection().equals(Direction.INBOUND)) {
                 ConnectorMessage testMessage = createTestMessage(tenant, connectorClient,
                         mapping.getMappingTopicSample(), send, payload);
+                if (Boolean.TRUE.equals(send)) {
+                    testMessage.setTestExternalIdPrefix(ProcessingContext.TEST_EXTERNAL_ID_PREFIX);
+                }
                 processingResultWrapper = connectorClient.getDispatcher().onTestMessage(
                         testMessage,
                         mapping);
@@ -154,8 +191,41 @@ public class TestController {
 
             if (processingResultWrapper != null && processingResultWrapper.getProcessingResult() != null) {
                 // Wait for the future to complete and get the result
-                var processingResult = (List<? extends ProcessingContext<?>>) processingResultWrapper
-                        .getProcessingResult().get();
+                List<? extends ProcessingContext<?>> processingResult = awaitContexts(processingResultWrapper);
+
+                // The test device was deleted but its ID is still cached somewhere: the send fails with
+                // "No managedObject for id". Evict, re-ensure the device and retry once.
+                // Siblings of the failed request may already have been created (the pipeline continues after
+                // a failure), so a retry would duplicate them: only retry if nothing was sent successfully.
+                boolean staleTestDevice = false;
+                boolean retrySkipped = false;
+                boolean deviceNotFound = liveTestIdentity != null && containsDeviceNotFound(processingResult);
+                if (deviceNotFound && anyRequestSucceeded(processingResult)) {
+                    log.warn("{} - Live test hit a deleted test device ({}), but other requests already succeeded: "
+                            + "not retrying to avoid duplicates", tenant, liveTestIdentity.getValue());
+                    c8YAgent.evictExternalIdFromCaches(tenant, liveTestIdentity);
+                    retrySkipped = true;
+                    staleTestDevice = true;
+                } else if (deviceNotFound) {
+                    log.warn("{} - Live test hit a deleted test device ({}), evicting the cached ID and retrying once",
+                            tenant, liveTestIdentity.getValue());
+                    c8YAgent.evictExternalIdFromCaches(tenant, liveTestIdentity);
+                    C8YAgent.TestDevice recreated = c8YAgent.ensureTestDevice(tenant, liveTestIdentity.getValue(),
+                            liveTestIdentity.getValue(), liveTestIdentity.getType());
+                    if (recreated != null) {
+                        result.setTestDeviceId(recreated.id());
+                        result.setTestDeviceCreated(recreated.created());
+                        ConnectorMessage retryMessage = createTestMessage(tenant, connectorClient,
+                                mapping.getMappingTopicSample(), send, payload);
+                        retryMessage.setTestExternalIdPrefix(ProcessingContext.TEST_EXTERNAL_ID_PREFIX);
+                        ProcessingResultWrapper<?> retryWrapper = connectorClient.getDispatcher()
+                                .onTestMessage(retryMessage, mapping);
+                        if (retryWrapper != null && retryWrapper.getProcessingResult() != null) {
+                            processingResult = awaitContexts(retryWrapper);
+                        }
+                    }
+                    staleTestDevice = containsDeviceNotFound(processingResult);
+                }
 
                 if (processingResult != null && !processingResult.isEmpty()) {
                     if (processingResult.size() > 1) {
@@ -179,6 +249,15 @@ public class TestController {
                                 result.getErrors().add(msg);
                             }
                         }
+                    }
+                    if (staleTestDevice) {
+                        result.getErrors().add("The test device '" + liveTestIdentity.getValue() + "' no longer "
+                                + "exists but its ID is still cached, and "
+                                + (retrySkipped
+                                        ? "some requests already succeeded, so the test was not retried automatically (the cached ID was evicted). "
+                                        : "re-creating it did not help. ")
+                                + (retrySkipped ? "Run the Live Test again."
+                                        : "Clear the Inbound ID cache (Monitoring > Cache statistic) and run the Live Test again."));
                     }
                     result.setSuccess(result.getErrors().isEmpty());
                     // If filter is configured and no requests were produced, add filter warning.
@@ -206,6 +285,11 @@ public class TestController {
             log.error("{} - Connector not found for tenant: {}", tenant, e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Connector not found: " + e.getMessage());
+        } catch (TimeoutException e) {
+            log.error("{} - Test timed out: {}", tenant, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT,
+                    "The test did not finish in time and was cancelled. Check the connectivity to Cumulocity "
+                            + "and the mapping for long-running code.");
         } catch (InterruptedException e) {
             log.error("{} - Test interrupted: {}", tenant, e.getMessage(), e);
             Thread.currentThread().interrupt(); // Restore interrupt status
@@ -218,6 +302,94 @@ public class TestController {
         } catch (Exception ex) {
             log.error("{} - Error transforming payload: {}", tenant, ex.getMessage(), ex);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
+        } finally {
+            // Leave nothing behind, whatever the outcome: devices created in the mock by this run
+            // must not be found by the next one, and the mock should not hold memory between runs.
+            clearMockCaches(tenant);
+        }
+    }
+
+    /** What a test waits for the pipeline when the dispatcher did not report its own timeout. */
+    private static final long DEFAULT_TEST_TIMEOUT_MS = 60_000;
+
+    /** Grace period on top of the pipeline timeout, so the pipeline's own timeout handling wins the race. */
+    private long testTimeoutMarginMs = 5_000;
+
+    /**
+     * Waits for the pipeline, but not forever: a starved Cumulocity semaphore or a hanging REST call
+     * would otherwise hold the HTTP request open indefinitely. On timeout the work is cancelled.
+     */
+    @SuppressWarnings("unchecked")
+    private List<? extends ProcessingContext<?>> awaitContexts(ProcessingResultWrapper<?> wrapper)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        long timeoutMs = (wrapper.getPipelineTimeoutMS() > 0 ? wrapper.getPipelineTimeoutMS() : DEFAULT_TEST_TIMEOUT_MS)
+                + testTimeoutMarginMs;
+        try {
+            return (List<? extends ProcessingContext<?>>) wrapper.getProcessingResult().get(timeoutMs,
+                    TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            wrapper.getProcessingResult().cancel(true);
+            wrapper.getCancellationRequested().set(true);
+            throw e;
+        }
+    }
+
+    /** A live test must not fall through to the mapping creating devices itself: report and stop. */
+    private ResponseEntity<TestResult> liveTestFailure(TestResult result, String tenant, String message) {
+        log.warn("{} - {}", tenant, message);
+        result.setSuccess(false);
+        result.getErrors().add(message);
+        return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+
+    /** True if any request was sent without error, i.e. re-dispatching the payload would send it twice. */
+    static boolean anyRequestSucceeded(List<? extends ProcessingContext<?>> contexts) {
+        if (contexts == null) {
+            return false;
+        }
+        for (ProcessingContext<?> processingContext : contexts) {
+            if (processingContext == null || processingContext.getRequests() == null) {
+                continue;
+            }
+            for (var request : processingContext.getRequests()) {
+                if (request != null && !request.hasError()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** True if any context failed because a managed object (a cached, since deleted device) is gone. */
+    static boolean containsDeviceNotFound(List<? extends ProcessingContext<?>> contexts) {
+        if (contexts == null) {
+            return false;
+        }
+        for (ProcessingContext<?> processingContext : contexts) {
+            if (processingContext == null || processingContext.getErrors() == null) {
+                continue;
+            }
+            for (Exception error : processingContext.getErrors()) {
+                Throwable cause = error;
+                for (int depth = 0; cause != null && depth < 10; depth++, cause = cause.getCause()) {
+                    // Only "the managed object is gone". Any other 404 (a group, an attachment, ...) is a
+                    // different problem, and retrying would resend requests that already succeeded.
+                    if (cause.getMessage() != null && cause.getMessage().contains("No managedObject for id")) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private void clearMockCaches(String tenant) {
+        try {
+            c8YAgent.clearMockIdentityCache(tenant);
+            c8YAgent.clearMockInventoryCache(tenant);
+        } catch (Exception e) {
+            // Never let cleanup mask the test result (or turn a result into an error).
+            log.warn("{} - Failed to clear mock caches: {}", tenant, e.getMessage());
         }
     }
 
@@ -331,10 +503,11 @@ public class TestController {
     /**
      * Runs the mapping in dry-run mode (testing=true, sendPayload=false) and returns
      * the externalId that the substitution actually produces at runtime. Returns null
-     * if the dry-run fails or produces no externalId.
+     * if the dry-run fails or produces no externalId. A timeout or interruption is propagated
+     * so the caller reports it instead of falling back and performing the real send.
      */
     private String resolveExternalIdViaDryRun(String tenant, AConnectorClient connectorClient,
-            Mapping mapping, String payload) {
+            Mapping mapping, String payload) throws InterruptedException, TimeoutException {
         try {
             ConnectorMessage dryRunMessage = createTestMessage(tenant, connectorClient,
                     mapping.getMappingTopicSample(), false, payload);
@@ -343,10 +516,12 @@ public class TestController {
             if (dryRunWrapper == null || dryRunWrapper.getProcessingResult() == null) {
                 return null;
             }
-            var dryRunContexts = (List<? extends ProcessingContext<?>>) dryRunWrapper.getProcessingResult().get();
+            var dryRunContexts = awaitContexts(dryRunWrapper);
             if (dryRunContexts != null && !dryRunContexts.isEmpty()) {
                 return dryRunContexts.get(0).getExternalId();
             }
+        } catch (InterruptedException | TimeoutException e) {
+            throw e;
         } catch (Exception e) {
             log.warn("{} - Dry-run for externalId resolution failed, falling back to static extraction: {}",
                     tenant, e.getMessage());
@@ -375,23 +550,6 @@ public class TestController {
         return null;
     }
 
-    /**
-     * Derives an externalId candidate from a mapping topic sample by taking the last non-empty segment.
-     * E.g. "testSmartInbound/sensor-berlin-01" → "sensor-berlin-01"
-     */
-    private String deriveExternalIdFromTopic(String topicSample) {
-        if (topicSample == null || topicSample.isEmpty()) {
-            return "test-device";
-        }
-        String[] segments = topicSample.split("/");
-        for (int i = segments.length - 1; i >= 0; i--) {
-            if (!segments[i].isEmpty() && !segments[i].equals("#") && !segments[i].equals("+")) {
-                return segments[i];
-            }
-        }
-        return "test-device";
-    }
-
     private ConnectorMessage createTestMessage(String tenant, AConnectorClient connectorClient, String topic,
             boolean sendPayload,
             String payloadMessage) {
@@ -399,6 +557,7 @@ public class TestController {
                 .tenant(tenant)
                 .topic(topic)
                 .sendPayload(sendPayload)
+                .testRun(true)
                 .connectorIdentifier(connectorClient.getConnectorIdentifier())
                 .payload(payloadMessage.getBytes())
                 .build();

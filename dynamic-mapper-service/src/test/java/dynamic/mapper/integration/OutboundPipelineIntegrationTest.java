@@ -59,6 +59,7 @@ import dynamic.mapper.model.MappingType;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.model.TransformationType;
+import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import dynamic.mapper.processor.outbound.OutboundMessageRouter;
 import dynamic.mapper.mapping.MappingService;
@@ -449,6 +450,64 @@ class OutboundPipelineIntegrationTest {
         verify(mappingService, never()).resolveMappingOutbound(any(), any(), any());
 
         log.info("✅ Dispatcher onTestNotification - Test mapping processed");
+    }
+
+    private C8YMessage routedMessageOfTestNotification(boolean send) throws Exception {
+        Mapping mapping = outboundMappings.get(0);
+        when(connectorClient.determineMaxQosOutbound(any())).thenReturn(mapping.getQos());
+        Notification notification = createNotification(API.MEASUREMENT, "CREATE", """
+                {"id": "12345", "source": {"id": "67890"}, "type": "c8y_TemperatureMeasurement"}
+                """);
+
+        dispatcher.onTestNotification(notification, mapping, send).getProcessingResult().get();
+
+        org.mockito.ArgumentCaptor<C8YMessage> routed = org.mockito.ArgumentCaptor.forClass(C8YMessage.class);
+        verify(outboundMessageRouter).processOutboundMessage(routed.capture(), any(), any(), anyBoolean(), any(), any());
+        return routed.getValue();
+    }
+
+    @Test
+    void testDispatcherOnTestNotification_liveTestPrefixesTheMockExternalId() throws Exception {
+        // A Live Test publishes to the real broker with a mocked identity: the prefix keeps the topic
+        // away from real devices.
+        C8YMessage routed = routedMessageOfTestNotification(true);
+
+        assertEquals(dynamic.mapper.processor.runtime.ProcessingContext.TEST_EXTERNAL_ID_PREFIX,
+                routed.getTestExternalIdPrefix());
+    }
+
+    @Test
+    void testDispatcherOnTestNotification_dryRunKeepsTheExternalIdUnchanged() throws Exception {
+        assertNull(routedMessageOfTestNotification(false).getTestExternalIdPrefix());
+    }
+
+    private double outboundMessageCount(io.micrometer.core.instrument.simple.SimpleMeterRegistry registry) {
+        return registry.find("dynmapper_outbound_message_total").counters().stream()
+                .mapToDouble(io.micrometer.core.instrument.Counter::count).sum();
+    }
+
+    @Test
+    void testDispatcherCountsLiveTrafficButNotTestTraffic() throws Exception {
+        // Operational metrics describe real traffic: a Dry Run or Live Test must not move them.
+        io.micrometer.core.instrument.simple.SimpleMeterRegistry registry =
+                new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
+        io.micrometer.core.instrument.Metrics.addRegistry(registry);
+        try {
+            Mapping mapping = outboundMappings.get(0);
+            when(connectorClient.determineMaxQosOutbound(any())).thenReturn(mapping.getQos());
+            when(mappingService.resolveMappingOutbound(eq(TEST_TENANT), any(), any())).thenReturn(List.of(mapping));
+            Notification notification = createNotification(API.MEASUREMENT, "CREATE",
+                    "{\"id\": \"12345\", \"source\": {\"id\": \"67890\"}, \"type\": \"t\"}");
+
+            dispatcher.onTestNotification(notification, mapping, true).getProcessingResult().get();
+            dispatcher.onTestNotification(notification, mapping, false).getProcessingResult().get();
+            assertEquals(0.0, outboundMessageCount(registry), "test traffic is not operational traffic");
+
+            dispatcher.onNotification(notification).getProcessingResult().get();
+            assertEquals(1.0, outboundMessageCount(registry), "a regular notification is counted");
+        } finally {
+            io.micrometer.core.instrument.Metrics.removeRegistry(registry);
+        }
     }
 
     @Test

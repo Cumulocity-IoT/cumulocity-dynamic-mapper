@@ -83,7 +83,7 @@ public class SendInboundProcessor extends BaseProcessor {
 
             // At least one request failed above (recorded via context.addError, not thrown) —
             // bookkeeping mirrors the catch block below, just for isolated per-request failures.
-            if (context.hasError() && !testing) {
+            if (context.hasError() && context.affectsMappingStatus()) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 mappingStatus.incrementErrors();
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
@@ -102,7 +102,7 @@ public class SendInboundProcessor extends BaseProcessor {
             else
                 context.addError(new ProcessingException(errorMessage, e));
 
-            if (!testing) {
+            if (context.affectsMappingStatus()) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 mappingStatus.incrementErrors();
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
@@ -345,10 +345,22 @@ public class SendInboundProcessor extends BaseProcessor {
                     }
 
                     // Cache the mapping of device to client ID
-                    if (context.getClientId() != null) {
+                    if (!context.isTesting() && context.getClientId() != null) {
                         serviceRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                                 request.getSourceId());
                     }
+                } else {
+                    // A request without a resolvable source would be rejected by the Cumulocity API
+                    // anyway; fail it here with a message that says why. The marker is what the UI
+                    // keys its "assume the device exists" dialog on, so it must only appear when the
+                    // flag is really off.
+                    String reason = context.getMapping().getCreateNonExistingDevice()
+                            ? "not found in inventory"
+                            : "not found in inventory and createNonExistingDevice is disabled";
+                    throw new ProcessingException(String.format(
+                            "%s - Cannot send %s request: externalId '%s' (type '%s') %s",
+                            tenant, request.getApi(), request.getExternalId(), request.getExternalIdType(),
+                            reason));
                 }
             }
 
@@ -364,7 +376,9 @@ public class SendInboundProcessor extends BaseProcessor {
             }
 
         } catch (Exception e) {
-            context.getCurrentRequest().setError(e);
+            if (context.getCurrentRequest() != null) {
+                context.getCurrentRequest().setError(e);
+            }
             request.setError(e);
             throw e;
         }
@@ -376,7 +390,9 @@ public class SendInboundProcessor extends BaseProcessor {
     private void createProcessingAlarms(ProcessingContext<Object> context) {
         String tenant = context.getTenant();
 
-        if (context.getSourceId() != null && !context.getAlarms().isEmpty()) {
+        // A test run raises no processing alarms: the problem is in the test result already, and the
+        // source may be a real device (an outbound test's source id comes from the test payload).
+        if (context.affectsMappingStatus() && context.getSourceId() != null && !context.getAlarms().isEmpty()) {
             ManagedObjectRepresentation sourceMor = new ManagedObjectRepresentation();
             sourceMor.setId(new GId(context.getSourceId()));
 
@@ -441,7 +457,7 @@ public class SendInboundProcessor extends BaseProcessor {
             // context.getSourceId() is set when the Smart Function returned an INVENTORY object.
             String resolvedId = context.getSourceId();
             if (resolvedId == null) {
-                String externalIdValue = parts[1] + "_" + parts[3]; // [Group ID]_[Edge Node ID]
+                String externalIdValue = context.liveTestId(parts[1] + "_" + parts[3]); // [Group ID]_[Edge Node ID]
                 com.cumulocity.model.ID identity = new com.cumulocity.model.ID(externalIdType, externalIdValue);
                 com.cumulocity.rest.representation.identity.ExternalIDRepresentation resolved =
                         c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());
@@ -487,7 +503,7 @@ public class SendInboundProcessor extends BaseProcessor {
             }
             String sparkplugDeviceId = parts[4];
             // Always resolve the NODE's external ID: [Group ID]_[Edge Node ID]
-            String nodeExternalIdValue = parts[1] + "_" + parts[3];
+            String nodeExternalIdValue = context.liveTestId(parts[1] + "_" + parts[3]);
             com.cumulocity.model.ID nodeIdentity = new com.cumulocity.model.ID(externalIdType, nodeExternalIdValue);
             com.cumulocity.rest.representation.identity.ExternalIDRepresentation resolved =
                     c8yAgent.resolveExternalId2GlobalId(tenant, nodeIdentity, context.isTesting());
@@ -598,7 +614,7 @@ public class SendInboundProcessor extends BaseProcessor {
             }
             String sparkplugDeviceId = parts[4];
             // Resolve the NODE MO: [Group ID]_[Edge Node ID]
-            String nodeExternalIdValue = parts[1] + "_" + parts[3];
+            String nodeExternalIdValue = context.liveTestId(parts[1] + "_" + parts[3]);
             ID nodeIdentity = new ID(externalIdType, nodeExternalIdValue);
             ExternalIDRepresentation resolved =
                     c8yAgent.resolveExternalId2GlobalId(tenant, nodeIdentity, context.isTesting());
@@ -621,7 +637,7 @@ public class SendInboundProcessor extends BaseProcessor {
 
             if (nodeMoId == null) {
                 // Derive NODE external ID from topic: [Group ID]_[Edge Node ID]
-                String externalIdValue = parts[1] + "_" + parts[3];
+                String externalIdValue = context.liveTestId(parts[1] + "_" + parts[3]);
                 ID identity = new ID(externalIdType, externalIdValue);
                 ExternalIDRepresentation resolved =
                         c8yAgent.resolveExternalId2GlobalId(tenant, identity, context.isTesting());

@@ -126,7 +126,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             context.addError(new ProcessingException(errorMessage, e));
         }
 
-        if (!context.isTesting()) {
+        if (context.affectsMappingStatus()) {
             MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             mappingStatus.incrementErrors();
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
@@ -238,6 +238,7 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             // Check if sourceId is explicitly set in CumulocityObject
             String resolvedDeviceId;
             List<ExternalId> externalSources = cumulocityMessage.getExternalSource();
+            applyLiveTestExternalIdPrefix(externalSources, context);
             ExternalIdInfo externalIdInfo = ExternalIdInfo.from(externalSources);
 
             if (externalIdInfo.isPresent()) {
@@ -245,6 +246,9 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             }
 
             if (cumulocityMessage.getSourceId() != null && !cumulocityMessage.getSourceId().isEmpty()) {
+                if (context.getTestExternalIdPrefix() != null) {
+                    throw new ProcessingException(ProcessingContext.LIVE_TEST_C8Y_ID_ERROR);
+                }
                 // Use explicitly provided sourceId
                 resolvedDeviceId = cumulocityMessage.getSourceId();
                 context.setSourceId(resolvedDeviceId);

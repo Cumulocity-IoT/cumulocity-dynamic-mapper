@@ -74,6 +74,19 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 public class ProcessingContext<O> implements AutoCloseable {
 
     public static final String CREATE_NON_EXISTING_DEVICE = "createNonExistingDevice";
+
+    /**
+     * A live test must never write to the real device that owns an external ID: its test device is
+     * registered under this prefix + the external ID the mapping produces.
+     */
+    public static final String TEST_EXTERNAL_ID_PREFIX = "d11r_liveTest_";
+
+    /**
+     * A live test registers a test device under a prefixed external ID. A mapping that names a device
+     * by its Cumulocity ID bypasses that and would write to whatever real device the payload names.
+     */
+    public static final String LIVE_TEST_C8Y_ID_ERROR = "A Live Test cannot address a device by its Cumulocity ID, "
+            + "because that would write to the real device. Identify the device by external ID, or use a Dry Run.";
     public static final String SOURCE_ID = "source.id";
     public static final String DEVICE_NAME = "deviceName";
     public static final String DEVICE_TYPE = "deviceType";
@@ -145,6 +158,17 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     @Builder.Default
     private boolean sendPayload = false;
+
+    /**
+     * True for any run started from the mapping editor's test panel (Dry Run or Live Test). Unlike
+     * {@link #testing}, which only means "use the mock services" and is off for an inbound Live Test,
+     * this is on for both, and is what keeps a test from touching the mapping's runtime status.
+     */
+    @Builder.Default
+    private boolean testRun = false;
+
+    /** Prefix of external IDs in a live test, see {@link #TEST_EXTERNAL_ID_PREFIX}; null otherwise. */
+    private String testExternalIdPrefix;
 
     @Builder.Default
     private boolean testing = false;
@@ -233,6 +257,23 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     @Builder.Default
     private BinaryInfo binaryInfo = new BinaryInfo();
+
+    /**
+     * The external ID to look up or register for this message: unchanged normally, prefixed in a live
+     * test so the test device never shares an external ID with a real device.
+     */
+    public String liveTestId(String externalId) {
+        return (testExternalIdPrefix == null || externalId == null) ? externalId : testExternalIdPrefix + externalId;
+    }
+
+    /**
+     * Whether this run may change the mapping's runtime status: message and error counters, the
+     * consecutive-failure streak (which can auto-deactivate the mapping) and the processing statistics.
+     * False for every test run, including an inbound Live Test that uses real services.
+     */
+    public boolean affectsMappingStatus() {
+        return !testing && !testRun;
+    }
 
     public boolean hasError() {
         return !errors.isEmpty();

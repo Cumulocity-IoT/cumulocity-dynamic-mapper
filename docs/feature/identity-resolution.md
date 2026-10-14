@@ -68,10 +68,9 @@ paths — this is a real structural detail, not an implementation accident:
    the **create-or-lookup** path used when a mapping has `createNonExistingDevice=true`.
 
 Because these are two different caches, an eviction of one does **not** evict the other.
-`CamelDispatcherInbound` handles this explicitly: after a request fails with HTTP 422 (e.g.
+[`InboundMessageDispatcher`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/InboundMessageDispatcher.java) handles this explicitly: after a request fails with HTTP 422 (e.g.
 the cached device was deleted from inventory), it evicts the entry from **both** caches
-before resending
-([`CamelDispatcherInbound.java:203-216`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/CamelDispatcherInbound.java#L203-L216)) —
+(in `processMessage()`) and, if the mapping has `createNonExistingDevice=true`, resends the message once through the router —
 a comment there points to `attic/fix/inconsistant-cache/ISSUE.md` documenting the bug that
 motivated evicting both.
 

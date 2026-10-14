@@ -103,7 +103,7 @@ public class SendOutboundProcessor extends BaseProcessor {
             // itself throws before the normal FAILED/SUCCESSFUL ack above is reached.
             autoAckOperation(context, tenant, mapping, OperationStatus.FAILED);
 
-            if (!testing) {
+            if (context.affectsMappingStatus()) {
                 MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
                 mappingStatus.incrementErrors();
                 mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
@@ -230,7 +230,7 @@ public class SendOutboundProcessor extends BaseProcessor {
 
     /**
      * Publish to all real (non-TEST) connectors that have the mapping deployed and are connected.
-     * Used for outbound "Send Test Message" so the payload reaches the actual broker.
+     * Used for an outbound live test so the payload reaches the actual broker.
      */
     private void publishToRealConnectors(ProcessingContext<Object> context, String tenant) {
         Mapping mapping = context.getMapping();
@@ -277,7 +277,9 @@ public class SendOutboundProcessor extends BaseProcessor {
     private void createProcessingAlarms(ProcessingContext<Object> context) {
         String tenant = context.getTenant();
 
-        if (context.getSourceId() != null && !context.getAlarms().isEmpty()) {
+        // A test run raises no processing alarms: the problem is in the test result already, and the
+        // source may be a real device (an outbound test's source id comes from the test payload).
+        if (context.affectsMappingStatus() && context.getSourceId() != null && !context.getAlarms().isEmpty()) {
             ManagedObjectRepresentation sourceMor = new ManagedObjectRepresentation();
             sourceMor.setId(new GId(context.getSourceId()));
 

@@ -725,7 +725,16 @@ public class MockIdentity {
      */
     public void clear() {
         String tenant = subscriptionsService.getTenant();
+        clear(tenant);
+    }
 
+    /**
+     * Clear all external ID mappings for a specific tenant.
+     * Useful for test cleanup.
+     *
+     * @param tenant The tenant identifier
+     */
+    public void clear(String tenant) {
         if (tenant == null) {
             throw new IllegalStateException("No tenant context available");
         }
