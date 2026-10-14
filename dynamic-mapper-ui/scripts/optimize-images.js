@@ -109,14 +109,11 @@ async function main() {
 
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
-  const results = [];
-  for (const filename of filenames) {
-    results.push(await optimizeOne(filename));
-  }
-
   // OUTPUT_DIR is generated, so anything in it that the config no longer references is a leftover
   // from a renamed or deleted screenshot. The packaging step copies the whole directory, so those
   // leftovers would otherwise keep shipping inside dynamic-mapper.zip indefinitely.
+  // Prune first: case-insensitive filesystems may otherwise reuse a differently cased filename
+  // during optimization, only to delete that required image here afterwards.
   const expected = new Set(filenames);
   const pruned = fs
     .readdirSync(OUTPUT_DIR)
@@ -126,6 +123,11 @@ async function main() {
   }
   if (pruned.length > 0) {
     console.log(`[optimize-images] pruned ${pruned.length} unreferenced: ${pruned.join(', ')}`);
+  }
+
+  const results = [];
+  for (const filename of filenames) {
+    results.push(await optimizeOne(filename));
   }
 
   const optimized = results.filter((r) => !r.skipped);
