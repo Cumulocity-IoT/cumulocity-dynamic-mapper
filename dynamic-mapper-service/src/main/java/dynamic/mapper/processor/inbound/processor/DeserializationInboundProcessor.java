@@ -98,13 +98,12 @@ public class DeserializationInboundProcessor extends BaseProcessor {
     private void handleMissingProcessor(String tenant, Mapping mapping, ProcessingContext<?> context) {
         MappingStatus mappingStatusUnspecified = mappingService
                 .getMappingStatus(tenant, Mapping.UNSPECIFIED_MAPPING);
-        MappingStatus mappingStatus = mappingService
-                .getMappingStatus(tenant, mapping);
         String errorMessage = String.format("%s - No processor for MessageType: %s registered",
                 tenant, mapping.getMappingType());
         log.error(errorMessage);
         context.addError(new ProcessingException(errorMessage));
         if (context.affectsMappingStatus()) {
+            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             mappingStatus.incrementErrors();
             mappingStatusUnspecified.incrementErrors();
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
@@ -113,14 +112,13 @@ public class DeserializationInboundProcessor extends BaseProcessor {
 
     private void handleDeserializationError(String tenant, Mapping mapping, Exception e,
             ProcessingContext<?> context) {
-        MappingStatus mappingStatus = mappingService
-                .getMappingStatus(tenant, mapping);
         String errorMessage = String.format("%s - Failed to deserialize payload: %s",
                 tenant, e.getMessage());
         log.warn(errorMessage);
         log.debug("{} - Deserialization error details:", tenant, e);
         context.addError(new ProcessingException(errorMessage, e));
         if (context.affectsMappingStatus()) {
+            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             mappingStatus.incrementErrors();
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }

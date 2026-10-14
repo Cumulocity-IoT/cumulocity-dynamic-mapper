@@ -342,6 +342,38 @@ class AbstractEnrichmentProcessorTest {
     }
 
     @Test
+    void testRealRun_loadsTheSmartFunctionStateFromTheStore() throws Exception {
+        processor.process(processingContext, "test-connector");
+
+        verify(flowStateStore).loadState(TEST_TENANT, mapping.getIdentifier());
+    }
+
+    @Test
+    void testTestRun_neitherLoadsNorOverwritesTheLiveSmartFunctionState() throws Exception {
+        // A Dry Run / Live Test of a stateful Smart Function must not start from the production counter
+        // or write its increment back: it gets a throw-away state and no store.
+        processingContext.setTestRun(true);
+
+        processor.process(processingContext, "test-connector");
+        processingContext.close(); // close() is what writes the state back for a real run
+
+        verify(flowStateStore, never()).loadState(any(), any());
+        verify(flowStateStore, never()).saveState(any(), any(), any());
+    }
+
+    @Test
+    void testTestRun_doesNotCreateOrUpdateTheMappingStatus() throws Exception {
+        // Looking the status up creates its entry: testing a new or edited mapping must not add a phantom
+        // row to the monitoring page.
+        processingContext.setTestRun(true);
+
+        processor.process(processingContext, "test-connector");
+
+        verify(mappingService, never()).getMappingStatus(any(), any(Mapping.class));
+        assertEquals(0L, mappingStatus.messagesReceived);
+    }
+
+    @Test
     void testProcessCallsPerformPreEnrichmentSetup() throws Exception {
         // Given
 

@@ -242,6 +242,9 @@ public class ExtensibleResultInboundProcessor extends AbstractExtensibleResultPr
             }
 
             if (c8yObj.getSourceId() != null && !c8yObj.getSourceId().isEmpty()) {
+                if (context.getTestExternalIdPrefix() != null) {
+                    throw new ProcessingException(ProcessingContext.LIVE_TEST_C8Y_ID_ERROR);
+                }
                 // Use explicitly provided sourceId
                 resolvedDeviceId = c8yObj.getSourceId();
                 context.setSourceId(resolvedDeviceId);

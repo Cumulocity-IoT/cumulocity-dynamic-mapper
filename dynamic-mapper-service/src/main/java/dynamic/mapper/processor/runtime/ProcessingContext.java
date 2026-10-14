@@ -80,6 +80,13 @@ public class ProcessingContext<O> implements AutoCloseable {
      * registered under this prefix + the external ID the mapping produces.
      */
     public static final String TEST_EXTERNAL_ID_PREFIX = "d11r_liveTest_";
+
+    /**
+     * A live test registers a test device under a prefixed external ID. A mapping that names a device
+     * by its Cumulocity ID bypasses that and would write to whatever real device the payload names.
+     */
+    public static final String LIVE_TEST_C8Y_ID_ERROR = "A Live Test cannot address a device by its Cumulocity ID, "
+            + "because that would write to the real device. Identify the device by external ID, or use a Dry Run.";
     public static final String SOURCE_ID = "source.id";
     public static final String DEVICE_NAME = "deviceName";
     public static final String DEVICE_TYPE = "deviceType";

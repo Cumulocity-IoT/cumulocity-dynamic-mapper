@@ -141,10 +141,10 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
     @Override
     protected void handleProcessingError(Exception e, String errorMessage,
             ProcessingContext<?> context, String tenant, Mapping mapping) {
-        MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
         context.addError(new ProcessingException(errorMessage, e));
         context.setIgnoreFurtherProcessing(true);
         if (context.affectsMappingStatus()) {
+            MappingStatus mappingStatus = mappingService.getMappingStatus(tenant, mapping);
             mappingStatus.incrementErrors();
             mappingService.increaseAndHandleFailureCount(tenant, mapping, mappingStatus);
         }
@@ -241,7 +241,9 @@ public class FlowOutboundProcessor extends AbstractFlowProcessor {
      * Create alarms for any errors or warnings that occurred during processing.
      */
     private void createAlarmsForProcessing(ProcessingContext<?> context, String tenant) {
-        if (context.getSourceId() != null && !context.getAlarms().isEmpty()) {
+        // A test run raises no processing alarms: the problem is in the test result already, and the
+        // source may be a real device (an outbound test's source id comes from the test payload).
+        if (context.affectsMappingStatus() && context.getSourceId() != null && !context.getAlarms().isEmpty()) {
             ManagedObjectRepresentation sourceMor = new ManagedObjectRepresentation();
             sourceMor.setId(new GId(context.getSourceId()));
             context.getAlarms()

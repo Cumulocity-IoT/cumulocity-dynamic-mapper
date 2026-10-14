@@ -103,7 +103,9 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
                 log.info("{} - PROCESSING: message on topic: [{}], payload: {}", tenant, topic, payload);
             }
         }
-        this.inboundProcessingCounter.increment();
+        if (testMapping == null) { // test traffic is not operational traffic
+            this.inboundProcessingCounter.increment();
+        }
 
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
         ProcessingResultWrapper<?> result = ProcessingResultWrapper.builder()
@@ -241,7 +243,9 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
                     }
                 }
                 // Stop the timer
-                timer.stop(inboundProcessingTimer);
+                if (testMapping == null) {
+                    timer.stop(inboundProcessingTimer);
+                }
                 return contexts != null ? contexts : new ArrayList<>();
 
             } catch (Exception e) {

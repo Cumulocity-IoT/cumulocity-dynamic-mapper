@@ -26,6 +26,8 @@ import com.cumulocity.model.ID;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
@@ -131,17 +133,14 @@ public class TestController {
                 if (externalId == null) {
                     externalId = extractIdentityFromSourceTemplate(mapping.getSourceTemplate());
                 }
-                if (externalId == null) {
-                    externalId = deriveExternalIdFromTopic(mapping.getMappingTopicSample());
-                }
                 String externalIdType = (mapping.getExternalIdType() != null && !mapping.getExternalIdType().isEmpty())
                         ? mapping.getExternalIdType()
                         : "c8y_Serial";
                 if (externalId == null) {
                     return liveTestFailure(result, tenant,
-                            "The external ID for the test device could not be determined from the mapping, "
-                                    + "so the live test was not run. Add an external ID to the source template "
-                                    + "or the sample topic.");
+                            "The mapping does not identify its device by an external ID, so a Live Test cannot "
+                                    + "provide a test device for it and was not run. Identify the device by external "
+                                    + "ID, or use a Dry Run.");
                 }
                 // Never register the test device under the mapping's own external ID: once the real
                 // device sends its first message, that message would be written to the test device.
@@ -185,8 +184,7 @@ public class TestController {
 
             if (processingResultWrapper != null && processingResultWrapper.getProcessingResult() != null) {
                 // Wait for the future to complete and get the result
-                List<? extends ProcessingContext<?>> processingResult = (List<? extends ProcessingContext<?>>) processingResultWrapper
-                        .getProcessingResult().get();
+                List<? extends ProcessingContext<?>> processingResult = awaitContexts(processingResultWrapper);
 
                 // The test device was deleted but its ID is still cached somewhere: the send fails with
                 // "No managedObject for id". Evict, re-ensure the device and retry once.
@@ -206,8 +204,7 @@ public class TestController {
                         ProcessingResultWrapper<?> retryWrapper = connectorClient.getDispatcher()
                                 .onTestMessage(retryMessage, mapping);
                         if (retryWrapper != null && retryWrapper.getProcessingResult() != null) {
-                            processingResult = (List<? extends ProcessingContext<?>>) retryWrapper
-                                    .getProcessingResult().get();
+                            processingResult = awaitContexts(retryWrapper);
                         }
                     }
                     staleTestDevice = containsDeviceNotFound(processingResult);
@@ -267,6 +264,11 @@ public class TestController {
             log.error("{} - Connector not found for tenant: {}", tenant, e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,
                     "Connector not found: " + e.getMessage());
+        } catch (TimeoutException e) {
+            log.error("{} - Test timed out: {}", tenant, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT,
+                    "The test did not finish in time and was cancelled. Check the connectivity to Cumulocity "
+                            + "and the mapping for long-running code.");
         } catch (InterruptedException e) {
             log.error("{} - Test interrupted: {}", tenant, e.getMessage(), e);
             Thread.currentThread().interrupt(); // Restore interrupt status
@@ -283,6 +285,31 @@ public class TestController {
             // Leave nothing behind, whatever the outcome: devices created in the mock by this run
             // must not be found by the next one, and the mock should not hold memory between runs.
             clearMockCaches(tenant);
+        }
+    }
+
+    /** What a test waits for the pipeline when the dispatcher did not report its own timeout. */
+    private static final long DEFAULT_TEST_TIMEOUT_MS = 60_000;
+
+    /** Grace period on top of the pipeline timeout, so the pipeline's own timeout handling wins the race. */
+    private long testTimeoutMarginMs = 5_000;
+
+    /**
+     * Waits for the pipeline, but not forever: a starved Cumulocity semaphore or a hanging REST call
+     * would otherwise hold the HTTP request open indefinitely. On timeout the work is cancelled.
+     */
+    @SuppressWarnings("unchecked")
+    private List<? extends ProcessingContext<?>> awaitContexts(ProcessingResultWrapper<?> wrapper)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        long timeoutMs = (wrapper.getPipelineTimeoutMS() > 0 ? wrapper.getPipelineTimeoutMS() : DEFAULT_TEST_TIMEOUT_MS)
+                + testTimeoutMarginMs;
+        try {
+            return (List<? extends ProcessingContext<?>>) wrapper.getProcessingResult().get(timeoutMs,
+                    TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            wrapper.getProcessingResult().cancel(true);
+            wrapper.getCancellationRequested().set(true);
+            throw e;
         }
     }
 
@@ -450,10 +477,13 @@ public class TestController {
             if (dryRunWrapper == null || dryRunWrapper.getProcessingResult() == null) {
                 return null;
             }
-            var dryRunContexts = (List<? extends ProcessingContext<?>>) dryRunWrapper.getProcessingResult().get();
+            var dryRunContexts = awaitContexts(dryRunWrapper);
             if (dryRunContexts != null && !dryRunContexts.isEmpty()) {
                 return dryRunContexts.get(0).getExternalId();
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("{} - Dry-run for externalId resolution interrupted", tenant);
         } catch (Exception e) {
             log.warn("{} - Dry-run for externalId resolution failed, falling back to static extraction: {}",
                     tenant, e.getMessage());
@@ -480,23 +510,6 @@ public class TestController {
             log.warn("Could not extract identity from source template: {}", e.getMessage());
         }
         return null;
-    }
-
-    /**
-     * Derives an externalId candidate from a mapping topic sample by taking the last non-empty segment.
-     * E.g. "testSmartInbound/sensor-berlin-01" → "sensor-berlin-01"
-     */
-    private String deriveExternalIdFromTopic(String topicSample) {
-        if (topicSample == null || topicSample.isEmpty()) {
-            return "test-device";
-        }
-        String[] segments = topicSample.split("/");
-        for (int i = segments.length - 1; i >= 0; i--) {
-            if (!segments[i].isEmpty() && !segments[i].equals("#") && !segments[i].equals("+")) {
-                return segments[i];
-            }
-        }
-        return "test-device";
     }
 
     private ConnectorMessage createTestMessage(String tenant, AConnectorClient connectorClient, String topic,

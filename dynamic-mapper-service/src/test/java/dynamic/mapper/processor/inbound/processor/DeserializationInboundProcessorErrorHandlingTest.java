@@ -129,7 +129,6 @@ class DeserializationInboundProcessorErrorHandlingTest {
         // A Live Test uses real services (testing=false) but is still a test run: a broken payload typed
         // into the editor must not bump the error counters or the failure streak that auto-deactivates.
         mapping.setMappingType(MappingType.JSON);
-        when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
         when(connectorMessage.getTestRun()).thenReturn(true);
         replaceDeserializerWithMock(MappingType.JSON);
         when(mockDeserializer.deserializePayload(eq(mapping), eq(connectorMessage), anyBoolean()))
@@ -138,7 +137,8 @@ class DeserializationInboundProcessorErrorHandlingTest {
         processor.process(TEST_TENANT, mapping, connectorMessage, serviceConfiguration, false);
 
         verify(mappingService, never()).increaseAndHandleFailureCount(any(), any(), any());
-        assertEquals(0, mappingStatus.getErrors());
+        // not even looked up: that would create a status entry for a mapping that may not be saved yet
+        verify(mappingService, never()).getMappingStatus(TEST_TENANT, mapping);
     }
 
     private void replaceDeserializerWithMock(MappingType mappingType) throws Exception {

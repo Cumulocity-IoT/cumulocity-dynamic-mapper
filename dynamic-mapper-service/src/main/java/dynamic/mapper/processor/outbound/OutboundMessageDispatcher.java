@@ -274,7 +274,9 @@ public class OutboundMessageDispatcher implements NotificationCallback {
                     connectorClient.getConnectorName(),
                     c8yMessage.getMessageId());
         }
-        this.outboundProcessingCounter.increment();
+        if (testMapping == null) { // test traffic is not operational traffic
+            this.outboundProcessingCounter.increment();
+        }
 
         Qos consolidatedQos = Qos.AT_LEAST_ONCE;
         ProcessingResultWrapper<?> result = ProcessingResultWrapper.builder()
@@ -376,7 +378,9 @@ public class OutboundMessageDispatcher implements NotificationCallback {
                 log.error("{} - Error processing outbound message: {}", tenant, e.getMessage(), e);
                 throw new RuntimeException("Outbound processing failed", e);
             } finally {
-                timer.stop(outboundProcessingTimer);
+                if (testMapping == null) {
+                    timer.stop(outboundProcessingTimer);
+                }
                 result.markWorkerCompleted();
             }
         });

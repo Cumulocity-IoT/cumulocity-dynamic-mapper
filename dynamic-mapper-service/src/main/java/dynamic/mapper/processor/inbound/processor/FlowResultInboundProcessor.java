@@ -246,6 +246,9 @@ public class FlowResultInboundProcessor extends AbstractFlowResultProcessor {
             }
 
             if (cumulocityMessage.getSourceId() != null && !cumulocityMessage.getSourceId().isEmpty()) {
+                if (context.getTestExternalIdPrefix() != null) {
+                    throw new ProcessingException(ProcessingContext.LIVE_TEST_C8Y_ID_ERROR);
+                }
                 // Use explicitly provided sourceId
                 resolvedDeviceId = cumulocityMessage.getSourceId();
                 context.setSourceId(resolvedDeviceId);

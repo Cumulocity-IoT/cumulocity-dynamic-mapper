@@ -221,6 +221,9 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 substitute.setRepairStrategy(RepairStrategy.CREATE_IF_MISSING);
             }
         } else if ((Mapping.TOKEN_IDENTITY + ".c8ySourceId").equals(pathTarget)) {
+            if (context.getTestExternalIdPrefix() != null) {
+                throw new ProcessingException(ProcessingContext.LIVE_TEST_C8Y_ID_ERROR);
+            }
             SubstituteValue sourceId = new SubstituteValue(substitute.getValue(),
                     TYPE.TEXTUAL, RepairStrategy.CREATE_IF_MISSING, false);
             // in this case the device needs to exists beforehand

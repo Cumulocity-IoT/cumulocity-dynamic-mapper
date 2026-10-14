@@ -225,8 +225,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 if (inboundCache != null && !Boolean.TRUE.equals(testing)) {
                     resultInner = inboundCache.getIdByExternalId(identity);
                 }
-                Counter.builder("dynmapper_inbound_identity_requests_total").tag("tenant", tenant)
-                        .register(Metrics.globalRegistry).increment();
+                if (!Boolean.TRUE.equals(testing)) { // a dry run's mock lookups are not identity requests
+                    Counter.builder("dynmapper_inbound_identity_requests_total").tag("tenant", tenant)
+                            .register(Metrics.globalRegistry).increment();
+                }
                 if (resultInner == null) {
                     resultInner = identityApi.resolveExternalId2GlobalId(identity, testing, c8ySemaphore);
                     if (inboundCache != null && !Boolean.TRUE.equals(testing)) {

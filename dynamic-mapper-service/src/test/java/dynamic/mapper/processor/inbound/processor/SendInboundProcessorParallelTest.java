@@ -254,6 +254,23 @@ class SendInboundProcessorParallelTest {
         verify(serviceRegistry, never()).addOrUpdateClientRelation(any(), any(), any());
     }
 
+    @Test
+    void testProcessingAlarms_areRaisedForARealRunButNeverForATestRun() throws Exception {
+        processingContext.setSourceId("4711");
+        processingContext.getAlarms().add("something went wrong while processing");
+        processingContext.setRequests(new ArrayList<>());
+
+        processor.process(processingContext);
+        verify(c8yAgent, times(1)).createAlarm(any(), any(), any(), any(), any(), any());
+
+        // the same situation in a Live Test (real services, but a test run) must stay silent: the
+        // alarm would land on the test device, and the problem is already in the test result
+        org.mockito.Mockito.clearInvocations(c8yAgent);
+        processingContext.setTestRun(true);
+        processor.process(processingContext);
+        verify(c8yAgent, never()).createAlarm(any(), any(), any(), any(), any(), any());
+    }
+
     // ---- helpers ----
 
     private DynamicMapperRequest buildMeasurementRequest(String payloadJson) {

@@ -390,7 +390,9 @@ public class SendInboundProcessor extends BaseProcessor {
     private void createProcessingAlarms(ProcessingContext<Object> context) {
         String tenant = context.getTenant();
 
-        if (context.getSourceId() != null && !context.getAlarms().isEmpty()) {
+        // A test run raises no processing alarms: the problem is in the test result already, and the
+        // source may be a real device (an outbound test's source id comes from the test payload).
+        if (context.affectsMappingStatus() && context.getSourceId() != null && !context.getAlarms().isEmpty()) {
             ManagedObjectRepresentation sourceMor = new ManagedObjectRepresentation();
             sourceMor.setId(new GId(context.getSourceId()));
 
