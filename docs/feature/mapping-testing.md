@@ -55,6 +55,8 @@ written into the tenant — and, when wanted, seeing the real object being creat
 - Neither test reads or overwrites the Smart Function's persisted state, raises processing alarms, or counts as
   operational traffic in the message metrics.
 - A test that does not finish within the pipeline timeout is cancelled and answered with a timeout error.
+- A request without a mapping (or without its direction) or without a payload is answered `400` with a message that
+  says which is missing; an absent `send` means Dry Run.
 
 **Cleanup and permissions**
 - Test devices are identifiable (type and fragment `d11r_testDevice`, external ID prefix) and removable from
@@ -161,7 +163,9 @@ A mapping that names its device by Cumulocity ID is refused in the pipeline
 
 A deleted test device is not subscribed for inventory updates, so nothing evicts it from the caches. Two layers:
 `ensureTestDevice` never trusts the cache (above); and if the send still fails with `404 No managedObject for id`,
-the controller evicts the ID, re-ensures the device and retries **once**. If that fails too, the result carries an
+the controller evicts the ID, re-ensures the device and retries **once**. Only that specific error triggers the retry:
+any other `404` (a group, an attachment) is not mistaken for a deleted test device, because resending would repeat
+requests that already succeeded. If that fails too, the result carries an
 error telling the user to clear the *Inbound ID cache* (*Monitoring → Cache statistic*, mapping admins only).
 
 ### Test runs and the mapping status

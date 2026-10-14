@@ -21,7 +21,6 @@
 
 package dynamic.mapper.controller;
 
-import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.model.ID;
 import java.util.ArrayList;
 import java.util.List;
@@ -108,7 +107,15 @@ public class TestController {
         TestResult result = new TestResult();
         Mapping mapping = context.getMapping();
         String payload = context.getPayload();
-        Boolean send = context.getSend();
+        // @Valid is not enforced on the body, so check what the rest of the method dereferences: a missing
+        // field used to surface as a NullPointerException (a 500, or a 400 without a message).
+        if (mapping == null || mapping.getDirection() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A test needs a mapping with a direction.");
+        }
+        if (payload == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A test needs a payload.");
+        }
+        Boolean send = Boolean.TRUE.equals(context.getSend()); // absent means Dry Run
         String tenant = contextService.getContext().getTenant();
         log.info("{} - Test mapping: {}, {}, {}, {}", tenant, mapping.getName(), mapping.getId(), send,
                 payload);
@@ -333,9 +340,8 @@ public class TestController {
             for (Exception error : processingContext.getErrors()) {
                 Throwable cause = error;
                 for (int depth = 0; cause != null && depth < 10; depth++, cause = cause.getCause()) {
-                    if (cause instanceof SDKException sdk && sdk.getHttpStatus() == 404) {
-                        return true;
-                    }
+                    // Only "the managed object is gone". Any other 404 (a group, an attachment, ...) is a
+                    // different problem, and retrying would resend requests that already succeeded.
                     if (cause.getMessage() != null && cause.getMessage().contains("No managedObject for id")) {
                         return true;
                     }

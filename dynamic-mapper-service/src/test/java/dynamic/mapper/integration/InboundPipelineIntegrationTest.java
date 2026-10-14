@@ -162,6 +162,35 @@ class InboundPipelineIntegrationTest {
     // ========== CAMEL DISPATCHER ENTRY POINT TESTS ==========
 
     @Test
+    void testDispatcherCountsLiveTrafficButNotTestTraffic() throws Exception {
+        // Operational metrics describe real traffic: a Dry Run or Live Test must not move them.
+        io.micrometer.core.instrument.simple.SimpleMeterRegistry registry =
+                new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
+        io.micrometer.core.instrument.Metrics.addRegistry(registry);
+        try {
+            Mapping mapping = findMappingByName(inboundMappings, "Mapping - 01");
+            when(mappingService.resolveMappingInbound(TEST_TENANT, "fleet/bus_amsterdam"))
+                    .thenReturn(List.of(mapping));
+            when(connectorClient.determineMaxQosInbound(any())).thenReturn(mapping.getQos());
+            byte[] payload = "{\"fuel\":365,\"mea\":\"c8y_FuelMeasurement\"}".getBytes();
+
+            dispatcher.onTestMessage(createConnectorMessage("fleet/bus_amsterdam", payload), mapping)
+                    .getProcessingResult().get();
+            assertEquals(0.0, inboundMessageCount(registry), "test traffic is not operational traffic");
+
+            dispatcher.onMessage(createConnectorMessage("fleet/bus_amsterdam", payload)).getProcessingResult().get();
+            assertEquals(1.0, inboundMessageCount(registry), "a regular message is counted");
+        } finally {
+            io.micrometer.core.instrument.Metrics.removeRegistry(registry);
+        }
+    }
+
+    private double inboundMessageCount(io.micrometer.core.instrument.simple.SimpleMeterRegistry registry) {
+        return registry.find("dynmapper_inbound_message_total").counters().stream()
+                .mapToDouble(io.micrometer.core.instrument.Counter::count).sum();
+    }
+
+    @Test
     void testDispatcherOnMessage_SimpleJSON() throws Exception {
         // Given - Simple JSON mapping (Mapping - 01)
         Mapping mapping = findMappingByName(inboundMappings, "Mapping - 01");

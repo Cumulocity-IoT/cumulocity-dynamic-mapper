@@ -143,6 +143,9 @@ repeat it. The regression tests below are the safety net for that.
 | `mapping-testing.component.spec.ts` (UI) | A Dry Run opens the dialog for the marker as a warning and as an error and re-runs with `createNonExistingDevice = true` on confirm; a Live Test never opens it; the dialog does nothing on cancel, without the marker, or when the flag is already on |
 | `ProcessingContextLiveTestIdTest`, `ConsolidationProcessorTestRunTest`, `OutboundTestRunAccountingTest`, `DeserializationInboundProcessorErrorHandlingTest` | A test run (Dry Run or inbound Live Test) never counts toward the mapping status; a real run does |
 | `CommonProcessorLiveTestIdTest` | An outbound live test registers the mock device under the prefixed external ID; a dry run keeps it unchanged |
+| `TestRunGuardCoverageTest` | Architecture check: every `increaseAndHandleFailureCount` and `resetFailureCountOnSuccess` call site under `processor/` carries an `affectsMappingStatus()` guard, so a new call site that forgets it fails the build |
+| `SubstitutionResultInboundProcessorTest`, `FlowResultInboundProcessorTest` | A Live Test is refused for a device named by Cumulocity ID; production still accepts it |
+| `InboundPipelineIntegrationTest`, `OutboundPipelineIntegrationTest` | Test traffic does not move the message counters while regular traffic does; an outbound Live Test routes with the prefix, a Dry Run without |
 | `TestControllerTest` (live test) | A live test always provides a test device (created or reused), ignores the deprecated flag, fails without sending when none can be provided, and a Dry Run never touches test devices |
 
 Removing the guards in `C8YAgent` or the `finally` clear makes five of these fail.

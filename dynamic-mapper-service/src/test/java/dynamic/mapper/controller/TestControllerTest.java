@@ -497,6 +497,107 @@ class TestControllerTest {
     }
 
     @Test
+    void testMapping_missingMappingOrPayload_is400WithAMessage() {
+        TestContext noMapping = new TestContext();
+        noMapping.setPayload("{}");
+        ResponseStatusException ex1 = assertThrows(ResponseStatusException.class, () -> controller.testMapping(noMapping));
+        assertEquals(HttpStatus.BAD_REQUEST, ex1.getStatusCode());
+        assertTrue(ex1.getReason().contains("mapping"));
+
+        TestContext noPayload = new TestContext();
+        noPayload.setMapping(makeInboundMapping());
+        noPayload.setPayload(null);
+        ResponseStatusException ex2 = assertThrows(ResponseStatusException.class, () -> controller.testMapping(noPayload));
+        assertEquals(HttpStatus.BAD_REQUEST, ex2.getStatusCode());
+        assertTrue(ex2.getReason().contains("payload"));
+    }
+
+    @Test
+    void testMapping_sendAbsent_isADryRun() throws Exception {
+        stubDispatcherResult(contextWithExternalId());
+        TestContext ctx = dryRunContext();
+        ctx.setSend(null); // "send": null in the request body
+
+        controller.testMapping(ctx);
+
+        verify(c8YAgent, org.mockito.Mockito.never()).ensureTestDevice(anyString(), anyString(), anyString(), anyString());
+        org.mockito.ArgumentCaptor<ConnectorMessage> sent = org.mockito.ArgumentCaptor.forClass(ConnectorMessage.class);
+        verify(dispatcher).onTestMessage(sent.capture(), any(Mapping.class));
+        assertEquals(Boolean.FALSE, sent.getValue().getSendPayload());
+    }
+
+    @Test
+    void testMapping_errorsOfALaterContextAreReportedEvenThoughOnlyTheFirstOneIsReturned() throws Exception {
+        ProcessingContext<Object> first = contextWithExternalId();
+        ProcessingContext<Object> second = contextWithExternalId();
+        second.addError(new dynamic.mapper.processor.ProcessingException("second device failed"));
+        when(connectorRegistry.getClientForTenant(TENANT, TestClient.TEST_CONNECTOR_IDENTIFIER)).thenReturn(connectorClient);
+        when(connectorClient.getDispatcher()).thenReturn(dispatcher);
+        when(connectorClient.getConnectorIdentifier()).thenReturn(TestClient.TEST_CONNECTOR_IDENTIFIER);
+        ProcessingResultWrapper wrapper = ProcessingResultWrapper.builder()
+                .processingResult(CompletableFuture.completedFuture(List.of((ProcessingContext) first, (ProcessingContext) second)))
+                .build();
+        org.mockito.Mockito.doReturn(wrapper).when(dispatcher).onTestMessage(any(ConnectorMessage.class), any(Mapping.class));
+
+        TestResult result = controller.testMapping(dryRunContext()).getBody();
+
+        assertTrue(!result.getSuccess(), "a failure in a later context must not make the test look green");
+        assertTrue(result.getErrors().stream().anyMatch(e -> e.contains("second device failed")));
+    }
+
+    @Test
+    void testMapping_liveTest_externalIdFallsBackToTheSourceTemplate() throws Exception {
+        // the dry run derived nothing (e.g. it failed), the static template names the identity
+        stubDispatcherResult(ProcessingContext.builder().mapping(makeInboundMapping()).build());
+        Mapping mapping = makeInboundMapping();
+        mapping.setSourceTemplate("{\"_IDENTITY_\":{\"externalId\":\"any_SerialNumber\"}}");
+        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
+                .thenReturn(new C8YAgent.TestDevice("77", true));
+
+        TestContext ctx = new TestContext();
+        ctx.setMapping(mapping);
+        ctx.setPayload("{}");
+        ctx.setSend(true);
+        controller.testMapping(ctx);
+
+        verify(c8YAgent).ensureTestDevice(eq(TENANT), eq("d11r_liveTest_any_SerialNumber"),
+                eq("d11r_liveTest_any_SerialNumber"), anyString());
+    }
+
+    @Test
+    void testMapping_liveTest_aNotFoundOfSomethingElseIsNotMistakenForADeletedTestDevice() throws Exception {
+        stubDispatcherResult(contextWithExternalId());
+        ProcessingContext<Object> failed = contextWithExternalId();
+        failed.addError(new dynamic.mapper.processor.ProcessingException("Could not send",
+                new com.cumulocity.sdk.client.SDKException(404, "Event attachment not found")));
+        when(dispatcher.onTestMessage(any(ConnectorMessage.class), any(Mapping.class))).thenReturn(
+                wrapperOf(contextWithExternalId()), wrapperOf(failed));
+        when(c8YAgent.ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString()))
+                .thenReturn(new C8YAgent.TestDevice("77", true));
+
+        TestContext ctx = dryRunContext();
+        ctx.setSend(true);
+        TestResult result = controller.testMapping(ctx).getBody();
+
+        assertTrue(!result.getSuccess());
+        // no eviction, no second ensure, no resend of requests that may already have succeeded
+        verify(c8YAgent, org.mockito.Mockito.never()).evictExternalIdFromCaches(anyString(), any());
+        verify(c8YAgent, times(1)).ensureTestDevice(eq(TENANT), anyString(), anyString(), anyString());
+        verify(dispatcher, times(2)).onTestMessage(any(ConnectorMessage.class), any(Mapping.class));
+    }
+
+    @Test
+    void testMapping_isRestrictedToMapperAdminsAndCreators() throws Exception {
+        org.springframework.security.access.prepost.PreAuthorize rule = TestController.class
+                .getMethod("testMapping", TestContext.class)
+                .getAnnotation(org.springframework.security.access.prepost.PreAuthorize.class);
+
+        // with a Live Test the result is written with the microservice's own credentials
+        assertTrue(rule.value().contains("ROLE_DYNAMIC_MAPPER_ADMIN"));
+        assertTrue(rule.value().contains("ROLE_DYNAMIC_MAPPER_CREATE"));
+    }
+
+    @Test
     void testMapping_executionExceptionDuringDispatch_yields500() throws Exception {
         when(connectorRegistry.getClientForTenant(TENANT, TestClient.TEST_CONNECTOR_IDENTIFIER))
                 .thenReturn(connectorClient);
