@@ -41,7 +41,7 @@ import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/
 import { CodeTemplate, ServiceConfiguration } from '../../configuration';
 import { base64ToString, stringToBase64, stripTemplateMetadataTags } from '../../shared/mapping/util';
 import { ExtensionService } from '../../extension';
-import { AIAgentService, resolveRequiredAgentName } from '../core/ai-agent.service';
+import { AiAgentService, resolveRequiredAgentName } from '../core/ai-agent.service';
 
 // Types
 interface SelectOption<T> {
@@ -82,7 +82,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly sharedService = inject(SharedService);
   private readonly extensionService = inject(ExtensionService);
-  private readonly aiAgentService = inject(AIAgentService);
+  private readonly aiAgentService = inject(AiAgentService);
   private readonly fb = inject(FormBuilder);
   private readonly bottomDrawerService = inject(BottomDrawerService);
   private readonly destroy$ = new Subject<void>();

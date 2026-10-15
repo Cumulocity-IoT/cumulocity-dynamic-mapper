@@ -29,7 +29,7 @@ import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { saveAs } from 'file-saver';
 import { BehaviorSubject, from, map, Subject, takeUntil } from 'rxjs';
 import packageJson from '../../package.json';
-import { AIAgentService } from '../mapping/core/ai-agent.service';
+import { AiAgentService } from '../mapping/core/ai-agent.service';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from '../shared/configuration/configuration.model';
 import { ImportServiceConfigurationComponent } from './import/import-service-configuration-modal.component';
@@ -47,7 +47,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
   private sharedService = inject(SharedService);
   private fb = inject(FormBuilder);
   private route = inject(ActivatedRoute);
-  private aiAgentService = inject(AIAgentService);
+  private aiAgentService = inject(AiAgentService);
   private readonly router = inject(Router);
   private readonly bsModalService = inject(BsModalService);
 

@@ -38,19 +38,19 @@ import {
 } from './shared';
 import { TestingModule } from './test-device/testing.module';
 import './shared/styles/shared.css';
-import { BrokerConnectorModule } from './connector';
-import { LandingModule } from './introduction/doc.module';
+import { ConnectorConfigurationModule } from './connector';
+import { DocModule } from './introduction/doc.module';
 
 @NgModule({
   imports: [
     CoreModule,
-    LandingModule,
+    DocModule,
     TestingModule,
     MappingModule,
     MappingTreeModule,
     MonitoringModule,
     ServiceConfigurationModule,
-    BrokerConnectorModule,
+    ConnectorConfigurationModule,
     ExtensionModule,
     FormsModule,
     ModalModule,

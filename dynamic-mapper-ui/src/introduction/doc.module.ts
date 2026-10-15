@@ -91,4 +91,4 @@ const LEGACY_REDIRECTS: Record<string, string> = {
     hookNavigator(DocNavigationFactory),
   ]
 })
-export class LandingModule { }
+export class DocModule { }

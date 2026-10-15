@@ -67,7 +67,7 @@ import {
 } from '../../shared/mapping/util';
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, tryToTemplateType } from '../../shared/configuration/configuration.model';
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
-import { AIPromptComponent } from '../prompt/ai-prompt.component';
+import { AiPromptComponent } from '../prompt/ai-prompt.component';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { ConfirmationModalComponent } from '../../shared';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
@@ -781,7 +781,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
 
     const testMapping = buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false);
 
-    const drawer = this.bottomDrawerService.openDrawer(AIPromptComponent, {
+    const drawer = this.bottomDrawerService.openDrawer(AiPromptComponent, {
       initialState: { mapping: testMapping, aiAgent: this.aiAgent, editorMode: this.stepperConfiguration.editorMode }
     });
 

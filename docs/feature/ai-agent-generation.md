@@ -55,9 +55,9 @@ JSONata paths or JavaScript.
 
 ## Implementation
 
-### Backend: agent bootstrap, not generation — [`AIAgentService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/ai/AIAgentService.java)
+### Backend: agent bootstrap, not generation — [`AiAgentService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/ai/AiAgentService.java)
 
-Despite the name, `AIAgentService` does not generate substitutions or code itself; it
+Despite the name, `AiAgentService` does not generate substitutions or code itself; it
 provisions agent *definitions* on the external AI Agent Manager and exposes one MCP tool. The
 actual chat/generation happens client-side (see below), talking directly to the platform
 service and bypassing `dynamic-mapper-service` entirely. Someone looking for a "generate"
@@ -82,7 +82,7 @@ endpoint in the Java backend won't find one — that's expected.
   JSONata agent actually run a candidate expression against sample JSON mid-conversation and
   see the real result — a self-check before answering, rather than emitting an expression it
   hasn't verified. Registered as an MCP tool callback in `App.java`
-  (`ToolCallbackProvider tools(AIAgentService aiAgentService)`).
+  (`ToolCallbackProvider tools(AiAgentService aiAgentService)`).
 - The system prompts encode the rules the LLM must follow: the `Substitution`
   (`pathSource`/`pathTarget`/`expandArray`/…) and `Mapping` shapes it must conform to,
   GraalVM-specific JavaScript constraints for Smart Functions (e.g. no `.forEach`/`.map` on
@@ -111,7 +111,7 @@ endpoint in the Java backend won't find one — that's expected.
   gracefully when the AI Agent Manager isn't reachable, per the "must still work without AI"
   requirement above.
 
-### Frontend: the generation drawer — [`AIPromptComponent`](../../dynamic-mapper-ui/src/mapping/prompt/ai-prompt.component.ts)
+### Frontend: the generation drawer — [`AiPromptComponent`](../../dynamic-mapper-ui/src/mapping/prompt/ai-prompt.component.ts)
 
 Wraps `@c8y/ngx-components/ai/agent-chat`'s `AgentChatComponent`, configured with the resolved
 `clientAgentDefinition`. Opened from the mapping stepper's transformation step
@@ -165,7 +165,7 @@ path gates its Add/Update buttons on `isSubstitutionValid()`
 but that is a *button guard, not an invariant* — `replaceAllSubstitutions()` and
 `addSubstitution()`, which the AI path calls directly, do not check it.
 
-`AIPromptComponent` therefore runs its own checks on each answer before the result can be
+`AiPromptComponent` therefore runs its own checks on each answer before the result can be
 applied, and reports what it finds in a warning panel in the drawer, with a button that sends
 the problems back to the agent as a follow-up turn. The checks are deliberately **warnings, not
 a hard gate** — Save stays enabled, because an expression can fail against the *sample* template

@@ -22,18 +22,18 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
-import { SubstitutionRendererComponent, SubstitutionGridSettings } from './substitution-grid.component';
+import { SubstitutionGridComponent, SubstitutionGridSettings } from './substitution-grid.component';
 import { EditorMode } from '../../shared/mapping/stepper.model';
 
 /**
- * Unit tests for {@link SubstitutionRendererComponent} — the substitution list/grid.
+ * Unit tests for {@link SubstitutionGridComponent} — the substitution list/grid.
  * The interesting behaviour is selection/edit emission and the delete-confirmation flow,
- * which only fires the {@link SubstitutionRendererComponent.deleteSub} output once the user
+ * which only fires the {@link SubstitutionGridComponent.deleteSub} output once the user
  * confirms the modal.
  */
-describe('SubstitutionRendererComponent', () => {
-  let component: SubstitutionRendererComponent;
-  let fixture: ComponentFixture<SubstitutionRendererComponent>;
+describe('SubstitutionGridComponent', () => {
+  let component: SubstitutionGridComponent;
+  let fixture: ComponentFixture<SubstitutionGridComponent>;
   let mockBsModalService: jasmine.SpyObj<BsModalService>;
   let closeSubject: Subject<boolean>;
   let modalHide: jasmine.Spy;
@@ -50,16 +50,16 @@ describe('SubstitutionRendererComponent', () => {
     mockBsModalService = jasmine.createSpyObj('BsModalService', ['show']);
     mockBsModalService.show.and.returnValue({ content: { closeSubject }, hide: modalHide } as any);
 
-    TestBed.overrideComponent(SubstitutionRendererComponent, {
+    TestBed.overrideComponent(SubstitutionGridComponent, {
       set: { imports: [], providers: [], schemas: [NO_ERRORS_SCHEMA], template: '<div></div>' }
     });
 
     await TestBed.configureTestingModule({
-      imports: [SubstitutionRendererComponent],
+      imports: [SubstitutionGridComponent],
       providers: [{ provide: BsModalService, useValue: mockBsModalService }]
     }).compileComponents();
 
-    fixture = TestBed.createComponent(SubstitutionRendererComponent);
+    fixture = TestBed.createComponent(SubstitutionGridComponent);
     component = fixture.componentInstance;
     component.settings = settings();
   });

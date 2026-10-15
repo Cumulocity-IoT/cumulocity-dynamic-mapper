@@ -22,7 +22,7 @@ import { NgModule } from '@angular/core';
 import { hookRoute, hookTab } from '@c8y/ngx-components';
 import { featureResolver, NODE3 } from '../shared';
 import { ServiceConfigurationComponent } from './service-configuration.component';
-import { CodeComponent } from './code-template/code-template.component';
+import { CodeTemplateComponent } from './code-template/code-template.component';
 import { CodeTemplateTabFactory } from './code-template-tab.factory';
 import { ConfigurationTabFactory } from './configuration-tab.factory';
 
@@ -37,21 +37,21 @@ import { ConfigurationTabFactory } from './configuration-tab.factory';
     }),
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/INBOUND_SMART_FUNCTION`,
-      component: CodeComponent,
+      component: CodeTemplateComponent,
       resolve: {
         feature: featureResolver
       }
     }),
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/OUTBOUND_SMART_FUNCTION`,
-      component: CodeComponent,
+      component: CodeTemplateComponent,
       resolve: {
         feature: featureResolver
       }
     }),
     hookRoute({
       path: `c8y-pkg-dynamic-mapper/${NODE3}/codeTemplate/others`,
-      component: CodeComponent,
+      component: CodeTemplateComponent,
       resolve: {
         feature: featureResolver
       }

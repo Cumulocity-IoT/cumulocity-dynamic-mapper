@@ -19,7 +19,7 @@
  */
 import { NgModule } from '@angular/core';
 import { FORMLY_CONFIG } from '@ngx-formly/core';
-import { CustomFieldTextarea } from './component/formly/textarea.type.component';
+import { TextareaTypeComponent } from './component/formly/textarea.type.component';
 import { FormatStringPipe } from './misc/format-string.pipe';
 import { InputListFormlyComponent } from './component/formly/input-list-formly.component';
 import { provideEchartsCore } from 'ngx-echarts';
@@ -27,8 +27,8 @@ import { CapitalizeCasePipe } from './misc/capitalize-case.pipe';
 import { FilterJsonPipe } from './misc/filter-json.pipe';
 import { Base64DecodePipe } from './misc/base64-decode.pipe';
 import { CamelCasePipe } from './misc/camel-case.pipe';
-import { CustomFieldInput } from './component/formly/input.type.component';
-import { WrapperCustomFormField } from './component/formly/custom-form-field-wrapper.component';
+import { InputTypeComponent } from './component/formly/input.type.component';
+import { CustomFormFieldWrapperComponent } from './component/formly/custom-form-field-wrapper.component';
 
 @NgModule({
   imports: [
@@ -37,8 +37,8 @@ import { WrapperCustomFormField } from './component/formly/custom-form-field-wra
     CapitalizeCasePipe,
     Base64DecodePipe,
     FilterJsonPipe,
-    CustomFieldInput,
-    CustomFieldTextarea,
+    InputTypeComponent,
+    TextareaTypeComponent,
     InputListFormlyComponent
   ],
   exports: [
@@ -47,8 +47,8 @@ import { WrapperCustomFormField } from './component/formly/custom-form-field-wra
     CapitalizeCasePipe,
     Base64DecodePipe,
     FilterJsonPipe,
-    CustomFieldInput,
-    CustomFieldTextarea,
+    InputTypeComponent,
+    TextareaTypeComponent,
     InputListFormlyComponent
   ],
   providers: [CamelCasePipe, FormatStringPipe, CapitalizeCasePipe, Base64DecodePipe, FilterJsonPipe,
@@ -60,11 +60,11 @@ import { WrapperCustomFormField } from './component/formly/custom-form-field-wra
         types: [
           {
             name: 'd11r-textarea',
-            component: CustomFieldTextarea
+            component: TextareaTypeComponent
           },
           {
             name: 'd11r-input',
-            component: CustomFieldInput
+            component: InputTypeComponent
           },
           { name: 'enum', extends: 'select' },
           { name: 'boolean', extends: 'checkbox' },
@@ -76,7 +76,7 @@ import { WrapperCustomFormField } from './component/formly/custom-form-field-wra
         wrappers: [
           {
             name: 'd11r-wrapper-form-field',
-            component: WrapperCustomFormField
+            component: CustomFormFieldWrapperComponent
           }
         ],
       }
