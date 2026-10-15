@@ -73,6 +73,11 @@ anything that threw.
 
 Open it in the **Administration** application under **Ecosystem → Microservices → dynamic-mapper-service → Logs**.
 
+**Your tenant only subscribes to the Dynamic Mapper?** Then the microservice belongs to another tenant and you cannot
+open its log in Administration. Open **Monitoring → Service logs** in the Dynamic Mapper instead: it shows the lines
+that were logged for your tenant, provided the operator switched the collection on. See
+[Service logs](/c8y-pkg-dynamic-mapper/introduction/monitoring#service-logs).
+
 ![Microservice log](../../../resources/image/Dynamic_Mapper_Monitoring_Microservice_Log.png "The Logs tab of the dynamic-mapper-service microservice in the Administration application, showing inbound processing, JS LOG lines from a Smart Function, and a WARN explaining why no request was created.")
 
 Useful controls on that page:

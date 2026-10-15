@@ -5,7 +5,7 @@ title: Monitoring
 ### Monitoring {#monitoring}
 
 The **Monitoring** section in the left navigation contains views for **Statistic processed**, **Chart
-processed**, **Cache statistic**, **Service events**, and **Hierarchy mapping**. Each gives a different
+processed**, **Cache statistic**, **Service events**, **Service logs**, and **Hierarchy mapping**. Each gives a different
 operational perspective on what the mapper is doing at runtime.
 
 #### Statistic processed (Inbound / Outbound)
@@ -117,6 +117,79 @@ or event category. This is particularly useful when correlating errors with know
 Service events are stored in an in-memory ring buffer and are lost on microservice restart. For long-term audit
 trails, configure the Cumulocity platform's built-in audit log or forward events to an external monitoring
 system.
+:::
+
+#### Service logs {#service-logs}
+
+The Service logs view shows the log of the `dynamic-mapper-service` microservice inside the Dynamic Mapper, so you
+can follow what the mapper did for your tenant without opening the Administration application. Where the lines come
+from depends on who owns the microservice. The badge at the left of the action bar tells you which one you are
+looking at:
+
+| Badge | What you see | When |
+|---|---|---|
+| **Platform log** | The complete log of the microservice instance, including the lines of every tenant that shares it. | You are in the tenant that owns the microservice and your user may read applications. |
+| **Collected log** | Only the lines that were logged for **your** tenant. | Every other case: your tenant only subscribes to the microservice, or you own it but your user may not read its log in Administration. |
+
+![Service logs](../../../resources/image/Dynamic_Mapper_Monitoring_Service_Logs.png "The Service logs view showing the collected log of a tenant: badge and note in the action bar, instance and start time above the log, paging buttons below.")
+
+The page picks the source itself; there is nothing to choose. Both look and behave the same.
+
+##### The collected log
+
+The service stores the lines of each tenant as events in that tenant and this view reads them back. What that means
+for you:
+
+- **Only your tenant's lines.** A line is shown to a tenant only if it was logged for that tenant. Lines of other
+  tenants, and lines that belong to no tenant (start-up, shared infrastructure), never appear.
+- **Warnings and errors by default.** Lines below the level the operator configured are not collected. Informational
+  lines can contain device payloads, which is why the default is **WARN**.
+- **Limited and slightly late.** Lines are kept for a limited time (24 hours by default) and arrive within about a
+  minute. A very busy period can exceed the per-tenant limit; the view then says how many lines were left out.
+- **Same line format** as the platform log: time (UTC), level, thread, logger and message. A stack trace stays with
+  the line it belongs to.
+
+##### Controls
+
+| Control | What it does |
+|---|---|
+| **Instance name** | Selects the microservice instance. Each instance has its own log; the collected log lists the instances that have stored lines for your tenant. |
+| **From** and **Apply** | Jumps to a start time. The time is in **UTC**, not your local time. |
+| **First / Previous / Next / Last** | Pages through the log. **Last** shows the newest lines. **Next** and **Last** are disabled while auto refresh is on, because it already follows the newest lines. |
+| **Dark theme** | Switches the log between a dark and a light theme. The choice is remembered in your browser. |
+| **Auto refresh** | Reloads the newest lines every 10 seconds. |
+| **Download** | Saves the whole log of the selected instance as `<instance>.log`. |
+
+##### Who can open it
+
+The view requires `ROLE_DYNAMIC_MAPPER_ADMIN`; users without it do not see the menu entry. See
+[Managing permissions](/c8y-pkg-dynamic-mapper/introduction/access-control).
+
+:::info
+The collected log is stored as ordinary Cumulocity events of type `d11r_serviceLog`, attached to a managed object
+named **Dynamic Mapper service log** in your tenant. Anyone who may read events in your tenant can also list them
+there, independent of the Dynamic Mapper roles.
+:::
+
+##### Switching the collection on
+
+Collecting the log is off by default. Whoever deploys the microservice switches it on with a property of the
+service. How a property is set depends on how the microservice is deployed; a restart is required.
+
+| Property | Default | Meaning |
+|---|---|---|
+| `service.logs.collector.enabled` | `false` | Switches the collection on. |
+| `service.logs.collector.min-level` | `WARN` | Lowest level that is collected: `TRACE`, `DEBUG`, `INFO`, `WARN` or `ERROR`. |
+| `service.logs.collector.interval-ms` | `30000` | How often collected lines are stored. |
+| `service.logs.collector.max-lines-per-tenant` | `500` | Most lines stored for one tenant per run; the rest is counted as left out. |
+| `service.logs.collector.max-chunk-bytes` | `65536` | Size of one stored event. |
+| `service.logs.collector.retention-hours` | `24` | How long stored lines are kept. |
+| `service.logs.collector.max-buffered-records-per-tenant` | `2000` | Lines one tenant can have waiting in memory. When it is full the oldest are dropped. |
+
+:::caution
+At level **INFO** the service logs the full payload of every message it processes, and the collected log shows it to
+the tenant's administrators. Keep the default **WARN** unless you need the processing steps. Lines that are still in
+the service's memory when an instance stops are lost, because they are stored a short time after they are logged.
 :::
 
 #### Hierarchy mapping

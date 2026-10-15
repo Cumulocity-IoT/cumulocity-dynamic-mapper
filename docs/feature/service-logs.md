@@ -97,6 +97,10 @@ previous design onto the agent itself (if any exist) are invisible to the page a
 
 ### Read side and page
 
+![Service logs page, collected log](../../resources/image/Dynamic_Mapper_Monitoring_Service_Logs.png)
+
+User documentation: [`monitoring.md`](../../dynamic-mapper-ui/public/docs/monitoring.md#service-logs).
+
 [`ServiceLogsController`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/ServiceLogsController.java) /
 [`ServiceLogReader`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/logs/ServiceLogReader.java): reads the calling
 tenant's events **as that tenant's service user** (the caller's own event permission is irrelevant), up to 10 chunks per page,

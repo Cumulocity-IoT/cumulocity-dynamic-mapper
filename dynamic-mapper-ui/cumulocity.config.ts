@@ -202,6 +202,10 @@ export default {
         to: 'image/Dynamic_Mapper_Monitoring_Tree.png'
       },
       {
+        from: '../resources/image-optimized/Dynamic_Mapper_Monitoring_Service_Logs.png',
+        to: 'image/Dynamic_Mapper_Monitoring_Service_Logs.png'
+      },
+      {
         from: '../LICENSE',
         to: 'LICENSE.txt'
       },
