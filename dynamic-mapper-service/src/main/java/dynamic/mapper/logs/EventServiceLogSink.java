@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.joda.time.DateTime;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import com.cumulocity.microservice.context.ContextService;
@@ -50,7 +49,6 @@ import dynamic.mapper.core.C8YAgent;
  * {@code levels}, {@code omitted} and {@code logs}.
  */
 @Service
-@ConditionalOnProperty(prefix = "service.logs.collector", name = "enabled", havingValue = "true")
 public class EventServiceLogSink implements ServiceLogSink {
 
     public static final String EVENT_TYPE = "d11r_serviceLog";

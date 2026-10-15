@@ -183,8 +183,16 @@ service. How a property is set depends on how the microservice is deployed; a re
 | `service.logs.collector.interval-ms` | `30000` | How often collected lines are stored. |
 | `service.logs.collector.max-lines-per-tenant` | `500` | Most lines stored for one tenant per run; the rest is counted as left out. |
 | `service.logs.collector.max-chunk-bytes` | `65536` | Size of one stored event. |
-| `service.logs.collector.retention-hours` | `24` | How long stored lines are kept. |
+| `service.logs.collector.retention-hours` | `24` | How long stored lines are kept. Older lines are deleted by the clean-up described below, even when the collection itself is switched off. |
+| `service.logs.retention.enabled` | `true` | Switches the clean-up of old stored lines on or off. |
+| `service.logs.retention.interval-ms` | `3600000` | How often old lines are deleted (every hour by default). |
 | `service.logs.collector.max-buffered-records-per-tenant` | `2000` | Lines one tenant can have waiting in memory. When it is full the oldest are dropped. |
+
+**Clean-up.** A separate job deletes the stored lines of every subscribed tenant once they are older than the retention
+period, so the number of `d11r_serviceLog` events does not keep growing. It runs on its own schedule and does not
+depend on the collection: if you switch the collection off, lines that were stored earlier are still removed when
+their time is up. Every instance of the microservice runs it; deleting lines that are already gone does nothing.
+The lines of a tenant that unsubscribes are left alone, because they belong to that tenant.
 
 :::caution
 At level **INFO** the service logs the full payload of every message it processes, and the collected log shows it to

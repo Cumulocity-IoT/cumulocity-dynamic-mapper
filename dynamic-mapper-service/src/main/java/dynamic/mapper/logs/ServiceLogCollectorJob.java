@@ -20,11 +20,8 @@
 
 package dynamic.mapper.logs;
 
-import java.time.Clock;
-import java.time.Duration;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -42,13 +39,11 @@ public class ServiceLogCollectorJob {
     private final ServiceLogCollector collector;
 
     public ServiceLogCollectorJob(ServiceLogBuffer buffer, ServiceLogSink sink,
-            MicroserviceSubscriptionsService subscriptionsService, ServiceLogPolicy policy,
-            @Value("${service.logs.collector.retention-hours:24}") int retentionHours) {
+            MicroserviceSubscriptionsService subscriptionsService, ServiceLogPolicy policy) {
         this.collector = new ServiceLogCollector(buffer, sink,
                 () -> subscriptionsService.getAll().stream().map(MicroserviceCredentials::getTenant)
                         .collect(Collectors.toSet()),
-                policy, System.getenv("HOSTNAME") != null ? System.getenv("HOSTNAME") : "local",
-                Duration.ofHours(retentionHours), Clock.systemUTC());
+                policy, System.getenv("HOSTNAME") != null ? System.getenv("HOSTNAME") : "local");
     }
 
     @Scheduled(fixedDelayString = "${service.logs.collector.interval-ms:30000}",

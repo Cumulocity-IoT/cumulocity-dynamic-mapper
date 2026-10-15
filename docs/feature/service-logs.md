@@ -67,13 +67,14 @@ platform's log* for what was measured.
 | `BoundedServiceLogBuffer` | in-memory, **bounded per tenant**: a flooding tenant drops its own oldest lines and can neither exhaust memory nor push out another tenant; drops are counted; `restore` puts records back in order |
 | `ServiceLogCapture` | the Spring bean that attaches/detaches the appender and exposes the buffer |
 | `ServiceLogPolicy`, `ServiceLogChunker` | minimum level, excluded loggers, per-tenant line cap with an `omitted` count, byte-bounded chunks; **a record reaches a tenant only if its own tenant field names that tenant and the tenant is subscribed** |
-| `ServiceLogCollector` | one run: drain → per-tenant chunks → store. A failed store puts that tenant's *unstored* records back (time watermark of the last stored chunk) and does not hold up other tenants; never throws; a repeated identical failure is logged once, then every 20th run; purge at most hourly; records of tenants that are not subscribed are dropped |
+| `ServiceLogCollector` | one run: drain → per-tenant chunks → store. A failed store puts that tenant's *unstored* records back (time watermark of the last stored chunk) and does not hold up other tenants; never throws; a repeated identical failure is logged once, then every 20th run; records of tenants that are not subscribed are dropped. It no longer purges (see retention) |
 | `EventServiceLogSink`, `ServiceLogSourceLocator` | one `d11r_serviceLog` event per chunk, written with that tenant's service user, on a dedicated source object (below) |
 | `ServiceLogReader`, `ServiceLogsController` | the read side (below) |
-| `ServiceLogCollectorConfiguration`, `ServiceLogCollectorJob` | the shared policy and the `@Scheduled` trigger; every bean exists only when `service.logs.collector.enabled=true` |
+| `ServiceLogCollectorConfiguration`, `ServiceLogCollectorJob` | the shared policy and the `@Scheduled` trigger; these beans (and the capture) exist only when `service.logs.collector.enabled=true`. The sink, the reader and the retention job are always present |
+| `ServiceLogRetention`, `ServiceLogRetentionJob` | **retention, independent of the collector**: once an hour, for every subscribed tenant, deletes stored lines older than `retention-hours` (bulk delete by type, source and time). Runs even when collection is switched off, so a service that stopped collecting does not leave events behind; a failing tenant does not stop the others and is retried next run; unsubscribed tenants are not touched (their events belong to their tenant); every instance runs it, which is redundant but harmless |
 
 Settings (`application.properties`): `interval-ms` 30000, `min-level` WARN, `max-lines-per-tenant` 500, `max-chunk-bytes`
-65536, `retention-hours` 24, `max-buffered-records-per-tenant` 2000.
+65536, `retention-hours` 24, `max-buffered-records-per-tenant` 2000. Retention: `service.logs.retention.enabled` true, `service.logs.retention.interval-ms` 3600000 (the age limit stays `service.logs.collector.retention-hours`).
 
 Known limits: a record's time is the event's millisecond, so two records of the same millisecond across a retry watermark can
 be skipped or repeated; a line count of a multi-line record counts every line; lines logged while the buffer is full are lost
@@ -184,7 +185,7 @@ credential handling.
 - **Secrets in lines.** At `INFO` the service logs full device payloads. The minimum level is the protection (`WARN` default).
   A tenant-specific level, editable only by `ROLE_DYNAMIC_MAPPER_ADMIN` and bounded below by an operator floor, would be a
   per-tenant setting in the service configuration — **not built**.
-- **Cost.** One event write per tenant per interval when it has something, plus an hourly delete per tenant. Measure before
+- **Cost.** One event write per tenant per interval when it has something, plus an hourly delete per tenant by the retention job. At the defaults a tenant holds at most about 2,880 events (one per 30 s over 24 h), each up to 64 KB, and in practice far fewer because a chunk is only written when there is something to store. Measure before
   lowering the 30 s default with many tenants.
 - **Tenant lifecycle.** Unsubscribed tenants' lines are dropped at the next run; the log source object is looked up per
   tenant and its cache is dropped on unsubscribe. Stored events stay under the tenant's own retention.

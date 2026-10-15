@@ -14,7 +14,8 @@ class ServiceLogCollectorWiringTest {
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
             .withBean(ServiceLogSink.class, () -> mock(ServiceLogSink.class))
             .withBean(MicroserviceSubscriptionsService.class, () -> mock(MicroserviceSubscriptionsService.class))
-            .withUserConfiguration(ServiceLogCollectorConfiguration.class, ServiceLogCapture.class, ServiceLogCollectorJob.class);
+            .withUserConfiguration(ServiceLogCollectorConfiguration.class, ServiceLogCapture.class, ServiceLogCollectorJob.class,
+                    ServiceLogRetentionJob.class);
 
     @Test
     void isOffByDefault() {
@@ -37,5 +38,19 @@ class ServiceLogCollectorWiringTest {
             assertEquals(1, ctx.getBeansOfType(ServiceLogCapture.class).size());
             assertEquals(1, ctx.getBeansOfType(ServiceLogPolicy.class).size());
         });
+    }
+
+    @Test
+    void retentionRunsEvenWhenTheCollectorIsOffSoStoredLinesNeverPileUp() {
+        runner.withPropertyValues("service.logs.collector.enabled=false").run(ctx -> {
+            assertEquals(0, ctx.getBeansOfType(ServiceLogCollectorJob.class).size());
+            assertEquals(1, ctx.getBeansOfType(ServiceLogRetentionJob.class).size());
+        });
+    }
+
+    @Test
+    void retentionCanBeSwitchedOff() {
+        runner.withPropertyValues("service.logs.retention.enabled=false")
+                .run(ctx -> assertEquals(0, ctx.getBeansOfType(ServiceLogRetentionJob.class).size()));
     }
 }

@@ -20,8 +20,6 @@
 
 package dynamic.mapper.logs;
 
-import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -51,24 +49,18 @@ public class ServiceLogCollector {
     private final Supplier<Set<String>> subscribedTenants;
     private final ServiceLogPolicy policy;
     private final String instance;
-    private final Duration retention;
-    private final Duration purgeEvery = Duration.ofHours(1);
-    private final Clock clock;
 
-    private Instant lastPurge = Instant.EPOCH;
     private boolean announced;
     private String lastFailure;
     private int repeatedFailures;
 
     public ServiceLogCollector(ServiceLogBuffer buffer, ServiceLogSink sink, Supplier<Set<String>> subscribedTenants,
-            ServiceLogPolicy policy, String instance, Duration retention, Clock clock) {
+            ServiceLogPolicy policy, String instance) {
         this.buffer = buffer;
         this.sink = sink;
         this.subscribedTenants = subscribedTenants;
         this.policy = policy;
         this.instance = instance;
-        this.retention = retention;
-        this.clock = clock;
     }
 
     /** One collection run. Never throws: a failure is logged (once per streak) and retried next run. */
@@ -113,7 +105,6 @@ public class ServiceLogCollector {
             if (!failed) {
                 lastFailure = null;
             }
-            purgeIfDue(tenants);
         } catch (Exception e) {
             remember("*", e);
         }
@@ -147,26 +138,6 @@ public class ServiceLogCollector {
             lastFailure = message;
             repeatedFailures = 0;
             log.warn("Service log collection failed for {}", message);
-        }
-    }
-
-    private void purgeIfDue(Set<String> tenants) {
-        Instant now = clock.instant();
-        if (Duration.between(lastPurge, now).compareTo(purgeEvery) < 0) {
-            return;
-        }
-        lastPurge = now;
-        Instant before = now.minus(retention);
-        List<String> failed = new ArrayList<>();
-        for (String tenant : tenants) {
-            try {
-                sink.purge(tenant, before);
-            } catch (Exception e) {
-                failed.add(tenant);
-            }
-        }
-        if (!failed.isEmpty()) {
-            log.warn("Could not purge old service logs for tenants {}", failed);
         }
     }
 }

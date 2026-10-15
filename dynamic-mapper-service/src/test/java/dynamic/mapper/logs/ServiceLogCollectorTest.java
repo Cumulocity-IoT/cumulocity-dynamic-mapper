@@ -4,10 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -68,7 +65,6 @@ class ServiceLogCollectorTest {
         final Set<String> failing = new HashSet<>();
         int failOnWriteNumber = -1;
         int writes;
-        final List<String> purged = new ArrayList<>();
 
         @Override
         public void write(String tenant, String instance, ServiceLogChunk chunk) {
@@ -81,7 +77,7 @@ class ServiceLogCollectorTest {
 
         @Override
         public void purge(String tenant, Instant before) {
-            purged.add(tenant);
+            // not the collector's job any more: see ServiceLogRetention
         }
 
         String logsOf(String tenant) {
@@ -91,17 +87,9 @@ class ServiceLogCollectorTest {
 
     private final FakeBuffer buffer = new FakeBuffer();
     private final FakeSink sink = new FakeSink();
-    private Instant now = T0;
-    private final Clock clock = new Clock() {
-        public java.time.ZoneId getZone() { return ZoneOffset.UTC; }
-        public Clock withZone(java.time.ZoneId zone) { return this; }
-        public Instant instant() { return now; }
-    };
-
     private ServiceLogCollector collector(Set<String> subscribed, int maxChunkBytes) {
         return new ServiceLogCollector(buffer, sink, () -> subscribed,
-                new ServiceLogPolicy("WARN", 500, maxChunkBytes, List.of("ServiceLogCollector")), "pod-1",
-                Duration.ofHours(24), clock);
+                new ServiceLogPolicy("WARN", 500, maxChunkBytes, List.of("ServiceLogCollector")), "pod-1");
     }
 
     @Test
@@ -188,18 +176,5 @@ class ServiceLogCollectorTest {
         collector(Set.of("tenantA"), 65536).collect(); // must not throw
 
         assertEquals(0, sink.writes);
-    }
-
-    @Test
-    void oldCopiesArePurgedAtMostOncePerHour() {
-        ServiceLogCollector c = collector(Set.of("tenantA", "tenantB"), 65536);
-
-        c.collect();
-        c.collect();
-        assertEquals(2, sink.purged.size(), "one purge per tenant, not per run");
-
-        now = now.plus(Duration.ofMinutes(61));
-        c.collect();
-        assertEquals(4, sink.purged.size());
     }
 }
