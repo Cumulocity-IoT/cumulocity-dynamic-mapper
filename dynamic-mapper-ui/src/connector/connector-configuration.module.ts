@@ -44,4 +44,4 @@ import { featureResolver, NODE3 } from '../shared/mapping/mapping.constants';
     })
   ]
 })
-export class BrokerConnectorModule { }
+export class ConnectorConfigurationModule { }

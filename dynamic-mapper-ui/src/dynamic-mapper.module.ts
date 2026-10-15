@@ -29,7 +29,7 @@ import {
 import { ModalModule } from 'ngx-bootstrap/modal';
 import { ServiceConfigurationModule } from './configuration/service-configuration.module';
 import { ExtensionModule } from './extension/extension.module';
-import { MappingTreeModule } from './mapping-tree/tree.module';
+import { MappingTreeModule } from './mapping-tree/mapping-tree.module';
 import { MappingModule } from './mapping/mapping.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { FormlyPresetModule } from '@ngx-formly/core/preset';
@@ -38,19 +38,19 @@ import {
 } from './shared';
 import { TestingModule } from './test-device/testing.module';
 import './shared/styles/shared.css';
-import { BrokerConnectorModule } from './connector';
-import { LandingModule } from './introduction/doc.module';
+import { ConnectorConfigurationModule } from './connector';
+import { DocModule } from './introduction/doc.module';
 
 @NgModule({
   imports: [
     CoreModule,
-    LandingModule,
+    DocModule,
     TestingModule,
     MappingModule,
     MappingTreeModule,
     MonitoringModule,
     ServiceConfigurationModule,
-    BrokerConnectorModule,
+    ConnectorConfigurationModule,
     ExtensionModule,
     FormsModule,
     ModalModule,

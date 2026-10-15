@@ -38,8 +38,8 @@ const SENSITIVE_PLACEHOLDER = '****';
 
 @Component({
   selector: 'd11r-mapping-import-connectors',
-  templateUrl: './import-connectors-modal.component.html',
-  styleUrls: ['./import-connectors-modal.component.style.css'],
+  templateUrl: './import-connectors.component.html',
+  styleUrls: ['./import-connectors.component.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule]

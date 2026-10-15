@@ -76,7 +76,7 @@ export function toClientAgentDefinition(
 @Injectable({
   providedIn: 'root'
 })
-export class AIAgentService {
+export class AiAgentService {
   private readonly client: FetchClient = inject(FetchClient);
 
   /** Short-lived cache so the drawer's and the stepper's independent agent-deployment checks
@@ -94,7 +94,7 @@ export class AIAgentService {
    */
   async getAIAgents(): Promise<AgentTextDefinition[]> {
     const now = Date.now();
-    if (this.agentsCache && now - this.agentsCache.timestamp < AIAgentService.AGENTS_CACHE_TTL_MS) {
+    if (this.agentsCache && now - this.agentsCache.timestamp < AiAgentService.AGENTS_CACHE_TTL_MS) {
       return this.agentsCache.promise;
     }
     const promise = this.fetchAIAgents();

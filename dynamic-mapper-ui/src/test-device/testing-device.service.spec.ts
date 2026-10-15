@@ -20,7 +20,7 @@
 
 import { AlertService } from '@c8y/ngx-components';
 import { InventoryService } from '@c8y/client';
-import { TestingDeviceService } from './testing.service';
+import { TestingDeviceService } from './testing-device.service';
 
 /**
  * The Test device page lists the devices carrying the fragment d11r_testDevice (created by a Live Test).

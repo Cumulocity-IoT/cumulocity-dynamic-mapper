@@ -1,6 +1,7 @@
 const tsParser = require('@typescript-eslint/parser');
 const tsPlugin = require('@typescript-eslint/eslint-plugin');
 const cypressPlugin = require('eslint-plugin-cypress');
+const angularPlugin = require('@angular-eslint/eslint-plugin');
 
 module.exports = [
   {
@@ -22,9 +23,29 @@ module.exports = [
     },
     plugins: {
       '@typescript-eslint': tsPlugin,
+      '@angular-eslint': angularPlugin,
     },
     rules: {
       '@typescript-eslint/no-deprecated': 'error',
+      // Naming rules
+      '@angular-eslint/component-selector': [
+        'error',
+        { type: 'element', prefix: 'd11r', style: 'kebab-case' },
+      ],
+      '@angular-eslint/directive-selector': [
+        'error',
+        { type: 'attribute', prefix: 'd11r', style: 'camelCase' },
+      ],
+      '@angular-eslint/component-class-suffix': 'error',
+      '@angular-eslint/directive-class-suffix': 'error',
+      '@typescript-eslint/naming-convention': [
+        'error',
+        // PascalCase with no all-caps acronyms (AiAgentService, not AIAgentService)
+        {
+          selector: 'typeLike',
+          format: ['StrictPascalCase'],
+        },
+      ],
     },
   },
   {
@@ -33,6 +54,8 @@ module.exports = [
     files: ['**/*.spec.ts'],
     rules: {
       '@typescript-eslint/no-deprecated': 'off',
+      // specs declare throwaway host components with test selectors
+      '@angular-eslint/component-selector': 'off',
     },
   },
   {

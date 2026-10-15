@@ -24,7 +24,7 @@ import { BottomDrawerRef, BottomDrawerService } from '@c8y/ngx-components';
 import { MappingTypeDrawerComponent } from './mapping-type-drawer.component';
 import { SharedService, Direction, MappingType, TransformationType } from '../../shared';
 import { ExtensionService } from '../../extension';
-import { AIAgentService } from '../core/ai-agent.service';
+import { AiAgentService } from '../core/ai-agent.service';
 import { ServiceConfiguration } from '../../configuration';
 
 // ---------------------------------------------------------------------------
@@ -55,7 +55,7 @@ async function createComponent(direction: Direction): Promise<MappingTypeDrawerC
 describe('MappingTypeDrawerComponent', () => {
   let mockSharedService: jasmine.SpyObj<SharedService>;
   let mockExtensionService: jasmine.SpyObj<ExtensionService>;
-  let mockAIAgentService: jasmine.SpyObj<AIAgentService>;
+  let mockAIAgentService: jasmine.SpyObj<AiAgentService>;
   let mockDrawerRef: jasmine.SpyObj<BottomDrawerRef<any>>;
 
   beforeEach(() => {
@@ -69,7 +69,7 @@ describe('MappingTypeDrawerComponent', () => {
     mockExtensionService = jasmine.createSpyObj<ExtensionService>('ExtensionService', ['getProcessorExtensions']);
     mockExtensionService.getProcessorExtensions.and.resolveTo(new Map());
 
-    mockAIAgentService = jasmine.createSpyObj<AIAgentService>('AIAgentService', ['getAIAgents']);
+    mockAIAgentService = jasmine.createSpyObj<AiAgentService>('AiAgentService', ['getAIAgents']);
     mockAIAgentService.getAIAgents.and.resolveTo([]);
 
     mockDrawerRef = jasmine.createSpyObj<BottomDrawerRef<any>>('BottomDrawerRef', ['close']);
@@ -80,7 +80,7 @@ describe('MappingTypeDrawerComponent', () => {
       providers: [
         { provide: SharedService, useValue: mockSharedService },
         { provide: ExtensionService, useValue: mockExtensionService },
-        { provide: AIAgentService, useValue: mockAIAgentService },
+        { provide: AiAgentService, useValue: mockAIAgentService },
         { provide: BottomDrawerRef, useValue: mockDrawerRef },
         { provide: BottomDrawerService, useValue: jasmine.createSpyObj('BottomDrawerService', ['openDrawer']) }
       ]

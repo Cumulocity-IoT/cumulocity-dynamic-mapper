@@ -25,8 +25,8 @@ import {
   ALERT_INFO_TIMEOUT
 } from '../../shared';
 import { EditorMode, SubstitutionModel } from '../../shared/mapping/stepper.model';
-import { SubstitutionRendererComponent } from '../substitution/substitution-grid.component';
-import { AIPromptComponent } from '../prompt/ai-prompt.component';
+import { SubstitutionGridComponent } from '../substitution/substitution-grid.component';
+import { AiPromptComponent } from '../prompt/ai-prompt.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
@@ -37,10 +37,10 @@ import { CollapseModule } from 'ngx-bootstrap/collapse';
 
 @Component({
   selector: 'd11r-mapping-transformation-step',
-  templateUrl: './mapping-transformation.component.html',
+  templateUrl: './mapping-substitution-step.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   standalone: true,
-  imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, JsonEditorComponent, SubstitutionRendererComponent]
+  imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, JsonEditorComponent, SubstitutionGridComponent]
 })
 export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   @Input() mapping: Mapping;
@@ -440,7 +440,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
       testMapping.sampleTransportFields = this.stepperConfiguration.sampleTransportFields;
     }
 
-    const drawer = this.bottomDrawerService.openDrawer(AIPromptComponent, {
+    const drawer = this.bottomDrawerService.openDrawer(AiPromptComponent, {
       initialState: { mapping: testMapping, aiAgent: this.aiAgent, editorMode: this.stepperConfiguration.editorMode }
     });
 

@@ -37,7 +37,7 @@ import { SharedModule } from "../../shared.module";
 ]
   // changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class WrapperCustomFormField extends FieldWrapper implements OnInit {
+export class CustomFormFieldWrapperComponent extends FieldWrapper implements OnInit {
   maxHelpBlockLength = 64;
   showDescriptionAsPopup: boolean;
   customWrapperClass: string;

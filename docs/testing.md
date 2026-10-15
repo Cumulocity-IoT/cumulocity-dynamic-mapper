@@ -303,7 +303,7 @@ mocked dependencies.
 
 | Area | Specs |
 |------|-------|
-| Mapping stepper & editor | `stepper-mapping/mapping-stepper.component.spec.ts`, `stepper-mapping/stepper-view.model.spec.ts`, `unified-editor/mapping-unified-editor.component.spec.ts`, `step-property/mapping-properties.component.spec.ts`, `step-template/mapping-template-step.component.spec.ts`, `step-connector/mapping-connector.component.spec.ts` |
+| Mapping stepper & editor | `stepper-mapping/mapping-stepper.component.spec.ts`, `stepper-mapping/stepper-view.model.spec.ts`, `unified-editor/mapping-unified-editor.component.spec.ts`, `step-properties/mapping-step-properties.component.spec.ts`, `step-template/mapping-template-step.component.spec.ts`, `step-connector/mapping-connector.component.spec.ts` |
 | Substitutions | `substitution/substitution-grid.component.spec.ts`, `service/substitution-management.service.spec.ts` |
 | Versioning | `versions/mapping-version-drawer.component.spec.ts`, `versions/mapping-versions-count.component.spec.ts`, `versions/publish-version-modal.component.spec.ts`, `versions/version-state-cell.renderer.component.spec.ts` |
 | Cell renderers | `renderer/name.renderer.component.spec.ts`, `renderer/version-badge.renderer.component.spec.ts` |
@@ -311,7 +311,7 @@ mocked dependencies.
 | Services | `shared/service/connector-configuration.service.spec.ts`, `mapping/core/testing.service.spec.ts`, `mapping/service/mapping-stepper.service.spec.ts` |
 | Connectors / subscriptions / monitoring | `shared/connector-configuration/edit/connector-configuration-drawer.component.spec.ts`, `mapping/subscription/subscription.component.spec.ts`, `monitoring/versions-tab.factory.spec.ts` |
 | Mapping creation | `mapping/mapping-create/mapping-type-drawer.component.spec.ts` |
-| Service configuration | `configuration/service-configuration.component.spec.ts` (expert-mode visibility, processing-budget validation), `configuration/import/import-service-configuration-modal.component.spec.ts` (snapshot restore: nothing applied before confirmation, failures never reported as success) |
+| Service configuration | `configuration/service-configuration.component.spec.ts` (expert-mode visibility, processing-budget validation), `configuration/import/import-service-configuration.component.spec.ts` (snapshot restore: nothing applied before confirmation, failures never reported as success) |
 
 **Pattern for c8y standalone components:** their templates import `CoreModule`, which eagerly
 reaches into the app-shell DI graph the test injector does not provide (`NG0201

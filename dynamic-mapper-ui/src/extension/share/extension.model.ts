@@ -29,7 +29,7 @@ import { ExtensionService } from "../extension.service";
  * rejects with the plain string 'Could not upload file.' in that case). A server-side rejection
  * that does carry a response body surfaces that body's own message instead of a static enum.
  */
-export enum ERROR_TYPE {
+export enum ErrorType {
   UPLOAD_FAILED = 'UPLOAD_FAILED'
 }
 

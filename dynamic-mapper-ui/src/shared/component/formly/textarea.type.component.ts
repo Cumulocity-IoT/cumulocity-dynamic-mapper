@@ -76,7 +76,7 @@ import { FieldType, FormlyModule } from '@ngx-formly/core';
   standalone: true,
   imports: [FormsModule, ReactiveFormsModule, FormlyModule]
 })
-export class CustomFieldTextarea extends FieldType implements AfterViewInit {
+export class TextareaTypeComponent extends FieldType implements AfterViewInit {
   @ViewChild('textareaRef') textareaRef: ElementRef<HTMLTextAreaElement>;
   showSensitive = false;
 

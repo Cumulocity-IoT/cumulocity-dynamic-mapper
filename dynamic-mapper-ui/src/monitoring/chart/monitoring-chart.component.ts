@@ -39,8 +39,8 @@ const MAX_SLOWEST_MAPPINGS = 10;
 
 @Component({
   selector: 'd11r-monitoring-chart',
-  templateUrl: './chart.component.html',
-  styleUrls: ['./chart.component.css'],
+  templateUrl: './monitoring-chart.component.html',
+  styleUrls: ['./monitoring-chart.component.css'],
   standalone: true,
   imports: [CoreModule, NgxEchartsModule],
   providers: [provideEchartsCore({ echarts: () => import('echarts') })]

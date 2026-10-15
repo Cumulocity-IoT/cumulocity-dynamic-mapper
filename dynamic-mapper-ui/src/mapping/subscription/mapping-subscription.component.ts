@@ -73,7 +73,7 @@ import { provideGridPersistence } from '../../shared/misc/grid-persistence';
 
 @Component({
   selector: 'd11r-mapping-subscription-grid',
-  templateUrl: 'subscription.component.html',
+  templateUrl: 'mapping-subscription.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,

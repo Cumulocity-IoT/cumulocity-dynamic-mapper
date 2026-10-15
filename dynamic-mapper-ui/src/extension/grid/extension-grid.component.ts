@@ -25,7 +25,7 @@ import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { BehaviorSubject, Observable, of, Subject } from 'rxjs';
 import { catchError, retry, shareReplay, switchMap, takeUntil, tap, timeout } from 'rxjs/operators';
 import { Feature, Operation, SharedService } from '../../shared';
-import { AddExtensionComponent } from '../add/add-extension-modal.component';
+import { AddExtensionComponent } from '../add/add-extension.component';
 import { ExtensionService } from '../extension.service';
 import { ExtensionCardComponent } from '../card/extension-card.component';
 

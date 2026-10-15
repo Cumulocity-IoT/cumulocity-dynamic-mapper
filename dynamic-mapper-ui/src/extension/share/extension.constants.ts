@@ -18,11 +18,11 @@
  * @authors Christof Strack
  */
 import { gettext } from '@c8y/ngx-components/gettext';
-import { ERROR_TYPE } from './extension.model';
+import { ErrorType } from './extension.model';
 import { PropertiesListItem } from '@c8y/ngx-components';
 
 export const ERROR_MESSAGES = {
-  [ERROR_TYPE.UPLOAD_FAILED]: gettext(
+  [ErrorType.UPLOAD_FAILED]: gettext(
     'Could not upload the *.jar file. Please check your connection and try again.'
   )
 };

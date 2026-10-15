@@ -207,7 +207,7 @@ failure in a later one cannot make the test look green.
 | Component/service | File | Role |
 |---|---|---|
 | `TestingService` | [`mapping/core/testing.service.ts`](../../dynamic-mapper-ui/src/mapping/core/testing.service.ts) | HTTP client: `testMapping()` POSTs to `/test/mapping`; `resetMockCache()` clears the two mock caches. |
-| `MappingStepTestingComponent` | [`mapping/step-testing/mapping-testing.component.ts`](../../dynamic-mapper-ui/src/mapping/step-testing/mapping-testing.component.ts) | The stepper step (`d11r-mapping-testing`): payload editor, request/response viewers, console panel, the buttons. |
+| `MappingStepTestingComponent` | [`mapping/step-testing/mapping-step-testing.component.ts`](../../dynamic-mapper-ui/src/mapping/step-testing/mapping-step-testing.component.ts) | The stepper step (`d11r-mapping-testing`): payload editor, request/response viewers, console panel, the buttons. |
 | Test device page | [`test-device/`](../../dynamic-mapper-ui/src/test-device/) | *Monitoring → Test device*: lists devices carrying the fragment `d11r_testDevice`. The header total counts test devices only. Deleting (row or bulk) is offered to mapping admins only; the outcome alert appears after the deletes have finished, reports partial failures, and the grid is refreshed either way. |
 
 Key interactions in `MappingStepTestingComponent`:

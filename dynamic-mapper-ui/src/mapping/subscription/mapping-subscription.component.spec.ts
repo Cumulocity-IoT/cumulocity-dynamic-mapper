@@ -22,7 +22,7 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlertService, DataGridService } from '@c8y/ngx-components';
-import { MappingSubscriptionComponent } from './subscription.component';
+import { MappingSubscriptionComponent } from './mapping-subscription.component';
 import { MappingService } from '../core/mapping.service';
 import { SubscriptionService } from '../core/subscription.service';
 import { SharedService } from '../../shared';

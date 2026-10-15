@@ -23,13 +23,13 @@ import { AlertService, CoreModule, DropAreaComponent, ModalLabels } from '@c8y/n
 import { gettext } from '@c8y/ngx-components/gettext';
 import { Subject, Subscription } from 'rxjs';
 import { ERROR_MESSAGES } from '../share/extension.constants';
-import { ERROR_TYPE } from '../share/extension.model';
+import { ErrorType } from '../share/extension.model';
 import { ExtensionService } from '../extension.service';
 
 @Component({
   selector: 'd11r-mapping-add-extension',
-  templateUrl: './add-extension-modal.component.html',
-  styleUrls: ['./add-extension-modal.component.style.css'],
+  templateUrl: './add-extension.component.html',
+  styleUrls: ['./add-extension.component.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule]
@@ -134,7 +134,7 @@ export class AddExtensionComponent implements OnDestroy {
    */
   private extractErrorMessage(error: any): string | undefined {
     if (typeof error === 'string') {
-      return ERROR_MESSAGES[ERROR_TYPE.UPLOAD_FAILED];
+      return ERROR_MESSAGES[ErrorType.UPLOAD_FAILED];
     }
     return error?.data?.message || error?.data?.error || undefined;
   }

@@ -37,8 +37,8 @@ import { createCustomUuid, Mapping } from '../../shared';
 
 @Component({
   selector: 'd11r-mapping-import-extension',
-  templateUrl: './import-modal.component.html',
-  styleUrls: ['./import-modal.component.style.css'],
+  templateUrl: './import-mappings.component.html',
+  styleUrls: ['./import-mappings.component.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports:[CoreModule]

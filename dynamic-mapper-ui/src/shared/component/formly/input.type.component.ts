@@ -54,7 +54,7 @@ import { FieldType } from '@ngx-formly/core';
     FormsModule,
   ]
 })
-export class CustomFieldInput extends FieldType {
+export class InputTypeComponent extends FieldType {
   get type() {
     return this.props.type || 'text';
   }

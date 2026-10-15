@@ -27,7 +27,7 @@ import { KpiDetails } from '../../shared/monitoring.service';
     ],
     standalone: true
 })
-export class KpListComponent {
+export class KpiListComponent {
     @Input() kpis: KpiDetails[];
     /** Whether the user may clear caches; disables the per-row clear buttons. */
     @Input() canClear = false;

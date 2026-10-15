@@ -62,7 +62,7 @@ export interface SubstitutionGridSettings {
   standalone: true,
   imports: [CoreModule, PopoverModule, SharedModule, FormsModule]
 })
-export class SubstitutionRendererComponent implements OnDestroy {
+export class SubstitutionGridComponent implements OnDestroy {
   @Input()
   mapping!: Mapping;
   @Input()
@@ -150,22 +150,22 @@ export class SubstitutionRendererComponent implements OnDestroy {
     return Object.keys(RepairStrategy).map(key => ({
       label: key,
       value: key,
-      description: SubstitutionRendererComponent.REPAIR_STRATEGY_DESCRIPTIONS[key] ?? '',
+      description: SubstitutionGridComponent.REPAIR_STRATEGY_DESCRIPTIONS[key] ?? '',
       // USE_FIRST/LAST_VALUE_OF_ARRAY collapse an extracted array to a single element - meaningless
       // once "Expand as array" already splits the array into N substitutions.
       disabled: this.isRepairStrategyDisabled() ||
-        (SubstitutionRendererComponent.ARRAY_ONLY_STRATEGIES.includes(key) && sub.expandArray)
+        (SubstitutionGridComponent.ARRAY_ONLY_STRATEGIES.includes(key) && sub.expandArray)
     }));
   }
 
   /** Tooltip on the select itself: what the currently chosen strategy does. */
   repairStrategyDescriptionFor(sub: Substitution): string {
-    return SubstitutionRendererComponent.REPAIR_STRATEGY_DESCRIPTIONS[sub.repairStrategy] ?? '';
+    return SubstitutionGridComponent.REPAIR_STRATEGY_DESCRIPTIONS[sub.repairStrategy] ?? '';
   }
 
   onExpandArrayChange(sub: Substitution, expandArray: boolean): void {
     sub.expandArray = expandArray;
-    if (expandArray && SubstitutionRendererComponent.ARRAY_ONLY_STRATEGIES.includes(sub.repairStrategy)) {
+    if (expandArray && SubstitutionGridComponent.ARRAY_ONLY_STRATEGIES.includes(sub.repairStrategy)) {
       sub.repairStrategy = RepairStrategy.DEFAULT;
     }
     this.substitutionChange.emit();

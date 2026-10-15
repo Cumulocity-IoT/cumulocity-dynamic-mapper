@@ -62,7 +62,7 @@ interface TestingModel {
 
 @Component({
   selector: 'd11r-mapping-testing',
-  templateUrl: 'mapping-testing.component.html',
+  templateUrl: 'mapping-step-testing.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,

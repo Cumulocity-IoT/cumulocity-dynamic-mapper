@@ -19,7 +19,7 @@
  */
 import { NgModule } from '@angular/core';
 import { hookNavigator, hookRoute } from '@c8y/ngx-components';
-import { MappingTreeComponent } from './tree.component';
+import { MappingTreeComponent } from './mapping-tree.component';
 import { NODE2 } from '../shared';
 import { treeResolver } from './util';
 import { MappingTreeNavigationFactory } from './tree.factory';

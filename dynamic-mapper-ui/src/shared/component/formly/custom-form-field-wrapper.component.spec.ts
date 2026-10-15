@@ -3,7 +3,7 @@ import { Component, NO_ERRORS_SCHEMA, Pipe, PipeTransform } from '@angular/core'
 import { TestBed } from '@angular/core/testing';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { FieldType, FormlyFieldConfig, FormlyModule } from '@ngx-formly/core';
-import { WrapperCustomFormField } from './custom-form-field-wrapper.component';
+import { CustomFormFieldWrapperComponent } from './custom-form-field-wrapper.component';
 
 // The wrapper's template uses c8y pipes; CoreModule cannot be loaded in a plain test injector
 // (NG0201, see the overrideComponent note in mapping-properties.component.spec.ts), so stand-ins.
@@ -21,7 +21,7 @@ class FormatStub implements PipeTransform {
 }
 
 @Component({ selector: 'formly-test-input', standalone: true, template: '<input [formControl]="formControl" />', imports: [ReactiveFormsModule] })
-class TestInput extends FieldType {}
+class TestInputComponent extends FieldType {}
 
 @Component({
   selector: 'host-cmp',
@@ -42,18 +42,18 @@ class HostComponent {
   ];
 }
 
-describe('WrapperCustomFormField', () => {
+describe('CustomFormFieldWrapperComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [
         HostComponent,
         FormlyModule.forRoot({
-          types: [{ name: 'test-input', component: TestInput }],
-          wrappers: [{ name: 'd11r-wrapper-form-field', component: WrapperCustomFormField }]
+          types: [{ name: 'test-input', component: TestInputComponent }],
+          wrappers: [{ name: 'd11r-wrapper-form-field', component: CustomFormFieldWrapperComponent }]
         })
       ]
     });
-    TestBed.overrideComponent(WrapperCustomFormField, {
+    TestBed.overrideComponent(CustomFormFieldWrapperComponent, {
       set: { imports: [CommonModule, FormlyModule, TranslateStub, FormatStub], providers: [], schemas: [NO_ERRORS_SCHEMA] }
     });
   });

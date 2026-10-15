@@ -68,6 +68,7 @@
   },
   "devDependencies": {
     "@angular-devkit/architect": "^0.2102.24",
+    "@angular-eslint/eslint-plugin": "^21.4.0",
     "@angular/build": "^21.2.19",
     "@angular/cli": "^21.2.19",
     "@angular/compiler-cli": "21.2.19",

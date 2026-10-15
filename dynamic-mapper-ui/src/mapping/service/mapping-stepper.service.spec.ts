@@ -33,7 +33,7 @@ import {
 } from './mapping-stepper.service';
 import { MappingService } from '../core/mapping.service';
 import { ExtensionService } from '../../extension';
-import { AIAgentService } from '../core/ai-agent.service';
+import { AiAgentService } from '../core/ai-agent.service';
 import { EditorMode } from '../../shared/mapping/stepper.model';
 import {
   ALERT_ACTION_REQUIRED_TIMEOUT,
@@ -65,7 +65,7 @@ describe('MappingStepperService', () => {
   let service: MappingStepperService;
   let mockSharedService: jasmine.SpyObj<SharedService>;
   let mockAlertService: jasmine.SpyObj<AlertService>;
-  let mockAIAgentService: jasmine.SpyObj<AIAgentService>;
+  let mockAIAgentService: jasmine.SpyObj<AiAgentService>;
   let mockExtensionService: jasmine.SpyObj<ExtensionService>;
   let mockMappingService: jasmine.SpyObj<MappingService>;
 
@@ -125,7 +125,7 @@ describe('MappingStepperService', () => {
       'success',
       'danger'
     ], { state: [] });
-    mockAIAgentService = jasmine.createSpyObj<AIAgentService>('AIAgentService', ['getAIAgents']);
+    mockAIAgentService = jasmine.createSpyObj<AiAgentService>('AiAgentService', ['getAIAgents']);
     mockExtensionService = jasmine.createSpyObj<ExtensionService>('ExtensionService', ['getProcessorExtensions']);
     mockMappingService = jasmine.createSpyObj<MappingService>('MappingService', [
       'evaluateExpression',
@@ -149,7 +149,7 @@ describe('MappingStepperService', () => {
         { provide: MappingService, useValue: mockMappingService },
         { provide: SharedService, useValue: mockSharedService },
         { provide: ExtensionService, useValue: mockExtensionService },
-        { provide: AIAgentService, useValue: mockAIAgentService },
+        { provide: AiAgentService, useValue: mockAIAgentService },
         { provide: AlertService, useValue: mockAlertService }
       ]
     });

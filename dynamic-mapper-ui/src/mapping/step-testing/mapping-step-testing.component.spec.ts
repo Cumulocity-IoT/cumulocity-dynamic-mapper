@@ -24,7 +24,7 @@ import { AlertService } from '@c8y/ngx-components';
 import { TranslateService } from '@ngx-translate/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { of, ReplaySubject } from 'rxjs';
-import { MappingStepTestingComponent } from './mapping-testing.component';
+import { MappingStepTestingComponent } from './mapping-step-testing.component';
 import { TestingService } from '../core/testing.service';
 import { Direction, Mapping, MappingType, Qos, StepperConfiguration, TransformationType } from '../../shared';
 import { DynamicMapperRequest, TestContext, TestResult } from '../../shared/mapping/processor/processor.model';

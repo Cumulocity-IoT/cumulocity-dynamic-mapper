@@ -52,7 +52,7 @@ interface CodeTemplateEntry {
   standalone: true,
   imports: [CoreModule, CommonModule, PopoverModule, EditorComponent, FormsModule]
 })
-export class CodeComponent implements OnInit, AfterViewInit, OnDestroy {
+export class CodeTemplateComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild(EditorComponent, { static: false }) codeEditor!: EditorComponent;
 
   codeTemplateDecoded?: CodeTemplate;

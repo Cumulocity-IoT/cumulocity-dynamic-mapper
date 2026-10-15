@@ -19,7 +19,7 @@
  */
 import { inject } from '@angular/core';
 import { ResolveFn } from '@angular/router';
-import { MappingTreeService } from './tree.service';
+import { MappingTreeService } from './mapping-tree.service';
 
 export const treeResolver: ResolveFn<JSON > = () => {
   const mappingTreeService = inject(MappingTreeService);

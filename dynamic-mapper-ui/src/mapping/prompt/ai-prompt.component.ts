@@ -48,7 +48,7 @@ import { EditorMode } from '../../shared/mapping/stepper.model';
   imports:[CoreModule, AgentChatComponent],
   host: { class: 'd-contents' }
 })
-export class AIPromptComponent implements OnInit {
+export class AiPromptComponent implements OnInit {
 
   private readonly alertService = inject(AlertService);
   private readonly sharedService = inject(SharedService);
@@ -325,7 +325,7 @@ export class AIPromptComponent implements OnInit {
       return;
     }
     if (!this.agentChat) {
-      console.error('AIPromptComponent.sendMessage: #agentChat is not available yet');
+      console.error('AiPromptComponent.sendMessage: #agentChat is not available yet');
       return;
     }
     await this.agentChat.sendMessage({ role: 'user', content: this.newMessage });
