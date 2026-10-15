@@ -83,10 +83,18 @@
         </button>
         @if (!aiAgentDeployed) {
         <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-          popover="{{'AI Assistant is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+          [popover]="(aiCapabilitiesDisabled
+            ? 'AI capabilities are disabled in this tenant.'
+            : 'AI Assistant is disabled if AI Agent is not deployed in this tenant or no agent is defined.') | translate"
           placement="right" container="body" triggers="focus" type="button"></button>
         }
       </div>
+      @if (aiCapabilitiesDisabled) {
+      <div class="alert alert-info m-t-8" data-cy="dm-ai-disabled-info">
+        <i c8yIcon="info"></i>
+        {{ 'AI capabilities are disabled in this tenant.' | translate }}
+      </div>
+      }
       <!-- Expert Mode collapsible header -->
       <div class="d-flex a-i-center p-t-4 p-b-4" data-cy="dm-mapping-transform-expert-toggle" (click)="toggleExpertMode()" style="cursor:pointer">
         <i [c8yIcon]="expertMode ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>

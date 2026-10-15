@@ -69,8 +69,9 @@ describe('MappingTypeDrawerComponent', () => {
     mockExtensionService = jasmine.createSpyObj<ExtensionService>('ExtensionService', ['getProcessorExtensions']);
     mockExtensionService.getProcessorExtensions.and.resolveTo(new Map());
 
-    mockAIAgentService = jasmine.createSpyObj<AiAgentService>('AiAgentService', ['getAIAgents']);
+    mockAIAgentService = jasmine.createSpyObj<AiAgentService>('AiAgentService', ['getAIAgents', 'getAISettings']);
     mockAIAgentService.getAIAgents.and.resolveTo([]);
+    mockAIAgentService.getAISettings.and.resolveTo({ killSwitch: false, telemetryOptOut: false });
 
     mockDrawerRef = jasmine.createSpyObj<BottomDrawerRef<any>>('BottomDrawerRef', ['close']);
     mockDrawerRef.close.and.resolveTo();

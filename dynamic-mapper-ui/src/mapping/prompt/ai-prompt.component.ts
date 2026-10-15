@@ -30,7 +30,7 @@ import { Mapping, Substitution, MappingType, RepairStrategy, SAMPLE_TEMPLATES_C8
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
 import { AIMessage, ClientAgentDefinition, Suggestion } from '@c8y/ngx-components/ai';
-import { toClientAgentDefinition } from '../core/ai-agent.service';
+import { AiAgentService, toClientAgentDefinition } from '../core/ai-agent.service';
 import { MappingService } from '../core/mapping.service';
 import { MappingTokens } from '../../shared/mapping/processor/processor.model';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
@@ -55,6 +55,7 @@ export class AiPromptComponent implements OnInit {
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly mappingService = inject(MappingService);
+  private readonly aiAgentService = inject(AiAgentService);
 
   @ViewChild(AgentChatComponent) agentChat?: AgentChatComponent;
 
@@ -92,6 +93,9 @@ export class AiPromptComponent implements OnInit {
   agentType: MappingType;
   variables: Record<string, unknown> = {};
   clientAgentDefinition?: ClientAgentDefinition;
+  aiChatEnabled = false;
+  aiCapabilitiesDisabled = false;
+  aiAvailabilityCheckFailed = false;
   assistantMessageDisplayConfig = {
     showDefaultToolDetails: 'all' as const,
     experimental_nonFinalStepTextDisplay: 'collapsible-thinking-block' as const
@@ -126,6 +130,21 @@ export class AiPromptComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    try {
+      const settings = await this.aiAgentService.getAISettings(true);
+      if (settings.killSwitch) {
+        this.aiCapabilitiesDisabled = true;
+        this.cdr.detectChanges();
+        return;
+      }
+    } catch (error) {
+      console.error('Failed to check AI settings before opening the AI assistant:', error);
+      this.aiAvailabilityCheckFailed = true;
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.aiChatEnabled = true;
     this.agentType = this.mapping.mappingType;
     this.serviceConfiguration =
       await this.sharedService.getServiceConfiguration();

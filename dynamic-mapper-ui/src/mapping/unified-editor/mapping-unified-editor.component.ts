@@ -193,6 +193,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   targetTemplate?: any;
   targetSystem!: string;
   aiAgentDeployed = false;
+  aiCapabilitiesDisabled = false;
   aiAgent: AgentObjectDefinition | AgentTextDefinition | null = null;
 
   // Use service observables
@@ -300,6 +301,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.serviceConfiguration = init.serviceConfiguration;
     this.aiAgent = init.aiAgent;
     this.aiAgentDeployed = init.aiAgentDeployed;
+    this.aiCapabilitiesDisabled = init.aiCapabilitiesDisabled;
     this.filterFormlyFields = init.filterFormlyFields;
     this.codeTemplates = init.codeTemplates;
     this.codeTemplatesDecoded = init.codeTemplatesDecoded;
