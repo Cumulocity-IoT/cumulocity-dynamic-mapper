@@ -20,8 +20,8 @@
   -->
 
 <!-- Main Content -->
-<div class="d-col flex-nowrap no-align-items p-48 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
-  <div class="card card--fullpage d-col flex-grow">
+<div class="d-col flex-nowrap no-align-items p-t-48 p-l-48 p-r-48 p-b-16 flex-grow col-md-12 col-md-offset-0 c8y-stepper--no-btns">
+  <div class="card card--fullpage d-col flex-grow m-b-0">
     <!-- Header -->
     <div class="card-header separator" style="justify-content: center">
       <h4 class="card-title d-flex">
@@ -40,7 +40,7 @@
     <div class="card-inner-scroll flex-grow">
       <div class="card-block">
         <div class="p-b-24">
-          <c8y-editor [editorOptions]="editorOptions" class="form-control flex-grow" style="min-height: 600px"
+          <c8y-editor [editorOptions]="editorOptions" class="d-block" style="height: calc(100vh - 400px); min-height: 400px"
             monacoEditorMarkerValidator [(ngModel)]="code">
           </c8y-editor>
         </div>
