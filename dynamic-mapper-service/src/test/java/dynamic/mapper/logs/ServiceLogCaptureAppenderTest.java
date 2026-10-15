@@ -41,14 +41,18 @@ class ServiceLogCaptureAppenderTest {
     @BeforeEach
     void attach() {
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
-        buffer = new BoundedServiceLogBuffer(1000);
-        appender = new ServiceLogCaptureAppender(buffer, new ServiceLogPolicy("WARN", 500, 65536, List.of()));
+        buffer = new BoundedServiceLogBuffer();
+        appender = new ServiceLogCaptureAppender(buffer, new TestSettings());
         appender.setContext(context);
         appender.start();
         logger = context.getLogger("dynamic.mapper.test.capture");
         logger.setAdditive(false);
         logger.setLevel(Level.TRACE);
         logger.addAppender(appender);
+    }
+
+    private Map<String, List<ServiceLogRecord>> drainAll() {
+        return buffer.drain(List.of("tenantA", "tenantB", "tenantC", "tenantFromSdk"));
     }
 
     @AfterEach
@@ -64,7 +68,7 @@ class ServiceLogCaptureAppenderTest {
             logger.warn("Connector {} failed", "mqtt-1");
         }
 
-        List<ServiceLogRecord> records = buffer.drainAll().get("tenantA");
+        List<ServiceLogRecord> records = drainAll().get("tenantA");
 
         assertEquals(1, records.size());
         assertEquals("WARN", records.get(0).level());
@@ -81,7 +85,7 @@ class ServiceLogCaptureAppenderTest {
             logger.error("tenantA - Could not connect");
         }
 
-        String text = buffer.drainAll().get("tenantA").get(0).text();
+        String text = drainAll().get("tenantA").get(0).text();
 
         assertTrue(text.endsWith(" : Could not connect"), text);
     }
@@ -93,7 +97,7 @@ class ServiceLogCaptureAppenderTest {
             logger.error("tenantB - looks like another tenant's line but is logged for tenantA");
         }
 
-        Map<String, List<ServiceLogRecord>> drained = buffer.drainAll();
+        Map<String, List<ServiceLogRecord>> drained = drainAll();
 
         assertEquals(java.util.Set.of("tenantA"), drained.keySet(), "the unattributed line went nowhere");
         assertEquals(1, drained.get("tenantA").size());
@@ -105,7 +109,7 @@ class ServiceLogCaptureAppenderTest {
         MDC.put(TenantLogContext.SDK_KEY, "tenantFromSdk");
         logger.warn("inside an SDK scope");
 
-        assertEquals(1, buffer.drainAll().get("tenantFromSdk").size());
+        assertEquals(1, drainAll().get("tenantFromSdk").size());
     }
 
     @Test
@@ -115,7 +119,7 @@ class ServiceLogCaptureAppenderTest {
             logger.debug("debug");
         }
 
-        assertTrue(buffer.drainAll().isEmpty());
+        assertTrue(drainAll().isEmpty());
     }
 
     @Test
@@ -130,7 +134,7 @@ class ServiceLogCaptureAppenderTest {
             own.detachAppender(appender);
         }
 
-        assertTrue(buffer.drainAll().isEmpty());
+        assertTrue(drainAll().isEmpty());
     }
 
     @Test
@@ -139,7 +143,7 @@ class ServiceLogCaptureAppenderTest {
             logger.error("failed", new IllegalStateException("boom"));
         }
 
-        String text = buffer.drainAll().get("tenantA").get(0).text();
+        String text = drainAll().get("tenantA").get(0).text();
 
         assertTrue(text.contains("java.lang.IllegalStateException: boom"), text);
         assertTrue(text.contains("\tat ") || text.contains("\n\tat") || text.contains("at dynamic.mapper"), text);
@@ -170,7 +174,7 @@ class ServiceLogCaptureAppenderTest {
             t.join();
         }
 
-        Map<String, List<ServiceLogRecord>> drained = buffer.drainAll();
+        Map<String, List<ServiceLogRecord>> drained = drainAll();
 
         for (String tenant : List.of("tenantA", "tenantB", "tenantC")) {
             assertEquals(perTenant, drained.get(tenant).size());
@@ -183,5 +187,131 @@ class ServiceLogCaptureAppenderTest {
 
     private static String otherThan(String tenant) {
         return tenant.equals("tenantA") ? "tenantB" : "tenantA";
+    }
+
+    @Test
+    void whatTheCollectorLogsWhileItStoresIsNotCapturedAndStoredInTurn() {
+        // a sink that logs for the tenant while it stores, as the SDK and the HTTP client do at a low minimum level
+        ServiceLogSink chatty = new ServiceLogSink() {
+            @Override
+            public void write(String tenant, String instance, ServiceLogChunk chunk) {
+                try (var scope = TenantLogContext.open(tenant)) {
+                    logger.warn("storing a chunk for {}", tenant);
+                }
+            }
+
+            @Override
+            public void purge(String tenant, java.time.Instant before) {
+            }
+        };
+        buffer.offer(new ServiceLogRecord(java.time.Instant.now(), "WARN", "t", "tenantA", "d.m.Foo", "a real line"), 100);
+
+        new ServiceLogCollector(buffer, chatty, () -> java.util.Set.of("tenantA"), new TestSettings(), "pod-1",
+                java.time.Clock.systemUTC()).collect();
+
+        assertTrue(drainAll().isEmpty(), "the line logged while storing must not come back as a new line to store");
+        try (var scope = TenantLogContext.open("tenantA")) {
+            logger.warn("after the run");
+        }
+        assertEquals(1, drainAll().get("tenantA").size(), "capture works again once the run is over");
+    }
+
+    @Test
+    void aHugeMessageIsCutBeforeItEntersTheBuffer() {
+        logger.detachAppender(appender);
+        appender.stop();
+        appender = new ServiceLogCaptureAppender(buffer, new TestSettings(c -> {
+            c.setMinLevel("WARN");
+            c.setMaxRecordBytes(1024);
+        }));
+        appender.setContext((LoggerContext) LoggerFactory.getILoggerFactory());
+        appender.start();
+        logger.addAppender(appender);
+
+        try (var scope = TenantLogContext.open("tenantA")) {
+            logger.error("payload {}", "x".repeat(3_000_000));
+        }
+
+        String text = drainAll().get("tenantA").get(0).text();
+        assertTrue(text.getBytes(java.nio.charset.StandardCharsets.UTF_8).length <= 1024, "length " + text.length());
+        assertTrue(text.endsWith("[truncated]"));
+    }
+
+    private void useSettings(TestSettings settings) {
+        logger.detachAppender(appender);
+        appender.stop();
+        appender = new ServiceLogCaptureAppender(buffer, settings);
+        appender.setContext((LoggerContext) LoggerFactory.getILoggerFactory());
+        appender.start();
+        logger.addAppender(appender);
+    }
+
+    @Test
+    void aTenantThatSwitchedTheServiceLogOffIsNotCapturedButOthersAre() {
+        useSettings(new TestSettings().with("tenantA", c -> c.setEnabled(false)));
+
+        try (var a = TenantLogContext.open("tenantA")) {
+            logger.error("from the tenant that opted out");
+        }
+        try (var b = TenantLogContext.open("tenantB")) {
+            logger.error("from another tenant");
+        }
+
+        Map<String, List<ServiceLogRecord>> drained = drainAll();
+        assertEquals(java.util.Set.of("tenantB"), drained.keySet());
+    }
+
+    @Test
+    void eachTenantHasItsOwnMinimumLevel() {
+        useSettings(new TestSettings().with("tenantA", c -> c.setMinLevel("INFO")).with("tenantB", c -> c.setMinLevel("ERROR")));
+
+        try (var a = TenantLogContext.open("tenantA")) {
+            logger.info("A info");
+        }
+        try (var b = TenantLogContext.open("tenantB")) {
+            logger.info("B info");
+            logger.warn("B warn");
+            logger.error("B error");
+        }
+
+        Map<String, List<ServiceLogRecord>> drained = drainAll();
+        assertEquals(1, drained.get("tenantA").size(), "A asked for INFO");
+        assertEquals(1, drained.get("tenantB").size(), "B asked for ERROR only");
+        assertTrue(drained.get("tenantB").get(0).text().endsWith("B error"));
+    }
+
+    @Test
+    void aSettingChangedWhileRunningAppliesToTheNextLineWithoutARestart() {
+        TestSettings live = new TestSettings();
+        useSettings(live);
+        try (var a = TenantLogContext.open("tenantA")) {
+            logger.info("dropped at the default WARN");
+        }
+        assertTrue(drainAll().isEmpty());
+
+        live.with("tenantA", c -> c.setMinLevel("INFO")); // what saving the Service configuration page does
+        try (var a = TenantLogContext.open("tenantA")) {
+            logger.info("kept after the change");
+        }
+
+        assertEquals(1, drainAll().get("tenantA").size());
+    }
+
+    @Test
+    void eachTenantsBufferBoundIsItsOwnSetting() {
+        useSettings(new TestSettings(c -> c.setMinLevel("WARN")).with("tenantA", c -> {
+            c.setMinLevel("WARN");
+            c.setMaxBufferedRecords(100); // the smallest allowed
+        }));
+
+        try (var a = TenantLogContext.open("tenantA")) {
+            for (int i = 0; i < 150; i++) {
+                logger.warn("line {}", i);
+            }
+        }
+
+        List<ServiceLogRecord> kept = drainAll().get("tenantA");
+        assertEquals(100, kept.size());
+        assertTrue(kept.get(0).text().endsWith("line 50"), "the oldest 50 were dropped: " + kept.get(0).text());
     }
 }

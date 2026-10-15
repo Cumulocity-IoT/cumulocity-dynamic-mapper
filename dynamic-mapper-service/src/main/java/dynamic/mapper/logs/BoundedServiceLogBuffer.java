@@ -22,63 +22,71 @@ package dynamic.mapper.logs;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
- * In-memory {@link ServiceLogBuffer}, bounded <b>per tenant</b>: when a tenant's queue is full the oldest record is
- * dropped, so one tenant that logs furiously (or whose events cannot be stored) can neither exhaust the service's memory
- * nor push out another tenant's lines. Dropped records are counted.
+ * In-memory {@link ServiceLogBuffer}, bounded <b>per tenant</b> (the bound is passed with each record, because it is a
+ * setting of that tenant): when a tenant's queue is full the oldest record is dropped, so one tenant that logs furiously
+ * (or whose events cannot be stored) can neither exhaust the service's memory nor push out another tenant's lines.
+ * Dropped records are counted.
  *
  * <p>Called from every logging thread, so all access is guarded by one short lock; nothing is formatted or sent while
  * holding it.
  */
 public class BoundedServiceLogBuffer implements ServiceLogBuffer {
 
-    private final int maxPerTenant;
     private final Map<String, Deque<ServiceLogRecord>> queues = new HashMap<>();
     private final Map<String, Integer> dropped = new HashMap<>();
 
-    public BoundedServiceLogBuffer(int maxPerTenant) {
-        if (maxPerTenant < 1) {
-            throw new IllegalArgumentException("maxPerTenant must be >= 1");
-        }
-        this.maxPerTenant = maxPerTenant;
-    }
-
-    public synchronized void offer(ServiceLogRecord record) {
+    public synchronized void offer(ServiceLogRecord record, int maxPerTenant) {
         Deque<ServiceLogRecord> queue = queues.computeIfAbsent(record.tenant(), t -> new ArrayDeque<>());
-        if (queue.size() >= maxPerTenant) {
-            queue.pollFirst();
-            dropped.merge(record.tenant(), 1, Integer::sum);
-        }
         queue.addLast(record);
+        trim(record.tenant(), queue, maxPerTenant);
     }
 
     @Override
-    public synchronized Map<String, List<ServiceLogRecord>> drainAll() {
+    public synchronized Map<String, List<ServiceLogRecord>> drain(Collection<String> tenants) {
         Map<String, List<ServiceLogRecord>> out = new LinkedHashMap<>();
-        queues.forEach((tenant, queue) -> {
-            if (!queue.isEmpty()) {
+        for (String tenant : tenants) {
+            Deque<ServiceLogRecord> queue = queues.remove(tenant);
+            if (queue != null && !queue.isEmpty()) {
                 out.put(tenant, new ArrayList<>(queue));
             }
-        });
-        queues.clear();
+        }
         return out;
     }
 
     @Override
-    public synchronized void restore(String tenant, List<ServiceLogRecord> records) {
+    public synchronized void retainOnly(Set<String> keep) {
+        queues.keySet().removeIf(tenant -> !keep.contains(tenant));
+        dropped.keySet().removeIf(tenant -> !keep.contains(tenant));
+    }
+
+    @Override
+    public synchronized void discard(String tenant) {
+        queues.remove(tenant);
+        dropped.remove(tenant);
+    }
+
+    @Override
+    public synchronized void restore(String tenant, List<ServiceLogRecord> records, int maxPerTenant) {
         Deque<ServiceLogRecord> queue = queues.computeIfAbsent(tenant, t -> new ArrayDeque<>());
         List<ServiceLogRecord> reversed = new ArrayList<>(records);
         Collections.reverse(reversed);
         for (ServiceLogRecord r : reversed) {
             queue.addFirst(r); // the oldest ends up first again
         }
+        trim(tenant, queue, maxPerTenant);
+    }
+
+    private void trim(String tenant, Deque<ServiceLogRecord> queue, int maxPerTenant) {
         while (queue.size() > maxPerTenant) {
             queue.pollFirst();
             dropped.merge(tenant, 1, Integer::sum);
@@ -86,9 +94,14 @@ public class BoundedServiceLogBuffer implements ServiceLogBuffer {
     }
 
     @Override
-    public synchronized Map<String, Integer> takeDropped() {
-        Map<String, Integer> out = new HashMap<>(dropped);
-        dropped.clear();
+    public synchronized Map<String, Integer> takeDropped(Collection<String> tenants) {
+        Map<String, Integer> out = new HashMap<>();
+        for (String tenant : tenants) {
+            Integer n = dropped.remove(tenant);
+            if (n != null) {
+                out.put(tenant, n);
+            }
+        }
         return out;
     }
 }

@@ -8,49 +8,30 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 
-/** The feature is off unless explicitly enabled, and complete when it is. */
+/** On unless the operator switches it off; the retention job is there either way. */
 class ServiceLogCollectorWiringTest {
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
             .withBean(ServiceLogSink.class, () -> mock(ServiceLogSink.class))
+            .withBean(ServiceLogSettingsProvider.class, () -> new TestSettings())
             .withBean(MicroserviceSubscriptionsService.class, () -> mock(MicroserviceSubscriptionsService.class))
-            .withUserConfiguration(ServiceLogCollectorConfiguration.class, ServiceLogCapture.class, ServiceLogCollectorJob.class,
-                    ServiceLogRetentionJob.class);
+            .withUserConfiguration(ServiceLogCapture.class, ServiceLogCollectorJob.class, ServiceLogRetentionJob.class);
 
     @Test
-    void isOffByDefault() {
+    void isOnWhenNothingIsConfiguredBecauseEveryValueHasADefaultInCode() {
         runner.run(ctx -> {
-            assertEquals(0, ctx.getBeansOfType(ServiceLogCollectorJob.class).size());
-            assertEquals(0, ctx.getBeansOfType(ServiceLogCapture.class).size());
-        });
-    }
-
-    @Test
-    void isOffWhenExplicitlyDisabled() {
-        runner.withPropertyValues("service.logs.collector.enabled=false")
-                .run(ctx -> assertEquals(0, ctx.getBeansOfType(ServiceLogCapture.class).size()));
-    }
-
-    @Test
-    void isCompleteWhenEnabledAndTheJobGetsTheCaptureAsItsBuffer() {
-        runner.withPropertyValues("service.logs.collector.enabled=true").run(ctx -> {
-            assertEquals(1, ctx.getBeansOfType(ServiceLogCollectorJob.class).size());
             assertEquals(1, ctx.getBeansOfType(ServiceLogCapture.class).size());
-            assertEquals(1, ctx.getBeansOfType(ServiceLogPolicy.class).size());
-        });
-    }
-
-    @Test
-    void retentionRunsEvenWhenTheCollectorIsOffSoStoredLinesNeverPileUp() {
-        runner.withPropertyValues("service.logs.collector.enabled=false").run(ctx -> {
-            assertEquals(0, ctx.getBeansOfType(ServiceLogCollectorJob.class).size());
+            assertEquals(1, ctx.getBeansOfType(ServiceLogCollectorJob.class).size());
             assertEquals(1, ctx.getBeansOfType(ServiceLogRetentionJob.class).size());
         });
     }
 
     @Test
-    void retentionCanBeSwitchedOff() {
-        runner.withPropertyValues("service.logs.retention.enabled=false")
-                .run(ctx -> assertEquals(0, ctx.getBeansOfType(ServiceLogRetentionJob.class).size()));
+    void theOperatorCanSwitchTheWholeFeatureOffButRetentionStillRunsToCleanUp() {
+        runner.withPropertyValues("service.logs.enabled=false").run(ctx -> {
+            assertEquals(0, ctx.getBeansOfType(ServiceLogCapture.class).size());
+            assertEquals(0, ctx.getBeansOfType(ServiceLogCollectorJob.class).size());
+            assertEquals(1, ctx.getBeansOfType(ServiceLogRetentionJob.class).size());
+        });
     }
 }

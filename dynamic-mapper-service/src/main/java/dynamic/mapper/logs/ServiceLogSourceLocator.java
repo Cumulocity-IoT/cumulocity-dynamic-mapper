@@ -106,11 +106,41 @@ public class ServiceLogSourceLocator {
         external.setType(EXTERNAL_ID_TYPE);
         external.setExternalId(EXTERNAL_ID);
         external.setManagedObject(source);
-        identityApi.create(external);
+        try {
+            identityApi.create(external);
+        } catch (SDKException e) {
+            // Another instance of the service created the source at the same moment and registered its external id first
+            // (the id is unique, so exactly one wins). Use the winner and remove the object we just made, or it would stay
+            // behind as an orphan in the tenant's inventory.
+            cache.remove(tenant);
+            Optional<GId> winner = find(tenant);
+            if (winner.isPresent() && !winner.get().equals(source.getId())) {
+                discard(tenant, source);
+                return winner.get();
+            }
+            throw e;
+        }
         link(tenant, source);
         log.info("{} - Created the service log source {}", tenant, source.getId().getValue());
         cache.put(tenant, source.getId());
         return source.getId();
+    }
+
+    private void discard(String tenant, ManagedObjectRepresentation orphan) {
+        try {
+            inventoryApi.delete(orphan.getId());
+        } catch (RuntimeException e) {
+            log.warn("{} - Could not remove the duplicate service log source {}: {}", tenant, orphan.getId().getValue(),
+                    e.getMessage());
+        }
+    }
+
+    /**
+     * Forgets the remembered source. Called when a write finds it gone (the tenant deleted the object): without it the
+     * stale id would be used, and fail, until the tenant unsubscribes.
+     */
+    public void evict(String tenant) {
+        cache.remove(tenant);
     }
 
     /** Shows the source under the agent in the inventory. Cosmetic: a failure must not stop log collection. */

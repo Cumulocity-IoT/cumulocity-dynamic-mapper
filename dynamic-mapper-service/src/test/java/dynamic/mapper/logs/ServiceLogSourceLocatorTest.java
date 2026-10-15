@@ -120,4 +120,44 @@ class ServiceLogSourceLocatorTest {
         // tenantA was looked up again after the event; tenantB came from the cache
         verify(identityApi, times(3)).getExternalId(any(ID.class));
     }
+
+    @Test
+    void whenTwoInstancesCreateTheSourceAtTheSameTimeTheLoserUsesTheWinnerAndRemovesItsOwnObject() {
+        // our find: 404; then identity create loses the race (409); the second find returns the winner
+        when(identityApi.getExternalId(any(ID.class))).thenThrow(new SDKException(404, "not found"))
+                .thenReturn(externalIdOf("WINNER"));
+        ManagedObjectRepresentation ours = new ManagedObjectRepresentation();
+        ours.setId(new GId("OURS"));
+        when(inventoryApi.create(any())).thenReturn(ours);
+        org.mockito.Mockito.doThrow(new SDKException(409, "already exists")).when(identityApi)
+                .create(any(ExternalIDRepresentation.class));
+
+        GId id = locator.getOrCreate("tenantA");
+
+        assertEquals("WINNER", id.getValue());
+        verify(inventoryApi).delete(new GId("OURS"));
+    }
+
+    @Test
+    void aFailedExternalIdRegistrationThatIsNotARaceIsNotHidden() {
+        when(identityApi.getExternalId(any(ID.class))).thenThrow(new SDKException(404, "not found"));
+        ManagedObjectRepresentation ours = new ManagedObjectRepresentation();
+        ours.setId(new GId("OURS"));
+        when(inventoryApi.create(any())).thenReturn(ours);
+        org.mockito.Mockito.doThrow(new SDKException(500, "boom")).when(identityApi).create(any(ExternalIDRepresentation.class));
+
+        assertThrows(SDKException.class, () -> locator.getOrCreate("tenantA"));
+    }
+
+    @Test
+    void evictingForgetsTheSourceSoADeletedObjectIsLookedUpAgain() {
+        when(identityApi.getExternalId(any(ID.class))).thenReturn(externalIdOf("99"));
+        locator.find("tenantA");
+        locator.find("tenantA"); // cached
+
+        locator.evict("tenantA");
+        locator.find("tenantA");
+
+        verify(identityApi, times(2)).getExternalId(any(ID.class));
+    }
 }

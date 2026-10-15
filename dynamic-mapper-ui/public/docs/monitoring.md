@@ -142,10 +142,12 @@ for you:
 
 - **Only your tenant's lines.** A line is shown to a tenant only if it was logged for that tenant. Lines of other
   tenants, and lines that belong to no tenant (start-up, shared infrastructure), never appear.
-- **Warnings and errors by default.** Lines below the level the operator configured are not collected. Informational
-  lines can contain device payloads, which is why the default is **WARN**.
-- **Limited and slightly late.** Lines are kept for a limited time (24 hours by default) and arrive within about a
-  minute. A very busy period can exceed the per-tenant limit; the view then says how many lines were left out.
+- **The level you choose.** Only lines at or above the level set in the service log settings are stored (**INFO** by
+  default). Informational lines contain what the mapper did, including message payloads; choose **WARN** to store
+  warnings and errors only.
+- **Limited and slightly late.** Lines are kept for a limited time (24 hours by default) and arrive within about half a
+  minute. Lines that do not fit into one storage run are stored in the next. If a very busy period overflows the in-memory
+  backlog, the oldest lines are lost and the view says how many.
 - **Same line format** as the platform log: time (UTC), level, thread, logger and message. A stack trace stays with
   the line it belongs to.
 
@@ -162,7 +164,8 @@ for you:
 
 ##### Who can open it
 
-The view requires `ROLE_DYNAMIC_MAPPER_ADMIN`; users without it do not see the menu entry. See
+The view requires `ROLE_DYNAMIC_MAPPER_ADMIN`; users without it do not see the menu entry. Changing its settings
+requires the same role. See
 [Managing permissions](/c8y-pkg-dynamic-mapper/introduction/access-control).
 
 :::info
@@ -171,34 +174,46 @@ named **Dynamic Mapper service log** in your tenant. Anyone who may read events 
 there, independent of the Dynamic Mapper roles.
 :::
 
-##### Switching the collection on
+##### Service log settings {#service-logs-settings}
 
-Collecting the log is off by default. Whoever deploys the microservice switches it on with a property of the
-service. How a property is set depends on how the microservice is deployed; a restart is required.
+Each tenant decides for itself what is stored for it, under **Configuration → Service configuration → Monitoring →
+Service logs**. The settings are part of the service configuration, so **Save** applies them to the next log line:
+there is no restart. A value you leave out keeps its default, and a value outside its range is clamped to the nearest
+allowed one, so a setting can never overload the microservice that all tenants share.
 
-| Property | Default | Meaning |
-|---|---|---|
-| `service.logs.collector.enabled` | `false` | Switches the collection on. |
-| `service.logs.collector.min-level` | `WARN` | Lowest level that is collected: `TRACE`, `DEBUG`, `INFO`, `WARN` or `ERROR`. |
-| `service.logs.collector.interval-ms` | `30000` | How often collected lines are stored. |
-| `service.logs.collector.max-lines-per-tenant` | `500` | Most lines stored for one tenant per run; the rest is counted as left out. |
-| `service.logs.collector.max-chunk-bytes` | `65536` | Size of one stored event. |
-| `service.logs.collector.retention-hours` | `24` | How long stored lines are kept. Older lines are deleted by the clean-up described below, even when the collection itself is switched off. |
-| `service.logs.retention.enabled` | `true` | Switches the clean-up of old stored lines on or off. |
-| `service.logs.retention.interval-ms` | `3600000` | How often old lines are deleted (every hour by default). |
-| `service.logs.collector.max-buffered-records-per-tenant` | `2000` | Lines one tenant can have waiting in memory. When it is full the oldest are dropped. |
+| Setting | Default | Allowed | Meaning |
+|---|---|---|---|
+| **Store service logs** | on | on / off | Stores this tenant's log lines. Off: nothing is stored and lines still waiting are discarded. |
+| **Lowest level stored** | `INFO` | `ERROR`, `WARN`, `INFO` | Lines below it are not stored. |
+| **Keep stored lines for** | 24 | 1 to 720 hours | Older stored lines are deleted. |
 
-**Clean-up.** A separate job deletes the stored lines of every subscribed tenant once they are older than the retention
-period, so the number of `d11r_serviceLog` events does not keep growing. It runs on its own schedule and does not
-depend on the collection: if you switch the collection off, lines that were stored earlier are still removed when
-their time is up. Every instance of the microservice runs it; deleting lines that are already gone does nothing.
-The lines of a tenant that unsubscribes are left alone, because they belong to that tenant.
+**Expert settings** show these as well:
+
+| Setting | Default | Allowed | Meaning |
+|---|---|---|---|
+| **Store every** | 30000 ms | 5000 to 3600000 | How often the waiting lines are stored. |
+| **Most lines per run** | 500 | 1 to 5000 | Lines beyond it are stored in the next run. |
+| **Largest stored event** | 65536 bytes | 1024 to 262144 | Log text in one event. |
+| **Longest single message** | 8192 bytes | 256 to 65536 | A longer message or stack trace is cut; never larger than an event. |
+| **Lines kept in memory** | 2000 | 100 to 10000, at most 16 MB | Lines that can wait between two runs. When it is full, the oldest are dropped and the view says how many. |
+| **Delete old stored lines** | on | on / off | The clean-up below. Keep it on, or stored lines pile up. |
+| **Delete old lines every** | 3600000 ms | 60000 to 86400000 | How often the clean-up runs. |
+
+**Clean-up.** A separate job deletes each tenant's stored lines once they are older than that tenant's retention, so the
+number of `d11r_serviceLog` events does not keep growing. It does not depend on **Store service logs**: if you switch
+storing off, lines that were stored earlier are still removed when their time is up. Every instance of the microservice
+runs it; deleting lines that are already gone does nothing. The lines of a tenant that unsubscribes are left alone,
+because they belong to that tenant.
 
 :::caution
 At level **INFO** the service logs the full payload of every message it processes, and the collected log shows it to
-the tenant's administrators. Keep the default **WARN** unless you need the processing steps. Lines that are still in
-the service's memory when an instance stops are lost, because they are stored a short time after they are logged.
+the tenant's administrators. Choose **WARN** if payloads should not be stored. When an instance stops the service
+stores the lines still waiting in memory; lines are lost only if the instance is killed without a clean stop.
 :::
+
+**For operators.** The microservice's operator can switch the whole feature off for every tenant with the property
+`service.logs.enabled=false` of the service (a restart is required). It is on when the property is absent. The clean-up
+keeps running even then, so lines that were stored earlier are still deleted.
 
 #### Hierarchy mapping
 

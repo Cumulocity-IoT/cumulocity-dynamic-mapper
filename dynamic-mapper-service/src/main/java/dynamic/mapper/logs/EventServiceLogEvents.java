@@ -95,15 +95,23 @@ public class EventServiceLogEvents implements ServiceLogReader.Events {
         return result.get();
     }
 
+    /**
+     * The stored chunk of an event, or {@code null} if it is not one. Anyone who may create events in the tenant can
+     * create one of this type with arbitrary content, so a malformed one is skipped instead of failing every read.
+     */
     static ServiceLogReader.StoredChunk toChunk(EventRepresentation event) {
         Object fragment = event.getProperty(EventServiceLogSink.FRAGMENT);
         if (!(fragment instanceof Map<?, ?> m) || m.get("dateTo") == null || m.get("dateFrom") == null) {
             return null;
         }
-        return new ServiceLogReader.StoredChunk(Instant.parse(m.get("dateFrom").toString()),
-                Instant.parse(m.get("dateTo").toString()),
-                m.get("instance") == null ? null : m.get("instance").toString(), number(m.get("lines")),
-                number(m.get("omitted")), m.get("logs") == null ? "" : m.get("logs").toString());
+        try {
+            return new ServiceLogReader.StoredChunk(Instant.parse(m.get("dateFrom").toString()),
+                    Instant.parse(m.get("dateTo").toString()),
+                    m.get("instance") == null ? null : m.get("instance").toString(), number(m.get("lines")),
+                    number(m.get("omitted")), m.get("logs") == null ? "" : m.get("logs").toString());
+        } catch (java.time.format.DateTimeParseException e) {
+            return null;
+        }
     }
 
     private static int number(Object o) {

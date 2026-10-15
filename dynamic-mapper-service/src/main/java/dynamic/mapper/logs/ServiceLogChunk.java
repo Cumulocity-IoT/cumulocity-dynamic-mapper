@@ -21,19 +21,26 @@
 package dynamic.mapper.logs;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 /**
  * What one event carries: a contiguous run of one tenant's records.
  *
  * @param dateFrom time of the first record
- * @param dateTo   time of the last record — the event's time and the paging key
+ * @param dateTo   time of the last (newest) record
  * @param lines    number of log lines (a multi-line record counts every line)
  * @param levels   records per level, e.g. {@code {WARN=2, ERROR=1}}
- * @param omitted  records of this run that did not fit the per-tenant cap (set on the last chunk only)
+ * @param omitted  records lost since the previous chunk because the tenant's buffer overflowed
+ * @param records  the records this chunk was built from; <b>not stored</b>, it lets the collector put back exactly the
+ *                 records that were not stored when a write fails
  */
-public record ServiceLogChunk(Instant dateFrom, Instant dateTo, int lines, Map<String, Integer> levels,
-        int omitted, String logs) {
+public record ServiceLogChunk(Instant dateFrom, Instant dateTo, int lines, Map<String, Integer> levels, int omitted,
+        String logs, List<ServiceLogRecord> records) {
+
+    public ServiceLogChunk withOmitted(int omitted) {
+        return new ServiceLogChunk(dateFrom, dateTo, lines, levels, omitted, logs, records);
+    }
 
     public String summary() {
         StringBuilder s = new StringBuilder().append(lines).append(" line(s)");

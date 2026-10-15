@@ -20,22 +20,32 @@
 
 package dynamic.mapper.logs;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 
 /**
  * What may be copied to a tenant, and how much.
  *
- * @param minLevel         lines below it are never copied (the service itself runs at TRACE/INFO, and INFO
- *                         lines can carry device payloads — see docs/feature/service-logs.md)
- * @param maxLinesPerTenant per collection run; the rest is counted as omitted, not silently lost
- * @param maxChunkBytes    size of one event's log text, well below the platform's event size limit
- * @param excludedLoggers  loggers whose lines are never copied (the collector's own, to avoid a feedback
- *                         loop); matched against the end of the logger field, which logback abbreviates
+ * @param minLevel          lines below it are never copied (the service itself runs at TRACE/INFO, and INFO
+ *                          lines can carry device payloads — see docs/feature/service-logs.md)
+ * @param maxLinesPerTenant per collection run; the rest is <b>deferred to the next run</b>, not dropped
+ * @param maxChunkBytes     size of one event's log text, well below the platform's event size limit
+ * @param maxRecordBytes    size of one record: a single huge message or stack trace is cut to this, because a chunk
+ *                          cannot be split inside a record and an oversized event would be rejected again and again
+ * @param excludedLoggers   loggers whose lines are never copied (the collector's own, to avoid a feedback
+ *                          loop); matched against the end of the logger name
  */
-public record ServiceLogPolicy(String minLevel, int maxLinesPerTenant, int maxChunkBytes,
+public record ServiceLogPolicy(String minLevel, int maxLinesPerTenant, int maxChunkBytes, int maxRecordBytes,
         List<String> excludedLoggers) {
 
+    static final int DEFAULT_MAX_RECORD_BYTES = 8192;
+
+    /** Class names of everything on the collection path; matched against the end of the logger name. */
+    public static final List<String> OWN_LOGGERS = List.of("ServiceLogCollector", "ServiceLogCollectorJob",
+            "ServiceLogCapture", "ServiceLogCaptureAppender", "EventServiceLogSink", "ServiceLogSourceLocator",
+            "ServiceLogRetention", "ServiceLogRetentionJob");
+    private static final String TRUNCATED = " … [truncated]";
     private static final List<String> LEVELS = List.of("TRACE", "DEBUG", "INFO", "WARN", "ERROR");
 
     public ServiceLogPolicy {
@@ -45,7 +55,20 @@ public record ServiceLogPolicy(String minLevel, int maxLinesPerTenant, int maxCh
         if (maxLinesPerTenant < 1 || maxChunkBytes < 1024) {
             throw new IllegalArgumentException("maxLinesPerTenant must be >= 1 and maxChunkBytes >= 1024");
         }
+        if (maxRecordBytes < 256 || maxRecordBytes > maxChunkBytes) {
+            throw new IllegalArgumentException("maxRecordBytes must be between 256 and maxChunkBytes");
+        }
         excludedLoggers = excludedLoggers == null ? List.of() : List.copyOf(excludedLoggers);
+    }
+
+    public ServiceLogPolicy(String minLevel, int maxLinesPerTenant, int maxChunkBytes, List<String> excludedLoggers) {
+        this(minLevel, maxLinesPerTenant, maxChunkBytes, Math.min(maxChunkBytes, DEFAULT_MAX_RECORD_BYTES), excludedLoggers);
+    }
+
+    /** The policy of one tenant, from its current settings. */
+    public static ServiceLogPolicy of(dynamic.mapper.configuration.ServiceLogsConfiguration.Settings settings) {
+        return new ServiceLogPolicy(settings.minLevel(), settings.maxLinesPerRun(), settings.maxChunkBytes(),
+                settings.maxRecordBytes(), OWN_LOGGERS);
     }
 
     static int rank(String level) {
@@ -62,5 +85,22 @@ public record ServiceLogPolicy(String minLevel, int maxLinesPerTenant, int maxCh
             }
         }
         return true;
+    }
+
+    /** The text, cut to {@link #maxRecordBytes()} (never inside a multi-byte character) with a marker if it was cut. */
+    public String limit(String text) {
+        return limit(text, maxRecordBytes);
+    }
+
+    public static String limit(String text, int maxBytes) {
+        byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
+        if (bytes.length <= maxBytes) {
+            return text;
+        }
+        int cut = maxBytes - TRUNCATED.getBytes(StandardCharsets.UTF_8).length;
+        while (cut > 0 && (bytes[cut] & 0xC0) == 0x80) {
+            cut--;
+        }
+        return new String(bytes, 0, cut, StandardCharsets.UTF_8) + TRUNCATED;
     }
 }

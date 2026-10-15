@@ -75,11 +75,15 @@ public class ServiceLogsController {
                     "Reading the service log requires ROLE_DYNAMIC_MAPPER_ADMIN");
         }
         String tenant = contextService.getContext().getTenant();
+        Instant from;
+        Instant to;
         try {
-            return ResponseEntity.ok(reader.read(tenant, instance, parse(dateFrom), parse(dateTo)));
+            from = parse(dateFrom);
+            to = parse(dateTo);
         } catch (DateTimeParseException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dates must be ISO-8601, e.g. 2026-10-15T12:00:00Z");
         }
+        return ResponseEntity.ok(reader.read(tenant, instance, from, to));
     }
 
     private static Instant parse(String value) {

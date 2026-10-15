@@ -67,6 +67,9 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
   nothingCollected = false;
 
   private timer: ReturnType<typeof setInterval>;
+  /** Numbers each request so an answer that arrives after a newer request was made is ignored. */
+  private requestSeq = 0;
+  private inFlight = false;
 
   constructor(
     private nativeLogs: NativeServiceLogsService,
@@ -144,15 +147,20 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
   }
 
   async download(): Promise<void> {
-    const parts: string[] = [];
-    let request: LogRequest = { instance: this.selectedInstance, dateFrom: EPOCH };
-    let window: LogWindow;
-    do {
-      window = await this.source.load(request);
-      parts.push(window.logs.endsWith('\n') ? window.logs : `${window.logs}\n`);
-      request = { instance: this.selectedInstance, dateFrom: window.dateTo };
-    } while (window.more && window.dateTo);
-    saveAs(new Blob(parts, { type: 'text/plain' }), `${this.selectedInstance}.log`);
+    try {
+      const parts: string[] = [];
+      let request: LogRequest = { instance: this.selectedInstance, dateFrom: EPOCH };
+      let window: LogWindow;
+      do {
+        window = await this.source.load(request);
+        parts.push(window.logs.endsWith('\n') ? window.logs : `${window.logs}\n`);
+        request = { instance: this.selectedInstance, dateFrom: window.dateTo };
+      } while (window.more && window.dateTo);
+      saveAs(new Blob(parts, { type: 'text/plain' }), `${this.selectedInstance}.log`);
+    } catch (e) {
+      console.error(e);
+      this.alertService.danger('Failed to download the log.');
+    }
   }
 
   /** Makes `source` the active one and shows its latest lines. Returns false if it cannot serve this tenant. */
@@ -195,15 +203,21 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
 
   private async fetch(params: { dateFrom?: string; dateTo?: string }, silent = false): Promise<void> {
     if (!this.source) return;
+    // A refresh timer must not pile requests up behind a slow one.
+    if (silent && this.inFlight) return;
+    const ticket = ++this.requestSeq;
+    this.inFlight = true;
     this.isLoading = !silent;
     try {
       const window = await this.source.load({ instance: this.selectedInstance, ...params });
+      if (ticket !== this.requestSeq) return; // a newer request was started meanwhile: this answer is out of date
       if (!window.logs && !window.empty) {
         if (!silent) this.alertService.info('No logs available.');
         return;
       }
       this.show(window);
     } catch (e) {
+      if (ticket !== this.requestSeq) return;
       if (e instanceof LogsUnavailableError) {
         this.stopTimer();
         this.autoRefresh = false;
@@ -214,7 +228,10 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
       }
       console.error(e);
     } finally {
-      this.isLoading = false;
+      if (ticket === this.requestSeq) {
+        this.inFlight = false;
+        this.isLoading = false;
+      }
     }
   }
 }

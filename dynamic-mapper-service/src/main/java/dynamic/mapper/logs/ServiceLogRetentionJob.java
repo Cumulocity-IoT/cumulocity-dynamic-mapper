@@ -21,43 +21,35 @@
 package dynamic.mapper.logs;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 
-import lombok.extern.slf4j.Slf4j;
-
 /**
- * Runs the {@link ServiceLogRetention} on a timer. On by default and independent of
- * {@code service.logs.collector.enabled}; switch it off with {@code service.logs.retention.enabled=false}.
+ * Wakes the {@link ServiceLogRetention} once a minute; the retention decides per tenant whether that tenant is due, so each
+ * tenant's own interval and age limit apply. Always present — also when the service log is switched off — so stored lines
+ * never pile up.
  *
  * <p>Every service instance runs it. That is redundant but harmless: deleting events that are already gone is a no-op.
  */
-@Slf4j
 @Component
-@ConditionalOnProperty(prefix = "service.logs.retention", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class ServiceLogRetentionJob {
 
     private final ServiceLogRetention retention;
 
     public ServiceLogRetentionJob(ServiceLogSink sink, MicroserviceSubscriptionsService subscriptionsService,
-            @Value("${service.logs.collector.retention-hours:24}") int retentionHours) {
+            ServiceLogSettingsProvider settings) {
         this.retention = new ServiceLogRetention(sink,
                 () -> subscriptionsService.getAll().stream().map(MicroserviceCredentials::getTenant)
                         .collect(Collectors.toSet()),
-                Duration.ofHours(retentionHours), Clock.systemUTC());
-        log.info("Service log retention: stored lines older than {} hour(s) are deleted", retentionHours);
+                settings, Clock.systemUTC());
     }
 
-    @Scheduled(fixedDelayString = "${service.logs.retention.interval-ms:3600000}",
-            initialDelayString = "${service.logs.retention.initial-delay-ms:300000}")
+    @Scheduled(fixedDelay = 60_000, initialDelay = 120_000)
     public void run() {
         retention.run();
     }

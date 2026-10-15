@@ -149,4 +149,67 @@ class ServiceLogReaderTest {
         assertEquals(11, page.omitted());
         assertEquals(5, page.lines());
     }
+
+    @Test
+    void anInstanceWhoseChunksAreFarBackIsStillFoundAmongManyNewerChunksOfAnotherInstance() {
+        FakeEvents events = new FakeEvents();
+        for (int i = 0; i < 5; i++) {
+            events.chunk("pod-quiet", i); // old
+        }
+        for (int i = 5; i < 205; i++) {
+            events.chunk("pod-busy", i); // 200 newer chunks of the other pod
+        }
+
+        Page page = reader(events, 10).read("t", "pod-quiet", null, null);
+
+        assertEquals(5, page.chunks(), "found beyond the first 50 events");
+        assertTrue(page.instances().contains("pod-quiet"));
+    }
+
+    @Test
+    void aWalkThatHitsItsBoundSaysThereMayBeMoreInsteadOfEndingThePaging() {
+        FakeEvents events = new FakeEvents();
+        events.chunk("pod-quiet", 0);
+        for (int i = 1; i < 1 + ServiceLogReader.MAX_PAGES * ServiceLogReader.PAGE_SIZE + 10; i++) {
+            events.chunk("pod-busy", i);
+        }
+
+        Page page = reader(events, 10).read("t", "pod-quiet", null, null);
+
+        assertEquals(0, page.chunks());
+        assertTrue(page.more(), "not 'no more': the quiet pod's chunk was simply out of reach");
+    }
+
+    @Test
+    void discoveryReadsOneSmallPageAndNeverTheWholeLog() {
+        java.util.concurrent.atomic.AtomicInteger discoveryCalls = new java.util.concurrent.atomic.AtomicInteger();
+        FakeEvents events = new FakeEvents() {
+            @Override
+            public List<StoredChunk> list(String tenant, Instant from, Instant to, boolean oldestFirst, int page, int pageSize) {
+                if (from == null && to == null && pageSize == ServiceLogReader.DISCOVERY_SIZE) {
+                    discoveryCalls.incrementAndGet();
+                    assertEquals(1, page, "discovery must not page");
+                }
+                return super.list(tenant, from, to, oldestFirst, page, pageSize);
+            }
+        };
+        for (int i = 0; i < 300; i++) {
+            events.chunk("pod-1", i);
+        }
+
+        reader(events, 10).read("t", null, null, null);
+
+        assertEquals(1, discoveryCalls.get());
+    }
+
+    @Test
+    void aRequestedInstanceThatHasNoStoredLinesIsAnEmptyPageNotAnError() {
+        FakeEvents events = new FakeEvents().chunk("pod-1", 0);
+
+        Page page = reader(events, 10).read("t", "pod-gone", null, null);
+
+        assertEquals(0, page.chunks());
+        assertTrue(page.instances().contains("pod-gone"));
+        assertFalse(page.empty());
+    }
 }

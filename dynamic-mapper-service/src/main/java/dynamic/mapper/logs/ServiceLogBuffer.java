@@ -20,18 +20,26 @@
 
 package dynamic.mapper.logs;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** Log records captured inside the process, waiting to be stored, per tenant. */
 public interface ServiceLogBuffer {
 
-    /** Takes everything captured so far, per tenant, oldest first, and empties the buffer. */
-    Map<String, List<ServiceLogRecord>> drainAll();
+    /** Takes what is waiting for the given tenants, oldest first, and removes it from the buffer. Others stay. */
+    Map<String, List<ServiceLogRecord>> drain(Collection<String> tenants);
 
-    /** Records lost to the per-tenant bound since the last call, per tenant; resets the counts. */
-    Map<String, Integer> takeDropped();
+    /** Removes everything waiting for tenants that are not in {@code keep}, so a tenant that is gone does not hold memory. */
+    void retainOnly(Set<String> keep);
+
+    /** Removes everything waiting for one tenant (for a tenant that switched the service log off). */
+    void discard(String tenant);
+
+    /** Records lost to the per-tenant bound since the last call for these tenants, per tenant; resets their counts. */
+    Map<String, Integer> takeDropped(Collection<String> tenants);
 
     /** Puts records back at the front after a failed store, so the next run retries them in order. */
-    void restore(String tenant, List<ServiceLogRecord> records);
+    void restore(String tenant, List<ServiceLogRecord> records, int maxPerTenant);
 }

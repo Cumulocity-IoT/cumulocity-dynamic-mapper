@@ -31,8 +31,9 @@ import dynamic.mapper.util.TenantLogContext;
  * Takes each log event of a tenant as it is logged, instead of reading the platform's log afterwards.
  *
  * <p>The tenant comes from the event's MDC — the same source as the {@code [tenant]} field of the console line, so a
- * line can only reach the tenant it was logged for. An event without a tenant is ignored. Events below the policy's
- * minimum level and events of the collection path itself ({@code dynamic.mapper.logs}) are ignored.
+ * line can only reach the tenant it was logged for. An event without a tenant is ignored. Events of a tenant that switched
+ * the service log off, below that tenant's minimum level, or from the collection path itself
+ * ({@code dynamic.mapper.logs}) are ignored.
  *
  * <p>Runs on the logging thread: it must be quick and must never log (that would recurse); a failure is reported to
  * logback's status system and the event is skipped.
@@ -44,13 +45,31 @@ public class ServiceLogCaptureAppender extends AppenderBase<ILoggingEvent> {
 
     private static final String OWN_PACKAGE = "dynamic.mapper.logs.";
 
+    /**
+     * While set on a thread, nothing that thread logs is captured. The collector sets it around its own run: the SDK and
+     * the HTTP client log while it stores a tenant's lines, and at a low minimum level those lines would be captured and
+     * stored in turn, forever.
+     */
+    private static final ThreadLocal<Boolean> SUPPRESSED = new ThreadLocal<>();
+
+    /** Suppresses capture on the calling thread until the returned handle is closed. */
+    public static AutoCloseable suppressOnThisThread() {
+        Boolean previous = SUPPRESSED.get();
+        SUPPRESSED.set(Boolean.TRUE);
+        return () -> {
+            if (previous == null) {
+                SUPPRESSED.remove();
+            }
+        };
+    }
+
     private final BoundedServiceLogBuffer buffer;
-    private final ServiceLogPolicy policy;
+    private final ServiceLogSettingsProvider settings;
     private PatternLayout layout;
 
-    public ServiceLogCaptureAppender(BoundedServiceLogBuffer buffer, ServiceLogPolicy policy) {
+    public ServiceLogCaptureAppender(BoundedServiceLogBuffer buffer, ServiceLogSettingsProvider settings) {
         this.buffer = buffer;
-        this.policy = policy;
+        this.settings = settings;
         setName("ServiceLogCapture");
     }
 
@@ -67,6 +86,9 @@ public class ServiceLogCaptureAppender extends AppenderBase<ILoggingEvent> {
     @Override
     protected void append(ILoggingEvent event) {
         try {
+            if (SUPPRESSED.get() != null) {
+                return;
+            }
             String logger = event.getLoggerName();
             if (logger != null && logger.startsWith(OWN_PACKAGE)) {
                 return;
@@ -75,14 +97,20 @@ public class ServiceLogCaptureAppender extends AppenderBase<ILoggingEvent> {
             if (tenant == null) {
                 return;
             }
-            ServiceLogRecord record = new ServiceLogRecord(Instant.ofEpochMilli(event.getTimeStamp()),
-                    event.getLevel().toString(), event.getThreadName(), tenant, logger, null);
-            if (!policy.admits(record)) {
-                return; // level, excluded logger: decided before the (costlier) formatting
+            // The tenant's own settings, as they are right now: a change on the Service configuration page applies to the
+            // next line. A tenant that switched the service log off costs only this lookup.
+            dynamic.mapper.configuration.ServiceLogsConfiguration.Settings s = settings.forTenant(tenant);
+            if (!s.enabled() || ServiceLogPolicy.rank(event.getLevel().toString()) < ServiceLogPolicy.rank(s.minLevel())) {
+                return;
             }
-            String text = layout.doLayout(event);
-            buffer.offer(new ServiceLogRecord(record.time(), record.level(), record.thread(), tenant, logger,
-                    stripTrailingNewlines(text)));
+            for (String own : ServiceLogPolicy.OWN_LOGGERS) {
+                if (logger != null && logger.endsWith(own)) {
+                    return;
+                }
+            }
+            String text = ServiceLogPolicy.limit(stripTrailingNewlines(layout.doLayout(event)), s.maxRecordBytes());
+            buffer.offer(new ServiceLogRecord(Instant.ofEpochMilli(event.getTimeStamp()), event.getLevel().toString(),
+                    event.getThreadName(), tenant, logger, text), s.maxBufferedRecords());
         } catch (RuntimeException e) {
             addError("Could not capture a log event: " + e);
         }

@@ -20,14 +20,15 @@
 
 package dynamic.mapper.logs;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.ILoggerFactory;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import org.springframework.beans.factory.annotation.Value;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
@@ -37,24 +38,24 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Attaches the {@link ServiceLogCaptureAppender} to the root logger and exposes what it captured as a
- * {@link ServiceLogBuffer}. Present only when {@code service.logs.collector.enabled=true}.
+ * {@link ServiceLogBuffer}. Which tenant's lines are captured, and how many, is decided per tenant by its
+ * {@link ServiceLogSettingsProvider settings}; the property {@code service.logs.enabled=false} is an operator's switch
+ * that turns the whole feature off for every tenant (it is on when the property is absent).
  *
- * <p>This replaces reading the platform's log: measured on a deployed service, no credential the service holds may
- * read its own native log, whereas the logging framework already knows every line's tenant (docs/feature/service-logs.md).
+ * <p>This replaces reading the platform's log: measured on a deployed service, no credential the service holds may read
+ * its own native log, whereas the logging framework already knows every line's tenant (docs/feature/service-logs.md).
  */
 @Slf4j
 @Component
-@ConditionalOnProperty(prefix = "service.logs.collector", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "service.logs", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class ServiceLogCapture implements ServiceLogBuffer {
 
-    private final BoundedServiceLogBuffer buffer;
+    private final BoundedServiceLogBuffer buffer = new BoundedServiceLogBuffer();
     private final ServiceLogCaptureAppender appender;
     private Logger root;
 
-    public ServiceLogCapture(ServiceLogPolicy policy,
-            @Value("${service.logs.collector.max-buffered-records-per-tenant:2000}") int maxBufferedPerTenant) {
-        this.buffer = new BoundedServiceLogBuffer(maxBufferedPerTenant);
-        this.appender = new ServiceLogCaptureAppender(buffer, policy);
+    public ServiceLogCapture(ServiceLogSettingsProvider settings) {
+        this.appender = new ServiceLogCaptureAppender(buffer, settings);
     }
 
     @PostConstruct
@@ -80,17 +81,27 @@ public class ServiceLogCapture implements ServiceLogBuffer {
     }
 
     @Override
-    public Map<String, List<ServiceLogRecord>> drainAll() {
-        return buffer.drainAll();
+    public Map<String, List<ServiceLogRecord>> drain(Collection<String> tenants) {
+        return buffer.drain(tenants);
     }
 
     @Override
-    public void restore(String tenant, List<ServiceLogRecord> records) {
-        buffer.restore(tenant, records);
+    public void retainOnly(Set<String> keep) {
+        buffer.retainOnly(keep);
     }
 
     @Override
-    public Map<String, Integer> takeDropped() {
-        return buffer.takeDropped();
+    public void discard(String tenant) {
+        buffer.discard(tenant);
+    }
+
+    @Override
+    public Map<String, Integer> takeDropped(Collection<String> tenants) {
+        return buffer.takeDropped(tenants);
+    }
+
+    @Override
+    public void restore(String tenant, List<ServiceLogRecord> records, int maxPerTenant) {
+        buffer.restore(tenant, records, maxPerTenant);
     }
 }

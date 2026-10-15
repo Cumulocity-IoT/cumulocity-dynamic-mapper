@@ -4,8 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -27,6 +31,7 @@ class ServiceLogCollectorTest {
         Map<String, List<ServiceLogRecord>> pending = new LinkedHashMap<>();
         Map<String, Integer> dropped = new HashMap<>();
         RuntimeException failDrain;
+        int lastRestoreBound = -1;
 
         FakeBuffer add(ServiceLogRecord r) {
             pending.computeIfAbsent(r.tenant(), t -> new ArrayList<>()).add(r);
@@ -34,24 +39,45 @@ class ServiceLogCollectorTest {
         }
 
         @Override
-        public Map<String, List<ServiceLogRecord>> drainAll() {
+        public Map<String, List<ServiceLogRecord>> drain(Collection<String> tenants) {
             if (failDrain != null) {
                 throw failDrain;
             }
-            Map<String, List<ServiceLogRecord>> out = pending;
-            pending = new LinkedHashMap<>();
+            Map<String, List<ServiceLogRecord>> out = new LinkedHashMap<>();
+            for (String tenant : tenants) {
+                List<ServiceLogRecord> list = pending.remove(tenant);
+                if (list != null) {
+                    out.put(tenant, list);
+                }
+            }
             return out;
         }
 
         @Override
-        public Map<String, Integer> takeDropped() {
-            Map<String, Integer> out = dropped;
-            dropped = new HashMap<>();
+        public void retainOnly(Set<String> keep) {
+            pending.keySet().removeIf(t -> !keep.contains(t));
+        }
+
+        @Override
+        public void discard(String tenant) {
+            pending.remove(tenant);
+        }
+
+        @Override
+        public Map<String, Integer> takeDropped(Collection<String> tenants) {
+            Map<String, Integer> out = new HashMap<>();
+            for (String tenant : tenants) {
+                Integer n = dropped.remove(tenant);
+                if (n != null) {
+                    out.put(tenant, n);
+                }
+            }
             return out;
         }
 
         @Override
-        public void restore(String tenant, List<ServiceLogRecord> records) {
+        public void restore(String tenant, List<ServiceLogRecord> records, int maxPerTenant) {
+            lastRestoreBound = maxPerTenant;
             List<ServiceLogRecord> merged = new ArrayList<>(records);
             merged.addAll(pending.getOrDefault(tenant, List.of()));
             if (!merged.isEmpty()) {
@@ -77,7 +103,7 @@ class ServiceLogCollectorTest {
 
         @Override
         public void purge(String tenant, Instant before) {
-            // not the collector's job any more: see ServiceLogRetention
+            // not the collector's job: see ServiceLogRetention
         }
 
         String logsOf(String tenant) {
@@ -87,9 +113,19 @@ class ServiceLogCollectorTest {
 
     private final FakeBuffer buffer = new FakeBuffer();
     private final FakeSink sink = new FakeSink();
-    private ServiceLogCollector collector(Set<String> subscribed, int maxChunkBytes) {
-        return new ServiceLogCollector(buffer, sink, () -> subscribed,
-                new ServiceLogPolicy("WARN", 500, maxChunkBytes, List.of("ServiceLogCollector")), "pod-1");
+    private Instant now = T0;
+    private final Clock clock = new Clock() {
+        public java.time.ZoneId getZone() { return ZoneOffset.UTC; }
+        public Clock withZone(java.time.ZoneId zone) { return this; }
+        public Instant instant() { return now; }
+    };
+
+    private ServiceLogCollector collector(Set<String> subscribed, TestSettings settings) {
+        return new ServiceLogCollector(buffer, sink, () -> subscribed, settings, "pod-1", clock);
+    }
+
+    private ServiceLogCollector collector(Set<String> subscribed) {
+        return collector(subscribed, new TestSettings());
     }
 
     @Test
@@ -97,7 +133,7 @@ class ServiceLogCollectorTest {
         buffer.add(rec("tenantA", "WARN", 1, "a-warning secret-of-A")).add(rec("tenantB", "ERROR", 2, "b-error secret-of-B"))
                 .add(rec("tenantA", "ERROR", 3, "a-error"));
 
-        collector(Set.of("tenantA", "tenantB"), 65536).collect();
+        collector(Set.of("tenantA", "tenantB")).collect();
 
         assertTrue(sink.logsOf("tenantA").contains("a-warning") && sink.logsOf("tenantA").contains("a-error"));
         assertFalse(sink.logsOf("tenantA").contains("secret-of-B"));
@@ -106,10 +142,10 @@ class ServiceLogCollectorTest {
     }
 
     @Test
-    void recordsOfATenantThatIsNotSubscribedAreDroppedNotStored() {
+    void theBufferOfATenantThatIsNotSubscribedIsEmptiedNotStored() {
         buffer.add(rec("gone", "ERROR", 1, "from an unsubscribed tenant")).add(rec("tenantA", "WARN", 2, "kept"));
 
-        collector(Set.of("tenantA"), 65536).collect();
+        collector(Set.of("tenantA")).collect();
 
         assertEquals(Set.of("tenantA"), sink.written.keySet());
         assertTrue(buffer.pending.isEmpty(), "dropped, not kept for later");
@@ -119,16 +155,74 @@ class ServiceLogCollectorTest {
     void theOwnerTenantIsTreatedLikeAnyOther() {
         buffer.add(rec("owner", "ERROR", 1, "owner line"));
 
-        collector(Set.of("owner", "tenantA"), 65536).collect();
+        collector(Set.of("owner", "tenantA")).collect();
 
         assertTrue(sink.logsOf("owner").contains("owner line"));
+    }
+
+    @Test
+    void aTenantThatSwitchedTheServiceLogOffGetsNothingStoredAndItsBufferIsEmptied() {
+        buffer.add(rec("tenantA", "WARN", 1, "a")).add(rec("tenantB", "WARN", 2, "b"));
+        TestSettings settings = new TestSettings().with("tenantA", c -> c.setEnabled(false));
+
+        collector(Set.of("tenantA", "tenantB"), settings).collect();
+
+        assertEquals(Set.of("tenantB"), sink.written.keySet());
+        assertTrue(buffer.pending.isEmpty());
+    }
+
+    @Test
+    void eachTenantIsStoredOnItsOwnInterval() {
+        TestSettings settings = new TestSettings(c -> c.setMinLevel("WARN"))
+                .with("slow", c -> {
+                    c.setMinLevel("WARN");
+                    c.setIntervalMs(60_000);
+                })
+                .with("fast", c -> {
+                    c.setMinLevel("WARN");
+                    c.setIntervalMs(5_000);
+                });
+        ServiceLogCollector c = collector(Set.of("slow", "fast"), settings);
+        c.collect(); // first pass: both are due (nothing was stored before)
+        buffer.add(rec("slow", "WARN", 1, "slow 1")).add(rec("fast", "WARN", 1, "fast 1"));
+
+        now = T0.plusSeconds(10);
+        c.collect();
+        assertEquals(Set.of("fast"), sink.written.keySet(), "10 s: only the 5 s tenant is due");
+        assertEquals(1, buffer.pending.get("slow").size(), "the other tenant's line waits");
+
+        now = T0.plusSeconds(61);
+        c.collect();
+        assertTrue(sink.logsOf("slow").contains("slow 1"));
+    }
+
+    @Test
+    void flushStoresEveryTenantNowWhateverItsInterval() {
+        TestSettings settings = new TestSettings().with("tenantA", c -> {
+            c.setMinLevel("WARN");
+            c.setIntervalMs(3_600_000);
+        });
+        ServiceLogCollector c = collector(Set.of("tenantA"), settings);
+        c.collect();
+        buffer.add(rec("tenantA", "WARN", 1, "waiting"));
+        now = T0.plusSeconds(10);
+        c.collect();
+        assertTrue(sink.written.isEmpty(), "not due yet");
+
+        c.flush(); // the service is stopping
+
+        assertTrue(sink.logsOf("tenantA").contains("waiting"));
     }
 
     @Test
     void aFailedStoreIsRetriedNextRunWithoutHoldingUpOrDuplicatingOtherTenants() {
         sink.failing.add("tenantA");
         buffer.add(rec("tenantA", "WARN", 1, "a1")).add(rec("tenantB", "WARN", 2, "b1"));
-        ServiceLogCollector c = collector(Set.of("tenantA", "tenantB"), 65536);
+        TestSettings fast = new TestSettings(c -> {
+            c.setMinLevel("WARN");
+            c.setIntervalMs(5_000);
+        });
+        ServiceLogCollector c = collector(Set.of("tenantA", "tenantB"), fast);
 
         c.collect();
         assertTrue(sink.logsOf("tenantB").contains("b1"), "B was not held up by A");
@@ -137,6 +231,7 @@ class ServiceLogCollectorTest {
 
         sink.failing.clear();
         buffer.add(rec("tenantA", "WARN", 5, "a2"));
+        now = T0.plusSeconds(6);
         c.collect();
 
         assertTrue(sink.logsOf("tenantA").contains("a1") && sink.logsOf("tenantA").contains("a2"));
@@ -150,9 +245,13 @@ class ServiceLogCollectorTest {
             buffer.add(rec("tenantA", "WARN", i, "x".repeat(100) + i));
         }
         sink.failOnWriteNumber = 2; // the first chunk is stored, the second fails
-        ServiceLogCollector c = collector(Set.of("tenantA"), 1024);
+        TestSettings tiny = new TestSettings(c -> {
+            c.setMinLevel("WARN");
+            c.setMaxChunkBytes(1024);
+            c.setMaxRecordBytes(1024);
+        });
 
-        c.collect();
+        collector(Set.of("tenantA"), tiny).collect();
 
         int storedLines = sink.written.get("tenantA").stream().mapToInt(ServiceLogChunk::lines).sum();
         int restored = buffer.pending.get("tenantA").size();
@@ -161,10 +260,78 @@ class ServiceLogCollectorTest {
     }
 
     @Test
+    void theRestoreUsesThatTenantsOwnBufferBound() {
+        sink.failing.add("tenantA");
+        buffer.add(rec("tenantA", "WARN", 1, "a1"));
+        TestSettings settings = new TestSettings().with("tenantA", c -> {
+            c.setMinLevel("WARN");
+            c.setMaxBufferedRecords(300);
+        });
+
+        collector(Set.of("tenantA"), settings).collect();
+
+        assertEquals(300, buffer.lastRestoreBound);
+    }
+
+    @Test
+    void whatDoesNotFitTheTenantsLineCapWaitsForTheNextRunInsteadOfBeingDropped() {
+        TestSettings settings = new TestSettings(c -> {
+            c.setMinLevel("WARN");
+            c.setMaxLinesPerRun(3);
+            c.setIntervalMs(5_000);
+        });
+        ServiceLogCollector c = collector(Set.of("tenantA"), settings);
+        for (int i = 0; i < 5; i++) {
+            buffer.add(rec("tenantA", "WARN", i, "line " + i));
+        }
+
+        c.collect();
+        assertEquals(3, sink.written.get("tenantA").stream().mapToInt(ServiceLogChunk::lines).sum());
+        assertEquals(2, buffer.pending.get("tenantA").size(), "the newest two are kept");
+
+        now = T0.plusSeconds(6);
+        c.collect();
+        assertTrue(sink.logsOf("tenantA").contains("line 3") && sink.logsOf("tenantA").contains("line 4"));
+        assertTrue(buffer.pending.isEmpty());
+    }
+
+    @Test
+    void recordsThatReachedTheBufferOutOfOrderAreStoredInTimeOrder() {
+        buffer.add(rec("tenantA", "WARN", 9, "newest")).add(rec("tenantA", "WARN", 2, "oldest"));
+
+        collector(Set.of("tenantA")).collect();
+
+        ServiceLogChunk chunk = sink.written.get("tenantA").get(0);
+        assertEquals("oldest\nnewest", chunk.logs());
+        assertEquals(T0.plusSeconds(9), chunk.dateTo(), "the chunk ends at its newest record");
+    }
+
+    @Test
+    void linesLostToABufferOverflowAreReportedOnTheTenantsNextChunk() {
+        buffer.add(rec("tenantA", "WARN", 1, "after the gap"));
+        buffer.dropped.put("tenantA", 7);
+
+        collector(Set.of("tenantA")).collect();
+
+        assertEquals(7, sink.written.get("tenantA").get(0).omitted());
+    }
+
+    @Test
+    void aHugeRecordIsCutAndStoredInsteadOfBlockingTheTenantForGood() {
+        buffer.add(rec("tenantA", "ERROR", 1, "payload " + "x".repeat(2_000_000)));
+
+        collector(Set.of("tenantA")).collect();
+
+        assertEquals(1, sink.written.get("tenantA").size());
+        assertTrue(sink.written.get("tenantA").get(0).logs().length() <= 8192);
+        assertTrue(buffer.pending.isEmpty());
+    }
+
+    @Test
     void theCollectorsOwnLinesAreNeverStored() {
         buffer.add(new ServiceLogRecord(T0, "ERROR", "t", "tenantA", "d.m.l.ServiceLogCollector", "collector failed"));
 
-        collector(Set.of("tenantA"), 65536).collect();
+        collector(Set.of("tenantA")).collect();
 
         assertTrue(sink.written.isEmpty());
     }
@@ -173,7 +340,7 @@ class ServiceLogCollectorTest {
     void aFailingBufferDoesNotThrow() {
         buffer.failDrain = new IllegalStateException("boom");
 
-        collector(Set.of("tenantA"), 65536).collect(); // must not throw
+        collector(Set.of("tenantA")).collect(); // must not throw
 
         assertEquals(0, sink.writes);
     }

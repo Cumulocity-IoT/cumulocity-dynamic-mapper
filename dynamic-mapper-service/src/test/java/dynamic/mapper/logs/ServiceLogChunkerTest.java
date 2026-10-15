@@ -7,10 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import org.junit.jupiter.api.Test;
+
+import dynamic.mapper.logs.ServiceLogChunker.TenantChunks;
 
 class ServiceLogChunkerTest {
 
@@ -21,33 +21,35 @@ class ServiceLogChunkerTest {
                 "d.m.Foo", text);
     }
 
+    private static String logsOf(TenantChunks chunks) {
+        return String.join("\n", chunks.chunks().stream().map(ServiceLogChunk::logs).toList());
+    }
+
     @Test
-    void eachTenantOnlyEverReceivesItsOwnRecords() {
-        List<ServiceLogRecord> records = List.of(
+    void aTenantOnlyEverReceivesRecordsThatNameIt() {
+        List<ServiceLogRecord> mixed = List.of(
                 rec("tenantA", "WARN", 1, "a1 secret-of-A"),
                 rec("tenantB", "ERROR", 2, "b1 secret-of-B"),
                 rec("tenantA", "ERROR", 3, "a2"));
 
-        Map<String, List<ServiceLogChunk>> out = ServiceLogChunker.chunk(records, WARN,
-                Set.of("tenantA", "tenantB"), Map.of());
+        String a = logsOf(ServiceLogChunker.chunkTenant("tenantA", mixed, WARN));
+        String b = logsOf(ServiceLogChunker.chunkTenant("tenantB", mixed, WARN));
 
-        String a = out.get("tenantA").get(0).logs();
-        String b = out.get("tenantB").get(0).logs();
         assertTrue(a.contains("a1") && a.contains("a2") && !a.contains("secret-of-B"), a);
         assertTrue(b.contains("b1") && !b.contains("secret-of-A") && !b.contains("a2"), b);
     }
 
     @Test
-    void unattributedAndUnsubscribedRecordsGoNowhere() {
+    void aRecordWithoutATenantOrWithAnotherOneIsNeverPartOfTheTenantBeingStored() {
         List<ServiceLogRecord> records = List.of(
                 rec(null, "ERROR", 1, "global error"),
-                rec("gone", "ERROR", 2, "from an unsubscribed tenant"),
+                rec("tenantB", "ERROR", 2, "from another tenant"),
                 rec("tenantA", "ERROR", 3, "kept"));
 
-        Map<String, List<ServiceLogChunk>> out = ServiceLogChunker.chunk(records, WARN, Set.of("tenantA"), Map.of());
+        TenantChunks out = ServiceLogChunker.chunkTenant("tenantA", records, WARN);
 
-        assertEquals(Set.of("tenantA"), out.keySet());
-        assertFalse(out.get("tenantA").get(0).logs().contains("global"));
+        assertEquals("kept", logsOf(out));
+        assertTrue(out.deferred().isEmpty(), "they are not deferred either: they simply do not belong");
     }
 
     @Test
@@ -57,38 +59,77 @@ class ServiceLogChunkerTest {
                 "d.m.l.ServiceLogCollector", "collector failed");
         ServiceLogRecord warn = rec("tenantA", "WARN", 3, "warn");
 
-        Map<String, List<ServiceLogChunk>> out = ServiceLogChunker.chunk(List.of(info, own, warn), WARN,
-                Set.of("tenantA"), Map.of());
-
-        String logs = out.get("tenantA").get(0).logs();
-        assertEquals("warn", logs);
+        assertEquals("warn", logsOf(ServiceLogChunker.chunkTenant("tenantA", List.of(info, own, warn), WARN)));
     }
 
     @Test
-    void alreadyCollectedRecordsAreSkippedPerTenant() {
-        List<ServiceLogRecord> records = List.of(rec("tenantA", "WARN", 1, "old"), rec("tenantA", "WARN", 5, "new"),
-                rec("tenantB", "WARN", 1, "b-first-time"));
+    void recordsAreStoredInTimeOrderEvenWhenTheyArrivedOutOfOrder() {
+        // stamped when logged, but queued by whichever thread got there first
+        List<ServiceLogRecord> arrival = List.of(rec("tenantA", "WARN", 5, "newest"), rec("tenantA", "WARN", 1, "oldest"),
+                rec("tenantA", "WARN", 3, "middle"));
 
-        Map<String, List<ServiceLogChunk>> out = ServiceLogChunker.chunk(records, WARN, Set.of("tenantA", "tenantB"),
-                Map.of("tenantA", Instant.parse("2026-10-15T11:00:01Z")));
+        ServiceLogChunk chunk = ServiceLogChunker.chunkTenant("tenantA", arrival, WARN).chunks().get(0);
 
-        assertEquals("new", out.get("tenantA").get(0).logs());
-        assertEquals("b-first-time", out.get("tenantB").get(0).logs());
+        assertEquals("oldest\nmiddle\nnewest", chunk.logs());
+        assertEquals(Instant.parse("2026-10-15T11:00:01Z"), chunk.dateFrom());
+        assertEquals(Instant.parse("2026-10-15T11:00:05Z"), chunk.dateTo(), "the chunk ends at its newest record");
     }
 
     @Test
-    void theLineCapOmitsTheRestAndSaysSo() {
+    void recordsOfTheSameMillisecondKeepTheirArrivalOrder() {
+        List<ServiceLogRecord> records = List.of(rec("tenantA", "WARN", 1, "first"), rec("tenantA", "WARN", 1, "second"),
+                rec("tenantA", "WARN", 1, "third"));
+
+        assertEquals("first\nsecond\nthird", ServiceLogChunker.chunkTenant("tenantA", records, WARN).chunks().get(0).logs());
+    }
+
+    @Test
+    void whatDoesNotFitTheLineCapIsDeferredNotDropped() {
         ServiceLogPolicy small = new ServiceLogPolicy("WARN", 3, 65536, List.of());
         List<ServiceLogRecord> records = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             records.add(rec("tenantA", "WARN", i, "line " + i));
         }
 
-        ServiceLogChunk chunk = ServiceLogChunker.chunk(records, small, Set.of("tenantA"), Map.of()).get("tenantA").get(0);
+        TenantChunks result = ServiceLogChunker.chunkTenant("tenantA", records, small);
 
-        assertEquals(3, chunk.lines());
-        assertEquals(2, chunk.omitted());
-        assertTrue(chunk.summary().contains("2 omitted"), chunk.summary());
+        assertEquals(3, result.chunks().stream().mapToInt(ServiceLogChunk::lines).sum());
+        assertEquals(List.of("line 3", "line 4"), result.deferred().stream().map(ServiceLogRecord::text).toList(),
+                "the NEWEST lines wait for the next run, in order");
+    }
+
+    @Test
+    void aMultiLineRecordCountsEveryLineAgainstTheCap() {
+        ServiceLogPolicy small = new ServiceLogPolicy("WARN", 4, 65536, List.of());
+        List<ServiceLogRecord> records = List.of(rec("tenantA", "ERROR", 1, "boom\n\tat a\n\tat b"),
+                rec("tenantA", "ERROR", 2, "second\n\tat c\n\tat d"));
+
+        TenantChunks result = ServiceLogChunker.chunkTenant("tenantA", records, small);
+
+        assertEquals(3, result.chunks().get(0).lines());
+        assertEquals(1, result.deferred().size());
+    }
+
+    @Test
+    void aRecordLongerThanTheCapIsStillTakenOtherwiseItWouldWaitForever() {
+        ServiceLogPolicy small = new ServiceLogPolicy("WARN", 2, 65536, List.of());
+        ServiceLogRecord longTrace = rec("tenantA", "ERROR", 1, "boom\n\tat a\n\tat b\n\tat c\n\tat d");
+
+        TenantChunks result = ServiceLogChunker.chunkTenant("tenantA", List.of(longTrace), small);
+
+        assertEquals(1, result.chunks().size());
+        assertTrue(result.deferred().isEmpty());
+    }
+
+    @Test
+    void aSingleHugeRecordIsCutSoItCanNeverMakeAnEventTheServerRejects() {
+        ServiceLogPolicy policy = new ServiceLogPolicy("WARN", 500, 65536, 1024, List.of());
+        ServiceLogRecord huge = rec("tenantA", "ERROR", 1, "payload " + "x".repeat(5_000_000));
+
+        ServiceLogChunk chunk = ServiceLogChunker.chunkTenant("tenantA", List.of(huge), policy).chunks().get(0);
+
+        assertTrue(chunk.logs().getBytes(java.nio.charset.StandardCharsets.UTF_8).length <= 1024, "size " + chunk.logs().length());
+        assertTrue(chunk.logs().endsWith("[truncated]"));
     }
 
     @Test
@@ -99,7 +140,7 @@ class ServiceLogChunkerTest {
             records.add(rec("tenantA", "WARN", i, "x".repeat(100) + i));
         }
 
-        List<ServiceLogChunk> chunks = ServiceLogChunker.chunk(records, tiny, Set.of("tenantA"), Map.of()).get("tenantA");
+        List<ServiceLogChunk> chunks = ServiceLogChunker.chunkTenant("tenantA", records, tiny).chunks();
 
         assertTrue(chunks.size() > 1);
         assertTrue(chunks.stream().allMatch(c -> c.logs().getBytes().length <= 1024));
@@ -110,15 +151,19 @@ class ServiceLogChunkerTest {
     }
 
     @Test
-    void aMultiLineRecordCountsEveryLineAgainstTheCap() {
-        ServiceLogPolicy small = new ServiceLogPolicy("WARN", 4, 65536, List.of());
-        List<ServiceLogRecord> records = List.of(rec("tenantA", "ERROR", 1, "boom\n\tat a\n\tat b"),
-                rec("tenantA", "ERROR", 2, "second\n\tat c\n\tat d"));
+    void everyChunkRemembersExactlyTheRecordsItWasBuiltFrom() {
+        ServiceLogPolicy tiny = new ServiceLogPolicy("WARN", 500, 1024, List.of());
+        List<ServiceLogRecord> records = new ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            records.add(rec("tenantA", "WARN", i, "x".repeat(200) + i));
+        }
 
-        ServiceLogChunk chunk = ServiceLogChunker.chunk(records, small, Set.of("tenantA"), Map.of()).get("tenantA").get(0);
+        List<ServiceLogChunk> chunks = ServiceLogChunker.chunkTenant("tenantA", records, tiny).chunks();
 
-        assertEquals(3, chunk.lines());
-        assertEquals(1, chunk.omitted());
+        assertEquals(12, chunks.stream().mapToInt(c -> c.records().size()).sum());
+        for (ServiceLogChunk c : chunks) {
+            assertEquals(c.records().size(), c.levels().values().stream().mapToInt(Integer::intValue).sum());
+        }
     }
 
     @Test
@@ -127,5 +172,18 @@ class ServiceLogChunkerTest {
                 () -> new ServiceLogPolicy("LOUD", 10, 4096, List.of()));
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
                 () -> new ServiceLogPolicy("WARN", 0, 4096, List.of()));
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> new ServiceLogPolicy("WARN", 10, 4096, 8192, List.of()), "a record cannot exceed a chunk");
+    }
+
+    @Test
+    void limitNeverCutsInsideAMultiByteCharacter() {
+        ServiceLogPolicy policy = new ServiceLogPolicy("WARN", 500, 65536, 300, List.of());
+        String text = "ä".repeat(1000); // two bytes each
+
+        String limited = policy.limit(text);
+
+        assertTrue(limited.getBytes(java.nio.charset.StandardCharsets.UTF_8).length <= 300);
+        assertFalse(limited.contains("�"), "no broken character");
     }
 }

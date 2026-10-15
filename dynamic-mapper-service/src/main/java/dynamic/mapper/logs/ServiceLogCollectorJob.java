@@ -20,6 +20,7 @@
 
 package dynamic.mapper.logs;
 
+import java.time.Clock;
 import java.util.stream.Collectors;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -29,25 +30,34 @@ import org.springframework.stereotype.Component;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 
+import jakarta.annotation.PreDestroy;
+
 /**
- * Runs the {@link ServiceLogCollector} on a timer. Off unless {@code service.logs.collector.enabled=true}.
+ * Wakes the {@link ServiceLogCollector} every few seconds. The collector decides per tenant whether that tenant is due, so
+ * each tenant's own interval applies; the tick only sets the finest granularity (the smallest interval a tenant can have
+ * is 5 seconds). Present unless the operator set {@code service.logs.enabled=false}.
  */
 @Component
-@ConditionalOnProperty(prefix = "service.logs.collector", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "service.logs", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class ServiceLogCollectorJob {
 
     private final ServiceLogCollector collector;
 
     public ServiceLogCollectorJob(ServiceLogBuffer buffer, ServiceLogSink sink,
-            MicroserviceSubscriptionsService subscriptionsService, ServiceLogPolicy policy) {
+            MicroserviceSubscriptionsService subscriptionsService, ServiceLogSettingsProvider settings) {
         this.collector = new ServiceLogCollector(buffer, sink,
                 () -> subscriptionsService.getAll().stream().map(MicroserviceCredentials::getTenant)
                         .collect(Collectors.toSet()),
-                policy, System.getenv("HOSTNAME") != null ? System.getenv("HOSTNAME") : "local");
+                settings, System.getenv("HOSTNAME") != null ? System.getenv("HOSTNAME") : "local", Clock.systemUTC());
     }
 
-    @Scheduled(fixedDelayString = "${service.logs.collector.interval-ms:30000}",
-            initialDelayString = "${service.logs.collector.initial-delay-ms:30000}")
+    /** Stores what is still waiting in memory when the service stops, so a restart does not lose the last interval. */
+    @PreDestroy
+    void flush() {
+        collector.flush();
+    }
+
+    @Scheduled(fixedDelay = 5_000, initialDelay = 15_000)
     public void run() {
         collector.collect();
     }

@@ -35,6 +35,7 @@ import com.cumulocity.microservice.subscription.service.MicroserviceSubscription
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.event.EventRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.event.EventApi;
 import com.cumulocity.sdk.client.event.EventFilter;
 
@@ -86,7 +87,14 @@ public class EventServiceLogSink implements ServiceLogSink {
             fragment.put("omitted", chunk.omitted());
             fragment.put("logs", chunk.logs());
             event.setProperty(FRAGMENT, fragment);
-            eventApi.create(event);
+            try {
+                eventApi.create(event);
+            } catch (SDKException e) {
+                if (e.getHttpStatus() == 404) {
+                    sourceLocator.evict(tenant); // the source object is gone: look it up (or recreate it) next time
+                }
+                throw e;
+            }
             return null;
         });
     }
