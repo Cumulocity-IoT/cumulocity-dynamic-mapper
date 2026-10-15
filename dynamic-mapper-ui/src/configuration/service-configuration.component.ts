@@ -32,7 +32,7 @@ import packageJson from '../../package.json';
 import { AiAgentService } from '../mapping/core/ai-agent.service';
 import { Feature, Operation, SharedService } from '../shared';
 import { ServiceConfiguration } from '../shared/configuration/configuration.model';
-import { ImportServiceConfigurationComponent } from './import/import-service-configuration-modal.component';
+import { ImportServiceConfigurationComponent } from './import/import-service-configuration.component';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',

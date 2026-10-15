@@ -26,7 +26,7 @@ import { FORMLY_CONFIG } from '@ngx-formly/core';
 import { NODE1, featureResolver, Direction } from '../shared';
 import { MappingComponent } from './grid/mapping.component';
 import { checkTopicsInboundAreValid, checkTopicsOutboundAreValid } from '../shared/mapping/util';
-import { MappingSubscriptionComponent } from './subscription/subscription.component';
+import { MappingSubscriptionComponent } from './subscription/mapping-subscription.component';
 import { DeviceClientMapComponent } from './client-relation/device-client-map.component';
 import { MappingTabFactory } from './mapping-tab.factory';
 import { SubstitutionManagementService } from './service/substitution-management.service';

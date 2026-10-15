@@ -32,8 +32,8 @@ import { SharedService } from '../../shared';
  */
 @Component({
   selector: 'd11r-import-service-configuration',
-  templateUrl: './import-service-configuration-modal.component.html',
-  styleUrls: ['./import-service-configuration-modal.component.style.css'],
+  templateUrl: './import-service-configuration.component.html',
+  styleUrls: ['./import-service-configuration.component.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule]

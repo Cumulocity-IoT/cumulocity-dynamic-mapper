@@ -28,8 +28,8 @@ import { ExtensionService } from '../extension.service';
 
 @Component({
   selector: 'd11r-mapping-add-extension',
-  templateUrl: './add-extension-modal.component.html',
-  styleUrls: ['./add-extension-modal.component.style.css'],
+  templateUrl: './add-extension.component.html',
+  styleUrls: ['./add-extension.component.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule]

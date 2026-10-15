@@ -74,7 +74,7 @@ import { MappingValidationError } from '../../shared/mapping/mapping-validation-
 import { ConfirmsUnsavedChanges } from '../core/unsaved-changes.guard';
 import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
-import { MappingStepTestingComponent } from '../step-testing/mapping-testing.component';
+import { MappingStepTestingComponent } from '../step-testing/mapping-step-testing.component';
 import {
   CommitBlocker,
   commitSuccessMessage,
@@ -83,10 +83,10 @@ import {
 } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { CommonModule } from '@angular/common';
-import { MappingStepPropertiesComponent } from '../step-properties/mapping-properties.component';
+import { MappingStepPropertiesComponent } from '../step-properties/mapping-step-properties.component';
 import { MappingConnectorComponent } from '../step-connector/mapping-connector.component';
-import { MappingSubstitutionStepComponent } from '../step-transformation/mapping-transformation.component';
-import { MappingTemplateStepComponent } from '../step-template/mapping-template.component';
+import { MappingSubstitutionStepComponent } from '../step-transformation/mapping-substitution-step.component';
+import { MappingTemplateStepComponent } from '../step-template/mapping-template-step.component';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { StepperViewModel } from '../stepper/stepper-view.model';
 

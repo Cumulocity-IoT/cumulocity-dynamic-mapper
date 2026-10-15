@@ -68,14 +68,14 @@ import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, tryT
 import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
 import { AiPromptComponent } from '../prompt/ai-prompt.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
-import { MappingStepTestingComponent } from '../step-testing/mapping-testing.component';
+import { MappingStepTestingComponent } from '../step-testing/mapping-step-testing.component';
 import { CommitEditorState, MappingStepperService } from '../service/mapping-stepper.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { CommonModule } from '@angular/common';
-import { MappingStepPropertiesComponent } from '../step-properties/mapping-properties.component';
+import { MappingStepPropertiesComponent } from '../step-properties/mapping-step-properties.component';
 import { MappingConnectorComponent } from '../step-connector/mapping-connector.component';
-import { MappingSubstitutionStepComponent } from '../step-transformation/mapping-transformation.component';
-import { MappingTemplateStepComponent } from '../step-template/mapping-template.component';
+import { MappingSubstitutionStepComponent } from '../step-transformation/mapping-substitution-step.component';
+import { MappingTemplateStepComponent } from '../step-template/mapping-template-step.component';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { StepperViewModel } from './stepper-view.model';
 

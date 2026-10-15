@@ -37,7 +37,7 @@ import { CollapseModule } from 'ngx-bootstrap/collapse';
 
 @Component({
   selector: 'd11r-mapping-transformation-step',
-  templateUrl: './mapping-transformation.component.html',
+  templateUrl: './mapping-substitution-step.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   standalone: true,
   imports: [CoreModule, CommonModule, PopoverModule, CollapseModule, JsonEditorComponent, SubstitutionGridComponent]

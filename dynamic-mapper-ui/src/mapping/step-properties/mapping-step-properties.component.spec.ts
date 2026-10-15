@@ -23,7 +23,7 @@ import { of } from 'rxjs';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { AlertService } from '@c8y/ngx-components';
-import { MappingStepPropertiesComponent } from './mapping-properties.component';
+import { MappingStepPropertiesComponent } from './mapping-step-properties.component';
 import { Direction, Mapping, Qos, SharedService, StepperConfiguration } from '../../shared';
 import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
 import { MappingService } from '../core/mapping.service';

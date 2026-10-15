@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { AlertService } from '@c8y/ngx-components';
-import { ImportServiceConfigurationComponent } from './import-service-configuration-modal.component';
+import { ImportServiceConfigurationComponent } from './import-service-configuration.component';
 import { SharedService } from '../../shared';
 
 /**

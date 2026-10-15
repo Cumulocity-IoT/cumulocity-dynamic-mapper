@@ -79,15 +79,15 @@ import { MappingService } from '../core/mapping.service';
 import { MappingBulkOperationsService } from '../core/mapping-bulk-operations.service';
 import { ExplorerMappingHandoffService } from '../core/explorer-mapping-handoff.service';
 import { SubscriptionService } from '../core/subscription.service';
-import { ImportMappingsComponent } from '../import/import-modal.component';
+import { ImportMappingsComponent } from '../import/import-mappings.component';
 import { MappingVersionDrawerComponent } from '../versions/mapping-version-drawer.component';
 import { MappingPublishService } from '../versions/mapping-publish.service';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
-import { MappingIdCellRendererComponent } from '../renderer/mapping-id.renderer.component';
-import { MappingStatusActivationRendererComponent } from '../renderer/status-activation.renderer.component';
+import { MappingIdCellRendererComponent } from '../renderer/mapping-id-cell.renderer.component';
+import { MappingStatusActivationRendererComponent } from '../renderer/mapping-status-activation.renderer.component';
 import { StatusRendererComponent } from '../renderer/status.renderer.component';
 import {
   PayloadWrapper

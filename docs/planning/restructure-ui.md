@@ -87,7 +87,7 @@ configuration/  connector/  extension/  introduction/
 mapping/  mapping-tree/  monitoring/  test-device/
 ```
 
-`mapping-tree/tree.module.ts` is registered alongside the other seven. Moving it under `mapping/`
+`mapping-tree/mapping-tree.module.ts` is registered alongside the other seven. Moving it under `mapping/`
 would break that invariant, not restore one. Only its internal file prefix was inconsistent.
 
 ### Deliberately not changed
