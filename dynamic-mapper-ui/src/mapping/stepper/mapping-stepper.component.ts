@@ -154,6 +154,7 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
   // hasMappingContentChanged() in onCommitButton(). undefined for CREATE/COPY, which always persist.
   private initialContentSnapshot?: MappingContentSnapshot;
   aiAgentDeployed = false;
+  aiCapabilitiesDisabled = false;
   aiAgent: AgentObjectDefinition | AgentTextDefinition | null = null;
 
   // Use service observables
@@ -272,6 +273,7 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
     this.serviceConfiguration = init.serviceConfiguration;
     this.aiAgent = init.aiAgent;
     this.aiAgentDeployed = init.aiAgentDeployed;
+    this.aiCapabilitiesDisabled = init.aiCapabilitiesDisabled;
     this.filterFormlyFields = init.filterFormlyFields;
     this.codeTemplates = init.codeTemplates;
     this.codeTemplatesDecoded = init.codeTemplatesDecoded;

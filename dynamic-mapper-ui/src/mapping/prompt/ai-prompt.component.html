@@ -19,6 +19,20 @@
 ~
 -->
 
+@if (aiCapabilitiesDisabled) {
+<div class="alert alert-info m-16" data-cy="dm-ai-disabled-info">
+  <i c8yIcon="info"></i>
+  {{ 'AI capabilities are disabled in this tenant.' | translate }}
+</div>
+}
+@if (aiAvailabilityCheckFailed) {
+<div class="alert alert-warning m-16" data-cy="dm-ai-settings-unavailable">
+  <i c8yIcon="exclamation-triangle"></i>
+  {{ 'AI settings could not be verified. The AI assistant is unavailable.' | translate }}
+</div>
+}
+
+@if (aiChatEnabled && aiAgent) {
 <div class="card-header separator" style="justify-content: center">
   <h4 class="card-title d-flex">
     <i class="btn btn-ai btn-sm btn-ai-hint ai-icon m-r-8" style="margin-top:4px;"><span></span></i>
@@ -26,9 +40,10 @@
     <span class="label label-success m-l-8 m-t-8 m-b-8 text-16">{{aiAgent.name}}</span>
   </h4>
 </div>
+}
 
 <div class="card-inner-scroll fit-h">
-  @if (aiAgent && clientAgentDefinition) {
+  @if (aiChatEnabled && aiAgent && clientAgentDefinition) {
   <c8y-agent-chat
     [agent]="clientAgentDefinition"
     [variables]="variables"

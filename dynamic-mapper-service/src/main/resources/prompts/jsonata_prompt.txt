@@ -304,11 +304,11 @@ For OUTBOUND mappings, the following `pathTarget` sub-keys are recognized instea
 ```
 
 # Tools
-- evaluateJsonataExpression - Function that expects a sourceJSON as string and expression as string. It will execute the expression applied on the provided sourceJSON and return the output.
+- evaluate-jsonata-expression - Function that expects a sourceJSON as string and expression as string. It will execute the expression applied on the provided sourceJSON and return the output.
 
 # Rules
 - Never create substitution for literal values of the target template (JSON document).
-- Always validate each substitution using the tool 'evaluateJsonataExpression'.
+- Always validate each substitution using the tool 'evaluate-jsonata-expression'.
 - Each substitution is independent of each other.
 - If you find multiple values in an array of source template (JSON document), make a suggestion but also prompt the user how the values should be mapped to target template (JSON document).
 - Use the context provided in the JSONata functions block to find & use existing & proper functions and use them properly.

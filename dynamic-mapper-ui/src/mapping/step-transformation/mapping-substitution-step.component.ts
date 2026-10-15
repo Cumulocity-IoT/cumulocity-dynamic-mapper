@@ -51,6 +51,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   @Input() targetSystem: string;
   @Input() feature: Feature;
   @Input() aiAgentDeployed: boolean;
+  @Input() aiCapabilitiesDisabled = false;
   @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
   @Input() schemaSource: any;
   @Input() schemaTarget: any;

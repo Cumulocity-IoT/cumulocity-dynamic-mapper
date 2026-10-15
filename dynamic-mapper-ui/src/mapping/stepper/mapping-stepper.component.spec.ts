@@ -148,6 +148,7 @@ describe('MappingStepperComponent', () => {
     serviceConfiguration: {} as any,
     aiAgent: null,
     aiAgentDeployed: false,
+    aiCapabilitiesDisabled: false,
     filterFormlyFields: [],
     codeTemplates: {} as any,
     codeTemplatesDecoded: new Map(),
@@ -231,7 +232,7 @@ describe('MappingStepperComponent', () => {
       Promise.resolve({ result: '', resultType: 'empty', valid: true })
     );
     mockStepperService.checkAIAgentDeployment.and.returnValue(
-      Promise.resolve({ aiAgent: null, aiAgentDeployed: false })
+      Promise.resolve({ aiAgent: null, aiAgentDeployed: false, aiCapabilitiesDisabled: false })
     );
     mockStepperService.loadCodeTemplates.and.returnValue(Promise.resolve(new Map()));
     mockStepperService.initializeEditorSession.and.returnValue(Promise.resolve(buildEditorSessionResult()));
