@@ -66,11 +66,15 @@
     {
       "name": "dynamic-mapper-mcp-server",
       "description": "MCP Server for Dynamic Mapper service",
-      "url": "/service/dynamic-mapper-service/sse",
-      "type": "sse",
+      "url": "/service/dynamic-mapper-service/mcp",
+      "type": "http",
       "sendAuthentication": true
     }
   ],
+  "agents": {
+    "dynamic-mapper-jsonata-agent": "agents/jsonata_agent.json",
+    "dynamic-mapper-smartfunction-agent": "agents/smartfunction_agent.json"
+  },
   "openApiSpec": "api-docs",
   "icon": {
     "class": "c8y-icon-dynamic-mapper"
