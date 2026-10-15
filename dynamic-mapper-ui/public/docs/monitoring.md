@@ -155,7 +155,6 @@ for you:
 
 | Control | What it does |
 |---|---|
-| **Instance name** | Selects the microservice instance. Each instance has its own log; the collected log lists the instances that have stored lines for your tenant. |
 | **From** and **Apply** | Jumps to a start time. The time is in **UTC**, not your local time. |
 | **First / Previous / Next / Last** | Pages through the log. **Last** shows the newest lines. **Next** and **Last** are disabled while auto refresh is on, because it already follows the newest lines. |
 | **Dark theme** | Switches the log between a dark and a light theme. The choice is remembered in your browser. |

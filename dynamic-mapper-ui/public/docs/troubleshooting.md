@@ -82,8 +82,6 @@ that were logged for your tenant, provided the operator switched the collection 
 
 Useful controls on that page:
 
-- **Instance name** — the microservice may run more than one instance. A given message is handled by exactly one
-  of them, so if you do not find your message, check the other instances.
 - **From** — jump to the time the message arrived, rather than scrolling back through the buffer.
 - **Auto refresh** — follow the log live while you publish a test message.
 - **Download** — save the log for a bug report, or to search it with your own tools.

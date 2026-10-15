@@ -118,10 +118,6 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
     }
   }
 
-  onInstanceChange(): void {
-    this.loadLatest();
-  }
-
   loadLatest(): Promise<void> {
     return this.fetch({});
   }
