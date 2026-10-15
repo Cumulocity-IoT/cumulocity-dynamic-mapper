@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.core.client;
 
+import dynamic.mapper.util.TenantScheduledThreadPoolExecutor;
 import static java.util.Map.entry;
 
 import java.security.KeyStore;
@@ -606,7 +607,7 @@ public abstract class AConnectorClient {
             c8yAgent.closeOrphanedConnectorSession(tenant, connectorName, connectorIdentifier);
         }
 
-        this.housekeepingExecutor = new ScheduledThreadPoolExecutor(1, r -> {
+        this.housekeepingExecutor = new TenantScheduledThreadPoolExecutor(tenant, 1, r -> {
             Thread t = new Thread(r, "housekeeping-" + connectorIdentifier);
             t.setDaemon(true);
             return t;

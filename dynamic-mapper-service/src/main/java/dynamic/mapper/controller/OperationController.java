@@ -190,7 +190,7 @@ public class OperationController {
             - `REFRESH_NOTIFICATIONS_SUBSCRIPTIONS`: Refreshes notification subscriptions for the current tenant.
             - `CLEAR_CACHE`: Clears a specific cache (e.g., inbound ID cache, outbound ID cache, inventory cache).
             - `INIT_CODE_TEMPLATES`: Initializes code templates for the current tenant.
-            - `PROBE_SERVICE_LOGS`: Diagnostic, owner tenant only. Checks whether the owner tenant's service user can read this microservice's logs and returns a verdict with the HTTP status of every step and the roles that user holds. Never returns log content.
+            - `PROBE_SERVICE_LOGS`: Diagnostic, owner tenant only. Checks whether the owner tenant's service user can read this microservice's logs and returns a verdict with the HTTP status of every step and the roles that user holds. Optional parameter `applicationId` if the application cannot be found by name. Never returns log content.
 
             """, requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Service operation to execute with parameters", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = ServiceOperation.class), examples = {
             @ExampleObject(name = "Reload Mappings", description = "Reload all mappings for the current tenant", value = """
@@ -278,7 +278,7 @@ public class OperationController {
                 case CLEAR_CACHE_DEVICE_TO_CLIENT:
                     return handleClearCacheDeviceToClient(tenant, parameters);
                 case PROBE_SERVICE_LOGS:
-                    return handleProbeServiceLogs(tenant);
+                    return handleProbeServiceLogs(tenant, parameters);
                 case ROTATE_GRAALVM_ENGINE:
                     serviceRegistry.getGraalVMContextService().rotateEngine(tenant);
                     return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -304,14 +304,14 @@ public class OperationController {
      * service's own logs? Only callable from the owner tenant — the answer names the owner tenant, its
      * service user's roles and this service's instances, which another tenant has no business seeing.
      */
-    private ResponseEntity<?> handleProbeServiceLogs(String tenant) {
+    private ResponseEntity<?> handleProbeServiceLogs(String tenant, Map<String, String> parameters) {
         String owner = serviceLogsProbe.getOwnerTenant();
         if (owner != null && !owner.isBlank() && !owner.equals(tenant)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "PROBE_SERVICE_LOGS can only be run from the tenant that owns the microservice");
         }
         String instance = System.getenv("HOSTNAME");
-        return ResponseEntity.ok(serviceLogsProbe.probe(instance));
+        return ResponseEntity.ok(serviceLogsProbe.probe(instance, parameters == null ? null : parameters.get("applicationId")));
     }
 
     private ResponseEntity<?> handleClearCacheDeviceToClient(String tenant, Map<String, String> parameters) {

@@ -99,7 +99,11 @@ export class MonitoringNavigationFactory implements NavigatorNodeFactory {
     try {
       const feature: any = await this.sharedService.getFeatures();
       const copyStaticNodesPlugin = _.clone(this.staticNodesStandalone);
-      const navs = Object.values(copyStaticNodesPlugin) as NavigatorNode[];
+      // The service log describes the tenant's devices and connectors: only mapper admins get the entry
+      // (the service enforces the same role on the collected log, so hiding it is a convenience, not the control).
+      const navs = (Object.entries(copyStaticNodesPlugin) as [string, NavigatorNode][])
+        .filter(([key]) => key !== 'monitoringLogsNode' || feature?.userHasMappingAdminRole)
+        .map(([, node]) => node);
 
       return this.applicationService
         .isAvailable(MonitoringNavigationFactory.APPLICATION_DYNAMIC_MAPPING_SERVICE)

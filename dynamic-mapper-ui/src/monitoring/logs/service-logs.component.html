@@ -1,0 +1,112 @@
+<c8y-title translate>Service logs</c8y-title>
+@if (source && !error) {
+<c8y-action-bar-item [placement]="'left'">
+  <div class="d-flex a-i-center">
+    @if (isCollected) {
+    <span class="label label-info m-r-8" translate>Collected log</span>
+    <small class="text-muted" translate>
+      Only the lines of your tenant that the service collected for it (by default warnings and errors), kept for a
+      limited time and up to a minute late.
+    </small>
+    } @else {
+    <span class="label label-default" translate>Platform log</span>
+    }
+  </div>
+</c8y-action-bar-item>
+}
+<c8y-action-bar-item [placement]="'right'">
+  <label class="c8y-switch m-b-0 m-r-8">
+    <input type="checkbox" [checked]="darkTheme" (change)="toggleTheme()" />
+    <span></span>
+    {{ 'Dark theme' | translate }}
+  </label>
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  <button type="button" class="btn btn-link" (click)="download()" [disabled]="!selectedInstance || !!error">
+    <i c8yIcon="download"></i>
+    {{ 'Download' | translate }}
+  </button>
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'right'">
+  <button type="button" class="btn btn-link c8y-realtime" (click)="toggleAutoRefresh()" [disabled]="!!error">
+    <span class="c8y-pulse" [ngClass]="autoRefresh ? 'active' : 'inactive'"></span>
+    {{ 'Auto refresh' | translate }}
+  </button>
+</c8y-action-bar-item>
+
+<div class="card content-fullpage--sm content-fullpage--xs">
+  @if (source && !error && window?.omitted > 0) {
+  <div class="card-block p-b-0 flex-no-shrink">
+    <div class="alert alert-warning m-b-0">
+      {{ window.omitted }} {{ 'line(s) were left out because of the collection limit.' | translate }}
+    </div>
+  </div>
+  }
+  @if (error) {
+  <div class="card-block">
+    <c8y-ui-empty-state [icon]="'logs'" [title]="error" [subtitle]="errorHint" [horizontal]="true"></c8y-ui-empty-state>
+  </div>
+  } @else if (nothingCollected) {
+  <div class="card-block">
+    <c8y-ui-empty-state
+      [icon]="'logs'"
+      [title]="(ownerTenant ? 'This tenant owns the microservice' : 'No collected log yet') | translate"
+      [subtitle]="(ownerTenant ? 'The log lines of the owner tenant are not copied; read the log in Administration, under Ecosystem and Microservices, which needs the permission to read applications.' : 'Nothing has been collected for your tenant. Either the operator has not switched the collection on, or no line at the configured level has been logged for your tenant yet.') | translate"
+      [horizontal]="true"
+    ></c8y-ui-empty-state>
+  </div>
+  } @else {
+  <div class="d-flex d-col fit-h">
+    <div class="card-block overflow-visible flex-no-shrink">
+      <div class="row">
+        <div class="col-md-8">
+          <div class="d-flex a-i-center">
+            <label class="m-r-8 m-b-0 text-nowrap" for="instance" translate>Instance name</label>
+            <div class="c8y-select-wrapper flex-grow">
+              <select id="instance" class="form-control" [(ngModel)]="selectedInstance" (ngModelChange)="onInstanceChange()" [disabled]="isLoading">
+                @for (i of instances; track i) {
+                <option [ngValue]="i">{{ i }}</option>
+                }
+              </select>
+              <span></span>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="d-flex a-i-center p-t-8 p-t-md-0">
+            <label class="m-r-8 m-b-0" for="dateFrom" translate>From</label>
+            <input id="dateFrom" type="datetime-local" step="1" class="form-control" [(ngModel)]="dateFromInput" />
+            <span class="m-l-4 m-r-8">UTC</span>
+            <button type="button" class="btn btn-primary" (click)="applyDateFrom()" [disabled]="isLoading || !dateFromInput">
+              {{ 'Apply' | translate }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-block p-t-0 p-b-0 fit-h" style="min-height: 400px; height: calc(100vh - 360px)">
+      <c8y-editor class="d-block fit-h" [editorOptions]="editorOptions" [theme]="darkTheme ? 'dark' : 'light'" [ngModel]="logsText"></c8y-editor>
+    </div>
+
+    <div class="card-footer">
+      <div class="d-flex">
+        <div class="m-l-auto btn-group">
+          <button title="{{ 'First' | translate }}" type="button" class="btn btn-default" [ngClass]="{ 'btn-pending': isLoading }" (click)="loadFirst()" [disabled]="isLoading">
+            <i c8yIcon="skip-previous"></i>
+          </button>
+          <button title="{{ 'Previous' | translate }}" type="button" class="btn btn-default" [ngClass]="{ 'btn-pending': isLoading }" (click)="loadPrevious()" [disabled]="isLoading">
+            <i c8yIcon="caret-back"></i>
+          </button>
+          <button title="{{ 'Next' | translate }}" type="button" class="btn btn-default" [ngClass]="{ 'btn-pending': isLoading }" (click)="loadNext()" [disabled]="isLoading || autoRefresh">
+            <i c8yIcon="forward"></i>
+          </button>
+          <button title="{{ 'Last' | translate }}" type="button" class="btn btn-default" [ngClass]="{ 'btn-pending': isLoading }" (click)="loadLatest()" [disabled]="isLoading || autoRefresh">
+            <i c8yIcon="skip-next"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  }
+</div>

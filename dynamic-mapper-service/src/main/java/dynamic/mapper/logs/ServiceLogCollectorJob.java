@@ -1,0 +1,72 @@
+/*
+ * Copyright (c) 2025 Cumulocity GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * @authors Christof Strack
+ */
+
+package dynamic.mapper.logs;
+
+import java.time.Clock;
+import java.time.Duration;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
+import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
+
+/**
+ * Runs the {@link ServiceLogCollector} on a timer. Off unless {@code service.logs.collector.enabled=true}.
+ *
+ * <p>The collector's own loggers are excluded from collection by name, so collecting never feeds on itself.
+ */
+@Component
+@ConditionalOnProperty(prefix = "service.logs.collector", name = "enabled", havingValue = "true")
+public class ServiceLogCollectorJob {
+
+    /** Class names of everything on the collection path; matched against the end of the logger field. */
+    static final List<String> OWN_LOGGERS = List.of("ServiceLogCollector", "ServiceLogCollectorJob",
+            "PlatformServiceLogSource", "EventServiceLogSink", "ServiceLogsProbe");
+
+    private final ServiceLogCollector collector;
+
+    public ServiceLogCollectorJob(ServiceLogSource source, ServiceLogSink sink,
+            MicroserviceSubscriptionsService subscriptionsService,
+            @Value("${C8Y_BOOTSTRAP_TENANT:}") String ownerTenant,
+            @Value("${service.logs.collector.min-level:WARN}") String minLevel,
+            @Value("${service.logs.collector.max-lines-per-tenant:500}") int maxLinesPerTenant,
+            @Value("${service.logs.collector.max-chunk-bytes:65536}") int maxChunkBytes,
+            @Value("${service.logs.collector.retention-hours:24}") int retentionHours,
+            @Value("${service.logs.collector.look-back-minutes:10}") int lookBackMinutes,
+            @Value("${service.logs.collector.max-pages:5}") int maxPages) {
+        this.collector = new ServiceLogCollector(source, sink,
+                () -> subscriptionsService.getAll().stream().map(MicroserviceCredentials::getTenant)
+                        .collect(Collectors.toSet()),
+                ownerTenant, new ServiceLogPolicy(minLevel, maxLinesPerTenant, maxChunkBytes, OWN_LOGGERS),
+                Duration.ofMinutes(lookBackMinutes), Duration.ofHours(retentionHours), maxPages, Clock.systemUTC());
+    }
+
+    @Scheduled(fixedDelayString = "${service.logs.collector.interval-ms:30000}",
+            initialDelayString = "${service.logs.collector.initial-delay-ms:60000}")
+    public void run() {
+        collector.collect();
+    }
+}

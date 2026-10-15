@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.httppolling;
 
+import dynamic.mapper.util.TenantLogContext;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
@@ -447,7 +448,7 @@ public class HttpPollingConnector extends AConnectorClient {
         // the bounded wait in awaitProcessingSuccess, together up to ~2 minutes worst case)
         // directly on this small timing-only pool — see pollScheduler's field Javadoc.
         ScheduledFuture<?> future = scheduler.schedule(
-                () -> virtualThreadPool.execute(() -> executePoll(topic)), delayMs, TimeUnit.MILLISECONDS);
+                () -> virtualThreadPool.execute(TenantLogContext.runnable(tenant, () -> executePoll(topic))), delayMs, TimeUnit.MILLISECONDS);
         pollTasks.put(topic, future);
     }
 

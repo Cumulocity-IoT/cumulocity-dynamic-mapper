@@ -147,7 +147,7 @@ class OperationControllerTest {
                 () -> controller.runOperation(new ServiceOperation(Operation.PROBE_SERVICE_LOGS, new HashMap<>())));
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
-        verify(serviceLogsProbe, never()).probe(any());
+        verify(serviceLogsProbe, never()).probe(any(), any());
     }
 
     @Test
@@ -160,7 +160,7 @@ class OperationControllerTest {
                 () -> controller.runOperation(new ServiceOperation(Operation.PROBE_SERVICE_LOGS, new HashMap<>())));
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
-        verify(serviceLogsProbe, never()).probe(any());
+        verify(serviceLogsProbe, never()).probe(any(), any());
     }
 
     @Test
@@ -170,7 +170,7 @@ class OperationControllerTest {
         var result = new dynamic.mapper.core.ServiceLogsProbe.Result(
                 dynamic.mapper.core.ServiceLogsProbe.Verdict.CAN_READ_LOGS, TENANT, "i", List.of(), List.of(),
                 List.of(), "ok");
-        when(serviceLogsProbe.probe(any())).thenReturn(result);
+        when(serviceLogsProbe.probe(any(), any())).thenReturn(result);
 
         ResponseEntity<?> response = controller.runOperation(
                 new ServiceOperation(Operation.PROBE_SERVICE_LOGS, new HashMap<>()));

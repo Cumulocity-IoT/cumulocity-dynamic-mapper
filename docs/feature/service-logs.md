@@ -1,8 +1,9 @@
 # Service logs in a multi-tenant deployment
 
-> **Status: partly implemented.** Done: the *Monitoring → Service logs* page (reads the platform log endpoint
-> directly, so it works only in the owner tenant) and the per-line tenant field the collector depends on
-> (see *Traps*). Not done: the collector, the events, retention and the events-backed page.
+> **Status: built, collector off by default.** Done: the per-line tenant field; the `PROBE_SERVICE_LOGS` diagnostic;
+> the **collector** (`dynamic.mapper.logs`, `service.logs.collector.enabled=false`); the **service endpoint**
+> `GET /monitoring/service-logs` (admin only) and the **events-backed mode** of the *Monitoring → Service logs* page.
+> Not done: a per-tenant opt-out and a per-tenant minimum level, and any run of the whole chain on a deployed tenant.
 
 How a subscriber tenant sees the logs of `dynamic-mapper-service` when the service is deployed in
 an enterprise (owner) tenant and subscribed by sub-tenants.
@@ -79,12 +80,31 @@ flowchart LR
    mechanism the existing service events use). Never one event per line: at `INFO` the rate would
    overwhelm the tenant's event API.
 
+### Collector (implemented)
+
+| Class | Role | Tested |
+|---|---|---|
+| `ServiceLogParser` | log text → records; the tenant comes from the `[tenant]` field only, continuation lines stay with their record, JVM/logback noise is dropped | unit |
+| `ServiceLogPolicy` / `ServiceLogChunker` | minimum level, collector's own loggers excluded, per-tenant line cap with an `omitted` count, byte-bounded chunks, "already stored" skip; **a record reaches a tenant only if its own field names that tenant and the tenant is subscribed** | unit, incl. cross-tenant cases |
+| `ServiceLogCollector` | one run: read window → parse → per-tenant chunks → store; cursor in memory (first run looks back 10 min, never replays history); a failed store holds the cursor (max 3 runs) and tenants already stored are skipped on retry; never throws; purge at most hourly; the owner tenant is not copied | unit with fake source/sink |
+| `PlatformServiceLogSource` | reads **this instance's own** log with the bootstrap user; finds the application record that lists this pod | **not unit-tested** (HTTP glue) |
+| `ServiceLogSourceLocator` | finds (reader) or creates (writer) the source object; per-tenant cache dropped on unsubscribe; linking it under the agent is cosmetic and may fail silently | unit |
+| `EventServiceLogSink` | `d11r_serviceLog` events on that source object, written with that tenant's service user | **not unit-tested** (SDK glue) |
+| `ServiceLogCollectorJob` | `@Scheduled`; the beans exist only when `service.logs.collector.enabled=true` | wiring test |
+
+Settings (`application.properties`): `interval-ms` 30000, `min-level` WARN, `max-lines-per-tenant` 500,
+`max-chunk-bytes` 65536, `retention-hours` 24, `look-back-minutes` 10, `max-pages` 5.
+
+Known limits: two records with the same millisecond across a window boundary can be skipped or repeated; a pod
+that dies between runs loses up to one interval; the line cap counts every line of a multi-line record; the
+sink's dedupe reads the newest 20 `d11r_serviceLog` events of the tenant.
+
 ### Event shape
 
 | Field | Value |
 |---|---|
 | `type` | `d11r_serviceLog` |
-| `source` | the tenant's existing service agent managed object (the one the *Service events* page uses) |
+| `source` | the tenant's **service-log source** object (`d11r_serviceLogSource`, external id `c8y_Serial`/`d11r_serviceLogSource`, a child addition of the agent) — **not the agent**: the *Service events* page lists the agent's newest 1000 events without a type filter, so log events of up to 64 KB would push the real service events off it |
 | `time` | `dateTo` of the chunk |
 | `text` | short summary, e.g. `37 lines (2 WARN, 1 ERROR)` — what a generic events list shows |
 | `d11r_serviceLog.instance` | instance name |
@@ -110,21 +130,24 @@ override in the service configuration, validated like the other service-configur
 | Service (environment) | interval, minimum level, per-tenant cap, chunk size, retention | 30 s, `WARN`, 500 lines, 64 KB, 24 h |
 | Tenant (service configuration) | opt out | off |
 
-### UI
+### UI (implemented)
 
-[`ServiceLogsComponent`](../../dynamic-mapper-ui/src/monitoring/logs/service-logs.component.ts)
-gets a second source behind the same layout:
+[`ServiceLogsComponent`](../../dynamic-mapper-ui/src/monitoring/logs/service-logs.component.ts) tries the platform's log
+first ([`NativeServiceLogsService`](../../dynamic-mapper-ui/src/monitoring/logs/native-service-logs.service.ts)) and, when
+that is refused or the tenant sees no instance, uses the collected log
+([`CollectedServiceLogsService`](../../dynamic-mapper-ui/src/monitoring/logs/collected-service-logs.service.ts)) — no user choice.
+Both sit behind one interface with the **same window semantics**, so First / Previous / Next / Latest, the *From* field,
+auto refresh and Download behave identically: neither bound = latest, `dateFrom` only = after (oldest first),
+`dateTo` only = before. A badge says *Platform log* or *Collected log*; the collected view states that only the
+tenant's own, filtered, limited-retention lines are shown, flags lines omitted by the cap, and shows a dedicated empty
+state when nothing has been collected.
 
-- **Source choice:** try the native endpoint first; on `403` switch to events for the rest of the
-  session (the 403 handling already exists). Show a small badge *Native* / *Collected*.
-- **Instances:** distinct `d11r_serviceLog.instance` values from the newest events.
-- **Window and paging:** First / Previous / Next / Last and the *From … UTC* field become
-  `EventService.list` queries on `d11r_serviceLog.dateFrom`, `pageSize` bounded, then concatenated
-  into the editor. Same time-window semantics as the native source, so the buttons keep their meaning.
-- **Auto refresh:** poll the newest chunk (the interval is no shorter than the collector interval).
-- **Download:** page through all chunks of the instance and save as `<instance>.log`.
-- **Empty states:** *collection not enabled for this tenant* (service switch or tenant opt-out),
-  *no logs yet*, and *not permitted* (403 on the events API).
+The endpoint ([`ServiceLogsController`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/ServiceLogsController.java),
+[`ServiceLogReader`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/logs/ServiceLogReader.java)) reads the
+tenant's `d11r_serviceLog` events **as the tenant's service user** (so the caller's own event permission is irrelevant),
+assembles up to 10 chunks per page in ascending order, never mixes instances (default: the newest chunk's), and reports
+`more`, `empty` and `omitted`. Bounds are exclusive and refer to a chunk's end time; two chunks ending in the same
+millisecond at a page boundary can be skipped.
 
 ### Traps
 
@@ -165,10 +188,18 @@ gets a second source behind the same layout:
     statistics on a `pulsar-timer-*` thread. The topic in the text names the tenant
     (`persistent://t2050305588/...`), but we do not attribute from text by design; these lines remain
     in the owner tenant's native log. Quiet them with the logger level if they are noise.
-  - **Known gaps, safe by design:** Kafka, HTTP-polling and Google Pub/Sub consumer loops (their dispatcher
-    lines are covered, their own are not), HTTP connector requests, scheduled jobs and the token/housekeeping executors do not open a
-    scope yet. Their lines are *unattributed* and so are dropped by the collector — missing coverage,
-    never a leak. Find them with the diagnostic above and close each with `TenantLogContext.open`.
+  - **Also scoped now:** the Kafka consumer loop (it is one long-lived thread per topic, so its whole body runs in
+    the scope), the Pub/Sub receiver, the HTTP-polling hand-off (the poll timer thread has no tenant to pass on, so
+    the task carries the connector's own), and every connector's housekeeping thread
+    ([`TenantScheduledThreadPoolExecutor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/util/TenantScheduledThreadPoolExecutor.java):
+    a timer cannot inherit a scope from whoever scheduled the task, so the executor belongs to one tenant).
+    The token-refresh and websocket-reconnect timers are cross-tenant by design and use `runForEachTenant`, whose
+    SDK scope already attributes their lines.
+  - **Still unscoped, safe by design:** HTTP connector *requests* arriving on Tomcat threads when the SDK request
+    scope is absent, the websocket ping timer, the explorer sessions' consumer threads, and any call site not yet
+    listed. Their lines are *unattributed* and so are dropped by the collector — missing coverage, never a leak.
+    Find them with the diagnostic above (a `[-]` line that still starts with a tenant) and close each with
+    `TenantLogContext.open`.
   - **Registration is programmatic, not in `logback-spring.xml`.**
     [`TenantLogging.register()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/util/TenantLogging.java)
     (first line of `App.main`) puts `%tenantId` and the tenant-aware `%m` into logback's static
@@ -184,6 +215,36 @@ gets a second source behind the same layout:
     dropped only when it matches. **Still missing:** a test that two tenants' rendered lines are
     disjoint end to end (needs the collector).
 - **Credentials of the owner tenant.** *Testable inside the service:* as an admin of the owner tenant, `POST /service/dynamic-mapper-service/operation` with `{"operation":"PROBE_SERVICE_LOGS"}` (operation `PROBE_SERVICE_LOGS`, `ServiceLogsProbe`) makes the logs call as that service user and returns `CAN_READ_LOGS`, `FORBIDDEN` (with the roles it holds), `OWNER_NOT_SUBSCRIBED` or `INCONCLUSIVE`. Refused to every other tenant. Reading the native log needs an owner-tenant identity with
+  **Measured (2026-10-15, owner tenant t14070519, probe verdict `FORBIDDEN`):** the owner's service
+  user `service_dynamic-mapper-service` authenticates and holds 25 roles — exactly the manifest's
+  `requiredRoles` plus `ROLE_SYSTEM` — and **no** `ROLE_APPLICATION_MANAGEMENT_*`. Reading the logs of
+  its own instance returned `403 Access Denied`. So, as deployed, the collector cannot read the native
+  log through the service user. Untested: whether adding `ROLE_APPLICATION_MANAGEMENT_READ` is
+  enough. It is **not a free change**: `requiredRoles` are granted to the service user in *every*
+  subscribing tenant, so it widens that user's rights everywhere and each tenant has to accept it on
+  subscription. This tilts the design toward the in-process alternative below, which needs no extra role.
+  **From the public OpenAPI spec (`c8y-oas.yml`):** the logs endpoint is **not documented at all**, so its
+  required role is unpublished (the neighbouring application read APIs use `ROLE_APPLICATION_MANAGEMENT_READ`,
+  which is only a hint). `GET /application/currentApplication` and `GET /application/currentApplication/subscriptions`
+  (`getApplicationUserCollectionRepresentation`) require the **bootstrap user**, not the service user —
+  which is why a service user gets 403 on the former. `GET /application/applications/{id}/bootstrapUser`
+  needs `ROLE_APPLICATION_MANAGEMENT_ADMIN`. **Untested lead:** the bootstrap user exists in the owner
+  tenant only, so if *it* can read its own application's logs, no `requiredRoles` change (and no widening
+  in subscribing tenants) is needed.
+  **CORRECTION — the bootstrap user cannot read the logs.** An earlier note here said it could, based on a `c8y` call that
+  returned 200. That call most likely ran as the operator's own logged-in `c8y` session (an admin with application-management
+  rights), not as the bootstrap user. Measured since, **with `curl` and the bootstrap credentials: `403` with Basic
+  authentication on the tenant's public host; inside the service: `403` for the service user and for the bootstrap user
+  on the internal address, and `403` for the bootstrap user on the public host** (probe, same day). A bearer-token attempt
+  also returned 403 but is **inconclusive** (the token may not have been issued). So **no credential the service holds can read
+  its own native log**, and reading it through the platform needs a user with an application-management role.
+  Consequences: the collector's current source (`PlatformServiceLogSource`) cannot work as is. Options: (1) grant
+  `ROLE_APPLICATION_MANAGEMENT_READ` through `requiredRoles` — untested, and it widens the service user in every subscribing
+  tenant; (2) **capture the lines inside the process** with a logging appender that already sees each line's tenant (the
+  `[tenant]` field is the MDC set by `TenantLogContext`), which needs no platform permission, no credentials, no log parsing
+  and no cursor — see *Alternatives considered*. Everything downstream of the source (policy, chunker, sink, source object,
+  endpoint, page) is source-independent and stays.
+
   application read access. The service user of the owner tenant exists only if the owner subscribes
   to its own microservice, and its permissions are those of the manifest's `requiredRoles`. Verify
   that the roles needed for the log endpoint can be requested there; if not, the collection has to be
@@ -214,10 +275,12 @@ gets a second source behind the same layout:
 
 ### Open decisions
 
-1. **Who may read the collected events?** The events page follows the event permissions of the
-   tenant, which are broader than an administrator. The Service logs page is currently visible
-   to all roles; decide whether the copy should be restricted to a role, since logs describe the
-   tenant's devices and connectors.
-2. **Owner-tenant credentials** (see *Traps*) — decides where the collector runs.
-3. **Default `WARN` vs `INFO`.** `WARN` keeps volume low but hides the normal story ("Connector
-   connected"); a per-tenant raise to `INFO` within the operator's ceiling may be needed.
+1. **Who may read the collected log — decided: `ROLE_DYNAMIC_MAPPER_ADMIN`.** Enforced in the service endpoint (403 for
+   everyone else) and by hiding the navigation entry. **Limit:** the events are ordinary platform events, so a user who
+   holds the platform's event-read permission can still list them through the platform's own API; the role controls
+   access *through the mapper*, not the events themselves. A platform permission cannot be tied to an application role.
+2. ~~Owner-tenant credentials~~ — resolved: the bootstrap user works (see *Traps*).
+3. **Minimum level.** Today a service property (`service.logs.collector.min-level`, default `WARN`) set by the operator.
+   Tying the *tenant's* choice to the same role means a per-tenant setting in the service configuration (editable by
+   `ROLE_DYNAMIC_MAPPER_ADMIN` only) bounded below by an operator floor — not built. INFO lines can carry device payloads,
+   which is the reason for the `WARN` default.
