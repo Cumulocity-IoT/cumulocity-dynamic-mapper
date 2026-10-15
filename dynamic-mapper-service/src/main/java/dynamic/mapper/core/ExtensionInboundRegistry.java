@@ -40,7 +40,7 @@ public class ExtensionInboundRegistry {
     public Map<String, Extension> initializeExtensions(String tenant) {
         Map<String, Extension> extensions = new ConcurrentHashMap<>();
         tenantExtensionProcessors.put(tenant, extensions);
-        log.info("Initialized Extensions for tenant: {}", tenant);
+        log.info("{} - Initialized Extensions", tenant);
         return extensions;
     }
 

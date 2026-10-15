@@ -20,6 +20,7 @@
  */
 package dynamic.mapper.processor.outbound;
 
+import dynamic.mapper.util.TenantLogContext;
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import java.net.URI;
@@ -343,7 +344,7 @@ public class OutboundMessageDispatcher implements NotificationCallback {
         //   3. runs GraalVM cancel-actions (Context.close) to stop CPU-bound JS execution
         // All three paths are handled below.
         final String connectorIdentifier = connectorClient.getConnectorIdentifier();
-        Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(() -> {
+        Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(TenantLogContext.wrap(tenant, () -> {
             // ── Early-exit path ──────────────────────────────────────────────────────────
             // If cancelProcessing() was already called (e.g. the timeout fired before this
             // thread was scheduled), skip processing entirely.
@@ -383,7 +384,7 @@ public class OutboundMessageDispatcher implements NotificationCallback {
                 }
                 result.markWorkerCompleted();
             }
-        });
+        }));
         result.setProcessingResult((Future) futureProcessingResult);
         return result;
     }

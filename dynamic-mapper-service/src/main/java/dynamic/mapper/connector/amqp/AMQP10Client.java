@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.amqp;
 
+import dynamic.mapper.util.TenantLogContext;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
@@ -500,13 +501,13 @@ public class AMQP10Client extends AConnectorClient {
                 // lifecycleLock/connectDisconnectExecutionLock, so this background reconnect
                 // can't race a concurrent submitConnect()/submitDisconnect() triggered by a
                 // user operation or another health check.
-                virtualThreadPool.submit(() -> {
+                virtualThreadPool.submit(TenantLogContext.runnable(tenant, () -> {
                     try {
                         submitConnect();
                     } catch (Exception e) {
                         log.error("{} - Error during AMQP 1.0 reconnection", tenant, e);
                     }
-                });
+                }));
             }
         }
     }

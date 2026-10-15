@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.mqtt;
 
+import dynamic.mapper.util.TenantLogContext;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -171,126 +172,128 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
 
     @Override
     public void accept(M mqttMessage) {
-        String topic = extractTopic(mqttMessage);
-        byte[] payloadBytes = extractPayload(mqttMessage);
-        String messageId = getMessageId(topic, payloadBytes);
-        ConnectorMessage connectorMessage = buildConnectorMessage(mqttMessage, topic, payloadBytes);
+        try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
+            String topic = extractTopic(mqttMessage);
+            byte[] payloadBytes = extractPayload(mqttMessage);
+            String messageId = getMessageId(topic, payloadBytes);
+            ConnectorMessage connectorMessage = buildConnectorMessage(mqttMessage, topic, payloadBytes);
 
-        if (serviceConfiguration.getLogPayload()) {
-            log.info("{} - INITIAL: message on topic: [{}], QoS message: {}, connector: {},{}",
-                    tenant, topic, extractQos(mqttMessage), connectorName, connectorIdentifier);
-        }
-
-        ProcessingResultWrapper<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
-        int publishQos = extractQos(mqttMessage);
-        int mappingQos = processedResults.getConsolidatedQos().getLevel();
-        int timeout = processedResults.getPipelineTimeoutMS();
-        // The guarantee we can actually provide is bounded by both ends: the publisher's QoS
-        // (a QoS 0 message is gone the moment it is delivered, no matter what the mapping asks
-        // for) and the strongest QoS among the mappings that matched.
-        int effectiveQos = Math.min(publishQos, mappingQos);
-
-        if (serviceConfiguration.getLogPayload()) {
-            log.info(
-                    "{} - PREPARING_RESULTS: message on topic: [{}], QoS message: {}, QoS effective: {}, QoS mappings: {}, connector {}",
-                    tenant, topic, extractQos(mqttMessage), effectiveQos, mappingQos, connectorIdentifier);
-        }
-
-        if (effectiveQos > 0) {
-            activeProcessingMessages.incrementAndGet();
-            virtualThreadPool.submit(() -> {
-                long effectiveTimeout = timeout;
-                try {
-                    List<? extends ProcessingContext<?>> results;
-                    if (timeout > 0) {
-                        // Give a retransmission more time than the first attempt: a timeout can
-                        // be caused by a transiently slow platform, not by a broken mapping.
-                        // Capped at MAX_TIMEOUT_ESCALATION_FACTOR x the base budget — the previous
-                        // cap (the configured pipeline timeout) equalled the base budget itself,
-                        // so the escalation could never actually increase anything.
-                        int attempt = failureCountPerMessage
-                                .getOrDefault(messageId, new AtomicInteger(0)).get();
-                        effectiveTimeout = Math.min(
-                                (long) timeout * (attempt + 1),
-                                (long) timeout * MAX_TIMEOUT_ESCALATION_FACTOR);
-                        if (attempt > 0) {
-                            log.info(
-                                    "{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
-                                    tenant, attempt + 1, effectiveTimeout, timeout, connectorIdentifier);
-                        }
-                        results = processedResults.getProcessingResult().get(effectiveTimeout,
-                                TimeUnit.MILLISECONDS);
-                    } else {
-                        // No per-message budget (non-Smart-Function mapping). Still bounded: an
-                        // unbounded get() parks this worker — and leaves the message unacknowledged
-                        // — forever if the pipeline blocks in I/O.
-                        effectiveTimeout = ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
-                        results = processedResults.getProcessingResult().get(effectiveTimeout,
-                                TimeUnit.MILLISECONDS);
-                    }
-
-                    // JS CPU timeout may have fired and closed the GraalVM context before the
-                    // wall-clock timeout expired. The future completes early with
-                    // cancellationRequested=true. Do NOT ACK — let the broker retransmit.
-                    if (processedResults.getCancellationRequested().get()) {
-                        log.warn(
-                                "{} - JS CPU timeout fired: processing cancelled before wall-clock timeout, not ACKing. connector: {}",
-                                tenant, connectorIdentifier);
-                        triggerReconnectOrAck(mqttMessage, topic, messageId);
-                        return null;
-                    }
-
-                    int httpStatusCode = ProcessingResultHelper.extractMaxHttpStatus(
-                            results, tenant, topic, log);
-
-                    if (httpStatusCode < 0) {
-                        // No errors → ACK and clear failure counter
-                        failureCountPerMessage.remove(messageId);
-                        log.warn("{} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
-                                tenant, topic, extractQos(mqttMessage), connectorIdentifier);
-                        acknowledgeMessage(mqttMessage);
-                    } else if (httpStatusCode < 500) {
-                        // Client-side error → ACK (not a transient failure worth retrying)
-                        failureCountPerMessage.remove(messageId);
-                        log.warn(
-                                "{} - END: Sending manual ack due to non-Server error for MQTT message: topic: [{}], QoS: {}, connector: {}",
-                                tenant, topic, extractQos(mqttMessage), connectorIdentifier);
-                        acknowledgeMessage(mqttMessage);
-                    } else {
-                        // Server error (≥500) → do not ACK, trigger reconnect for retransmission
-                        log.warn(
-                                "{} - END: Server error (HTTP {}), not sending ACK. Triggering reconnect for retransmission. topic: [{}], connector: {}",
-                                tenant, httpStatusCode, topic, connectorIdentifier);
-                        triggerReconnectOrAck(mqttMessage, topic, messageId);
-                    }
-                } catch (InterruptedException | ExecutionException e) {
-                    log.warn("{} - END: Was interrupted for MQTT message: topic: [{}], QoS: {}, connector: {}",
-                            tenant, topic, extractQos(mqttMessage), connectorIdentifier);
-                } catch (TimeoutException e) {
-                    // cancelProcessing() closes any active GraalVM context via
-                    // Context.close(cancelIfExecuting=true) — the only reliable way to stop
-                    // CPU-bound JS that ignores Java thread interruption.
-                    log.warn("{} - Timeout occurred, initiating cancellation of processing task, connector: {}",
-                            tenant, connectorIdentifier);
-                    boolean futureCompleted = processedResults
-                            .cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
-
-                    log.warn(
-                            "{} - END: Processing timed out after {}ms, not sending ACK. Triggering reconnect for retransmission. connector: {}, future completed: {}",
-                            tenant, effectiveTimeout, connectorIdentifier, futureCompleted);
-                    triggerReconnectOrAck(mqttMessage, topic, messageId);
-                } finally {
-                    activeProcessingMessages.decrementAndGet();
-                }
-                return null; // Callable<Void>
-            });
-        } else {
-            // QoS 0 (or downgraded to 0): acknowledge immediately, no reliability guarantee
             if (serviceConfiguration.getLogPayload()) {
-                log.info("{} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
-                        tenant, topic, extractQos(mqttMessage), connectorIdentifier);
+                log.info("{} - INITIAL: message on topic: [{}], QoS message: {}, connector: {},{}",
+                        tenant, topic, extractQos(mqttMessage), connectorName, connectorIdentifier);
             }
-            acknowledgeMessage(mqttMessage);
+
+            ProcessingResultWrapper<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
+            int publishQos = extractQos(mqttMessage);
+            int mappingQos = processedResults.getConsolidatedQos().getLevel();
+            int timeout = processedResults.getPipelineTimeoutMS();
+            // The guarantee we can actually provide is bounded by both ends: the publisher's QoS
+            // (a QoS 0 message is gone the moment it is delivered, no matter what the mapping asks
+            // for) and the strongest QoS among the mappings that matched.
+            int effectiveQos = Math.min(publishQos, mappingQos);
+
+            if (serviceConfiguration.getLogPayload()) {
+                log.info(
+                        "{} - PREPARING_RESULTS: message on topic: [{}], QoS message: {}, QoS effective: {}, QoS mappings: {}, connector {}",
+                        tenant, topic, extractQos(mqttMessage), effectiveQos, mappingQos, connectorIdentifier);
+            }
+
+            if (effectiveQos > 0) {
+                activeProcessingMessages.incrementAndGet();
+                virtualThreadPool.submit(TenantLogContext.wrap(tenant, () -> {
+                    long effectiveTimeout = timeout;
+                    try {
+                        List<? extends ProcessingContext<?>> results;
+                        if (timeout > 0) {
+                            // Give a retransmission more time than the first attempt: a timeout can
+                            // be caused by a transiently slow platform, not by a broken mapping.
+                            // Capped at MAX_TIMEOUT_ESCALATION_FACTOR x the base budget — the previous
+                            // cap (the configured pipeline timeout) equalled the base budget itself,
+                            // so the escalation could never actually increase anything.
+                            int attempt = failureCountPerMessage
+                                    .getOrDefault(messageId, new AtomicInteger(0)).get();
+                            effectiveTimeout = Math.min(
+                                    (long) timeout * (attempt + 1),
+                                    (long) timeout * MAX_TIMEOUT_ESCALATION_FACTOR);
+                            if (attempt > 0) {
+                                log.info(
+                                        "{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
+                                        tenant, attempt + 1, effectiveTimeout, timeout, connectorIdentifier);
+                            }
+                            results = processedResults.getProcessingResult().get(effectiveTimeout,
+                                    TimeUnit.MILLISECONDS);
+                        } else {
+                            // No per-message budget (non-Smart-Function mapping). Still bounded: an
+                            // unbounded get() parks this worker — and leaves the message unacknowledged
+                            // — forever if the pipeline blocks in I/O.
+                            effectiveTimeout = ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
+                            results = processedResults.getProcessingResult().get(effectiveTimeout,
+                                    TimeUnit.MILLISECONDS);
+                        }
+
+                        // JS CPU timeout may have fired and closed the GraalVM context before the
+                        // wall-clock timeout expired. The future completes early with
+                        // cancellationRequested=true. Do NOT ACK — let the broker retransmit.
+                        if (processedResults.getCancellationRequested().get()) {
+                            log.warn(
+                                    "{} - JS CPU timeout fired: processing cancelled before wall-clock timeout, not ACKing. connector: {}",
+                                    tenant, connectorIdentifier);
+                            triggerReconnectOrAck(mqttMessage, topic, messageId);
+                            return null;
+                        }
+
+                        int httpStatusCode = ProcessingResultHelper.extractMaxHttpStatus(
+                                results, tenant, topic, log);
+
+                        if (httpStatusCode < 0) {
+                            // No errors → ACK and clear failure counter
+                            failureCountPerMessage.remove(messageId);
+                            log.warn("{} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
+                                    tenant, topic, extractQos(mqttMessage), connectorIdentifier);
+                            acknowledgeMessage(mqttMessage);
+                        } else if (httpStatusCode < 500) {
+                            // Client-side error → ACK (not a transient failure worth retrying)
+                            failureCountPerMessage.remove(messageId);
+                            log.warn(
+                                    "{} - END: Sending manual ack due to non-Server error for MQTT message: topic: [{}], QoS: {}, connector: {}",
+                                    tenant, topic, extractQos(mqttMessage), connectorIdentifier);
+                            acknowledgeMessage(mqttMessage);
+                        } else {
+                            // Server error (≥500) → do not ACK, trigger reconnect for retransmission
+                            log.warn(
+                                    "{} - END: Server error (HTTP {}), not sending ACK. Triggering reconnect for retransmission. topic: [{}], connector: {}",
+                                    tenant, httpStatusCode, topic, connectorIdentifier);
+                            triggerReconnectOrAck(mqttMessage, topic, messageId);
+                        }
+                    } catch (InterruptedException | ExecutionException e) {
+                        log.warn("{} - END: Was interrupted for MQTT message: topic: [{}], QoS: {}, connector: {}",
+                                tenant, topic, extractQos(mqttMessage), connectorIdentifier);
+                    } catch (TimeoutException e) {
+                        // cancelProcessing() closes any active GraalVM context via
+                        // Context.close(cancelIfExecuting=true) — the only reliable way to stop
+                        // CPU-bound JS that ignores Java thread interruption.
+                        log.warn("{} - Timeout occurred, initiating cancellation of processing task, connector: {}",
+                                tenant, connectorIdentifier);
+                        boolean futureCompleted = processedResults
+                                .cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
+
+                        log.warn(
+                                "{} - END: Processing timed out after {}ms, not sending ACK. Triggering reconnect for retransmission. connector: {}, future completed: {}",
+                                tenant, effectiveTimeout, connectorIdentifier, futureCompleted);
+                        triggerReconnectOrAck(mqttMessage, topic, messageId);
+                    } finally {
+                        activeProcessingMessages.decrementAndGet();
+                    }
+                    return null; // Callable<Void>
+                }));
+            } else {
+                // QoS 0 (or downgraded to 0): acknowledge immediately, no reliability guarantee
+                if (serviceConfiguration.getLogPayload()) {
+                    log.info("{} - END: Sending manual ack for MQTT message: topic: [{}], QoS: {}, connector: {}",
+                            tenant, topic, extractQos(mqttMessage), connectorIdentifier);
+                }
+                acknowledgeMessage(mqttMessage);
+            }
         }
     }
 

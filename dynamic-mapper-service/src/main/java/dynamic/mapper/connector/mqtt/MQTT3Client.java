@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.mqtt;
 
+import dynamic.mapper.util.TenantLogContext;
 import com.hivemq.client.mqtt.MqttGlobalPublishFilter;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
@@ -145,7 +146,7 @@ public class MQTT3Client extends AMQTTClient {
 
         // Add listeners — detection only, housekeeping owns all reconnect scheduling
         mqttClient = builder
-                .addDisconnectedListener(context -> {
+                .addDisconnectedListener(context -> TenantLogContext.run(tenant, () -> {
                     //We should always log when a client is disconnected!
                     Throwable cause = context.getCause();
                     log.info("{} - MQTT3 client disconnected (reason: {})", tenant, cause.getMessage());
@@ -177,13 +178,13 @@ public class MQTT3Client extends AMQTTClient {
                                 tenant, stale, intentional,
                                 connectorConfiguration.getEnabled(), wasConnected);
                     }
-                })
-                .addConnectedListener(context -> {
+                }))
+                .addConnectedListener(context -> TenantLogContext.run(tenant, () -> {
                     reconnectAttempt.set(0);
                     nextReconnectTimeMs = Long.MAX_VALUE;
                     connectionStateManager.setConnected(true);
                     log.info("{} - MQTT3 client connected", tenant);
-                })
+                }))
                 .buildBlocking();
     }
 
@@ -334,7 +335,7 @@ public class MQTT3Client extends AMQTTClient {
                     .callback(mqttCallback)
                     .manualAcknowledgement(true)
                     .send()
-                    .whenComplete((subAck, throwable) -> {
+                    .whenComplete(TenantLogContext.biConsumer(tenant, (subAck, throwable) -> {
                         if (throwable != null) {
                             log.error("{} - Failed to subscribe to topic: [{}]", tenant, topic, throwable);
                         } else {
@@ -342,7 +343,7 @@ public class MQTT3Client extends AMQTTClient {
                                     tenant, topic, adjustedQos);
                             sendSubscriptionEvents(topic, "Subscribed");
                         }
-                    });
+                    }));
 
         } catch (Exception e) {
             throw new ConnectorException("Failed to subscribe to topic: " + topic, e);
@@ -360,14 +361,14 @@ public class MQTT3Client extends AMQTTClient {
 
         Mqtt3AsyncClient asyncClient = mqttClient.toAsync();
         asyncClient.unsubscribe(Mqtt3Unsubscribe.builder().topicFilter(topic).build())
-                .whenComplete((unused, throwable) -> {
+                .whenComplete(TenantLogContext.biConsumer(tenant, (unused, throwable) -> {
                     if (throwable != null) {
                         log.error("{} - Failed to unsubscribe from topic: [{}]", tenant, topic, throwable);
                     } else {
                         log.info("{} - Successfully unsubscribed from topic: [{}]", tenant, topic);
                         sendSubscriptionEvents(topic, "Unsubscribed");
                     }
-                });
+                }));
     }
 
     @Override

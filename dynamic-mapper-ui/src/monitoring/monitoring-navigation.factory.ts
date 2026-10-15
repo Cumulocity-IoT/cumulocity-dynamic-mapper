@@ -71,6 +71,14 @@ export class MonitoringNavigationFactory implements NavigatorNodeFactory {
       priority: 505,
       preventDuplicates: true
     }),
+    monitoringLogsNode: new NavigatorNode({
+      parent: gettext('Monitoring'),
+      label: gettext('Service logs'),
+      icon: 'terminal',
+      path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/logs`,
+      priority: 500,
+      preventDuplicates: true
+    }),
   } as const;
 
   constructor(

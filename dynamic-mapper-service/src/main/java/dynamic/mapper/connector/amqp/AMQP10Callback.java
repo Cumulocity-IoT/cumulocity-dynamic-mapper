@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.amqp;
 
+import dynamic.mapper.util.TenantLogContext;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
@@ -90,49 +91,51 @@ public class AMQP10Callback implements MessageListener {
 
     @Override
     public void onMessage(Message message) {
-        String address = resolveAddress(message);
+        try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
+            String address = resolveAddress(message);
 
-        try {
-            byte[] payload = extractPayload(message);
-            if (payload == null) {
-                acknowledgeQuietly(message, address);
-                return;
+            try {
+                byte[] payload = extractPayload(message);
+                if (payload == null) {
+                    acknowledgeQuietly(message, address);
+                    return;
+                }
+
+                // AT_MOST_ONCE: ack now so a failure below never causes redelivery.
+                if (qos == Qos.AT_MOST_ONCE) {
+                    acknowledgeQuietly(message, address);
+                }
+
+                ConnectorMessage connectorMessage = ConnectorMessage.builder()
+                        .tenant(tenant)
+                        .topic(address)
+                        .sendPayload(true)
+                        .connectorIdentifier(connectorIdentifier)
+                        .payload(payload)
+                        .build();
+
+                if (serviceConfiguration.getLogPayload()) {
+                    log.info("{} - INITIAL: AMQP 1.0 message on address: [{}], connector: {}, {}",
+                            tenant, address, connectorName, connectorIdentifier);
+                }
+
+                genericMessageCallback.onMessage(connectorMessage);
+
+                // AT_LEAST_ONCE: only ack once processing has completed successfully, so a failure
+                // leaves the message unacknowledged and it gets redelivered.
+                if (qos != Qos.AT_MOST_ONCE) {
+                    acknowledgeQuietly(message, address);
+                }
+
+                if (serviceConfiguration.getLogPayload()) {
+                    log.info("{} - PROCESSING_COMPLETED: AMQP 1.0 message on address: [{}], connector: {}",
+                            tenant, address, connectorIdentifier);
+                }
+
+            } catch (Exception e) {
+                log.error("{} - Error processing AMQP 1.0 message on address: [{}]",
+                        tenant, address, e);
             }
-
-            // AT_MOST_ONCE: ack now so a failure below never causes redelivery.
-            if (qos == Qos.AT_MOST_ONCE) {
-                acknowledgeQuietly(message, address);
-            }
-
-            ConnectorMessage connectorMessage = ConnectorMessage.builder()
-                    .tenant(tenant)
-                    .topic(address)
-                    .sendPayload(true)
-                    .connectorIdentifier(connectorIdentifier)
-                    .payload(payload)
-                    .build();
-
-            if (serviceConfiguration.getLogPayload()) {
-                log.info("{} - INITIAL: AMQP 1.0 message on address: [{}], connector: {}, {}",
-                        tenant, address, connectorName, connectorIdentifier);
-            }
-
-            genericMessageCallback.onMessage(connectorMessage);
-
-            // AT_LEAST_ONCE: only ack once processing has completed successfully, so a failure
-            // leaves the message unacknowledged and it gets redelivered.
-            if (qos != Qos.AT_MOST_ONCE) {
-                acknowledgeQuietly(message, address);
-            }
-
-            if (serviceConfiguration.getLogPayload()) {
-                log.info("{} - PROCESSING_COMPLETED: AMQP 1.0 message on address: [{}], connector: {}",
-                        tenant, address, connectorIdentifier);
-            }
-
-        } catch (Exception e) {
-            log.error("{} - Error processing AMQP 1.0 message on address: [{}]",
-                    tenant, address, e);
         }
     }
 

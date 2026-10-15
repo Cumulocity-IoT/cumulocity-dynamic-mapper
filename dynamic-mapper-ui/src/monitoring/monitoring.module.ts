@@ -29,6 +29,7 @@ import { StatisticTabFactory } from './statistic-tab.factory';
 import { CacheStatisticComponent } from './cache/cache-statistic.component';
 import { MappingVersionsCountComponent } from '../mapping/versions/mapping-versions-count.component';
 import { VersionsTabFactory } from './versions-tab.factory';
+import { ServiceLogsComponent } from './logs/service-logs.component';
 
 @NgModule({
   providers: [
@@ -69,6 +70,10 @@ import { VersionsTabFactory } from './versions-tab.factory';
       component: MappingVersionsCountComponent, resolve: {
         feature: featureResolver
       }
+    }),
+    hookRoute({
+      path: `c8y-pkg-dynamic-mapper/${NODE2}/monitoring/logs`,
+      component: ServiceLogsComponent
     }),
     hookNavigator(MonitoringNavigationFactory),
     hookTab(StatisticTabFactory),

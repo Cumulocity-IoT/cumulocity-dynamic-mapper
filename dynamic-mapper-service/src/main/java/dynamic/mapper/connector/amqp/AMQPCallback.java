@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.amqp;
 
+import dynamic.mapper.util.TenantLogContext;
 import com.rabbitmq.client.*;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
@@ -68,58 +69,60 @@ public class AMQPCallback extends DefaultConsumer {
             Envelope envelope,
             AMQP.BasicProperties properties,
             byte[] body) throws IOException {
+        try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
 
-        String routingKey = envelope.getRoutingKey();
-        long deliveryTag = envelope.getDeliveryTag();
+            String routingKey = envelope.getRoutingKey();
+            long deliveryTag = envelope.getDeliveryTag();
 
-        // Convert routing key to topic format (replace . with /)
-        String topic = routingKey.replace(".", "/");
+            // Convert routing key to topic format (replace . with /)
+            String topic = routingKey.replace(".", "/");
 
-        try {
-            // Build connector message
-            ConnectorMessage connectorMessage = ConnectorMessage.builder()
-                    .tenant(tenant)
-                    .topic(topic)
-                    .sendPayload(true)
-                    .connectorIdentifier(connectorIdentifier)
-                    .payload(body)
-                    .build();
-
-            if (serviceConfiguration.getLogPayload()) {
-                log.info("{} - INITIAL: message on routing key: [{}], connector: {}, {}",
-                        tenant, routingKey, connectorName, connectorIdentifier);
-            }
-
-            // Process the message
-            ProcessingResultWrapper<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
-
-            if (serviceConfiguration.getLogPayload()) {
-                log.info("{} - PREPARING_RESULTS: message on routing key: [{}], connector: {}",
-                        tenant, routingKey, connectorIdentifier);
-            }
-
-            // Acknowledge message if not auto-ack
-            // Note: If autoAck is true in basicConsume, this won't be needed
-            if (this.getChannel() != null && !envelope.isRedeliver()) {
-                this.getChannel().basicAck(deliveryTag, false);
-            }
-
-            if (serviceConfiguration.getLogPayload()) {
-                log.info("{} - PROCESSING_COMPLETED: message on routing key: [{}], connector: {}",
-                        tenant, routingKey, connectorIdentifier);
-            }
-
-        } catch (Exception e) {
-            log.error("{} - Error processing AMQP message on routing key: [{}]",
-                    tenant, routingKey, e);
-
-            // Reject message and requeue
             try {
-                if (this.getChannel() != null) {
-                    this.getChannel().basicNack(deliveryTag, false, true);
+                // Build connector message
+                ConnectorMessage connectorMessage = ConnectorMessage.builder()
+                        .tenant(tenant)
+                        .topic(topic)
+                        .sendPayload(true)
+                        .connectorIdentifier(connectorIdentifier)
+                        .payload(body)
+                        .build();
+
+                if (serviceConfiguration.getLogPayload()) {
+                    log.info("{} - INITIAL: message on routing key: [{}], connector: {}, {}",
+                            tenant, routingKey, connectorName, connectorIdentifier);
                 }
-            } catch (IOException ex) {
-                log.error("{} - Error rejecting message", tenant, ex);
+
+                // Process the message
+                ProcessingResultWrapper<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
+
+                if (serviceConfiguration.getLogPayload()) {
+                    log.info("{} - PREPARING_RESULTS: message on routing key: [{}], connector: {}",
+                            tenant, routingKey, connectorIdentifier);
+                }
+
+                // Acknowledge message if not auto-ack
+                // Note: If autoAck is true in basicConsume, this won't be needed
+                if (this.getChannel() != null && !envelope.isRedeliver()) {
+                    this.getChannel().basicAck(deliveryTag, false);
+                }
+
+                if (serviceConfiguration.getLogPayload()) {
+                    log.info("{} - PROCESSING_COMPLETED: message on routing key: [{}], connector: {}",
+                            tenant, routingKey, connectorIdentifier);
+                }
+
+            } catch (Exception e) {
+                log.error("{} - Error processing AMQP message on routing key: [{}]",
+                        tenant, routingKey, e);
+
+                // Reject message and requeue
+                try {
+                    if (this.getChannel() != null) {
+                        this.getChannel().basicNack(deliveryTag, false, true);
+                    }
+                } catch (IOException ex) {
+                    log.error("{} - Error rejecting message", tenant, ex);
+                }
             }
         }
     }

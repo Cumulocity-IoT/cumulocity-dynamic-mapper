@@ -22,6 +22,8 @@
 package dynamic.mapper.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
@@ -101,6 +103,7 @@ class OperationControllerTest {
     @Mock private FlowStateStore flowStateStore;
     @Mock private ExtensionManager extensionManager;
     @Mock private ObjectMapper objectMapper;
+    @Mock private dynamic.mapper.core.ServiceLogsProbe serviceLogsProbe;
 
     private OperationController controller;
 
@@ -109,7 +112,7 @@ class OperationControllerTest {
         controller = new OperationController(connectorRegistry, mappingService, connectorConfigurationService,
                 serviceConfigurationService, bootstrapService, c8YAgent, contextService, serviceRegistry,
                 cacheManager, deploymentMapService, mappingStatusService, identityFacade, inventoryFacade, flowStateStore,
-                extensionManager, objectMapper);
+                extensionManager, objectMapper, serviceLogsProbe);
 
         UserCredentials creds = mock(UserCredentials.class);
         when(creds.getTenant()).thenReturn(TENANT);
@@ -128,6 +131,52 @@ class OperationControllerTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+    }
+
+    private static void grant(String role) {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "tester", "n/a", List.of(new SimpleGrantedAuthority(role))));
+    }
+
+    @Test
+    void probeServiceLogs_needsTheAdminRole() {
+        grant("ROLE_DYNAMIC_MAPPER_CREATE");
+
+        var ex = org.junit.jupiter.api.Assertions.assertThrows(
+                org.springframework.web.server.ResponseStatusException.class,
+                () -> controller.runOperation(new ServiceOperation(Operation.PROBE_SERVICE_LOGS, new HashMap<>())));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        verify(serviceLogsProbe, never()).probe(any());
+    }
+
+    @Test
+    void probeServiceLogs_isRefusedToATenantThatDoesNotOwnTheMicroservice() {
+        grant("ROLE_DYNAMIC_MAPPER_ADMIN");
+        when(serviceLogsProbe.getOwnerTenant()).thenReturn("some-other-owner");
+
+        var ex = org.junit.jupiter.api.Assertions.assertThrows(
+                org.springframework.web.server.ResponseStatusException.class,
+                () -> controller.runOperation(new ServiceOperation(Operation.PROBE_SERVICE_LOGS, new HashMap<>())));
+
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        verify(serviceLogsProbe, never()).probe(any());
+    }
+
+    @Test
+    void probeServiceLogs_runsForAnAdminOfTheOwnerTenant() {
+        grant("ROLE_DYNAMIC_MAPPER_ADMIN");
+        when(serviceLogsProbe.getOwnerTenant()).thenReturn(TENANT);
+        var result = new dynamic.mapper.core.ServiceLogsProbe.Result(
+                dynamic.mapper.core.ServiceLogsProbe.Verdict.CAN_READ_LOGS, TENANT, "i", List.of(), List.of(),
+                List.of(), "ok");
+        when(serviceLogsProbe.probe(any())).thenReturn(result);
+
+        ResponseEntity<?> response = controller.runOperation(
+                new ServiceOperation(Operation.PROBE_SERVICE_LOGS, new HashMap<>()));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(result, response.getBody());
     }
 
     private Mapping makeMapping() {

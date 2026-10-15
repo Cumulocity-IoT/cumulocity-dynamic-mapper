@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.mqtt;
 
+import dynamic.mapper.util.TenantLogContext;
 import com.hivemq.client.mqtt.MqttGlobalPublishFilter;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5AsyncClient;
@@ -146,7 +147,7 @@ public class MQTT5Client extends AMQTTClient {
 
         // Add listeners — detection only, housekeeping owns all reconnect scheduling
         mqttClient = builder
-                .addDisconnectedListener(context -> {
+                .addDisconnectedListener(context -> TenantLogContext.run(tenant, () -> {
                     boolean wasConnected = connectionStateManager.isConnected();
                     //We should always log when a client is disconnected!
                     Throwable cause = context.getCause();
@@ -177,13 +178,13 @@ public class MQTT5Client extends AMQTTClient {
                                 tenant, stale, intentional,
                                 connectorConfiguration.getEnabled(), wasConnected);
                     }
-                })
-                .addConnectedListener(context -> {
+                }))
+                .addConnectedListener(context -> TenantLogContext.run(tenant, () -> {
                     reconnectAttempt.set(0);
                     nextReconnectTimeMs = Long.MAX_VALUE;
                     connectionStateManager.setConnected(true);
                     log.info("{} - MQTT5 client connected", tenant);
-                })
+                }))
                 .buildBlocking();
     }
 
@@ -337,7 +338,7 @@ public class MQTT5Client extends AMQTTClient {
                     .callback(mqttCallback)
                     .manualAcknowledgement(true)
                     .send()
-                    .whenComplete((subAck, throwable) -> {
+                    .whenComplete(TenantLogContext.biConsumer(tenant, (subAck, throwable) -> {
                         if (throwable != null) {
                             log.error("{} - Failed to subscribe to topic: [{}]", tenant, topic, throwable);
                         } else {
@@ -354,7 +355,7 @@ public class MQTT5Client extends AMQTTClient {
 
                             sendSubscriptionEvents(topic, "Subscribed");
                         }
-                    });
+                    }));
 
         } catch (Exception e) {
             throw new ConnectorException("Failed to subscribe to topic: " + topic, e);
@@ -372,7 +373,7 @@ public class MQTT5Client extends AMQTTClient {
 
         Mqtt5AsyncClient asyncClient = mqttClient.toAsync();
         asyncClient.unsubscribe(Mqtt5Unsubscribe.builder().topicFilter(topic).build())
-                .whenComplete((unsubAck, throwable) -> {
+                .whenComplete(TenantLogContext.biConsumer(tenant, (unsubAck, throwable) -> {
                     if (throwable != null) {
                         log.error("{} - Failed to unsubscribe from topic: [{}]", tenant, topic, throwable);
                     } else {
@@ -388,7 +389,7 @@ public class MQTT5Client extends AMQTTClient {
 
                         sendSubscriptionEvents(topic, "Unsubscribed");
                     }
-                });
+                }));
     }
 
     @Override
