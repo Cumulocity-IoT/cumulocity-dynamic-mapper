@@ -50,8 +50,8 @@
   <div class="card-block">
     <c8y-ui-empty-state
       [icon]="'logs'"
-      [title]="(ownerTenant ? 'This tenant owns the microservice' : 'No collected log yet') | translate"
-      [subtitle]="(ownerTenant ? 'The log lines of the owner tenant are not copied; read the log in Administration, under Ecosystem and Microservices, which needs the permission to read applications.' : 'Nothing has been collected for your tenant. Either the operator has not switched the collection on, or no line at the configured level has been logged for your tenant yet.') | translate"
+      [title]="'No collected log yet' | translate"
+      [subtitle]="'Nothing has been collected for your tenant. Either the operator has not switched the collection on, or no line at the configured level has been logged for your tenant yet.' | translate"
       [horizontal]="true"
     ></c8y-ui-empty-state>
   </div>

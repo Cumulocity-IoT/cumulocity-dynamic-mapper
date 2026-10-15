@@ -20,19 +20,18 @@
 
 package dynamic.mapper.logs;
 
-import java.io.IOException;
-import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 
-/** Where the native log of this service instance is read from. */
-public interface ServiceLogSource {
+/** Log records captured inside the process, waiting to be stored, per tenant. */
+public interface ServiceLogBuffer {
 
-    /** One window of the log as the platform returns it. */
-    record Window(Instant dateFrom, Instant dateTo, String logs, boolean truncated) {
-    }
+    /** Takes everything captured so far, per tenant, oldest first, and empties the buffer. */
+    Map<String, List<ServiceLogRecord>> drainAll();
 
-    /** Name of the instance whose log is read; used to key the events. */
-    String instance();
+    /** Records lost to the per-tenant bound since the last call, per tenant; resets the counts. */
+    Map<String, Integer> takeDropped();
 
-    /** The log from {@code from} on, in the platform's window semantics ({@code truncated} = more follows). */
-    Window fetch(Instant from) throws IOException, InterruptedException;
+    /** Puts records back at the front after a failed store, so the next run retries them in order. */
+    void restore(String tenant, List<ServiceLogRecord> records);
 }

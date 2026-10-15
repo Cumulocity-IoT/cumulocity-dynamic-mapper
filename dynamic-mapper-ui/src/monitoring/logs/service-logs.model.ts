@@ -39,8 +39,6 @@ export interface LogWindow {
   empty: boolean;
   /** Lines left out by the collection limit (collected source only). */
   omitted: number;
-  /** This tenant owns the microservice: its lines are never copied, so an empty collected log is expected. */
-  owner: boolean;
 }
 
 export interface ServiceLogsSource {

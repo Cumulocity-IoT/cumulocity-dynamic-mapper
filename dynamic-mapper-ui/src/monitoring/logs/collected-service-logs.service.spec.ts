@@ -60,8 +60,7 @@ describe('CollectedServiceLogsService', () => {
       instance: 'pod-1',
       instances: ['pod-1', 'pod-0'],
       empty: false,
-      omitted: 3,
-      owner: true
+      omitted: 3
     });
 
     const window = await service.load({});
@@ -74,8 +73,7 @@ describe('CollectedServiceLogsService', () => {
       instance: 'pod-1',
       instances: ['pod-1', 'pod-0'],
       empty: false,
-      omitted: 3,
-      owner: true
+      omitted: 3
     });
   });
 

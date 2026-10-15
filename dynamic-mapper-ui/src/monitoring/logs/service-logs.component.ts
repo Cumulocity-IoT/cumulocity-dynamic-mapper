@@ -65,8 +65,6 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
   errorHint: string;
   /** The collected log exists but nothing has been collected for this tenant yet. */
   nothingCollected = false;
-  /** The empty collected log is that of the owner tenant, which is never copied. */
-  ownerTenant = false;
 
   private timer: ReturnType<typeof setInterval>;
 
@@ -186,7 +184,6 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
     this.instances = window.instances;
     this.selectedInstance = window.instance;
     this.nothingCollected = window.empty;
-    this.ownerTenant = window.owner;
     this.logsText = window.logs;
     this.dateFromInput = window.dateFrom ? new Date(window.dateFrom).toISOString().slice(0, 19) : '';
   }

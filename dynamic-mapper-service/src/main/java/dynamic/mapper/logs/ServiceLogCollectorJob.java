@@ -22,7 +22,6 @@ package dynamic.mapper.logs;
 
 import java.time.Clock;
 import java.time.Duration;
-import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -35,37 +34,25 @@ import com.cumulocity.microservice.subscription.service.MicroserviceSubscription
 
 /**
  * Runs the {@link ServiceLogCollector} on a timer. Off unless {@code service.logs.collector.enabled=true}.
- *
- * <p>The collector's own loggers are excluded from collection by name, so collecting never feeds on itself.
  */
 @Component
 @ConditionalOnProperty(prefix = "service.logs.collector", name = "enabled", havingValue = "true")
 public class ServiceLogCollectorJob {
 
-    /** Class names of everything on the collection path; matched against the end of the logger field. */
-    static final List<String> OWN_LOGGERS = List.of("ServiceLogCollector", "ServiceLogCollectorJob",
-            "PlatformServiceLogSource", "EventServiceLogSink", "ServiceLogsProbe");
-
     private final ServiceLogCollector collector;
 
-    public ServiceLogCollectorJob(ServiceLogSource source, ServiceLogSink sink,
-            MicroserviceSubscriptionsService subscriptionsService,
-            @Value("${C8Y_BOOTSTRAP_TENANT:}") String ownerTenant,
-            @Value("${service.logs.collector.min-level:WARN}") String minLevel,
-            @Value("${service.logs.collector.max-lines-per-tenant:500}") int maxLinesPerTenant,
-            @Value("${service.logs.collector.max-chunk-bytes:65536}") int maxChunkBytes,
-            @Value("${service.logs.collector.retention-hours:24}") int retentionHours,
-            @Value("${service.logs.collector.look-back-minutes:10}") int lookBackMinutes,
-            @Value("${service.logs.collector.max-pages:5}") int maxPages) {
-        this.collector = new ServiceLogCollector(source, sink,
+    public ServiceLogCollectorJob(ServiceLogBuffer buffer, ServiceLogSink sink,
+            MicroserviceSubscriptionsService subscriptionsService, ServiceLogPolicy policy,
+            @Value("${service.logs.collector.retention-hours:24}") int retentionHours) {
+        this.collector = new ServiceLogCollector(buffer, sink,
                 () -> subscriptionsService.getAll().stream().map(MicroserviceCredentials::getTenant)
                         .collect(Collectors.toSet()),
-                ownerTenant, new ServiceLogPolicy(minLevel, maxLinesPerTenant, maxChunkBytes, OWN_LOGGERS),
-                Duration.ofMinutes(lookBackMinutes), Duration.ofHours(retentionHours), maxPages, Clock.systemUTC());
+                policy, System.getenv("HOSTNAME") != null ? System.getenv("HOSTNAME") : "local",
+                Duration.ofHours(retentionHours), Clock.systemUTC());
     }
 
     @Scheduled(fixedDelayString = "${service.logs.collector.interval-ms:30000}",
-            initialDelayString = "${service.logs.collector.initial-delay-ms:60000}")
+            initialDelayString = "${service.logs.collector.initial-delay-ms:30000}")
     public void run() {
         collector.collect();
     }

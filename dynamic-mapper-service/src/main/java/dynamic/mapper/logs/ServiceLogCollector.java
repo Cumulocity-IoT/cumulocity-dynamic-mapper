@@ -20,12 +20,10 @@
 
 package dynamic.mapper.logs;
 
-import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -35,166 +33,121 @@ import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Copies each subscribed tenant's own log lines from the service's native log into that tenant's events,
- * so a tenant that does not own the microservice can see them (docs/feature/service-logs.md).
+ * Stores each subscribed tenant's own log lines, captured inside the process, as that tenant's events, so a tenant that
+ * does not own the microservice can read them (docs/feature/service-logs.md).
  *
- * <p>Every instance reads only <b>its own</b> log: no coordination, no duplicates. The cursor is in memory;
- * a restart of the process starts a short look-back before now, and the sink's "newest stored record" per
- * tenant makes any overlap harmless. Delivery is near-real-time, not guaranteed.
+ * <p>One run drains the {@link ServiceLogBuffer}, lets {@link ServiceLogChunker} apply the isolation rule (a record
+ * reaches a tenant only if its own tenant field names it, the tenant is subscribed and the policy admits it), and writes
+ * one event per chunk. A tenant whose store fails gets its unstored records put back, so the next run retries them
+ * in order; the other tenants are not held up by it. Records of tenants that are not subscribed are dropped.
  *
- * <p>This class is the orchestration only; reading ({@link ServiceLogSource}), storing
- * ({@link ServiceLogSink}) and the isolation rule ({@link ServiceLogChunker}) are separate so each can be
- * tested alone.
+ * <p>Delivery is near-real-time, not guaranteed: lines still buffered when the process dies are lost.
  */
 @Slf4j
 public class ServiceLogCollector {
 
-    /** After this many runs that failed to store something, the cursor moves on rather than stalling forever. */
-    static final int MAX_FAILED_RUNS = 3;
-
-    private final ServiceLogSource source;
+    private final ServiceLogBuffer buffer;
     private final ServiceLogSink sink;
     private final Supplier<Set<String>> subscribedTenants;
-    private final String ownerTenant;
     private final ServiceLogPolicy policy;
-    private final Duration lookBack;
+    private final String instance;
     private final Duration retention;
-    private final Duration purgeEvery;
-    private final int maxPages;
+    private final Duration purgeEvery = Duration.ofHours(1);
     private final Clock clock;
 
-    private Instant cursor;
     private Instant lastPurge = Instant.EPOCH;
-    private int failedRuns;
     private boolean announced;
-    private boolean announcedWaiting;
-    private boolean reportedFirstWindow;
     private String lastFailure;
     private int repeatedFailures;
 
-    public ServiceLogCollector(ServiceLogSource source, ServiceLogSink sink, Supplier<Set<String>> subscribedTenants,
-            String ownerTenant, ServiceLogPolicy policy, Duration lookBack, Duration retention, int maxPages,
-            Clock clock) {
-        this.source = source;
+    public ServiceLogCollector(ServiceLogBuffer buffer, ServiceLogSink sink, Supplier<Set<String>> subscribedTenants,
+            ServiceLogPolicy policy, String instance, Duration retention, Clock clock) {
+        this.buffer = buffer;
         this.sink = sink;
         this.subscribedTenants = subscribedTenants;
-        this.ownerTenant = ownerTenant;
         this.policy = policy;
-        this.lookBack = lookBack;
+        this.instance = instance;
         this.retention = retention;
-        this.purgeEvery = Duration.ofHours(1);
-        this.maxPages = maxPages;
         this.clock = clock;
     }
 
-    /** One collection run. Never throws: a failure is logged (at most once per streak) and retried next run. */
+    /** One collection run. Never throws: a failure is logged (once per streak) and retried next run. */
     public synchronized void collect() {
         try {
             if (!announced) {
                 announced = true;
-                log.info("Service log collector running for instance {} (owner tenant {}, minimum level {}, "
-                        + "at most {} line(s) per tenant and run)", source.instance(), ownerTenant, policy.minLevel(),
-                        policy.maxLinesPerTenant());
+                log.info("Service log collector running for instance {} (minimum level {}, at most {} line(s) per tenant "
+                        + "and run)", instance, policy.minLevel(), policy.maxLinesPerTenant());
             }
             Set<String> tenants = new HashSet<>(subscribedTenants.get());
-            // The owner tenant has the native log; copying it there would only duplicate it.
-            tenants.remove(ownerTenant);
-            if (tenants.isEmpty()) {
-                if (!announcedWaiting) {
-                    announcedWaiting = true;
-                    log.info("Service log collector: no subscribed tenant other than the owner yet, waiting");
+            Map<String, List<ServiceLogRecord>> drained = buffer.drainAll();
+            reportDropped();
+            int stored = 0;
+            Set<String> written = new HashSet<>();
+            boolean failed = false;
+            for (Map.Entry<String, List<ServiceLogRecord>> entry : drained.entrySet()) {
+                String tenant = entry.getKey();
+                if (!tenants.contains(tenant)) {
+                    continue; // not (or no longer) subscribed: nothing may be stored for it
                 }
-                return;
-            }
-            announcedWaiting = false;
-            boolean allStored = collectWindows(tenants);
-            lastFailure = null;
-            if (allStored) {
-                failedRuns = 0;
-            } else if (++failedRuns >= MAX_FAILED_RUNS) {
-                log.warn("Service log collection could not store every tenant's lines {} runs in a row; moving on",
-                        failedRuns);
-                failedRuns = 0;
-            }
-            // else: the cursor was kept, so the next run re-reads the window; tenants that did succeed are skipped
-            purgeIfDue(tenants);
-        } catch (Exception e) {
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-            // The same failure every interval is noise: say it once, then remind now and then.
-            if (e.getMessage() != null && e.getMessage().equals(lastFailure)) {
-                if (++repeatedFailures % 20 == 0) {
-                    log.warn("Service log collection still failing ({} runs): {}", repeatedFailures + 1, e.getMessage());
-                }
-            } else {
-                lastFailure = e.getMessage();
-                repeatedFailures = 0;
-                log.warn("Service log collection failed: {}", e.getMessage());
-            }
-        }
-    }
-
-    private boolean collectWindows(Set<String> tenants) throws IOException, InterruptedException {
-        Instant now = clock.instant();
-        Instant from = cursor != null ? cursor : now.minus(lookBack);
-        Map<String, Instant> collected = new HashMap<>();
-        Set<String> asked = new HashSet<>();
-        boolean allStored = true;
-        int recordsRead = 0;
-        int chunksStored = 0;
-        Set<String> tenantsWritten = new HashSet<>();
-        Instant next = from;
-        for (int page = 0; page < maxPages; page++) {
-            ServiceLogSource.Window window = source.fetch(next);
-            List<ServiceLogRecord> records = ServiceLogParser.parse(window.logs());
-            recordsRead += records.size();
-            if (!reportedFirstWindow) {
-                reportedFirstWindow = true;
-                // Where lines drop out, once: read -> attributed to a subscribed tenant -> admitted by the policy.
-                long attributed = records.stream().filter(r -> r.isAttributed() && tenants.contains(r.tenant())).count();
-                long admitted = records.stream()
-                        .filter(r -> tenants.contains(r.tenant()) && policy.admits(r)).count();
-                log.info("Service log collector first window {} .. {}: {} record(s) read, {} of subscribed tenants {}, "
-                        + "{} at or above level {}{}", window.dateFrom(), window.dateTo(), records.size(), attributed,
-                        tenants, admitted, policy.minLevel(), window.truncated() ? " (more follows)" : "");
-            }
-            for (ServiceLogRecord r : records) {
-                if (r.isAttributed() && tenants.contains(r.tenant()) && asked.add(r.tenant())) {
-                    sink.lastCollected(r.tenant(), source.instance()).ifPresent(t -> collected.put(r.tenant(), t));
-                }
-            }
-            for (Map.Entry<String, List<ServiceLogChunk>> e
-                    : ServiceLogChunker.chunk(records, policy, tenants, collected).entrySet()) {
-                for (ServiceLogChunk chunk : e.getValue()) {
+                List<ServiceLogChunk> chunks = ServiceLogChunker
+                        .chunk(entry.getValue(), policy, tenants, Map.of()).getOrDefault(tenant, List.of());
+                Instant watermark = null;
+                for (ServiceLogChunk chunk : chunks) {
                     try {
-                        sink.write(e.getKey(), source.instance(), chunk);
-                        collected.put(e.getKey(), chunk.dateTo());
-                        chunksStored++;
-                        tenantsWritten.add(e.getKey());
-                    } catch (Exception ex) {
-                        allStored = false;
-                        log.warn("Could not store service log chunk for tenant {}: {}", e.getKey(), ex.getMessage());
+                        sink.write(tenant, instance, chunk);
+                        watermark = chunk.dateTo();
+                        stored++;
+                        written.add(tenant);
+                    } catch (Exception e) {
+                        failed = true;
+                        remember(tenant, e);
+                        restoreUnstored(tenant, entry.getValue(), watermark);
                         break; // keep this tenant's chunks in order
                     }
                 }
             }
-            boolean progressed = window.dateTo() != null && window.dateTo().isAfter(next);
-            if (window.dateTo() != null) {
-                next = window.dateTo();
+            if (stored > 0) {
+                log.info("Service log collector stored {} chunk(s) for tenant(s) {}", stored, written);
             }
-            if (!window.truncated() || !progressed) {
-                break;
+            if (!failed) {
+                lastFailure = null;
+            }
+            purgeIfDue(tenants);
+        } catch (Exception e) {
+            remember("*", e);
+        }
+    }
+
+    private void restoreUnstored(String tenant, List<ServiceLogRecord> records, Instant storedUpTo) {
+        List<ServiceLogRecord> unstored = new ArrayList<>();
+        for (ServiceLogRecord r : records) {
+            if (storedUpTo == null || r.time().isAfter(storedUpTo)) {
+                unstored.add(r);
             }
         }
-        if (allStored || failedRuns + 1 >= MAX_FAILED_RUNS) {
-            cursor = next;
+        buffer.restore(tenant, unstored);
+    }
+
+    private void reportDropped() {
+        Map<String, Integer> dropped = buffer.takeDropped();
+        if (!dropped.isEmpty()) {
+            log.warn("Service log collector dropped records because a tenant's buffer was full: {}", dropped);
         }
-        if (chunksStored > 0) {
-            log.info("Service log collector stored {} chunk(s) for tenant(s) {} from {} record(s) read", chunksStored,
-                    tenantsWritten, recordsRead);
+    }
+
+    /** The same failure every interval is noise: say it once, then remind now and then. */
+    private void remember(String tenant, Exception e) {
+        String message = tenant + ": " + e.getMessage();
+        if (message.equals(lastFailure)) {
+            if (++repeatedFailures % 20 == 0) {
+                log.warn("Service log collection still failing ({} runs): {}", repeatedFailures + 1, message);
+            }
+        } else {
+            lastFailure = message;
+            repeatedFailures = 0;
+            log.warn("Service log collection failed for {}", message);
         }
-        return allStored;
     }
 
     private void purgeIfDue(Set<String> tenants) {
@@ -215,9 +168,5 @@ public class ServiceLogCollector {
         if (!failed.isEmpty()) {
             log.warn("Could not purge old service logs for tenants {}", failed);
         }
-    }
-
-    Instant cursor() {
-        return cursor;
     }
 }

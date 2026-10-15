@@ -52,11 +52,9 @@ public class ServiceLogReader {
     /**
      * @param more  whether more chunks exist beyond this page in the direction that was asked for
      * @param empty no collected log exists at all for this tenant (as opposed to an empty page)
-     * @param owner the tenant owns the microservice: its lines are never copied (it has the native log), so an
-     *              empty result is expected there
      */
     public record Page(List<String> instances, String instance, Instant dateFrom, Instant dateTo, int chunks,
-            int lines, int omitted, boolean more, boolean empty, boolean owner, String logs) {
+            int lines, int omitted, boolean more, boolean empty, String logs) {
     }
 
     static final int PAGE_SIZE = 50;
@@ -64,12 +62,10 @@ public class ServiceLogReader {
 
     private final Events events;
     private final int maxChunks;
-    private final String ownerTenant;
 
-    public ServiceLogReader(Events events, int maxChunks, String ownerTenant) {
+    public ServiceLogReader(Events events, int maxChunks) {
         this.events = events;
         this.maxChunks = maxChunks;
-        this.ownerTenant = ownerTenant;
     }
 
     public Page read(String tenant, String instance, Instant dateFrom, Instant dateTo) {
@@ -79,7 +75,7 @@ public class ServiceLogReader {
             // only fills `instances`
         }
         if (instances.isEmpty()) {
-            return new Page(List.of(), null, null, null, 0, 0, 0, false, true, isOwner(tenant), "");
+            return new Page(List.of(), null, null, null, 0, 0, 0, false, true, "");
         }
         String chosen = instance != null && !instance.isBlank() ? instance : instances.iterator().next();
 
@@ -92,7 +88,7 @@ public class ServiceLogReader {
             Collections.reverse(page); // fetched newest first; present oldest first
         }
         if (page.isEmpty()) {
-            return new Page(new ArrayList<>(instances), chosen, null, null, 0, 0, 0, false, false, isOwner(tenant), "");
+            return new Page(new ArrayList<>(instances), chosen, null, null, 0, 0, 0, false, false, "");
         }
         StringBuilder logs = new StringBuilder();
         int lines = 0;
@@ -106,11 +102,7 @@ public class ServiceLogReader {
             omitted += c.omitted();
         }
         return new Page(new ArrayList<>(instances), chosen, page.get(0).dateFrom(), page.get(page.size() - 1).dateTo(),
-                page.size(), lines, omitted, more, false, isOwner(tenant), logs.toString());
-    }
-
-    private boolean isOwner(String tenant) {
-        return ownerTenant != null && !ownerTenant.isBlank() && ownerTenant.equals(tenant);
+                page.size(), lines, omitted, more, false, logs.toString());
     }
 
     /**

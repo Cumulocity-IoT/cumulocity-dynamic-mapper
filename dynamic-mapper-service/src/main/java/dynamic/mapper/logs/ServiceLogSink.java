@@ -21,13 +21,9 @@
 package dynamic.mapper.logs;
 
 import java.time.Instant;
-import java.util.Optional;
 
 /** Where a tenant's copy of the log is stored. */
 public interface ServiceLogSink {
-
-    /** Time of the newest record already stored for this tenant and instance, if any. */
-    Optional<Instant> lastCollected(String tenant, String instance);
 
     void write(String tenant, String instance, ServiceLogChunk chunk);
 

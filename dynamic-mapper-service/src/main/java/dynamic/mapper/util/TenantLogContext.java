@@ -51,6 +51,21 @@ public final class TenantLogContext implements AutoCloseable {
     /** The key the Cumulocity microservice SDK sets inside its own tenant scopes. */
     public static final String SDK_KEY = "tenant";
 
+    /**
+     * The tenant of a log event's MDC: the SDK's key inside its own scope, else ours, else {@code null}. The same rule as
+     * {@link TenantLogConverter}, for code that reads the MDC of an event instead of printing it.
+     */
+    public static String tenantOf(java.util.Map<String, String> mdc) {
+        if (mdc == null) {
+            return null;
+        }
+        String tenant = mdc.get(SDK_KEY);
+        if (tenant == null || tenant.isEmpty()) {
+            tenant = mdc.get(KEY);
+        }
+        return tenant == null || tenant.isEmpty() ? null : tenant;
+    }
+
     /** The tenant a line logged right now would be attributed to, or {@code null}. */
     public static String current() {
         String sdk = MDC.get(SDK_KEY);

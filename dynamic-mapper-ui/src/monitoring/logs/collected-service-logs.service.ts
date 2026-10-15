@@ -59,8 +59,7 @@ export class CollectedServiceLogsService implements ServiceLogsSource {
       instance: body.instance ?? '',
       instances: body.instances ?? [],
       empty: !!body.empty,
-      omitted: body.omitted ?? 0,
-      owner: !!body.owner
+      omitted: body.omitted ?? 0
     };
   }
 }

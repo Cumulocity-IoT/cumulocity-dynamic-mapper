@@ -24,7 +24,6 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.joda.time.DateTime;
@@ -68,28 +67,6 @@ public class EventServiceLogSink implements ServiceLogSink {
         this.subscriptionsService = subscriptionsService;
         this.contextService = contextService;
         this.sourceLocator = sourceLocator;
-    }
-
-    @Override
-    public Optional<Instant> lastCollected(String tenant, String instance) {
-        return inTenant(tenant, false, sourceId -> {
-            if (sourceId == null) {
-                return Optional.<Instant>empty();
-            }
-            Instant newest = null;
-            for (EventRepresentation event : eventApi
-                    .getEventsByFilter(new EventFilter().byType(EVENT_TYPE).bySource(sourceId)).get(20).getEvents()) {
-                Object fragment = event.getProperty(FRAGMENT);
-                if (fragment instanceof Map<?, ?> map && instance.equals(map.get("instance"))
-                        && map.get("dateTo") != null) {
-                    Instant to = Instant.parse(map.get("dateTo").toString());
-                    if (newest == null || to.isAfter(newest)) {
-                        newest = to;
-                    }
-                }
-            }
-            return Optional.ofNullable(newest);
-        });
     }
 
     @Override

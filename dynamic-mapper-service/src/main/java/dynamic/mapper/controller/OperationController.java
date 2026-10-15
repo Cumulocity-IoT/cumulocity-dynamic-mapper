@@ -41,7 +41,6 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.core.BootstrapService;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.CacheManager;
-import dynamic.mapper.core.ServiceLogsProbe;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.ExtensionManager;
 import dynamic.mapper.core.facade.IdentityFacade;
@@ -106,7 +105,6 @@ public class OperationController {
     private final dynamic.mapper.processor.flow.FlowStateStore flowStateStore;
     private final ExtensionManager extensionManager;
     private final ObjectMapper objectMapper;
-    private final ServiceLogsProbe serviceLogsProbe;
 
 
     /** Which role each operation needs. ADMIN implies CREATE (see {@link Utils}). */
@@ -134,7 +132,6 @@ public class OperationController {
             Map.entry(Operation.REFRESH_NOTIFICATIONS_SUBSCRIPTIONS, RequiredRole.ADMIN),
             Map.entry(Operation.REFRESH_STATUS_MAPPING, RequiredRole.CREATE),
             Map.entry(Operation.RELOAD_EXTENSIONS, RequiredRole.ADMIN),
-            Map.entry(Operation.PROBE_SERVICE_LOGS, RequiredRole.ADMIN),
             Map.entry(Operation.RELOAD_MAPPINGS, RequiredRole.CREATE),
             Map.entry(Operation.RESET_DEPLOYMENT_MAP, RequiredRole.ADMIN),
             Map.entry(Operation.RESET_STATISTICS_MAPPING, RequiredRole.ADMIN),
@@ -190,7 +187,6 @@ public class OperationController {
             - `REFRESH_NOTIFICATIONS_SUBSCRIPTIONS`: Refreshes notification subscriptions for the current tenant.
             - `CLEAR_CACHE`: Clears a specific cache (e.g., inbound ID cache, outbound ID cache, inventory cache).
             - `INIT_CODE_TEMPLATES`: Initializes code templates for the current tenant.
-            - `PROBE_SERVICE_LOGS`: Diagnostic, owner tenant only. Checks whether the owner tenant's service user can read this microservice's logs and returns a verdict with the HTTP status of every step and the roles that user holds. Optional parameter `applicationId` if the application cannot be found by name. Never returns log content.
 
             """, requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Service operation to execute with parameters", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = ServiceOperation.class), examples = {
             @ExampleObject(name = "Reload Mappings", description = "Reload all mappings for the current tenant", value = """
@@ -277,8 +273,6 @@ public class OperationController {
                     return handleInitCodeTemplates(tenant, parameters);
                 case CLEAR_CACHE_DEVICE_TO_CLIENT:
                     return handleClearCacheDeviceToClient(tenant, parameters);
-                case PROBE_SERVICE_LOGS:
-                    return handleProbeServiceLogs(tenant, parameters);
                 case ROTATE_GRAALVM_ENGINE:
                     serviceRegistry.getGraalVMContextService().rotateEngine(tenant);
                     return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -297,21 +291,6 @@ public class OperationController {
             log.error("{} - Error running operation: {}", tenant, ex.getMessage(), ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
-    }
-
-    /**
-     * Diagnostic for docs/feature/service-logs.md: can the owner tenant's service user read this
-     * service's own logs? Only callable from the owner tenant — the answer names the owner tenant, its
-     * service user's roles and this service's instances, which another tenant has no business seeing.
-     */
-    private ResponseEntity<?> handleProbeServiceLogs(String tenant, Map<String, String> parameters) {
-        String owner = serviceLogsProbe.getOwnerTenant();
-        if (owner != null && !owner.isBlank() && !owner.equals(tenant)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "PROBE_SERVICE_LOGS can only be run from the tenant that owns the microservice");
-        }
-        String instance = System.getenv("HOSTNAME");
-        return ResponseEntity.ok(serviceLogsProbe.probe(instance, parameters == null ? null : parameters.get("applicationId")));
     }
 
     private ResponseEntity<?> handleClearCacheDeviceToClient(String tenant, Map<String, String> parameters) {

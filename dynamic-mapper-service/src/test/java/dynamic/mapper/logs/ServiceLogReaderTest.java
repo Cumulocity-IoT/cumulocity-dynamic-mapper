@@ -41,7 +41,7 @@ class ServiceLogReaderTest {
     }
 
     private static ServiceLogReader reader(FakeEvents events, int max) {
-        return new ServiceLogReader(events, max, "owner");
+        return new ServiceLogReader(events, max);
     }
 
     @Test
@@ -50,15 +50,6 @@ class ServiceLogReaderTest {
 
         assertTrue(page.empty());
         assertEquals("", page.logs());
-    }
-
-    @Test
-    void theOwnerTenantIsToldItsLogIsNotCopiedSoAnEmptyResultIsExpected() {
-        Page owner = reader(new FakeEvents(), 10).read("owner", null, null, null);
-        Page other = reader(new FakeEvents(), 10).read("tenantA", null, null, null);
-
-        assertTrue(owner.empty() && owner.owner());
-        assertTrue(other.empty() && !other.owner());
     }
 
     @Test

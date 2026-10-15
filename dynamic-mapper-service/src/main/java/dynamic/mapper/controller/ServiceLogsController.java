@@ -58,10 +58,9 @@ public class ServiceLogsController {
     private final ServiceLogReader reader;
 
     public ServiceLogsController(ContextService<UserCredentials> contextService, ServiceLogReader.Events events,
-            @Value("${service.logs.reader.max-chunks:10}") int maxChunks,
-            @Value("${C8Y_BOOTSTRAP_TENANT:}") String ownerTenant) {
+            @Value("${service.logs.reader.max-chunks:10}") int maxChunks) {
         this.contextService = contextService;
-        this.reader = new ServiceLogReader(events, maxChunks, ownerTenant);
+        this.reader = new ServiceLogReader(events, maxChunks);
     }
 
     @Operation(summary = "Read the collected service log", description = """

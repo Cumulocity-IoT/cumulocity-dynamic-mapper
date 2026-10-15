@@ -81,8 +81,7 @@ export class NativeServiceLogsService implements ServiceLogsSource {
         instance,
         instances: this.instances,
         empty: false,
-        omitted: 0,
-        owner: false
+        omitted: 0
       };
     } catch (e) {
       const status = (e as any)?.res?.status ?? (e as any)?.status;

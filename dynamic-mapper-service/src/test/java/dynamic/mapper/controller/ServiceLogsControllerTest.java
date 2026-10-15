@@ -40,7 +40,7 @@ class ServiceLogsControllerTest {
         when(credentials.getTenant()).thenReturn("tenantA");
         when(contextService.getContext()).thenReturn(credentials);
         events = mock(ServiceLogReader.Events.class);
-        controller = new ServiceLogsController(contextService, events, 10, "owner");
+        controller = new ServiceLogsController(contextService, events, 10);
     }
 
     @AfterEach

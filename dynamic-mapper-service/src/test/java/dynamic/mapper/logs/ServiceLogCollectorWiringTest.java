@@ -8,29 +8,34 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 
-/** The feature is off unless explicitly enabled, and on when it is. */
+/** The feature is off unless explicitly enabled, and complete when it is. */
 class ServiceLogCollectorWiringTest {
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
-            .withBean(ServiceLogSource.class, () -> mock(ServiceLogSource.class))
             .withBean(ServiceLogSink.class, () -> mock(ServiceLogSink.class))
             .withBean(MicroserviceSubscriptionsService.class, () -> mock(MicroserviceSubscriptionsService.class))
-            .withUserConfiguration(ServiceLogCollectorJob.class);
+            .withUserConfiguration(ServiceLogCollectorConfiguration.class, ServiceLogCapture.class, ServiceLogCollectorJob.class);
 
     @Test
     void isOffByDefault() {
-        runner.run(ctx -> assertEquals(0, ctx.getBeansOfType(ServiceLogCollectorJob.class).size()));
+        runner.run(ctx -> {
+            assertEquals(0, ctx.getBeansOfType(ServiceLogCollectorJob.class).size());
+            assertEquals(0, ctx.getBeansOfType(ServiceLogCapture.class).size());
+        });
     }
 
     @Test
     void isOffWhenExplicitlyDisabled() {
         runner.withPropertyValues("service.logs.collector.enabled=false")
-                .run(ctx -> assertEquals(0, ctx.getBeansOfType(ServiceLogCollectorJob.class).size()));
+                .run(ctx -> assertEquals(0, ctx.getBeansOfType(ServiceLogCapture.class).size()));
     }
 
     @Test
-    void isOnWhenEnabled() {
-        runner.withPropertyValues("service.logs.collector.enabled=true", "C8Y_BOOTSTRAP_TENANT=owner")
-                .run(ctx -> assertEquals(1, ctx.getBeansOfType(ServiceLogCollectorJob.class).size()));
+    void isCompleteWhenEnabledAndTheJobGetsTheCaptureAsItsBuffer() {
+        runner.withPropertyValues("service.logs.collector.enabled=true").run(ctx -> {
+            assertEquals(1, ctx.getBeansOfType(ServiceLogCollectorJob.class).size());
+            assertEquals(1, ctx.getBeansOfType(ServiceLogCapture.class).size());
+            assertEquals(1, ctx.getBeansOfType(ServiceLogPolicy.class).size());
+        });
     }
 }
