@@ -211,6 +211,9 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
      */
     @Override
     public ConnectionTestResult testConnection() {
+        // This client's own specification holds the real URL and the tenant's credentials; the configuration it was
+        // given may still carry the registry's generic defaults. Apply them as loadConfiguration() does.
+        connectorConfiguration.copyPredefinedValues(getConnectorSpecification());
         try (PulsarClient probe = newClientBuilder().build()) {
             probe.getPartitionsForTopic(String.format("persistent://%s/%s/%s", tenant,
                     connectorConfiguration.getProperties().getOrDefault("pulsarNamespace", PULSAR_NAMESPACE), PULSAR_TOWARDS_PLATFORM_TOPIC)).get(15, TimeUnit.SECONDS);

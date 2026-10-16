@@ -64,6 +64,13 @@ class ServiceLogCollectorTest {
         }
 
         @Override
+        public void restoreDropped(String tenant, int count) {
+            if (count > 0) {
+                dropped.merge(tenant, count, Integer::sum);
+            }
+        }
+
+        @Override
         public Map<String, Integer> takeDropped(Collection<String> tenants) {
             Map<String, Integer> out = new HashMap<>();
             for (String tenant : tenants) {
@@ -345,6 +352,32 @@ class ServiceLogCollectorTest {
         collector(Set.of("tenantA")).collect();
 
         assertEquals(7, sink.written.get("tenantA").get(0).omitted());
+    }
+
+    @Test
+    void theOverflowCountIsKeptWhenTheChunkThatWouldCarryItCouldNotBeStored() {
+        buffer.add(rec("tenantA", "WARN", 1, "after the gap"));
+        buffer.dropped.put("tenantA", 7);
+        sink.failing.add("tenantA");
+        ServiceLogCollector c = collector(Set.of("tenantA"));
+
+        c.collect();
+        assertEquals(7, buffer.dropped.get("tenantA"), "not lost with the failed write");
+
+        sink.failing.clear();
+        now = T0.plusSeconds(60);
+        c.collect();
+        assertEquals(7, sink.written.get("tenantA").get(0).omitted(), "reported once storing works again");
+        assertTrue(buffer.dropped.isEmpty());
+    }
+
+    @Test
+    void theOverflowCountWaitsForTheNextChunkWhenNothingIsBufferedToCarryIt() {
+        buffer.dropped.put("tenantA", 4);
+
+        collector(Set.of("tenantA")).collect();
+
+        assertEquals(4, buffer.dropped.get("tenantA"));
     }
 
     @Test

@@ -101,6 +101,11 @@ public class ServiceLogCapture implements ServiceLogBuffer {
     }
 
     @Override
+    public void restoreDropped(String tenant, int count) {
+        buffer.restoreDropped(tenant, count);
+    }
+
+    @Override
     public void restore(String tenant, List<ServiceLogRecord> records, int maxPerTenant) {
         buffer.restore(tenant, records, maxPerTenant);
     }
