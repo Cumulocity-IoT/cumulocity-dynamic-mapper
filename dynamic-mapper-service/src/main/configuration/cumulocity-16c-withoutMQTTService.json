@@ -73,7 +73,7 @@
   ],
   "agents": {
     "dynamic-mapper-jsonata-agent": "agents/jsonata_agent.json",
-    "dynamic-mapper-smartfunction-agent": "agents/smartfunction_agent.json"
+    "dynamic-mapper-smart-function-agent": "agents/smartfunction_agent.json"
   },
   "openApiSpec": "api-docs",
   "icon": {

@@ -321,14 +321,14 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
   private async checkAIAgentAvailability(): Promise<void> {
     try {
-      const settings = await this.aiAgentService.getAISettings();
+      const settings = await this.aiAgentService.getAISettings(true);
       this.aiCapabilitiesDisabled = settings.killSwitch;
       if (settings.killSwitch) {
         this.deployedAgentNames = new Set();
         this.aiAvailabilityCheckFailed = false;
         return;
       }
-      const agents = await this.aiAgentService.getAIAgents();
+      const agents = await this.aiAgentService.getAIAgents(true);
       this.deployedAgentNames = new Set(agents.map(agent => agent.name));
       this.aiAvailabilityCheckFailed = false;
     } catch (error) {

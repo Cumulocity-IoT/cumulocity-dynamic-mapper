@@ -344,11 +344,11 @@ export class MappingStepperService {
     }> {
         let agents: AgentTextDefinition[];
         try {
-            const settings = await this.aiAgentService.getAISettings();
+            const settings = await this.aiAgentService.getAISettings(true);
             if (settings.killSwitch) {
                 return { aiAgentDeployed: false, aiAgent: null, aiCapabilitiesDisabled: true };
             }
-            agents = await this.aiAgentService.getAIAgents();
+            agents = await this.aiAgentService.getAIAgents(true);
         } catch (error) {
             // A failed availability check must not block the rest of the editor bootstrap —
             // fall back to "no agent deployed" and let the transformation step's own

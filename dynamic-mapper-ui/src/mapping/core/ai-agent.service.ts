@@ -154,15 +154,19 @@ export class AiAgentService {
    * NOT swallowed here and propagates to the caller, so it can be distinguished from "AI is
    * genuinely not configured" (see `MappingTypeDrawerComponent.checkAIAgentAvailability`).
    */
-  async getAIAgents(): Promise<AgentTextDefinition[]> {
-    const settings = await this.getAISettings();
+  async getAIAgents(forceRefresh = false): Promise<AgentTextDefinition[]> {
+    const settings = await this.getAISettings(forceRefresh);
     if (settings.killSwitch) {
       this.agentsCache = null;
       return [];
     }
 
     const now = Date.now();
-    if (this.agentsCache && now - this.agentsCache.timestamp < AiAgentService.AGENTS_CACHE_TTL_MS) {
+    if (
+      !forceRefresh &&
+      this.agentsCache &&
+      now - this.agentsCache.timestamp < AiAgentService.AGENTS_CACHE_TTL_MS
+    ) {
       return this.agentsCache.promise;
     }
     const promise = this.fetchAIAgents();
