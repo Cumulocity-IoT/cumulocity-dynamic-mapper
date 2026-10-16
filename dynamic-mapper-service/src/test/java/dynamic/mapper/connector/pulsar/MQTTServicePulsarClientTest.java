@@ -614,6 +614,73 @@ class MQTTServicePulsarClientTest {
                 TEST_TENANT));
     }
 
+    /** Lines the client logs, with the MDC they were logged with. */
+    private ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> captureClientLog() {
+        ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
+                .getLogger(MQTTServicePulsarClient.class);
+        ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> appender = new ch.qos.logback.core.read.ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        return appender;
+    }
+
+    private void stopCapturing(ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> appender) {
+        ((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(MQTTServicePulsarClient.class))
+                .detachAppender(appender);
+    }
+
+    @Test
+    void failoverConsumerChangesAreLoggedInsideTheTenantsLogContext() throws Exception {
+        mqttServicePulsarClient = new MQTTServicePulsarClient(serviceRegistry, connectorRegistry,
+                connectorConfiguration, dispatcher, TEST_SUBSCRIPTION_ID, TEST_TENANT);
+        injectTopicNames(mqttServicePulsarClient);
+        ConsumerEventListener listener = invokePrivateMethod(mqttServicePulsarClient, "platformConsumerEvents",
+                new Class<?>[] {});
+        var appender = captureClientLog();
+        try {
+            // called from a thread that has no tenant, as Pulsar's are
+            listener.becameActive(platformConsumer, 0);
+            listener.becameInactive(platformConsumer, 0);
+
+            assertEquals(2, appender.list.size());
+            for (var event : appender.list) {
+                assertEquals(TEST_TENANT, dynamic.mapper.util.TenantLogContext.tenantOf(event.getMDCPropertyMap()),
+                        "attributed to the tenant, so it reaches the tenant's service log");
+            }
+            assertTrue(appender.list.get(0).getFormattedMessage().contains("now the active consumer"));
+            assertTrue(appender.list.get(1).getFormattedMessage().contains("another instance took over"));
+            assertEquals(null, org.slf4j.MDC.get(dynamic.mapper.util.TenantLogContext.KEY),
+                    "the context is left again");
+        } finally {
+            stopCapturing(appender);
+        }
+    }
+
+    @Test
+    void aRestoredPlatformConsumerConnectionIsReportedOnceWhenHousekeepingSeesIt() throws Exception {
+        mqttServicePulsarClient = new MQTTServicePulsarClient(serviceRegistry, connectorRegistry,
+                connectorConfiguration, dispatcher, TEST_SUBSCRIPTION_ID, TEST_TENANT);
+        injectConsumerAndProducer(mqttServicePulsarClient, platformConsumer, deviceProducer);
+        Field lost = MQTTServicePulsarClient.class.getDeclaredField("platformConsumerLost");
+        lost.setAccessible(true);
+        lost.set(mqttServicePulsarClient, true);
+        when(platformConsumer.isConnected()).thenReturn(true);
+        when(deviceProducer.isConnected()).thenReturn(true);
+        var appender = captureClientLog();
+        try {
+            for (int i = 0; i < 2; i++) {
+                invokePrivateMethod(mqttServicePulsarClient, "connectorSpecificHousekeeping",
+                        new Class<?>[] { String.class }, TEST_TENANT);
+            }
+
+            long restored = appender.list.stream()
+                    .filter(e -> e.getFormattedMessage().contains("connection restored")).count();
+            assertEquals(1, restored);
+        } finally {
+            stopCapturing(appender);
+        }
+    }
+
     @Test
     void testGetSubscriptionName() throws Exception {
         String result = invokePrivateStaticMethod(

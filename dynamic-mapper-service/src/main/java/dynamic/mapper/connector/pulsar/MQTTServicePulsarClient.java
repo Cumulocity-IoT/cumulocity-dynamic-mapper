@@ -37,6 +37,7 @@ import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 import dynamic.mapper.connector.mqtt.SparkplugCertificateManager;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.util.TenantLogContext;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.lang3.StringUtils;
@@ -76,6 +77,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
     // Cumulocity-specific consumer and producer
     private Consumer<byte[]> platformConsumer;
+    /** Set when housekeeping saw the platform consumer disconnected; cleared (and logged) when it is connected again. */
+    private volatile boolean platformConsumerLost;
     private Producer<byte[]> deviceProducer;
     // Guards all check-then-recreate sequences on platformConsumer/deviceProducer: without it,
     // concurrent callers (e.g. two publishMEAO() calls racing to recreate a disconnected
@@ -420,6 +423,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                                 .multiplier(2)
                                 .build())
                         .messageListener(mqttServiceCallback)
+                        .consumerEventListener(platformConsumerEvents())
                         .subscribe();
 
                 log.info("{} - Subscribed to platform topic: [{}], subscription: [{}]",
@@ -437,6 +441,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                         .subscriptionName(subscriptionName)
                         .autoUpdatePartitions(false)
                         .messageListener(mqttServiceCallback)
+                        .consumerEventListener(platformConsumerEvents())
                         .subscriptionType(SubscriptionType.Failover)
                         .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
                                 .minDelayMs(negativeAckRedeliveryDelay)
@@ -460,6 +465,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                         .topic(towardsPlatformTopic)
                         .subscriptionName(subscriptionName)
                         .messageListener(mqttServiceCallback)
+                        .consumerEventListener(platformConsumerEvents())
                         .subscriptionType(SubscriptionType.Failover)
                         .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
                                 .minDelayMs(negativeAckRedeliveryDelay)
@@ -480,6 +486,29 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         } finally {
             pulsarChannelLock.unlock();
         }
+    }
+
+    /**
+     * Reports which instance of the failover subscription is the active consumer. Pulsar calls it on its own threads,
+     * which carry no tenant, so the lines are logged inside the tenant's log context: that is what puts them into the
+     * tenant's service log (the client library's own lines on those threads are unattributed and never reach a tenant).
+     */
+    private ConsumerEventListener platformConsumerEvents() {
+        return new ConsumerEventListener() {
+            @Override
+            public void becameActive(Consumer<?> consumer, int partitionId) {
+                TenantLogContext.run(tenant, () -> log.info(
+                        "{} - MQTT Service consumer is now the active consumer of [{}] (partition {}), connector: {}",
+                        tenant, towardsPlatformTopic, partitionId, connectorName));
+            }
+
+            @Override
+            public void becameInactive(Consumer<?> consumer, int partitionId) {
+                TenantLogContext.run(tenant, () -> log.info(
+                        "{} - MQTT Service consumer is no longer the active consumer of [{}] (partition {}): another instance took over, connector: {}",
+                        tenant, towardsPlatformTopic, partitionId, connectorName));
+            }
+        };
     }
 
     /**
@@ -773,11 +802,19 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         // lazy-recreate path — without this, a dropped subscription (e.g. broker-side fencing)
         // would otherwise silently stop all inbound device->platform traffic forever, since
         // nothing else ever calls subscribeToTowardsPlatformTopic() again outside of connect().
+        // Pulsar reconnects a dropped connection by itself and reports it only in its own (unattributed) log lines, so
+        // the tenant is told here, on the transition.
+        if (platformConsumer != null && platformConsumer.isConnected() && platformConsumerLost) {
+            platformConsumerLost = false;
+            log.info("{} - Platform consumer connection restored, connector: {}", tenant, connectorName);
+        }
         if (platformConsumer != null && !platformConsumer.isConnected()
                 && pulsarClient != null && !pulsarClient.isClosed() && shouldConnect()) {
+            platformConsumerLost = true;
             log.warn("{} - Platform consumer disconnected, attempting to resubscribe", tenant);
             try {
                 subscribeToTowardsPlatformTopic();
+                platformConsumerLost = false;
                 log.info("{} - Platform consumer resubscribed successfully", tenant);
             } catch (Exception e) {
                 log.error("{} - Failed to resubscribe platform consumer, will retry next housekeeping cycle: {}",
@@ -902,6 +939,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         try {
             platformConsumer = null;
             deviceProducer = null;
+            platformConsumerLost = false;
         } finally {
             pulsarChannelLock.unlock();
         }
