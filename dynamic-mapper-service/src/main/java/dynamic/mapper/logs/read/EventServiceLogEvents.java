@@ -20,6 +20,7 @@
 
 package dynamic.mapper.logs.read;
 
+import dynamic.mapper.logs.capture.ServiceLogCaptureAppender;
 import dynamic.mapper.logs.store.EventServiceLogSink;
 import dynamic.mapper.logs.store.ServiceLogSourceLocator;
 
@@ -62,6 +63,14 @@ public class EventServiceLogEvents implements ServiceLogReader.Events {
     @Override
     public ServiceLogReader.Batch list(String tenant, Instant from, Instant to, boolean oldestFirst,
             int page, int pageSize) {
+        // Reading the log is not itself log content: the SDK lines it produces must not be captured and stored.
+        try (ServiceLogCaptureAppender.Suppression ignored = ServiceLogCaptureAppender.suppressOnThisThread()) {
+            return read(tenant, from, to, oldestFirst, page, pageSize);
+        }
+    }
+
+    private ServiceLogReader.Batch read(String tenant, Instant from, Instant to, boolean oldestFirst, int page,
+            int pageSize) {
         AtomicReference<ServiceLogReader.Batch> result = new AtomicReference<>(ServiceLogReader.Batch.of(List.of()));
         AtomicReference<RuntimeException> failure = new AtomicReference<>();
         subscriptionsService.runForTenant(tenant, () -> {

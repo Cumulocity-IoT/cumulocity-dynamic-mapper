@@ -109,16 +109,27 @@ public class ServiceLogSourceLocator {
         try {
             identityApi.create(external);
         } catch (SDKException e) {
-            // Another instance of the service created the source at the same moment and registered its external id first
-            // (the id is unique, so exactly one wins). Use the winner and remove the object we just made, or it would stay
-            // behind as an orphan in the tenant's inventory.
+            // The registration failed: either another instance created the source at the same moment and registered its
+            // external id first (the id is unique, so exactly one wins), or the platform failed (5xx, unreachable). Ask
+            // who owns the id now. Whatever the answer, the object we just made must not stay behind as an orphan in the
+            // tenant's inventory, unless it turns out to be the registered one (the platform may have stored the
+            // registration although the answer was lost).
             cache.remove(tenant);
-            Optional<GId> winner = find(tenant);
-            if (winner.isPresent() && !winner.get().equals(source.getId())) {
-                discard(tenant, source);
-                return winner.get();
+            Optional<GId> registered = Optional.empty();
+            try {
+                registered = find(tenant);
+            } catch (RuntimeException lookupFailure) {
+                e.addSuppressed(lookupFailure); // the platform is still failing: clean up as far as possible
             }
-            throw e;
+            if (registered.isPresent() && registered.get().equals(source.getId())) {
+                cache.put(tenant, source.getId()); // ours after all: carry on as if the call had succeeded
+            } else {
+                discard(tenant, source);
+                if (registered.isPresent()) {
+                    return registered.get();
+                }
+                throw e;
+            }
         }
         link(tenant, source);
         log.info("{} - Created the service log source {}", tenant, source.getId().getValue());

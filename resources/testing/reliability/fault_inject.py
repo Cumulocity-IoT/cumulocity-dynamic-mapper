@@ -7,12 +7,18 @@ from mitmproxy import command, ctx, http
 # Deliberately left as a placeholder here: this file is checked into the repo, unlike the gitignored
 # application-dev.properties, so no real tenant hostname belongs in the committed default.
 REAL_HOST = os.environ.get("REAL_HOST", "<your-tenant>.cumulocity.com")
+# The default fault: the inventory (mapping reload after an MQTT reconnect).
 FAULT_PATH_PREFIX = "/inventory/managedObjects"
+# The service log's calls (dynamic.mapper.logs.store): events written by EventServiceLogSink, and the external-id
+# lookup/registration of ServiceLogSourceLocator. Switched on separately, because faulting /event/events also hits the
+# mapper's own events.
+SERVICE_LOG_PATH_PREFIXES = ("/event/events", "/identity/externalIds")
 
 
 class FaultInjector:
     def __init__(self):
         self.enabled = False
+        self.service_log = False
 
     # Activate from the mitmproxy TUI: press ":" to open the command bar, type
     # "fault.toggle" (or "fault.on" / "fault.off" for an explicit state) and hit Enter.
@@ -32,6 +38,18 @@ class FaultInjector:
         self.enabled = False
         ctx.log.alert("fault injection DISABLED")
 
+    # "fault.logs.on" / "fault.logs.off": fail the service log's event and identity calls. Independent of "fault.on";
+    # use both to also fail the inventory call that creates the log's source object.
+    @command.command("fault.logs.on")
+    def logs_on(self) -> None:
+        self.service_log = True
+        ctx.log.alert("service log fault injection ENABLED")
+
+    @command.command("fault.logs.off")
+    def logs_off(self) -> None:
+        self.service_log = False
+        ctx.log.alert("service log fault injection DISABLED")
+
     def request(self, flow: http.HTTPFlow):
         # Reverse-proxy mode forwards whatever Host header the client sent
         # (localhost:8888); Cumulocity routes tenants by subdomain, so the
@@ -40,7 +58,13 @@ class FaultInjector:
         flow.request.host_header = REAL_HOST
 
     def response(self, flow: http.HTTPFlow):
-        if self.enabled and flow.request.path.startswith(FAULT_PATH_PREFIX):
+        path = flow.request.path
+        faulted = (self.enabled and path.startswith(FAULT_PATH_PREFIX)) or (
+            self.service_log and path.startswith(SERVICE_LOG_PATH_PREFIXES)
+        )
+        if faulted:
+            # Applied after the platform handled the request, as in a real gateway failure: a POST can have taken
+            # effect although the client sees a 502.
             flow.response = http.Response.make(
                 502, b"Bad Gateway", {"Content-Type": "text/plain"}
             )

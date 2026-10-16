@@ -56,8 +56,23 @@ public class ServiceLogCaptureAppender extends AppenderBase<ILoggingEvent> {
      */
     private static final ThreadLocal<Boolean> SUPPRESSED = new ThreadLocal<>();
 
-    /** Suppresses capture on the calling thread until the returned handle is closed. */
-    public static AutoCloseable suppressOnThisThread() {
+    /** Handle of {@link #suppressOnThisThread()}; closing it does not throw, so it needs no try/catch. */
+    public interface Suppression extends AutoCloseable {
+        @Override
+        void close();
+    }
+
+    /** Whether capture is currently suppressed on the calling thread. */
+    public static boolean isSuppressedOnThisThread() {
+        return SUPPRESSED.get() != null;
+    }
+
+    /**
+     * Suppresses capture on the calling thread until the returned handle is closed. Everything that stores, reads or
+     * deletes the collected log must run inside it: the SDK and HTTP client log while they do, and those lines would
+     * otherwise be captured and stored in turn.
+     */
+    public static Suppression suppressOnThisThread() {
         Boolean previous = SUPPRESSED.get();
         SUPPRESSED.set(Boolean.TRUE);
         return () -> {

@@ -6,8 +6,7 @@ import { StatusRendererComponent } from './status.renderer.component';
 /**
  * `StatusRendererComponent` renders the Version/Status cell of the mapping grid in a fixed order:
  * version, then draft, then debug. Only the version is interactive — when the column supplies a
- * `callback` it opens the version drawer; the state labels are status information and must never
- * be links.
+ * `callback` it opens the version drawer; the debug label always links to the Service logs page.
  *
  * As in version-badge.renderer.component.spec.ts, `CoreModule` is dropped via `overrideComponent`
  * because it reaches into the c8y app-shell DI graph (`ApplicationService`) that a bare TestBed
@@ -56,7 +55,7 @@ describe('StatusRendererComponent', () => {
 
   it('renders the version as a plain badge when the column supplies no callback', () => {
     const el = render(ALL);
-    expect(el.querySelector('a')).toBeNull();
+    expect(el.querySelector('[data-cy="dm-mapping-status-link-row-1"]')).toBeNull();
     expect(el.textContent).toContain('v1.2.3');
     expect(el.textContent).toContain('debug');
     expect(el.textContent).toContain('draft');
@@ -95,22 +94,31 @@ describe('StatusRendererComponent', () => {
     expect(callback).toHaveBeenCalledWith({ id: 'row-1' });
   });
 
-  it('tells the user where to find debug output, on hover', () => {
-    const el = render(ALL, () => undefined);
-    const tip = el.querySelector('[data-cy="dm-mapping-status-debug-row-1"]')!.getAttribute('title')!;
-    expect(tip).toContain('microservice log');
-    expect(tip).toContain('dynamic-mapper-service');
+  it('renders debug as a link to the Service logs, with or without a callback', () => {
+    for (const callback of [undefined, () => undefined]) {
+      TestBed.resetTestingModule();
+      TestBed.overrideComponent(StatusRendererComponent, {
+        set: { imports: [], schemas: [NO_ERRORS_SCHEMA] }
+      });
+      const debug = render(ALL, callback).querySelector('[data-cy="dm-mapping-status-debug-row-1"]')!;
+      expect(debug.tagName).toBe('A');
+      expect(debug.getAttribute('title')).toContain('Service logs');
+    }
+  });
+
+  it('points the debug link at the monitoring logs route', () => {
+    TestBed.configureTestingModule({
+      imports: [StatusRendererComponent],
+      providers: [{ provide: CellRendererContext, useValue: { value: ALL, item: { id: 'row-1' }, property: {} } }]
+    });
+    const fixture = TestBed.createComponent(StatusRendererComponent);
+    expect(fixture.componentInstance.serviceLogsRoute).toBe('/c8y-pkg-dynamic-mapper/node2/monitoring/logs');
   });
 
   it('says what the version link actually does, on hover', () => {
     const el = render(ALL, () => undefined);
     const tip = el.querySelector('[data-cy="dm-mapping-status-link-row-1"]')!.getAttribute('title')!;
     expect(tip).toContain('version history');
-  });
-
-  it('never makes debug a link — it is status, not an action', () => {
-    const el = render(ALL, () => undefined);
-    expect(el.querySelector('[data-cy="dm-mapping-status-debug-row-1"]')!.tagName).toBe('SPAN');
   });
 
   it('renders draft as a plain badge when there is no callback', () => {

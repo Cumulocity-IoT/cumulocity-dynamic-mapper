@@ -147,6 +147,57 @@ class ServiceLogSourceLocatorTest {
         org.mockito.Mockito.doThrow(new SDKException(500, "boom")).when(identityApi).create(any(ExternalIDRepresentation.class));
 
         assertThrows(SDKException.class, () -> locator.getOrCreate("tenantA"));
+        verify(inventoryApi).delete(new GId("OURS"));
+    }
+
+    @Test
+    void whenThePlatformStaysDownAfterTheObjectWasCreatedTheObjectIsStillRemovedAndTheErrorIsReported() {
+        // find: 404, then the platform fails for the registration and for the lookup that follows it
+        when(identityApi.getExternalId(any(ID.class))).thenThrow(new SDKException(404, "not found"))
+                .thenThrow(new SDKException(502, "Bad Gateway"));
+        ManagedObjectRepresentation ours = new ManagedObjectRepresentation();
+        ours.setId(new GId("OURS"));
+        when(inventoryApi.create(any())).thenReturn(ours);
+        org.mockito.Mockito.doThrow(new SDKException(502, "Bad Gateway")).when(identityApi)
+                .create(any(ExternalIDRepresentation.class));
+
+        SDKException failure = assertThrows(SDKException.class, () -> locator.getOrCreate("tenantA"));
+
+        assertEquals(502, failure.getHttpStatus());
+        assertEquals(1, failure.getSuppressed().length, "the failed lookup is kept as a suppressed cause");
+        verify(inventoryApi).delete(new GId("OURS"));
+    }
+
+    @Test
+    void aFailedCleanupDoesNotReplaceTheOriginalError() {
+        when(identityApi.getExternalId(any(ID.class))).thenThrow(new SDKException(404, "not found"))
+                .thenThrow(new SDKException(502, "Bad Gateway"));
+        ManagedObjectRepresentation ours = new ManagedObjectRepresentation();
+        ours.setId(new GId("OURS"));
+        when(inventoryApi.create(any())).thenReturn(ours);
+        org.mockito.Mockito.doThrow(new SDKException(502, "Bad Gateway")).when(identityApi)
+                .create(any(ExternalIDRepresentation.class));
+        org.mockito.Mockito.doThrow(new SDKException(502, "Bad Gateway")).when(inventoryApi).delete(any(GId.class));
+
+        SDKException failure = assertThrows(SDKException.class, () -> locator.getOrCreate("tenantA"));
+
+        assertEquals(502, failure.getHttpStatus());
+    }
+
+    @Test
+    void aRegistrationThatTheAnswerWasLostForIsKeptNotDeleted() {
+        // the platform stored the external id but the response was lost: the lookup now returns our own object
+        when(identityApi.getExternalId(any(ID.class))).thenThrow(new SDKException(404, "not found"))
+                .thenReturn(externalIdOf("OURS"));
+        ManagedObjectRepresentation ours = new ManagedObjectRepresentation();
+        ours.setId(new GId("OURS"));
+        when(inventoryApi.create(any())).thenReturn(ours);
+        org.mockito.Mockito.doThrow(new SDKException(502, "Bad Gateway")).when(identityApi)
+                .create(any(ExternalIDRepresentation.class));
+
+        assertEquals("OURS", locator.getOrCreate("tenantA").getValue());
+
+        verify(inventoryApi, never()).delete(any(GId.class));
     }
 
     @Test

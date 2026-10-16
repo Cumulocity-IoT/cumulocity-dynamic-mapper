@@ -34,6 +34,7 @@ class ServiceLogRetentionTest {
     static class RecordingSink implements ServiceLogSink {
         final Map<String, Instant> purged = new LinkedHashMap<>();
         final Set<String> failing = new java.util.HashSet<>();
+        boolean suppressedWhilePurging;
 
         @Override
         public void write(String tenant, String instance, ServiceLogChunk chunk) {
@@ -42,6 +43,7 @@ class ServiceLogRetentionTest {
 
         @Override
         public void purge(String tenant, Instant before) {
+            suppressedWhilePurging = dynamic.mapper.logs.capture.ServiceLogCaptureAppender.isSuppressedOnThisThread();
             if (failing.contains(tenant)) {
                 throw new IllegalStateException("event API down");
             }
@@ -139,5 +141,16 @@ class ServiceLogRetentionTest {
 
         assertTrue(failed.isEmpty());
         assertTrue(sink.purged.isEmpty());
+    }
+
+    @Test
+    void whatTheSdkLogsWhileDeletingIsNotCapturedInTurn() {
+        RecordingSink sink = new RecordingSink();
+
+        retention(sink, Set.of("tenantA"), new TestSettings(), CLOCK).run();
+
+        assertTrue(sink.suppressedWhilePurging);
+        assertTrue(!dynamic.mapper.logs.capture.ServiceLogCaptureAppender.isSuppressedOnThisThread(),
+                "capture is on again once the pass is over");
     }
 }

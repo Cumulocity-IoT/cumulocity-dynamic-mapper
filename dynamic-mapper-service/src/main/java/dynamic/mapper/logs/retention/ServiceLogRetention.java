@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import dynamic.mapper.logs.capture.ServiceLogCaptureAppender;
 import dynamic.mapper.configuration.ServiceLogsConfiguration.Settings;
 import lombok.extern.slf4j.Slf4j;
 
@@ -64,6 +65,13 @@ public class ServiceLogRetention {
 
     /** One pass. Never throws; returns the tenants whose purge failed (empty when everything worked). */
     public synchronized List<String> run() {
+        // The SDK and HTTP client log while deleting; those lines must not be captured and stored in turn.
+        try (ServiceLogCaptureAppender.Suppression ignored = ServiceLogCaptureAppender.suppressOnThisThread()) {
+            return purgeAll();
+        }
+    }
+
+    private List<String> purgeAll() {
         List<String> failed = new ArrayList<>();
         List<String> reasons = new ArrayList<>();
         try {
