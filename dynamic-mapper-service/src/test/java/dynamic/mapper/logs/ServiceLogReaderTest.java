@@ -46,7 +46,7 @@ class ServiceLogReaderTest {
 
     @Test
     void noCollectedLogAtAllIsReportedAsEmptyNotAsAnEmptyPage() {
-        Page page = reader(new FakeEvents(), 10).read("t", null, null, null);
+        Page page = reader(new FakeEvents(), 10).read("t", null, null);
 
         assertTrue(page.empty());
         assertEquals("", page.logs());
@@ -59,7 +59,7 @@ class ServiceLogReaderTest {
             events.chunk("pod-1", i);
         }
 
-        Page page = reader(events, 10).read("t", null, null, null);
+        Page page = reader(events, 10).read("t", null, null);
 
         assertEquals(10, page.chunks());
         assertTrue(page.more());
@@ -76,10 +76,10 @@ class ServiceLogReaderTest {
         ServiceLogReader reader = reader(events, 10);
 
         List<String> seenNewestPageFirst = new ArrayList<>();
-        Page page = reader.read("t", null, null, null);
+        Page page = reader.read("t", null, null);
         seenNewestPageFirst.add(page.logs());
         while (page.more()) {
-            page = reader.read("t", page.instance(), null, page.dateFrom());
+            page = reader.read("t", null, page.dateFrom());
             seenNewestPageFirst.add(page.logs());
         }
 
@@ -101,10 +101,10 @@ class ServiceLogReaderTest {
         ServiceLogReader reader = reader(events, 10);
 
         List<String> pages = new ArrayList<>();
-        Page page = reader.read("t", "pod-1", Instant.parse("1970-01-01T00:00:00Z"), null);
+        Page page = reader.read("t", Instant.parse("1970-01-01T00:00:00Z"), null);
         pages.add(page.logs());
         while (page.more()) {
-            page = reader.read("t", "pod-1", page.dateTo(), null);
+            page = reader.read("t", page.dateTo(), null);
             pages.add(page.logs());
         }
 
@@ -115,23 +115,61 @@ class ServiceLogReaderTest {
     }
 
     @Test
-    void instancesAreNeverMixedAndTheNewestOneIsTheDefault() {
-        FakeEvents events = new FakeEvents().chunk("pod-old", 0).chunk("pod-old", 1).chunk("pod-new", 2).chunk("pod-new", 3);
+    void theChunksOfAllInstancesAreReturnedTogetherInTimeOrder() {
+        FakeEvents events = new FakeEvents().chunk("pod-old", 0).chunk("pod-new", 1).chunk("pod-old", 2).chunk("pod-new", 3);
 
-        Page defaulted = reader(events, 10).read("t", null, null, null);
-        Page old = reader(events, 10).read("t", "pod-old", null, null);
+        Page page = reader(events, 10).read("t", null, null);
 
-        assertEquals("pod-new", defaulted.instance());
-        assertEquals(List.of("pod-new", "pod-old"), defaulted.instances());
-        assertFalse(defaulted.logs().contains("pod-old"));
-        assertEquals("pod-old#0\npod-old#1", old.logs());
+        assertEquals("pod-old#0\npod-new#1\npod-old#2\npod-new#3", page.logs());
+    }
+
+    @Test
+    void aQuietInstanceIsNotHiddenBehindManyNewerChunksOfAnother() {
+        FakeEvents events = new FakeEvents();
+        for (int i = 0; i < 5; i++) {
+            events.chunk("pod-quiet", i);
+        }
+        for (int i = 5; i < 205; i++) {
+            events.chunk("pod-busy", i);
+        }
+
+        Page first = reader(events, 10).read("t", Instant.parse("1970-01-01T00:00:00Z"), null);
+
+        assertEquals(10, first.chunks(), "the first page is not consumed by filtering");
+        assertTrue(first.logs().startsWith("pod-quiet#0\n"));
+    }
+
+    @Test
+    void chunksThatEndAtTheSameInstantAreNeverSplitAcrossPages() {
+        FakeEvents events = new FakeEvents();
+        for (int i = 0; i < 9; i++) {
+            events.chunk("pod-1", i);
+        }
+        // the 10th and 11th chunk end at the same millisecond
+        events.all.add(new StoredChunk(T0.plusSeconds(18), T0.plusSeconds(19), "pod-1", 1, 0, "tie-a"));
+        events.all.add(new StoredChunk(T0.plusSeconds(18), T0.plusSeconds(19), "pod-2", 1, 0, "tie-b"));
+        events.chunk("pod-1", 11);
+        ServiceLogReader reader = reader(events, 10);
+
+        List<String> pages = new ArrayList<>();
+        Page page = reader.read("t", Instant.parse("1970-01-01T00:00:00Z"), null);
+        pages.add(page.logs());
+        while (page.more()) {
+            page = reader.read("t", page.dateTo(), null);
+            pages.add(page.logs());
+        }
+
+        String all = String.join("\n", pages);
+        assertTrue(all.contains("tie-a") && all.contains("tie-b"), all);
+        assertEquals(12, all.split("\n").length);
+        assertTrue(pages.get(0).contains("tie-a") && pages.get(0).contains("tie-b"), "the tie stays on one page");
     }
 
     @Test
     void aWindowBeyondTheLastChunkIsAnEmptyPageNotAnError() {
         FakeEvents events = new FakeEvents().chunk("pod-1", 0);
 
-        Page page = reader(events, 10).read("t", "pod-1", T0.plusSeconds(100), null);
+        Page page = reader(events, 10).read("t", T0.plusSeconds(100), null);
 
         assertFalse(page.empty());
         assertEquals(0, page.chunks());
@@ -144,72 +182,9 @@ class ServiceLogReaderTest {
         events.all.add(new StoredChunk(T0, T0.plusSeconds(1), "pod-1", 3, 7, "x"));
         events.all.add(new StoredChunk(T0.plusSeconds(2), T0.plusSeconds(3), "pod-1", 2, 4, "y"));
 
-        Page page = reader(events, 10).read("t", null, null, null);
+        Page page = reader(events, 10).read("t", null, null);
 
         assertEquals(11, page.omitted());
         assertEquals(5, page.lines());
-    }
-
-    @Test
-    void anInstanceWhoseChunksAreFarBackIsStillFoundAmongManyNewerChunksOfAnotherInstance() {
-        FakeEvents events = new FakeEvents();
-        for (int i = 0; i < 5; i++) {
-            events.chunk("pod-quiet", i); // old
-        }
-        for (int i = 5; i < 205; i++) {
-            events.chunk("pod-busy", i); // 200 newer chunks of the other pod
-        }
-
-        Page page = reader(events, 10).read("t", "pod-quiet", null, null);
-
-        assertEquals(5, page.chunks(), "found beyond the first 50 events");
-        assertTrue(page.instances().contains("pod-quiet"));
-    }
-
-    @Test
-    void aWalkThatHitsItsBoundSaysThereMayBeMoreInsteadOfEndingThePaging() {
-        FakeEvents events = new FakeEvents();
-        events.chunk("pod-quiet", 0);
-        for (int i = 1; i < 1 + ServiceLogReader.MAX_PAGES * ServiceLogReader.PAGE_SIZE + 10; i++) {
-            events.chunk("pod-busy", i);
-        }
-
-        Page page = reader(events, 10).read("t", "pod-quiet", null, null);
-
-        assertEquals(0, page.chunks());
-        assertTrue(page.more(), "not 'no more': the quiet pod's chunk was simply out of reach");
-    }
-
-    @Test
-    void discoveryReadsOneSmallPageAndNeverTheWholeLog() {
-        java.util.concurrent.atomic.AtomicInteger discoveryCalls = new java.util.concurrent.atomic.AtomicInteger();
-        FakeEvents events = new FakeEvents() {
-            @Override
-            public List<StoredChunk> list(String tenant, Instant from, Instant to, boolean oldestFirst, int page, int pageSize) {
-                if (from == null && to == null && pageSize == ServiceLogReader.DISCOVERY_SIZE) {
-                    discoveryCalls.incrementAndGet();
-                    assertEquals(1, page, "discovery must not page");
-                }
-                return super.list(tenant, from, to, oldestFirst, page, pageSize);
-            }
-        };
-        for (int i = 0; i < 300; i++) {
-            events.chunk("pod-1", i);
-        }
-
-        reader(events, 10).read("t", null, null, null);
-
-        assertEquals(1, discoveryCalls.get());
-    }
-
-    @Test
-    void aRequestedInstanceThatHasNoStoredLinesIsAnEmptyPageNotAnError() {
-        FakeEvents events = new FakeEvents().chunk("pod-1", 0);
-
-        Page page = reader(events, 10).read("t", "pod-gone", null, null);
-
-        assertEquals(0, page.chunks());
-        assertTrue(page.instances().contains("pod-gone"));
-        assertFalse(page.empty());
     }
 }

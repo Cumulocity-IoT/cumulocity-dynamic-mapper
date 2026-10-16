@@ -73,7 +73,7 @@ public class ServiceLogsController {
             No parameter: the latest chunks. `dateFrom` only: the chunks after it (next page; use 1970-01-01T00:00:00Z for the first). \
             `dateTo` only: the chunks before it (previous page). Requires `ROLE_DYNAMIC_MAPPER_ADMIN`.""")
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ServiceLogReader.Page> read(@RequestParam(required = false) String instance,
+    public ResponseEntity<ServiceLogReader.Page> read(
             @RequestParam(required = false) String dateFrom, @RequestParam(required = false) String dateTo) {
         if (!Utils.userHasMappingAdminRole()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -88,7 +88,7 @@ public class ServiceLogsController {
         } catch (DateTimeParseException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dates must be ISO-8601, e.g. 2026-10-15T12:00:00Z");
         }
-        return ResponseEntity.ok(reader.read(tenant, instance, from, to));
+        return ResponseEntity.ok(reader.read(tenant, from, to));
     }
 
     @Operation(summary = "Store the calling tenant's waiting log lines now", description = """

@@ -41,12 +41,12 @@ describe('CollectedServiceLogsService', () => {
     expect(calls[0]).toBe('service/dynamic-mapper-service/monitoring/service-logs');
   });
 
-  it('passes the instance and the bounds on as query parameters', async () => {
+  it('passes the bounds on as query parameters, and no instance', async () => {
     const { service, calls } = serviceAnswering(200, {});
 
     await service.load({ instance: 'pod-1', dateFrom: '2026-10-15T12:00:00.000Z' });
 
-    expect(calls[0]).toContain('instance=pod-1');
+    expect(calls[0]).not.toContain('instance=');
     expect(calls[0]).toContain('dateFrom=2026-10-15T12%3A00%3A00.000Z');
     expect(calls[0]).not.toContain('dateTo');
   });
@@ -57,8 +57,6 @@ describe('CollectedServiceLogsService', () => {
       dateTo: 'b',
       logs: 'line',
       more: true,
-      instance: 'pod-1',
-      instances: ['pod-1', 'pod-0'],
       empty: false,
       omitted: 3
     });
@@ -70,8 +68,8 @@ describe('CollectedServiceLogsService', () => {
       dateTo: 'b',
       logs: 'line',
       more: true,
-      instance: 'pod-1',
-      instances: ['pod-1', 'pod-0'],
+      instance: '',
+      instances: [],
       empty: false,
       omitted: 3
     });

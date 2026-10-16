@@ -49,7 +49,6 @@ export class CollectedServiceLogsService implements ServiceLogsSource {
 
   async load(request: LogRequest): Promise<LogWindow> {
     const query = new URLSearchParams();
-    if (request.instance) query.set('instance', request.instance);
     if (request.dateFrom) query.set('dateFrom', request.dateFrom);
     if (request.dateTo) query.set('dateTo', request.dateTo);
     const suffix = query.toString();
@@ -66,8 +65,8 @@ export class CollectedServiceLogsService implements ServiceLogsSource {
       dateTo: body.dateTo ?? null,
       logs: body.logs ?? '',
       more: !!body.more,
-      instance: body.instance ?? '',
-      instances: body.instances ?? [],
+      instance: '',
+      instances: [],
       empty: !!body.empty,
       omitted: body.omitted ?? 0
     };

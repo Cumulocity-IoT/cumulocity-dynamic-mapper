@@ -23,9 +23,7 @@ package dynamic.mapper.logs;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Reads a tenant's collected log back and assembles it into the same window-and-paging shape the platform's
@@ -53,14 +51,12 @@ public class ServiceLogReader {
      * @param more  whether more chunks exist beyond this page in the direction that was asked for
      * @param empty no collected log exists at all for this tenant (as opposed to an empty page)
      */
-    public record Page(List<String> instances, String instance, Instant dateFrom, Instant dateTo, int chunks,
-            int lines, int omitted, boolean more, boolean empty, String logs) {
+    public record Page(Instant dateFrom, Instant dateTo, int chunks, int lines, int omitted, boolean more, boolean empty,
+            String logs) {
     }
 
-    /** Newest events looked at to learn which instances have stored lines; only their names are kept. */
-    static final int DISCOVERY_SIZE = 20;
     static final int PAGE_SIZE = 50;
-    /** Most pages walked to find one instance's chunks: bounds the work and memory of a single request. */
+    /** Most pages walked for one request: bounds the work and memory of a single request. */
     static final int MAX_PAGES = 10;
 
     private final Events events;
@@ -71,33 +67,23 @@ public class ServiceLogReader {
         this.maxChunks = maxChunks;
     }
 
-    public Page read(String tenant, String instance, Instant dateFrom, Instant dateTo) {
-        // Which instances have stored lines, and which one is meant when none is named: the newest chunk's. One small page,
-        // and only the instance names are kept — the chunks themselves can be tens of kilobytes each.
-        Set<String> instances = new LinkedHashSet<>();
-        for (StoredChunk c : events.list(tenant, null, null, false, 1, DISCOVERY_SIZE)) {
-            if (c.instance() != null) {
-                instances.add(c.instance());
-            }
-        }
-        if (instances.isEmpty()) {
-            return new Page(List.of(), null, null, null, 0, 0, 0, false, true, "");
-        }
-        String chosen = instance != null && !instance.isBlank() ? instance : instances.iterator().next();
-        instances.add(chosen); // a requested instance stays selectable even if it was quiet recently
-
+    /**
+     * Chunks of all instances are returned together, ordered by their end time: the tenant sees its log, not the pods that
+     * happened to serve it, and nothing has to be filtered out after it was fetched.
+     */
+    public Page read(String tenant, Instant dateFrom, Instant dateTo) {
         boolean after = dateFrom != null && dateTo == null;
         boolean range = dateFrom != null && dateTo != null;
-        Scan scan = scan(tenant, dateFrom, dateTo, after || range, chosen, maxChunks + 1);
-        List<StoredChunk> found = scan.chunks();
+        Scan scan = scan(tenant, dateFrom, dateTo, after || range, maxChunks);
+        List<StoredChunk> page = new ArrayList<>(scan.chunks());
         // `more` is also true when the walk gave up because it hit its bound: ending the paging there would hide data.
-        boolean more = found.size() > maxChunks || scan.bounded();
-        List<StoredChunk> page = new ArrayList<>(found.subList(0, Math.min(found.size(), maxChunks)));
+        boolean more = scan.more() || scan.bounded();
         if (!(after || range)) {
             Collections.reverse(page); // fetched newest first; present oldest first
         }
         if (page.isEmpty()) {
-            return new Page(new ArrayList<>(instances), chosen, null, null, 0, 0, 0, more, false, "");
+            // Without a window the log itself is empty; with one, the window is merely past its end.
+            return new Page(null, null, 0, 0, 0, more, dateFrom == null && dateTo == null && !more, "");
         }
         StringBuilder logs = new StringBuilder();
         int lines = 0;
@@ -110,34 +96,40 @@ public class ServiceLogReader {
             lines += c.lines();
             omitted += c.omitted();
         }
-        return new Page(new ArrayList<>(instances), chosen, page.get(0).dateFrom(), page.get(page.size() - 1).dateTo(),
-                page.size(), lines, omitted, more, false, logs.toString());
-    }
-
-    /** @param bounded the walk stopped at {@link #MAX_PAGES} with more events still to look at */
-    private record Scan(List<StoredChunk> chunks, boolean bounded) {
+        return new Page(page.get(0).dateFrom(), page.get(page.size() - 1).dateTo(), page.size(), lines, omitted, more,
+                false, logs.toString());
     }
 
     /**
-     * Walks stored chunks (bounded) and returns those of {@code instance} that lie strictly inside {@code (from, to)}.
+     * @param more    a chunk beyond the page exists
+     * @param bounded the walk stopped at {@link #MAX_PAGES} with more events still to look at
      */
-    private Scan scan(String tenant, Instant from, Instant to, boolean oldestFirst, String instance, int limit) {
+    private record Scan(List<StoredChunk> chunks, boolean more, boolean bounded) {
+    }
+
+    /**
+     * Walks stored chunks (bounded) and returns those that lie strictly inside {@code (from, to)}, at least {@code limit}.
+     * The page is only closed between two different end times: a time is the paging cursor, so chunks that end at the same
+     * millisecond must all be on one page, or the next request (strictly after / before it) would skip the ones left over.
+     */
+    private Scan scan(String tenant, Instant from, Instant to, boolean oldestFirst, int limit) {
         List<StoredChunk> out = new ArrayList<>();
         for (int page = 1; page <= MAX_PAGES; page++) {
             List<StoredChunk> batch = events.list(tenant, from, to, oldestFirst, page, PAGE_SIZE);
             for (StoredChunk c : batch) {
                 boolean inside = (from == null || c.dateTo().isAfter(from)) && (to == null || c.dateTo().isBefore(to));
-                if (inside && instance.equals(c.instance())) {
-                    out.add(c);
-                    if (out.size() >= limit) {
-                        return new Scan(out, false);
-                    }
+                if (!inside) {
+                    continue;
                 }
+                if (out.size() >= limit && !c.dateTo().equals(out.get(out.size() - 1).dateTo())) {
+                    return new Scan(out, true, false);
+                }
+                out.add(c);
             }
             if (batch.size() < PAGE_SIZE) {
-                return new Scan(out, false); // ran out of events: the end is real
+                return new Scan(out, false, false); // ran out of events: the end is real
             }
         }
-        return new Scan(out, true);
+        return new Scan(out, false, true);
     }
 }

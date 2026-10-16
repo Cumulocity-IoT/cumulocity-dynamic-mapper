@@ -160,14 +160,15 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
   async download(): Promise<void> {
     try {
       const parts: string[] = [];
-      let request: LogRequest = { instance: this.selectedInstance, dateFrom: EPOCH };
+      const instance = this.selectedInstance; // fixed for the whole export: every page must come from the same instance
+      let request: LogRequest = { instance, dateFrom: EPOCH };
       let window: LogWindow;
       do {
         window = await this.source.load(request);
         parts.push(window.logs.endsWith('\n') ? window.logs : `${window.logs}\n`);
-        request = { instance: this.selectedInstance, dateFrom: window.dateTo };
+        request = { instance, dateFrom: window.dateTo };
       } while (window.more && window.dateTo);
-      saveAs(new Blob(parts, { type: 'text/plain' }), `${this.selectedInstance}.log`);
+      saveAs(new Blob(parts, { type: 'text/plain' }), `${instance || 'service-log'}.log`);
     } catch (e) {
       console.error(e);
       this.alertService.danger('Failed to download the log.');

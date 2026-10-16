@@ -63,7 +63,7 @@ class ServiceLogsControllerTest {
     void aUserWithoutTheAdminRoleCannotReadTheLogAndNothingIsQueried() {
         grant("ROLE_DYNAMIC_MAPPER_CREATE");
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> controller.read(null, null, null));
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> controller.read(null, null));
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         verify(events, never()).list(any(), any(), any(), anyBoolean(), anyInt(), anyInt());
@@ -74,7 +74,7 @@ class ServiceLogsControllerTest {
         grant("ROLE_DYNAMIC_MAPPER_ADMIN");
         when(events.list(any(), any(), any(), anyBoolean(), anyInt(), anyInt())).thenReturn(List.of());
 
-        var response = controller.read(null, null, null);
+        var response = controller.read(null, null);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(true, response.getBody().empty());
@@ -86,7 +86,7 @@ class ServiceLogsControllerTest {
         grant("ROLE_DYNAMIC_MAPPER_ADMIN");
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> controller.read(null, "yesterday", null));
+                () -> controller.read("yesterday", null));
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
     }
