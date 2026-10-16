@@ -42,4 +42,7 @@ public interface ServiceLogBuffer {
 
     /** Puts records back at the front after a failed store, so the next run retries them in order. */
     void restore(String tenant, List<ServiceLogRecord> records, int maxPerTenant);
+
+    /** Puts back a count that {@link #takeDropped} returned but that could not be delivered, so it is reported next time. */
+    void restoreDropped(String tenant, int count);
 }

@@ -28,12 +28,16 @@ const SERVICE_NAME = 'dynamic-mapper-service';
  * other tenant gets 403 (or cannot find the application), which is reported as {@link LogsUnavailableError}
  * so the page can fall back to the collected log.
  */
+/** How long the list of instances is trusted before it is looked up again. */
+const REDISCOVERY_MS = 60_000;
+
 @Injectable({ providedIn: 'root' })
 export class NativeServiceLogsService implements ServiceLogsSource {
   readonly kind: LogSourceKind = 'native';
 
   private appId: string;
   private instances: string[] = [];
+  private discoveredAt = 0;
 
   constructor(
     private applicationService: ApplicationService,
@@ -60,12 +64,39 @@ export class NativeServiceLogsService implements ServiceLogsSource {
       }
       this.appId = chosen.appId;
       this.instances = chosen.instances;
+      this.discoveredAt = Date.now();
     } catch (e) {
       throw e instanceof LogsUnavailableError ? e : new LogsUnavailableError(`Cannot look up the microservice: ${e}`);
     }
   }
 
   async load(request: LogRequest): Promise<LogWindow> {
+    // Instances come and go (restarts, rolling deployments): look again now and then, and when one has vanished.
+    if (Date.now() - this.discoveredAt > REDISCOVERY_MS) {
+      await this.rediscover();
+    }
+    try {
+      return await this.loadFrom(request);
+    } catch (e) {
+      if (e instanceof LogsUnavailableError && e.status === 404 && (await this.rediscover())) {
+        return this.loadFrom(request);
+      }
+      throw e;
+    }
+  }
+
+  /** Looks the instances up again; keeps the old list if the lookup fails. Returns whether it succeeded. */
+  private async rediscover(): Promise<boolean> {
+    try {
+      await this.init();
+      return true;
+    } catch {
+      this.discoveredAt = Date.now(); // do not retry on every refresh tick
+      return false;
+    }
+  }
+
+  private async loadFrom(request: LogRequest): Promise<LogWindow> {
     const instance = request.instance && this.instances.includes(request.instance) ? request.instance : this.instances[0];
     const params: Record<string, string> = {};
     if (request.dateFrom) params['dateFrom'] = request.dateFrom;

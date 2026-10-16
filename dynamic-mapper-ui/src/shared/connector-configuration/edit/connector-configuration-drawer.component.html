@@ -79,7 +79,7 @@
       </button>
       @if (supportsTest) {
       <button type="button" name="test" class="btn btn-default m-l-8" data-cy="dm-connector-test" (click)="onTest()"
-        [disabled]="testing || !dynamicForm.valid || !feature?.userHasMappingAdminRole" [class.btn-pending]="testing" translate>
+        [disabled]="testing || (dynamicForm.enabled && !dynamicForm.valid) || !feature?.userHasMappingAdminRole" [class.btn-pending]="testing" translate>
         Test connection
       </button>
       }

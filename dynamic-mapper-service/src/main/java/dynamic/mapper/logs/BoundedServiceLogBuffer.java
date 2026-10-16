@@ -124,6 +124,13 @@ public class BoundedServiceLogBuffer implements ServiceLogBuffer {
     }
 
     @Override
+    public synchronized void restoreDropped(String tenant, int count) {
+        if (count > 0) {
+            dropped.merge(tenant, count, Integer::sum);
+        }
+    }
+
+    @Override
     public synchronized Map<String, Integer> takeDropped(Collection<String> tenants) {
         Map<String, Integer> out = new HashMap<>();
         for (String tenant : tenants) {

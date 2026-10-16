@@ -191,6 +191,16 @@ public class PulsarConnectorClient extends AConnectorClient {
      */
     @Override
     public ConnectionTestResult testConnection() {
+        try {
+            // The probe is never initialize()d (that would change connector status), so the trust certificate that
+            // buildPulsarClient() installs for a self-signed broker has to be loaded here.
+            if (Boolean.TRUE.equals(connectorConfiguration.getProperties().get("useSelfSignedCertificate"))
+                    && cert == null) {
+                cert = loadCertificateFromConfiguration();
+            }
+        } catch (Exception e) {
+            return ConnectionTestResult.failed("The configured certificate could not be loaded: " + e.getMessage(), null);
+        }
         try (PulsarClient probe = buildPulsarClient()) {
             probe.getPartitionsForTopic("persistent://public/default/dm-connection-test").get(15, TimeUnit.SECONDS);
             return ConnectionTestResult.ok("Connected to Pulsar", null);

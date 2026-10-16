@@ -143,20 +143,24 @@ public class ServiceLogCollector {
                 Settings settings = entry.getValue();
                 lastRun.put(tenant, now);
                 List<ServiceLogRecord> records = drained.get(tenant);
+                int lost = dropped.getOrDefault(tenant, 0);
                 if (records == null) {
+                    buffer.restoreDropped(tenant, lost); // nothing to carry the count on yet
                     continue;
                 }
                 ServiceLogChunker.TenantChunks plan = ServiceLogChunker.chunkTenant(tenant, records,
                         ServiceLogPolicy.of(settings));
                 List<ServiceLogChunk> chunks = plan.chunks();
                 List<ServiceLogRecord> notStored = new ArrayList<>();
+                boolean lostReported = false;
                 for (int i = 0; i < chunks.size(); i++) {
                     ServiceLogChunk chunk = chunks.get(i);
-                    if (i == 0 && dropped.getOrDefault(tenant, 0) > 0) {
-                        chunk = chunk.withOmitted(dropped.get(tenant)); // tell the reader lines are missing before this
+                    if (i == 0 && lost > 0) {
+                        chunk = chunk.withOmitted(lost); // tell the reader lines are missing before this
                     }
                     try {
                         sink.write(tenant, instance, chunk);
+                        lostReported |= i == 0;
                         stored++;
                         written.add(tenant);
                     } catch (Exception e) {
@@ -168,6 +172,9 @@ public class ServiceLogCollector {
                         }
                         break; // keep this tenant's chunks in order
                     }
+                }
+                if (!lostReported) {
+                    buffer.restoreDropped(tenant, lost); // the chunk that would have carried it was not stored
                 }
                 notStored.addAll(plan.deferred());
                 if (!notStored.isEmpty()) {
