@@ -389,6 +389,7 @@ export const PATH_CONFIGURATION_CONNECTION_ENDPOINT = 'configuration/connector';
 export const PATH_CONFIGURATION_SERVICE_ENDPOINT = 'configuration/service';
 export const PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT = 'configuration/code';
 export const PATH_MAPPING_TREE_ENDPOINT = 'monitoring/tree';
+export const PATH_SERVICE_LOGS_ENDPOINT = 'monitoring/service-logs';
 export const PATH_MAPPING_ACTIVE_SUBSCRIPTIONS_ENDPOINT = 'monitoring/tree';
 export const PATH_STATUS_CONNECTORS_ENDPOINT = 'monitoring/status/connectors';
 export const PATH_FEATURE_ENDPOINT = 'configuration/feature';

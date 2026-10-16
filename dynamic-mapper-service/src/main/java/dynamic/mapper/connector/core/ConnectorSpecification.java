@@ -84,6 +84,9 @@ public class ConnectorSpecification implements Cloneable {
 	@JsonSetter(nulls = Nulls.SKIP)
 	public List<Qos> supportedQos;
 
+	@Schema(description = "True if the connector can verify connectivity/authentication of an (unsaved) configuration via the connector test endpoint.", example = "true")
+	public boolean supportsConnectionTest;
+
 	/**
 	 * Convenience constructor for connectors that do not declare a QoS capability themselves —
 	 * {@code supportedQos} is then stamped from the client instance
@@ -93,7 +96,7 @@ public class ConnectorSpecification implements Cloneable {
 			Map<String, ConnectorProperty> properties, boolean supportsMessageContext,
 			List<Direction> supportedDirections) {
 		this(name, description, connectorType, singleton, properties, supportsMessageContext, supportedDirections,
-				null);
+				null, false);
 	}
 
 	public boolean isPropertySensitive(String property) {

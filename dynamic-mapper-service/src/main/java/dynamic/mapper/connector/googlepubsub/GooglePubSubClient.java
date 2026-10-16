@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.googlepubsub;
 
+import dynamic.mapper.util.TenantLogContext;
 import com.google.api.core.ApiFuture;
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.auth.oauth2.GoogleCredentials;
@@ -332,72 +333,74 @@ public class GooglePubSubClient extends AConnectorClient {
      */
     void processPubSubMessage(PubsubMessage message, AckReplyConsumer consumer,
             String topic, Qos qos) {
-        byte[] payload = message.getData().toByteArray();
-        String messageId = message.getMessageId();
+        try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
+            byte[] payload = message.getData().toByteArray();
+            String messageId = message.getMessageId();
 
-        ConnectorMessage connectorMessage = ConnectorMessage.builder()
-                .tenant(tenant)
-                .topic(topic)
-                .sendPayload(true)
-                .connectorIdentifier(connectorIdentifier)
-                .payload(payload)
-                .build();
+            ConnectorMessage connectorMessage = ConnectorMessage.builder()
+                    .tenant(tenant)
+                    .topic(topic)
+                    .sendPayload(true)
+                    .connectorIdentifier(connectorIdentifier)
+                    .payload(payload)
+                    .build();
 
-        if (serviceConfiguration.getLogPayload()) {
-            log.info("{} - INITIAL: Pub/Sub message on topic: [{}], messageId: {}, connector: {}",
-                    tenant, topic, messageId, connectorName);
-        }
+            if (serviceConfiguration.getLogPayload()) {
+                log.info("{} - INITIAL: Pub/Sub message on topic: [{}], messageId: {}, connector: {}",
+                        tenant, topic, messageId, connectorName);
+            }
 
-        if (qos == Qos.AT_MOST_ONCE) {
-            // Ack immediately — at-most-once delivery
-            consumer.ack();
-            dispatcher.onMessage(connectorMessage);
-            return;
-        }
+            if (qos == Qos.AT_MOST_ONCE) {
+                // Ack immediately — at-most-once delivery
+                consumer.ack();
+                dispatcher.onMessage(connectorMessage);
+                return;
+            }
 
-        // At-least-once: ack only after successful processing
-        // Held in a holder so the timeout handler below can cancel the very pipeline that
-        // timed out (the local would not be in scope there).
-        java.util.concurrent.atomic.AtomicReference<ProcessingResultWrapper<?>> resultRef =
-                new java.util.concurrent.atomic.AtomicReference<>();
-        try {
-            ProcessingResultWrapper<?> result = dispatcher.onMessage(connectorMessage);
-            resultRef.set(result);
-            int timeout = result.getPipelineTimeoutMS();
+            // At-least-once: ack only after successful processing
+            // Held in a holder so the timeout handler below can cancel the very pipeline that
+            // timed out (the local would not be in scope there).
+            java.util.concurrent.atomic.AtomicReference<ProcessingResultWrapper<?>> resultRef =
+                    new java.util.concurrent.atomic.AtomicReference<>();
+            try {
+                ProcessingResultWrapper<?> result = dispatcher.onMessage(connectorMessage);
+                resultRef.set(result);
+                int timeout = result.getPipelineTimeoutMS();
 
-            // Always bounded: this runs on a Pub/Sub subscriber thread, so an unbounded get()
-            // would park that thread — and with it the subscription's delivery slot — for as
-            // long as the pipeline hangs.
-            long effectiveTimeout = timeout > 0 ? timeout : ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
-            List<? extends ProcessingContext<?>> contexts =
-                    result.getProcessingResult().get(effectiveTimeout, TimeUnit.MILLISECONDS);
+                // Always bounded: this runs on a Pub/Sub subscriber thread, so an unbounded get()
+                // would park that thread — and with it the subscription's delivery slot — for as
+                // long as the pipeline hangs.
+                long effectiveTimeout = timeout > 0 ? timeout : ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
+                List<? extends ProcessingContext<?>> contexts =
+                        result.getProcessingResult().get(effectiveTimeout, TimeUnit.MILLISECONDS);
 
-            boolean hasError = contexts != null && contexts.stream().anyMatch(ProcessingContext::hasError);
-            if (hasError) {
-                log.warn("{} - Processing error for Pub/Sub message: topic=[{}], messageId={} — nacking",
+                boolean hasError = contexts != null && contexts.stream().anyMatch(ProcessingContext::hasError);
+                if (hasError) {
+                    log.warn("{} - Processing error for Pub/Sub message: topic=[{}], messageId={} — nacking",
+                            tenant, topic, messageId);
+                    consumer.nack();
+                } else {
+                    consumer.ack();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("{} - Processing interrupted for Pub/Sub message: topic=[{}], messageId={} — nacking",
                         tenant, topic, messageId);
                 consumer.nack();
-            } else {
-                consumer.ack();
+            } catch (TimeoutException e) {
+                // Must cancel explicitly: falling through to the generic handler below would nack the
+                // message while leaving the pipeline — including any runaway GraalVM context — running.
+                ProcessingResultWrapper<?> timedOut = resultRef.get();
+                boolean drained = timedOut != null
+                        && timedOut.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
+                log.warn("{} - Processing timed out for Pub/Sub message: topic=[{}], messageId={}, "
+                        + "worker drained: {} — nacking", tenant, topic, messageId, drained);
+                consumer.nack();
+            } catch (Exception e) {
+                log.error("{} - Processing failed for Pub/Sub message: topic=[{}], messageId={} — nacking",
+                        tenant, topic, messageId, e);
+                consumer.nack();
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.warn("{} - Processing interrupted for Pub/Sub message: topic=[{}], messageId={} — nacking",
-                    tenant, topic, messageId);
-            consumer.nack();
-        } catch (TimeoutException e) {
-            // Must cancel explicitly: falling through to the generic handler below would nack the
-            // message while leaving the pipeline — including any runaway GraalVM context — running.
-            ProcessingResultWrapper<?> timedOut = resultRef.get();
-            boolean drained = timedOut != null
-                    && timedOut.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
-            log.warn("{} - Processing timed out for Pub/Sub message: topic=[{}], messageId={}, "
-                    + "worker drained: {} — nacking", tenant, topic, messageId, drained);
-            consumer.nack();
-        } catch (Exception e) {
-            log.error("{} - Processing failed for Pub/Sub message: topic=[{}], messageId={} — nacking",
-                    tenant, topic, messageId, e);
-            consumer.nack();
         }
     }
 

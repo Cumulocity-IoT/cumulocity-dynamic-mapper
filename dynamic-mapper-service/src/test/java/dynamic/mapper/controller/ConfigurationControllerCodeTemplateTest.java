@@ -55,6 +55,7 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
+import dynamic.mapper.core.ConnectorClientFactory;
 import dynamic.mapper.core.BootstrapService;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.mapping.MappingService;
@@ -94,6 +95,7 @@ class ConfigurationControllerCodeTemplateTest {
 
         controller = new ConfigurationController(
                 mock(ConnectorRegistry.class),
+                mock(ConnectorClientFactory.class),
                 mock(MappingService.class),
                 mock(ConnectorConfigurationService.class),
                 serviceConfigurationService,

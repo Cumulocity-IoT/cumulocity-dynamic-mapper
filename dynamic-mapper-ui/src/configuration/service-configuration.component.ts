@@ -31,7 +31,7 @@ import { BehaviorSubject, from, map, Subject, takeUntil } from 'rxjs';
 import packageJson from '../../package.json';
 import { AiAgentService } from '../mapping/core/ai-agent.service';
 import { Feature, Operation, SharedService } from '../shared';
-import { ServiceConfiguration } from '../shared/configuration/configuration.model';
+import { DEFAULT_SERVICE_LOGS, ServiceConfiguration } from '../shared/configuration/configuration.model';
 import { ImportServiceConfigurationComponent } from './import/import-service-configuration.component';
 
 @Component({
@@ -229,6 +229,18 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       suppressDeprecationWarning: [''],
       cacheAliasMaps: [''],
       externalIdBinding: [''],
+      serviceLogs: this.fb.group({
+        enabled: [DEFAULT_SERVICE_LOGS.enabled],
+        minLevel: [DEFAULT_SERVICE_LOGS.minLevel],
+        intervalMs: [DEFAULT_SERVICE_LOGS.intervalMs],
+        maxLinesPerRun: [DEFAULT_SERVICE_LOGS.maxLinesPerRun],
+        maxChunkBytes: [DEFAULT_SERVICE_LOGS.maxChunkBytes],
+        maxRecordBytes: [DEFAULT_SERVICE_LOGS.maxRecordBytes],
+        maxBufferedRecords: [DEFAULT_SERVICE_LOGS.maxBufferedRecords],
+        retentionHours: [DEFAULT_SERVICE_LOGS.retentionHours],
+        retentionEnabled: [DEFAULT_SERVICE_LOGS.retentionEnabled],
+        retentionIntervalMs: [DEFAULT_SERVICE_LOGS.retentionIntervalMs]
+      }),
     }, { validators: ServiceConfigurationComponent.pipelineTimeoutExceedsCpuBudget });
   }
 

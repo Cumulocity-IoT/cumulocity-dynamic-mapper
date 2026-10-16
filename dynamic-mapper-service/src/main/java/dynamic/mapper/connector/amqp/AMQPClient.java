@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.amqp;
 
+import dynamic.mapper.util.TenantLogContext;
 import com.rabbitmq.client.*;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorProperty;
@@ -458,13 +459,13 @@ public class AMQPClient extends AConnectorClient {
                 // lifecycleLock/connectDisconnectExecutionLock, so this background reconnect
                 // can't race a concurrent submitConnect()/submitDisconnect() triggered by a
                 // user operation or another health check.
-                virtualThreadPool.submit(() -> {
+                virtualThreadPool.submit(TenantLogContext.runnable(tenant, () -> {
                     try {
                         submitConnect();
                     } catch (Exception e) {
                         log.error("{} - Error during reconnection", tenant, e);
                     }
-                });
+                }));
             }
         }
     }

@@ -692,6 +692,180 @@
             </div>
           </c8y-li>
           }
+          <ng-container formGroupName="serviceLogs">
+            <c8y-li class="p-t-16">
+              <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">
+                Service logs
+                <small class="text-muted">The microservice log lines of this tenant that its administrators can read under
+                  Monitoring &gt; Service logs.</small>
+              </div>
+            </c8y-li>
+            <c8y-li>
+              <c8y-li-icon icon="logs"></c8y-li-icon>
+              <div class="d-flex a-i-center">
+                <div>
+                  <p>{{ 'Store service logs' | translate }}</p>
+                  <p>
+                    <small translate>Store this tenant's log lines as events so they can be read without access to the
+                      microservice. Stored as ordinary events, which can count against your storage.</small>
+                  </p>
+                </div>
+                <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                  <label class="c8y-switch c8y-switch--inline" title="{{ 'Store service logs' | translate }}">
+                    <input name="serviceLogsEnabled" type="checkbox" formControlName="enabled" />
+                    <span></span>
+                  </label>
+                </div>
+              </div>
+            </c8y-li>
+            <c8y-li>
+              <c8y-li-icon icon="filter"></c8y-li-icon>
+              <div class="d-flex a-i-center">
+                <div>
+                  <p>{{ 'Lowest level stored' | translate }}</p>
+                  <p>
+                    <small translate>INFO stores the processing steps, including message payloads. WARN stores warnings and
+                      errors only.</small>
+                  </p>
+                </div>
+                <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                  <div class="c8y-select-wrapper">
+                    <select class="form-control" name="serviceLogsMinLevel" formControlName="minLevel"
+                      [attr.aria-label]="'Lowest level stored' | translate">
+                      <option value="ERROR">ERROR</option>
+                      <option value="WARN">WARN</option>
+                      <option value="INFO">INFO</option>
+                    </select>
+                    <span></span>
+                  </div>
+                </div>
+              </div>
+            </c8y-li>
+            <c8y-li>
+              <c8y-li-icon icon="history"></c8y-li-icon>
+              <div class="d-flex a-i-center">
+                <div>
+                  <p>{{ 'Keep stored lines for' | translate }}</p>
+                  <p>
+                    <small translate>Hours (1 to 720). Older lines are deleted.</small>
+                  </p>
+                </div>
+                <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                  <input class="form-control" name="serviceLogsRetentionHours" type="number" min="1" max="720"
+                    formControlName="retentionHours" />
+                </div>
+              </div>
+            </c8y-li>
+            @if (expertMode) {
+            <c8y-li>
+              <c8y-li-icon icon="clock"></c8y-li-icon>
+              <div class="d-flex a-i-center">
+                <div>
+                  <p>{{ 'Store every' | translate }}</p>
+                  <p>
+                    <small translate>Milliseconds (5000 to 3600000) between two runs that store the waiting lines.</small>
+                  </p>
+                </div>
+                <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                  <input class="form-control" name="serviceLogsIntervalMs" type="number" min="5000" max="3600000"
+                    formControlName="intervalMs" />
+                </div>
+              </div>
+            </c8y-li>
+            <c8y-li>
+              <c8y-li-icon icon="list-numbered"></c8y-li-icon>
+              <div class="d-flex a-i-center">
+                <div>
+                  <p>{{ 'Most lines per run' | translate }}</p>
+                  <p>
+                    <small translate>1 to 5000. Lines beyond this are stored in the next run.</small>
+                  </p>
+                </div>
+                <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                  <input class="form-control" name="serviceLogsMaxLinesPerRun" type="number" min="1" max="5000"
+                    formControlName="maxLinesPerRun" />
+                </div>
+              </div>
+            </c8y-li>
+            <c8y-li>
+              <c8y-li-icon icon="file-type-document"></c8y-li-icon>
+              <div class="d-flex a-i-center">
+                <div>
+                  <p>{{ 'Largest stored event' | translate }}</p>
+                  <p>
+                    <small translate>Bytes (1024 to 262144) of log text in one event.</small>
+                  </p>
+                </div>
+                <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                  <input class="form-control" name="serviceLogsMaxChunkBytes" type="number" min="1024" max="262144"
+                    formControlName="maxChunkBytes" />
+                </div>
+              </div>
+            </c8y-li>
+            <c8y-li>
+              <c8y-li-icon icon="scissors"></c8y-li-icon>
+              <div class="d-flex a-i-center">
+                <div>
+                  <p>{{ 'Longest single message' | translate }}</p>
+                  <p>
+                    <small translate>Bytes (256 to 65536). A longer message or stack trace is cut.</small>
+                  </p>
+                </div>
+                <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                  <input class="form-control" name="serviceLogsMaxRecordBytes" type="number" min="256" max="65536"
+                    formControlName="maxRecordBytes" />
+                </div>
+              </div>
+            </c8y-li>
+            <c8y-li>
+              <c8y-li-icon icon="database"></c8y-li-icon>
+              <div class="d-flex a-i-center">
+                <div>
+                  <p>{{ 'Lines kept in memory' | translate }}</p>
+                  <p>
+                    <small translate>100 to 10000, and at most 16 MB. When full, the oldest waiting lines are dropped.</small>
+                  </p>
+                </div>
+                <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                  <input class="form-control" name="serviceLogsMaxBufferedRecords" type="number" min="100" max="10000"
+                    formControlName="maxBufferedRecords" />
+                </div>
+              </div>
+            </c8y-li>
+            <c8y-li>
+              <c8y-li-icon icon="trash"></c8y-li-icon>
+              <div class="d-flex a-i-center">
+                <div>
+                  <p>{{ 'Delete old stored lines' | translate }}</p>
+                  <p>
+                    <small translate>Keep this on, or stored lines pile up. Runs even when storing is switched off.</small>
+                  </p>
+                </div>
+                <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                  <label class="c8y-switch c8y-switch--inline" title="{{ 'Delete old stored lines' | translate }}">
+                    <input name="serviceLogsRetentionEnabled" type="checkbox" formControlName="retentionEnabled" />
+                    <span></span>
+                  </label>
+                </div>
+              </div>
+            </c8y-li>
+            <c8y-li>
+              <c8y-li-icon icon="clock"></c8y-li-icon>
+              <div class="d-flex a-i-center">
+                <div>
+                  <p>{{ 'Delete old lines every' | translate }}</p>
+                  <p>
+                    <small translate>Milliseconds (60000 to 86400000) between two clean-ups.</small>
+                  </p>
+                </div>
+                <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                  <input class="form-control" name="serviceLogsRetentionIntervalMs" type="number" min="60000"
+                    max="86400000" formControlName="retentionIntervalMs" />
+                </div>
+              </div>
+            </c8y-li>
+            }
+          </ng-container>
           }
           @if (section == 'ai') {
           @if (aiCapabilitiesDisabled) {

@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.pulsar;
 
+import dynamic.mapper.util.TenantLogContext;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -59,103 +60,105 @@ public class PulsarCallback extends AbstractPulsarCallback {
     }
 
     void received(Consumer<byte[]> consumer, Message<byte[]> message, String topic) {
-        String client = message.getProducerName();
-        byte[] payloadBytes = message.getData();
-        String messageId = message.getMessageId().toString();
-        ConnectorMessage connectorMessage = ConnectorMessage.builder()
-                .tenant(tenant)
-                .topic(topic)
-                .clientId(client)
-                .sendPayload(true)
-                .connectorIdentifier(connectorIdentifier)
-                .payload(payloadBytes)
-                .key(message.hasKey() ? message.getKey() : null)
-                .build();
+        try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
+            String client = message.getProducerName();
+            byte[] payloadBytes = message.getData();
+            String messageId = message.getMessageId().toString();
+            ConnectorMessage connectorMessage = ConnectorMessage.builder()
+                    .tenant(tenant)
+                    .topic(topic)
+                    .clientId(client)
+                    .sendPayload(true)
+                    .connectorIdentifier(connectorIdentifier)
+                    .payload(payloadBytes)
+                    .key(message.hasKey() ? message.getKey() : null)
+                    .build();
 
-        if (serviceConfiguration.getLogPayload()) {
-            log.info("{} - INITIAL: message on topic: [{}], connector: {}, {}",
-                    tenant, topic, connectorName, connectorIdentifier);
-        }
-
-        ProcessingResultWrapper<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
-        int timeout = processedResults.getPipelineTimeoutMS();
-
-        if (serviceConfiguration.getLogPayload()) {
-            log.info("{} - PREPARING_RESULTS: message on topic: [{}], connector {}",
-                    tenant, topic, connectorIdentifier);
-        }
-
-        virtualThreadPool.submit(() -> {
-            try {
-                // The dispatcher returns early, without a processing future, for messages it
-                // deliberately skips (null/$SYS topic, null payload, mapping resolution error).
-                // Acknowledge those; otherwise they stay unacknowledged forever.
-                if (processedResults.getProcessingResult() == null) {
-                    log.warn("{} - No processing result for Pulsar message (skipped by dispatcher), acknowledging. topic: [{}], connector: {}",
-                            tenant, topic, connectorIdentifier);
-                    consumer.acknowledge(message);
-                    return null;
-                }
-                List<? extends ProcessingContext<?>> results;
-                // Always bounded: an unbounded get() parks this worker — and leaves the message
-                // unacknowledged — forever if the pipeline blocks in I/O. Mappings without their
-                // own budget (non-Smart-Function) fall back to the hard ceiling.
-                long effectiveTimeout = timeout > 0 ? timeout : ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
-                results = processedResults.getProcessingResult().get(effectiveTimeout, TimeUnit.MILLISECONDS);
-
-                // JS CPU timeout may have fired before the wall-clock timeout.
-                if (processedResults.getCancellationRequested().get()) {
-                    log.warn(
-                            "{} - JS CPU timeout fired: processing cancelled before wall-clock timeout, not ACKing. connector: {}",
-                            tenant, connectorIdentifier);
-                    handleFailureOrPoisonPill(consumer, message, messageId, topic);
-                    return null;
-                }
-
-                int httpStatusCode = ProcessingResultHelper.extractMaxHttpStatus(
-                        results, tenant, topic, log);
-
-                if (httpStatusCode < 0) {
-                    failureCountPerMessage.remove(messageId);
-                    if (serviceConfiguration.getLogPayload()) {
-                        log.debug("{} - END: Sending ack for Pulsar message: topic: [{}], connector: {}",
-                                tenant, topic, connectorIdentifier);
-                    }
-                    consumer.acknowledge(message);
-                } else if (httpStatusCode < 500) {
-                    failureCountPerMessage.remove(messageId);
-                    log.warn("{} - END: Sending ack due to client error for Pulsar message: topic: [{}], connector: {}",
-                            tenant, topic, connectorIdentifier);
-                    consumer.acknowledge(message);
-                } else {
-                    log.warn(
-                            "{} - END: Server error (HTTP {}), sending negative ack for Pulsar redelivery. topic: [{}], connector: {}",
-                            tenant, httpStatusCode, topic, connectorIdentifier);
-                    handleFailureOrPoisonPill(consumer, message, messageId, topic);
-                }
-            } catch (InterruptedException | ExecutionException e) {
-                log.warn("{} - END: Was interrupted for Pulsar message: topic: [{}], connector: {}",
-                        tenant, topic, connectorIdentifier);
-                handleFailureOrPoisonPill(consumer, message, messageId, topic);
-            } catch (TimeoutException e) {
-                log.warn("{} - Timeout occurred, initiating cancellation of processing task, connector: {}",
-                        tenant, connectorIdentifier);
-                boolean futureCompleted = cancelAndDrain(processedResults);
-                log.warn(
-                        "{} - END: Processing timed out after {}ms, sending negative ack for Pulsar redelivery. connector: {}, future completed: {}",
-                        tenant, timeout, connectorIdentifier, futureCompleted);
-                handleFailureOrPoisonPill(consumer, message, messageId, topic);
-            } catch (PulsarClientException e) {
-                log.error("{} - Error acknowledging Pulsar message: topic: [{}], connector: {}",
-                        tenant, topic, connectorIdentifier, e);
-            } catch (Exception e) {
-                // Anything unexpected must not leave the message silently unacknowledged
-                // (a task submitted to the pool swallows exceptions).
-                log.error("{} - Unexpected error processing Pulsar message, sending negative ack. topic: [{}], connector: {}",
-                        tenant, topic, connectorIdentifier, e);
-                handleFailureOrPoisonPill(consumer, message, messageId, topic);
+            if (serviceConfiguration.getLogPayload()) {
+                log.info("{} - INITIAL: message on topic: [{}], connector: {}, {}",
+                        tenant, topic, connectorName, connectorIdentifier);
             }
-            return null;
-        });
+
+            ProcessingResultWrapper<?> processedResults = genericMessageCallback.onMessage(connectorMessage);
+            int timeout = processedResults.getPipelineTimeoutMS();
+
+            if (serviceConfiguration.getLogPayload()) {
+                log.info("{} - PREPARING_RESULTS: message on topic: [{}], connector {}",
+                        tenant, topic, connectorIdentifier);
+            }
+
+            virtualThreadPool.submit(TenantLogContext.wrap(tenant, () -> {
+                try {
+                    // The dispatcher returns early, without a processing future, for messages it
+                    // deliberately skips (null/$SYS topic, null payload, mapping resolution error).
+                    // Acknowledge those; otherwise they stay unacknowledged forever.
+                    if (processedResults.getProcessingResult() == null) {
+                        log.warn("{} - No processing result for Pulsar message (skipped by dispatcher), acknowledging. topic: [{}], connector: {}",
+                                tenant, topic, connectorIdentifier);
+                        consumer.acknowledge(message);
+                        return null;
+                    }
+                    List<? extends ProcessingContext<?>> results;
+                    // Always bounded: an unbounded get() parks this worker — and leaves the message
+                    // unacknowledged — forever if the pipeline blocks in I/O. Mappings without their
+                    // own budget (non-Smart-Function) fall back to the hard ceiling.
+                    long effectiveTimeout = timeout > 0 ? timeout : ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
+                    results = processedResults.getProcessingResult().get(effectiveTimeout, TimeUnit.MILLISECONDS);
+
+                    // JS CPU timeout may have fired before the wall-clock timeout.
+                    if (processedResults.getCancellationRequested().get()) {
+                        log.warn(
+                                "{} - JS CPU timeout fired: processing cancelled before wall-clock timeout, not ACKing. connector: {}",
+                                tenant, connectorIdentifier);
+                        handleFailureOrPoisonPill(consumer, message, messageId, topic);
+                        return null;
+                    }
+
+                    int httpStatusCode = ProcessingResultHelper.extractMaxHttpStatus(
+                            results, tenant, topic, log);
+
+                    if (httpStatusCode < 0) {
+                        failureCountPerMessage.remove(messageId);
+                        if (serviceConfiguration.getLogPayload()) {
+                            log.debug("{} - END: Sending ack for Pulsar message: topic: [{}], connector: {}",
+                                    tenant, topic, connectorIdentifier);
+                        }
+                        consumer.acknowledge(message);
+                    } else if (httpStatusCode < 500) {
+                        failureCountPerMessage.remove(messageId);
+                        log.warn("{} - END: Sending ack due to client error for Pulsar message: topic: [{}], connector: {}",
+                                tenant, topic, connectorIdentifier);
+                        consumer.acknowledge(message);
+                    } else {
+                        log.warn(
+                                "{} - END: Server error (HTTP {}), sending negative ack for Pulsar redelivery. topic: [{}], connector: {}",
+                                tenant, httpStatusCode, topic, connectorIdentifier);
+                        handleFailureOrPoisonPill(consumer, message, messageId, topic);
+                    }
+                } catch (InterruptedException | ExecutionException e) {
+                    log.warn("{} - END: Was interrupted for Pulsar message: topic: [{}], connector: {}",
+                            tenant, topic, connectorIdentifier);
+                    handleFailureOrPoisonPill(consumer, message, messageId, topic);
+                } catch (TimeoutException e) {
+                    log.warn("{} - Timeout occurred, initiating cancellation of processing task, connector: {}",
+                            tenant, connectorIdentifier);
+                    boolean futureCompleted = cancelAndDrain(processedResults);
+                    log.warn(
+                            "{} - END: Processing timed out after {}ms, sending negative ack for Pulsar redelivery. connector: {}, future completed: {}",
+                            tenant, timeout, connectorIdentifier, futureCompleted);
+                    handleFailureOrPoisonPill(consumer, message, messageId, topic);
+                } catch (PulsarClientException e) {
+                    log.error("{} - Error acknowledging Pulsar message: topic: [{}], connector: {}",
+                            tenant, topic, connectorIdentifier, e);
+                } catch (Exception e) {
+                    // Anything unexpected must not leave the message silently unacknowledged
+                    // (a task submitted to the pool swallows exceptions).
+                    log.error("{} - Unexpected error processing Pulsar message, sending negative ack. topic: [{}], connector: {}",
+                            tenant, topic, connectorIdentifier, e);
+                    handleFailureOrPoisonPill(consumer, message, messageId, topic);
+                }
+                return null;
+            }));
+        }
     }
 }

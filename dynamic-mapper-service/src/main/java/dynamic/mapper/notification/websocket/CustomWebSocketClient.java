@@ -21,6 +21,7 @@
 
 package dynamic.mapper.notification.websocket;
 
+import dynamic.mapper.util.TenantLogContext;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.model.DynamicMapperRequest;
 import lombok.Getter;
@@ -93,207 +94,213 @@ public class CustomWebSocketClient extends WebSocketClient {
 
     @Override
     public void onOpen(ServerHandshake serverHandshake) {
-        this.executorService = Executors.newScheduledThreadPool(1);
-        this.callback.onOpen(this.uri);
-        // send(ByteBuffer.allocate(0));
-        executorService.scheduleAtFixedRate(this::sendPing, 1, 1, TimeUnit.MINUTES);
+        try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
+            this.executorService = Executors.newScheduledThreadPool(1);
+            this.callback.onOpen(this.uri);
+            // send(ByteBuffer.allocate(0));
+            executorService.scheduleAtFixedRate(this::sendPing, 1, 1, TimeUnit.MINUTES);
+        }
     }
 
     @Override
     public void onMessage(String message) {
-        Notification notification = Notification.parse(message);
-        String messageId = notification.getAckHeader();
+        try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
+            Notification notification = Notification.parse(message);
+            String messageId = notification.getAckHeader();
 
-        if (serviceConfiguration.getLogPayload()) {
-            log.info(
-                    "{} - INITIAL: message on connector InternalWebSocket (notification 2.0) for outbound connector {}, API: {}, Operation: {}",
-                    tenant, connectorId.displayName(), notification.getApi(), notification.getOperation());
-        }
-        ProcessingResultWrapper<?> processedResults = this.callback.onNotification(notification);
-        if (processedResults == null) {
-            // Defensive guard: callback should never return null, but if it does,
-            // ACK the message to prevent Cumulocity from endlessly re-delivering it.
-            log.error("{} - onNotification returned null for API: {}, Operation: {} — ACKing to prevent infinite redelivery, connector: InternalWebSocket",
-                    tenant, notification.getApi(), notification.getOperation());
-            if (notification.getAckHeader() != null) {
-                send(notification.getAckHeader());
+            if (serviceConfiguration.getLogPayload()) {
+                log.info(
+                        "{} - INITIAL: message on connector InternalWebSocket (notification 2.0) for outbound connector {}, API: {}, Operation: {}",
+                        tenant, connectorId.displayName(), notification.getApi(), notification.getOperation());
             }
-            return;
-        }
-        int mappingQos = processedResults.getConsolidatedQos().getLevel();
-        int timeout = processedResults.getPipelineTimeoutMS();
+            ProcessingResultWrapper<?> processedResults = this.callback.onNotification(notification);
+            if (processedResults == null) {
+                // Defensive guard: callback should never return null, but if it does,
+                // ACK the message to prevent Cumulocity from endlessly re-delivering it.
+                log.error("{} - onNotification returned null for API: {}, Operation: {} — ACKing to prevent infinite redelivery, connector: InternalWebSocket",
+                        tenant, notification.getApi(), notification.getOperation());
+                if (notification.getAckHeader() != null) {
+                    send(notification.getAckHeader());
+                }
+                return;
+            }
+            int mappingQos = processedResults.getConsolidatedQos().getLevel();
+            int timeout = processedResults.getPipelineTimeoutMS();
 
-        if (mappingQos > 0) {
-            // Use the provided virtualThreadPool instead of creating a new thread
-            virtualThreadPool.submit(() -> {
-                long effectiveTimeout = timeout;
-                try {
-                    // Wait for the future to complete.
-                    // Multiply timeout by (attempt + 1) so each retransmission gets progressively
-                    // more processing time — useful when the first timeout was caused by a slow server.
-                    // attempt = current failure count for this message:
-                    //   0 → first try   → 1× timeout
-                    //   1 → 2nd try     → 2× timeout
-                    //   …  capped at MAX_PROCESSING_TIMEOUT
-                    List<? extends ProcessingContext<?>> results = null;
-                    if (timeout > 0 && processedResults.getProcessingResult() != null) {
-                        int attempt = failureCountPerMessage.getOrDefault(messageId, new AtomicInteger(0)).get();
-                        effectiveTimeout = Math.min(
-                                (long) timeout * (attempt + 1),
-                                (long) timeout * MAX_TIMEOUT_ESCALATION_FACTOR);
-                        if (attempt > 0) {
-                            log.info("{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
-                                    tenant, attempt + 1, effectiveTimeout, timeout, connectorId.displayName());
+            if (mappingQos > 0) {
+                // Use the provided virtualThreadPool instead of creating a new thread
+                virtualThreadPool.submit(() -> {
+                    long effectiveTimeout = timeout;
+                    try {
+                        // Wait for the future to complete.
+                        // Multiply timeout by (attempt + 1) so each retransmission gets progressively
+                        // more processing time — useful when the first timeout was caused by a slow server.
+                        // attempt = current failure count for this message:
+                        //   0 → first try   → 1× timeout
+                        //   1 → 2nd try     → 2× timeout
+                        //   …  capped at MAX_PROCESSING_TIMEOUT
+                        List<? extends ProcessingContext<?>> results = null;
+                        if (timeout > 0 && processedResults.getProcessingResult() != null) {
+                            int attempt = failureCountPerMessage.getOrDefault(messageId, new AtomicInteger(0)).get();
+                            effectiveTimeout = Math.min(
+                                    (long) timeout * (attempt + 1),
+                                    (long) timeout * MAX_TIMEOUT_ESCALATION_FACTOR);
+                            if (attempt > 0) {
+                                log.info("{} - Retransmission attempt {}: using increased timeout {}ms (base: {}ms), connector: {}",
+                                        tenant, attempt + 1, effectiveTimeout, timeout, connectorId.displayName());
+                            }
+                            results = processedResults.getProcessingResult().get(effectiveTimeout,
+                                    TimeUnit.MILLISECONDS);
+                        } else if (processedResults.getProcessingResult() != null) {
+                            // No per-message budget: still bounded, so a pipeline blocked in I/O
+                            // cannot park this worker forever.
+                            effectiveTimeout = ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
+                            results = processedResults.getProcessingResult().get(effectiveTimeout,
+                                    TimeUnit.MILLISECONDS);
                         }
-                        results = processedResults.getProcessingResult().get(effectiveTimeout,
-                                TimeUnit.MILLISECONDS);
-                    } else if (processedResults.getProcessingResult() != null) {
-                        // No per-message budget: still bounded, so a pipeline blocked in I/O
-                        // cannot park this worker forever.
-                        effectiveTimeout = ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
-                        results = processedResults.getProcessingResult().get(effectiveTimeout,
-                                TimeUnit.MILLISECONDS);
-                    }
 
-                    // JS CPU timeout may have fired and closed the GraalVM context before the
-                    // wall-clock timeout expired. In that case the future completes early with
-                    // cancellationRequested=true. We must NOT ACK — treat it like a TimeoutException
-                    // so the broker retransmits the unACKed message.
-                    if (processedResults.getCancellationRequested().get()) {
-                        log.warn("{} - JS CPU timeout fired: processing cancelled before wall-clock timeout, not ACKing. connector: {}",
-                                tenant, connectorId.displayName());
-                        handleFailureOrRetransmit(notification, messageId);
-                        return null;
-                    }
+                        // JS CPU timeout may have fired and closed the GraalVM context before the
+                        // wall-clock timeout expired. In that case the future completes early with
+                        // cancellationRequested=true. We must NOT ACK — treat it like a TimeoutException
+                        // so the broker retransmits the unACKed message.
+                        if (processedResults.getCancellationRequested().get()) {
+                            log.warn("{} - JS CPU timeout fired: processing cancelled before wall-clock timeout, not ACKing. connector: {}",
+                                    tenant, connectorId.displayName());
+                            handleFailureOrRetransmit(notification, messageId);
+                            return null;
+                        }
 
-                    // Check for errors in results
-                    boolean hasErrors = false;
-                    int httpStatusCode = 0;
-                    if (results != null) {
-                        for (ProcessingContext<?> context : results) {
-                            List<DynamicMapperRequest> resultRequests = context.getRequests();
-                            if (context.hasError() || resultRequests.stream().anyMatch(DynamicMapperRequest::hasError)) {
-                                for (DynamicMapperRequest r : resultRequests) {
-                                    if (r.hasError()) {
-                                        Throwable e = r.getError();
-                                        while (!(e instanceof ProcessingException) && e.getCause() != null && e != e.getCause()) {
-                                            e = e.getCause();
-                                        }
-                                        if (e instanceof ProcessingException) {
-                                            ProcessingException processingException = (ProcessingException) e;
-                                            httpStatusCode = Math.max(processingException.getHttpStatusCode(),
-                                                    httpStatusCode);
+                        // Check for errors in results
+                        boolean hasErrors = false;
+                        int httpStatusCode = 0;
+                        if (results != null) {
+                            for (ProcessingContext<?> context : results) {
+                                List<DynamicMapperRequest> resultRequests = context.getRequests();
+                                if (context.hasError() || resultRequests.stream().anyMatch(DynamicMapperRequest::hasError)) {
+                                    for (DynamicMapperRequest r : resultRequests) {
+                                        if (r.hasError()) {
+                                            Throwable e = r.getError();
+                                            while (!(e instanceof ProcessingException) && e.getCause() != null && e != e.getCause()) {
+                                                e = e.getCause();
+                                            }
+                                            if (e instanceof ProcessingException) {
+                                                ProcessingException processingException = (ProcessingException) e;
+                                                httpStatusCode = Math.max(processingException.getHttpStatusCode(),
+                                                        httpStatusCode);
+                                            }
                                         }
                                     }
+                                    hasErrors = true;
+                                    // break;
                                 }
-                                hasErrors = true;
-                                // break;
                             }
                         }
-                    }
 
-                    if (!hasErrors) {
-                        // No errors found, acknowledge the message and reset failure counter
-                        failureCountPerMessage.remove(messageId);
-                        if (notification.getAckHeader() != null) {
-                            log.info(
-                                    "{} - END: Sending manual ack for message on Internal WebSocket connector (notification 2.0), API: {}, QoS: {}, Outbound Connector: {}",
-                                    tenant, notification.getApi(), mappingQos, connectorId.displayName());
-                            send(notification.getAckHeader()); // ack message
+                        if (!hasErrors) {
+                            // No errors found, acknowledge the message and reset failure counter
+                            failureCountPerMessage.remove(messageId);
+                            if (notification.getAckHeader() != null) {
+                                log.info(
+                                        "{} - END: Sending manual ack for message on Internal WebSocket connector (notification 2.0), API: {}, QoS: {}, Outbound Connector: {}",
+                                        tenant, notification.getApi(), mappingQos, connectorId.displayName());
+                                send(notification.getAckHeader()); // ack message
+                            } else {
+                                throw new RuntimeException("No message id found for ack");
+                            }
+                        } else if (httpStatusCode < 500) {
+                            // Errors found but not a server error, acknowledge the message and reset failure counter
+                            failureCountPerMessage.remove(messageId); // client-side error is not a transient failure
+                            if (notification.getAckHeader() != null) {
+                                log.info(
+                                        "{} - END: Sending manual ack for message on Internal WebSocket connector (notification 2.0), API: {}, QoS: {}, Outbound Connector: {}",
+                                        tenant, notification.getApi(), mappingQos, connectorId.displayName());
+                                send(notification.getAckHeader()); // ack message
+                            } else {
+                                throw new RuntimeException("No message id found for ack");
+                            }
                         } else {
-                            throw new RuntimeException("No message id found for ack");
+                            // Server error (>=500): trigger WebSocket reconnect for retransmission
+                            log.warn(
+                                    "{} - END: Server error (HTTP {}), triggering WebSocket reconnect for retransmission. API: {}, connector: {}",
+                                    tenant, httpStatusCode, notification.getApi(), connectorId.displayName());
+                            handleFailureOrRetransmit(notification, messageId);
                         }
-                    } else if (httpStatusCode < 500) {
-                        // Errors found but not a server error, acknowledge the message and reset failure counter
-                        failureCountPerMessage.remove(messageId); // client-side error is not a transient failure
-                        if (notification.getAckHeader() != null) {
-                            log.info(
-                                    "{} - END: Sending manual ack for message on Internal WebSocket connector (notification 2.0), API: {}, QoS: {}, Outbound Connector: {}",
-                                    tenant, notification.getApi(), mappingQos, connectorId.displayName());
-                            send(notification.getAckHeader()); // ack message
-                        } else {
-                            throw new RuntimeException("No message id found for ack");
+                    } catch (InterruptedException | ExecutionException e) {
+                        // Processing failed, check failure threshold
+                        log.warn("{} - END: Processing InterruptedException | ExecutionException: {}",
+                                tenant, e.getMessage());
+                        handleFailureOrRetransmit(notification, messageId);
+                    } catch (TimeoutException e) {
+                        // cancelProcessing() calls Future.cancel(true) to interrupt IO-blocked threads
+                        // AND closes any active GraalVM context via Context.close(cancelIfExecuting=true)
+                        // — the only reliable way to stop CPU-bound JS execution.
+                        log.warn("{} - Timeout occurred, initiating cancellation of processing task, connector {}", tenant, connectorId.getName());
+                        var cancelResult = processedResults.cancelProcessing();
+                        log.info("{} - Cancellation result: future was cancelled={}, connector {}", tenant, cancelResult, connectorId.getName());
+
+                        // Wait for the future to actually terminate after cancellation.
+                        // The active cancellation checks in C8YAgent.createMEAO() should prevent any new HTTP calls,
+                        // allowing threads to exit quickly. We wait up to 2 seconds as a fail-safe in case a thread
+                        // is already mid-flight in an HTTP call that cannot be interrupted immediately.
+                        boolean futureCompleted = false;
+                        int maxWaitIterations = 20; // 20 × 100ms = 2 seconds
+                        for (int i = 0; i < maxWaitIterations; i++) {
+                            if (processedResults.getProcessingResult().isDone()) {
+                                futureCompleted = true;
+                                log.info("{} - Future completed after {}ms wait, connector {}", tenant, (i + 1) * 100, connectorId.getName());
+                                break;
+                            }
+                            try {
+                                Thread.sleep(100); //NOSONAR intentional wait for future completion
+                            } catch (InterruptedException ie) {
+                                Thread.currentThread().interrupt();
+                                log.warn("{} - Interrupted while waiting for future completion, connector {}", tenant, connectorId.getName());
+                                break;
+                            }
                         }
-                    } else {
-                        // Server error (>=500): trigger WebSocket reconnect for retransmission
+
+                        if (!futureCompleted) {
+                            log.error("{} - Future did NOT complete within 2 seconds after cancellation! This indicates that a thread is stuck in a blocking operation that cannot be interrupted. Check for long-running HTTP calls or other blocking I/O. connector: {}", tenant, connectorId.getName());
+                        }
+
                         log.warn(
-                                "{} - END: Server error (HTTP {}), triggering WebSocket reconnect for retransmission. API: {}, connector: {}",
-                                tenant, httpStatusCode, notification.getApi(), connectorId.displayName());
+                                "{} - END: Processing timed out after {}ms, triggering WebSocket reconnect for retransmission. connector: {}, cancel result: {}, future completed: {}",
+                                tenant, effectiveTimeout, connectorId.displayName(), cancelResult, futureCompleted);
+                        handleFailureOrRetransmit(notification, messageId);
+                    } catch (Exception e) {
+                        // Handle other exceptions
+                        log.error("{} - END: Processing failed with exception: {}", tenant, e.getMessage(), e);
                         handleFailureOrRetransmit(notification, messageId);
                     }
-                } catch (InterruptedException | ExecutionException e) {
-                    // Processing failed, check failure threshold
-                    log.warn("{} - END: Processing InterruptedException | ExecutionException: {}",
-                            tenant, e.getMessage());
-                    handleFailureOrRetransmit(notification, messageId);
-                } catch (TimeoutException e) {
-                    // cancelProcessing() calls Future.cancel(true) to interrupt IO-blocked threads
-                    // AND closes any active GraalVM context via Context.close(cancelIfExecuting=true)
-                    // — the only reliable way to stop CPU-bound JS execution.
-                    log.warn("{} - Timeout occurred, initiating cancellation of processing task, connector {}", tenant, connectorId.getName());
-                    var cancelResult = processedResults.cancelProcessing();
-                    log.info("{} - Cancellation result: future was cancelled={}, connector {}", tenant, cancelResult, connectorId.getName());
-
-                    // Wait for the future to actually terminate after cancellation.
-                    // The active cancellation checks in C8YAgent.createMEAO() should prevent any new HTTP calls,
-                    // allowing threads to exit quickly. We wait up to 2 seconds as a fail-safe in case a thread
-                    // is already mid-flight in an HTTP call that cannot be interrupted immediately.
-                    boolean futureCompleted = false;
-                    int maxWaitIterations = 20; // 20 × 100ms = 2 seconds
-                    for (int i = 0; i < maxWaitIterations; i++) {
-                        if (processedResults.getProcessingResult().isDone()) {
-                            futureCompleted = true;
-                            log.info("{} - Future completed after {}ms wait, connector {}", tenant, (i + 1) * 100, connectorId.getName());
-                            break;
-                        }
-                        try {
-                            Thread.sleep(100); //NOSONAR intentional wait for future completion
-                        } catch (InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                            log.warn("{} - Interrupted while waiting for future completion, connector {}", tenant, connectorId.getName());
-                            break;
-                        }
-                    }
-
-                    if (!futureCompleted) {
-                        log.error("{} - Future did NOT complete within 2 seconds after cancellation! This indicates that a thread is stuck in a blocking operation that cannot be interrupted. Check for long-running HTTP calls or other blocking I/O. connector: {}", tenant, connectorId.getName());
-                    }
-
-                    log.warn(
-                            "{} - END: Processing timed out after {}ms, triggering WebSocket reconnect for retransmission. connector: {}, cancel result: {}, future completed: {}",
-                            tenant, effectiveTimeout, connectorId.displayName(), cancelResult, futureCompleted);
-                    handleFailureOrRetransmit(notification, messageId);
-                } catch (Exception e) {
-                    // Handle other exceptions
-                    log.error("{} - END: Processing failed with exception: {}", tenant, e.getMessage(), e);
-                    handleFailureOrRetransmit(notification, messageId);
-                }
-                return null; // Proper return for Callable<Void>
-            });
-        } else {
-            // For QoS 0 (or downgraded to 0), no need for special handling
-
-            // If the original publish was QoS > 0 but got downgraded, we should still
-            // acknowledge
-            if (notification.getAckHeader() != null) {
-                log.debug(
-                        "{} - END: Sending manual ack for message on Internal WebSocket connector (notification 2.0), API: {}, QoS: {}, Outbound Connector: {}",
-                        tenant, notification.getApi(), mappingQos, connectorId.displayName());
-                send(notification.getAckHeader()); // ack message
+                    return null; // Proper return for Callable<Void>
+                });
             } else {
-                throw new RuntimeException("No message id found for ack");
+                // For QoS 0 (or downgraded to 0), no need for special handling
+
+                // If the original publish was QoS > 0 but got downgraded, we should still
+                // acknowledge
+                if (notification.getAckHeader() != null) {
+                    log.debug(
+                            "{} - END: Sending manual ack for message on Internal WebSocket connector (notification 2.0), API: {}, QoS: {}, Outbound Connector: {}",
+                            tenant, notification.getApi(), mappingQos, connectorId.displayName());
+                    send(notification.getAckHeader()); // ack message
+                } else {
+                    throw new RuntimeException("No message id found for ack");
+                }
             }
         }
     }
 
     @Override
     public void onClose(int statusCode, String reason, boolean remote) {
-        log.info("{} - WebSocket closed{}statusCode: {}, reason: {}", tenant, remote ? "by server, " : ", ",
-                statusCode, reason);
-        this.lastCloseReason = reason;
-        if (this.executorService != null)
-            this.executorService.shutdownNow();
-        this.callback.onClose(statusCode, reason);
+        try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
+            log.info("{} - WebSocket closed{}statusCode: {}, reason: {}", tenant, remote ? "by server, " : ", ",
+                    statusCode, reason);
+            this.lastCloseReason = reason;
+            if (this.executorService != null)
+                this.executorService.shutdownNow();
+            this.callback.onClose(statusCode, reason);
+        }
     }
 
     public boolean isConflict() {
@@ -344,7 +351,9 @@ public class CustomWebSocketClient extends WebSocketClient {
 
     @Override
     public void onError(Exception e) {
-        log.error("{} - WebSocket error: ", tenant, e);
-        this.callback.onError(e);
+        try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
+            log.error("{} - WebSocket error: ", tenant, e);
+            this.callback.onError(e);
+        }
     }
 }

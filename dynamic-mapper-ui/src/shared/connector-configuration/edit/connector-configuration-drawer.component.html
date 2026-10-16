@@ -67,9 +67,22 @@
       </div>
     </div>
     <div class="card-footer separator p-24 text-center flex-no-shrink">
+      @if (testResult) {
+      <div class="alert m-b-16 text-left" style="width: 100%; max-width: none;"
+        [ngClass]="testResult.success ? 'alert-success' : 'alert-danger'" role="alert"
+        data-cy="dm-connector-test-result">
+        {{ testResult.message }}
+      </div>
+      }
       <button type="button" name="cancel" class="btn btn-default" data-cy="dm-connector-cancel" (click)="onCancel()" translate>
         Cancel
       </button>
+      @if (supportsTest) {
+      <button type="button" name="test" class="btn btn-default m-l-8" data-cy="dm-connector-test" (click)="onTest()"
+        [disabled]="testing || (dynamicForm.enabled && !dynamicForm.valid) || !feature?.userHasMappingAdminRole" [class.btn-pending]="testing" translate>
+        Test connection
+      </button>
+      }
       <button type="button" name="save" class="btn btn-primary  m-l-8" data-cy="dm-connector-save" (click)="onSave()"
         [disabled]="readOnly || !dynamicForm.valid || !feature?.userHasMappingAdminRole" translate>
         Save

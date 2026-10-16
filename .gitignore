@@ -34,6 +34,9 @@ hs_err_pid*
 target/
 target_old/
 logs/
+# ...but not source packages that happen to be called logs (the service-log collector and its page)
+!dynamic-mapper-service/src/**/logs/
+!dynamic-mapper-ui/src/**/logs/
 bin/
 attic/*
 

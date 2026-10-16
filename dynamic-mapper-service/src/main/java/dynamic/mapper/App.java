@@ -21,6 +21,8 @@
 
 package dynamic.mapper;
 
+import dynamic.mapper.util.MdcPropagatingExecutorService;
+import dynamic.mapper.util.TenantLogging;
 import com.cumulocity.microservice.autoconfigure.MicroserviceApplication;
 import com.cumulocity.microservice.context.annotation.EnableContextSupport;
 import com.cumulocity.model.DateTimeConverter;
@@ -82,7 +84,7 @@ public class App {
     @Bean("virtualThreadPool")
     public ExecutorService virtualThreadPool() {
         final ThreadFactory factory = Thread.ofVirtual().name("virtThread-", 0).factory();
-        return Executors.newThreadPerTaskExecutor(factory);
+        return new MdcPropagatingExecutorService(Executors.newThreadPerTaskExecutor(factory));
     }
 
     @Bean
@@ -197,6 +199,8 @@ public class App {
     }
 
     public static void main(String[] args) {
+        // Before logging initialises: the tenant field and message converters (see TenantLogging).
+        TenantLogging.register();
         SpringApplication.run(App.class, args);
     }
 

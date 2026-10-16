@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonMerge;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
@@ -76,6 +77,7 @@ public class ServiceConfiguration implements Cloneable {
         this.engineMaxAgeMinutes = 0;
         this.explorerSessionTTLMinutes = 10;
         this.contextPoolSize = 20;
+        this.serviceLogs = new ServiceLogsConfiguration();
     }
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Enable logging of message payloads for debugging purposes. Caution: May expose sensitive data in logs.", example = "false")
@@ -306,4 +308,8 @@ public class ServiceConfiguration implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     private Integer explorerSessionTTLMinutes;
 
+    @Schema(description = "Settings of the service log (Monitoring > Service logs): what is stored for this tenant, how much, and for how long. Every value has a default; unset values keep it.")
+    @JsonSetter(nulls = Nulls.SKIP)
+    @JsonMerge
+    private ServiceLogsConfiguration serviceLogs;
 }

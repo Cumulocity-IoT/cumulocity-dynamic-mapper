@@ -21,6 +21,8 @@
 
 package dynamic.mapper.connector.kafka;
 
+import dynamic.mapper.connector.core.client.ConnectionTestResult;
+import dynamic.mapper.util.TenantLogContext;
 import com.cumulocity.sdk.client.SDKException;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
@@ -375,6 +377,41 @@ public class KafkaClientV2 extends AConnectorClient {
     }
 
     @Override
+    public boolean supportsConnectionTest() {
+        return true;
+    }
+
+    /**
+     * Probes with an {@link AdminClient} only (describeCluster): no consumer is created, so the
+     * live connector's consumer group is never joined and no rebalance is triggered.
+     */
+    @Override
+    public ConnectionTestResult testConnection() {
+        try {
+            buildKafkaProperties();
+            Properties props = new Properties();
+            props.putAll(kafkaProducerProperties);
+            props.put("request.timeout.ms", "10000");
+            props.put("default.api.timeout.ms", "10000");
+            try (AdminClient probe = AdminClient.create(props)) {
+                int brokers = probe.describeCluster().nodes().get(10, TimeUnit.SECONDS).size();
+                return ConnectionTestResult.ok("Connected to Kafka cluster (" + brokers + " broker(s))", null);
+            }
+        } catch (java.util.concurrent.ExecutionException e) {
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            if (cause instanceof org.apache.kafka.common.errors.AuthenticationException) {
+                return ConnectionTestResult.failed("Authentication failed: " + cause.getMessage(), null);
+            }
+            return ConnectionTestResult.failed("Connection failed: " + cause.getMessage(), null);
+        } catch (java.util.concurrent.TimeoutException e) {
+            return ConnectionTestResult.failed(
+                    "Could not reach the bootstrap servers within 10s (check host, port, security settings)", null);
+        } catch (Exception e) {
+            return ConnectionTestResult.failed("Connection failed: " + e.getMessage(), null);
+        }
+    }
+
+    @Override
     public void connect() {
         if (!beginConnection()) {
             return;
@@ -619,65 +656,67 @@ public class KafkaClientV2 extends AConnectorClient {
      */
     private void consumeMessages(KafkaConsumerWrapper wrapper, Map<String, KafkaConsumerWrapper> consumersMap,
             Map<String, Future<?>> tasksMap, Map<String, MutableInt> failureCountsMap) {
-        KafkaConsumer<String, String> consumer = wrapper.getConsumer();
-        String topic = wrapper.getTopic();
+        try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
+            KafkaConsumer<String, String> consumer = wrapper.getConsumer();
+            String topic = wrapper.getTopic();
 
-        log.debug("{} - Starting message consumption for topic: [{}]", tenant, topic);
+            log.debug("{} - Starting message consumption for topic: [{}]", tenant, topic);
 
-        try {
-            while (!wrapper.isCloseRequested()) {
-                try {
-                    drainPendingCommits(wrapper);
-
-                    ConsumerRecords<String, String> records = consumer
-                            .poll(Duration.ofMillis(CONSUMER_POLL_TIMEOUT_MS));
-
-                    for (ConsumerRecord<String, String> record : records) {
-                        processKafkaMessage(record);
-                    }
-
-                    // Reset failed count on successful poll
-                    failureCountsMap.remove(topic);
-
-                } catch (WakeupException we) {
-                    // Only triggered by our own requestClose(); the while condition will exit next.
-                    break;
-                } catch (Exception e) {
-                    log.error("{} - Error consuming messages from topic: [{}]", tenant, topic, e);
-                    handleConsumerError(topic, e);
-
-                    MutableInt failCount = failureCountsMap.computeIfAbsent(topic, k -> new MutableInt(0));
-                    failCount.increment();
-
-                    if (failCount.intValue() > MAX_CONSECUTIVE_FAILURES) {
-                        log.error("{} - Too many consecutive failures for topic: [{}], stopping this consumer; housekeeping will retry it", tenant, topic);
-                        // Hand off to the slower housekeeping-driven retry cycle (monitorSubscriptions())
-                        // instead of leaving the count above MAX_RETRY_ATTEMPTS, where it would never
-                        // be picked up again.
-                        failCount.setValue(1);
-                        break;
-                    }
-
+            try {
+                while (!wrapper.isCloseRequested()) {
                     try {
-                        Thread.sleep(CONSUMER_RESTART_DELAY_MS);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
+                        drainPendingCommits(wrapper);
+
+                        ConsumerRecords<String, String> records = consumer
+                                .poll(Duration.ofMillis(CONSUMER_POLL_TIMEOUT_MS));
+
+                        for (ConsumerRecord<String, String> record : records) {
+                            processKafkaMessage(record);
+                        }
+
+                        // Reset failed count on successful poll
+                        failureCountsMap.remove(topic);
+
+                    } catch (WakeupException we) {
+                        // Only triggered by our own requestClose(); the while condition will exit next.
                         break;
+                    } catch (Exception e) {
+                        log.error("{} - Error consuming messages from topic: [{}]", tenant, topic, e);
+                        handleConsumerError(topic, e);
+
+                        MutableInt failCount = failureCountsMap.computeIfAbsent(topic, k -> new MutableInt(0));
+                        failCount.increment();
+
+                        if (failCount.intValue() > MAX_CONSECUTIVE_FAILURES) {
+                            log.error("{} - Too many consecutive failures for topic: [{}], stopping this consumer; housekeeping will retry it", tenant, topic);
+                            // Hand off to the slower housekeeping-driven retry cycle (monitorSubscriptions())
+                            // instead of leaving the count above MAX_RETRY_ATTEMPTS, where it would never
+                            // be picked up again.
+                            failCount.setValue(1);
+                            break;
+                        }
+
+                        try {
+                            Thread.sleep(CONSUMER_RESTART_DELAY_MS);
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
                     }
                 }
+            } finally {
+                drainPendingCommits(wrapper);
+                try {
+                    consumer.close();
+                } catch (Exception e) {
+                    log.warn("{} - Error closing Kafka consumer for topic: [{}]", tenant, topic, e);
+                }
+                // Conditional remove: don't clobber a newer wrapper/task a concurrent subscribe()
+                // may already have installed for this topic.
+                consumersMap.remove(topic, wrapper);
+                tasksMap.remove(topic);
+                log.debug("{} - Stopped message consumption for topic: [{}]", tenant, topic);
             }
-        } finally {
-            drainPendingCommits(wrapper);
-            try {
-                consumer.close();
-            } catch (Exception e) {
-                log.warn("{} - Error closing Kafka consumer for topic: [{}]", tenant, topic, e);
-            }
-            // Conditional remove: don't clobber a newer wrapper/task a concurrent subscribe()
-            // may already have installed for this topic.
-            consumersMap.remove(topic, wrapper);
-            tasksMap.remove(topic);
-            log.debug("{} - Stopped message consumption for topic: [{}]", tenant, topic);
         }
     }
 

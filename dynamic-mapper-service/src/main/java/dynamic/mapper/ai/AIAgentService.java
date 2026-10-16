@@ -72,7 +72,6 @@ public class AIAgentService {
     private static final String DEFAULT_SMART_FUNCTION_AGENT_NAME = "dynamic-mapper-smartfunction-agent";
     private static final String JSONATA_TOOL_NAME = "evaluate-jsonata-expression";
     private static final String MCP_SERVER_NAME = "dynamic-mapper-mcp-server";
-    private static final String AI_AGENT_MCP_SERVER_PATH = "/service/ai/mcp/servers";
     private static final String AI_AGENT_PATH = "/service/ai/agent";
     private static final String AI_AGENT_HEALTH_ENDPOINT = "/service/ai/health";
 

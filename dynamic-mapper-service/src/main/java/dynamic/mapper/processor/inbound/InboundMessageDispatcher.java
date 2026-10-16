@@ -1,5 +1,6 @@
 package dynamic.mapper.processor.inbound;
 
+import dynamic.mapper.util.TenantLogContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -66,9 +67,11 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
 
     @Override
     public ProcessingResultWrapper<?> onMessage(ConnectorMessage message) {
-        // Notify any explorer sessions listening on this connector
-        connectorClient.notifyExplorerListeners(message);
-        return processMessage(message, null);
+        try (TenantLogContext ignored = TenantLogContext.open(message.getTenant())) {
+            // Notify any explorer sessions listening on this connector
+            connectorClient.notifyExplorerListeners(message);
+            return processMessage(message, null);
+        }
     }
 
     @Override
@@ -175,7 +178,7 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
         }
 
         // Process via the in-process router, asynchronously
-        Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(() -> {
+        Future<List<ProcessingContext<Object>>> futureProcessingResult = virtualThreadPool.submit(TenantLogContext.wrap(tenant, () -> {
             // Lets a timed-out callback verify that this thread really left — Future.isDone()
             // cannot tell it that, see ProcessingResultWrapper.workerCompleted.
             result.markWorkerStarted();
@@ -254,7 +257,7 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
             } finally {
                 result.markWorkerCompleted();
             }
-        });
+        }));
 
         result.setProcessingResult((Future) futureProcessingResult);
 

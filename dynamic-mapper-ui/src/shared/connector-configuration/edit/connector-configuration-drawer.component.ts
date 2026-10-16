@@ -17,11 +17,12 @@
  *
  * @authors Christof Strack
  */
-import { ChangeDetectorRef, Component, inject, Input, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, Injector, Input, OnInit } from '@angular/core';
 import { BottomDrawerRef, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { FormlyFieldConfig, FormlyModule } from '@ngx-formly/core';
 import { FormGroup, FormsModule } from '@angular/forms';
 import {
+  ConnectionTestResult,
   ConnectorConfiguration,
   ConnectorProperty,
   ConnectorPropertyType,
@@ -36,6 +37,7 @@ import { FormatStringPipe } from '../../misc/format-string.pipe';
 
 import { SharedModule } from '../../shared.module';
 import { Action } from '../types';
+import { ConnectorConfigurationService } from '../../service/connector-configuration.service';
 
 interface PropertyEntry {
   key: string;
@@ -101,6 +103,27 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   private readonly sharedService = inject(SharedService);
   private readonly formatStringPipe = inject(FormatStringPipe);
   private readonly cdr = inject(ChangeDetectorRef);
+  // resolved lazily (only when Test is clicked) so the drawer itself needs no extra providers
+  private readonly injector = inject(Injector);
+
+  testing = false;
+  testResult?: ConnectionTestResult;
+
+  get supportsTest(): boolean {
+    return !!this.specifications?.find(sp => sp.connectorType === this.configuration?.connectorType)
+      ?.supportsConnectionTest;
+  }
+
+  async onTest(): Promise<void> {
+    this.testing = true;
+    this.testResult = undefined;
+    try {
+      this.testResult = await this.injector.get(ConnectorConfigurationService).testConfiguration(this.configuration);
+    } finally {
+      this.testing = false;
+      this.cdr.markForCheck();
+    }
+  }
 
   async ngOnInit() {
     this.feature = await this.sharedService.getFeatures();

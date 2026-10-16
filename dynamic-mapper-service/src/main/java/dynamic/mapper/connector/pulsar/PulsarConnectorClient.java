@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.pulsar;
 
+import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
@@ -175,6 +176,48 @@ public class PulsarConnectorClient extends AConnectorClient {
             connectionStateManager.updateStatusWithError(e);
         } finally {
             endConnection();
+        }
+    }
+
+    @Override
+    public boolean supportsConnectionTest() {
+        return true;
+    }
+
+    /**
+     * Builds a throwaway client and does a topic lookup, which forces the connection and
+     * authentication without subscribing or producing (no effect on the live consumer's subscription).
+     * An authorization error on the probe topic still proves the credentials were accepted.
+     */
+    @Override
+    public ConnectionTestResult testConnection() {
+        try {
+            // The probe is never initialize()d (that would change connector status), so the trust certificate that
+            // buildPulsarClient() installs for a self-signed broker has to be loaded here.
+            if (Boolean.TRUE.equals(connectorConfiguration.getProperties().get("useSelfSignedCertificate"))
+                    && cert == null) {
+                cert = loadCertificateFromConfiguration();
+            }
+        } catch (Exception e) {
+            return ConnectionTestResult.failed("The configured certificate could not be loaded: " + e.getMessage(), null);
+        }
+        try (PulsarClient probe = buildPulsarClient()) {
+            probe.getPartitionsForTopic("persistent://public/default/dm-connection-test").get(15, TimeUnit.SECONDS);
+            return ConnectionTestResult.ok("Connected to Pulsar", null);
+        } catch (java.util.concurrent.ExecutionException e) {
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            if (cause instanceof PulsarClientException.AuthenticationException) {
+                return ConnectionTestResult.failed("Authentication failed: " + cause.getMessage(), null);
+            }
+            if (cause instanceof PulsarClientException.AuthorizationException) {
+                return ConnectionTestResult.ok(
+                        "Connected and authenticated (not authorized for the probe topic, which is expected)", null);
+            }
+            return ConnectionTestResult.failed("Connection failed: " + cause.getMessage(), null);
+        } catch (java.util.concurrent.TimeoutException e) {
+            return ConnectionTestResult.failed("Connection timed out", null);
+        } catch (Exception e) {
+            return ConnectionTestResult.failed("Connection failed: " + e.getMessage(), null);
         }
     }
 
