@@ -253,6 +253,28 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     return !!option?.value && this.AI_GENERATION_TYPES.includes(option.value);
   }
 
+  /** AI would be offered for this transformation type, but no usable agent was found. Distinct from
+   *  the kill switch and from a failed availability check, which have their own hints. */
+  shouldShowAINotDeployedInfo(): boolean {
+    if (this.aiCapabilitiesDisabled || this.aiAvailabilityCheckFailed) return false;
+    const option = this.formGroup?.get('transformationType')?.value as TransformationTypeOption;
+    return !!option?.value && this.AI_GENERATION_TYPES.includes(option.value)
+      && !this.isAIAgentDeployedFor(option.value);
+  }
+
+  getAINotDeployedText(): string {
+    const option = this.formGroup?.get('transformationType')?.value as TransformationTypeOption;
+    const agentName = resolveRequiredAgentName(option?.value, this.serviceConfiguration);
+    const typeLabel = option?.value === TransformationType.SMART_FUNCTION ? 'Smart Function' : 'JSONata';
+    if (!agentName) {
+      return `AI generation is unavailable: no ${typeLabel} agent is configured in the service configuration.`;
+    }
+    if (this.aiAgentService.agentListError) {
+      return `AI generation is unavailable: the list of AI agents could not be loaded (${this.aiAgentService.agentListError}).`;
+    }
+    return `AI generation is unavailable: agent "${agentName}" is not deployed in this tenant.`;
+  }
+
   /** Whether the code-template dropdown should be shown — hidden once the user picks "Generate with AI".
    *  Only relevant for Smart Function; JSONata has no code-template concept. */
   shouldShowCodeTemplateDropdown(): boolean {

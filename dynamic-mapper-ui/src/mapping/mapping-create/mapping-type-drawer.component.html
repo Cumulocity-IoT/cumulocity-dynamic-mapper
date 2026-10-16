@@ -155,6 +155,13 @@
             </div>
           </c8y-form-group>
           }
+          @if (shouldShowAINotDeployedInfo()) {
+          <c8y-form-group class="p-l-16 p-r-16">
+            <div class="alert alert-info" style="max-width: none;" data-cy="dm-ai-not-deployed-info">
+              {{ getAINotDeployedText() | translate }}
+            </div>
+          </c8y-form-group>
+          }
           <!-- Manual vs. Generate with AI - Choice (only offered when an AI agent is deployed for this transformation type) -->
           @if (shouldShowAIGenerationChoice()) {
           <c8y-form-group class="p-l-16 p-r-16">

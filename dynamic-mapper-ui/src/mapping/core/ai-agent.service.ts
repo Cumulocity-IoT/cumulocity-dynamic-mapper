@@ -91,6 +91,9 @@ export class AiAgentService {
    *  each fire their own network round trip. Not cached on a failed fetch, so a transient
    *  error is retried on the very next call rather than being remembered for the full TTL. */
   private agentsCache: { promise: Promise<AgentTextDefinition[]>; timestamp: number } | null = null;
+  /** Why the last agent-list fetch returned no usable list (e.g. "403 Forbidden"); undefined when it
+   *  succeeded. Lets callers tell "request rejected" apart from "no matching agent deployed". */
+  agentListError: string | undefined;
   private static readonly AGENTS_CACHE_TTL_MS = 30_000;
   private static readonly SETTINGS_CACHE_TTL_MS = 30_000;
 
@@ -179,7 +182,9 @@ export class AiAgentService {
       }
     );
 
+    this.agentListError = undefined;
     if (!res.ok) {
+      this.agentListError = `${res.status} ${res.statusText}`.trim();
       // Surfaced verbatim (including the body) because this endpoint is undocumented and not part of
       // the SDK's AIService: a 401/403 here means the *browser user* may not list agents even though
       // the microservice can, and the two look identical from the empty agent list alone.
@@ -193,6 +198,7 @@ export class AiAgentService {
 
     const data = await res.json();
     if (!Array.isArray(data)) {
+      this.agentListError = 'unexpected response';
       console.error(
         `Unexpected response from ${BASE_AI_URL}/${PATH_AGENT_ENDPOINT}: expected an array of agents`,
         data
