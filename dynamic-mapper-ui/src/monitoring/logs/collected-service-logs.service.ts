@@ -37,6 +37,16 @@ export class CollectedServiceLogsService implements ServiceLogsSource {
     // Nothing to prepare: the service answers for the calling tenant.
   }
 
+  async flush(): Promise<void> {
+    const response = await this.client.fetch(`${BASE_URL}/${PATH_SERVICE_LOGS_ENDPOINT}/flush`, { method: 'POST' });
+    if (response.status === 403) {
+      throw new LogsUnavailableError('Fetching the service log requires the role ROLE_DYNAMIC_MAPPER_ADMIN', 403);
+    }
+    if (!response.ok) {
+      throw new LogsUnavailableError(`The service answered HTTP ${response.status}`, response.status);
+    }
+  }
+
   async load(request: LogRequest): Promise<LogWindow> {
     const query = new URLSearchParams();
     if (request.instance) query.set('instance', request.instance);

@@ -74,24 +74,32 @@ public class ServiceLogCollector {
 
     /** One pass: every tenant whose interval has elapsed is stored. Never throws. */
     public synchronized void collect() {
-        collect(false);
+        collect(false, null);
     }
 
     /** Stores every tenant's waiting lines now, whatever their interval (used when the service stops). */
     public synchronized void flush() {
-        collect(true);
+        collect(true, null);
     }
 
-    private void collect(boolean force) {
+    /**
+     * Stores one tenant's waiting lines now, whatever its interval: the "fetch now" button of the service log page. Does
+     * nothing for a tenant that is not subscribed or has switched the service log off.
+     */
+    public synchronized void flushTenant(String tenant) {
+        collect(true, tenant);
+    }
+
+    private void collect(boolean force, String only) {
         // Whatever this thread logs while storing (SDK, HTTP client) must not be captured and stored in turn.
         try (AutoCloseable ignored = ServiceLogCaptureAppender.suppressOnThisThread()) {
-            run(force);
+            run(force, only);
         } catch (Exception e) {
             remember("*", e);
         }
     }
 
-    private void run(boolean force) {
+    private void run(boolean force, String only) {
         try {
             if (!announced) {
                 announced = true;
@@ -107,6 +115,9 @@ public class ServiceLogCollector {
                 Settings settings = settingsProvider.forTenant(tenant);
                 if (!settings.enabled()) {
                     buffer.discard(tenant); // switched off: nothing may be kept for it
+                    continue;
+                }
+                if (only != null && !only.equals(tenant)) {
                     continue;
                 }
                 Instant last = lastRun.get(tenant);

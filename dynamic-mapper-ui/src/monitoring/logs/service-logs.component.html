@@ -21,6 +21,14 @@
     {{ 'Dark theme' | translate }}
   </label>
 </c8y-action-bar-item>
+@if (isCollected) {
+<c8y-action-bar-item [placement]="'right'">
+  <button type="button" class="btn btn-link" (click)="fetchNow()" [disabled]="isLoading || !!error">
+    <i c8yIcon="refresh"></i>
+    {{ 'Fetch now' | translate }}
+  </button>
+</c8y-action-bar-item>
+}
 <c8y-action-bar-item [placement]="'right'">
   <button type="button" class="btn btn-link" (click)="download()" [disabled]="!selectedInstance || !!error">
     <i c8yIcon="download"></i>

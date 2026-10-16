@@ -122,6 +122,21 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
     return this.fetch({});
   }
 
+  /** Has the service store what it still holds for this tenant, then shows the newest lines. */
+  async fetchNow(): Promise<void> {
+    if (!this.source?.flush) return;
+    this.isLoading = true;
+    try {
+      await this.source.flush();
+    } catch (e) {
+      console.error(e);
+      this.alertService.danger('Failed to fetch the service log.');
+    } finally {
+      this.isLoading = false;
+    }
+    await this.loadLatest();
+  }
+
   loadFirst(): Promise<void> {
     return this.fetch({ dateFrom: EPOCH });
   }

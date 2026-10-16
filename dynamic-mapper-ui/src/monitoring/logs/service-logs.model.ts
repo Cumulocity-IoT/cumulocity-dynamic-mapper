@@ -46,6 +46,8 @@ export interface ServiceLogsSource {
   /** Prepares the source; throws {@link LogsUnavailableError} if it cannot serve this tenant. */
   init(): Promise<void>;
   load(request: LogRequest): Promise<LogWindow>;
+  /** Asks the service to store the lines it still holds in memory now (collected source only). */
+  flush?(): Promise<void>;
 }
 
 /** The source cannot serve this tenant or user. `status` is the HTTP status when there was one. */

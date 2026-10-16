@@ -23,11 +23,13 @@ package dynamic.mapper.controller;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,6 +38,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 
+import dynamic.mapper.logs.ServiceLogCollectorJob;
 import dynamic.mapper.logs.ServiceLogReader;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -56,10 +59,12 @@ public class ServiceLogsController {
 
     private final ContextService<UserCredentials> contextService;
     private final ServiceLogReader reader;
+    private final ObjectProvider<ServiceLogCollectorJob> collector;
 
     public ServiceLogsController(ContextService<UserCredentials> contextService, ServiceLogReader.Events events,
-            @Value("${service.logs.reader.max-chunks:10}") int maxChunks) {
+            @Value("${service.logs.reader.max-chunks:10}") int maxChunks, ObjectProvider<ServiceLogCollectorJob> collector) {
         this.contextService = contextService;
+        this.collector = collector;
         this.reader = new ServiceLogReader(events, maxChunks);
     }
 
@@ -84,6 +89,23 @@ public class ServiceLogsController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dates must be ISO-8601, e.g. 2026-10-15T12:00:00Z");
         }
         return ResponseEntity.ok(reader.read(tenant, instance, from, to));
+    }
+
+    @Operation(summary = "Store the calling tenant's waiting log lines now", description = """
+            Stores the lines this service instance has captured for the calling tenant but not yet written, instead of \
+            waiting for the collection interval, so a following read returns them. Only the instance that handles the \
+            request is flushed. Requires `ROLE_DYNAMIC_MAPPER_ADMIN`.""")
+    @PostMapping("/flush")
+    public ResponseEntity<Void> flush() {
+        if (!Utils.userHasMappingAdminRole()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Fetching the service log requires ROLE_DYNAMIC_MAPPER_ADMIN");
+        }
+        ServiceLogCollectorJob job = collector.getIfAvailable();
+        if (job != null) { // absent when the operator switched collection off: nothing is waiting then
+            job.flushTenant(contextService.getContext().getTenant());
+        }
+        return ResponseEntity.noContent().build();
     }
 
     private static Instant parse(String value) {

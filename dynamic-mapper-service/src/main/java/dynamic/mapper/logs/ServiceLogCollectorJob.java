@@ -57,6 +57,11 @@ public class ServiceLogCollectorJob {
         collector.flush();
     }
 
+    /** Stores the given tenant's waiting lines now instead of at its next interval. */
+    public void flushTenant(String tenant) {
+        collector.flushTenant(tenant);
+    }
+
     @Scheduled(fixedDelay = 5_000, initialDelay = 15_000)
     public void run() {
         collector.collect();

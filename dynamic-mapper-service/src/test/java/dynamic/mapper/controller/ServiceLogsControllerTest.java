@@ -24,13 +24,16 @@ import org.springframework.web.server.ResponseStatusException;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 
+import dynamic.mapper.logs.ServiceLogCollectorJob;
 import dynamic.mapper.logs.ServiceLogReader;
+import org.springframework.beans.factory.ObjectProvider;
 
 class ServiceLogsControllerTest {
 
     private ContextService<UserCredentials> contextService;
     private ServiceLogReader.Events events;
     private ServiceLogsController controller;
+    private ServiceLogCollectorJob job;
 
     @BeforeEach
     @SuppressWarnings("unchecked")
@@ -40,7 +43,10 @@ class ServiceLogsControllerTest {
         when(credentials.getTenant()).thenReturn("tenantA");
         when(contextService.getContext()).thenReturn(credentials);
         events = mock(ServiceLogReader.Events.class);
-        controller = new ServiceLogsController(contextService, events, 10);
+        job = mock(ServiceLogCollectorJob.class);
+        ObjectProvider<ServiceLogCollectorJob> provider = mock(ObjectProvider.class);
+        when(provider.getIfAvailable()).thenReturn(job);
+        controller = new ServiceLogsController(contextService, events, 10, provider);
     }
 
     @AfterEach
@@ -83,5 +89,16 @@ class ServiceLogsControllerTest {
                 () -> controller.read(null, "yesterday", null));
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+    }
+
+    @Test
+    void flushStoresOnlyTheCallersTenantAndRequiresTheAdminRole() {
+        grant("ROLE_DYNAMIC_MAPPER_CREATE");
+        assertThrows(ResponseStatusException.class, () -> controller.flush());
+        verify(job, never()).flushTenant(any());
+
+        grant("ROLE_DYNAMIC_MAPPER_ADMIN");
+        controller.flush();
+        verify(job).flushTenant("tenantA");
     }
 }

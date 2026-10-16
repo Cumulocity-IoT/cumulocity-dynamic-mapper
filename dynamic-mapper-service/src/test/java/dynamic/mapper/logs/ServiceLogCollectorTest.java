@@ -215,6 +215,37 @@ class ServiceLogCollectorTest {
     }
 
     @Test
+    void flushTenantStoresOnlyThatTenantNowAndLeavesTheOthersWaiting() {
+        TestSettings settings = new TestSettings(c -> {
+            c.setMinLevel("WARN");
+            c.setIntervalMs(3_600_000);
+        });
+        ServiceLogCollector c = collector(Set.of("tenantA", "tenantB"), settings);
+        c.collect();
+        buffer.add(rec("tenantA", "WARN", 1, "a waiting"));
+        buffer.add(rec("tenantB", "WARN", 1, "b waiting"));
+        now = T0.plusSeconds(10);
+
+        c.flushTenant("tenantA");
+
+        assertTrue(sink.logsOf("tenantA").contains("a waiting"));
+        assertTrue(sink.logsOf("tenantB").isEmpty(), "another tenant is not stored");
+        c.flush();
+        assertTrue(sink.logsOf("tenantB").contains("b waiting"), "and its lines were not lost");
+    }
+
+    @Test
+    void flushTenantDoesNothingForATenantThatSwitchedTheServiceLogOff() {
+        TestSettings settings = new TestSettings().with("tenantA", c -> c.setEnabled(false));
+        ServiceLogCollector c = collector(Set.of("tenantA"), settings);
+        buffer.add(rec("tenantA", "WARN", 1, "x"));
+
+        c.flushTenant("tenantA");
+
+        assertTrue(sink.written.isEmpty());
+    }
+
+    @Test
     void aFailedStoreIsRetriedNextRunWithoutHoldingUpOrDuplicatingOtherTenants() {
         sink.failing.add("tenantA");
         buffer.add(rec("tenantA", "WARN", 1, "a1")).add(rec("tenantB", "WARN", 2, "b1"));

@@ -155,6 +155,7 @@ for you:
 
 | Control | What it does |
 |---|---|
+| **Fetch now** | Collected log only. Has the service store the lines it holds for your tenant right away, instead of at the next collection interval, and then shows the newest lines. Only the instance that answers the request is flushed, so with several instances some lines can still arrive at their next interval. |
 | **From** and **Apply** | Jumps to a start time. The time is in **UTC**, not your local time. |
 | **First / Previous / Next / Last** | Pages through the log. **Last** shows the newest lines. **Next** and **Last** are disabled while auto refresh is on, because it already follows the newest lines. |
 | **Dark theme** | Switches the log between a dark and a light theme. The choice is remembered in your browser. |
