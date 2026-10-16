@@ -74,7 +74,7 @@ export function toClientAgentDefinition(
   };
 }
 
-export interface AIAgentSettings {
+export interface AiAgentSettings {
   killSwitch: boolean;
   telemetryOptOut?: boolean;
 }
@@ -85,7 +85,7 @@ export interface AIAgentSettings {
 export class AiAgentService {
   private readonly client: FetchClient = inject(FetchClient);
 
-  private settingsCache: { promise: Promise<AIAgentSettings>; timestamp: number } | null = null;
+  private settingsCache: { promise: Promise<AiAgentSettings>; timestamp: number } | null = null;
   /** Short-lived cache so the drawer's and the stepper's independent agent-deployment checks
    *  (both happen within seconds of each other during a single mapping-creation flow) don't
    *  each fire their own network round trip. Not cached on a failed fetch, so a transient
@@ -99,7 +99,7 @@ export class AiAgentService {
    * or the killSwitch field; those versions predate the kill switch and remain enabled.
    * Other failed or malformed responses are handled as unavailable.
    */
-  async getAISettings(forceRefresh = false): Promise<AIAgentSettings> {
+  async getAISettings(forceRefresh = false): Promise<AiAgentSettings> {
     const now = Date.now();
     if (
       !forceRefresh &&
@@ -115,7 +115,7 @@ export class AiAgentService {
     return promise;
   }
 
-  private async fetchAISettings(): Promise<AIAgentSettings> {
+  private async fetchAISettings(): Promise<AiAgentSettings> {
     const url = `${BASE_AI_URL}/${PATH_AI_SETTINGS_ENDPOINT}`;
     const res: IFetchResponse = await this.client.fetch(url, {
       headers: { 'content-type': 'application/json' },
