@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.mqtt;
 
+import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import dynamic.mapper.util.TenantLogContext;
 import com.hivemq.client.mqtt.MqttGlobalPublishFilter;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
@@ -84,6 +85,80 @@ public class MQTT5Client extends AMQTTClient {
         super(serviceRegistry, connectorRegistry, connectorConfiguration,
                 dispatcher, additionalSubscriptionIdTest, tenant);
         this.connectorSpecification = createConnectorSpecification();
+    }
+
+    @Override
+    public boolean supportsConnectionTest() {
+        return true;
+    }
+
+    // Standalone probe: deliberately does NOT go through buildMqttClient()/connectMqttWithRetry(),
+    // whose listeners and setConnected() calls would report CONNECTED/DISCONNECTED status events
+    // for the real connector with this identifier. A unique client id keeps the broker from
+    // treating the probe as a takeover of the live session; no subscribe, clean session.
+
+    @Override
+    public ConnectionTestResult testConnection() {
+        Mqtt5AsyncClient client = null;
+        try {
+            String protocol = (String) connectorConfiguration.getProperties()
+                    .getOrDefault("protocol", MQTT_PROTOCOL_MQTT);
+            String mqttHost = (String) connectorConfiguration.getProperties().get("mqttHost");
+            Integer mqttPort = (Integer) connectorConfiguration.getProperties().get("mqttPort");
+            String user = (String) connectorConfiguration.getProperties().get("user");
+            String password = (String) connectorConfiguration.getProperties().get("password");
+            if (StringUtils.isEmpty(mqttHost) || mqttPort == null) {
+                return ConnectionTestResult.failed("mqttHost and mqttPort are required", null);
+            }
+            Mqtt5ClientBuilder builder = Mqtt5Client.builder()
+                    .serverHost(mqttHost)
+                    .serverPort(mqttPort)
+                    .identifier("dm-connection-test-" + java.util.UUID.randomUUID().toString().substring(0, 8))
+                    .transportConfig()
+                        .socketConnectTimeout(10, TimeUnit.SECONDS)
+                        .applyTransportConfig();
+            if (!StringUtils.isEmpty(user)) {
+                Complete authBuilder = Mqtt5SimpleAuth.builder().username(user);
+                if (!StringUtils.isEmpty(password)) {
+                    authBuilder.password(password.getBytes(StandardCharsets.UTF_8));
+                }
+                builder.simpleAuth(authBuilder.build());
+            }
+            if ((Boolean) connectorConfiguration.getProperties().getOrDefault("useSelfSignedCertificate", false)) {
+                initializeMqttSslConfiguration();
+                builder.sslConfig(mqttSslConfig);
+            } else if (MQTT_PROTOCOL_MQTTS.equals(protocol) || MQTT_PROTOCOL_WSS.equals(protocol)) {
+                builder.sslWithDefaultConfig();
+            }
+            if (MQTT_PROTOCOL_WS.equals(protocol) || MQTT_PROTOCOL_WSS.equals(protocol)) {
+                builder.webSocketWithDefaultConfig();
+                String serverPath = (String) connectorConfiguration.getProperties().get("serverPath");
+                if (serverPath != null) {
+                    builder.webSocketConfig().serverPath(serverPath).applyWebSocketConfig();
+                }
+            }
+            client = builder.buildAsync();
+            Mqtt5ConnAck ack = client.connectWith().cleanStart(true).keepAlive(30).send()
+                    .get(15, TimeUnit.SECONDS);
+            if (!ack.getReasonCode().isError()) {
+                return ConnectionTestResult.ok("Connected to " + mqttHost + ":" + mqttPort, null);
+            }
+            return ConnectionTestResult.failed("Broker refused the connection: " + ack.getReasonCode().name(), null);
+        } catch (java.util.concurrent.TimeoutException e) {
+            return ConnectionTestResult.failed("Connection timed out", null);
+        } catch (Exception e) {
+            Throwable cause = e instanceof java.util.concurrent.ExecutionException && e.getCause() != null
+                    ? e.getCause() : e;
+            return ConnectionTestResult.failed("Connection failed: " + cause.getMessage(), null);
+        } finally {
+            if (client != null) {
+                try {
+                    client.disconnect();
+                } catch (Exception ignored) {
+                    // probe client may never have connected
+                }
+            }
+        }
     }
 
     @Override

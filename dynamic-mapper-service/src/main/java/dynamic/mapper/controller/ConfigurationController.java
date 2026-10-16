@@ -34,6 +34,8 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.ConnectorType;
+import dynamic.mapper.connector.core.client.AConnectorClient;
+import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.*;
 
@@ -104,6 +106,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class ConfigurationController {
 
     private final ConnectorRegistry connectorRegistry;
+    private final ConnectorClientFactory connectorClientFactory;
     private final MappingService mappingService;
     private final ConnectorConfigurationService connectorConfigurationService;
     private final ServiceConfigurationService serviceConfigurationService;
@@ -397,6 +400,46 @@ public class ConfigurationController {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
         }
         return ResponseEntity.status(HttpStatus.OK).body(identifier);
+    }
+
+    @Operation(summary = "Test connector configuration", description = """
+            Verifies connectivity and authentication for the given (possibly unsaved) connector configuration
+            using a throwaway client; nothing is saved, registered or subscribed.
+
+            Sensitive properties sent as "****" are resolved from the stored configuration with the same identifier.
+
+            **Security:** Requires `ROLE_DYNAMIC_MAPPER_ADMIN`
+            """)
+    @PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_ADMIN')")
+    @PostMapping(value = "/connector/test", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ConnectionTestResult> testConnectionConfiguration(
+            @Valid @RequestBody ConnectorConfiguration configuration) {
+        String tenant = contextService.getContext().getTenant();
+        ConnectorSpecification spec = connectorRegistry.getConnectorSpecification(configuration.getConnectorType());
+        if (spec == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported connector type");
+        }
+        try {
+            ConnectorConfiguration original = configuration.getIdentifier() == null ? null
+                    : connectorConfigurationService.getConnectorConfiguration(configuration.getIdentifier(), tenant);
+            for (String property : configuration.getProperties().keySet()) {
+                if (spec.isPropertySensitive(property) && "****".equals(configuration.getProperties().get(property))
+                        && original != null && original.getProperties() != null) {
+                    configuration.getProperties().put(property, original.getProperties().get(property));
+                }
+            }
+            configuration.copyPredefinedValues(spec);
+            AConnectorClient client = connectorClientFactory.createConnectorClient(configuration, "", tenant);
+            if (client == null || !client.supportsConnectionTest()) {
+                return ResponseEntity.ok(ConnectionTestResult.failed(
+                        "Connection test is not supported for this connector type", null));
+            }
+            log.info("{} - Testing connector configuration, type: {}", tenant, configuration.getConnectorType());
+            return ResponseEntity.ok(client.testConnection());
+        } catch (Exception ex) {
+            log.error("{} - Error testing connector configuration", tenant, ex);
+            return ResponseEntity.ok(ConnectionTestResult.failed("Test failed: " + ex.getMessage(), null));
+        }
     }
 
     @Operation(summary = "Update connector configuration", description = """

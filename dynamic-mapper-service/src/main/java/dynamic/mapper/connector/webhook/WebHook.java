@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.webhook;
 
+import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -242,6 +243,52 @@ public class WebHook extends AConnectorClient {
             // immediately supersede the FAILED event carrying the actual error message.
             connectionStateManager.setConnected(false);
             connectionStateManager.updateStatusWithError(e);
+        }
+    }
+
+    @Override
+    public boolean supportsConnectionTest() {
+        return true;
+    }
+
+    /**
+     * GET only, never POST: a webhook receiver's data endpoint may have side effects. Uses the
+     * configured health endpoint when there is one (same check as {@link #connect()}), else the
+     * base URL, where 404/405 still prove the host is reachable and the credentials were accepted.
+     */
+    @Override
+    public ConnectionTestResult testConnection() {
+        baseUrl = (String) connectorConfiguration.getProperties().getOrDefault("baseUrl", null);
+        if (StringUtils.isEmpty(baseUrl)) {
+            return ConnectionTestResult.failed("baseUrl is required", null);
+        }
+        String healthEndpoint = (String) connectorConfiguration.getProperties().get("baseUrlHealthEndpoint");
+        boolean hasHealth = !StringUtils.isEmpty(healthEndpoint);
+        try {
+            WebClient client = buildWebClient();
+            ResponseEntity<String> response = (hasHealth ? client.get().uri(healthEndpoint) : client.get())
+                    .retrieve()
+                    .onStatus(status -> true, r -> Mono.empty())
+                    .toEntity(String.class)
+                    .timeout(REQUEST_TIMEOUT)
+                    .block();
+            int code = response == null ? -1 : response.getStatusCode().value();
+            if (code == 401 || code == 403) {
+                return ConnectionTestResult.failed("Authentication failed (HTTP " + code
+                        + "): the server rejected the configured credentials", code);
+            }
+            if (code >= 200 && code < 300) {
+                return ConnectionTestResult.ok("Connected, HTTP " + code
+                        + (hasHealth ? " (health endpoint)" : ""), code);
+            }
+            if (!hasHealth && code >= 400 && code < 500) {
+                return ConnectionTestResult.ok("Connection OK: host reachable and credentials accepted. The base URL "
+                        + "itself returned HTTP " + code + ", which is typical for POST-only receivers; configure a "
+                        + "health endpoint for a definitive check.", code);
+            }
+            return ConnectionTestResult.failed("Server returned HTTP " + code, code);
+        } catch (Exception e) {
+            return ConnectionTestResult.failed("Connection failed: " + e.getMessage(), null);
         }
     }
 

@@ -95,6 +95,8 @@ export interface ConnectorSpecification {
    * is clamped to the strongest level in this list when it runs on this connector.
    */
   supportedQos?: Qos[];
+  /** True if the backend can verify connectivity/authentication of an unsaved configuration. */
+  supportsConnectionTest?: boolean;
   properties: { [name: string]: ConnectorProperty };
 }
 
@@ -103,6 +105,12 @@ export const connectorResolver: ResolveFn<ConnectorConfiguration> = (route) => {
   const identifier = route.paramMap.get('identifier');
   return connectorConfigurationService.getConfiguration(identifier);
 };
+
+export interface ConnectionTestResult {
+  success: boolean;
+  message: string;
+  statusCode?: number;
+}
 
 export interface PollingInterval {
   label: string;

@@ -86,6 +86,8 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
   private readonly connectorConfigurationService = inject(ConnectorConfigurationService);
   private readonly cdr = inject(ChangeDetectorRef);
 
+  private currentIdentifier: string | null = this.route.snapshot.paramMap.get('identifier');
+
   async ngOnInit() {
     this.specifications$ = this.connectorConfigurationService.getSpecifications();
     this.feature = await this.sharedService.getFeatures();
@@ -94,6 +96,7 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
       takeUntil(this.destroy$),
       tap(({ connector }) => {
         this.configuration = connector;
+        this.currentIdentifier = connector.identifier;
         this.cdr.detectChanges();
       }))
       .subscribe(async data => {
@@ -114,11 +117,15 @@ export class ConnectorDetailsComponent implements OnInit, OnDestroy {
     // instead of only the one-shot route-resolver snapshot: onConfigurationToggle()'s optimistic
     // flip of `enabled` is otherwise never corrected if the connect/reconnect attempt it
     // triggered ultimately fails or is still backing off.
-    const identifier = this.route.snapshot.paramMap.get('identifier');
+    //
+    // The identifier must be read at emission time, not captured once here: navigating between
+    // connectors via the sidebar reuses this component instance (only the :identifier param
+    // changes), so a value captured at init goes stale and the poll below would keep overwriting
+    // `configuration` with the connector that was opened first.
     this.connectorConfigurationService.getConfigurationsWithStatus().pipe(
       takeUntil(this.destroy$)
     ).subscribe(configurations => {
-      const match = configurations.find(config => config.identifier === identifier);
+      const match = configurations.find(config => config.identifier === this.currentIdentifier);
       if (match) {
         this.configuration = match;
         this.cdr.detectChanges();

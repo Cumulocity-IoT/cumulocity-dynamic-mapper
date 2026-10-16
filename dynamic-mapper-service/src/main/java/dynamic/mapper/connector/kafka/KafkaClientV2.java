@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.kafka;
 
+import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import dynamic.mapper.util.TenantLogContext;
 import com.cumulocity.sdk.client.SDKException;
 import dynamic.mapper.configuration.ConnectorConfiguration;
@@ -373,6 +374,41 @@ public class KafkaClientV2 extends AConnectorClient {
         this.kafkaProducerProperties = producerProps;
 
         log.debug("{} - Kafka properties configured for: {}", tenant, bootstrapServers);
+    }
+
+    @Override
+    public boolean supportsConnectionTest() {
+        return true;
+    }
+
+    /**
+     * Probes with an {@link AdminClient} only (describeCluster): no consumer is created, so the
+     * live connector's consumer group is never joined and no rebalance is triggered.
+     */
+    @Override
+    public ConnectionTestResult testConnection() {
+        try {
+            buildKafkaProperties();
+            Properties props = new Properties();
+            props.putAll(kafkaProducerProperties);
+            props.put("request.timeout.ms", "10000");
+            props.put("default.api.timeout.ms", "10000");
+            try (AdminClient probe = AdminClient.create(props)) {
+                int brokers = probe.describeCluster().nodes().get(10, TimeUnit.SECONDS).size();
+                return ConnectionTestResult.ok("Connected to Kafka cluster (" + brokers + " broker(s))", null);
+            }
+        } catch (java.util.concurrent.ExecutionException e) {
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            if (cause instanceof org.apache.kafka.common.errors.AuthenticationException) {
+                return ConnectionTestResult.failed("Authentication failed: " + cause.getMessage(), null);
+            }
+            return ConnectionTestResult.failed("Connection failed: " + cause.getMessage(), null);
+        } catch (java.util.concurrent.TimeoutException e) {
+            return ConnectionTestResult.failed(
+                    "Could not reach the bootstrap servers within 10s (check host, port, security settings)", null);
+        } catch (Exception e) {
+            return ConnectionTestResult.failed("Connection failed: " + e.getMessage(), null);
+        }
     }
 
     @Override

@@ -1275,7 +1275,28 @@ public abstract class AConnectorClient {
         if (connectorSpecification != null && connectorSpecification.getSupportedQos() == null) {
             connectorSpecification.setSupportedQos(supportedQos);
         }
+        if (connectorSpecification != null) {
+            connectorSpecification.setSupportsConnectionTest(supportsConnectionTest());
+        }
         return connectorSpecification;
+    }
+
+    /**
+     * Whether {@link #testConnection()} is implemented. The UI only offers the test button for
+     * connectors that return true.
+     */
+    public boolean supportsConnectionTest() {
+        return false;
+    }
+
+    /**
+     * Verifies connectivity and authentication of this instance's configuration without subscribing,
+     * registering or processing anything. Runs on a throwaway instance built from the (unsaved) form
+     * values, so it must not touch shared state such as the registry, connector status or other
+     * clients' sessions. Only called when {@link #supportsConnectionTest()} is true.
+     */
+    public ConnectionTestResult testConnection() {
+        return ConnectionTestResult.failed("Connection test is not supported for this connector type", null);
     }
 
     /**
@@ -1403,9 +1424,28 @@ public abstract class AConnectorClient {
         connectorConfiguration = connectorConfigurationService
                 .getConnectorConfiguration(getConnectorIdentifier(), tenant);
         connectorConfiguration.copyPredefinedValues(getConnectorSpecification());
+        warnOnMaskedSensitiveProperties();
 
         serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
+    }
+
+    /**
+     * A stored sensitive value equal to the UI mask ("****") means a placeholder was persisted
+     * instead of the real secret (e.g. imported/copied config); it would be sent verbatim and the
+     * target rejects it (typically 401). Log the property name only, never the value.
+     */
+    private void warnOnMaskedSensitiveProperties() {
+        ConnectorSpecification spec = getConnectorSpecification();
+        if (spec == null || connectorConfiguration.getProperties() == null) {
+            return;
+        }
+        connectorConfiguration.getProperties().forEach((key, value) -> {
+            if (spec.isPropertySensitive(key) && "****".equals(value)) {
+                log.warn("{} - Connector {}: sensitive property '{}' is stored as the mask \"****\"; "
+                        + "re-enter it in the connector configuration and save", tenant, connectorName, key);
+            }
+        });
     }
 
     /**

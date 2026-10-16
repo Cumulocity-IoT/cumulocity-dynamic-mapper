@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.httppolling;
 
+import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import dynamic.mapper.util.TenantLogContext;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
@@ -747,6 +748,50 @@ public class HttpPollingConnector extends AConnectorClient {
     // ProcessingContext), so a small, separate GET-only implementation is less invasive here
     // than changing WebHook's visibility or extracting a shared base class.)
     // -------------------------------------------------------------------------
+
+    @Override
+    public boolean supportsConnectionTest() {
+        return true;
+    }
+
+    /**
+     * One GET against the configured base URL with the configured authentication. The base URL
+     * itself is usually not a data endpoint (mapping topics are appended as paths), so a 404 still
+     * proves the host is reachable and the credentials were accepted; only 401/403 are auth
+     * failures. Works from the constructor-supplied config, not the stored one, so unsaved form
+     * values are tested.
+     */
+    @Override
+    public ConnectionTestResult testConnection() {
+        baseUrl = (String) connectorConfiguration.getProperties().getOrDefault("url", null);
+        if (StringUtils.isEmpty(baseUrl)) {
+            return ConnectionTestResult.failed("url is required", null);
+        }
+        try {
+            WebClient client = buildWebClient();
+            ResponseEntity<String> response = client.get().retrieve()
+                    .onStatus(status -> true, r -> reactor.core.publisher.Mono.empty())
+                    .toEntity(String.class)
+                    .timeout(REQUEST_TIMEOUT)
+                    .block();
+            int code = response == null ? -1 : response.getStatusCode().value();
+            if (code == 401 || code == 403) {
+                return ConnectionTestResult.failed("Authentication failed (HTTP " + code
+                        + "): the server rejected the configured credentials", code);
+            }
+            if (code >= 200 && code < 300) {
+                return ConnectionTestResult.ok("Connected, HTTP " + code, code);
+            }
+            if (code >= 400 && code < 500) {
+                return ConnectionTestResult.ok("Connection OK: host reachable and credentials accepted. The base URL "
+                        + "itself returned HTTP " + code + ", which is normal here because mapping topics are "
+                        + "appended as paths (e.g. /events).", code);
+            }
+            return ConnectionTestResult.failed("Server returned HTTP " + code, code);
+        } catch (Exception e) {
+            return ConnectionTestResult.failed("Connection failed: " + e.getMessage(), null);
+        }
+    }
 
     private WebClient buildWebClient() {
         String authentication = (String) connectorConfiguration.getProperties().get("authentication");

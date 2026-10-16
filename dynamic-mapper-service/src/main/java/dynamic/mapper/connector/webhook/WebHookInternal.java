@@ -43,6 +43,12 @@ import java.util.Collections;
 @Slf4j
 public class WebHookInternal extends WebHook {
 
+    /** Targets the platform itself with preconfigured values; there is nothing for a user to verify. */
+    @Override
+    public boolean supportsConnectionTest() {
+        return false;
+    }
+
     /**
      * Default constructor
      */

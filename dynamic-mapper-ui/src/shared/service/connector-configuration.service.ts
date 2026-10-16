@@ -40,7 +40,7 @@ import {
   distinctUntilChanged,
   tap,
 } from 'rxjs/operators';
-import { BASE_URL, ConnectorConfiguration, ConnectorSpecification, ConnectorStatus, ConnectorStatusEvent, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_STATUS_CONNECTORS_ENDPOINT, PollingInterval } from '..';
+import { BASE_URL, ConnectionTestResult, ConnectorConfiguration, ConnectorSpecification, ConnectorStatus, ConnectorStatusEvent, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_STATUS_CONNECTORS_ENDPOINT, PollingInterval } from '..';
 
 @Injectable({ providedIn: 'root' })
 export class ConnectorConfigurationService {
@@ -178,6 +178,26 @@ export class ConnectorConfigurationService {
     } catch (error) {
       console.error('Failed to create connector configuration:', error);
       throw error;
+    }
+  }
+
+  /** Verifies connectivity/auth of an unsaved configuration; nothing is saved on the backend. */
+  async testConfiguration(configuration: Partial<ConnectorConfiguration>): Promise<ConnectionTestResult> {
+    try {
+      const response = await this.client.fetch(
+        `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/test`,
+        {
+          headers: { 'content-type': 'application/json', accept: 'application/json' },
+          body: JSON.stringify(configuration),
+          method: 'POST'
+        }
+      );
+      if (!response.ok) {
+        return { success: false, message: `HTTP ${response.status}: ${response.statusText}` };
+      }
+      return await response.json();
+    } catch (error) {
+      return { success: false, message: error?.message ?? 'Test request failed' };
     }
   }
 
