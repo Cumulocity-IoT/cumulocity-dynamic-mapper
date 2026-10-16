@@ -133,6 +133,7 @@ export class AiAgentService {
     if (
       !data ||
       typeof data !== 'object' ||
+      Array.isArray(data) ||
       (data.killSwitch !== undefined && typeof data.killSwitch !== 'boolean') ||
       (data.telemetryOptOut !== undefined && typeof data.telemetryOptOut !== 'boolean')
     ) {
