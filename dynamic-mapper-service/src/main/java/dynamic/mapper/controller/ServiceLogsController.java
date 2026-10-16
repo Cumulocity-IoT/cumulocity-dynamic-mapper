@@ -20,6 +20,9 @@
 
 package dynamic.mapper.controller;
 
+import dynamic.mapper.logs.collect.ServiceLogCollectorJob;
+import dynamic.mapper.logs.read.ServiceLogReader;
+
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 
@@ -38,8 +41,6 @@ import org.springframework.web.server.ResponseStatusException;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 
-import dynamic.mapper.logs.ServiceLogCollectorJob;
-import dynamic.mapper.logs.ServiceLogReader;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 

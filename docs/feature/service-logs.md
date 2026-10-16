@@ -63,7 +63,7 @@ The lines are **captured inside the process**, not read back from the platform. 
 line's tenant, so there is nothing to parse, no cursor, no credentials and no platform permission involved — see *Why not the
 platform's log* for what was measured.
 
-| Class (`dynamic.mapper.logs`) | Role |
+| Class (`dynamic.mapper.logs.*`: `model`, `capture`, `collect`, `store`, `read`, `retention`, `settings`) | Role |
 |---|---|
 | `ServiceLogCaptureAppender` | attached to the root logger; per event: tenant from the MDC (SDK key, else ours), ignores events without a tenant, below the minimum level, from `dynamic.mapper.logs.*`, or logged on a thread that is currently collecting (`suppressOnThisThread`, so the SDK and HTTP-client lines produced while storing are never captured in turn); formats the line like the console (`2026-10-15T12:00:00.000Z  WARN [thread] logger : message`, UTC, stack trace included), **cuts it to `max-record-bytes`** and offers it to the buffer. Never logs (would recurse) |
 | `ServiceLogCapture` | the Spring bean that attaches/detaches the appender and exposes the buffer |
@@ -108,7 +108,7 @@ previous design onto the agent itself (if any exist) are invisible to the page a
 User documentation: [`monitoring.md`](../../dynamic-mapper-ui/public/docs/monitoring.md#service-logs).
 
 [`ServiceLogsController`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/ServiceLogsController.java) /
-[`ServiceLogReader`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/logs/ServiceLogReader.java): reads the calling
+[`ServiceLogReader`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/logs/read/ServiceLogReader.java): reads the calling
 tenant's events **as that tenant's service user** (the caller's own event permission is irrelevant), up to 10 chunks per page,
 ascending, never mixing instances (default: the newest chunk's), and reports `more`, `empty` and `omitted`. Neither bound =
 latest; `dateFrom` only = after (oldest first); `dateTo` only = before. Bounds are exclusive and refer to a chunk's end time.

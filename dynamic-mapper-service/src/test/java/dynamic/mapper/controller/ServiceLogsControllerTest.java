@@ -1,5 +1,8 @@
 package dynamic.mapper.controller;
 
+import dynamic.mapper.logs.collect.ServiceLogCollectorJob;
+import dynamic.mapper.logs.read.ServiceLogReader;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,8 +27,6 @@ import org.springframework.web.server.ResponseStatusException;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 
-import dynamic.mapper.logs.ServiceLogCollectorJob;
-import dynamic.mapper.logs.ServiceLogReader;
 import org.springframework.beans.factory.ObjectProvider;
 
 class ServiceLogsControllerTest {
