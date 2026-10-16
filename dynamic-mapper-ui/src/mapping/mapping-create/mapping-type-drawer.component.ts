@@ -133,6 +133,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
    *  service genuinely reporting no agents — shown to the user so they don't mistake a
    *  transient failure for "AI is not configured for this transformation type". */
   aiAvailabilityCheckFailed = false;
+  aiCapabilitiesDisabled = false;
   private serviceConfiguration: ServiceConfiguration;
   private deployedAgentNames = new Set<string>();
 
@@ -246,6 +247,12 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     return !!option?.value && this.AI_GENERATION_TYPES.includes(option.value);
   }
 
+  shouldShowAIDisabledInfo(): boolean {
+    if (!this.aiCapabilitiesDisabled) return false;
+    const option = this.formGroup?.get('transformationType')?.value as TransformationTypeOption;
+    return !!option?.value && this.AI_GENERATION_TYPES.includes(option.value);
+  }
+
   /** Whether the code-template dropdown should be shown — hidden once the user picks "Generate with AI".
    *  Only relevant for Smart Function; JSONata has no code-template concept. */
   shouldShowCodeTemplateDropdown(): boolean {
@@ -292,11 +299,19 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
   private async checkAIAgentAvailability(): Promise<void> {
     try {
+      const settings = await this.aiAgentService.getAISettings();
+      this.aiCapabilitiesDisabled = settings.killSwitch;
+      if (settings.killSwitch) {
+        this.deployedAgentNames = new Set();
+        this.aiAvailabilityCheckFailed = false;
+        return;
+      }
       const agents = await this.aiAgentService.getAIAgents();
       this.deployedAgentNames = new Set(agents.map(agent => agent.name));
       this.aiAvailabilityCheckFailed = false;
     } catch (error) {
       console.error('Failed to check AI agent availability:', error);
+      this.aiCapabilitiesDisabled = false;
       this.deployedAgentNames = new Set();
       this.aiAvailabilityCheckFailed = true;
     }

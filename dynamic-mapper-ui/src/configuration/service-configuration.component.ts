@@ -91,6 +91,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
   agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
   destroy$: Subject<void> = new Subject<void>();
   aiAgentDeployed: boolean = false;
+  aiCapabilitiesDisabled = false;
   inventoryFragmentsList: string[] = [''];
 
   trackByFragmentFn(index: any, _item: any) {
@@ -232,7 +233,10 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
   }
 
   private subscribeToAIAgents(): void {
-    from(this.aiAgentService.getAIAgents())
+    from(this.aiAgentService.getAISettings().then(async settings => {
+      this.aiCapabilitiesDisabled = settings.killSwitch;
+      return settings.killSwitch ? [] : this.aiAgentService.getAIAgents();
+    }))
       .pipe(
         map(agents => agents.map(agent => agent.name)),
         takeUntil(this.destroy$)
@@ -244,6 +248,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
         },
         error: error => {
           console.error('Failed to check AI agent availability:', error);
+          this.aiCapabilitiesDisabled = false;
           this.agents$.next([]);
           this.aiAgentDeployed = false;
         }

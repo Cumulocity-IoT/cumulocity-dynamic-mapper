@@ -50,10 +50,30 @@ JSONata paths or JavaScript.
 - **If the AI Agent Manager is unavailable, mapping creation/editing must still work** without
   AI — "Generate with AI" is an optional accelerator, not a hard dependency of the mapping
   editor.
+- **The tenant AI Agent Manager kill switch is authoritative.** The UI checks
+  `GET service/ai/settings` before listing agents or opening the chat. When `killSwitch` is
+  `true`, it makes no request to an AI agent, disables AI generation in the mapper, and tells
+  the user that AI capabilities are disabled in the tenant. Agent definitions may still be
+  provisioned during backend bootstrap; provisioning does not send prompts.
 
 ---
 
 ## Implementation
+
+### Manifest agent endpoints
+
+The manifest's `agents` values are HTTP paths relative to the microservice, not classpath
+or filesystem paths. Like the MCP example application, the service must serve each definition
+over HTTP. `AgentDefinitionController` exposes the bundled JSON resources at:
+
+- `/service/dynamic-mapper-service/agents/jsonata_agent.json`
+- `/service/dynamic-mapper-service/agents/smartfunction_agent.json`
+
+The manifest paths remain `agents/jsonata_agent.json` and `agents/smartfunction_agent.json`;
+the platform gateway supplies the `/service/dynamic-mapper-service/` prefix. Packaging the
+files in `src/main/resources/agents/` alone does not make them HTTP-accessible.
+After deployment, authenticated GET requests to these URLs must return HTTP 200 with the
+JSON definitions so the AI Agent Manager can retrieve them for automatic provisioning.
 
 ### Backend: agent bootstrap, not generation — [`AiAgentService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/ai/AiAgentService.java)
 
@@ -96,7 +116,8 @@ endpoint in the Java backend won't find one — that's expected.
   configured agent name: `JSONATA`/`DEFAULT` → `ServiceConfiguration.jsonataAgent`,
   `SMART_FUNCTION` → `ServiceConfiguration.smartFunctionAgent`.
 - `getAIAgents()` / `fetchAIAgents()` (lines 95-138) call `GET service/ai/agent` **directly
-  against the platform service**, bypassing `dynamic-mapper-service` — the code comments this
+  against the platform service**, but only after `GET service/ai/settings` confirms the tenant
+  kill switch is off. This bypasses `dynamic-mapper-service` — the code comments this
   endpoint as undocumented and not part of the SDK's `AIService`, and note that a 401/403
   there is indistinguishable from "no agents configured" from the UI's point of view. Results
   are cached in memory for 30 seconds.
@@ -110,6 +131,9 @@ endpoint in the Java backend won't find one — that's expected.
   (`checkAIAgentAvailability`) so the "Generate with AI" entry point can be hidden or disabled
   gracefully when the AI Agent Manager isn't reachable, per the "must still work without AI"
   requirement above.
+- The generation drawer independently refreshes the tenant settings before rendering
+  `AgentChatComponent`, so a stale availability check cannot open the chat after the kill switch
+  is enabled. The mapping-creation and editor affordances show a tenant-specific disabled notice.
 
 ### Frontend: the generation drawer — [`AiPromptComponent`](../../dynamic-mapper-ui/src/mapping/prompt/ai-prompt.component.ts)
 

@@ -125,7 +125,7 @@ describe('MappingStepperService', () => {
       'success',
       'danger'
     ], { state: [] });
-    mockAIAgentService = jasmine.createSpyObj<AiAgentService>('AiAgentService', ['getAIAgents']);
+    mockAIAgentService = jasmine.createSpyObj<AiAgentService>('AiAgentService', ['getAIAgents', 'getAISettings']);
     mockExtensionService = jasmine.createSpyObj<ExtensionService>('ExtensionService', ['getProcessorExtensions']);
     mockMappingService = jasmine.createSpyObj<MappingService>('MappingService', [
       'evaluateExpression',
@@ -142,6 +142,7 @@ describe('MappingStepperService', () => {
     mockSharedService.getServiceConfiguration.and.resolveTo({} as any);
     mockSharedService.getCodeTemplates.and.resolveTo({} as CodeTemplateMap);
     mockAIAgentService.getAIAgents.and.resolveTo([]);
+    mockAIAgentService.getAISettings.and.resolveTo({ killSwitch: false, telemetryOptOut: false });
 
     TestBed.configureTestingModule({
       providers: [

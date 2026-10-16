@@ -340,16 +340,21 @@ export class MappingStepperService {
     async checkAIAgentDeployment(mapping: Mapping, serviceConfiguration: ServiceConfiguration): Promise<{
         aiAgentDeployed: boolean;
         aiAgent: any;
+        aiCapabilitiesDisabled: boolean;
     }> {
         let agents: AgentTextDefinition[];
         try {
+            const settings = await this.aiAgentService.getAISettings();
+            if (settings.killSwitch) {
+                return { aiAgentDeployed: false, aiAgent: null, aiCapabilitiesDisabled: true };
+            }
             agents = await this.aiAgentService.getAIAgents();
         } catch (error) {
             // A failed availability check must not block the rest of the editor bootstrap —
             // fall back to "no agent deployed" and let the transformation step's own
             // "Generate with AI" affordance simply stay hidden.
             console.error('Failed to check AI agent deployment:', error);
-            return { aiAgentDeployed: false, aiAgent: null };
+            return { aiAgentDeployed: false, aiAgent: null, aiCapabilitiesDisabled: false };
         }
         const agentNames = agents.map(agent => agent.name);
         const requiredAgentName = resolveRequiredAgentName(mapping.transformationType, serviceConfiguration);
@@ -361,7 +366,8 @@ export class MappingStepperService {
 
         return {
             aiAgentDeployed: agentNames.length > 0 && hasRequiredAgent,
-            aiAgent: selectedAgent
+            aiAgent: selectedAgent,
+            aiCapabilitiesDisabled: false
         };
     }
 
@@ -816,6 +822,7 @@ export class MappingStepperService {
             serviceConfiguration,
             aiAgent: aiResult.aiAgent,
             aiAgentDeployed: aiResult.aiAgentDeployed,
+            aiCapabilitiesDisabled: aiResult.aiCapabilitiesDisabled,
             filterFormlyFields,
             codeTemplates,
             codeTemplatesDecoded,
@@ -1140,6 +1147,7 @@ export interface EditorSessionResult {
     serviceConfiguration: ServiceConfiguration;
     aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
     aiAgentDeployed: boolean;
+    aiCapabilitiesDisabled: boolean;
     filterFormlyFields: FormlyFieldConfig[];
     codeTemplates: CodeTemplateMap;
     codeTemplatesDecoded: Map<string, CodeTemplate>;
