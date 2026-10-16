@@ -72,7 +72,7 @@ class ServiceLogsControllerTest {
     @Test
     void anAdminReadsTheirOwnTenantsLogOnly() {
         grant("ROLE_DYNAMIC_MAPPER_ADMIN");
-        when(events.list(any(), any(), any(), anyBoolean(), anyInt(), anyInt())).thenReturn(List.of());
+        when(events.list(any(), any(), any(), anyBoolean(), anyInt(), anyInt())).thenReturn(ServiceLogReader.Batch.of(List.of()));
 
         var response = controller.read(null, null);
 

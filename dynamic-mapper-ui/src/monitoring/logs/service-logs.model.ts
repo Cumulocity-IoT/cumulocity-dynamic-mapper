@@ -31,6 +31,8 @@ export interface LogWindow {
   dateFrom: string | null;
   dateTo: string | null;
   logs: string;
+  /** Cursor for the page before this one, when it differs from `dateFrom` (the collected log pages by end time). */
+  before?: string | null;
   /** More lines exist beyond this window in the direction that was requested. */
   more: boolean;
   instance: string;

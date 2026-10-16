@@ -44,10 +44,23 @@ public class BoundedServiceLogBuffer implements ServiceLogBuffer {
 
     private final Map<String, Deque<ServiceLogRecord>> queues = new HashMap<>();
     private final Map<String, Integer> dropped = new HashMap<>();
+    private final Map<String, Long> bytes = new HashMap<>();
+    private long totalBytes;
+
+    /** Most memory one tenant's waiting lines may take, whatever its record bound: its records are dropped oldest first. */
+    static final long MAX_BYTES_PER_TENANT = 16L * 1024 * 1024;
+    /** Most memory all tenants' waiting lines may take together; a tenant over it loses its own oldest lines. */
+    static final long MAX_BYTES_TOTAL = 128L * 1024 * 1024;
+
+    /** A conservative estimate of what a record keeps alive: its text (UTF-16 worst case) and its headers. */
+    static long sizeOf(ServiceLogRecord r) {
+        return 2L * r.text().length() + 200;
+    }
 
     public synchronized void offer(ServiceLogRecord record, int maxPerTenant) {
         Deque<ServiceLogRecord> queue = queues.computeIfAbsent(record.tenant(), t -> new ArrayDeque<>());
         queue.addLast(record);
+        add(record.tenant(), sizeOf(record));
         trim(record.tenant(), queue, maxPerTenant);
     }
 
@@ -56,6 +69,7 @@ public class BoundedServiceLogBuffer implements ServiceLogBuffer {
         Map<String, List<ServiceLogRecord>> out = new LinkedHashMap<>();
         for (String tenant : tenants) {
             Deque<ServiceLogRecord> queue = queues.remove(tenant);
+            forget(tenant);
             if (queue != null && !queue.isEmpty()) {
                 out.put(tenant, new ArrayList<>(queue));
             }
@@ -66,12 +80,14 @@ public class BoundedServiceLogBuffer implements ServiceLogBuffer {
     @Override
     public synchronized void retainOnly(Set<String> keep) {
         queues.keySet().removeIf(tenant -> !keep.contains(tenant));
+        new java.util.ArrayList<>(bytes.keySet()).stream().filter(t -> !keep.contains(t)).forEach(this::forget);
         dropped.keySet().removeIf(tenant -> !keep.contains(tenant));
     }
 
     @Override
     public synchronized void discard(String tenant) {
         queues.remove(tenant);
+        forget(tenant);
         dropped.remove(tenant);
     }
 
@@ -82,14 +98,28 @@ public class BoundedServiceLogBuffer implements ServiceLogBuffer {
         Collections.reverse(reversed);
         for (ServiceLogRecord r : reversed) {
             queue.addFirst(r); // the oldest ends up first again
+            add(tenant, sizeOf(r));
         }
         trim(tenant, queue, maxPerTenant);
     }
 
     private void trim(String tenant, Deque<ServiceLogRecord> queue, int maxPerTenant) {
-        while (queue.size() > maxPerTenant) {
-            queue.pollFirst();
+        while (!queue.isEmpty() && (queue.size() > maxPerTenant || bytes.getOrDefault(tenant, 0L) > MAX_BYTES_PER_TENANT
+                || totalBytes > MAX_BYTES_TOTAL)) {
+            add(tenant, -sizeOf(queue.pollFirst()));
             dropped.merge(tenant, 1, Integer::sum);
+        }
+    }
+
+    private void add(String tenant, long delta) {
+        bytes.merge(tenant, delta, Long::sum);
+        totalBytes += delta;
+    }
+
+    private void forget(String tenant) {
+        Long held = bytes.remove(tenant);
+        if (held != null) {
+            totalBytes -= held;
         }
     }
 

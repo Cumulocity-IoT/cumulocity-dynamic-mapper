@@ -42,16 +42,29 @@ public class ServiceLogReader {
     public record StoredChunk(Instant dateFrom, Instant dateTo, String instance, int lines, int omitted, String logs) {
     }
 
+    /**
+     * One page of stored events. {@code rawSize} is how many events the platform returned, malformed ones included: the
+     * scan must judge "end of the log" by that, not by how many chunks were valid, or a full page holding a few malformed
+     * events would look like the last one and hide everything after it.
+     */
+    public record Batch(List<StoredChunk> chunks, int rawSize) {
+        public static Batch of(List<StoredChunk> chunks) {
+            return new Batch(chunks, chunks.size());
+        }
+    }
+
     /** Access to the stored chunks of one tenant; {@code page} is 1-based. */
     public interface Events {
-        List<StoredChunk> list(String tenant, Instant from, Instant to, boolean oldestFirst, int page, int pageSize);
+        Batch list(String tenant, Instant from, Instant to, boolean oldestFirst, int page, int pageSize);
     }
 
     /**
+     * @param before the cursor for the page before this one: the <em>end</em> time of the page's first chunk. The scan
+     *               compares against end times, so the start time would skip a chunk that ends inside the first one
      * @param more  whether more chunks exist beyond this page in the direction that was asked for
      * @param empty no collected log exists at all for this tenant (as opposed to an empty page)
      */
-    public record Page(Instant dateFrom, Instant dateTo, int chunks, int lines, int omitted, boolean more, boolean empty,
+    public record Page(Instant dateFrom, Instant dateTo, Instant before, int chunks, int lines, int omitted, boolean more, boolean empty,
             String logs) {
     }
 
@@ -83,7 +96,7 @@ public class ServiceLogReader {
         }
         if (page.isEmpty()) {
             // Without a window the log itself is empty; with one, the window is merely past its end.
-            return new Page(null, null, 0, 0, 0, more, dateFrom == null && dateTo == null && !more, "");
+            return new Page(null, null, null, 0, 0, 0, more, dateFrom == null && dateTo == null && !more, "");
         }
         StringBuilder logs = new StringBuilder();
         int lines = 0;
@@ -96,7 +109,7 @@ public class ServiceLogReader {
             lines += c.lines();
             omitted += c.omitted();
         }
-        return new Page(page.get(0).dateFrom(), page.get(page.size() - 1).dateTo(), page.size(), lines, omitted, more,
+        return new Page(page.get(0).dateFrom(), page.get(page.size() - 1).dateTo(), page.get(0).dateTo(), page.size(), lines, omitted, more,
                 false, logs.toString());
     }
 
@@ -115,8 +128,8 @@ public class ServiceLogReader {
     private Scan scan(String tenant, Instant from, Instant to, boolean oldestFirst, int limit) {
         List<StoredChunk> out = new ArrayList<>();
         for (int page = 1; page <= MAX_PAGES; page++) {
-            List<StoredChunk> batch = events.list(tenant, from, to, oldestFirst, page, PAGE_SIZE);
-            for (StoredChunk c : batch) {
+            Batch batch = events.list(tenant, from, to, oldestFirst, page, PAGE_SIZE);
+            for (StoredChunk c : batch.chunks()) {
                 boolean inside = (from == null || c.dateTo().isAfter(from)) && (to == null || c.dateTo().isBefore(to));
                 if (!inside) {
                     continue;
@@ -126,7 +139,7 @@ public class ServiceLogReader {
                 }
                 out.add(c);
             }
-            if (batch.size() < PAGE_SIZE) {
+            if (batch.rawSize() < PAGE_SIZE) {
                 return new Scan(out, false, false); // ran out of events: the end is real
             }
         }

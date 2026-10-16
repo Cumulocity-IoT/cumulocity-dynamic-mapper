@@ -57,9 +57,9 @@ public class EventServiceLogEvents implements ServiceLogReader.Events {
     }
 
     @Override
-    public List<ServiceLogReader.StoredChunk> list(String tenant, Instant from, Instant to, boolean oldestFirst,
+    public ServiceLogReader.Batch list(String tenant, Instant from, Instant to, boolean oldestFirst,
             int page, int pageSize) {
-        AtomicReference<List<ServiceLogReader.StoredChunk>> result = new AtomicReference<>(List.of());
+        AtomicReference<ServiceLogReader.Batch> result = new AtomicReference<>(ServiceLogReader.Batch.of(List.of()));
         AtomicReference<RuntimeException> failure = new AtomicReference<>();
         subscriptionsService.runForTenant(tenant, () -> {
             try {
@@ -77,14 +77,15 @@ public class EventServiceLogEvents implements ServiceLogReader.Events {
                     params.add(new QueryParam(() -> "revert", "true"));
                 }
                 List<ServiceLogReader.StoredChunk> chunks = new ArrayList<>();
-                for (EventRepresentation event : eventApi.getEventsByFilter(filter)
-                        .get(pageSize, params.toArray(new QueryParam[0])).getEvents()) {
+                List<EventRepresentation> raw = eventApi.getEventsByFilter(filter)
+                        .get(pageSize, params.toArray(new QueryParam[0])).getEvents();
+                for (EventRepresentation event : raw) {
                     ServiceLogReader.StoredChunk chunk = toChunk(event);
                     if (chunk != null) {
                         chunks.add(chunk);
                     }
                 }
-                result.set(chunks);
+                result.set(new ServiceLogReader.Batch(chunks, raw.size()));
             } catch (RuntimeException e) {
                 failure.set(e);
             }

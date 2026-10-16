@@ -126,4 +126,33 @@ class BoundedServiceLogBufferTest {
         assertTrue(buffer.drain(List.of("A")).isEmpty());
         assertTrue(buffer.takeDropped(List.of("A")).isEmpty());
     }
+
+    @Test
+    void aTenantsWaitingLinesAreBoundedInBytesNotOnlyInCount() {
+        BoundedServiceLogBuffer buffer = new BoundedServiceLogBuffer();
+        String big = "x".repeat(60_000); // ~120 KB each by the buffer's estimate
+        for (int i = 0; i < 1000; i++) {
+            buffer.offer(new ServiceLogRecord(java.time.Instant.EPOCH.plusMillis(i), "INFO", "t", "tenantA", "l", big),
+                    10_000);
+        }
+
+        int kept = buffer.drain(java.util.List.of("tenantA")).get("tenantA").size();
+
+        assertTrue(kept < 200, "kept " + kept);
+        assertTrue(kept > 0);
+        assertTrue(buffer.takeDropped(java.util.List.of("tenantA")).get("tenantA") > 0);
+    }
+
+    @Test
+    void oneTenantCannotUseUpTheMemoryOfAnother() {
+        BoundedServiceLogBuffer buffer = new BoundedServiceLogBuffer();
+        String big = "x".repeat(60_000);
+        buffer.offer(new ServiceLogRecord(java.time.Instant.EPOCH, "INFO", "t", "tenantB", "l", "small"), 10_000);
+        for (int i = 0; i < 5000; i++) {
+            buffer.offer(new ServiceLogRecord(java.time.Instant.EPOCH.plusMillis(i), "INFO", "t", "tenantA", "l", big),
+                    10_000);
+        }
+
+        assertEquals(1, buffer.drain(java.util.List.of("tenantB")).get("tenantB").size());
+    }
 }

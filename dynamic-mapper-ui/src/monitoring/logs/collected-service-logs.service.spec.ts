@@ -66,6 +66,7 @@ describe('CollectedServiceLogsService', () => {
     expect(window).toEqual({
       dateFrom: 'a',
       dateTo: 'b',
+      before: null,
       logs: 'line',
       more: true,
       instance: '',

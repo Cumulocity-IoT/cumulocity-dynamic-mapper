@@ -567,6 +567,30 @@ public abstract class AConnectorClient {
     /**
      * Initialize managers
      */
+    /** Set while a throwaway client for a connection test is being constructed on this thread. */
+    private static final ThreadLocal<Boolean> PROBE_CONSTRUCTION = ThreadLocal.withInitial(() -> false);
+
+    /**
+     * Builds a client that is only used for {@link #testConnection()}. Construction of a normal client reconciles the
+     * connector's lifecycle session on the platform (it closes a session left open by a previous instance); a probe of an
+     * existing connector must not do that, or testing it would append DISCONNECTED and close its live session.
+     */
+    public static <T> T constructForProbe(java.util.concurrent.Callable<T> construction) throws Exception {
+        PROBE_CONSTRUCTION.set(true);
+        try {
+            return construction.call();
+        } finally {
+            PROBE_CONSTRUCTION.remove();
+        }
+    }
+
+    /** Releases what construction allocated, for a client that was only used to test a connection. */
+    public void discardProbe() {
+        if (housekeepingExecutor != null) {
+            housekeepingExecutor.shutdownNow();
+        }
+    }
+
     protected void initializeManagers() {
         this.explorerListeners = new ExplorerListenerRegistry(tenant, "inbound");
         this.outboundExplorerListeners = new ExplorerListenerRegistry(tenant, "outbound");
@@ -603,7 +627,7 @@ public abstract class AConnectorClient {
         // (e.g. the process was killed mid-flap), it would otherwise stay "open" on Cumulocity
         // forever. Best-effort: failures are logged and swallowed inside the call itself, must
         // never block/fail connector startup.
-        if (serviceConfiguration.getSendConnectorLifecycle()) {
+        if (serviceConfiguration.getSendConnectorLifecycle() && !PROBE_CONSTRUCTION.get()) {
             c8yAgent.closeOrphanedConnectorSession(tenant, connectorName, connectorIdentifier);
         }
 

@@ -64,7 +64,22 @@
   <div class="d-flex d-col fit-h">
     <div class="card-block overflow-visible flex-no-shrink">
       <div class="row">
-        <div class="col-md-5 col-md-offset-7">
+        @if (!isCollected) {
+        <div class="col-md-7">
+          <div class="d-flex a-i-center">
+            <label class="m-r-8 m-b-0 text-nowrap" for="instance" translate>Instance name</label>
+            <div class="c8y-select-wrapper flex-grow">
+              <select id="instance" class="form-control" [(ngModel)]="selectedInstance" (ngModelChange)="onInstanceChange()" [disabled]="isLoading">
+                @for (i of instances; track i) {
+                <option [ngValue]="i">{{ i }}</option>
+                }
+              </select>
+              <span></span>
+            </div>
+          </div>
+        </div>
+        }
+        <div class="col-md-5" [ngClass]="{ 'col-md-offset-7': isCollected }">
           <div class="d-flex a-i-center">
             <label class="m-r-8 m-b-0" for="dateFrom" translate>From</label>
             <input id="dateFrom" type="datetime-local" step="1" class="form-control" [(ngModel)]="dateFromInput" />

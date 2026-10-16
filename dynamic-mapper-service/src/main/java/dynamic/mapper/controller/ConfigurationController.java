@@ -429,13 +429,23 @@ public class ConfigurationController {
                 }
             }
             configuration.copyPredefinedValues(spec);
-            AConnectorClient client = connectorClientFactory.createConnectorClient(configuration, "", tenant);
-            if (client == null || !client.supportsConnectionTest()) {
-                return ResponseEntity.ok(ConnectionTestResult.failed(
-                        "Connection test is not supported for this connector type", null));
+            AConnectorClient client = AConnectorClient
+                    .constructForProbe(() -> connectorClientFactory.createConnectorClient(configuration, "", tenant));
+            try {
+                if (client == null || !client.supportsConnectionTest()) {
+                    return ResponseEntity.ok(ConnectionTestResult.failed(
+                            "Connection test is not supported for this connector type", null));
+                }
+                // The registry's specification only has generic defaults; a client may predefine values of its own
+                // (e.g. the MQTT Service URL and the tenant's credentials), exactly as loadConfiguration() applies them.
+                configuration.copyPredefinedValues(client.getConnectorSpecification());
+                log.info("{} - Testing connector configuration, type: {}", tenant, configuration.getConnectorType());
+                return ResponseEntity.ok(client.testConnection());
+            } finally {
+                if (client != null) {
+                    client.discardProbe();
+                }
             }
-            log.info("{} - Testing connector configuration, type: {}", tenant, configuration.getConnectorType());
-            return ResponseEntity.ok(client.testConnection());
         } catch (Exception ex) {
             log.error("{} - Error testing connector configuration", tenant, ex);
             return ResponseEntity.ok(ConnectionTestResult.failed("Test failed: " + ex.getMessage(), null));

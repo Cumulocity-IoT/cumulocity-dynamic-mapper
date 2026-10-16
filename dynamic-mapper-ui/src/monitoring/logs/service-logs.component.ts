@@ -118,6 +118,10 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
     }
   }
 
+  onInstanceChange(): void {
+    this.loadLatest();
+  }
+
   loadLatest(): Promise<void> {
     return this.fetch({});
   }
@@ -146,7 +150,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
   }
 
   loadPrevious(): Promise<void> {
-    return this.fetch({ dateTo: this.window?.dateFrom });
+    return this.fetch({ dateTo: this.window?.before ?? this.window?.dateFrom });
   }
 
   toggleAutoRefresh(): void {

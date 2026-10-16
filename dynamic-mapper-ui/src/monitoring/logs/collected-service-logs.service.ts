@@ -63,6 +63,7 @@ export class CollectedServiceLogsService implements ServiceLogsSource {
     return {
       dateFrom: body.dateFrom ?? null,
       dateTo: body.dateTo ?? null,
+      before: body.before ?? null,
       logs: body.logs ?? '',
       more: !!body.more,
       instance: '',

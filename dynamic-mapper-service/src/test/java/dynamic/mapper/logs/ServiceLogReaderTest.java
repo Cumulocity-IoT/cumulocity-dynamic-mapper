@@ -23,13 +23,14 @@ class ServiceLogReaderTest {
         final List<StoredChunk> all = new ArrayList<>();
 
         @Override
-        public List<StoredChunk> list(String tenant, Instant from, Instant to, boolean oldestFirst, int page, int pageSize) {
+        public ServiceLogReader.Batch list(String tenant, Instant from, Instant to, boolean oldestFirst, int page, int pageSize) {
             List<StoredChunk> matching = all.stream()
                     .filter(c -> (from == null || !c.dateTo().isBefore(from)) && (to == null || !c.dateTo().isAfter(to)))
                     .sorted(oldestFirst ? Comparator.comparing(StoredChunk::dateTo) : Comparator.comparing(StoredChunk::dateTo).reversed())
                     .toList();
             int start = (page - 1) * pageSize;
-            return start >= matching.size() ? List.of() : matching.subList(start, Math.min(matching.size(), start + pageSize));
+            return ServiceLogReader.Batch.of(start >= matching.size() ? List.of()
+                    : matching.subList(start, Math.min(matching.size(), start + pageSize)));
         }
 
         FakeEvents chunk(String instance, int index) {
@@ -79,7 +80,7 @@ class ServiceLogReaderTest {
         Page page = reader.read("t", null, null);
         seenNewestPageFirst.add(page.logs());
         while (page.more()) {
-            page = reader.read("t", null, page.dateFrom());
+            page = reader.read("t", null, page.before());
             seenNewestPageFirst.add(page.logs());
         }
 
@@ -186,5 +187,40 @@ class ServiceLogReaderTest {
 
         assertEquals(11, page.omitted());
         assertEquals(5, page.lines());
+    }
+
+    @Test
+    void aFullPlatformPageWithMalformedEventsDoesNotLookLikeTheEndOfTheLog() {
+        // Every platform page holds 50 events, but only 40 of them are valid chunks.
+        FakeEvents events = new FakeEvents() {
+            @Override
+            public ServiceLogReader.Batch list(String tenant, Instant from, Instant to, boolean oldestFirst, int page,
+                    int pageSize) {
+                ServiceLogReader.Batch b = super.list(tenant, from, to, oldestFirst, page, pageSize);
+                return new ServiceLogReader.Batch(b.chunks().subList(0, Math.min(b.chunks().size(), 40)),
+                        b.rawSize());
+            }
+        };
+        for (int i = 0; i < 400; i++) {
+            events.chunk("pod-1", i);
+        }
+
+        Page page = reader(events, 100).read("t", Instant.parse("1970-01-01T00:00:00Z"), null);
+
+        assertTrue(page.chunks() > 40, "the scan went on after a page with fewer valid chunks than events");
+    }
+
+    @Test
+    void thePreviousPageStartsBeforeTheEndTimeOfTheFirstChunkSoOverlappingChunksOfOtherInstancesAreSeen() {
+        FakeEvents events = new FakeEvents();
+        // pod-1's chunk spans 12:00-12:30, pod-2's chunk ends at 12:20 (inside it)
+        events.all.add(new StoredChunk(T0, T0.plusSeconds(1800), "pod-1", 1, 0, "long"));
+        events.all.add(new StoredChunk(T0.plusSeconds(600), T0.plusSeconds(1200), "pod-2", 1, 0, "inner"));
+
+        Page latest = reader(events, 1).read("t", null, null);
+        Page previous = reader(events, 1).read("t", null, latest.before());
+
+        assertEquals("long", latest.logs());
+        assertEquals("inner", previous.logs());
     }
 }
