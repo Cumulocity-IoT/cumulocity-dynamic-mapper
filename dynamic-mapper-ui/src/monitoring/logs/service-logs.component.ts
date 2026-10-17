@@ -115,7 +115,7 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
 
   /** A mapping is selected and the window holds none of its lines. */
   get noLinesForMapping(): boolean {
-    return !!this.selectedMapping && !this.logsText && !this.isLoading;
+    return !!this.selectedMapping && !this.logsText && !this.isLoading && !this.error;
   }
 
   async ngOnInit(): Promise<void> {
@@ -240,6 +240,8 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
         if (window.logs) {
           parts.push(window.logs.endsWith('\n') ? window.logs : `${window.logs}\n`);
         }
+        // An empty window (nothing of the mapping in the stretch searched) still carries how far the search got.
+        if (window.dateTo === request.dateFrom) break; // no progress: never loop on the same cursor
         request = { instance, mapping, dateFrom: window.dateTo };
       } while (window.more && window.dateTo);
       saveAs(new Blob(parts, { type: 'text/plain' }), `${instance || 'service-log'}${mapping ? `-${mapping}` : ''}.log`);

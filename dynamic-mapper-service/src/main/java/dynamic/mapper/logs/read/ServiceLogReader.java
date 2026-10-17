@@ -122,8 +122,14 @@ public class ServiceLogReader {
         }
         if (page.isEmpty()) {
             // Without a window the log itself is empty; with one, the window is merely past its end.
-            return new Page(null, null, null, 0, 0, 0, more,
-                    mapping == null && dateFrom == null && dateTo == null && !more, "");
+            boolean empty = mapping == null && dateFrom == null && dateTo == null && !more;
+            if (more && scan.lastScanned() != null) {
+                // The walk gave up at its bound without finding a chunk: hand out how far it got, or the caller (Next /
+                // Previous, the export) would have no cursor and could not continue past the stretch it just searched.
+                return (after || range) ? new Page(null, scan.lastScanned(), null, 0, 0, 0, true, false, "")
+                        : new Page(null, null, scan.lastScanned(), 0, 0, 0, true, false, "");
+            }
+            return new Page(null, null, null, 0, 0, 0, more, empty, "");
         }
         StringBuilder logs = new StringBuilder();
         int lines = 0;
@@ -148,8 +154,9 @@ public class ServiceLogReader {
     /**
      * @param more    a chunk beyond the page exists
      * @param bounded the walk stopped at {@link #MAX_PAGES} with more events still to look at
+     * @param lastScanned end time of the last chunk the walk looked at (the cursor to continue from), or {@code null}
      */
-    private record Scan(List<StoredChunk> chunks, boolean more, boolean bounded) {
+    private record Scan(List<StoredChunk> chunks, boolean more, boolean bounded, Instant lastScanned) {
     }
 
     /**
@@ -159,24 +166,26 @@ public class ServiceLogReader {
      */
     private Scan scan(String tenant, Instant from, Instant to, boolean oldestFirst, int limit, String mapping) {
         List<StoredChunk> out = new ArrayList<>();
+        Instant lastScanned = null;
         for (int page = 1; page <= MAX_PAGES; page++) {
             // Without a mapping the plain call is made: a source only has to implement the selection it can do.
             Batch batch = mapping == null ? events.list(tenant, from, to, oldestFirst, page, PAGE_SIZE)
                     : events.list(tenant, from, to, oldestFirst, page, PAGE_SIZE, mapping);
             for (StoredChunk c : batch.chunks()) {
+                lastScanned = c.dateTo();
                 boolean inside = (from == null || c.dateTo().isAfter(from)) && (to == null || c.dateTo().isBefore(to));
                 if (!inside) {
                     continue;
                 }
                 if (out.size() >= limit && !c.dateTo().equals(out.get(out.size() - 1).dateTo())) {
-                    return new Scan(out, true, false);
+                    return new Scan(out, true, false, lastScanned);
                 }
                 out.add(c);
             }
             if (batch.rawSize() < PAGE_SIZE) {
-                return new Scan(out, false, false); // ran out of events: the end is real
+                return new Scan(out, false, false, lastScanned); // ran out of events: the end is real
             }
         }
-        return new Scan(out, false, true);
+        return new Scan(out, false, true, lastScanned);
     }
 }

@@ -23,6 +23,7 @@ package dynamic.mapper.logs.collect;
 import dynamic.mapper.logs.model.ServiceLogChunk;
 import dynamic.mapper.logs.model.ServiceLogPolicy;
 import dynamic.mapper.logs.model.ServiceLogRecord;
+import dynamic.mapper.logs.read.MappingLogRecords;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -112,7 +113,9 @@ public final class ServiceLogChunker {
             text.append(r.text());
             inChunk.add(r);
             levels.merge(r.level(), 1, Integer::sum);
-            if (r.mapping() != null) {
+            // Only a record whose stored text still has its tag (the record limit may have cut it off) selects the chunk:
+            // the marker fragment must promise only what the text delivers.
+            if (r.mapping() != null && MappingLogRecords.carriesTag(r.text(), r.mapping())) {
                 mappings.add(r.mapping());
             }
             if (from == null) {

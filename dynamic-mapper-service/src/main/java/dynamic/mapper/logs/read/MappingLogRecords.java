@@ -44,6 +44,16 @@ public final class MappingLogRecords {
     private static final Pattern HEADER = Pattern.compile(
             "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}[.,]\\d+\\S* +[A-Z]+ \\[[^\\]\\n]*\\] (?:\\[m:([A-Za-z0-9_-]{1,64})\\] )?");
 
+    /** Whether the first line of the record {@code text} is a header that carries the tag of {@code mapping}. */
+    public static boolean carriesTag(String text, String mapping) {
+        if (text == null || mapping == null) {
+            return false;
+        }
+        int eol = text.indexOf('\n');
+        Matcher header = HEADER.matcher(eol < 0 ? text : text.substring(0, eol));
+        return header.find() && mapping.equals(header.group(1));
+    }
+
     /** The records of {@code logs} whose header carries {@code mapping}, joined by newlines; empty if there are none. */
     public static String filter(String logs, String mapping) {
         if (logs == null || logs.isEmpty()) {

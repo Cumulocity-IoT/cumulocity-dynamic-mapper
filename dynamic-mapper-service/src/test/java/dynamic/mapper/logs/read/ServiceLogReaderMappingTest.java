@@ -177,4 +177,31 @@ class ServiceLogReaderMappingTest {
 
         assertThrows(UnsupportedOperationException.class, () -> new ServiceLogReader(plain, 10).read("t", null, null, "aaa"));
     }
+
+    @Test
+    void aWalkThatEndsAtItsBoundWithoutAChunkStillHandsOutHowFarItGot() {
+        // Every event is at (not after) the lower bound, so none counts; the platform keeps returning full pages.
+        Instant from = T0.plusSeconds(100);
+        ServiceLogReader.Events stuck = new ServiceLogReader.Events() {
+            @Override
+            public ServiceLogReader.Batch list(String tenant, Instant f, Instant t, boolean oldestFirst, int page, int pageSize) {
+                return list(tenant, f, t, oldestFirst, page, pageSize, null);
+            }
+
+            @Override
+            public ServiceLogReader.Batch list(String tenant, Instant f, Instant t, boolean oldestFirst, int page, int pageSize,
+                    String mapping) {
+                return ServiceLogReader.Batch.of(java.util.stream.IntStream.range(0, pageSize)
+                        .mapToObj(i -> new StoredChunk(from.minusSeconds(1), from, "pod", 1, 0, "x")).toList());
+            }
+        };
+
+        Page forward = new ServiceLogReader(stuck, 10).read("t", from, null, "aaa");
+        Page backward = new ServiceLogReader(stuck, 10).read("t", null, null, "aaa");
+
+        assertTrue(forward.more());
+        assertEquals(from, forward.dateTo(), "Next / the export continue from here");
+        assertTrue(backward.more());
+        assertEquals(from, backward.before(), "Previous continues from here");
+    }
 }

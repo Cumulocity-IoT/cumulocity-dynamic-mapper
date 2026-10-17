@@ -130,6 +130,16 @@ describe('ServiceLogsComponent mapping selection', () => {
     expect(component.noLinesForMapping).toBe(true);
   });
 
+  it('does not claim "no lines for this mapping" when the load failed', async () => {
+    const { component } = await withMappings();
+    component.selectedMapping = 'in1';
+    component.isLoading = false;
+
+    expect(component.noLinesForMapping).toBe(true);
+    component.error = 'boom';
+    expect(component.noLinesForMapping).toBe(false);
+  });
+
   it('works without a mapping list when it cannot be loaded', async () => {
     const { component } = make();
     (component as any).mappingService = { getMappings: async () => Promise.reject(new Error('no')) };

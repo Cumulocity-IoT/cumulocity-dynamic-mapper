@@ -59,6 +59,12 @@ public final class MappingLogContext implements AutoCloseable {
         return isValid(mapping) ? mapping : null;
     }
 
+    /** The mapping of the calling thread's scope, or {@code null}. */
+    public static String current() {
+        String mapping = MDC.get(KEY);
+        return isValid(mapping) ? mapping : null;
+    }
+
     private final String previous;
 
     private MappingLogContext(String identifier) {

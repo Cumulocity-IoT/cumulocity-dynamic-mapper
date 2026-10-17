@@ -194,9 +194,9 @@ class ServiceLogChunkerTest {
     @Test
     void aChunkNamesTheMappingsThatHaveRecordsInIt() {
         List<ServiceLogRecord> records = List.of(
-                new ServiceLogRecord(Instant.parse("2026-10-15T11:00:01Z"), "ERROR", "t", "tenantA", "d.m.Foo", "a1", "aaa"),
-                new ServiceLogRecord(Instant.parse("2026-10-15T11:00:02Z"), "ERROR", "t", "tenantA", "d.m.Foo", "b1", "bbb"),
-                new ServiceLogRecord(Instant.parse("2026-10-15T11:00:03Z"), "ERROR", "t", "tenantA", "d.m.Foo", "a2", "aaa"),
+                new ServiceLogRecord(Instant.parse("2026-10-15T11:00:01Z"), "ERROR", "t", "tenantA", "d.m.Foo", HDR + "[m:aaa] d.m.Foo : a1", "aaa"),
+                new ServiceLogRecord(Instant.parse("2026-10-15T11:00:02Z"), "ERROR", "t", "tenantA", "d.m.Foo", HDR + "[m:bbb] d.m.Foo : b1", "bbb"),
+                new ServiceLogRecord(Instant.parse("2026-10-15T11:00:03Z"), "ERROR", "t", "tenantA", "d.m.Foo", HDR + "[m:aaa] d.m.Foo : a2", "aaa"),
                 rec("tenantA", "ERROR", 4, "no mapping"));
 
         TenantChunks out = ServiceLogChunker.chunkTenant("tenantA", records, WARN);
@@ -209,9 +209,22 @@ class ServiceLogChunkerTest {
     void theMappingSurvivesTheRecordSizeLimit() {
         ServiceLogPolicy small = new ServiceLogPolicy("WARN", 500, 65536, 256, List.of());
         List<ServiceLogRecord> records = List.of(
-                new ServiceLogRecord(Instant.parse("2026-10-15T11:00:01Z"), "ERROR", "t", "tenantA", "d.m.Foo", "x".repeat(5000), "aaa"));
+                new ServiceLogRecord(Instant.parse("2026-10-15T11:00:01Z"), "ERROR", "t", "tenantA", "d.m.Foo",
+                        HDR + "[m:aaa] d.m.Foo : " + "x".repeat(5000), "aaa"));
 
         assertEquals(java.util.Set.of("aaa"), ServiceLogChunker.chunkTenant("tenantA", records, small).chunks().get(0).mappings());
+    }
+
+    private static final String HDR = "2026-10-15T11:00:01.000Z ERROR [t] ";
+
+    @Test
+    void aRecordWhoseTagWasCutOffByTheLimitDoesNotMarkTheChunk() {
+        ServiceLogPolicy tiny = new ServiceLogPolicy("WARN", 500, 65536, 256, List.of());
+        List<ServiceLogRecord> records = List.of(
+                new ServiceLogRecord(Instant.parse("2026-10-15T11:00:01Z"), "ERROR", "t", "tenantA", "d.m.Foo",
+                        "2026-10-15T11:00:01.000Z ERROR [" + "t".repeat(400) + "] [m:aaa] d.m.Foo : x", "aaa"));
+
+        assertEquals(java.util.Set.of(), ServiceLogChunker.chunkTenant("tenantA", records, tiny).chunks().get(0).mappings());
     }
 
     @Test
@@ -220,7 +233,7 @@ class ServiceLogChunkerTest {
         List<ServiceLogRecord> records = new java.util.ArrayList<>();
         for (int i = 0; i < 12; i++) {
             records.add(new ServiceLogRecord(Instant.parse("2026-10-15T11:00:00Z").plusSeconds(i), "ERROR", "t", "tenantA", "d.m.Foo",
-                    ("m" + i + "-").repeat(60), i < 6 ? "first" : "second"));
+                    HDR + "[m:" + (i < 6 ? "first" : "second") + "] d.m.Foo : " + ("m" + i + "-").repeat(60), i < 6 ? "first" : "second"));
         }
 
         List<ServiceLogChunk> chunks = ServiceLogChunker.chunkTenant("tenantA", records, tiny).chunks();
