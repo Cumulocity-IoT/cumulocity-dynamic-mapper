@@ -45,4 +45,33 @@ class EventServiceLogEventsTest {
         assertNull(EventServiceLogEvents.toChunk(event("just a string")));
         assertNull(EventServiceLogEvents.toChunk(event(Map.of("dateFrom", "2026-10-15T12:00:00Z"))));
     }
+
+    @Test
+    void theEventQueryOfAMappingKeepsTypeSourceAndDatesAndAddsTheFragment() {
+        var params = EventServiceLogEvents.filter(com.cumulocity.model.idtype.GId.asGId("42"),
+                java.time.Instant.parse("2026-10-15T12:00:00Z"), java.time.Instant.parse("2026-10-15T13:00:00Z"), "l19zjk")
+                .getQueryParams();
+
+        assertEquals("d11r_serviceLog", params.get("type"));
+        assertEquals("42", params.get("source"));
+        assertEquals("d11r_serviceLog_map_l19zjk", params.get("fragmentType"));
+        assertNotNull(params.get("dateFrom"));
+        assertNotNull(params.get("dateTo"));
+    }
+
+    @Test
+    void theEventQueryWithoutAMappingHasNoFragmentRestriction() {
+        var params = EventServiceLogEvents.filter(com.cumulocity.model.idtype.GId.asGId("42"), null, null, null).getQueryParams();
+
+        assertEquals("d11r_serviceLog", params.get("type"));
+        assertNull(params.get("fragmentType"));
+    }
+
+    @Test
+    void anIdentifierThatIsNotOneNeverReachesTheQuery() {
+        var events = new EventServiceLogEvents(null, null, null);
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> events.list("t", null, null, false, 1, 50, "x&type=other"));
+    }
 }

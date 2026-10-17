@@ -22,6 +22,7 @@ package dynamic.mapper.controller;
 
 import dynamic.mapper.logs.collect.ServiceLogCollectorJob;
 import dynamic.mapper.logs.read.ServiceLogReader;
+import dynamic.mapper.util.MappingLogContext;
 
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -72,10 +73,13 @@ public class ServiceLogsController {
     @Operation(summary = "Read the collected service log", description = """
             Returns a window of the calling tenant's collected log lines, in the paging shape of the platform's native log.
             No parameter: the latest chunks. `dateFrom` only: the chunks after it (next page; use 1970-01-01T00:00:00Z for the first). \
-            `dateTo` only: the chunks before it (previous page). Requires `ROLE_DYNAMIC_MAPPER_ADMIN`.""")
+            `dateTo` only: the chunks before it (previous page). `mapping` (a mapping's identifier) restricts the result to the \
+            lines written while that mapping processed a payload; lines collected before this was introduced carry no \
+            mapping and never match. Requires `ROLE_DYNAMIC_MAPPER_ADMIN`.""")
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ServiceLogReader.Page> read(
-            @RequestParam(required = false) String dateFrom, @RequestParam(required = false) String dateTo) {
+            @RequestParam(required = false) String dateFrom, @RequestParam(required = false) String dateTo,
+            @RequestParam(required = false) String mapping) {
         if (!Utils.userHasMappingAdminRole()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Reading the service log requires ROLE_DYNAMIC_MAPPER_ADMIN");
@@ -89,7 +93,12 @@ public class ServiceLogsController {
         } catch (DateTimeParseException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dates must be ISO-8601, e.g. 2026-10-15T12:00:00Z");
         }
-        return ResponseEntity.ok(reader.read(tenant, from, to));
+        String mappingFilter = mapping == null || mapping.isBlank() ? null : mapping;
+        // The value becomes part of an event query: refuse anything that is not an identifier.
+        if (mappingFilter != null && !MappingLogContext.isValid(mappingFilter)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "mapping must be a mapping identifier");
+        }
+        return ResponseEntity.ok(reader.read(tenant, from, to, mappingFilter));
     }
 
     @Operation(summary = "Store the calling tenant's waiting log lines now", description = """

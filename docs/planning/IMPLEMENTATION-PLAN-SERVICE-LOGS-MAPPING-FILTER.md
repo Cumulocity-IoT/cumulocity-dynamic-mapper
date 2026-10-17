@@ -1,6 +1,6 @@
 # Implementation plan: filter Service logs by mapping
 
-Status: **planned, not started.** The platform gate is passed (2026-10-17) — see [Gate: fragmentType query](#gate-fragmenttype-query-verified-on-the-platform). Option B is confirmed; the Java-SDK chaining check remains.
+Status: **implemented on branch `feature/service-logs-mapping-filter` (not yet merged); see [Implementation notes](#implementation-notes).** The platform gate is passed (2026-10-17) — see [Gate: fragmentType query](#gate-fragmenttype-query-verified-on-the-platform). Option B is confirmed; the Java-SDK chaining check remains.
 
 ## Goal
 
@@ -121,3 +121,16 @@ Also verify before building: imported/legacy mappings never have identifiers wit
 ## Open points
 - Does a stricter `ServiceLogPolicy`/tenant level make the filter useless by default? (UI hint covers it; consider whether processing-level lines should be logged at INFO when a mapping has debug enabled.)
 - Foreign-thread callbacks losing the tag — wrap case by case if they matter in practice.
+
+## Implementation notes
+
+Deviations from the plan above, and what was checked:
+
+- **Marker fragment name:** `d11r_serviceLog_map_<identifier>` (the test used `d11r_map_<identifier>`; the platform behaviour is the same). The name is built in one place, `EventServiceLogSink.mappingFragment`, which writer and reader share.
+- **Java SDK chaining check: done.** `EventFilter.byType(...).bySource(...).byDate(...).byFragmentType(...)` keeps all four; `Filter.getQueryParams()` builds the query from every field (asserted in `EventServiceLogEventsTest`).
+- **Tag position:** `[m:<identifier>] ` right after the thread (stored) / after the tenant field (console), not after the logger as first sketched. The reader and the UI both look at the header only.
+- **UI details added during implementation:** the mapping list is a searchable `c8y-select` (type to filter, clear button = all lines), a direction selector (All / Inbound / Outbound) narrows it, and all help text lives in the header (short text + `btn-help` popover) instead of notes under the filter row.
+- **Context-aware debug label:** the `debug` label of the mapping grid (`StatusRendererComponent`) links to `monitoring/logs?mapping=<identifier>`; the page loads the mapping list first and preselects the mapping only if it exists (otherwise an info message and all lines), so the filter applied is always one the dropdown shows. The very first log load is already filtered.
+- **Auto refresh:** no change. With the platform-side selection a refresh is a cheap query, so "fetch incrementally / disable" is not needed.
+- **Native log:** filtered client-side in `NativeServiceLogsService`, so display and Download share it; the page labels it as "loaded lines only".
+- **Not done / still open:** the multi-page `currentPage` + `fragmentType` combination and the speed on a tenant with many large chunks were not measured on a real tenant; foreign-thread callbacks are untagged. Not run: an end-to-end check against a deployed service (needs a deployment).

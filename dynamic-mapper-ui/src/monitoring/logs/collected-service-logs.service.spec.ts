@@ -94,4 +94,34 @@ describe('CollectedServiceLogsService', () => {
     expect(error instanceof LogsUnavailableError).toBe(true);
     expect(error.status).toBe(500);
   });
+
+  it('passes the mapping on and keeps it together with the bounds', async () => {
+    const { service, calls } = serviceAnswering(200, {});
+
+    await service.load({ mapping: 'l19zjk', dateFrom: '2026-10-15T12:00:00.000Z' });
+
+    expect(calls[0]).toContain('mapping=l19zjk');
+    expect(calls[0]).toContain('dateFrom=');
+  });
+
+  it('sends no mapping parameter when none is selected, and never one that is not an identifier', async () => {
+    const { service, calls } = serviceAnswering(200, {});
+
+    await service.load({});
+    await service.load({ mapping: '' });
+    await service.load({ mapping: 'x&type=other' });
+
+    calls.forEach((url) => expect(url).not.toContain('mapping'));
+  });
+
+  it('returns an empty window with its cursors, not an error, when a mapping has no lines in the range', async () => {
+    const { service } = serviceAnswering(200, { dateFrom: 'a', dateTo: 'b', logs: '', more: true, empty: false });
+
+    const window = await service.load({ mapping: 'l19zjk' });
+
+    expect(window.logs).toBe('');
+    expect(window.more).toBe(true);
+    expect(window.dateTo).toBe('b');
+    expect(window.empty).toBe(false);
+  });
 });

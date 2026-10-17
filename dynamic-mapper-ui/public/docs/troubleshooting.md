@@ -110,7 +110,8 @@ WARN  d.m.p.i.p.FlowResultInboundProcessor - Device with externalId 'ctrlx-48FC8
 one. Rather than turning up logging globally — which on a busy tenant buries the messages you care about — enable
 **debug** for the one mapping you are investigating. Its entries then include the full payload at each stage, the
 individual substitutions applied, and `JS DEBUG:` output from `console.debug()` in Smart Functions, which is
-otherwise suppressed. See the next section.
+otherwise suppressed. The **debug** label in the mapping list opens the Service logs filtered to that mapping. See the
+next section.
 
 #### Enabling debug mode for a mapping {#debug-mode}
 

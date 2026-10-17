@@ -23,6 +23,7 @@ package dynamic.mapper.logs.read;
 import dynamic.mapper.logs.capture.ServiceLogCaptureAppender;
 import dynamic.mapper.logs.store.EventServiceLogSink;
 import dynamic.mapper.logs.store.ServiceLogSourceLocator;
+import dynamic.mapper.util.MappingLogContext;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -63,14 +64,37 @@ public class EventServiceLogEvents implements ServiceLogReader.Events {
     @Override
     public ServiceLogReader.Batch list(String tenant, Instant from, Instant to, boolean oldestFirst,
             int page, int pageSize) {
+        return list(tenant, from, to, oldestFirst, page, pageSize, null);
+    }
+
+    @Override
+    public ServiceLogReader.Batch list(String tenant, Instant from, Instant to, boolean oldestFirst,
+            int page, int pageSize, String mapping) {
+        if (mapping != null && !MappingLogContext.isValid(mapping)) {
+            throw new IllegalArgumentException("Not a mapping identifier: " + mapping);
+        }
         // Reading the log is not itself log content: the SDK lines it produces must not be captured and stored.
         try (ServiceLogCaptureAppender.Suppression ignored = ServiceLogCaptureAppender.suppressOnThisThread()) {
-            return read(tenant, from, to, oldestFirst, page, pageSize);
+            return read(tenant, from, to, oldestFirst, page, pageSize, mapping);
         }
     }
 
+    /** The event filter of one read; {@code mapping} narrows it to the chunks that hold lines of that mapping. */
+    static EventFilter filter(GId sourceId, Instant from, Instant to, String mapping) {
+        EventFilter filter = new EventFilter().byType(EventServiceLogSink.EVENT_TYPE)
+                .bySource(sourceId)
+                .byDate(new Date(from == null ? 0 : from.toEpochMilli()),
+                        new Date(to == null ? System.currentTimeMillis() + 86_400_000L : to.toEpochMilli()));
+        return mapping == null ? filter : filter.byFragmentType(filterFragmentOf(mapping));
+    }
+
+    /** The marker fragment a read for {@code mapping} selects by. */
+    public static String filterFragmentOf(String mapping) {
+        return EventServiceLogSink.mappingFragment(mapping);
+    }
+
     private ServiceLogReader.Batch read(String tenant, Instant from, Instant to, boolean oldestFirst, int page,
-            int pageSize) {
+            int pageSize, String mapping) {
         AtomicReference<ServiceLogReader.Batch> result = new AtomicReference<>(ServiceLogReader.Batch.of(List.of()));
         AtomicReference<RuntimeException> failure = new AtomicReference<>();
         subscriptionsService.runForTenant(tenant, () -> {
@@ -79,10 +103,7 @@ public class EventServiceLogEvents implements ServiceLogReader.Events {
                 if (sourceId == null) {
                     return; // nothing was ever collected for this tenant
                 }
-                EventFilter filter = new EventFilter().byType(EventServiceLogSink.EVENT_TYPE)
-                        .bySource(sourceId)
-                        .byDate(new Date(from == null ? 0 : from.toEpochMilli()),
-                                new Date(to == null ? System.currentTimeMillis() + 86_400_000L : to.toEpochMilli()));
+                EventFilter filter = filter(sourceId, from, to, mapping);
                 List<QueryParam> params = new ArrayList<>();
                 params.add(new QueryParam(() -> PagedCollectionResource.PAGE_NUMBER_KEY, String.valueOf(page)));
                 if (oldestFirst) {

@@ -30,6 +30,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.util.MappingLogContext;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.Mapping;
@@ -178,8 +179,18 @@ public class OutboundMessageRouter extends MessageRoutingSupport {
      * Single mapping processing pipeline. Mirrors the former
      * {@code direct:processSingleOutboundMapping} route.
      */
-    @SuppressWarnings("unchecked")
     private ProcessingContext<Object> processSingleOutboundMapping(Mapping mapping, C8YMessage c8yMessage,
+            String connectorIdentifier, boolean testing, ServiceConfiguration serviceConfiguration,
+            ProcessingResultWrapper<?> resultWrapper) {
+        // Every line logged while this mapping processes the message carries its identifier (service log filter).
+        try (MappingLogContext ignored = MappingLogContext.open(mapping.getIdentifier())) {
+            return runSingleOutboundMapping(mapping, c8yMessage, connectorIdentifier, testing, serviceConfiguration,
+                    resultWrapper);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private ProcessingContext<Object> runSingleOutboundMapping(Mapping mapping, C8YMessage c8yMessage,
             String connectorIdentifier, boolean testing, ServiceConfiguration serviceConfiguration,
             ProcessingResultWrapper<?> resultWrapper) {
         ProcessingContext<?> context = null;

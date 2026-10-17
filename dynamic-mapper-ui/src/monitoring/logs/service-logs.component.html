@@ -4,13 +4,53 @@
   <div class="d-flex a-i-center">
     @if (isCollected) {
     <span class="label label-info m-r-8" translate>Collected log</span>
-    <small class="text-muted" translate>Your tenant's lines only, at the configured level, kept for a limited time.</small>
+    <small class="text-muted" translate>Your tenant's lines only.</small>
     } @else {
-    <span class="label label-default" translate>Platform log</span>
+    <span class="label label-default m-r-8" translate>Platform log</span>
+    <small class="text-muted" translate>All lines of the selected instance.</small>
     }
+    @if (selectedMapping) {
+    <small class="text-muted m-l-4">· {{ 'Filtered by mapping' | translate }}</small>
+    }
+    <button
+      type="button"
+      class="btn-help m-l-8"
+      data-cy="service-logs-help"
+      aria-label="Help content"
+      placement="bottom"
+      triggers="focus"
+      container="body"
+      popoverTitle="{{ 'About this log' | translate }}"
+      [popover]="logHelp"
+    ></button>
   </div>
 </c8y-action-bar-item>
 }
+
+<!-- All help of this page lives here: the header shows a short text, this holds the details. -->
+<ng-template #logHelp>
+  <div class="text-12">
+    @if (isCollected) {
+    <p translate>Your tenant's lines only, at the configured level, kept for a limited time.</p>
+    } @else {
+    <p translate>The complete log of the selected microservice instance, including the lines of every tenant that shares it.</p>
+    }
+    @if (mappings.length) {
+    <p class="m-b-0"><strong translate>Mapping</strong></p>
+    <ul class="m-b-0 p-l-16">
+      <li translate>The list shows only lines written while the selected mapping processed a payload. Connector lines belong to no mapping.</li>
+      <li translate>All, Inbound and Outbound narrow the list of mappings; they do not filter the log by themselves.</li>
+      @if (isCollected) {
+      <li translate>Lines collected before this filter existed are not included.</li>
+      <li translate>Most per-message lines are DEBUG: lower the service log level on the Service configuration page to see them.</li>
+      <li translate>Clear the selection to see all lines again.</li>
+      } @else {
+      <li translate>Only the lines loaded now are searched: use Previous and Next to look further.</li>
+      }
+    </ul>
+    }
+  </div>
+</ng-template>
 <c8y-action-bar-item [placement]="'right'">
   <label class="c8y-switch m-b-0 m-r-8">
     <input type="checkbox" [checked]="darkTheme" (change)="toggleTheme()" />
@@ -65,7 +105,7 @@
     <div class="card-block overflow-visible flex-no-shrink">
       <div class="row">
         @if (!isCollected) {
-        <div class="col-md-7">
+        <div [ngClass]="mappings.length ? 'col-md-3' : 'col-md-7'">
           <div class="d-flex a-i-center">
             <label class="m-r-8 m-b-0 text-nowrap" for="instance" translate>Instance name</label>
             <div class="c8y-select-wrapper flex-grow">
@@ -79,7 +119,36 @@
           </div>
         </div>
         }
-        <div class="col-md-5" [ngClass]="{ 'col-md-offset-7': isCollected }">
+        @if (mappings.length) {
+        <div [ngClass]="isCollected ? 'col-md-7' : 'col-md-5'">
+          <div class="d-flex a-i-center">
+            <label class="m-r-8 m-b-0 text-nowrap" translate>Mapping</label>
+            <div class="c8y-select-wrapper m-r-8" style="width: 9em; flex: none">
+              <select id="mappingDirection" class="form-control" [attr.aria-label]="'Direction' | translate" [(ngModel)]="directionFilter" (ngModelChange)="onDirectionChange()" [disabled]="isLoading">
+                <option value="ALL">{{ 'All' | translate }}</option>
+                <option value="INBOUND">{{ 'Inbound' | translate }}</option>
+                <option value="OUTBOUND">{{ 'Outbound' | translate }}</option>
+              </select>
+              <span></span>
+            </div>
+            <!-- c8y-select: type to filter the mappings; the clear button goes back to all lines -->
+            <c8y-select
+              class="flex-grow"
+              data-cy="service-logs-mapping-select"
+              [items]="mappingItems"
+              [selected]="selectedMapping"
+              [filterItems]="true"
+              [canDeselect]="true"
+              [disabled]="isLoading"
+              placeholder="{{ 'All lines' | translate }}"
+              aria-label="Mapping"
+              (onSelect)="onMappingSelect($event)"
+              (onDeselect)="onMappingDeselect()"
+            ></c8y-select>
+          </div>
+        </div>
+        }
+        <div [ngClass]="dateColumnClass">
           <div class="d-flex a-i-center">
             <label class="m-r-8 m-b-0" for="dateFrom" translate>From</label>
             <input id="dateFrom" type="datetime-local" step="1" class="form-control" [(ngModel)]="dateFromInput" />
@@ -91,6 +160,17 @@
         </div>
       </div>
     </div>
+
+    @if (noLinesForMapping) {
+    <div class="card-block p-t-0 p-b-0 flex-no-shrink">
+      <div class="alert alert-info m-b-8">
+        {{ 'No lines for this mapping in this range.' | translate }}
+        @if (window?.more) {
+        {{ 'Use Previous or Next to keep looking.' | translate }}
+        }
+      </div>
+    </div>
+    }
 
     <div class="card-block p-t-0 p-b-0 fit-h" style="min-height: 400px; height: calc(100vh - 360px)">
       <c8y-editor class="d-block fit-h" [editorOptions]="editorOptions" [theme]="darkTheme ? 'dark' : 'light'" [ngModel]="logsText"></c8y-editor>

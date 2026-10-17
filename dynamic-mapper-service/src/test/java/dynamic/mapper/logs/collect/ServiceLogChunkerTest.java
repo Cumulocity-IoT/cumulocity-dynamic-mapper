@@ -190,4 +190,43 @@ class ServiceLogChunkerTest {
         assertTrue(limited.getBytes(java.nio.charset.StandardCharsets.UTF_8).length <= 300);
         assertFalse(limited.contains("�"), "no broken character");
     }
+
+    @Test
+    void aChunkNamesTheMappingsThatHaveRecordsInIt() {
+        List<ServiceLogRecord> records = List.of(
+                new ServiceLogRecord(Instant.parse("2026-10-15T11:00:01Z"), "ERROR", "t", "tenantA", "d.m.Foo", "a1", "aaa"),
+                new ServiceLogRecord(Instant.parse("2026-10-15T11:00:02Z"), "ERROR", "t", "tenantA", "d.m.Foo", "b1", "bbb"),
+                new ServiceLogRecord(Instant.parse("2026-10-15T11:00:03Z"), "ERROR", "t", "tenantA", "d.m.Foo", "a2", "aaa"),
+                rec("tenantA", "ERROR", 4, "no mapping"));
+
+        TenantChunks out = ServiceLogChunker.chunkTenant("tenantA", records, WARN);
+
+        assertEquals(1, out.chunks().size());
+        assertEquals(java.util.Set.of("aaa", "bbb"), out.chunks().get(0).mappings());
+    }
+
+    @Test
+    void theMappingSurvivesTheRecordSizeLimit() {
+        ServiceLogPolicy small = new ServiceLogPolicy("WARN", 500, 65536, 256, List.of());
+        List<ServiceLogRecord> records = List.of(
+                new ServiceLogRecord(Instant.parse("2026-10-15T11:00:01Z"), "ERROR", "t", "tenantA", "d.m.Foo", "x".repeat(5000), "aaa"));
+
+        assertEquals(java.util.Set.of("aaa"), ServiceLogChunker.chunkTenant("tenantA", records, small).chunks().get(0).mappings());
+    }
+
+    @Test
+    void chunksSplitBySizeEachNameOnlyTheirOwnMappings() {
+        ServiceLogPolicy tiny = new ServiceLogPolicy("WARN", 500, 1024, 256, List.of());
+        List<ServiceLogRecord> records = new java.util.ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            records.add(new ServiceLogRecord(Instant.parse("2026-10-15T11:00:00Z").plusSeconds(i), "ERROR", "t", "tenantA", "d.m.Foo",
+                    ("m" + i + "-").repeat(60), i < 6 ? "first" : "second"));
+        }
+
+        List<ServiceLogChunk> chunks = ServiceLogChunker.chunkTenant("tenantA", records, tiny).chunks();
+
+        assertTrue(chunks.size() >= 2);
+        assertEquals(java.util.Set.of("first"), chunks.get(0).mappings());
+        assertEquals(java.util.Set.of("second"), chunks.get(chunks.size() - 1).mappings());
+    }
 }

@@ -42,6 +42,7 @@ import com.cumulocity.sdk.client.event.EventApi;
 import com.cumulocity.sdk.client.event.EventFilter;
 
 import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.util.MappingLogContext;
 
 /**
  * Stores a tenant's copy of the log as events on the tenant's service-log source object (see
@@ -49,13 +50,21 @@ import dynamic.mapper.core.C8YAgent;
  *
  * <p>Event shape ({@code type d11r_serviceLog}): {@code text} is the summary; the fragment
  * {@code d11r_serviceLog} holds {@code instance}, {@code dateFrom}, {@code dateTo}, {@code lines},
- * {@code levels}, {@code omitted} and {@code logs}.
+ * {@code levels}, {@code omitted} and {@code logs}. A chunk with lines of a mapping also carries an empty marker fragment
+ * {@code d11r_serviceLog_map_<identifier>} per mapping (see {@link #mappingFragment(String)}).
  */
 @Service
 public class EventServiceLogSink implements ServiceLogSink {
 
     public static final String EVENT_TYPE = "d11r_serviceLog";
     public static final String FRAGMENT = "d11r_serviceLog";
+    /** Prefix of the per-mapping marker fragments, see {@link #mappingFragment(String)}. */
+    public static final String MAPPING_FRAGMENT_PREFIX = "d11r_serviceLog_map_";
+
+    /** Name of the marker fragment of a chunk that holds lines of the mapping with this identifier. */
+    public static String mappingFragment(String mappingIdentifier) {
+        return MAPPING_FRAGMENT_PREFIX + mappingIdentifier;
+    }
 
     private final EventApi eventApi;
     private final MicroserviceSubscriptionsService subscriptionsService;
@@ -73,22 +82,7 @@ public class EventServiceLogSink implements ServiceLogSink {
     @Override
     public void write(String tenant, String instance, ServiceLogChunk chunk) {
         inTenant(tenant, true, sourceId -> {
-            EventRepresentation event = new EventRepresentation();
-            ManagedObjectRepresentation source = new ManagedObjectRepresentation();
-            source.setId(sourceId);
-            event.setSource(source);
-            event.setType(EVENT_TYPE);
-            event.setText(chunk.summary());
-            event.setDateTime(new DateTime(chunk.dateTo().toEpochMilli()));
-            Map<String, Object> fragment = new LinkedHashMap<>();
-            fragment.put("instance", instance);
-            fragment.put("dateFrom", chunk.dateFrom().toString());
-            fragment.put("dateTo", chunk.dateTo().toString());
-            fragment.put("lines", chunk.lines());
-            fragment.put("levels", chunk.levels());
-            fragment.put("omitted", chunk.omitted());
-            fragment.put("logs", chunk.logs());
-            event.setProperty(FRAGMENT, fragment);
+            EventRepresentation event = toEvent(sourceId, instance, chunk);
             try {
                 eventApi.create(event);
             } catch (SDKException e) {
@@ -99,6 +93,34 @@ public class EventServiceLogSink implements ServiceLogSink {
             }
             return null;
         });
+    }
+
+    /** The event that stores {@code chunk}: summary, log fragment, and one marker fragment per mapping in it. */
+    static EventRepresentation toEvent(GId sourceId, String instance, ServiceLogChunk chunk) {
+        EventRepresentation event = new EventRepresentation();
+        ManagedObjectRepresentation source = new ManagedObjectRepresentation();
+        source.setId(sourceId);
+        event.setSource(source);
+        event.setType(EVENT_TYPE);
+        event.setText(chunk.summary());
+        event.setDateTime(new DateTime(chunk.dateTo().toEpochMilli()));
+        Map<String, Object> fragment = new LinkedHashMap<>();
+        fragment.put("instance", instance);
+        fragment.put("dateFrom", chunk.dateFrom().toString());
+        fragment.put("dateTo", chunk.dateTo().toString());
+        fragment.put("lines", chunk.lines());
+        fragment.put("levels", chunk.levels());
+        fragment.put("omitted", chunk.omitted());
+        fragment.put("logs", chunk.logs());
+        event.setProperty(FRAGMENT, fragment);
+        // One empty fragment per mapping that has lines in this chunk: the platform can then return only the chunks of
+        // one mapping (EventFilter.byFragmentType). Only valid identifiers are ever tagged, so the name is safe.
+        for (String mapping : chunk.mappings()) {
+            if (MappingLogContext.isValid(mapping)) {
+                event.setProperty(mappingFragment(mapping), new LinkedHashMap<String, Object>());
+            }
+        }
+        return event;
     }
 
     @Override

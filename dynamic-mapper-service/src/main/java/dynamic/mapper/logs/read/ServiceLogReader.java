@@ -56,6 +56,18 @@ public class ServiceLogReader {
     /** Access to the stored chunks of one tenant; {@code page} is 1-based. */
     public interface Events {
         Batch list(String tenant, Instant from, Instant to, boolean oldestFirst, int page, int pageSize);
+
+        /**
+         * Only the chunks that contain lines of the mapping with this identifier ({@code null}: all chunks). A source that
+         * cannot select by mapping must not pretend to: the default refuses.
+         */
+        default Batch list(String tenant, Instant from, Instant to, boolean oldestFirst, int page, int pageSize,
+                String mapping) {
+            if (mapping != null) {
+                throw new UnsupportedOperationException("This source cannot select chunks by mapping");
+            }
+            return list(tenant, from, to, oldestFirst, page, pageSize);
+        }
     }
 
     /**
@@ -85,9 +97,23 @@ public class ServiceLogReader {
      * happened to serve it, and nothing has to be filtered out after it was fetched.
      */
     public Page read(String tenant, Instant dateFrom, Instant dateTo) {
+        return read(tenant, dateFrom, dateTo, null);
+    }
+
+    /**
+     * Same as {@link #read(String, Instant, Instant)}, restricted to the lines of one mapping ({@code mapping} = its
+     * identifier, {@code null} = no restriction).
+     *
+     * <p>The platform returns only the chunks that contain the mapping, so paging is unchanged: a page is
+     * {@code maxChunks} such chunks and the cursors are theirs. Inside those chunks the other records are dropped. A
+     * chunk whose text then holds no matching record (a line cut short by the record limit lost its tag) still counts for the
+     * cursors, so the window can be empty while {@code more} is true — the page must keep paging, not stop.
+     * {@code empty} stays false with a mapping: the log exists, it just holds nothing for this mapping.
+     */
+    public Page read(String tenant, Instant dateFrom, Instant dateTo, String mapping) {
         boolean after = dateFrom != null && dateTo == null;
         boolean range = dateFrom != null && dateTo != null;
-        Scan scan = scan(tenant, dateFrom, dateTo, after || range, maxChunks);
+        Scan scan = scan(tenant, dateFrom, dateTo, after || range, maxChunks, mapping);
         List<StoredChunk> page = new ArrayList<>(scan.chunks());
         // `more` is also true when the walk gave up because it hit its bound: ending the paging there would hide data.
         boolean more = scan.more() || scan.bounded();
@@ -96,17 +122,23 @@ public class ServiceLogReader {
         }
         if (page.isEmpty()) {
             // Without a window the log itself is empty; with one, the window is merely past its end.
-            return new Page(null, null, null, 0, 0, 0, more, dateFrom == null && dateTo == null && !more, "");
+            return new Page(null, null, null, 0, 0, 0, more,
+                    mapping == null && dateFrom == null && dateTo == null && !more, "");
         }
         StringBuilder logs = new StringBuilder();
         int lines = 0;
         int omitted = 0;
         for (StoredChunk c : page) {
+            String text = mapping == null ? c.logs() : MappingLogRecords.filter(c.logs(), mapping);
+            if (mapping != null && text.isEmpty()) {
+                omitted += c.omitted();
+                continue; // nothing of this mapping in the chunk's text; its cursors still count (see above)
+            }
             if (logs.length() > 0) {
                 logs.append('\n');
             }
-            logs.append(c.logs());
-            lines += c.lines();
+            logs.append(text);
+            lines += mapping == null ? c.lines() : MappingLogRecords.lines(text);
             omitted += c.omitted();
         }
         return new Page(page.get(0).dateFrom(), page.get(page.size() - 1).dateTo(), page.get(0).dateTo(), page.size(), lines, omitted, more,
@@ -125,10 +157,12 @@ public class ServiceLogReader {
      * The page is only closed between two different end times: a time is the paging cursor, so chunks that end at the same
      * millisecond must all be on one page, or the next request (strictly after / before it) would skip the ones left over.
      */
-    private Scan scan(String tenant, Instant from, Instant to, boolean oldestFirst, int limit) {
+    private Scan scan(String tenant, Instant from, Instant to, boolean oldestFirst, int limit, String mapping) {
         List<StoredChunk> out = new ArrayList<>();
         for (int page = 1; page <= MAX_PAGES; page++) {
-            Batch batch = events.list(tenant, from, to, oldestFirst, page, PAGE_SIZE);
+            // Without a mapping the plain call is made: a source only has to implement the selection it can do.
+            Batch batch = mapping == null ? events.list(tenant, from, to, oldestFirst, page, PAGE_SIZE)
+                    : events.list(tenant, from, to, oldestFirst, page, PAGE_SIZE, mapping);
             for (StoredChunk c : batch.chunks()) {
                 boolean inside = (from == null || c.dateTo().isAfter(from)) && (to == null || c.dateTo().isBefore(to));
                 if (!inside) {

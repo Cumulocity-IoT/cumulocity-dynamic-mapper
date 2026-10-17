@@ -29,6 +29,7 @@ import java.time.Instant;
 import ch.qos.logback.classic.PatternLayout;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
+import dynamic.mapper.util.MappingLogContext;
 import dynamic.mapper.util.TenantLogContext;
 
 /**
@@ -44,8 +45,11 @@ import dynamic.mapper.util.TenantLogContext;
  */
 public class ServiceLogCaptureAppender extends AppenderBase<ILoggingEvent> {
 
-    /** The format of a stored line: the console format without process id and tenant (the event carries the tenant). */
-    static final String PATTERN = "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX,UTC} %5p [%t] %logger{39} : %m%n%ex";
+    /**
+     * The format of a stored line: the console format without process id and tenant (the event carries the tenant). The
+     * {@code %mappingTag} sits right after the thread: the reader finds it there, and only there.
+     */
+    static final String PATTERN = "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX,UTC} %5p [%t] %mappingTag%logger{39} : %m%n%ex";
 
     private static final String OWN_PACKAGE = "dynamic.mapper.logs.";
 
@@ -129,7 +133,8 @@ public class ServiceLogCaptureAppender extends AppenderBase<ILoggingEvent> {
             }
             String text = ServiceLogPolicy.limit(stripTrailingNewlines(layout.doLayout(event)), s.maxRecordBytes());
             buffer.offer(new ServiceLogRecord(Instant.ofEpochMilli(event.getTimeStamp()), event.getLevel().toString(),
-                    event.getThreadName(), tenant, logger, text), s.maxBufferedRecords());
+                    event.getThreadName(), tenant, logger, text,
+                    MappingLogContext.mappingOf(event.getMDCPropertyMap())), s.maxBufferedRecords());
         } catch (RuntimeException e) {
             addError("Could not capture a log event: " + e);
         }

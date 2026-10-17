@@ -157,11 +157,41 @@ for you:
 |---|---|
 | **Instance name** | Platform log only. Selects the microservice instance, because each instance has its own platform log. The collected log shows all instances together. |
 | **Fetch now** | Collected log only. Has the service store the lines it holds for your tenant right away, instead of at the next collection interval, and then shows the newest lines. Only the instance that answers the request is flushed, so with several instances some lines can still arrive at their next interval. |
+| **Mapping** | A searchable list: open it and type part of a mapping name to narrow the list. Selecting a mapping shows only the lines written while it processed a payload (see [Following one mapping](#service-logs-mapping)). The **×** in the field clears the selection and shows all lines again. |
+| **All / Inbound / Outbound** | In front of **Mapping**. Narrows the list of mappings to the inbound or the outbound ones. It does not filter the log by itself: with no mapping selected the whole log is shown whatever it says. If the selected mapping is not in the narrowed list, the selection is cleared and the whole log is shown again. |
 | **From** and **Apply** | Jumps to a start time. The time is in **UTC**, not your local time. |
 | **First / Previous / Next / Last** | Pages through the log. **Last** shows the newest lines. **Next** and **Last** are disabled while auto refresh is on, because it already follows the newest lines. |
+| **Help (?)** | In the action bar, next to the badge. The bar itself shows a short text; the help holds the details for the source you are looking at and for the mapping filter. |
 | **Dark theme** | Switches the log between a dark and a light theme. The choice is remembered in your browser. |
 | **Auto refresh** | Reloads the newest lines every 10 seconds. |
-| **Download** | Saves the whole log of the selected instance as `<instance>.log`. |
+| **Download** | Saves the whole log of the selected instance as `<instance>.log`. With a mapping selected, only that mapping's lines are saved, as `<instance>-<mapping identifier>.log`. |
+
+##### Following one mapping {#service-logs-mapping}
+
+Choose a mapping in the **Mapping** list to see only what the mapper logged **while it processed a payload for that
+mapping** — inbound or outbound: the transformation, the substitutions, the requests it sent and the errors it ran
+into. The connector's own lines (connect, subscribe, reconnect) are not part of it, because they belong to no mapping.
+
+Each such line carries the mapping's **identifier** in square brackets right in front of the logger, for example
+`[m:l19zjk]`. The list shows the mapping's name; the identifier is what you can search for in the downloaded log.
+
+The **debug** label in the mapping list links here and opens the page with that mapping already selected, so one
+click takes you from "debug is on for this mapping" to its detailed output. If the mapping no longer exists, the page
+says so and shows all lines.
+
+What to keep in mind:
+
+- **The level decides what there is to see.** Most per-message lines are written at **DEBUG**. With the default
+  level **INFO** a mapping that works without problems logs very little. To follow a mapping in detail, lower the
+  level under [Service log settings](#service-logs-settings) while you investigate, and raise it again afterwards.
+- **Only lines collected from now on.** Lines that were collected before this filter existed carry no mapping and
+  never appear when a mapping is selected.
+- **Collected log:** the whole stored log is searched, so the result can reach back further than one page; use
+  **Previous** and **Next** as usual. A window can be empty while more lines exist further back: the page then says so,
+  and **Previous** keeps looking.
+- **Platform log:** the filter only applies to the lines that are loaded right now — the platform cannot filter its
+  log. Use **Previous** and **Next** to look at other parts of the log.
+- A line that spans several rows (a stack trace) stays together with the line it belongs to.
 
 ##### Who can open it
 

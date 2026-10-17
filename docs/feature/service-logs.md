@@ -97,6 +97,7 @@ list comes from the newest few chunks, so an instance that was quiet for a while
 | `d11r_serviceLog.dateFrom` / `dateTo` | first and last record; the paging key |
 | `d11r_serviceLog.lines` / `levels` / `omitted` | counts |
 | `d11r_serviceLog.logs` | the lines, newline-joined, at most 64 KB per event |
+| `d11r_serviceLog_map_<identifier>` | empty marker fragment, **one per mapping that has lines in the chunk** (absent when none); lets a read for one mapping select its chunks on the platform — see [Filtering by mapping](#filtering-by-mapping) |
 
 One event per chunk, never per line: at `INFO` the per-line rate would overwhelm a tenant's event API. Events written by a
 previous design onto the agent itself (if any exist) are invisible to the page and never purged; delete them.
@@ -126,6 +127,59 @@ to the stored log
 refused or the tenant sees no instance. Both sit behind one interface with the **same window semantics**, so First /
 Previous / Next / Latest, the *From* field, auto refresh and Download behave identically. A badge and a note in the action
 bar say which source is shown; omitted lines and the empty state are explained.
+
+### Filtering by mapping
+
+*Show only the lines written while one mapping processed a payload.* Planned in
+[`IMPLEMENTATION-PLAN-SERVICE-LOGS-MAPPING-FILTER.md`](../planning/IMPLEMENTATION-PLAN-SERVICE-LOGS-MAPPING-FILTER.md).
+
+**Id:** `mapping.identifier` (generated, stable, the key the status, caches and deployment already use), not `mapping.id`.
+
+**Tag.** [`MappingLogContext`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/util/MappingLogContext.java) puts the
+identifier into the MDC (`mapperMapping`) around the processing of **one** mapping, in `processSingleInboundMapping` /
+`processSingleOutboundMapping` of the two routers (inline for the single-mapping case, on the worker thread otherwise). It is
+deliberately **not** propagated by `MdcPropagatingExecutorService`, which carries only the tenant. Dispatcher and connector
+lines run outside the scope and stay untagged. The identifier is validated (`[A-Za-z0-9_-]{1,64}`): an invalid value means "no
+mapping", never a wrong one.
+
+**Line format.** The conversion word `%mappingTag` ([`MappingLogConverter`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/util/MappingLogConverter.java),
+registered in `TenantLogging`) prints `[m:<identifier>] ` or nothing. The console pattern is `[%-11tenantId] %mappingTag` + logger;
+the stored pattern is `... [%t] %mappingTag%logger{39} : %m`. Lines outside a mapping keep their old format.
+
+**Why a chunk fragment as well.** A chunk is a time-contiguous run of **all** of a tenant's records, so filtering after
+reading has to fetch every chunk and still cannot page sensibly: a rare mapping can match nothing in the 500 newest events,
+the page then has no cursor, and each request pays for 500 full-text events. So the chunker records which mappings a chunk
+contains ([`ServiceLogChunk.mappings`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/logs/model/ServiceLogChunk.java))
+and the sink writes one empty fragment `d11r_serviceLog_map_<identifier>` per mapping on the event. The reader adds
+`EventFilter.byFragmentType(...)` ([`EventServiceLogEvents.filter`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/logs/read/EventServiceLogEvents.java)),
+so the platform returns **only the chunks that contain the mapping**. Paging is then unchanged: a page is `maxChunks` such
+chunks and the cursors are theirs. The platform behaviour this relies on was checked on a tenant: `fragmentType` combines with
+`type`, `source`, the date range and `revert`; an unknown fragment gives an empty list.
+
+**Records inside a chunk.** The chunk still holds the other mappings' and untagged lines, so the reader
+([`MappingLogRecords`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/logs/read/MappingLogRecords.java)) splits the text
+into records (a header line starts with a timestamp; stack traces and multi-line payloads are continuation) and keeps those whose
+**header** carries the tag — at its fixed position after the thread, never in the message. A chunk whose text then holds no
+matching record (the line was cut by the record-size limit and lost its tag) still counts for the cursors, so the window can be
+empty with `more` true; `empty` stays false with a mapping (the log exists, it holds nothing for this mapping). The UI shows
+that as *No lines for this mapping in this range* and keeps Previous / Next usable.
+
+**API.** `GET /monitoring/service-logs?mapping=<identifier>`; anything that is not an identifier is a 400 (the value becomes part
+of an event query). `ServiceLogReader.Events` has a second `list(..., mapping)`; a source that cannot select by mapping refuses
+instead of returning everything.
+
+**Native log (owner tenant).** The platform log is opaque text, so the UI filters the **loaded window** only
+([`filterLogByMapping`](../../dynamic-mapper-ui/src/monitoring/logs/mapping-log-filter.ts)) and says so on the page. The tag is
+looked for in the header (before the first ` : `), not in the message.
+
+**Limits.**
+- Chunks collected before this change have no marker fragment and never match.
+- A logged payload that itself contains a line that looks like a header (timestamp, level, `[thread]`) starts a new record in
+  the reader. That can only change which of the tenant's *own* lines are shown; isolation is decided before the text gets there.
+- Lines logged on foreign threads (SDK / HTTP client callbacks) are untagged unless the callback restores the scope.
+- A chunk carries one marker per mapping that logged in its interval, so the event grows with the number of busy mappings; it
+  stays far below the 64 KB log text.
+- Most per-message processing lines are DEBUG: at the default level a healthy mapping logs little.
 
 ### Per-tenant settings
 
@@ -232,5 +286,8 @@ credential handling.
   tenant and its cache is dropped on unsubscribe. Stored events stay under the tenant's own retention.
 - **Owner tenant.** Treated like any other tenant: its lines are stored too, so an owner user without application-management
   rights sees them. They duplicate what the platform's own log holds; that is accepted for one rule instead of a special case.
+- **Mapping filter and auto refresh.** Auto refresh re-reads the newest window; with the filter that is a cheap platform-side
+  query (only the mapping's chunks are fetched), so it needs no special handling — unlike a post-filter, which would scan up to
+  500 events every 10 s per open page.
 - **Open:** the uncovered scope gaps listed under *Tenant attribution*; per-tenant settings are applied by the service but the
   Angular form has no unit test.
