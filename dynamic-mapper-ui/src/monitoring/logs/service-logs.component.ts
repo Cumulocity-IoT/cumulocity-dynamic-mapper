@@ -223,6 +223,8 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
     }
     this.stopTimer();
     this.autoRefresh = false;
+    ++this.requestSeq;
+    this.inFlight = false;
     this.isLoading = true;
     try {
       await this.activate(target);
@@ -358,6 +360,8 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
     try {
       await source.init();
       const window = await source.load({ mapping: this.selectedMapping || undefined });
+      this.error = undefined;
+      this.errorHint = undefined;
       this.source = source;
       this.show(window);
       return true;
