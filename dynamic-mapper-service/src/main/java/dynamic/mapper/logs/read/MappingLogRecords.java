@@ -62,12 +62,14 @@ public final class MappingLogRecords {
         StringBuilder out = new StringBuilder();
         StringBuilder record = new StringBuilder();
         boolean keep = false;
+        Pattern recordStart = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}T");
         for (String line : logs.split("\\n", -1)) {
             Matcher header = HEADER.matcher(line);
-            if (header.find()) {
+            boolean hasHeader = header.find();
+            if (hasHeader || recordStart.matcher(line).find()) {
                 flush(out, record, keep);
                 record.setLength(0);
-                keep = mapping.equals(header.group(1));
+                keep = hasHeader && mapping.equals(header.group(1));
             }
             // A continuation line before any header belongs to no record that could match.
             if (record.length() > 0) {
