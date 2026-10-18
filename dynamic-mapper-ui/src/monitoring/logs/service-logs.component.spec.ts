@@ -231,6 +231,16 @@ describe('ServiceLogsComponent mapping selection', () => {
     expect(infos.length).toBe(0);
   });
 
+  it('keeps the items array when the list is recomputed to the same content', async () => {
+    const { component } = await withMappings();
+    const before = component.mappingItems;
+
+    component.directionFilter = 'ALL';
+    component.onDirectionChange();
+
+    expect(component.mappingItems).toBe(before);
+  });
+
   describe('source choice (owner tenant with a collected log)', () => {
     const both = { nativeUsable: true };
 

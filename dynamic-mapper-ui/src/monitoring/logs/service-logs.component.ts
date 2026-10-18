@@ -332,12 +332,13 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
   async download(): Promise<void> {
     try {
       const parts: string[] = [];
+      const source = this.source; // fixed for the whole export too: a source switch meanwhile must not mix two logs
       const instance = this.selectedInstance; // fixed for the whole export: every page must come from the same instance
       const mapping = this.selectedMapping || undefined; // the export has the same lines as the page
       let request: LogRequest = { instance, mapping, dateFrom: EPOCH };
       let window: LogWindow;
       do {
-        window = await this.source.load(request);
+        window = await source.load(request);
         if (window.logs) {
           parts.push(window.logs.endsWith('\n') ? window.logs : `${window.logs}\n`);
         }
@@ -409,10 +410,15 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Replaces the items only when they really differ: the select rebuilds its state each time its input is set. */
   private refreshMappingItems(): void {
-    this.mappingItems = this.mappings
+    const items = this.mappings
       .filter((m) => this.directionFilter === 'ALL' || m.direction === this.directionFilter)
       .map((m) => ({ label: m.label, value: m.identifier }));
+    const same = items.length === this.mappingItems.length && items.every((i, n) => i.value === this.mappingItems[n].value && i.label === this.mappingItems[n].label);
+    if (!same) {
+      this.mappingItems = items;
+    }
   }
 
   private show(window: LogWindow): void {
