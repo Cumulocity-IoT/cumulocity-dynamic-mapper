@@ -22,6 +22,7 @@ import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
 import { NODE2 } from '../../shared';
+import { MAPPING_IDENTIFIER } from '../../monitoring/logs/mapping-log-filter';
 
 /**
  * Version/Status cell of the mapping grid.
@@ -34,8 +35,8 @@ import { NODE2 } from '../../shared';
  *
  * Version and draft are interactive only when the column supplies a `callback` (see
  * MappingComponent.getColumnsMappings): they then open the version drawer for that row. The debug
- * label always links to the Service logs page, where the mapping's debug output can be read; it
- * needs no callback because it is a plain route.
+ * label always links to the Service logs page, filtered to this mapping (`?mapping=<identifier>`), where the
+ * mapping's debug output can be read; it needs no callback because it is a plain route.
  *
  * The affordance has to be visible at rest: c8y's `.interact` class only sets `cursor: pointer`,
  * and an <a> without an href gets no default link styling, so the version would otherwise look
@@ -94,7 +95,8 @@ import { NODE2 } from '../../shared';
           <a class="interact text-12 label label-success dm-debug-link"
             [attr.data-cy]="'dm-mapping-status-debug-' + context.item.id"
             [routerLink]="serviceLogsRoute"
-            title="Debug logging is enabled for this mapping. Open the Service logs to read the detailed output.">debug</a>
+            [queryParams]="serviceLogsQueryParams"
+            title="Debug logging is enabled for this mapping. Open the Service logs, filtered to the lines of this mapping, to read the detailed output.">debug</a>
         }
       </div>
     `,
@@ -152,4 +154,13 @@ export class StatusRendererComponent {
   readonly serviceLogsRoute = `/c8y-pkg-dynamic-mapper/${NODE2}/monitoring/logs`;
 
   constructor(public readonly context: CellRendererContext) { }
+
+  /**
+   * The Service logs page opens with this mapping preselected: the label is context aware, it leads to the lines of the
+   * mapping it sits on, not to the whole log. Without a usable identifier the link still opens the page, unfiltered.
+   */
+  get serviceLogsQueryParams(): { mapping?: string } {
+    const identifier = this.context?.item?.mapping?.identifier;
+    return typeof identifier === 'string' && MAPPING_IDENTIFIER.test(identifier) ? { mapping: identifier } : {};
+  }
 }

@@ -131,9 +131,11 @@ looking at:
 | **Platform log** | The complete log of the microservice instance, including the lines of every tenant that shares it. | You are in the tenant that owns the microservice and your user may read applications. |
 | **Collected log** | Only the lines that were logged for **your** tenant. | Every other case: your tenant only subscribes to the microservice, or you own it but your user may not read its log in Administration. |
 
-![Service logs](../../../resources/image/Dynamic_Mapper_Monitoring_Service_Logs.png "The Service logs view showing the collected log of a tenant: badge and note in the action bar, instance and start time above the log, paging buttons below.")
+![Service logs](../../../resources/image/Dynamic_Mapper_Monitoring_Service_Logs.png "The Service logs view showing the collected log of a tenant: badge and note in the action bar, mapping filter and start time above the log, paging buttons below.")
 
-The page picks the source itself; there is nothing to choose. Both look and behave the same.
+The page picks the source itself. Both look and behave the same. Only if you own the microservice **and** the collected
+log holds lines, a **Collected log** switch in the action bar lets you change between the two; the platform log stays
+the default.
 
 ##### The collected log
 
@@ -155,13 +157,48 @@ for you:
 
 | Control | What it does |
 |---|---|
-| **Instance name** | Platform log only. Selects the microservice instance, because each instance has its own platform log. The collected log shows all instances together. |
+| **Collected log** | A switch, shown only when both sources are available. Off: the live platform log. On: the stored log of your tenant. Selecting a mapping switches it on for you (see [Following one mapping](#service-logs-mapping)). |
 | **Fetch now** | Collected log only. Has the service store the lines it holds for your tenant right away, instead of at the next collection interval, and then shows the newest lines. Only the instance that answers the request is flushed, so with several instances some lines can still arrive at their next interval. |
+| **Mapping** | A searchable list: open it and type part of a mapping name to narrow the list. Selecting a mapping shows only the lines written while it processed a payload (see [Following one mapping](#service-logs-mapping)). The **×** in the field clears the selection and shows all lines again. |
+| **All / Inbound / Outbound** | In front of **Mapping**. Narrows the list of mappings to the inbound or the outbound ones. It does not filter the log by itself: with no mapping selected the whole log is shown whatever it says. If the selected mapping is not in the narrowed list, the selection is cleared and the whole log is shown again. |
 | **From** and **Apply** | Jumps to a start time. The time is in **UTC**, not your local time. |
 | **First / Previous / Next / Last** | Pages through the log. **Last** shows the newest lines. **Next** and **Last** are disabled while auto refresh is on, because it already follows the newest lines. |
-| **Dark theme** | Switches the log between a dark and a light theme. The choice is remembered in your browser. |
+| **Help (?)** | In the action bar, next to the badge. The bar itself shows a short text; the help holds the details for the source you are looking at (for the collected log: the collection delay and **Fetch now**) and for the mapping filter. |
 | **Auto refresh** | Reloads the newest lines every 10 seconds. |
-| **Download** | Saves the whole log of the selected instance as `<instance>.log`. |
+| **Download** | Saves the whole log of the source you are looking at as `<instance>.log`. With a mapping selected, only that mapping's lines are saved, as `<instance>-<mapping identifier>.log`. |
+
+##### Following one mapping {#service-logs-mapping}
+
+Choose a mapping in the **Mapping** list to see only what the mapper logged **while it processed a payload for that
+mapping** — inbound or outbound: the transformation, the substitutions, the requests it sent and the errors it ran
+into. The connector's own lines (connect, subscribe, reconnect) are not part of it, because they belong to no mapping.
+
+Each such line carries the mapping's **identifier** in square brackets right in front of the logger, for example
+`[m:l19zjk]`. The list shows the mapping's name; the identifier is what you can search for in the downloaded log.
+
+The **debug** label in the mapping list links here and opens the page with that mapping already selected, so one
+click takes you from "debug is on for this mapping" to its detailed output. If the mapping no longer exists, the page
+says so and shows all lines.
+
+What to keep in mind:
+
+- **The level decides what there is to see.** Most per-message lines are written at **DEBUG**. With the default
+  level **INFO** a mapping that works without problems logs very little. To follow a mapping in detail, lower the
+  level under [Service log settings](#service-logs-settings) while you investigate, and raise it again afterwards.
+- **Only lines collected from now on.** Lines that were collected before this filter existed carry no mapping and
+  never appear when a mapping is selected.
+- **Collected log:** the whole stored log is searched, so the result can reach back further than one page; use
+  **Previous** and **Next** as usual. A window can be empty while more lines exist further back: the page then says so,
+  and **Previous** keeps looking.
+- **Platform log:** the filter only applies to the lines that are loaded right now — the platform cannot filter its
+  log. Use **Previous** and **Next** to look at other parts of the log.
+- **Both sources available** (you own the microservice and the collected log holds lines): a **Collected log** switch
+  appears in the action bar. Selecting a mapping switches to the collected log automatically, because only it can
+  search its whole range; the header then reads *Filtered by mapping (collected log)*. Clearing the selection returns to
+  the platform log. Switching to the platform log yourself drops the mapping filter, and a switch you make by hand is
+  never undone by the page. Opening the page from the **debug** label starts on the collected log. If the collected log is off or empty, there is no switch and the
+  platform log is filtered as described above.
+- A line that spans several rows (a stack trace) stays together with the line it belongs to.
 
 ##### Who can open it
 

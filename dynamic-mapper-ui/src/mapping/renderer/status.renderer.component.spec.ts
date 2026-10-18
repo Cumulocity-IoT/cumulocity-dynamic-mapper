@@ -115,6 +115,20 @@ describe('StatusRendererComponent', () => {
     expect(fixture.componentInstance.serviceLogsRoute).toBe('/c8y-pkg-dynamic-mapper/node2/monitoring/logs');
   });
 
+  // The query parameters only depend on the row, so the component is built directly: no TestBed, no CoreModule providers.
+  const queryParamsOf = (item: unknown) =>
+    new StatusRendererComponent({ value: ALL, item, property: {} } as unknown as CellRendererContext).serviceLogsQueryParams;
+
+  it('opens the Service logs filtered to the mapping the debug label sits on', () => {
+    expect(queryParamsOf({ id: 'row-1', mapping: { identifier: 'l19zjk' } })).toEqual({ mapping: 'l19zjk' });
+  });
+
+  it('still opens the Service logs, unfiltered, when the row has no usable identifier', () => {
+    for (const item of [{ id: 'row-1' }, { id: 'row-1', mapping: {} }, { id: 'row-1', mapping: { identifier: 'a b&c=d' } }, undefined]) {
+      expect(queryParamsOf(item)).toEqual({});
+    }
+  });
+
   it('says what the version link actually does, on hover', () => {
     const el = render(ALL, () => undefined);
     const tip = el.querySelector('[data-cy="dm-mapping-status-link-row-1"]')!.getAttribute('title')!;

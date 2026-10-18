@@ -28,9 +28,19 @@ import java.time.Instant;
  *
  * @param tenant the tenant field of the line, or {@code null} when the line belongs to no tenant ({@code -})
  * @param text   the complete record exactly as logged, continuation lines included, no trailing newline
+ * @param mapping the {@code identifier} of the mapping the line was written for, or {@code null} for a line outside any
+ *                mapping's processing
  */
 public record ServiceLogRecord(Instant time, String level, String thread, String tenant, String logger,
-        String text) {
+        String text, String mapping) {
+
+    public ServiceLogRecord(Instant time, String level, String thread, String tenant, String logger, String text) {
+        this(time, level, thread, tenant, logger, text, null);
+    }
+
+    public ServiceLogRecord withText(String text) {
+        return new ServiceLogRecord(time, level, thread, tenant, logger, text, mapping);
+    }
 
     public boolean isAttributed() {
         return tenant != null && !tenant.isBlank();

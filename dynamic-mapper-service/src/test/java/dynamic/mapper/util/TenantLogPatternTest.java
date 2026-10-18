@@ -66,4 +66,28 @@ class TenantLogPatternTest {
         assertTrue(o.matches("(?s).*\\[tenantA\\s*\\] \\S*TenantLogPatternTest\\s+: after-sdk-scope-line.*"), o);
         assertTrue(o.matches("(?s).*\\[-\\s*\\] \\S*TenantLogPatternTest\\s+: after-line.*"), o);
     }
+
+    @Test
+    void mappingTagIsPrintedOnlyInsideAMappingScope(CapturedOutput out) throws Exception {
+        TenantLogging.register();
+        try (var ctx = new SpringApplicationBuilder(Empty.class)
+                .web(WebApplicationType.NONE)
+                .properties("logging.config=classpath:logback-spring.xml",
+                        "logging.pattern.correlation=[%-11tenantId] %mappingTag", "logging.threshold.console=INFO")
+                .run()) {
+            try (var a = TenantLogContext.open("tenantA")) {
+                LOG.info("outside-line");
+                try (var m = MappingLogContext.open("l19zjk")) {
+                    LOG.info("inside-line");
+                }
+                LOG.info("after-line");
+            }
+            Thread.sleep(300); // AsyncAppender
+        }
+        String o = out.getAll();
+        assertFalse(o.contains("PARSER_ERROR"), o);
+        assertTrue(o.matches("(?s).*\\[tenantA\\s*\\] \\S*TenantLogPatternTest\\s+: outside-line.*"), o);
+        assertTrue(o.matches("(?s).*\\[tenantA\\s*\\] \\[m:l19zjk\\] \\S*TenantLogPatternTest\\s+: inside-line.*"), o);
+        assertTrue(o.matches("(?s).*\\[tenantA\\s*\\] \\S*TenantLogPatternTest\\s+: after-line.*"), o);
+    }
 }

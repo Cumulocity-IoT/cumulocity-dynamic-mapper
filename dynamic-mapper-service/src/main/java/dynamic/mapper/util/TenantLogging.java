@@ -43,7 +43,11 @@ public final class TenantLogging {
     /** {@code %tenantId} — the line's tenant field. */
     public static final String TENANT_WORD = "tenantId";
 
+    /** {@code %mappingTag} — {@code [m:<identifier>] } inside a mapping's processing, else nothing. */
+    public static final String MAPPING_WORD = "mappingTag";
+
     public static void register() {
+        put(MAPPING_WORD, MappingLogConverter.class, MappingLogConverter::new);
         put(TENANT_WORD, TenantLogConverter.class, TenantLogConverter::new);
         // %m and its aliases: drop a leading "<tenant> - " that repeats the tenant field.
         for (String word : new String[] { "m", "msg", "message" }) {

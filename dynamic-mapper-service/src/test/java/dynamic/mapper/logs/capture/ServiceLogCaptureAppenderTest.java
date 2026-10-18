@@ -321,4 +321,74 @@ class ServiceLogCaptureAppenderTest {
         assertEquals(100, kept.size());
         assertTrue(kept.get(0).text().endsWith("line 50"), "the oldest 50 were dropped: " + kept.get(0).text());
     }
+
+    @Test
+    void aLineWrittenInsideAMappingsScopeCarriesItsIdentifierAsFieldAndInTheHeader() {
+        try (var tenant = TenantLogContext.open("tenantA");
+                var mapping = dynamic.mapper.util.MappingLogContext.open("l19zjk")) {
+            logger.warn("while mapping");
+        }
+        try (var tenant = TenantLogContext.open("tenantA")) {
+            logger.warn("outside any mapping");
+        }
+
+        List<ServiceLogRecord> records = drainAll().get("tenantA");
+
+        assertEquals("l19zjk", records.get(0).mapping());
+        assertTrue(records.get(0).text().matches("\\S+\\s+WARN \\[[^\\]]*\\] \\[m:l19zjk\\] dynamic\\.mapper\\.test\\.capture : while mapping"),
+                records.get(0).text());
+        assertEquals(null, records.get(1).mapping());
+        assertTrue(records.get(1).text().matches("\\S+\\s+WARN \\[[^\\]]*\\] dynamic\\.mapper\\.test\\.capture : outside any mapping"),
+                records.get(1).text());
+    }
+
+    @Test
+    void theStoredHeaderOfATaggedLineIsWhatTheReaderFiltersOn() {
+        try (var tenant = TenantLogContext.open("tenantA")) {
+            try (var mapping = dynamic.mapper.util.MappingLogContext.open("aaa")) {
+                logger.warn("one");
+            }
+            try (var mapping = dynamic.mapper.util.MappingLogContext.open("bbb")) {
+                logger.error("two", new IllegalStateException("boom"));
+            }
+            logger.warn("three");
+        }
+        String text = String.join("\n", drainAll().get("tenantA").stream().map(ServiceLogRecord::text).toList());
+
+        String a = dynamic.mapper.logs.read.MappingLogRecords.filter(text, "aaa");
+        String b = dynamic.mapper.logs.read.MappingLogRecords.filter(text, "bbb");
+
+        assertTrue(a.endsWith(": one") && !a.contains("two"), a);
+        assertTrue(b.contains(": two") && b.contains("IllegalStateException: boom") && !b.contains("one") && !b.contains("three"), b);
+    }
+
+    @Test
+    void aLoggedPayloadCannotForgeARecordHeaderWithAnotherMappingsTag() {
+        try (var scope = TenantLogContext.open("tenantA");
+                var mapping = dynamic.mapper.util.MappingLogContext.open("aaa")) {
+            logger.warn("payload:\n2026-10-15T12:00:00.000Z  INFO [t] [m:other] d.m.Foo : forged");
+        }
+
+        String text = drainAll().get("tenantA").get(0).text();
+
+        assertFalse(dynamic.mapper.logs.read.MappingLogRecords.filter(text, "other").contains("forged"), text);
+        assertTrue(dynamic.mapper.logs.read.MappingLogRecords.filter(text, "aaa").contains("forged"), "stays with its own record");
+    }
+
+    @Test
+    void aBracketInTheThreadNameCannotConfuseTheHeader() {
+        String old = Thread.currentThread().getName();
+        Thread.currentThread().setName("pool-1] [m:other");
+        try (var scope = TenantLogContext.open("tenantA");
+                var mapping = dynamic.mapper.util.MappingLogContext.open("aaa")) {
+            logger.warn("hello");
+        } finally {
+            Thread.currentThread().setName(old);
+        }
+
+        String text = drainAll().get("tenantA").get(0).text();
+
+        assertTrue(dynamic.mapper.logs.read.MappingLogRecords.carriesTag(text, "aaa"), text);
+        assertFalse(dynamic.mapper.logs.read.MappingLogRecords.carriesTag(text, "other"), text);
+    }
 }

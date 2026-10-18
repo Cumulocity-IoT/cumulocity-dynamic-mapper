@@ -23,6 +23,7 @@ package dynamic.mapper.logs.model;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * What one event carries: a contiguous run of one tenant's records.
@@ -34,12 +35,19 @@ import java.util.Map;
  * @param omitted  records lost since the previous chunk because the tenant's buffer overflowed
  * @param records  the records this chunk was built from; <b>not stored</b>, it lets the collector put back exactly the
  *                 records that were not stored when a write fails
+ * @param mappings identifiers of the mappings that have records in this chunk; stored as one event fragment each, so a
+ *                 read for one mapping fetches only the chunks that contain it
  */
 public record ServiceLogChunk(Instant dateFrom, Instant dateTo, int lines, Map<String, Integer> levels, int omitted,
-        String logs, List<ServiceLogRecord> records) {
+        String logs, List<ServiceLogRecord> records, Set<String> mappings) {
+
+    public ServiceLogChunk(Instant dateFrom, Instant dateTo, int lines, Map<String, Integer> levels, int omitted,
+            String logs, List<ServiceLogRecord> records) {
+        this(dateFrom, dateTo, lines, levels, omitted, logs, records, Set.of());
+    }
 
     public ServiceLogChunk withOmitted(int omitted) {
-        return new ServiceLogChunk(dateFrom, dateTo, lines, levels, omitted, logs, records);
+        return new ServiceLogChunk(dateFrom, dateTo, lines, levels, omitted, logs, records, mappings);
     }
 
     public String summary() {

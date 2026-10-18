@@ -29,6 +29,7 @@ import java.time.Instant;
 import ch.qos.logback.classic.PatternLayout;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
+import dynamic.mapper.util.MappingLogContext;
 import dynamic.mapper.util.TenantLogContext;
 
 /**
@@ -44,8 +45,12 @@ import dynamic.mapper.util.TenantLogContext;
  */
 public class ServiceLogCaptureAppender extends AppenderBase<ILoggingEvent> {
 
-    /** The format of a stored line: the console format without process id and tenant (the event carries the tenant). */
-    static final String PATTERN = "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX,UTC} %5p [%t] %logger{39} : %m%n%ex";
+    /**
+     * The format of a stored line: the console format without process id and tenant (the event carries the tenant). The
+     * {@code %mappingTag} sits right after the thread: the reader finds it there, and only there. The thread name is
+     * reduced to harmless characters so a {@code ]} in it cannot confuse the reader's header match.
+     */
+    static final String PATTERN = "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX,UTC} %5p [%replace(%t){'[^A-Za-z0-9 _.#:/@-]','_'}] %mappingTag%logger{39} : %m%n%ex";
 
     private static final String OWN_PACKAGE = "dynamic.mapper.logs.";
 
@@ -127,12 +132,24 @@ public class ServiceLogCaptureAppender extends AppenderBase<ILoggingEvent> {
                     return;
                 }
             }
-            String text = ServiceLogPolicy.limit(stripTrailingNewlines(layout.doLayout(event)), s.maxRecordBytes());
+            String text = ServiceLogPolicy.limit(neutralizeForgedHeaders(stripTrailingNewlines(layout.doLayout(event))), s.maxRecordBytes());
             buffer.offer(new ServiceLogRecord(Instant.ofEpochMilli(event.getTimeStamp()), event.getLevel().toString(),
-                    event.getThreadName(), tenant, logger, text), s.maxBufferedRecords());
+                    event.getThreadName(), tenant, logger, text,
+                    MappingLogContext.mappingOf(event.getMDCPropertyMap())), s.maxBufferedRecords());
         } catch (RuntimeException e) {
             addError("Could not capture a log event: " + e);
         }
+    }
+
+    /** A continuation line that starts like a record header ({@code 2026-10-17T…}), as a logged payload may. */
+    private static final java.util.regex.Pattern HEADER_LOOKALIKE = java.util.regex.Pattern.compile("\\n(?=\\d{4}-\\d{2}-\\d{2}T)");
+
+    /**
+     * Indents continuation lines that look like a record header, so a message (a payload!) cannot forge a header line
+     * with another mapping's tag; the reader starts a record only at a line that begins with a timestamp.
+     */
+    static String neutralizeForgedHeaders(String text) {
+        return text.indexOf('\n') < 0 ? text : HEADER_LOOKALIKE.matcher(text).replaceAll("\n ");
     }
 
     private static String stripTrailingNewlines(String s) {

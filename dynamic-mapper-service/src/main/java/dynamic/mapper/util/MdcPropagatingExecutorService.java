@@ -29,7 +29,9 @@ import java.util.concurrent.TimeUnit;
  * Runs each task with the tenant of the thread that submitted it, so work fanned out to a worker
  * (per-mapping processing, connector callbacks) keeps logging under the tenant it was started for.
  *
- * <p>Only the tenant is carried, not the whole MDC: other keys (the SDK's {@code device}) describe
+ * <p>The tenant and the mapping scope (if the submitter is inside one) are carried, so work a mapping hands to another
+ * thread stays attributed to it. A task submitted outside any scope clears the tag, and the per-mapping tasks of the
+ * routers set their own. Not the whole MDC: other keys (the SDK's {@code device}) describe
  * the submitting thread's current scope and must not outlive it.
  *
  * <p>Extends {@link AbstractExecutorService}, so {@code submit} still returns a real
@@ -46,8 +48,10 @@ public class MdcPropagatingExecutorService extends AbstractExecutorService {
     @Override
     public void execute(Runnable command) {
         final String tenant = TenantLogContext.current();
+        final String mapping = MappingLogContext.current();
         delegate.execute(() -> {
-            try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
+            try (TenantLogContext ignored = TenantLogContext.open(tenant);
+                    MappingLogContext ignoredMapping = MappingLogContext.open(mapping)) {
                 command.run();
             }
         });

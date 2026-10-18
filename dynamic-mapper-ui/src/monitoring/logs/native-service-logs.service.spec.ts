@@ -74,4 +74,26 @@ describe('NativeServiceLogsService', () => {
     expect(error instanceof LogsUnavailableError).toBe(true);
     expect(error.status).toBe(403);
   });
+
+  it('filters the lines of the loaded window by mapping, and leaves the cursors alone', async () => {
+    const logs = [
+      '2026-10-16T04:13:01.001Z  INFO 1 --- [t] [t1] d.m.Foo : connector',
+      '2026-10-16T04:13:02.002Z  INFO 1 --- [t] [t1] [m:aaa] d.m.Foo : a1',
+      '2026-10-16T04:13:03.003Z  INFO 1 --- [t] [t1] [m:bbb] d.m.Foo : b1'
+    ].join('\n');
+    const service = make({
+      apps: [{ id: 1, name: 'dynamic-mapper-service' }],
+      instancesByType: { c8y_Application_1: [POD] },
+      logs: async () => ({ data: { dateFrom: 'a', dateTo: 'b', logs, truncated: true } })
+    });
+    await service.init();
+
+    const all = await service.load({});
+    const filtered = await service.load({ mapping: 'aaa' });
+
+    expect(all.logs).toBe(logs);
+    expect(filtered.logs).toBe('2026-10-16T04:13:02.002Z  INFO 1 --- [t] [t1] [m:aaa] d.m.Foo : a1');
+    expect(filtered.dateTo).toBe('b');
+    expect(filtered.more).toBe(true);
+  });
 });

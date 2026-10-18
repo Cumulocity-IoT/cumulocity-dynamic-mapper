@@ -64,7 +64,7 @@ class ServiceLogsControllerTest {
     void aUserWithoutTheAdminRoleCannotReadTheLogAndNothingIsQueried() {
         grant("ROLE_DYNAMIC_MAPPER_CREATE");
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> controller.read(null, null));
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> controller.read(null, null, null));
 
         assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
         verify(events, never()).list(any(), any(), any(), anyBoolean(), anyInt(), anyInt());
@@ -75,7 +75,7 @@ class ServiceLogsControllerTest {
         grant("ROLE_DYNAMIC_MAPPER_ADMIN");
         when(events.list(any(), any(), any(), anyBoolean(), anyInt(), anyInt())).thenReturn(ServiceLogReader.Batch.of(List.of()));
 
-        var response = controller.read(null, null);
+        var response = controller.read(null, null, null);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(true, response.getBody().empty());
@@ -87,9 +87,34 @@ class ServiceLogsControllerTest {
         grant("ROLE_DYNAMIC_MAPPER_ADMIN");
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> controller.read("yesterday", null));
+                () -> controller.read("yesterday", null, null));
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+    }
+
+    @Test
+    void aMappingFilterIsPassedOnAndABlankOneMeansNoFilter() {
+        grant("ROLE_DYNAMIC_MAPPER_ADMIN");
+        when(events.list(any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any())).thenReturn(ServiceLogReader.Batch.of(List.of()));
+        when(events.list(any(), any(), any(), anyBoolean(), anyInt(), anyInt())).thenReturn(ServiceLogReader.Batch.of(List.of()));
+
+        controller.read(null, null, "l19zjk");
+        verify(events).list(org.mockito.ArgumentMatchers.eq("tenantA"), any(), any(), anyBoolean(), anyInt(), anyInt(),
+                org.mockito.ArgumentMatchers.eq("l19zjk"));
+
+        controller.read(null, null, "  ");
+        verify(events).list(org.mockito.ArgumentMatchers.eq("tenantA"), any(), any(), anyBoolean(), anyInt(), anyInt());
+    }
+
+    @Test
+    void aMappingFilterThatIsNotAnIdentifierIsABadRequestAndNothingIsQueried() {
+        grant("ROLE_DYNAMIC_MAPPER_ADMIN");
+
+        for (String bad : new String[] { "a b", "x=1&type=other", "a.b", "../x", "x".repeat(65) }) {
+            ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> controller.read(null, null, bad));
+            assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode(), bad);
+        }
+        verify(events, never()).list(any(), any(), any(), anyBoolean(), anyInt(), anyInt(), any());
     }
 
     @Test

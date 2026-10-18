@@ -21,6 +21,8 @@ export type LogSourceKind = 'native' | 'collected';
 
 /** What the page asks for. Neither date: the latest lines; `dateFrom` only: after it; `dateTo` only: before it. */
 export interface LogRequest {
+  /** Only the lines written while this mapping (its `identifier`) processed a payload. */
+  mapping?: string;
   instance?: string;
   dateFrom?: string;
   dateTo?: string;

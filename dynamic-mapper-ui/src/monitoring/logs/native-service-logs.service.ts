@@ -19,6 +19,7 @@
  */
 import { Injectable } from '@angular/core';
 import { ApplicationService, IManagedObject, InventoryService } from '@c8y/client';
+import { filterLogByMapping } from './mapping-log-filter';
 import { LogRequest, LogSourceKind, LogsUnavailableError, LogWindow, ServiceLogsSource } from './service-logs.model';
 
 const SERVICE_NAME = 'dynamic-mapper-service';
@@ -107,7 +108,8 @@ export class NativeServiceLogsService implements ServiceLogsSource {
       return {
         dateFrom: body.dateFrom ?? null,
         dateTo: body.dateTo ?? null,
-        logs: body.logs ?? '',
+        // The platform's log cannot be filtered by the service: only the lines of this window are.
+        logs: request.mapping ? filterLogByMapping(body.logs ?? '', request.mapping) : (body.logs ?? ''),
         more: !!body.truncated,
         instance,
         instances: this.instances,

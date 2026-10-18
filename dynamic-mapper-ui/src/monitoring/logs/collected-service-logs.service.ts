@@ -20,6 +20,7 @@
 import { Injectable } from '@angular/core';
 import { FetchClient } from '@c8y/client';
 import { BASE_URL, PATH_SERVICE_LOGS_ENDPOINT } from '../../shared';
+import { MAPPING_IDENTIFIER } from './mapping-log-filter';
 import { LogRequest, LogSourceKind, LogsUnavailableError, LogWindow, ServiceLogsSource } from './service-logs.model';
 
 /**
@@ -51,6 +52,7 @@ export class CollectedServiceLogsService implements ServiceLogsSource {
     const query = new URLSearchParams();
     if (request.dateFrom) query.set('dateFrom', request.dateFrom);
     if (request.dateTo) query.set('dateTo', request.dateTo);
+    if (request.mapping && MAPPING_IDENTIFIER.test(request.mapping)) query.set('mapping', request.mapping);
     const suffix = query.toString();
     const response = await this.client.fetch(`${BASE_URL}/${PATH_SERVICE_LOGS_ENDPOINT}${suffix ? `?${suffix}` : ''}`);
     if (response.status === 403) {

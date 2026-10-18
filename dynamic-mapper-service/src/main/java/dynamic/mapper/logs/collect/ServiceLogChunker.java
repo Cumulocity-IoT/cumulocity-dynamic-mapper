@@ -23,14 +23,17 @@ package dynamic.mapper.logs.collect;
 import dynamic.mapper.logs.model.ServiceLogChunk;
 import dynamic.mapper.logs.model.ServiceLogPolicy;
 import dynamic.mapper.logs.model.ServiceLogRecord;
+import dynamic.mapper.logs.read.MappingLogRecords;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Turns captured records into per-tenant event chunks. This is where the isolation rule is enforced: a record reaches a
@@ -69,8 +72,7 @@ public final class ServiceLogChunker {
         List<ServiceLogRecord> deferred = new ArrayList<>();
         int used = 0;
         for (ServiceLogRecord r : ordered) {
-            ServiceLogRecord limited = new ServiceLogRecord(r.time(), r.level(), r.thread(), r.tenant(), r.logger(),
-                    policy.limit(r.text()));
+            ServiceLogRecord limited = r.withText(policy.limit(r.text()));
             int lines = lineCount(limited.text());
             // The first record is always taken: if it alone exceeded the cap it would otherwise be deferred forever.
             if (deferred.isEmpty() && (accepted.isEmpty() || used + lines <= policy.maxLinesPerTenant())) {
@@ -88,6 +90,7 @@ public final class ServiceLogChunker {
         StringBuilder text = new StringBuilder();
         List<ServiceLogRecord> inChunk = new ArrayList<>();
         Map<String, Integer> levels = new LinkedHashMap<>();
+        Set<String> mappings = new LinkedHashSet<>();
         Instant from = null;
         Instant to = null;
         int lines = 0;
@@ -95,10 +98,11 @@ public final class ServiceLogChunker {
         for (ServiceLogRecord r : records) {
             int size = r.text().getBytes(StandardCharsets.UTF_8).length + 1;
             if (!inChunk.isEmpty() && bytes + size > maxBytes) {
-                chunks.add(new ServiceLogChunk(from, to, lines, levels, 0, text.toString(), inChunk));
+                chunks.add(new ServiceLogChunk(from, to, lines, levels, 0, text.toString(), inChunk, mappings));
                 text = new StringBuilder();
                 inChunk = new ArrayList<>();
                 levels = new LinkedHashMap<>();
+                mappings = new LinkedHashSet<>();
                 from = null;
                 lines = 0;
                 bytes = 0;
@@ -109,6 +113,11 @@ public final class ServiceLogChunker {
             text.append(r.text());
             inChunk.add(r);
             levels.merge(r.level(), 1, Integer::sum);
+            // Only a record whose stored text still has its tag (the record limit may have cut it off) selects the chunk:
+            // the marker fragment must promise only what the text delivers.
+            if (r.mapping() != null && MappingLogRecords.carriesTag(r.text(), r.mapping())) {
+                mappings.add(r.mapping());
+            }
             if (from == null) {
                 from = r.time();
             }
@@ -117,7 +126,7 @@ public final class ServiceLogChunker {
             bytes += size;
         }
         if (!inChunk.isEmpty()) {
-            chunks.add(new ServiceLogChunk(from, to, lines, levels, 0, text.toString(), inChunk));
+            chunks.add(new ServiceLogChunk(from, to, lines, levels, 0, text.toString(), inChunk, mappings));
         }
         return chunks;
     }
