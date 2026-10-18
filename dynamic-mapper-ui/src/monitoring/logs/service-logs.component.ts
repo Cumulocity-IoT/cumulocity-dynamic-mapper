@@ -223,6 +223,8 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
     }
     this.stopTimer();
     this.autoRefresh = false;
+    ++this.requestSeq;
+    this.inFlight = false;
     this.isLoading = true;
     try {
       await this.activate(target);
