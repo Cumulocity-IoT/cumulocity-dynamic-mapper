@@ -1,6 +1,6 @@
 # Implementation plan: filter Service logs by mapping
 
-Status: **implemented on branch `feature/service-logs-mapping-filter` (not yet merged); see [Implementation notes](#implementation-notes).** The platform gate is passed (2026-10-17) — see [Gate: fragmentType query](#gate-fragmenttype-query-verified-on-the-platform). Option B is confirmed; the Java-SDK chaining check remains.
+Status: **implemented on branch `feature/service-logs-mapping-filter` (not yet merged); see [Implementation notes](#implementation-notes).** The platform gate is passed (2026-10-17) — see [Gate: fragmentType query](#gate-fragmenttype-query-verified-on-the-platform). Option B is confirmed and the Java-SDK chaining check is done. The user-facing description lives in [`docs/feature/service-logs.md`](../feature/service-logs.md); this file keeps the design rationale (parts of the design below were superseded, see Implementation notes).
 
 ## Goal
 
@@ -38,9 +38,9 @@ Option B removes 1–3 and shrinks 4: the platform returns **only chunks that co
 - Open it in:
   - `InboundMessageRouter.processSingleInboundMapping` (`processor/inbound/InboundMessageRouter.java`)
   - `OutboundMessageRouter.processSingleOutboundMapping` (`processor/outbound/OutboundMessageRouter.java`)
-- Do **not** propagate it through `MdcPropagatingExecutorService` (that carries only the tenant on purpose); set it inside the per-mapping task.
+- ~~Do not propagate it through `MdcPropagatingExecutorService`~~ — superseded: the executor now carries the mapping scope too (a task submitted outside any scope clears it); the routers still set it inside the per-mapping task.
 - Not tagged, by design: dispatcher lines (topic resolution, "no mapping"), connector lines.
-- Known gaps: callbacks on foreign threads (SDK/HTTP client) lose the tag unless wrapped; the 422 resend path in `InboundMessageDispatcher` re-enters the router and is tagged by the same call site, but lines the dispatcher itself logs around the resend are not.
+- Known gaps: threads the SDK/HTTP client create themselves lose the tag unless wrapped; the 422 resend path in `InboundMessageDispatcher` re-enters the router and is tagged by the same call site, but lines the dispatcher itself logs around the resend are not.
 
 ### 2. Tag in the text
 - Print `[m:<identifier>]` in the log line **only when set**, at a fixed position (after the logger, before ` : `). Applies to the console pattern (`application.properties`, `logging.pattern.correlation` / a converter like `TenantLogConverter`) **and** to `ServiceLogCaptureAppender.PATTERN` (stored text).
@@ -62,7 +62,7 @@ Option B removes 1–3 and shrinks 4: the platform returns **only chunks that co
 
 ### 5. UI (`dynamic-mapper-ui/src/monitoring/logs/`)
 - `LogRequest` gets `mapping?: string` (`service-logs.model.ts`); `CollectedServiceLogsService.load` adds `&mapping=`.
-- Dropdown "Mapping" in the filter row of `service-logs.component.html`, next to "From"; options from the existing mapping service (name label, identifier value), plus "All".
+- Dropdown "Mapping" in the filter row of `service-logs.component.html`, next to "From"; options from the existing mapping service (name label, identifier value), plus "All". Superseded in part: see the UI details in Implementation notes (searchable select, source switch, no instance dropdown).
 - Changing the selection reloads from *latest*; **Download** respects the filter.
 - **Empty filtered window**: stay in the filtered state, show "No lines for this mapping in this range", keep Previous/Next usable (fix the early `return` in `fetch()`).
 - **Auto refresh with a filter**: fetch incrementally (`dateFrom` = last seen `dateTo`) instead of re-reading the latest window, or disable it.
@@ -134,3 +134,5 @@ Deviations from the plan above, and what was checked:
 - **Auto refresh:** no change. With the platform-side selection a refresh is a cheap query, so "fetch incrementally / disable" is not needed.
 - **Native log:** filtered client-side in `NativeServiceLogsService`, so display and Download share it; the page labels it as "loaded lines only".
 - **Not done / still open:** the multi-page `currentPage` + `fragmentType` combination and the speed on a tenant with many large chunks were not measured on a real tenant; foreign-thread callbacks are untagged. Not run: an end-to-end check against a deployed service (needs a deployment).
+- **UI after review:** a *Collected log* switch (platform / collected) is shown when both sources work; selecting a mapping switches to the collected log automatically and clearing it returns; switching to the platform log by hand drops the filter; the instance dropdown and the dark-theme switch are no longer shown; the "filter uses the collected log" note moved from an alert into the header (tooltip) and the help popover.
+- **Review fixes (after implementation):** `MdcPropagatingExecutorService` now also carries the mapping scope (see §1, which said it must not); the stored thread name is sanitised and continuation lines that look like headers are indented (spoofing); the chunker marks a chunk only when the record's tag survived the size limit; a walk that ends at its bound hands out a cursor; the UI got a source switch (platform / collected) with automatic switch to the collected log while a mapping is selected, no instance dropdown, hidden dark-theme switch. Details in `docs/feature/service-logs.md`.
