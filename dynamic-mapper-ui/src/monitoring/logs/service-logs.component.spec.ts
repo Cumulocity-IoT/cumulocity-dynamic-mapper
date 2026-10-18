@@ -25,22 +25,26 @@ import { LogsUnavailableError, LogWindow } from './service-logs.model';
 describe('ServiceLogsComponent mapping selection', () => {
   const window = (logs: string): LogWindow => ({ dateFrom: null, dateTo: null, logs, more: false, instance: '', instances: [], empty: false, omitted: 0 });
 
-  function make(queryParams: Record<string, string> = {}) {
+  function make(queryParams: Record<string, string> = {}, opts: { nativeUsable?: boolean; collectedEmpty?: boolean } = {}) {
     const loads: any[] = [];
     const infos: string[] = [];
     const collected = {
       kind: 'collected',
       init: async () => undefined,
       load: async (request: any) => {
-        loads.push(request);
-        return window('');
+        loads.push({ ...request, source: 'collected' });
+        return { ...window(''), empty: !!opts.collectedEmpty };
       }
     };
     // The platform log is not available to this tenant: the page falls back to the collected log, like in production.
     const native = {
       kind: 'native',
       init: async () => {
-        throw new LogsUnavailableError('not the owner');
+        if (!opts.nativeUsable) throw new LogsUnavailableError('not the owner');
+      },
+      load: async (request: any) => {
+        loads.push({ ...request, source: 'native' });
+        return window('');
       }
     };
     const mappingService = {
@@ -154,16 +158,12 @@ describe('ServiceLogsComponent mapping selection', () => {
     const { component } = make();
     const cols = (cls: string) => Number(/col-md-(\d+)/.exec(cls)[1]);
 
-    // collected log, no mappings: the date alone at the right edge
+    // no mappings: the date alone at the right edge
     expect(component.dateColumnClass).toBe('col-md-5 col-md-offset-7');
-    // collected log with mappings: mapping controls (7) + date (5)
+    // with mappings: mapping controls (7) + date (5), the same for the platform log (no instance selector)
     await (component as any).loadMappings();
     expect(7 + cols(component.dateColumnClass)).toBe(12);
-    // platform log with mappings: instance (3) + mapping controls (5) + date
     (component as any).source = { kind: 'native' };
-    expect(3 + 5 + cols(component.dateColumnClass)).toBe(12);
-    // platform log without mappings: instance (7) + date
-    component.mappings = [];
     expect(7 + cols(component.dateColumnClass)).toBe(12);
   });
 
@@ -197,8 +197,9 @@ describe('ServiceLogsComponent mapping selection', () => {
     await component.ngOnInit();
 
     expect(component.selectedMapping).toBe('in1');
-    expect(loads.every((l) => l.mapping === 'in1')).toBe(true);
-    expect(loads.length).toBeGreaterThan(0);
+    // the first load is the probe of the collected log, the page itself starts filtered
+    expect(loads.slice(1).every((l) => l.mapping === 'in1')).toBe(true);
+    expect(loads.length).toBeGreaterThan(1);
   });
 
   it('ignores a mapping from the link that does not exist, tells the user, and shows all lines', async () => {
@@ -207,7 +208,7 @@ describe('ServiceLogsComponent mapping selection', () => {
     await component.ngOnInit();
 
     expect(component.selectedMapping).toBe('');
-    expect(loads[0].mapping).toBeUndefined();
+    expect(loads.every((l) => l.mapping === undefined)).toBe(true);
     expect(infos.length).toBe(1);
   });
 
@@ -217,7 +218,7 @@ describe('ServiceLogsComponent mapping selection', () => {
     await component.ngOnInit();
 
     expect(component.selectedMapping).toBe('');
-    expect(loads[0].mapping).toBeUndefined();
+    expect(loads.every((l) => l.mapping === undefined)).toBe(true);
   });
 
   it('opens unfiltered without a link parameter', async () => {
@@ -226,7 +227,92 @@ describe('ServiceLogsComponent mapping selection', () => {
     await component.ngOnInit();
 
     expect(component.selectedMapping).toBe('');
-    expect(loads[0].mapping).toBeUndefined();
+    expect(loads.every((l) => l.mapping === undefined)).toBe(true);
     expect(infos.length).toBe(0);
+  });
+
+  describe('source choice (owner tenant with a collected log)', () => {
+    const both = { nativeUsable: true };
+
+    it('offers the switch and starts on the platform log when no mapping is asked for', async () => {
+      const { component } = make({}, both);
+      await component.ngOnInit();
+
+      expect(component.canChooseSource).toBe(true);
+      expect(component.source.kind).toBe('native');
+    });
+
+    it('offers no switch when the collected log holds nothing, and filters the platform log client-side', async () => {
+      const { component } = make({}, { nativeUsable: true, collectedEmpty: true });
+      await component.ngOnInit();
+      expect(component.canChooseSource).toBe(false);
+
+      component.onMappingSelect({ label: 'x', value: 'in1' });
+      expect(component.source.kind).toBe('native');
+      expect(component.mappingSourceNote).toBeUndefined();
+    });
+
+    it('offers no switch to a tenant that cannot read the platform log', async () => {
+      const { component } = make({}, {});
+      await component.ngOnInit();
+
+      expect(component.canChooseSource).toBe(false);
+      expect(component.source.kind).toBe('collected');
+    });
+
+    it('selecting a mapping switches to the collected log with a note, clearing it returns to the platform log', async () => {
+      const { component, loads } = make({}, both);
+      await component.ngOnInit();
+      loads.length = 0;
+
+      component.onMappingSelect({ label: 'x', value: 'in1' });
+      await new Promise((r) => setTimeout(r));
+      expect(component.source.kind).toBe('collected');
+      expect(component.mappingSourceNote).toContain('collected log');
+      expect(loads).toEqual([jasmine.objectContaining({ source: 'collected', mapping: 'in1' })]);
+
+      loads.length = 0;
+      component.onMappingDeselect();
+      await new Promise((r) => setTimeout(r));
+      expect(component.source.kind).toBe('native');
+      expect(component.mappingSourceNote).toBeUndefined();
+      expect(loads).toEqual([jasmine.objectContaining({ source: 'native', mapping: undefined })]);
+    });
+
+    it('a mapping from the link starts on the collected log, and clearing it returns to the platform log', async () => {
+      const { component } = make({ mapping: 'in1' }, both);
+      await component.ngOnInit();
+      expect(component.source.kind).toBe('collected');
+      expect(component.canChooseSource).toBe(true);
+
+      component.onMappingDeselect();
+      await new Promise((r) => setTimeout(r));
+      expect(component.source.kind).toBe('native');
+    });
+
+    it('switching to the platform log by hand drops the mapping filter and shows all lines', async () => {
+      const { component, loads } = make({ mapping: 'in1' }, both);
+      await component.ngOnInit();
+      loads.length = 0;
+
+      await component.onSourceChange(false);
+
+      expect(component.source.kind).toBe('native');
+      expect(component.selectedMapping).toBe('');
+      expect(loads).toEqual([jasmine.objectContaining({ source: 'native', mapping: undefined })]);
+    });
+
+    it('an explicit choice of the source is not undone when the mapping is cleared', async () => {
+      const { component } = make({}, both);
+      await component.ngOnInit();
+      component.onMappingSelect({ label: 'x', value: 'in1' });
+      await new Promise((r) => setTimeout(r));
+
+      await component.onSourceChange(true);
+      component.onMappingDeselect();
+      await new Promise((r) => setTimeout(r));
+
+      expect(component.source.kind).toBe('collected');
+    });
   });
 });

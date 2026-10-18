@@ -191,6 +191,11 @@ What to keep in mind:
   and **Previous** keeps looking.
 - **Platform log:** the filter only applies to the lines that are loaded right now — the platform cannot filter its
   log. Use **Previous** and **Next** to look at other parts of the log.
+- **Both sources available** (you own the microservice and the collected log holds lines): a **Collected log** switch
+  appears in the action bar. Selecting a mapping switches to the collected log automatically, because only it can
+  search its whole range, and a note says so; clearing the selection returns to the platform log. Switching the
+  source yourself is never undone by the page. If the collected log is off or empty, there is no switch and the
+  platform log is filtered as described above.
 - A line that spans several rows (a stack trace) stays together with the line it belongs to.
 
 ##### Who can open it

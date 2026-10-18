@@ -84,6 +84,13 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
    */
   mappingItems: SelectableItem[] = [];
 
+  /** Both sources can serve this tenant (the owner tenant with collection on), so the page offers the choice. */
+  canChooseSource = false;
+  /** The source that was active before selecting a mapping switched to the collected log; restored on clearing it. */
+  private sourceBeforeMapping: ServiceLogsSource | undefined;
+  /** Whether the collected log holds anything for this tenant; probed once on opening. */
+  private collectedAvailable = false;
+
   private timer: ReturnType<typeof setInterval>;
   /** Numbers each request so an answer that arrives after a newer request was made is ignored. */
   private requestSeq = 0;
@@ -102,15 +109,12 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Grid classes of the "From" column: the first row holds instance (platform log only), mapping controls (when there are
-   * mappings) and the date, and always adds up to 12 columns. Without mapping controls the collected log keeps the date at
-   * the right edge, as before.
+   * Grid classes of the "From" column: the first row holds the mapping controls (when there are mappings) and the date, and
+   * adds up to 12 columns. Without mapping controls the date stays at the right edge. Neither source shows an instance
+   * selector: the platform log is read from the instance the service picks.
    */
   get dateColumnClass(): string {
-    if (this.isCollected) {
-      return this.mappings.length ? 'col-md-5' : 'col-md-5 col-md-offset-7';
-    }
-    return this.mappings.length ? 'col-md-4' : 'col-md-5';
+    return this.mappings.length ? 'col-md-5' : 'col-md-5 col-md-offset-7';
   }
 
   /** A mapping is selected and the window holds none of its lines. */
@@ -130,9 +134,18 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
       // preselected if it exists, so the filter that is applied is always one the list shows.
       await this.loadMappings();
       this.preselectRequestedMapping();
-      // The owner tenant reads the platform's log; for anyone else that is refused, and the collected log is used.
-      if (!(await this.activate(this.nativeLogs))) {
+      // Both sources are offered when the tenant can read the platform log and also has a collected one; only the
+      // collected log can be filtered by mapping over its whole range, so it is the start when a mapping is asked for.
+      this.collectedAvailable = await this.probeCollected();
+      if (this.selectedMapping && this.collectedAvailable) {
         await this.activate(this.collectedLogs);
+        this.canChooseSource = await this.probeNative();
+        // clearing the filter returns to the live platform log
+        this.sourceBeforeMapping = this.canChooseSource ? this.nativeLogs : undefined;
+      } else if (!(await this.activate(this.nativeLogs))) {
+        await this.activate(this.collectedLogs);
+      } else {
+        this.canChooseSource = this.collectedAvailable;
       }
     } finally {
       this.isLoading = false;
@@ -171,21 +184,109 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
     this.refreshMappingItems();
     if (this.selectedMapping && !this.mappingItems.some((i) => i.value === this.selectedMapping)) {
       this.selectedMapping = '';
-      this.loadLatest();
+      this.changeSourceThenLoad(this.restoreSourceAfterMapping());
     }
   }
 
   /** A different mapping starts from the newest lines: the old window and its cursors belong to the old filter. */
   onMappingSelect(item: SelectableItem | undefined): void {
     this.selectedMapping = item?.value ?? '';
-    this.loadLatest();
+    this.changeSourceThenLoad(this.selectedMapping ? this.preferCollectedForMapping() : this.restoreSourceAfterMapping());
+  }
+
+  /** Loads at once when the source stays the same (nothing awaited), else after it was switched. */
+  private changeSourceThenLoad(switching: Promise<void> | undefined): void {
+    if (switching) {
+      switching.then(() => this.loadLatest());
+    } else {
+      this.loadLatest();
+    }
   }
 
   /** The select's clear button: back to all lines. */
   onMappingDeselect(): void {
     if (this.selectedMapping) {
       this.selectedMapping = '';
-      this.loadLatest();
+      this.changeSourceThenLoad(this.restoreSourceAfterMapping());
+    }
+  }
+
+  /** The source switch: an explicit choice, so it is not undone when the mapping filter is cleared. */
+  async onSourceChange(collected: boolean): Promise<void> {
+    this.sourceBeforeMapping = undefined;
+    const target = collected ? this.collectedLogs : this.nativeLogs;
+    if (this.source === target) return;
+    // A mapping filter belongs to the collected log (the platform log would only search its loaded window), so going to
+    // the platform log shows all lines instead of an empty, filtered window.
+    if (!collected && this.selectedMapping) {
+      this.selectedMapping = '';
+    }
+    this.stopTimer();
+    this.autoRefresh = false;
+    this.isLoading = true;
+    try {
+      await this.activate(target);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  /** The note shown while the mapping filter works on the platform log, or switched away from it. */
+  get mappingSourceNote(): string | undefined {
+    if (!this.selectedMapping) return undefined;
+    if (this.sourceBeforeMapping) {
+      return 'Mapping filter uses the collected log; the platform log can only be filtered within the loaded window.';
+    }
+    return undefined;
+  }
+
+  /** Only the collected log can select a mapping over its whole range: use it while a mapping is selected. */
+  private preferCollectedForMapping(): Promise<void> | undefined {
+    if (this.isCollected || !this.canChooseSource) return undefined;
+    const previous = this.source;
+    this.stopTimer();
+    this.autoRefresh = false;
+    return this.activateQuietly(this.collectedLogs).then((ok) => {
+      if (ok) this.sourceBeforeMapping = previous;
+    });
+  }
+
+  private restoreSourceAfterMapping(): Promise<void> | undefined {
+    const previous = this.sourceBeforeMapping;
+    this.sourceBeforeMapping = undefined;
+    if (!previous || this.source === previous) return undefined;
+    return this.activateQuietly(previous).then(() => undefined);
+  }
+
+  /** Switches the active source without loading it; the caller loads the first window. */
+  private async activateQuietly(source: ServiceLogsSource): Promise<boolean> {
+    try {
+      await source.init();
+      this.source = source;
+      this.selectedInstance = undefined;
+      this.error = undefined;
+      return true;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  }
+
+  private async probeCollected(): Promise<boolean> {
+    try {
+      await this.collectedLogs.init();
+      return !(await this.collectedLogs.load({})).empty;
+    } catch {
+      return false;
+    }
+  }
+
+  private async probeNative(): Promise<boolean> {
+    try {
+      await this.nativeLogs.init();
+      return true;
+    } catch {
+      return false;
     }
   }
 
