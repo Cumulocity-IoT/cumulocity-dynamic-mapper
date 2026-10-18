@@ -96,4 +96,14 @@ class MappingLogRecordsTest {
         assertEquals(1, MappingLogRecords.lines("x"));
         assertEquals(3, MappingLogRecords.lines("x\ny\nz"));
     }
+
+    @Test
+    void aRecordWhoseHeaderWasCutShortIsNotTakenForAContinuationOfThePreviousRecord() {
+        // The record-size limit cut a very long thread name before its closing bracket: no complete header.
+        String cut = "2026-10-16T04:13:05.005Z  INFO [" + "t".repeat(40);
+        String logs = String.join("\n", line("02.002", A, "a1"), cut, line("06.006", B, "b1"));
+
+        assertEquals(line("02.002", A, "a1"), MappingLogRecords.filter(logs, "aaa"));
+        assertEquals(line("06.006", B, "b1"), MappingLogRecords.filter(logs, "bbb"));
+    }
 }
