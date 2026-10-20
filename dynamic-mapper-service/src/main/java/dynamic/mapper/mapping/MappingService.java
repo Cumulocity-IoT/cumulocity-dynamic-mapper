@@ -21,6 +21,7 @@
 
 package dynamic.mapper.mapping;
 
+import dynamic.mapper.util.MappingLogContext;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
@@ -176,7 +177,8 @@ public class MappingService {
                     tenant,
                     Map.of("mappingId", mapping.getId(), "mappingName", mapping.getName()));
 
-            log.info("{} - Mapping created: {} [{}]", tenant, mapping.getName(), mapping.getId());
+            MappingLogContext.run(mapping.getIdentifier(),
+                    () -> log.info("{} - Mapping created: {} [{}]", tenant, mapping.getName(), mapping.getId()));
             return mapping;
         });
 
@@ -188,7 +190,10 @@ public class MappingService {
         }
 
         // Backfill the version record and sync the MO's version field.
-        dynamic.mapper.model.version.MappingVersion v1 = mappingVersionService.ensureBackfilled(tenant, created);
+        dynamic.mapper.model.version.MappingVersion v1;
+        try (MappingLogContext ignored = MappingLogContext.open(created.getIdentifier())) {
+            v1 = mappingVersionService.ensureBackfilled(tenant, created);
+        }
         if (v1 != null) {
             created.setVersion(v1.getVersion());
             updateMapping(tenant, created, false, true);
@@ -262,7 +267,8 @@ public class MappingService {
                         Map.of("mappingId", mapping.getId(), "mappingName", mapping.getName()));
             }
 
-            log.info("{} - Mapping updated: {} [{}]", tenant, mapping.getName(), mapping.getId());
+            MappingLogContext.run(mapping.getIdentifier(),
+                    () -> log.info("{} - Mapping updated: {} [{}]", tenant, mapping.getName(), mapping.getId()));
             return mapping;
         });
     }
@@ -343,7 +349,8 @@ public class MappingService {
                 mappingVersionService.deleteAllVersions(tenant, m.getIdentifier());
                 inventoryApi.delete(GId.asGId(id), false);
 
-                log.info("{} - Mapping deleted from Inventory: {}", tenant, id);
+                MappingLogContext.run(m.getIdentifier(),
+                        () -> log.info("{} - Mapping deleted from Inventory: {}", tenant, id));
                 return m;
             } catch (SDKException e) {
                 log.warn("{} - Failed to find managed object for mapping: {}", tenant, id, e);
@@ -364,7 +371,8 @@ public class MappingService {
                     tenant,
                     Map.of("mappingId", id, "mappingName", mapping.getName()));
 
-            log.info("{} - Mapping deleted from Service: {}", tenant, id);
+            MappingLogContext.run(mapping.getIdentifier(),
+                    () -> log.info("{} - Mapping deleted from Service: {}", tenant, id));
         }
 
         return mapping;
@@ -441,11 +449,15 @@ public class MappingService {
             throws Exception {
         java.util.concurrent.locks.ReentrantLock lock = activationLockFor(tenant, mappingId);
         lock.lock();
+        // Every line of this activation (version switch, cache update, warm-up, failure) carries the mapping's
+        // identifier; closed in the finally, which also runs after the catch below.
+        MappingLogContext activationScope = null;
         try {
             Mapping mapping = getMapping(tenant, mappingId);
             if (mapping == null) {
                 throw new IllegalArgumentException("Mapping not found: " + mappingId);
             }
+            activationScope = MappingLogContext.open(mapping.getIdentifier());
 
             // Capture the currently active configuration as a version if the line has
             // none yet (legacy backfill, NFR-1a). Does not change what is running.
@@ -494,7 +506,8 @@ public class MappingService {
                     final String identifier = toPersist.getIdentifier();
                     final String b64Code = toPersist.getCode();
                     final String mappingName = toPersist.getName();
-                    serviceRegistry.getVirtualThreadPool().submit(() -> {
+                    // Set explicitly: whether the pool carries the caller's scope over is not this code's business.
+                    serviceRegistry.getVirtualThreadPool().submit(() -> MappingLogContext.run(identifier, () -> {
                         try {
                             byte[] decoded = java.util.Base64.getDecoder().decode(b64Code);
                             String code = JavaScriptModuleStripper.toPlainScript(new String(decoded));
@@ -520,7 +533,7 @@ public class MappingService {
                                     tenant,
                                     null);
                         }
-                    });
+                    }));
                 }
 
                 return toPersist;
@@ -536,6 +549,9 @@ public class MappingService {
                 throw e;
             }
         } finally {
+            if (activationScope != null) {
+                activationScope.close();
+            }
             lock.unlock();
         }
     }
@@ -594,7 +610,8 @@ public class MappingService {
                 tenant,
                 Map.of("mappingId", mappingId, "mappingName", mapping.getName(), "debug", debug.toString()));
 
-        log.info("{} - Mapping {} debug set to {}", tenant, mappingId, debug);
+        MappingLogContext.run(mapping.getIdentifier(),
+                () -> log.info("{} - Mapping {} debug set to {}", tenant, mappingId, debug));
     }
 
     /**
@@ -618,7 +635,8 @@ public class MappingService {
                 tenant,
                 Map.of("mappingId", mappingId, "mappingName", mapping.getName()));
 
-        log.info("{} - Mapping {} filter updated", tenant, mappingId);
+        MappingLogContext.run(mapping.getIdentifier(),
+                () -> log.info("{} - Mapping {} filter updated", tenant, mappingId));
         return mapping;
     }
 
@@ -643,7 +661,8 @@ public class MappingService {
                 tenant,
                 Map.of("mappingId", mappingId, "mappingName", mapping.getName()));
 
-        log.info("{} - Mapping {} code updated", tenant, mappingId);
+        MappingLogContext.run(mapping.getIdentifier(),
+                () -> log.info("{} - Mapping {} code updated", tenant, mappingId));
         return mapping;
     }
 
@@ -670,11 +689,13 @@ public class MappingService {
     public Mapping saveDraftMapping(String tenant, String id, Mapping edits) {
         java.util.concurrent.locks.ReentrantLock lock = activationLockFor(tenant, id);
         lock.lock();
+        MappingLogContext scope = null; // the mapping's identifier on every line of this action; closed in the finally
         try {
             Mapping runnable = getMapping(tenant, id);
             if (runnable == null) {
                 throw new IllegalArgumentException("Mapping not found: " + id);
             }
+            scope = MappingLogContext.open(runnable.getIdentifier());
             edits.setId(id);
             edits.setIdentifier(runnable.getIdentifier());
             dynamic.mapper.model.version.MappingVersion draft = mappingVersionService.saveDraft(tenant,
@@ -690,6 +711,9 @@ public class MappingService {
             log.info("{} - Saved draft for mapping {}", tenant, runnable.displayLabel());
             return draft.getSnapshot();
         } finally {
+            if (scope != null) {
+                scope.close();
+            }
             lock.unlock();
         }
     }
@@ -705,12 +729,14 @@ public class MappingService {
     public dynamic.mapper.model.version.MappingVersion publishDraft(String tenant, String id, String version, String note) {
         java.util.concurrent.locks.ReentrantLock lock = activationLockFor(tenant, id);
         lock.lock();
+        MappingLogContext scope = null; // the mapping's identifier on every line of this action; closed in the finally
         try {
             Mapping runnable = getMapping(tenant, id);
             if (runnable == null) {
                 throw new IllegalArgumentException("Mapping not found: " + id);
             }
             String identifier = runnable.getIdentifier();
+            scope = MappingLogContext.open(identifier);
 
             // Preserve the currently active config in history before publishing a new version.
             mappingVersionService.ensureBackfilled(tenant, runnable);
@@ -738,6 +764,9 @@ public class MappingService {
                     published.getVersion());
             return published;
         } finally {
+            if (scope != null) {
+                scope.close();
+            }
             lock.unlock();
         }
     }
@@ -770,7 +799,9 @@ public class MappingService {
         if (runnable == null) {
             throw new IllegalArgumentException("Mapping not found: " + id);
         }
-        return mappingVersionService.updateNote(tenant, runnable.getIdentifier(), version, note);
+        try (MappingLogContext ignored = MappingLogContext.open(runnable.getIdentifier())) {
+            return mappingVersionService.updateNote(tenant, runnable.getIdentifier(), version, note);
+        }
     }
 
     /** Deletes an inactive published version; the active version cannot be deleted (FR-17). */
@@ -779,8 +810,10 @@ public class MappingService {
         if (runnable == null) {
             throw new IllegalArgumentException("Mapping not found: " + id);
         }
-        mappingVersionService.deleteVersion(tenant, runnable.getIdentifier(), version,
-                runnable.getVersion());
+        try (MappingLogContext ignored = MappingLogContext.open(runnable.getIdentifier())) {
+            mappingVersionService.deleteVersion(tenant, runnable.getIdentifier(), version,
+                    runnable.getVersion());
+        }
     }
 
     public String[] suggestNextVersions(String tenant, String id) {
@@ -796,13 +829,15 @@ public class MappingService {
         if (runnable == null) {
             throw new IllegalArgumentException("Mapping not found: " + id);
         }
-        mappingVersionService.deleteDraft(tenant, runnable.getIdentifier());
-        if (runnable.isDraftDirty()) {
-            runnable.setDraftDirty(false);
-            updateMapping(tenant, runnable, true, true);
-            updateCacheAfterChange(tenant, runnable);
+        try (MappingLogContext ignored = MappingLogContext.open(runnable.getIdentifier())) {
+            mappingVersionService.deleteDraft(tenant, runnable.getIdentifier());
+            if (runnable.isDraftDirty()) {
+                runnable.setDraftDirty(false);
+                updateMapping(tenant, runnable, true, true);
+                updateCacheAfterChange(tenant, runnable);
+            }
+            log.info("{} - Discarded draft of mapping {}", tenant, id);
         }
-        log.info("{} - Discarded draft of mapping {}", tenant, id);
     }
 
     // ========== Cache Management ==========
@@ -974,7 +1009,9 @@ public class MappingService {
      * Updates deployment for a mapping
      */
     public void updateDeploymentMapEntry(String tenant, String mappingIdentifier, @Valid List<String> deployment) {
-        deploymentMapService.updateDeployment(tenant, mappingIdentifier, deployment);
+        try (MappingLogContext ignored = MappingLogContext.open(mappingIdentifier)) {
+            deploymentMapService.updateDeployment(tenant, mappingIdentifier, deployment);
+        }
     }
 
     /**

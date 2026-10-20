@@ -20,6 +20,8 @@
  */
 package dynamic.mapper.processor.outbound.processor;
 
+import dynamic.mapper.processor.util.ExceptionText;
+
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -227,7 +229,7 @@ public class EnrichmentOutboundProcessor extends AbstractEnrichmentProcessor {
     protected void handleEnrichmentError(String tenant, Mapping mapping, Exception e,
             ProcessingContext<?> context, MappingStatus mappingStatus) {
         String errorMessage = String.format("%s - Error in enrichment phase for mapping: %s: %s", tenant,
-                mapping.getName(), e.getMessage());
+                mapping.getName(), ExceptionText.of(e));
         log.error(errorMessage, e);
         context.addError(new ProcessingException(errorMessage, e));
         context.setIgnoreFurtherProcessing(true);

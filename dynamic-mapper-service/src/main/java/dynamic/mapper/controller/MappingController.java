@@ -21,6 +21,7 @@
 
 package dynamic.mapper.controller;
 
+import dynamic.mapper.util.MappingLogContext;
 import java.util.List;
 import java.util.Map;
 
@@ -284,8 +285,9 @@ public class MappingController {
             // Handle post-creation operations
             handleMappingCreation(tenant, createdMapping);
             
-            log.info("{} - Successfully created mapping: {} [{}]", 
-                tenant, createdMapping.getName(), createdMapping.getId());
+            MappingLogContext.run(createdMapping.getIdentifier(), () -> log.info(
+                "{} - Successfully created mapping: {} [{}]",
+                tenant, createdMapping.getName(), createdMapping.getId()));
             
             return ResponseEntity.status(HttpStatus.CREATED).body(createdMapping);
             
@@ -370,8 +372,9 @@ public class MappingController {
             // Handle post-update operations
             handleMappingUpdate(tenant, updatedMapping);
             
-            log.info("{} - Successfully updated mapping: {} [{}]", 
-                tenant, updatedMapping.getName(), updatedMapping.getId());
+            MappingLogContext.run(updatedMapping.getIdentifier(), () -> log.info(
+                "{} - Successfully updated mapping: {} [{}]",
+                tenant, updatedMapping.getName(), updatedMapping.getId()));
             
             return ResponseEntity.ok(updatedMapping);
             
@@ -740,8 +743,9 @@ public class MappingController {
             // Handle post-deletion operations (cleanup subscriptions)
             handleMappingDeletion(tenant, deletedMapping);
             
-            log.info("{} - Successfully deleted mapping: {} [{}]", 
-                tenant, deletedMapping.getName(), deletedMapping.getId());
+            MappingLogContext.run(deletedMapping.getIdentifier(), () -> log.info(
+                "{} - Successfully deleted mapping: {} [{}]",
+                tenant, deletedMapping.getName(), deletedMapping.getId()));
             
             return ResponseEntity.ok(id);
             

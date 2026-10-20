@@ -21,6 +21,7 @@
 
 package dynamic.mapper.core;
 
+import dynamic.mapper.util.MappingLogContext;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryUsage;
@@ -940,8 +941,12 @@ public class GraalVMContextService {
                                     + "globalThis['onMessage'] = onMessage;\n" + "})();");
                     warmed++;
                 } catch (Exception e) {
-                    log.warn("{} - Failed to pre-compile mapping {}: {}", tenant, entry.getKey(),
-                            e.getMessage());
+                    // A failure to compile belongs to one mapping: tag it, so the service log filtered by that mapping
+                    // shows why it does not run. (Not around the try: a resource is closed before the catch runs.)
+                    try (MappingLogContext ignoredMapping = MappingLogContext.open(identifierOfSource(key))) {
+                        log.warn("{} - Failed to pre-compile mapping {}: {}", tenant, entry.getKey(),
+                                e.getMessage());
+                    }
                 }
             }
             log.info("{} - GraalVM pre-compiled {} mapping JavaScript source(s) — {}", tenant, warmed,
@@ -949,6 +954,22 @@ public class GraalVMContextService {
         } catch (Exception e) {
             log.warn("{} - Mapping code warm-up failed (non-fatal): {}", tenant, e.getMessage());
         }
+    }
+
+    /** The mapping identifier of a smart function source name {@code onMessage_<identifier>.js}, or {@code null}. */
+    static String identifierOfSource(String sourceName) {
+        String prefix = Mapping.SMART_FUNCTION_NAME + "_";
+        if (sourceName == null || !sourceName.startsWith(prefix)) {
+            return null;
+        }
+        String identifier = sourceName.substring(prefix.length());
+        for (String extension : new String[] { ".mjs", ".js" }) {
+            if (identifier.endsWith(extension)) {
+                identifier = identifier.substring(0, identifier.length() - extension.length());
+                break;
+            }
+        }
+        return MappingLogContext.isValid(identifier) ? identifier : null;
     }
 
     public void removeGraalsResources(String tenant) {

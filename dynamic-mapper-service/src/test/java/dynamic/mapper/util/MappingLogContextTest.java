@@ -84,4 +84,20 @@ class MappingLogContextTest {
         assertNull(MappingLogContext.mappingOf(Map.of()));
         assertNull(MappingLogContext.mappingOf(null));
     }
+
+    @Test
+    void runTagsOneStatementAndLeavesTheScopeAgain() {
+        MappingLogContext.run("ibd55642", () -> assertEquals("ibd55642", MappingLogContext.current()));
+
+        assertNull(MappingLogContext.current());
+    }
+
+    @Test
+    void runRestoresTheEnclosingScope() {
+        try (MappingLogContext outer = MappingLogContext.open("outer1")) {
+            MappingLogContext.run("inner1", () -> assertEquals("inner1", MappingLogContext.current()));
+
+            assertEquals("outer1", MappingLogContext.current());
+        }
+    }
 }

@@ -81,6 +81,16 @@ public final class MappingLogContext implements AutoCloseable {
         return new MappingLogContext(identifier);
     }
 
+    /**
+     * Runs {@code task} with {@code identifier} in the logging context. For a single log statement about one mapping
+     * outside the processing path (an administrative action).
+     */
+    public static void run(String identifier, Runnable task) {
+        try (MappingLogContext ignored = open(identifier)) {
+            task.run();
+        }
+    }
+
     @Override
     public void close() {
         if (previous == null) {
