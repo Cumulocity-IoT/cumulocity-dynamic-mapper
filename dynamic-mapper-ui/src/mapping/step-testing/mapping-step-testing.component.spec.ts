@@ -461,4 +461,64 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
       expect(alertService.danger).toHaveBeenCalledWith('<Test execution failed>: boom');
     });
   });
+  describe('payload sync with the mapping being edited', () => {
+    // Regression: running a test used to rewrite mapping.sourceTemplate and push the payload back
+    // to the host, so the editor reported "unsaved changes" for a mapping nobody had edited.
+    let emitted: any[];
+    let originalSource: string;
+
+    beforeEach(() => {
+      emitted = [];
+      component.sourceTemplateChanged.subscribe(v => emitted.push(v));
+      originalSource = component.mapping.sourceTemplate;
+    });
+
+    it('running a Dry Run leaves the mapping and the host untouched', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve(ok));
+
+      await component.onTestTransformation();
+
+      expect(component.mapping.sourceTemplate).toBe(originalSource);
+      expect(emitted).toEqual([]);
+    });
+
+    it('Reset leaves the mapping and the host untouched', async () => {
+      await component.onResetTransformation();
+
+      expect(component.mapping.sourceTemplate).toBe(originalSource);
+      expect(emitted).toEqual([]);
+    });
+
+    it('the test still runs with the payload shown in the editor', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve(ok));
+
+      await component.onTestTransformation();
+
+      const ctx = testingService.testMapping.calls.mostRecent().args[0];
+      expect(JSON.parse(ctx.mapping.sourceTemplate)).toEqual({ a: 1 });
+    });
+
+    it('a payload the user really edited is written back and announced', () => {
+      component.onSourceTemplateChanged({ updatedContent: { json: { a: 2 } } } as any);
+
+      expect(JSON.parse(component.mapping.sourceTemplate)).toEqual({ a: 2 });
+      expect(emitted).toEqual([{ a: 2 }]);
+    });
+
+    it('a change event that only re-serializes the same payload is not an edit', () => {
+      component.onSourceTemplateChanged({ updatedContent: { text: '{ "a": 1 }' } } as any);
+
+      expect(component.mapping.sourceTemplate).toBe(originalSource);
+      expect(emitted).toEqual([]);
+    });
+
+    it('key order alone does not count as an edit', () => {
+      component.onSourceTemplateChanged({ updatedContent: { json: { b: 1, a: 1 } } } as any);
+      emitted.length = 0;
+
+      component.onSourceTemplateChanged({ updatedContent: { json: { a: 1, b: 1 } } } as any);
+
+      expect(emitted).toEqual([]);
+    });
+  });
 });

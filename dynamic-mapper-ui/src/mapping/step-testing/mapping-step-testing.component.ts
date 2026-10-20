@@ -60,6 +60,15 @@ interface TestingModel {
   logs?: string[];
 }
 
+/** JSON.stringify with object keys sorted, so two payloads that differ only in key order compare equal. */
+function stableStringify(value: unknown): string {
+  return JSON.stringify(value, (_key, v) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)))
+      : v
+  );
+}
+
 @Component({
   selector: 'd11r-mapping-testing',
   templateUrl: 'mapping-step-testing.component.html',
@@ -169,7 +178,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       // (the strings actually sent to the backend) must be resynced with the freshly patched id too.
       const patchedTemplate = { ...this.sourceTemplate };
       patchC8YTemplateForTesting(patchedTemplate, this.testMapping);
-      this.syncPayload(patchedTemplate);
+      this.syncPayload(patchedTemplate, undefined, false);
       this.resetTestingModel();
       this.updateEditors();
 
@@ -186,7 +195,10 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   onSourceTemplateChanged(content: ContentChanges): void {
     const contentAsJson = this.parseJsonContent(content.updatedContent);
-    this.syncPayload(contentAsJson, this.extractTopicSample(contentAsJson));
+    // The editor can report a change that only re-serializes the same payload (key order,
+    // whitespace, or on load). Treating that as an edit would mark the mapping as changed.
+    const unchanged = stableStringify(contentAsJson) === stableStringify(this.sourceTemplate);
+    this.syncPayload(contentAsJson, this.extractTopicSample(contentAsJson), !unchanged);
   }
 
   /**
@@ -376,9 +388,15 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     };
   }
 
-  // Sync all three payload representations atomically.
+  // Keeps the testing component's own payload state (editor payload and the mapping copy that is
+  // sent to the backend) in step.
+  // propagate = true additionally writes the payload back into the mapping being edited and tells
+  // the host, so that a payload the user deliberately edited here becomes the mapping's source
+  // template. Running a test or resetting must NOT propagate: it would rewrite the live mapping
+  // (and store the test-only patched device id in it), and the editor would then report unsaved
+  // changes although the user changed nothing.
   // topicSample is only provided when called from the editor onChange handler.
-  private syncPayload(parsedContent: any, topicSample?: string): void {
+  private syncPayload(parsedContent: any, topicSample?: string, propagate = false): void {
     const sourceTemplateStr = JSON.stringify(parsedContent || {});
     this.sourceTemplate = parsedContent;
     this.testMapping = {
@@ -386,14 +404,16 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
       sourceTemplate: sourceTemplateStr,
       ...(topicSample ? { mappingTopicSample: topicSample } : {})
     };
-    this.mapping.sourceTemplate = sourceTemplateStr;
-    this.sourceTemplateChanged.emit(parsedContent);
+    if (propagate) {
+      this.mapping.sourceTemplate = sourceTemplateStr;
+      this.sourceTemplateChanged.emit(parsedContent);
+    }
   }
 
   private async performTest(sendPayload: boolean, assumeDeviceExists = false): Promise<TestResult> {
     // Always read directly from the editor to capture the latest content,
     // regardless of whether onChange fired (tree-mode edits may not always trigger it)
-    this.syncPayload(this.editorTestingPayload?.get() ?? this.sourceTemplate);
+    this.syncPayload(this.editorTestingPayload?.get() ?? this.sourceTemplate, undefined, false);
 
     const extractedPayload = this.requiresRawPayload()
       ? this.sourceTemplate?.['payload']
