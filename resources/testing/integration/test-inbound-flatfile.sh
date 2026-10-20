@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="4. FLAT_FILE / CSV → MEASUREMENT"
+TEST_TITLE="FLAT_FILE / CSV → MEASUREMENT"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 EXT_ID="dmtest-flat-$(date +%s)"

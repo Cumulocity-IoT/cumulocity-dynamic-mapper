@@ -21,7 +21,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="34. Smart Function outbound: Pattern 03 — getManagedObjectByExternalId — MO enrichment"
+TEST_TITLE="Smart Function outbound: Pattern 03 — getManagedObjectByExternalId — MO enrichment"
 
 SUBSCRIPTION_NAME=""
 EXT_ID="dmtest-out-molookup-$(date +%s)"

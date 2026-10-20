@@ -75,6 +75,7 @@ declare -a TESTS=(
     "inbound|test-inbound-alarm-dedup-upsert|Repeated ALARM (same source+type) → one alarm; upsert semantics via DM_EXPECT_ALARM_UPSERT=true"
     "inbound|test-inbound-deployment-reconcile|Deployment change applies live (un-deploy / re-deploy, no reconnect)"
     "inbound|test-inbound-rest-polling|REST_POLLING connector → MEASUREMENT (needs http-polling-mock)"
+    "inbound|test-inbound-filter|filterMapping / filterInventory — inbound"
     # ── Inbound (Smart Function patterns) ──────────────────────────────────────
     "smartfunction|test-inbound-smartfunction-02|Inbound: Pattern 02: Topic-based external ID + sensor filter"
     "smartfunction|test-inbound-smartfunction-03|Inbound: Pattern 03: getManagedObjectByExternalId — MO enrichment"
@@ -93,6 +94,7 @@ declare -a TESTS=(
     "outbound|test-outbound-operation|C8Y Operation → MQTT broker"
     "outbound|test-outbound-inventory|C8Y managed-object change → MQTT broker (metadata)"
     "outbound|test-outbound-filter|filterMapping — selective forwarding"
+    "outbound|test-outbound-filter-inventory|filterInventory / filterMapping — outbound inventory"
     "outbound|test-outbound-topic-resolution|Dynamic publish topic resolution"
     "outbound|test-outbound-json-smartfunction|Smart Function: Measurement → MQTT JSON"
     "outbound|test-outbound-smartfunction-externalsource|Smart Function externalSource → _externalId_ topic (broker round-trip)"
@@ -644,7 +646,7 @@ _cleanup_only() {   # [assume_yes]
     _check_c8y_session || exit 1
 
     _maps=$(c8y api --method GET --url "${_svc}/mapping" --output json </dev/null 2>/dev/null \
-        | jq -r '.[]? | select((.name // "")|startswith("test-")) | "\(.id)\t\(.name)"')
+        | jq -r '(if type == "array" then .[] else . end) | objects | select((.name // "")|startswith("test-")) | "\(.id)\t\(.name)"')
     _devs=$({ c8y devices list --name "test-*" --includeAll --output json </dev/null 2>/dev/null
               c8y devices list --name "dmtest-*" --includeAll --output json </dev/null 2>/dev/null; } \
         | jq -r 'select(.id) | "\(.id)\t\(.name)"' | sort -u)

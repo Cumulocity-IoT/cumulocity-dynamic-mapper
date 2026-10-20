@@ -22,7 +22,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="35. C8Y Measurement → WEB_HOOK connector"
+TEST_TITLE="C8Y Measurement → WEB_HOOK connector"
 
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 CONNECTOR_ID="testwebhook$$"

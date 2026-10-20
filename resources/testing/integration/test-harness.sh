@@ -153,10 +153,33 @@ fi
 
 # ── Output helpers ─────────────────────────────────────────────────────────────
 
+# The number shown in a test's banner is its position in the run-tests.sh catalogue (the same
+# number the runner's menu uses), derived on the fly — adding or moving a test there renumbers
+# everything, and the scripts themselves carry no number. Prints nothing when the running
+# script is not in the catalogue.
+dm_test_number() {
+    local _name _runner
+    _name=$(basename "${DM_TEST_SCRIPT:-$0}" .sh)
+    _runner="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/run-tests.sh"
+    [ -r "$_runner" ] || return 0
+    awk -v name="$_name" '
+        /^[[:space:]]+"[a-z]+\|test-[a-z0-9-]+\|/ {
+            n++; split($0, f, "|"); if (f[2] == name) { print n; exit }
+        }' "$_runner"
+}
+
+# "<title>" -> "<n>. <title>" (unless the title already starts with a number)
+dm_numbered_title() {   # <title>
+    local _n
+    case "$1" in [0-9]*.\ *) printf '%s' "$1"; return ;; esac
+    _n=$(dm_test_number)
+    if [ -n "$_n" ]; then printf '%s. %s' "$_n" "$1"; else printf '%s' "$1"; fi
+}
+
 dm_banner() {   # <title>
     echo ""
     printf "${_C_BOLD}%s${_C_RESET}\n" "=============================================="
-    printf "${_C_BOLD} %s${_C_RESET}\n" "$1"
+    printf "${_C_BOLD} %s${_C_RESET}\n" "$(dm_numbered_title "$1")"
     printf "${_C_BOLD}%s${_C_RESET}\n" "=============================================="
 }
 
@@ -172,7 +195,7 @@ dm_step() {     # <description>  OR  <n> <description>
 dm_done() {     # <title>
     echo ""
     printf "${_C_BOLD}%s${_C_RESET}\n" "=============================================="
-    printf "${_C_BOLD} %s: DONE${_C_RESET}\n" "$1"
+    printf "${_C_BOLD} %s: DONE${_C_RESET}\n" "$(dm_numbered_title "$1")"
     printf "${_C_BOLD}%s${_C_RESET}\n" "=============================================="
 }
 
@@ -1063,6 +1086,17 @@ dm_mapping_received_count() {   # <mapping_id>
     dm_api_json_array GET /monitoring/status/mapping/statistic \
         | jq -rs --arg id "$1" \
             'flatten(1) | (map(select(.id == $id))[0].messagesReceived) // 0' 2>/dev/null \
+        || printf '0'
+}
+
+# Return one counter of a mapping's runtime status (messagesReceived, messagesProcessed,
+# messagesFiltered, errors, ...). Always outputs a number (0 when the mapping has no stats yet).
+# Inbound filterMapping / filterInventory mismatches count as messagesFiltered; an outbound
+# mapping whose filter does not match is not selected at all, so none of its counters move.
+dm_mapping_stat() {   # <mapping_id> <field>
+    dm_api_json_array GET /monitoring/status/mapping/statistic \
+        | jq -rs --arg id "$1" --arg f "$2" \
+            'flatten(1) | (map(select(.id == $id))[0][$f]) // 0' 2>/dev/null \
         || printf '0'
 }
 

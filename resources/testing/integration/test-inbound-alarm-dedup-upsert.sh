@@ -18,7 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="13. Inbound ALARM dedup / upsert"
+TEST_TITLE="Inbound ALARM dedup / upsert"
 
 EXT_ID="dmtest-alarm-upsert-$(date +%s)"
 ALARM_TYPE="dmtest_UpsertAlarm_$$"

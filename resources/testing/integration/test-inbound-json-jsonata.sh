@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="2. JSON / JSONATA → EVENT"
+TEST_TITLE="JSON / JSONATA → EVENT"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 EXT_ID="dmtest-jsonata-$(date +%s)"

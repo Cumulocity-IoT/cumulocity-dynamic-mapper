@@ -21,7 +21,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="15. REST_POLLING connector → MEASUREMENT"
+TEST_TITLE="REST_POLLING connector → MEASUREMENT"
 
 CONNECTOR_ID="testrestpolling$$"
 MOCK_DEVICE_EXT_ID="poll-sensor-01"   # DEVICE_ID default of the mock

@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="3. JSON / Smart Function → MEASUREMENT"
+TEST_TITLE="JSON / Smart Function → MEASUREMENT"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 EXT_ID="dmtest-sf-$(date +%s)"

@@ -423,6 +423,7 @@ array) and drives the interactive menu. The categories below mirror it:
 |------|---------|
 | `test-inbound-json-default` | JSON / DEFAULT → MEASUREMENT |
 | `test-inbound-json-jsonata` | JSON / JSONATA → EVENT |
+| `test-inbound-filter` | `filterMapping` (payload) and `filterInventory` (target device) drop non-matching messages — checked via `messagesFiltered`, device creation and measurements |
 | `test-inbound-json-smartfunction` | JSON / Smart Function → MEASUREMENT |
 | `test-inbound-flatfile` | FLAT_FILE / CSV → MEASUREMENT |
 | `test-inbound-hex` | HEX → EVENT |
@@ -462,6 +463,7 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-outbound-operation` | C8Y Operation → MQTT broker |
 | `test-outbound-inventory` | C8Y managed-object change (**device metadata**) → MQTT broker |
 | `test-outbound-filter` | `filterMapping` — selective forwarding |
+| `test-outbound-filter-inventory` | `filterInventory` (device type) and `filterMapping` on a partial inventory change |
 | `test-outbound-topic-resolution` | Dynamic publish topic resolution |
 | `test-outbound-json-smartfunction` | Smart Function: Measurement → MQTT JSON |
 | `test-outbound-smartfunction-externalsource` | Smart Function `externalSource` resolves the `_externalId_` topic token — verified by a real broker round-trip (`mosquitto_sub -v`) |
@@ -563,7 +565,12 @@ The tests **skip** (exit 42) when the mock or credentials are missing.
 2. Customize mapping JSON for your use case
 3. Add validation assertions
 4. Test with `--keep` flag to verify cleanup
-5. Document in test Inventory table above
+5. Register the script in the `TESTS` catalogue of [run-tests.sh](run-tests.sh) and document it in the test inventory table above
+
+**Test numbers are not written in the scripts.** Set `TEST_TITLE` to the title only (for example
+`TEST_TITLE="filterMapping — selective forwarding"`). The banner shows the test's position in the
+`TESTS` catalogue of `run-tests.sh` — the same number the runner's menu uses — so inserting or moving
+an entry renumbers everything automatically.
 
 ## See Also
 

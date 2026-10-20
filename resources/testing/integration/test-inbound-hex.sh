@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="5. HEX → EVENT"
+TEST_TITLE="HEX → EVENT"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 EXT_ID="dmtest-hex-$(date +%s)"

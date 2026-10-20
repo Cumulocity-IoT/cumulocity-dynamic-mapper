@@ -18,7 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="27. C8Y Alarm → MQTT broker"
+TEST_TITLE="C8Y Alarm → MQTT broker"
 
 SUBSCRIPTION_NAME="DynamicMapperStaticDeviceSubscription"
 DEVICE_NAME="dmtest-out-alm-$(date +%s)"

@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="14. Deployment reconcile on change"
+TEST_TITLE="Deployment reconcile on change"
 
 EXT_ID="dmtest-reconcile-$(date +%s)"
 TOPIC="dmtest/reconcile/${EXT_ID}"

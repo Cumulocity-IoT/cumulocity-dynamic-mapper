@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=test-harness.sh
 source "${SCRIPT_DIR}/test-harness.sh"
 
-TEST_TITLE="6. HTTP connector → MEASUREMENT"
+TEST_TITLE="HTTP connector → MEASUREMENT"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 EXT_ID="dmtest-http-$(date +%s)"
