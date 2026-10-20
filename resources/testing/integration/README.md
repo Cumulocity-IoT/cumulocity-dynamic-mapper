@@ -23,9 +23,14 @@ bash run-tests.sh
 # Pick suite + connector: g = generic MQTT (default), m = Cumulocity MQTT Service
 bash run-tests.sh inbound m       # inbound suite against the MQTT Service
 bash run-tests.sh all g           # everything against the public broker
+
+# Same thing with options; --keep retains all test data from the whole run
+bash run-tests.sh inbound -c m -k
+DM_KEEP=true bash run-tests.sh all
 ```
 
-The runner takes two parameters — `[SUITE] [CONNECTOR]`. See
+The runner takes two parameters — `[SUITE] [CONNECTOR]` — plus the options
+`-c/--connector <g|m>` and `-k/--keep` (equivalent to `DM_KEEP=true`). See
 [Running against the Cumulocity MQTT Service](#running-against-the-cumulocity-mqtt-service).
 
 ### Standard flags
@@ -38,6 +43,27 @@ harness):
 | _(none)_ / `--cleanup` | Run the test and delete created data on exit (default). |
 | `--keep` | Run the test but retain created data for post-mortem debugging. |
 | `--validate-only` | Run environment validation, then exit `0` before creating data. |
+
+### Cleaning up kept test data
+
+Data kept with `--keep` / `DM_KEEP=true` is not removed automatically. Sweep it with:
+
+```bash
+bash run-tests.sh --cleanup-only        # lists, asks for confirmation, deletes
+bash run-tests.sh --cleanup-only -y     # no prompt
+```
+
+It deletes, by name: mappings `test-*`, devices `test-*` / `dmtest-*`, and trusted
+certificates `dmtest*`. Device groups and connectors (e.g. `test-mqtt-connector`)
+are **not** swept — their names are too generic; remove them by hand.
+
+Full keep-then-clean cycle:
+
+```bash
+bash run-tests.sh inbound -c m -k       # run, keep everything
+# ... inspect mappings in the UI ...
+bash run-tests.sh --cleanup-only -y
+```
 
 ## Architecture & Best Practices
 
