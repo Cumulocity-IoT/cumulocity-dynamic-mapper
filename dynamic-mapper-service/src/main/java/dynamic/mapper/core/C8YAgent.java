@@ -715,7 +715,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     } catch (SDKException s) {
                         log.error("{} - Could not send payload to c8y: {} {}: HTTP {} - {}", tenant, targetAPI, payload,
                                 s.getHttpStatus(), s.getMessage(), s);
-                        error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s);
+                        error.append(sendFailureText(targetAPI, payload, s));
                     }
                     return rt;
                 });
@@ -953,7 +953,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                 } catch (SDKException s) {
                     log.error("{} - Could not send payload to c8y: {} {}: HTTP {} - {}", tenant, targetAPI, payload,
                             s.getHttpStatus(), s.getMessage(), s);
-                    pe.set(new ProcessingException("Could not sent payload to c8y: " + targetAPI + "/" + payload, s));
+                    pe.set(new ProcessingException(sendFailureText(targetAPI, payload, s), s));
 
                     // Remove device from Cache
                     if (s.getHttpStatus() == 422) {
@@ -1281,7 +1281,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     log.error("{} - Could not send payload to c8y: {}: HTTP {} - {}", tenant, currentRequest.getRequest(),
                             s.getHttpStatus(), s.getMessage(), s);
                     pe.set(new ProcessingException(
-                            "Could not sent payload to c8y: " + targetAPI + "/" + currentRequest.getRequest(), s));
+                            sendFailureText(targetAPI, currentRequest.getRequest(), s), s));
                     // error.append("Could not sent payload to c8y: " + currentRequest.getRequest()
                     // + " " + s);
                 }
@@ -1541,4 +1541,13 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
     }
 
+
+    /**
+     * The text of a failed send as the statistics page and the processing result show it. The reason comes first: the
+     * payload that follows can be long and is cut where the text is displayed, which used to hide why the send failed.
+     */
+    static String sendFailureText(Object targetAPI, Object payload, SDKException failure) {
+        return "Could not send payload to c8y (HTTP " + failure.getHttpStatus() + " - " + failure.getMessage() + "): "
+                + targetAPI + "/" + payload;
+    }
 }

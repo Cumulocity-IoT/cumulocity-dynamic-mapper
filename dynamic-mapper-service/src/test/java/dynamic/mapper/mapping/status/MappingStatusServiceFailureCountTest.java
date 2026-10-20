@@ -131,17 +131,17 @@ class MappingStatusServiceFailureCountTest {
     }
 
     @Test
-    @DisplayName("resetting on success is a no-op for mappings that did not opt into the check")
-    void successResetIsNoOpWhenCheckDisabled() {
+    @DisplayName("a successful message clears the streak even for mappings without a threshold")
+    void successClearsStreakWhenCheckDisabled() {
         Mapping mapping = mapping(0);
         MappingStatus status = service.getOrCreateStatus(TENANT, mapping);
         service.incrementFailureCount(TENANT, mapping, status);
+        assertEquals(1, status.getCurrentFailureCount());
 
         service.resetFailureCountOnSuccess(TENANT, mapping);
 
-        // Left untouched: without a threshold the counter is purely informational, and the hot
-        // path must not pay for maintaining it.
-        assertEquals(1, status.getCurrentFailureCount());
+        // The statistics page shows this counter as the health state: left at 1 it would say "Failing" forever.
+        assertEquals(0, status.getCurrentFailureCount());
     }
 
     @Test
