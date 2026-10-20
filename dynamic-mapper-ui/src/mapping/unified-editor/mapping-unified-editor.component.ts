@@ -58,6 +58,7 @@ import {
   buildTestMapping,
   captureMappingContentSnapshot,
   checkTransformationType,
+  describeMappingContentChanges,
   hasMappingContentChanged,
   isConnectorSelectionEmpty,
   MappingContentSnapshot,
@@ -630,13 +631,30 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     if (this.stepperConfiguration.editorMode === EditorMode.READ_ONLY) return false;
 
     this.updateTemplatesInEditors();
-    return hasMappingContentChanged(
+    const contentChanged = hasMappingContentChanged(
       this.mapping,
       this.sourceTemplate,
       this.targetTemplate,
       this.mappingCode,
       this.initialContentSnapshot
-    ) || snapshotConnectors(this.deploymentMapEntry) !== this.initialDeploymentConnectors;
+    );
+    const connectorsChanged = snapshotConnectors(this.deploymentMapEntry) !== this.initialDeploymentConnectors;
+    if (contentChanged || connectorsChanged) {
+      // Says what the prompt is about, so an unexpected "unsaved changes" can be traced to its cause.
+      console.info('[mapping editor] unsaved changes:', [
+        ...describeMappingContentChanges(
+          this.mapping,
+          this.sourceTemplate,
+          this.targetTemplate,
+          this.mappingCode,
+          this.initialContentSnapshot
+        ),
+        ...(connectorsChanged
+          ? [`connectors: ${this.initialDeploymentConnectors} -> ${snapshotConnectors(this.deploymentMapEntry)}`]
+          : [])
+      ]);
+    }
+    return contentChanged || connectorsChanged;
   }
 
   /** {@link ConfirmsUnsavedChanges} — called by `unsavedChangesGuard` on every way out. */

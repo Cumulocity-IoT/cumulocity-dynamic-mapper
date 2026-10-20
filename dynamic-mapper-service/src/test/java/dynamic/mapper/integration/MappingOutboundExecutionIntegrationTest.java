@@ -94,7 +94,7 @@ class MappingOutboundExecutionIntegrationTest {
     private List<Mapping> outboundMappings;
 
     private static final String TEST_TENANT = "testTenant";
-    private static final String OUTBOUND_MAPPINGS_PATH = "resources/samples/mappings-OUTBOUND.json";
+    private static final String OUTBOUND_MAPPINGS_PATH = "dynamic-mapper-service/src/test/resources/mappings-fixture-OUTBOUND.json";
 
     @BeforeEach
     void setUp() throws Exception {

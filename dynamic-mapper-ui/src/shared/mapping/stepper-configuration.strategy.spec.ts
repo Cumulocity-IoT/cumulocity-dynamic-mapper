@@ -53,6 +53,28 @@ describe('StepperConfigurationResolver', () => {
       expect(result.editorMode).toBe(EditorMode.CREATE);
     });
 
+    it('should keep testing enabled for ANY_PAYLOAD with SMART_FUNCTION but hide the source editor', () => {
+      const baseConfig: StepperConfiguration = {
+        showEditorSource: true,
+        allowTestSending: false,
+        allowTestTransformation: false
+      };
+
+      const context: StepperConfigurationContext = {
+        mappingType: MappingType.ANY_PAYLOAD,
+        transformationType: TransformationType.SMART_FUNCTION,
+        direction: Direction.INBOUND,
+        editorMode: EditorMode.UPDATE,
+        substitutionsAsCode: false
+      };
+
+      const result = StepperConfigurationResolver.resolve(baseConfig, context);
+
+      expect(result.allowTestTransformation).toBe(true);
+      expect(result.allowTestSending).toBe(true);
+      expect(result.showEditorSource).toBe(false);
+    });
+
     it('should apply outbound override', () => {
       const baseConfig: StepperConfiguration = {
         allowTestSending: true,

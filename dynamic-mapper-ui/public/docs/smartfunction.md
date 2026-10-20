@@ -24,8 +24,8 @@ The signature and structure of a **Smart Function** has the form:
 function onMessage(inputMsg, context) {
   const msg = inputMsg;
   var payload = msg.getPayload(); // contains payload
-  console.log("Context" + context.getStateAll());
-  console.log("Payload Raw:" + msg.getPayload());
+  console.log("Context: " + JSON.stringify(context.getStateAll()));
+  console.log("Payload Raw: " + JSON.stringify(msg.getPayload()));
   console.log("Payload messageId" + payload['messageId']);
   // Get externalId from context first, fall back to payload
   var externalId = context.getClientId() || payload["externalId"];

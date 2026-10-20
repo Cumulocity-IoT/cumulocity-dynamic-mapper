@@ -24,8 +24,8 @@
 function onMessage(msg, context) {
     var payload = msg.payload;
 
-    console.log("Context: " + context.getConfig());
-    console.log("Payload Raw: " + payload);
+    console.log("Context: " + JSON.stringify(context.getConfig()));
+    console.log("Payload Raw: " + JSON.stringify(payload));
     console.log("Payload messageId: " +  payload["messageId"]);
 
     // Prefer context clientId (MQTT client id), fall back to payload field

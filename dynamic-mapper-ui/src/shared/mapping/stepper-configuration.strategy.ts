@@ -126,17 +126,13 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     }
   },
   {
-    // ANY_PAYLOAD + SMART_FUNCTION: binary payload cannot be test-sent as JSON,
-    // and the source editor is meaningless. Re-disable what the SMART_FUNCTION
-    // override above re-enabled.
-    // ANY_PAYLOAD + EXTENSION_JAVA is intentionally excluded — the EXTENSION_JAVA
-    // overrides above already set allowTestSending/allowTestTransformation correctly.
+    // ANY_PAYLOAD + SMART_FUNCTION: the broker message is binary, so the source editor is
+    // meaningless. Testing stays enabled (the SMART_FUNCTION override above): the test tab takes
+    // the message as a base64 string in `payload`, which is what the Smart Function receives live.
     condition: (ctx) =>
       ctx.mappingType === MappingType.ANY_PAYLOAD &&
       ctx.transformationType === TransformationType.SMART_FUNCTION,
     properties: {
-      allowTestSending: false,
-      allowTestTransformation: false,
       showEditorSource: false
     }
   }

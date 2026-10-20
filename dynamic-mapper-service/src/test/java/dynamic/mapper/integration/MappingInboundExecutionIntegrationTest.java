@@ -100,7 +100,7 @@ class MappingInboundExecutionIntegrationTest {
     private List<Mapping> inboundMappings;
 
     private static final String TEST_TENANT = "testTenant";
-    private static final String INBOUND_MAPPINGS_PATH = "resources/samples/mappings-INBOUND.json";
+    private static final String INBOUND_MAPPINGS_PATH = "dynamic-mapper-service/src/test/resources/mappings-fixture-INBOUND.json";
 
     @BeforeEach
     void setUp() throws Exception {

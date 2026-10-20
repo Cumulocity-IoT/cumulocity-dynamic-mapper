@@ -214,6 +214,17 @@ describe('MappingStepPropertiesComponent', () => {
     });
   });
 
+  describe('rendering before ngOnInit has finished', () => {
+    // Regression: ngOnInit awaits before it set up the filter model, and the template reads
+    // filterInventoryModel.filterExpression on the first change-detection pass in between
+    // ("Cannot read properties of undefined (reading 'filterExpression')").
+    it('has the filter model from construction on', () => {
+      const component = TestBed.createComponent(MappingStepPropertiesComponent).componentInstance;
+
+      expect(component.filterInventoryModel.filterExpression.resultType).toBe('empty');
+    });
+  });
+
   describe('filter inventory evaluation', () => {
     it('accepts a boolean-valued expression, stores the result, and sets mapping.filterInventory', async () => {
       mockMappingService.evaluateExpression.and.resolveTo(true as any);

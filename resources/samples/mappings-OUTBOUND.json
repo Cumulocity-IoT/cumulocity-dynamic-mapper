@@ -529,5 +529,34 @@
       "extensionType": "EXTENSION_OUTBOUND",
       "direction": "OUTBOUND"
     }
+  },
+  {
+    "id": "3f7c21a8",
+    "identifier": "3f7c21a8",
+    "name": "OUT-16 Alarm - fan out to three topics",
+    "targetAPI": "ALARM",
+    "direction": "OUTBOUND",
+    "mappingType": "JSON",
+    "transformationType": "SMART_FUNCTION",
+    "substitutions": [],
+    "active": false,
+    "debug": false,
+    "eventWithAttachment": false,
+    "createNonExistingDevice": false,
+    "updateExistingDevice": false,
+    "autoAckOperation": false,
+    "useExternalId": true,
+    "externalIdType": "c8y_Serial",
+    "filterMapping": "true",
+    "filterInventory": null,
+    "maxFailureCount": 0,
+    "qos": "AT_LEAST_ONCE",
+    "lastUpdate": 1792500000000,
+    "version": "1.0.0",
+    "targetTemplate": "{}",
+    "publishTopic": "alarm/state/+",
+    "publishTopicSample": "alarm/state/berlin_01",
+    "sourceTemplate": "{\"time\":\"2025-01-01T12:00:00.000Z\",\"type\":\"c8y_OverheatAlarm\",\"text\":\"Temperature above limit\",\"severity\":\"MAJOR\",\"status\":\"ACTIVE\",\"count\":3,\"source\":{\"id\":\"12345\"}}",
+    "code": "LyoqCiAqIEBuYW1lIEFsYXJtIC0gZmFuIG91dCB0byB0aHJlZSB0b3BpY3MKICogQGRlc2NyaXB0aW9uIFB1Ymxpc2hlcyB0aHJlZSBtZXNzYWdlcyBmb3IgZXZlcnkgYWxhcm06IGEgY29tcGFjdCBzdGF0ZSBtZXNzYWdlIGZvciBkYXNoYm9hcmRzLCBhCiAqICAgICAgICAgICAgICBub3RpZmljYXRpb24gd2l0aCBhIHJlYWRhYmxlIHRleHQgZm9yIHBhZ2luZy9jaGF0IGludGVncmF0aW9ucywgYW5kIGFuIGF1ZGl0IHJlY29yZAogKiAgICAgICAgICAgICAgZm9yIHRoZSBoaXN0b3J5LiBFYWNoIG1lc3NhZ2UgZ29lcyB0byBpdHMgb3duIHRvcGljIGFuZCBoYXMgaXRzIG93biBwYXlsb2FkIHNoYXBlLgogKiBAdGVtcGxhdGVUeXBlIE9VVEJPVU5EX1NNQVJUX0ZVTkNUSU9OCiAqCiAqIFNhbXBsZSBDdW11bG9jaXR5IGFsYXJtIHBheWxvYWQgKHNvdXJjZSkKICogewogKiAgICAgInRpbWUiOiAiMjAyNS0wMS0wMVQxMjowMDowMC4wMDBaIiwKICogICAgICJ0eXBlIjogImM4eV9PdmVyaGVhdEFsYXJtIiwKICogICAgICJ0ZXh0IjogIlRlbXBlcmF0dXJlIGFib3ZlIGxpbWl0IiwKICogICAgICJzZXZlcml0eSI6ICJNQUpPUiIsCiAqICAgICAic3RhdHVzIjogIkFDVElWRSIsCiAqICAgICAiY291bnQiOiAzLAogKiAgICAgInNvdXJjZSI6IHsgImlkIjogIjEyMzQ1IiB9CiAqIH0KICogcHVibGlzaFRvcGljICdhbGFybS9zdGF0ZS9iZXJsaW5fMDEnLCAnYWxhcm0vbm90aWZ5L2Jlcmxpbl8wMScsICdhbGFybS9hdWRpdC9iZXJsaW5fMDEnCiAqLwpmdW5jdGlvbiBvbk1lc3NhZ2UobXNnLCBjb250ZXh0KSB7CiAgICB2YXIgcGF5bG9hZCA9IG1zZy5wYXlsb2FkOwoKICAgIHZhciBleHRlcm5hbElkID0gY29udGV4dC5nZXRFeHRlcm5hbElkKCk7CiAgICBpZiAoIWV4dGVybmFsSWQpIHsKICAgICAgICBjb250ZXh0LmFkZFdhcm5pbmcoIk5vIGV4dGVybmFsIGlkIHJlc29sdmVkIGZvciBkZXZpY2UgIiArIG1zZy5zb3VyY2VJZCArICIgLSBubyBtZXNzYWdlIHB1Ymxpc2hlZC4iKTsKICAgICAgICByZXR1cm4gbnVsbDsKICAgIH0KCiAgICB2YXIgdGltZSA9IHBheWxvYWRbInRpbWUiXSB8fCBtc2cudGltZTsKCiAgICAvLyBSZXR1cm5pbmcgYW4gYXJyYXkgcHVibGlzaGVzIG9uZSBtZXNzYWdlIHBlciBlbGVtZW50LCBlYWNoIHRvIHRoZSB0b3BpYyBpdCBuYW1lcy4KICAgIHJldHVybiBbCiAgICAgICAgewogICAgICAgICAgICAvLyAxIC0gbGF0ZXN0IHN0YXRlLCBzbWFsbCBlbm91Z2ggZm9yIGEgZGFzaGJvYXJkIHdpZGdldAogICAgICAgICAgICB0b3BpYzogImFsYXJtL3N0YXRlLyIgKyBleHRlcm5hbElkLAogICAgICAgICAgICBwYXlsb2FkOiB7CiAgICAgICAgICAgICAgICAiZGV2aWNlSWQiOiBleHRlcm5hbElkLAogICAgICAgICAgICAgICAgImFsYXJtVHlwZSI6IHBheWxvYWRbInR5cGUiXSwKICAgICAgICAgICAgICAgICJzZXZlcml0eSI6IHBheWxvYWRbInNldmVyaXR5Il0sCiAgICAgICAgICAgICAgICAic3RhdHVzIjogcGF5bG9hZFsic3RhdHVzIl0KICAgICAgICAgICAgfQogICAgICAgIH0sCiAgICAgICAgewogICAgICAgICAgICAvLyAyIC0gaHVtYW4gcmVhZGFibGUgbm90aWZpY2F0aW9uCiAgICAgICAgICAgIHRvcGljOiAiYWxhcm0vbm90aWZ5LyIgKyBleHRlcm5hbElkLAogICAgICAgICAgICBwYXlsb2FkOiB7CiAgICAgICAgICAgICAgICAiZGV2aWNlSWQiOiBleHRlcm5hbElkLAogICAgICAgICAgICAgICAgInRpdGxlIjogcGF5bG9hZFsic2V2ZXJpdHkiXSArICI6ICIgKyBwYXlsb2FkWyJ0eXBlIl0sCiAgICAgICAgICAgICAgICAibWVzc2FnZSI6IHBheWxvYWRbInRleHQiXSArICIgKCIgKyBleHRlcm5hbElkICsgIikiLAogICAgICAgICAgICAgICAgInRpbWUiOiB0aW1lCiAgICAgICAgICAgIH0KICAgICAgICB9LAogICAgICAgIHsKICAgICAgICAgICAgLy8gMyAtIGF1ZGl0IHJlY29yZCB3aXRoIHRoZSBvY2N1cnJlbmNlIGNvdW50ZXIKICAgICAgICAgICAgdG9waWM6ICJhbGFybS9hdWRpdC8iICsgZXh0ZXJuYWxJZCwKICAgICAgICAgICAgcGF5bG9hZDogewogICAgICAgICAgICAgICAgImRldmljZUlkIjogZXh0ZXJuYWxJZCwKICAgICAgICAgICAgICAgICJhbGFybVR5cGUiOiBwYXlsb2FkWyJ0eXBlIl0sCiAgICAgICAgICAgICAgICAic3RhdHVzIjogcGF5bG9hZFsic3RhdHVzIl0sCiAgICAgICAgICAgICAgICAib2NjdXJyZW5jZXMiOiBwYXlsb2FkWyJjb3VudCJdLAogICAgICAgICAgICAgICAgInRpbWUiOiB0aW1lCiAgICAgICAgICAgIH0KICAgICAgICB9CiAgICBdOwp9CmV4cG9ydCB7IG9uTWVzc2FnZSB9Owo="
   }
 ]

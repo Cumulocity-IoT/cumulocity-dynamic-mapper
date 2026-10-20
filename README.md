@@ -98,10 +98,12 @@ Import and export mappings from the **Inbound Mappings** / **Outbound Mappings**
 or all at once — there is no longer a standalone import script. Ready-made sets to start from:
 
 - [resources/samples/mappings-INBOUND.json](resources/samples/mappings-INBOUND.json) — 17 mappings, `IN-01` … `IN-17`
-- [resources/samples/mappings-OUTBOUND.json](resources/samples/mappings-OUTBOUND.json) — 15 mappings, `OUT-01` … `OUT-15`
+- [resources/samples/mappings-OUTBOUND.json](resources/samples/mappings-OUTBOUND.json) — 16 mappings, `OUT-01` … `OUT-16`
 
 Each mapping name states the aspect it demonstrates. All samples are imported **inactive** — activate only the ones
-you want, since several share topic patterns. Smart Function samples are taken from the built-in code templates
+you want, since several share topic patterns. The binary-payload mappings can be dry-run from the editor's test tab: **IN-12** (Any Payload) takes the message as a
+base64 string in `payload`, and **IN-13** (native Sparkplug B) takes a JSON object that the test encodes to Sparkplug B
+protobuf. Smart Function samples are taken from the built-in code templates
 (`dynamic-mapper-service/src/main/resources/templates/`); the Java extension samples need the
 `dynamic-mapper-extension` extension deployed to the tenant.
 

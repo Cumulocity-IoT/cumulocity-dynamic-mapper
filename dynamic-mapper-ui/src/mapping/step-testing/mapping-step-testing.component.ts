@@ -260,9 +260,16 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
 
   // ===== PRIVATE METHODS =====
 
+  /** The test sends the `payload` string of the source template rather than the template itself. */
   protected requiresRawPayload(): boolean {
     return this.testMapping?.mappingType === MappingType.HEX ||
-           this.testMapping?.mappingType === MappingType.FLAT_FILE;
+           this.testMapping?.mappingType === MappingType.FLAT_FILE ||
+           this.testMapping?.mappingType === MappingType.ANY_PAYLOAD;
+  }
+
+  /** Whitespace and line terminators only matter for text formats; ANY_PAYLOAD carries base64. */
+  private isLineTerminatorSensitive(): boolean {
+    return this.requiresRawPayload() && this.testMapping?.mappingType !== MappingType.ANY_PAYLOAD;
   }
 
   private initializeMapping(): void {
@@ -302,7 +309,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
   private resetTestingModel(): void {
-    const logs: string[] = this.requiresRawPayload()
+    const logs: string[] = this.isLineTerminatorSensitive()
       ? ['INFO ' + this.t(gettext('Validate the mapping logic with real payloads. The specific parsing of whitespace and line terminators (CR/LF) may differ from the test environment, potentially altering the results.'))]
       : [];
     this.testingModel = { results: [], request: {}, response: {}, logs };

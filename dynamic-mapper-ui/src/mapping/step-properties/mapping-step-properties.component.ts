@@ -93,7 +93,11 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   propertyFormlyFields: FormlyFieldConfig[] = [];
   sourceSystem: string;
   targetSystem: string;
-  filterInventoryModel: FilterExpressionModel;
+  // Initialised here, not only in ngOnInit: ngOnInit awaits before it gets to initializeFilterModels(),
+  // and the template (which reads filterInventoryModel.filterExpression) is rendered in between.
+  filterInventoryModel: FilterExpressionModel = {
+    filterExpression: { result: '', resultType: 'empty', valid: false }
+  };
 
   private static readonly FILTER_INVENTORY_DESCRIPTION =
     'The filter is applied to the inventory object that is referenced in the payload. The filter has to be defined as boolean expression (JSONata), e.g. <code>type = "lora-device-type"</code>. NOTE: Any property referenced here has to be added in Configuration > Service Configuration > Fragments from inventory to cache.';

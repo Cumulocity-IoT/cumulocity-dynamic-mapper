@@ -24,7 +24,7 @@
 function onMessage(msg, context) {
     var payload = msg.payload;
 
-    console.log("Payload Raw:" + payload);
+    console.log("Payload Raw: " + JSON.stringify(payload));
     console.log("Payload messageId: " +  payload["messageId"]);
 
     // Extract externalId from the topic via context.getConfig().

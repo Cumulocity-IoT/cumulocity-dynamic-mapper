@@ -33,7 +33,7 @@
  */
 function onMessage(msg, context) {
     const payload = msg.payload;
-    console.log("Payload Raw: " + payload);
+    console.log("Payload Raw: " + JSON.stringify(payload));
 
     // Extract CSV data early
     const csvData = payload["payload"];

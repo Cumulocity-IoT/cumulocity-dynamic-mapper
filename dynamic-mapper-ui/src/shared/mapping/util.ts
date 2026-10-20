@@ -807,6 +807,29 @@ export interface MappingContentSnapshot {
   mappingCode: string;
 }
 
+/**
+ * The mapping as compared by the unsaved-changes check. Two normalisations keep the comparison to
+ * what the user can actually change:
+ *  - `extension.loaded` and `extension.message` are left out: they report whether the tenant
+ *    currently has the extension loaded, and the editor (re)fills them from the tenant when the
+ *    extension's event is selected on opening — after the snapshot is taken.
+ *  - `null` counts as "not set". The backend returns `null` for unset properties, while the editor
+ *    clears the same properties to `undefined` (for example `extension.parameter` when its text
+ *    field is initialised empty), which JSON.stringify drops. Counting that made a mapping look
+ *    edited the moment it was opened.
+ */
+function mappingContentJson(mapping: unknown): string {
+  const extension = (mapping as { extension?: Record<string, unknown> } | null | undefined)?.extension;
+  const comparable =
+    extension && typeof extension === 'object' && ('loaded' in extension || 'message' in extension)
+      ? (() => {
+          const { loaded: _loaded, message: _message, ...rest } = extension;
+          return { ...(mapping as object), extension: rest };
+        })()
+      : mapping;
+  return JSON.stringify(comparable, (_key, value) => (value === null ? undefined : value)) ?? 'null';
+}
+
 export function captureMappingContentSnapshot(
   mapping: unknown,
   sourceTemplate: unknown,
@@ -814,7 +837,7 @@ export function captureMappingContentSnapshot(
   mappingCode: string | undefined
 ): MappingContentSnapshot {
   return {
-    mappingJson: JSON.stringify(mapping),
+    mappingJson: mappingContentJson(mapping),
     sourceTemplateJson: JSON.stringify(sourceTemplate),
     targetTemplateJson: JSON.stringify(targetTemplate),
     mappingCode: mappingCode ?? ''
@@ -834,10 +857,36 @@ export function hasMappingContentChanged(
   mappingCode: string | undefined,
   initial: MappingContentSnapshot
 ): boolean {
-  return JSON.stringify(mapping) !== initial.mappingJson
+  return mappingContentJson(mapping) !== initial.mappingJson
     || JSON.stringify(sourceTemplate) !== initial.sourceTemplateJson
     || JSON.stringify(targetTemplate) !== initial.targetTemplateJson
     || (mappingCode ?? '') !== initial.mappingCode;
+}
+
+/**
+ * Names what differs between the opening snapshot and the current editing state, for the console
+ * when the unsaved-changes prompt appears. Each entry is a mapping property (with its value before
+ * and after) or the name of the template/code part that differs.
+ */
+export function describeMappingContentChanges(
+  mapping: unknown,
+  sourceTemplate: unknown,
+  targetTemplate: unknown,
+  mappingCode: string | undefined,
+  initial: MappingContentSnapshot
+): string[] {
+  const differences: string[] = [];
+  const before = JSON.parse(initial.mappingJson ?? 'null') ?? {};
+  const after = JSON.parse(mappingContentJson(mapping) ?? 'null') ?? {};
+  for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) {
+      differences.push(`mapping.${key}: ${JSON.stringify(before[key])} -> ${JSON.stringify(after[key])}`);
+    }
+  }
+  if (JSON.stringify(sourceTemplate) !== initial.sourceTemplateJson) differences.push('source template');
+  if (JSON.stringify(targetTemplate) !== initial.targetTemplateJson) differences.push('target template');
+  if ((mappingCode ?? '') !== initial.mappingCode) differences.push('code');
+  return differences;
 }
 
 /**
@@ -898,8 +947,10 @@ export function buildTestMapping(
   includeCode: boolean
 ): Mapping {
   const testMapping = structuredClone(mapping);
-  testMapping.sourceTemplate = JSON.stringify(sourceTemplate);
-  testMapping.targetTemplate = JSON.stringify(targetTemplate);
+  // The editors load their templates asynchronously; a quick switch to the testing tab can arrive first.
+  // JSON.stringify(undefined) is undefined, so keep the persisted template until the editor has one.
+  if (sourceTemplate !== undefined) testMapping.sourceTemplate = JSON.stringify(sourceTemplate);
+  if (targetTemplate !== undefined) testMapping.targetTemplate = JSON.stringify(targetTemplate);
   if (includeCode && mappingCode) {
     testMapping.code = stringToBase64(stripTemplateMetadataTags(mappingCode));
   }
