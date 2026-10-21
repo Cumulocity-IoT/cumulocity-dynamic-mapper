@@ -19,13 +19,15 @@
  */
 
 import { Direction, MappingType, StepperConfiguration, TransformationType } from './mapping.model';
-import { EditorMode } from './stepper.model';
+import { MappingPersistence } from './stepper.model';
 
 export interface StepperConfigurationContext {
   mappingType: MappingType;
   transformationType: TransformationType;
   direction: Direction;
-  editorMode: EditorMode;
+  persistence: MappingPersistence;
+  readOnly?: boolean;
+  isCopy?: boolean;
   substitutionsAsCode: boolean;
   hasDeployedConnector?: boolean;
 }
@@ -159,7 +161,9 @@ export class StepperConfigurationResolver {
     let config: StepperConfiguration = {
       ...baseConfig,
       direction: context.direction,
-      editorMode: context.editorMode
+      persistence: context.persistence,
+      readOnly: context.readOnly ?? false,
+      isCopy: context.isCopy ?? false
     };
 
     // Apply each override that matches its condition

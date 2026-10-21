@@ -29,7 +29,6 @@ import { ConnectorConfigurationService } from '../../shared/service/connector-co
 import { MappingService } from '../core/mapping.service';
 import { MappingStepperService } from '../service/mapping-stepper.service';
 import { FormatStringPipe } from '../../shared/misc/format-string.pipe';
-import { EditorMode } from '../../shared/mapping/stepper.model';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -40,7 +39,7 @@ function makeMapping(): Mapping {
 }
 
 function makeStepperConfiguration(): StepperConfiguration {
-  return { direction: Direction.INBOUND, editorMode: EditorMode.CREATE };
+  return { direction: Direction.INBOUND, persistence: 'create' };
 }
 
 async function createComponent(

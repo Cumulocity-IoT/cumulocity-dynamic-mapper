@@ -186,26 +186,6 @@ export class MappingService {
     return response.text();
   }
 
-  async updateMapping(mapping: Mapping): Promise<Mapping> {
-    const response = await this.client.fetch(
-      `${BASE_URL}/${PATH_MAPPING_ENDPOINT}/${mapping.id}`,
-      {
-        headers: {
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify(mapping),
-        method: 'PUT'
-      }
-    );
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw toBackendError(error, buildBackendErrorMessage(error, response.statusText));
-    }
-    const m = await response.json();
-    this.refreshAfterMutation(mapping.direction);
-    return m;
-  }
-
   async createMapping(mapping: Mapping): Promise<Mapping> {
     const response = await this.client.fetch(`${BASE_URL}/${PATH_MAPPING_ENDPOINT}`, {
       headers: {

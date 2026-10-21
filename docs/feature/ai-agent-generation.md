@@ -149,10 +149,10 @@ Wraps `@c8y/ngx-components/ai/agent-chat`'s `AgentChatComponent`, configured wit
   `[MAPPING_CONTEXT]` fenced block alongside *every* user message, per `AgentChatComponent`'s
   contract, rather than embedding it once in the visible transcript — the full JSON can run to
   dozens of lines and would otherwise make the first visible chat message unreadable.
-- `ngOnInit()` (lines 114-189) branches on `editorMode` and mapping kind:
-  - **UPDATE**: offers "Review / Refine existing …" vs. "Generate new … from scratch" as
+- `ngOnInit()` (lines 114-189) branches on `existingMapping` (set when the stepper configuration's `persistence` is `draft`) and mapping kind:
+  - **Existing mapping**: offers "Review / Refine existing …" vs. "Generate new … from scratch" as
     suggestion chips; nothing is sent automatically.
-  - **CREATE, Smart Function**: offers "Let AI propose a target structure" vs. "I want to
+  - **New mapping, Smart Function**: offers "Let AI propose a target structure" vs. "I want to
     provide a sample target payload" as chips.
   - **CREATE, JSONata**: sends a generate prompt immediately — see requirements above.
   `buildGenerateMessage()` (lines 233-274) is where the outbound-has-no-target-schema and

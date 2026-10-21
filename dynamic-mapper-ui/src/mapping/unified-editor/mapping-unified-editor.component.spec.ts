@@ -50,7 +50,6 @@ import {
   Feature,
   Qos
 } from '../../shared';
-import { EditorMode } from '../../shared/mapping/stepper.model';
 import { captureMappingContentSnapshot, configurationToYaml, yamlToConfiguration } from '../../shared/mapping/util';
 
 // Tab indices (mirrors the private constants in the component under test)
@@ -115,7 +114,7 @@ describe('MappingUnifiedEditorComponent', () => {
   });
 
   const buildConfig = (overrides: Partial<StepperConfiguration> = {}): StepperConfiguration => ({
-    editorMode: EditorMode.UPDATE,
+    persistence: 'draft',
     direction: Direction.INBOUND,
     showEditorSource: true,
     showEditorTarget: true,
@@ -693,7 +692,7 @@ describe('MappingUnifiedEditorComponent', () => {
     });
 
     it('leaves immediately in read-only mode', async () => {
-      component.stepperConfiguration = buildConfig({ editorMode: EditorMode.READ_ONLY });
+      component.stepperConfiguration = buildConfig({ persistence: 'draft', readOnly: true });
       component.mapping.name = 'edited somehow';
 
       await expectAsync(component.confirmLeaveWithUnsavedChanges()).toBeResolvedTo(true);

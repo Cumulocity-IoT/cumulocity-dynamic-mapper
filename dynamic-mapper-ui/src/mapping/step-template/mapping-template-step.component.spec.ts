@@ -35,7 +35,6 @@ import {
   Qos,
   ContentChanges
 } from '../../shared';
-import { EditorMode } from '../../shared/mapping/stepper.model';
 
 /**
  * Unit tests for {@link MappingTemplateStepComponent}.
@@ -81,7 +80,7 @@ describe('MappingTemplateStepComponent', () => {
   });
 
   const buildConfig = (overrides: Partial<StepperConfiguration> = {}): StepperConfiguration => ({
-    editorMode: EditorMode.CREATE,
+    persistence: 'create',
     direction: Direction.INBOUND,
     allowTemplateExpansion: false,
     ...overrides

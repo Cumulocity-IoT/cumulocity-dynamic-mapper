@@ -53,7 +53,6 @@ import {
 import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
 import { MappingService } from '../core/mapping.service';
 import { MappingStepperService } from '../service/mapping-stepper.service';
-import { EditorMode } from '../../shared/mapping/stepper.model';
 import { deriveSampleTopicFromTopic, getTypeOf, topicsHaveSameStructure } from '../../shared/mapping/util';
 
 interface FilterExpressionModel {
@@ -87,8 +86,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
 
   readonly MappingTypeLabels = MappingTypeLabels;
   readonly Direction = Direction;
-  readonly EditorMode = EditorMode;
-  readonly readOnlyHelp = ' To edit this mapping deactivate the mapping first in mapping list.';
+  readonly readOnlyHelp = ' This mapping is read-only: it uses a deprecated transformation type, or your user lacks the Mapping Admin / Mapping Create role.';
 
   propertyFormlyFields: FormlyFieldConfig[] = [];
   sourceSystem: string;
@@ -660,7 +658,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   }
 
   private get isReadOnly(): boolean {
-    return this.stepperConfiguration.editorMode === EditorMode.READ_ONLY;
+    return !!this.stepperConfiguration.readOnly;
   }
 
   private get canEdit(): boolean {

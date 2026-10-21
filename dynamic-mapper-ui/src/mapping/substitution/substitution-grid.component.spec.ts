@@ -23,7 +23,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
 import { SubstitutionGridComponent, SubstitutionGridSettings } from './substitution-grid.component';
-import { EditorMode } from '../../shared/mapping/stepper.model';
 
 /**
  * Unit tests for {@link SubstitutionGridComponent} — the substitution list/grid.
@@ -41,7 +40,7 @@ describe('SubstitutionGridComponent', () => {
   const settings = (): SubstitutionGridSettings => ({
     color: '#fff',
     selectedSubstitutionIndex: -1,
-    editorMode: EditorMode.CREATE
+    readOnly: false
   });
 
   beforeEach(async () => {

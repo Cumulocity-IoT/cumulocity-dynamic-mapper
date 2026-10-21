@@ -24,7 +24,6 @@ import { BsModalService } from 'ngx-bootstrap/modal';
 import { ConnectorConfigurationService } from '../../connector';
 import { DeploymentMapEntry, SharedService } from '../../shared';
 import { MappingConnectorComponent } from './mapping-connector.component';
-import { EditorMode } from '../../shared/mapping/stepper.model';
 
 /**
  * Unit tests for {@link MappingConnectorComponent}. It is a thin wrapper around the connector
@@ -57,13 +56,13 @@ describe('MappingConnectorComponent', () => {
   });
 
   it('is read-only in READ_ONLY editor mode', async () => {
-    component.stepperConfiguration = { editorMode: EditorMode.READ_ONLY };
+    component.stepperConfiguration = { persistence: 'draft', readOnly: true };
     await component.ngOnInit();
     expect(component.readOnly).toBe(true);
   });
 
   it('is editable in CREATE editor mode', async () => {
-    component.stepperConfiguration = { editorMode: EditorMode.CREATE };
+    component.stepperConfiguration = { persistence: 'create' };
     await component.ngOnInit();
     expect(component.readOnly).toBe(false);
   });

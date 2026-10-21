@@ -77,9 +77,9 @@
           <i c8yIcon="pencil"></i>&nbsp;Update substitution
         </button>
         <button type="button" class="btn btn-ai btn-sm m-l-4" data-cy="dm-mapping-transform-generate-ai" (click)="openGenerateSubstitutionDrawer()" [disabled]="!stepperConfiguration.showEditorSource ||
-              stepperConfiguration.editorMode === EditorMode.READ_ONLY || 
+              stepperConfiguration.readOnly || 
               !aiAgentDeployed">
-          <span>{{ stepperConfiguration.editorMode === EditorMode.UPDATE ? 'Review / Refine with AI' : 'Generate substitutions' }}</span>
+          <span>{{ stepperConfiguration.persistence === 'draft' ? 'Review / Refine with AI' : 'Generate substitutions' }}</span>
         </button>
         @if (!aiAgentDeployed) {
         <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
@@ -123,7 +123,7 @@
         <d11r-mapping-substitution-grid [mapping]="mapping" [settings]="{
               color: COLOR_HIGHLIGHTED,
               selectedSubstitutionIndex: selectedSubstitution,
-              editorMode: stepperConfiguration.editorMode
+              readOnly: !!stepperConfiguration.readOnly
             }" (selectSub)="onSelectSubstitution($event)" (deleteSub)="onDeleteSubstitution($event)"
           (substitutionChange)="onGridSubstitutionChange()" (cancelEdit)="cancelEditSubstitution()">
         </d11r-mapping-substitution-grid>

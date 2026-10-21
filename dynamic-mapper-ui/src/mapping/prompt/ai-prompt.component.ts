@@ -45,7 +45,6 @@ import { MappingTokens } from '../../shared/mapping/processor/processor.model';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { ServiceConfiguration } from '../../configuration';
 import { base64ToBytes } from '../../shared/mapping/util';
-import { EditorMode } from '../../shared/mapping/stepper.model';
 
 
 /** MCP tools (dynamic-mapper-service, MappingResultTools) through which the agents hand over their final result. */
@@ -76,7 +75,8 @@ export class AiPromptComponent implements OnInit {
 
   @Input() mapping: Mapping;
   @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
-  @Input() editorMode: EditorMode = EditorMode.CREATE;
+  /** True when the mapping already exists, so its code/substitutions can be reviewed rather than generated from scratch. */
+  @Input() existingMapping = false;
 
   private _save: (value: Substitution[] | string) => void;
   private _cancel: (reason?: any) => void;
@@ -238,13 +238,13 @@ export class AiPromptComponent implements OnInit {
     if (stored) {
       // The restored transcript already holds the earlier turns, so no suggestion chips and no
       // automatic first message — either would start the conversation again on top of it.
-      if (this.editorMode !== EditorMode.UPDATE) {
+      if (!this.existingMapping) {
         this.drawerTitle = this.isCodeMapping ? 'Generate Smart Function' : 'Generate Substitutions';
       }
       return;
     }
 
-    if (this.editorMode === EditorMode.UPDATE) {
+    if (this.existingMapping) {
       // Existing code/substitutions to review — offer both as suggestion chips inside
       // the chat itself and let the user pick, instead of auto-sending anything.
       const label = this.isCodeMapping ? 'Smart Function' : 'substitutions';

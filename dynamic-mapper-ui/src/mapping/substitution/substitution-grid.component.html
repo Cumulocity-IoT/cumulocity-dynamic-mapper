@@ -123,7 +123,7 @@
               }
               <button title="{{ 'Remove' | translate }}" class="btn btn-icon btn-clean showOnHover substitution-grid-delete-btn"
                 [attr.data-cy]="'dm-substitution-delete-' + i"
-                (click)="onSubstitutionDelete(i)" [disabled]="settings.editorMode === EditorMode.READ_ONLY">
+                (click)="onSubstitutionDelete(i)" [disabled]="settings.readOnly">
                 <i c8yIcon="delete" class="c8y-icon dlt-c8y-icon-delete"></i>
                 <span class="sr-only" translate>Remove</span>
               </button>

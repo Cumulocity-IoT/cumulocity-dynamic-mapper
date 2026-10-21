@@ -50,9 +50,9 @@ import { SharedService } from '../../shared';
 import { ExtensionService } from '../../extension';
 import { AiAgentService, resolveRequiredAgentName } from '../core/ai-agent.service';
 import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, decodeCodeTemplates, toTemplateType } from '../../shared/configuration/configuration.model';
-import { createCompletionProviderFlowFunction, EditorMode } from '../../shared/mapping/stepper.model';
+import { createCompletionProviderFlowFunction, MappingPersistence } from '../../shared/mapping/stepper.model';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
-import { StepperViewModel, StepperViewModelFactory } from '../stepper/stepper-view.model';
+import { StepperViewModel, createStepperViewModel } from '../stepper/stepper-view.model';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { base64ToString, configurationToYaml, isConnectorSelectionEmpty, stringToBase64, expandC8YTemplate, expandExternalTemplate, hasEsmExport, hasMappingContentChanged, isCodeOrExtensionTransformation, MappingContentSnapshot, reduceSourceTemplate, splitTopicExcludingSeparator, stripTemplateMetadataTags, getTypeOf, yamlToConfiguration } from '../../shared/mapping/util';
 
@@ -617,7 +617,7 @@ export class MappingStepperService {
                         templateOptions: {
                             label: 'Filter execution mapping',
                             class: 'input-sm',
-                            disabled: stepperConfiguration.editorMode === EditorMode.READ_ONLY ||
+                            disabled: stepperConfiguration.readOnly ||
                                 !stepperConfiguration.allowDefiningSubstitutions ||
                                 (!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole),
                             placeholder: '$exists(c8y_TemperatureMeasurement)',
@@ -665,18 +665,18 @@ export class MappingStepperService {
         const templateForm = new FormGroup({
             extensionName: new FormControl({
                 value: mapping?.extension?.extensionName,
-                disabled: stepperConfiguration.editorMode === EditorMode.READ_ONLY || extensionSelectorsHidden
+                disabled: stepperConfiguration.readOnly || extensionSelectorsHidden
             }, Validators.required),
             eventName: new FormControl({
                 value: mapping?.extension?.eventName,
-                disabled: stepperConfiguration.editorMode === EditorMode.READ_ONLY || extensionSelectorsHidden
+                disabled: stepperConfiguration.readOnly || extensionSelectorsHidden
             }, Validators.required),
             extensionParameter: new FormControl({
                 value: configurationToYaml(mapping?.extension?.parameter),
-                disabled: stepperConfiguration.editorMode === EditorMode.READ_ONLY
+                disabled: stepperConfiguration.readOnly
             }),
             sampleTargetTemplatesButton: new FormControl({
-                value: !stepperConfiguration.showEditorSource || stepperConfiguration.editorMode === EditorMode.READ_ONLY,
+                value: !stepperConfiguration.showEditorSource || stepperConfiguration.readOnly,
                 disabled: undefined
             })
         });
@@ -752,7 +752,7 @@ export class MappingStepperService {
         callbacks: EditorSessionCallbacks,
         disableExtensionSelectorsWhenHidden = false
     ): Promise<EditorSessionResult> {
-        const stepperViewModel = StepperViewModelFactory.create(stepperConfiguration);
+        const stepperViewModel = createStepperViewModel(stepperConfiguration);
 
         const extensionEventItems$ = this.extensionEvents$.pipe(
             map((events: ExtensionEntry[]) =>
@@ -772,7 +772,7 @@ export class MappingStepperService {
             language: 'javascript',
             renderWhitespace: 'none',
             tabSize: 4,
-            readOnly: stepperConfiguration.editorMode === EditorMode.READ_ONLY
+            readOnly: !!stepperConfiguration.readOnly
         };
 
         const templateForm = this.buildTemplateForm(
@@ -869,7 +869,7 @@ export class MappingStepperService {
      */
     async commitMapping(request: CommitMappingRequest): Promise<CommitResult> {
         const { mapping, deploymentMapEntry, stepperConfiguration, forms } = request;
-        const editorMode = stepperConfiguration.editorMode;
+        const persistence = stepperConfiguration.persistence;
 
         // A mapping must be bound to at least one connector. The stepper also disables its save
         // button on this condition; the unified editor deliberately does not, so for it this is the
@@ -924,7 +924,7 @@ export class MappingStepperService {
             request.mappingCode,
             request.initialContentSnapshot,
             stepperConfiguration.allowTemplateExpansion,
-            editorMode
+            persistence
         );
         if ('error' in encoded) {
             return { status: 'blocked', blocker: CommitBlocker.ENCODING, message: encoded.error };
@@ -937,7 +937,7 @@ export class MappingStepperService {
         let mappingPersisted: boolean;
         let persisted: Mapping = mapping;
         try {
-            if (editorMode === EditorMode.UPDATE) {
+            if (persistence === 'draft') {
                 mappingPersisted = true;
                 if (contentChanged) {
                     // Edits are saved to the line's draft; the running configuration is unchanged
@@ -956,7 +956,7 @@ export class MappingStepperService {
             if (error instanceof MappingValidationError) {
                 return { status: 'rejected', error };
             }
-            const message = editorMode === EditorMode.UPDATE
+            const message = persistence === 'draft'
                 ? gettext(`Failed to save draft for ${mapping.name}: `) + error.message
                 : gettext(`Failed to create mapping ${mapping.name}: `) + error.message;
             this.alertService.danger(message);
@@ -967,7 +967,7 @@ export class MappingStepperService {
         // something to write: the backend PUT reconciles subscriptions across all connectors
         // live, so a redundant write is not free. See §4 of IMPLEMENTATION-PLAN-COMMIT-MAPPING.md
         // for why this is the editor's condition rather than the stepper parent's.
-        if (mappingPersisted && (deploymentChanged || editorMode !== EditorMode.UPDATE)) {
+        if (mappingPersisted && (deploymentChanged || persistence !== 'draft')) {
             try {
                 await this.mappingService.updateDefinedDeploymentMapEntry(deploymentMapEntry);
             } catch (error) {
@@ -990,11 +990,11 @@ export class MappingStepperService {
         mappingCode: string | undefined,
         initialContentSnapshot: MappingContentSnapshot | undefined,
         allowTemplateExpansion: boolean,
-        editorMode: EditorMode
+        persistence: MappingPersistence
     ): { mapping: Mapping; contentChanged: boolean } | { error: string } {
         // Determine what changed before the template-expansion/code-encoding below mutates
         // `mapping` in place.
-        const contentChanged = editorMode === EditorMode.UPDATE && initialContentSnapshot
+        const contentChanged = persistence === 'draft' && initialContentSnapshot
             ? hasMappingContentChanged(mapping, sourceTemplate, targetTemplate, mappingCode, initialContentSnapshot)
             : true; // CREATE / COPY always persist
 
@@ -1053,7 +1053,7 @@ export interface CommitMappingRequest {
     sourceTemplate: any;
     targetTemplate: any;
     mappingCode: string | undefined;
-    initialContentSnapshot: MappingContentSnapshot | undefined;
+    initialContentSnapshot?: MappingContentSnapshot;
     /**
      * The forms whose validity gates a commit. Omitted by the stepper, whose cdk-stepper already
      * enforces linear completion — passing none means those blockers cannot fire.
@@ -1070,11 +1070,12 @@ export interface CommitMappingRequest {
  * What an editor component hands its host so the host can commit: everything
  * {@link MappingStepperService.commitMapping} needs except the deployment, which the host owns.
  * Used by the stepper, whose save button lives in the child but whose persistence lives in the
- * grid parent.
+ * grid parent. It carries no `initialContentSnapshot`: the stepper only creates and copies
+ * mappings, which always persist; editing an existing mapping is the unified editor's job.
  */
 export type CommitEditorState = Pick<
     CommitMappingRequest,
-    'mapping' | 'stepperConfiguration' | 'sourceTemplate' | 'targetTemplate' | 'mappingCode' | 'initialContentSnapshot'
+    'mapping' | 'stepperConfiguration' | 'sourceTemplate' | 'targetTemplate' | 'mappingCode'
 >;
 
 /** The comparable form of a deployment's connector selection, so both editors detect a
@@ -1095,9 +1096,9 @@ export interface CommitSuccessAlert {
 export function commitSuccessMessage(
     result: Extract<CommitResult, { status: 'saved' }>,
     mappingName: string,
-    editorMode: EditorMode
+    persistence: MappingPersistence
 ): CommitSuccessAlert | undefined {
-    if (editorMode !== EditorMode.UPDATE) {
+    if (persistence !== 'draft') {
         return {
             text: gettext(`Mapping ${mappingName} created successfully`),
             timeout: ALERT_SUCCESS_TIMEOUT

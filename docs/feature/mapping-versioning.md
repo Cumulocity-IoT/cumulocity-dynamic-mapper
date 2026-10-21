@@ -281,10 +281,12 @@ The API client is `MappingService` in
 `activateVersion`). `activateVersion` is a thin wrapper over `changeActivationMapping`,
 i.e. the `ACTIVATE_MAPPING` operation.
 
-The editor is where D-8 actually happens: in `EditorMode.UPDATE`, **Save** calls
-`saveDraft` rather than `PUT /mapping/{id}`
-([`mapping-unified-editor.component.ts:576`](../../dynamic-mapper-ui/src/mapping/unified-editor/mapping-unified-editor.component.ts#L576)),
-and only when the content actually changed. The success alert tells the user the edit is
+The editor is where D-8 actually happens. Whether a mapping is active or not, the edit route
+configures the editor with `persistence: 'draft'`, and **Save** calls `saveDraft` rather than
+`PUT /mapping/{id}` (`MappingStepperService.commitMapping`), and only when the content actually
+changed. (`persistence: 'create'` is the stepper's — new and copied mappings are created, not
+drafted.) The configuration is also `readOnly` for deprecated `SUBSTITUTION_AS_CODE` mappings and
+for users without a manage role (`mappingEditResolver`). The success alert tells the user the edit is
 a draft and must be published + activated to take effect. The editor deliberately does
 **not** stamp `lastUpdate` itself, because that value is the optimistic-concurrency token
 that has to be echoed back unchanged.

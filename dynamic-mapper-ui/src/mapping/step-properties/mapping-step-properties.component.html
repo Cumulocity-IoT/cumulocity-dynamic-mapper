@@ -23,7 +23,7 @@
     <div class="col-lg-6 col-lg-offset-3">
       <h4 class="text-medium text-center">
         General settings for {{ MappingTypeLabels[mapping.mappingType] }}
-        @if (stepperConfiguration.editorMode === EditorMode.READ_ONLY) {
+        @if (stepperConfiguration.readOnly) {
           <span class="label label-primary">{{ 'Read
             Only'
           }}</span>
@@ -32,7 +32,7 @@
           <ng-template #popupReadOnlyHelp>
             <div [innerHtml]="readOnlyHelp"></div>
           </ng-template>
-          @if (stepperConfiguration.editorMode === EditorMode.READ_ONLY) {
+          @if (stepperConfiguration.readOnly) {
             <button type="button" placement="right"
             [popover]="popupReadOnlyHelp" triggers="focus" class="btn-help" aria-label="Help content"></button>
           }

@@ -22,12 +22,14 @@ import { Direction, StepperConfiguration, Substitution } from '../../shared/mapp
 import { ClassDefinition, ClassOrEnum, EnumDefinition } from './smart-function-api.model';
 import { SMART_FUNCTION_API } from './generated/smart-function-api.generated';
 
-export enum EditorMode {
-  CREATE = 'CREATE',
-  UPDATE = 'UPDATE',
-  READ_ONLY = 'READ_ONLY',
-  COPY = 'COPY'
-}
+/**
+ * How Save persists the mapping being edited.
+ * - `create`: the mapping does not exist yet (new or copied) — it is created, always, together
+ *   with its deployment.
+ * - `draft`: the mapping already exists — edits go to the line's draft (never to the running
+ *   configuration, active or not) and only when the content actually changed.
+ */
+export type MappingPersistence = 'create' | 'draft';
 
 /** The in-progress substitution being edited in the stepper/unified-editor's transformation step. */
 export interface SubstitutionModel extends Partial<Substitution> {

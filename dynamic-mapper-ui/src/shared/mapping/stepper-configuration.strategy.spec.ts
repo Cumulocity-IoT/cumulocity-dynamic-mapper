@@ -23,7 +23,6 @@ import {
   StepperConfigurationResolver
 } from './stepper-configuration.strategy';
 import { Direction, MappingType, StepperConfiguration, TransformationType } from './mapping.model';
-import { EditorMode } from './stepper.model';
 
 describe('StepperConfigurationResolver', () => {
   describe('resolve', () => {
@@ -39,7 +38,7 @@ describe('StepperConfigurationResolver', () => {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.DEFAULT,
         direction: Direction.INBOUND,
-        editorMode: EditorMode.CREATE,
+        persistence: 'create',
         substitutionsAsCode: false
       };
 
@@ -50,7 +49,7 @@ describe('StepperConfigurationResolver', () => {
       expect(result.allowTestSending).toBe(true);
       expect(result.allowTestTransformation).toBe(true);
       expect(result.direction).toBe(Direction.INBOUND);
-      expect(result.editorMode).toBe(EditorMode.CREATE);
+      expect(result.persistence).toBe('create');
     });
 
     it('should keep testing enabled for ANY_PAYLOAD with SMART_FUNCTION but hide the source editor', () => {
@@ -64,7 +63,7 @@ describe('StepperConfigurationResolver', () => {
         mappingType: MappingType.ANY_PAYLOAD,
         transformationType: TransformationType.SMART_FUNCTION,
         direction: Direction.INBOUND,
-        editorMode: EditorMode.UPDATE,
+        persistence: 'draft',
         substitutionsAsCode: false
       };
 
@@ -85,7 +84,7 @@ describe('StepperConfigurationResolver', () => {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.DEFAULT,
         direction: Direction.OUTBOUND,
-        editorMode: EditorMode.CREATE,
+        persistence: 'create',
         substitutionsAsCode: false
       };
 
@@ -106,7 +105,7 @@ describe('StepperConfigurationResolver', () => {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.SMART_FUNCTION,
         direction: Direction.INBOUND,
-        editorMode: EditorMode.CREATE,
+        persistence: 'create',
         substitutionsAsCode: true
       };
 
@@ -128,7 +127,7 @@ describe('StepperConfigurationResolver', () => {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.SMART_FUNCTION,
         direction: Direction.INBOUND,
-        editorMode: EditorMode.CREATE,
+        persistence: 'create',
         substitutionsAsCode: false
       };
 
@@ -152,7 +151,7 @@ describe('StepperConfigurationResolver', () => {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.EXTENSION_JAVA,
         direction: Direction.OUTBOUND,
-        editorMode: EditorMode.CREATE,
+        persistence: 'create',
         substitutionsAsCode: false
       };
 
@@ -177,7 +176,7 @@ describe('StepperConfigurationResolver', () => {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.EXTENSION_JAVA,
         direction: Direction.INBOUND,
-        editorMode: EditorMode.CREATE,
+        persistence: 'create',
         substitutionsAsCode: false
       };
 
@@ -199,7 +198,7 @@ describe('StepperConfigurationResolver', () => {
         mappingType: MappingType.EXTENSION_JAVA,
         transformationType: TransformationType.DEFAULT,
         direction: Direction.INBOUND,
-        editorMode: EditorMode.CREATE,
+        persistence: 'create',
         substitutionsAsCode: false
       };
 
@@ -224,7 +223,7 @@ describe('StepperConfigurationResolver', () => {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.SMART_FUNCTION,
         direction: Direction.INBOUND,
-        editorMode: EditorMode.CREATE,
+        persistence: 'create',
         substitutionsAsCode: true
       };
 
@@ -250,7 +249,7 @@ describe('StepperConfigurationResolver', () => {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.SMART_FUNCTION,
         direction: Direction.INBOUND,
-        editorMode: EditorMode.CREATE,
+        persistence: 'create',
         substitutionsAsCode: true
       };
 
@@ -268,7 +267,7 @@ describe('StepperConfigurationResolver', () => {
         mappingType: MappingType.PROTOBUF_INTERNAL,
         transformationType: TransformationType.DEFAULT,
         direction: Direction.INBOUND,
-        editorMode: EditorMode.CREATE,
+        persistence: 'create',
         substitutionsAsCode: false
       };
 
@@ -287,7 +286,7 @@ describe('StepperConfigurationResolver', () => {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.EXTENSION_JAVA,
         direction: Direction.OUTBOUND,
-        editorMode: EditorMode.CREATE,
+        persistence: 'create',
         substitutionsAsCode: false
       };
 
@@ -307,7 +306,7 @@ describe('StepperConfigurationResolver', () => {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.DEFAULT,
         direction: Direction.INBOUND,
-        editorMode: EditorMode.CREATE,
+        persistence: 'create',
         substitutionsAsCode: false
       };
 
@@ -322,7 +321,7 @@ describe('StepperConfigurationResolver', () => {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.DEFAULT,
         direction: Direction.OUTBOUND,
-        editorMode: EditorMode.CREATE,
+        persistence: 'create',
         substitutionsAsCode: false
       };
 
@@ -343,7 +342,7 @@ describe('StepperConfigurationResolver', () => {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.SMART_FUNCTION,
         direction: Direction.INBOUND,
-        editorMode: EditorMode.CREATE,
+        persistence: 'create',
         substitutionsAsCode: true
       };
 
@@ -381,7 +380,7 @@ describe('StepperConfigurationResolver', () => {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.DEFAULT,
         direction: Direction.OUTBOUND,
-        editorMode: EditorMode.CREATE,
+        persistence: 'create',
         substitutionsAsCode: false
       };
 
@@ -397,7 +396,7 @@ describe('StepperConfigurationResolver', () => {
         mappingType: MappingType.JSON,
         transformationType: TransformationType.SMART_FUNCTION,
         direction: Direction.INBOUND,
-        editorMode: EditorMode.CREATE,
+        persistence: 'create',
         substitutionsAsCode: true
       };
 

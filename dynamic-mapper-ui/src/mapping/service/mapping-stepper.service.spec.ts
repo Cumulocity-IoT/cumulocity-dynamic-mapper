@@ -34,7 +34,6 @@ import {
 import { MappingService } from '../core/mapping.service';
 import { ExtensionService } from '../../extension';
 import { AiAgentService } from '../core/ai-agent.service';
-import { EditorMode } from '../../shared/mapping/stepper.model';
 import {
   ALERT_ACTION_REQUIRED_TIMEOUT,
   ALERT_SUCCESS_TIMEOUT,
@@ -98,7 +97,7 @@ describe('MappingStepperService', () => {
 
   function makeStepperConfig(overrides: Partial<StepperConfiguration> = {}): StepperConfiguration {
     return {
-      editorMode: EditorMode.UPDATE,
+      persistence: 'draft',
       direction: Direction.INBOUND,
       showEditorSource: true,
       showEditorTarget: true,
@@ -662,7 +661,7 @@ describe('MappingStepperService', () => {
       mockSharedService.getFeatures.and.resolveTo({ userHasMappingAdminRole: false, userHasMappingCreateRole: false } as any);
       const result = await service.initializeEditorSession(makeMapping(), makeStepperConfig(), new Subject(), callbacks());
       expect(result.editorTemplatesReadOnly).toBe(true);
-      expect(result.editorOptions.readOnly).toBe(false); // editorOptions.readOnly tracks EditorMode.READ_ONLY, not roles
+      expect(result.editorOptions.readOnly).toBe(false); // editorOptions.readOnly tracks readOnly, not roles
     });
 
     it('builds a templateForm with the expected controls', async () => {
@@ -675,7 +674,7 @@ describe('MappingStepperService', () => {
 
     it('disables extensionName/eventName in READ_ONLY mode', async () => {
       const result = await service.initializeEditorSession(
-        makeMapping(), makeStepperConfig({ editorMode: EditorMode.READ_ONLY }), new Subject(), callbacks()
+        makeMapping(), makeStepperConfig({ persistence: 'draft', readOnly: true }), new Subject(), callbacks()
       );
       expect(result.templateForm.get('extensionName')?.disabled).toBe(true);
       expect(result.templateForm.get('eventName')?.disabled).toBe(true);
@@ -801,7 +800,7 @@ describe('MappingStepperService', () => {
     it('JSON-stringifies source/target templates when template expansion is disabled', () => {
       const mapping = makeMapping();
       const result = service.encodeMappingForCommit(
-        mapping, { a: 1 }, { b: 2 }, undefined, undefined, false, EditorMode.CREATE
+        mapping, { a: 1 }, { b: 2 }, undefined, undefined, false, 'create'
       );
       expect('error' in result).toBe(false);
       expect(mapping.sourceTemplate).toBe(JSON.stringify({ a: 1 }));
@@ -813,7 +812,7 @@ describe('MappingStepperService', () => {
       // reduceSourceTemplate deletes the expansion tokens at the TOP level of the template,
       // so the fixture has to put them there — nested occurrences are left alone by design.
       service.encodeMappingForCommit(
-        mapping, { a: 1, _TOPIC_LEVEL_: ['x'], _IDENTITY_: {} }, { b: 2 }, undefined, undefined, true, EditorMode.CREATE
+        mapping, { a: 1, _TOPIC_LEVEL_: ['x'], _IDENTITY_: {} }, { b: 2 }, undefined, undefined, true, 'create'
       );
       expect(mapping.sourceTemplate).toBe(JSON.stringify({ a: 1 }));
       expect(mapping.targetTemplate).toBe(JSON.stringify({ b: 2 }));
@@ -822,7 +821,7 @@ describe('MappingStepperService', () => {
     it('encodes mappingCode to base64 (stripped of metadata tags) when provided', () => {
       const mapping = makeMapping();
       const result = service.encodeMappingForCommit(
-        mapping, {}, {}, 'function onMessage() {}', undefined, false, EditorMode.CREATE
+        mapping, {}, {}, 'function onMessage() {}', undefined, false, 'create'
       );
       expect('error' in result).toBe(false);
       expect(mapping.code).toBeTruthy();
@@ -831,13 +830,13 @@ describe('MappingStepperService', () => {
 
     it('leaves mapping.code untouched when no mappingCode is provided', () => {
       const mapping = makeMapping({ code: undefined });
-      service.encodeMappingForCommit(mapping, {}, {}, undefined, undefined, false, EditorMode.CREATE);
+      service.encodeMappingForCommit(mapping, {}, {}, undefined, undefined, false, 'create');
       expect(mapping.code).toBeUndefined();
     });
 
     it('always reports contentChanged=true for CREATE (no snapshot needed)', () => {
       const mapping = makeMapping();
-      const result = service.encodeMappingForCommit(mapping, {}, {}, undefined, undefined, false, EditorMode.CREATE);
+      const result = service.encodeMappingForCommit(mapping, {}, {}, undefined, undefined, false, 'create');
       expect('error' in result).toBe(false);
       expect((result as { contentChanged: boolean }).contentChanged).toBe(true);
     });
@@ -845,7 +844,7 @@ describe('MappingStepperService', () => {
     it('detects no content change in UPDATE mode when nothing differs from the snapshot', () => {
       const mapping = makeMapping();
       const snapshot = captureMappingContentSnapshot(mapping, {}, {}, undefined);
-      const result = service.encodeMappingForCommit(mapping, {}, {}, undefined, snapshot, false, EditorMode.UPDATE);
+      const result = service.encodeMappingForCommit(mapping, {}, {}, undefined, snapshot, false, 'draft');
       expect('error' in result).toBe(false);
       expect((result as { contentChanged: boolean }).contentChanged).toBe(false);
     });
@@ -853,28 +852,28 @@ describe('MappingStepperService', () => {
     it('detects a content change in UPDATE mode when the source template differs from the snapshot', () => {
       const mapping = makeMapping();
       const snapshot = captureMappingContentSnapshot(mapping, { original: true }, {}, undefined);
-      const result = service.encodeMappingForCommit(mapping, { changed: true }, {}, undefined, snapshot, false, EditorMode.UPDATE);
+      const result = service.encodeMappingForCommit(mapping, { changed: true }, {}, undefined, snapshot, false, 'draft');
       expect('error' in result).toBe(false);
       expect((result as { contentChanged: boolean }).contentChanged).toBe(true);
     });
 
     it('treats UPDATE mode with no snapshot as always changed (defensive fallback)', () => {
       const mapping = makeMapping();
-      const result = service.encodeMappingForCommit(mapping, {}, {}, undefined, undefined, false, EditorMode.UPDATE);
+      const result = service.encodeMappingForCommit(mapping, {}, {}, undefined, undefined, false, 'draft');
       expect('error' in result).toBe(false);
       expect((result as { contentChanged: boolean }).contentChanged).toBe(true);
     });
 
     it('returns an error for a substitutions-as-code mapping with no code', () => {
       const mapping = makeMapping({ transformationType: TransformationType.SMART_FUNCTION });
-      const result = service.encodeMappingForCommit(mapping, {}, {}, undefined, undefined, false, EditorMode.CREATE);
+      const result = service.encodeMappingForCommit(mapping, {}, {}, undefined, undefined, false, 'create');
       expect('error' in result).toBe(true);
       expect((result as { error: string }).error).toContain('Internal error');
     });
 
     it('succeeds for a substitutions-as-code mapping that does have code', () => {
       const mapping = makeMapping({ transformationType: TransformationType.SMART_FUNCTION });
-      const result = service.encodeMappingForCommit(mapping, {}, {}, 'function onMessage() {}', undefined, false, EditorMode.CREATE);
+      const result = service.encodeMappingForCommit(mapping, {}, {}, 'function onMessage() {}', undefined, false, 'create');
       expect('error' in result).toBe(false);
     });
   });
@@ -1026,7 +1025,7 @@ describe('MappingStepperService', () => {
         const mapping = makeMapping();
         const result = await service.commitMapping(makeRequest({
           mapping,
-          stepperConfiguration: makeStepperConfig({ editorMode: EditorMode.CREATE })
+          stepperConfiguration: makeStepperConfig({ persistence: 'create' })
         }));
 
         expect(mockMappingService.createMapping).toHaveBeenCalledWith(mapping);
@@ -1035,7 +1034,7 @@ describe('MappingStepperService', () => {
       });
 
       it('creates the mapping on COPY', async () => {
-        await service.commitMapping(makeRequest({ stepperConfiguration: makeStepperConfig({ editorMode: EditorMode.COPY }) }));
+        await service.commitMapping(makeRequest({ stepperConfiguration: makeStepperConfig({ persistence: 'create', isCopy: true }) }));
 
         expect(mockMappingService.createMapping).toHaveBeenCalled();
       });
@@ -1082,7 +1081,7 @@ describe('MappingStepperService', () => {
       });
 
       it('writes the deployment on CREATE even though the connectors are unchanged', async () => {
-        await service.commitMapping(makeRequest({ stepperConfiguration: makeStepperConfig({ editorMode: EditorMode.CREATE }) }));
+        await service.commitMapping(makeRequest({ stepperConfiguration: makeStepperConfig({ persistence: 'create' }) }));
 
         expect(mockMappingService.updateDefinedDeploymentMapEntry).toHaveBeenCalled();
       });
@@ -1100,7 +1099,7 @@ describe('MappingStepperService', () => {
         mockMappingService.createMapping.and.rejectWith(new Error('boom'));
 
         const result = await service.commitMapping(makeRequest({
-          stepperConfiguration: makeStepperConfig({ editorMode: EditorMode.CREATE })
+          stepperConfiguration: makeStepperConfig({ persistence: 'create' })
         }));
 
         expect(result.status).toBe('failed');
@@ -1142,7 +1141,7 @@ describe('MappingStepperService', () => {
         mockMappingService.createMapping.and.rejectWith(error);
 
         const result = await service.commitMapping(makeRequest({
-          stepperConfiguration: makeStepperConfig({ editorMode: EditorMode.CREATE })
+          stepperConfiguration: makeStepperConfig({ persistence: 'create' })
         }));
 
         expect(result).toEqual({ status: 'rejected', error });
@@ -1165,7 +1164,7 @@ describe('MappingStepperService', () => {
       it('still refreshes the grid after a failed save', async () => {
         mockMappingService.createMapping.and.rejectWith(new Error('boom'));
 
-        await service.commitMapping(makeRequest({ stepperConfiguration: makeStepperConfig({ editorMode: EditorMode.CREATE }) }));
+        await service.commitMapping(makeRequest({ stepperConfiguration: makeStepperConfig({ persistence: 'create' }) }));
 
         expect(mockMappingService.refreshMappings).toHaveBeenCalled();
       });
@@ -1193,38 +1192,38 @@ describe('MappingStepperService', () => {
       ({ status: 'saved', contentChanged, deploymentChanged }) as Extract<CommitResult, { status: 'saved' }>;
 
     it('announces a creation for every non-UPDATE mode', () => {
-      expect(commitSuccessMessage(saved(true, true), 'M', EditorMode.CREATE)?.text).toContain('created successfully');
-      expect(commitSuccessMessage(saved(true, true), 'M', EditorMode.COPY)?.text).toContain('created successfully');
+      expect(commitSuccessMessage(saved(true, true), 'M', 'create')?.text).toContain('created successfully');
+      expect(commitSuccessMessage(saved(true, true), 'M', 'create')?.text).toContain('created successfully');
     });
 
     it('distinguishes the three UPDATE outcomes', () => {
-      expect(commitSuccessMessage(saved(true, true), 'M', EditorMode.UPDATE)?.text)
+      expect(commitSuccessMessage(saved(true, true), 'M', 'draft')?.text)
         .toContain('Saved draft and connector assignments');
-      expect(commitSuccessMessage(saved(true, false), 'M', EditorMode.UPDATE)?.text)
+      expect(commitSuccessMessage(saved(true, false), 'M', 'draft')?.text)
         .toContain('Saved draft for M');
-      expect(commitSuccessMessage(saved(false, true), 'M', EditorMode.UPDATE)?.text)
+      expect(commitSuccessMessage(saved(false, true), 'M', 'draft')?.text)
         .toContain('Connector assignments for M saved');
     });
 
     it('keeps the draft messages up longer, because they ask for a follow-up action', () => {
       // Cumulocity auto-dismisses a detail-less success alert after 3s; these two tell the user
       // to publish and activate afterwards, so they must outlast that.
-      expect(commitSuccessMessage(saved(true, true), 'M', EditorMode.UPDATE)?.timeout)
+      expect(commitSuccessMessage(saved(true, true), 'M', 'draft')?.timeout)
         .toBe(ALERT_ACTION_REQUIRED_TIMEOUT);
-      expect(commitSuccessMessage(saved(true, false), 'M', EditorMode.UPDATE)?.timeout)
+      expect(commitSuccessMessage(saved(true, false), 'M', 'draft')?.timeout)
         .toBe(ALERT_ACTION_REQUIRED_TIMEOUT);
       expect(ALERT_ACTION_REQUIRED_TIMEOUT).toBeGreaterThan(3000);
     });
 
     it('uses the ordinary success dwell time for plain confirmations', () => {
-      expect(commitSuccessMessage(saved(true, true), 'M', EditorMode.CREATE)?.timeout)
+      expect(commitSuccessMessage(saved(true, true), 'M', 'create')?.timeout)
         .toBe(ALERT_SUCCESS_TIMEOUT);
-      expect(commitSuccessMessage(saved(false, true), 'M', EditorMode.UPDATE)?.timeout)
+      expect(commitSuccessMessage(saved(false, true), 'M', 'draft')?.timeout)
         .toBe(ALERT_SUCCESS_TIMEOUT);
     });
 
     it('says nothing when an UPDATE changed nothing', () => {
-      expect(commitSuccessMessage(saved(false, false), 'M', EditorMode.UPDATE)).toBeUndefined();
+      expect(commitSuccessMessage(saved(false, false), 'M', 'draft')).toBeUndefined();
     });
   });
 

@@ -28,7 +28,6 @@ import { MappingStepTestingComponent } from './mapping-step-testing.component';
 import { TestingService } from '../core/testing.service';
 import { Direction, Mapping, MappingType, Qos, StepperConfiguration, TransformationType } from '../../shared';
 import { DynamicMapperRequest, TestContext, TestResult } from '../../shared/mapping/processor/processor.model';
-import { EditorMode } from '../../shared/mapping/stepper.model';
 
 /**
  * Unit tests for the "device does not exist" confirmation in {@link MappingStepTestingComponent}.
@@ -113,7 +112,7 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
     fixture = TestBed.createComponent(MappingStepTestingComponent);
     component = fixture.componentInstance;
     component.mapping = buildMapping();
-    component.stepperConfiguration = { editorMode: EditorMode.CREATE, direction: Direction.INBOUND } as StepperConfiguration;
+    component.stepperConfiguration = { persistence: 'create', direction: Direction.INBOUND } as StepperConfiguration;
     component.updateTestingTemplate = new ReplaySubject<Mapping>(1);
     await component.ngOnInit();
   });

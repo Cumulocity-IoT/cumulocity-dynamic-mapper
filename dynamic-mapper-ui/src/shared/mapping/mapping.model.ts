@@ -19,12 +19,12 @@
  */
 
 import { MappingTokens } from './processor/processor.model';
-// `import type`, deliberately: EditorMode is only ever used in type position here, while
+// `import type`, deliberately: MappingPersistence is only ever used in type position here, while
 // stepper.model.ts imports Direction from this file as a *value*. A value import in both
 // directions is a runtime cycle — and because this module builds objects with computed keys like
 // `[Direction.INBOUND]` at module scope, whichever file loads second can see the enum as
 // undefined. `import type` is erased at compile time, which breaks the cycle at runtime.
-import type { EditorMode } from './stepper.model';
+import type { MappingPersistence } from './stepper.model';
 import { ConnectorConfiguration } from '../connector-configuration/connector.model';
 
 /**
@@ -368,7 +368,13 @@ export interface StepperConfiguration {
   showProcessorExtensionsInternal?: boolean;
   showCodeEditor?: boolean;
   showFilterExpression?: boolean;
-  editorMode?: EditorMode;
+  /** How Save persists the mapping; see {@link MappingPersistence}. */
+  persistence?: MappingPersistence;
+  /** Disables every editing control (deprecated mappings, users without a manage role). */
+  readOnly?: boolean;
+  /** The mapping being created is a copy of an existing one, so its templates are kept rather
+   *  than replaced by the generic defaults. */
+  isCopy?: boolean;
   allowNoDefinedIdentifier?: boolean;
   allowDefiningSubstitutions?: boolean;
   allowTestTransformation?: boolean;

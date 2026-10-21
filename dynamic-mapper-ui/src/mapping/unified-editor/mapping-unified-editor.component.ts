@@ -19,37 +19,27 @@
  */
 
 import {
-  AfterViewInit,
-  ChangeDetectorRef,
   Component,
   inject,
-  OnDestroy,
+  isDevMode,
   OnInit,
   ViewChild,
   ViewEncapsulation
 } from '@angular/core';
-import { FormGroup } from '@angular/forms';
 import { EditorComponent } from '@c8y/ngx-components/editor';
-import { Alert, AlertService, BottomDrawerService, CoreModule, TabComponent, TabsOutletComponent } from '@c8y/ngx-components';
+import { CoreModule, TabComponent, TabsOutletComponent } from '@c8y/ngx-components';
 import { GlobalContextService } from '@c8y/ngx-components/global-context';
-import { FormlyFieldConfig } from '@ngx-formly/core';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { ActivatedRoute, Router } from '@angular/router';
-import { firstValueFrom, Observable, ReplaySubject, Subject, takeUntil } from 'rxjs';
-import { Mode } from 'vanilla-jsoneditor';
+import { firstValueFrom } from 'rxjs';
 import {
   DeploymentMapEntry,
-  Direction,
-  Extension,
   Mapping,
   StepperConfiguration,
-  Feature,
-  isSubstitutionsAsCode,
   TransformationType,
   MappingTypeLabels,
   MappingType
 } from '../../shared';
-import { EditorMode } from '../../shared/mapping/stepper.model';
 import { MappingService } from '../core/mapping.service';
 import { SubscriptionService } from '../core/subscription.service';
 import { MappingEditData } from '../core/mapping-edit.resolver';
@@ -57,24 +47,17 @@ import {
   base64ToString,
   buildTestMapping,
   captureMappingContentSnapshot,
-  checkTransformationType,
   describeMappingContentChanges,
   hasMappingContentChanged,
   isConnectorSelectionEmpty,
   MappingContentSnapshot,
-  stripTemplateMetadataTags,
-  updateTemplatesInEditors,
-  validateProtectedFields
+  stripTemplateMetadataTags
 } from '../../shared/mapping/util';
-import { CodeTemplate, CodeTemplateMap, ServiceConfiguration, TemplateType, tryToTemplateType } from '../../shared/configuration/configuration.model';
-import { ManageTemplateComponent } from '../../shared/component/code-template/manage-template.component';
-import { AiPromptComponent } from '../prompt/ai-prompt.component';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { ConfirmationModalComponent } from '../../shared';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { ConfirmsUnsavedChanges } from '../core/unsaved-changes.guard';
 import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
-import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { MappingStepTestingComponent } from '../step-testing/mapping-step-testing.component';
 import {
   CommitBlocker,
@@ -89,7 +72,8 @@ import { MappingConnectorComponent } from '../step-connector/mapping-connector.c
 import { MappingSubstitutionStepComponent } from '../step-transformation/mapping-substitution-step.component';
 import { MappingTemplateStepComponent } from '../step-template/mapping-template-step.component';
 import { PopoverModule } from 'ngx-bootstrap/popover';
-import { StepperViewModel } from '../stepper/stepper-view.model';
+import { MappingEditorBase } from '../editor-base/mapping-editor.base';
+import { MappingExtensionSelectorComponent } from '../editor-base/mapping-extension-selector.component';
 
 // Tab index constants
 const TAB_CONNECTOR = 0;
@@ -129,16 +113,14 @@ const TAB_FOR_BLOCKER: Partial<Record<CommitBlocker, number>> = {
     MappingConnectorComponent,
     MappingSubstitutionStepComponent,
     MappingTemplateStepComponent,
-    MappingStepTestingComponent
+    MappingStepTestingComponent,
+    MappingExtensionSelectorComponent
   ]
 })
-export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnDestroy, ConfirmsUnsavedChanges {
+export class MappingUnifiedEditorComponent extends MappingEditorBase implements OnInit, ConfirmsUnsavedChanges {
   mapping!: Mapping;
   stepperConfiguration!: StepperConfiguration;
   deploymentMapEntry!: DeploymentMapEntry;
-
-  // View model with computed properties for template simplification
-  stepperViewModel!: StepperViewModel;
 
   @ViewChild('templateStep', { static: false }) templateStepRef!: MappingTemplateStepComponent;
   @ViewChild('mappingTestingStep', { static: false }) mappingTestingStep!: MappingStepTestingComponent;
@@ -146,24 +128,13 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   // Needed to select the substitution a validation failure points at.
   @ViewChild('transformationStep', { static: false }) transformationStepRef!: MappingSubstitutionStepComponent;
 
-  private readonly cdr = inject(ChangeDetectorRef);
-  private readonly bsModalService = inject(BsModalService);
-  private readonly alertService = inject(AlertService);
-  private readonly bottomDrawerService = inject(BottomDrawerService);
-  private readonly stepperService = inject(MappingStepperService);
-  private readonly substitutionService = inject(SubstitutionManagementService);
   private readonly mappingService = inject(MappingService);
   private readonly subscriptionService = inject(SubscriptionService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly globalContextService = inject(GlobalContextService);
 
-  readonly checkTransformationType = checkTransformationType;
-  readonly validateProtectedFields = validateProtectedFields;
   readonly MappingTypeLabels = MappingTypeLabels;
-  readonly Direction = Direction;
-  readonly TransformationType = TransformationType;
-  readonly EditorMode = EditorMode;
 
   // Exposed so the template can reference named tabs instead of magic numbers
   readonly TAB_CONNECTOR = TAB_CONNECTOR;
@@ -172,88 +143,14 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   readonly TAB_DEFINE_TRANSFORMATION = TAB_DEFINE_TRANSFORMATION;
   readonly TAB_TEST_MAPPING = TAB_TEST_MAPPING;
 
-  updateTestingTemplate = new ReplaySubject<Mapping>(1);
-  schemaSource: any;
-  schemaTarget: any;
-
-  templateForm!: FormGroup;
-  filterFormly = new FormGroup({});
-  filterFormlyFields!: FormlyFieldConfig[];
-  propertyFormly = new FormGroup({});
-  isGenerateSubstitutionOpen = false;
-
-  codeTemplateDecoded?: CodeTemplate;
-  codeTemplatesDecoded = new Map<string, CodeTemplate>();
-  codeTemplates?: CodeTemplateMap;
-  codeTemplateEntries: { key: string; name: string; type: TemplateType }[] = [];
-  mappingCode?: string;
-  templateId?: TemplateType;
-
-  sourceTemplate?: any;
-  sourceSystem!: string;
-  targetTemplate?: any;
-  targetSystem!: string;
-  aiAgentDeployed = false;
-  aiCapabilitiesDisabled = false;
-  aiAgent: AgentObjectDefinition | AgentTextDefinition | null = null;
-
-  // Use service observables
-  get countDeviceIdentifiers$() { return this.stepperService.countDeviceIdentifiers$; }
-  get isSubstitutionValid$() { return this.stepperService.isSubstitutionValid$; }
-  get isContentChangeValid$() { return this.stepperService.isContentChangeValid$; }
-  get extensionEvents$() { return this.stepperService.extensionEvents$; }
-  get isButtonDisabled$() { return this.stepperService.isButtonDisabled$; }
-  get sourceCustomMessage$() { return this.stepperService.sourceCustomMessage$; }
-  get targetCustomMessage$() { return this.stepperService.targetCustomMessage$; }
-
-  // Cached properties for c8y-select components
-  extensionItems: string[] = [];
-  extensionEventItems$: Observable<{ label: string; value: string }[]>;
-  /** True when the selected extension event has a configuration block defined */
-  hasExtensionParameter = false;
-  codeTemplateItems: Array<{ label: string, value: string }> = [];
-
-  templatesInitialized = false;
-  extensions = new Map<string, Extension>();
-  editorOptions?: EditorComponent['editorOptions'];
   currentStepIndex = TAB_CONNECTOR;
   activeTabIndex = TAB_CONNECTOR;
 
-  feature!: Feature;
-  serviceConfiguration!: ServiceConfiguration;
-
-  editorOptionsSourceTemplate = {
-    mode: Mode.tree,
-    removeModes: ['table'],
-    mainMenuBar: true,
-    navigationBar: false,
-    statusBar: false,
-    readOnly: false,
-    name: 'message'
-  };
-
-  editorOptionsTargetTemplate = {
-    mode: Mode.tree,
-    removeModes: ['table'],
-    mainMenuBar: true,
-    navigationBar: false,
-    statusBar: true,
-    readOnly: false
-  };
-
-  targetTemplateHelp = 'The template contains the dummy field <code>_TOPIC_LEVEL_</code> for outbound to map device identifiers.';
-  codeEditorHelp!: string;
-  codeEditorLabel!: string;
-
-  private readonly destroy$ = new Subject<void>();
+  protected readonly substitutionStepIndex = TAB_DEFINE_TRANSFORMATION;
 
   // Snapshots for change detection — set once at load time
   private initialContentSnapshot: MappingContentSnapshot = { mappingJson: '', sourceTemplateJson: '', targetTemplateJson: '', mappingCode: '' };
   private initialDeploymentConnectors = '';
-
-  private updateExtensionItems(): void {
-    this.extensionItems = this.stepperService.computeExtensionItems(this.extensions);
-  }
 
   async ngOnInit(): Promise<void> {
     // Hide auto-refresh button – this is an editor page, not a live-data view
@@ -288,39 +185,13 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       // disableExtensionSelectorsWhenHidden defaults to false — unified editor's current behavior
     );
 
-    this.stepperViewModel = init.stepperViewModel;
-    this.extensionEventItems$ = init.extensionEventItems$;
-    this.targetSystem = init.targetSystem;
-    this.sourceSystem = init.sourceSystem;
-    this.editorOptions = init.editorOptions;
-    this.templateForm = init.templateForm;
-    if (init.editorTemplatesReadOnly) {
-      this.editorOptionsSourceTemplate.readOnly = true;
-      this.editorOptionsTargetTemplate.readOnly = true;
-    }
-    this.feature = init.feature;
-    this.serviceConfiguration = init.serviceConfiguration;
-    this.aiAgent = init.aiAgent;
-    this.aiAgentDeployed = init.aiAgentDeployed;
-    this.aiCapabilitiesDisabled = init.aiCapabilitiesDisabled;
-    this.filterFormlyFields = init.filterFormlyFields;
-    this.codeTemplates = init.codeTemplates;
-    this.codeTemplatesDecoded = init.codeTemplatesDecoded;
-    this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.templateId);
-    this.codeTemplateEntries = init.codeTemplateEntries;
-    this.codeTemplateItems = init.codeTemplateItems;
-    this.codeEditorHelp = init.codeEditorHelp;
-    this.codeEditorLabel = init.codeEditorLabel;
+    this.applyEditorSession(init);
 
     // For the unified editor, expand existing templates upfront since mapping is fully defined
     await this.initializeTemplates();
 
     this.schemaSource = init.schemaSource;
     this.schemaTarget = init.schemaTarget;
-  }
-
-  private patchExtensionFormValues(): void {
-    this.stepperService.patchExtensionFormValues(this.templateForm, this.mapping, this.cdr);
   }
 
   private async initializeTemplates(): Promise<void> {
@@ -359,6 +230,8 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
 
     // Re-patch form values for extension selects if extension is selected
     if (this.mapping?.extension?.extensionName) {
+      // Not left to handleGeneralSettingsTab(): the editor can open on a tab that never runs it.
+      if (this.mapping.extension.parameter) this.hasExtensionParameter = true;
       this.stepperService.selectExtensionName(
         this.mapping.extension.extensionName,
         this.extensions,
@@ -368,27 +241,12 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     }
 
     // Validate substitutions with initial tab index
-    this.stepperService.refreshSubstitutionValidity(
-      this.mapping,
-      this.stepperConfiguration,
-      this.currentStepIndex < TAB_DEFINE_TRANSFORMATION
-    );
+    this.refreshSubstitutionValidity();
   }
 
-  ngAfterViewInit(): void {
-    this.registerCompletionProvider();
-  }
-
-  ngOnDestroy(): void {
+  override ngOnDestroy(): void {
     this.globalContextService.unregister('mapping-unified-editor');
-    this.stepperService.cleanup();
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
-  /** Also bound directly to the Monaco editor's `(editorInit)` in the template — see mapping-unified-editor.component.html. */
-  registerCompletionProvider(): Promise<void> {
-    return this.stepperService.registerCompletionProvider(this.mapping.direction);
+    super.ngOnDestroy();
   }
 
   /**
@@ -411,19 +269,10 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
    * Handles tab selection. Syncs templates when leaving the Templates tab,
    * and triggers appropriate handlers for the newly selected tab.
    */
-  // Serializes tab transitions: onTabSelected() is async and does real awaited work per tab, but
-  // nothing prevents the user from clicking a different tab again before the previous click's
-  // work has settled — arguably more likely here than in the linear stepper, since a tab UI
-  // invites fast back-and-forth clicking. Chaining through this queue makes each transition wait
-  // for the previous one's async work to fully finish before its own handler starts, so two
-  // concurrent handlers can't race on shared instance state (this.extensions, this.templateForm, ...).
-  private tabTransitionQueue: Promise<void> = Promise.resolve();
-
+  // Serialized (see enqueueTransition): onTabSelected() does real awaited work per tab, and a tab UI
+  // invites fast back-and-forth clicking — arguably more than the linear stepper does.
   async onTabSelected(newIndex: number): Promise<void> {
-    this.tabTransitionQueue = this.tabTransitionQueue
-      .catch(() => { /* don't let a prior transition's rejection break the chain */ })
-      .then(() => this.handleTabSelected(newIndex));
-    return this.tabTransitionQueue;
+    return this.enqueueTransition(() => this.handleTabSelected(newIndex));
   }
 
   private async handleTabSelected(newIndex: number): Promise<void> {
@@ -435,11 +284,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     this.activeTabIndex = newIndex;
     this.currentStepIndex = newIndex;
 
-    this.stepperService.refreshSubstitutionValidity(
-      this.mapping,
-      this.stepperConfiguration,
-      this.currentStepIndex < TAB_DEFINE_TRANSFORMATION
-    );
+    this.refreshSubstitutionValidity();
 
     switch (newIndex) {
       case TAB_GENERAL_SETTINGS:
@@ -458,26 +303,13 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   }
 
   private async handleGeneralSettingsTab(): Promise<void> {
-    this.extensions = await this.stepperService.loadExtensions(this.mapping);
-    this.updateExtensionItems();
-
-    if (this.mapping?.extension?.extensionName) {
-      // Guard: the extension may no longer be loaded on the tenant (removed/renamed).
-      if (!this.extensions.get(this.mapping.extension.extensionName)) {
-        const msg = `The extension ${this.mapping.extension.extensionName} with event ${this.mapping.extension.eventName} is not loaded...`;
-        this.raiseAlert({ type: 'warning', text: msg });
-        return;
-      }
-      this.stepperService.selectExtensionName(
-        this.mapping.extension.extensionName,
-        this.extensions,
-        this.mapping
-      );
-      // Show config textarea if the mapping already has configuration
-      if (this.mapping.extension.parameter) {
-        this.hasExtensionParameter = true;
-      }
-      this.patchExtensionFormValues();
+    this.isLoadingExtensions = true;
+    try {
+      this.extensions = await this.stepperService.loadExtensions(this.mapping);
+      this.updateExtensionItems();
+      this.restoreExtensionSelection(true);
+    } finally {
+      this.isLoadingExtensions = false;
     }
   }
 
@@ -490,43 +322,18 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     // updated at save time, so this would clobber any in-progress code edits made
     // on the Transformation tab. Seeding already happened once in initializeTemplates().
 
-    if (this.mapping?.extension?.extensionName && this.extensions?.get(this.mapping.extension.extensionName)) {
-      this.stepperService.selectExtensionName(
-        this.mapping.extension.extensionName,
-        this.extensions,
-        this.mapping
-      );
-      this.patchExtensionFormValues();
-    }
+    this.restoreExtensionSelection();
   }
 
   private handleDefineSubstitutionsTab(): void {
     this.updateTemplatesInEditors();
-    this.stepperService.refreshSubstitutionValidity(
-      this.mapping,
-      this.stepperConfiguration,
-      this.currentStepIndex < TAB_DEFINE_TRANSFORMATION
-    );
+    this.refreshSubstitutionValidity();
 
     this.updateTestingTemplate.next(buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false));
   }
 
   private handleTestMappingTab(): void {
     this.updateTestingTemplate.next(buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, true));
-  }
-
-  private updateTemplatesInEditors(): void {
-    const result = updateTemplatesInEditors(this.templateStepRef, this.sourceTemplate, this.targetTemplate);
-    this.sourceTemplate = result.sourceTemplate;
-    this.targetTemplate = result.targetTemplate;
-  }
-
-  onTestingSourceTemplateChanged(template: any): void {
-    this.sourceTemplate = template;
-  }
-
-  raiseAlert(alert: Alert): void {
-    this.stepperService.raiseAlert(alert);
   }
 
   async onCommitButton(): Promise<void> {
@@ -555,7 +362,9 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     if (result.status === 'blocked') {
       if (result.message) this.raiseAlert({ type: 'warning', text: result.message });
       const tab = TAB_FOR_BLOCKER[result.blocker];
-      if (tab !== undefined) this.activeTabIndex = tab;
+      // Through the normal transition (not a bare activeTabIndex assignment) so currentStepIndex
+      // and the per-tab setup stay consistent — same reasoning as showValidationIssues().
+      if (tab !== undefined) await this.onTabSelected(tab);
       return;
     }
 
@@ -570,7 +379,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       return; // the alert has already been raised
     }
 
-    const alert = commitSuccessMessage(result, this.mapping.name, this.stepperConfiguration.editorMode);
+    const alert = commitSuccessMessage(result, this.mapping.name, this.stepperConfiguration.persistence);
     // add() rather than success(): success() leaves the timeout unset, and Cumulocity then
     // auto-dismisses a detail-less success alert after 3s — too short to read an instruction.
     if (alert) this.alertService.add({ text: alert.text, type: 'success', timeout: alert.timeout });
@@ -582,7 +391,14 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     // Shared with the stepper's commit path (mapping.component.ts::onCommitMapping) so both
     // editors apply the same post-save check — an OUTBOUND mapping with no device subscribed
     // to receive it otherwise silently does nothing once activated.
-    await this.subscriptionService.validateSubscriptionOutbound(this.stepperConfiguration.direction);
+    // It is advisory and the mapping is already saved, so a failure must not strand the user in
+    // an editor whose state was just rebaselined.
+    try {
+      await this.subscriptionService.validateSubscriptionOutbound(this.stepperConfiguration.direction);
+    } catch (error) {
+      console.error('Post-save subscription check failed:', error);
+      this.alertService.warning(gettext('The mapping was saved, but checking the device subscriptions failed.'));
+    }
 
     this.navigateToGrid();
   }
@@ -629,7 +445,7 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
    * since the last tab switch — which is exactly the work most worth protecting.
    */
   private hasUnsavedChanges(): boolean {
-    if (this.stepperConfiguration.editorMode === EditorMode.READ_ONLY) return false;
+    if (this.stepperConfiguration.readOnly) return false;
 
     this.updateTemplatesInEditors();
     const contentChanged = hasMappingContentChanged(
@@ -640,8 +456,8 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
       this.initialContentSnapshot
     );
     const connectorsChanged = snapshotConnectors(this.deploymentMapEntry) !== this.initialDeploymentConnectors;
-    if (contentChanged || connectorsChanged) {
-      // Says what the prompt is about, so an unexpected "unsaved changes" can be traced to its cause.
+    if (isDevMode() && (contentChanged || connectorsChanged)) {
+      // Dev builds only. Says what the prompt is about, so an unexpected "unsaved changes" can be traced to its cause.
       console.info('[mapping editor] unsaved changes:', [
         ...describeMappingContentChanges(
           this.mapping,
@@ -679,95 +495,9 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
   }
 
   private navigateToGrid(): void {
-    const gridUrl = this.router.url.replace(/\/edit\/[^\/]+$/, '');
+    // Drop any query string / fragment first, or the end-anchored regex below never matches.
+    const gridUrl = this.router.url.split(/[?#]/)[0].replace(/\/edit\/[^\/]+$/, '');
     this.router.navigateByUrl(gridUrl);
-  }
-
-  async onSampleTargetTemplatesButton(): Promise<void> {
-    this.targetTemplate = this.stepperService.computeSampleTargetTemplate(this.mapping, this.stepperConfiguration);
-    this.templateStepRef?.editorTargetStepTemplate?.set(this.targetTemplate);
-  }
-
-  onSelectExtensionName(extensionName: string): void {
-    this.stepperService.applyExtensionNameSelection(extensionName, this.mapping, this.extensions);
-  }
-
-  onSelectExtensionEvent(extensionEvent: string): void {
-    const hasParameter = this.stepperService.applyExtensionEventSelection(
-      extensionEvent, this.mapping, this.extensions, this.templateForm
-    );
-    if (hasParameter !== undefined) {
-      this.hasExtensionParameter = hasParameter;
-    }
-  }
-
-  async onTargetAPIChanged(changedTargetAPI: string): Promise<void> {
-    const result = this.stepperService.applyTargetAPIChange(this.mapping, this.stepperConfiguration.direction, changedTargetAPI);
-    if (result.schemaTarget !== undefined) this.schemaTarget = result.schemaTarget;
-    if (result.schemaSource !== undefined) this.schemaSource = result.schemaSource;
-  }
-
-
-  deploymentMapEntryChange(deploymentMapEntry: DeploymentMapEntry): void {
-    this.deploymentMapEntry = deploymentMapEntry;
-    queueMicrotask(() => {
-      this.isButtonDisabled$.next(isConnectorSelectionEmpty(this.deploymentMapEntry));
-      this.cdr.markForCheck();
-    });
-  }
-
-  onValueCodeChange(value: string): void {
-    this.mappingCode = value;
-  }
-
-  onSelectCodeTemplate(): void {
-    const code = this.stepperService.computeCodeFromTemplate(
-      this.codeTemplatesDecoded, this.templateId, this.serviceConfiguration, this.mapping.transformationType
-    );
-    if (code !== undefined) {
-      this.mappingCode = code;
-    }
-  }
-
-  private updateCodeTemplateEntries(): void {
-    const result = this.stepperService.computeCodeTemplateEntries(
-      this.codeTemplates, this.stepperConfiguration.direction, this.mapping.transformationType
-    );
-    this.codeTemplateEntries = result.entries;
-    this.codeTemplateItems = result.items;
-  }
-
-  async onCreateCodeTemplate(): Promise<void> {
-    // Reachable only because the "Create new code template" button renders inside the
-    // code-editor section, which is gated on a StepperConfiguration flag two hops away from
-    // the transformation type. Check here rather than rely on that: an unsupported
-    // combination should tell the user, not throw out of an event handler.
-    const templateType = tryToTemplateType(this.stepperConfiguration.direction!, this.mapping.transformationType);
-    if (!templateType) {
-      this.alertService.warning(
-        `Code templates are only available for Smart Function mappings, not ${this.mapping.transformationType}.`
-      );
-      return;
-    }
-    const initialState = {
-      action: 'CREATE',
-      codeTemplate: { name: `New code template - ${templateType}`, templateType }
-    };
-
-    const modalRef = this.bsModalService.show(ManageTemplateComponent, { initialState });
-
-    modalRef.content.closeSubject.pipe(takeUntil(this.destroy$)).subscribe(async (codeTemplate: Partial<CodeTemplate>) => {
-      if (codeTemplate) {
-        this.codeTemplates = await this.stepperService.createCodeTemplateAndRefresh(
-          codeTemplate.name,
-          codeTemplate.description,
-          this.mappingCode,
-          this.stepperConfiguration.direction,
-          this.mapping.transformationType
-        );
-        this.updateCodeTemplateEntries();
-      }
-    });
   }
 
   /**
@@ -796,62 +526,4 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     await this.transformationStepRef?.onSelectSubstitution(result.index);
     this.cdr.detectChanges();
   }
-
-  async openGenerateSubstitutionDrawer(): Promise<void> {
-    this.isGenerateSubstitutionOpen = true;
-
-    const testMapping = buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false);
-
-    const drawer = this.bottomDrawerService.openDrawer(AiPromptComponent, {
-      initialState: { mapping: testMapping, aiAgent: this.aiAgent, editorMode: this.stepperConfiguration.editorMode }
-    });
-
-    try {
-      const result = await drawer.instance.result;
-
-      if (isSubstitutionsAsCode(this.mapping)) {
-        if (typeof result === 'string' && result.trim()) {
-          this.mappingCode = result;
-
-          if (this.codeEditor) {
-            queueMicrotask(() => {
-              this.codeEditor.writeValue(result);
-              this.cdr.markForCheck();
-            });
-          }
-
-        } else {
-          this.alertService.warning('No valid JavaScript code was generated.');
-        }
-      } else {
-        if (Array.isArray(result) && result.length > 0) {
-          this.alertService.success(`Generated ${result.length} substitutions.`);
-          // Same bulk replace as the transformation step: the generated set replaces the whole
-          // list atomically, with one validity refresh instead of one per item.
-          this.substitutionService.replaceAllSubstitutions(
-            result,
-            this.mapping,
-            () => {
-              this.stepperService.refreshSubstitutionValidity(
-                this.mapping,
-                this.stepperConfiguration,
-                this.currentStepIndex < TAB_DEFINE_TRANSFORMATION
-              );
-            }
-          );
-        } else {
-          this.alertService.warning('No substitutions were generated.');
-        }
-      }
-    } catch (error) {
-      // The drawer rejects with this exact string when the user clicks "Cancel" — not a failure.
-      if (error !== 'User canceled') {
-        console.error('AI generation error:', error);
-        this.alertService.danger('AI generation failed. Please try again.');
-      }
-    }
-
-    this.isGenerateSubstitutionOpen = false;
-  }
-
 }

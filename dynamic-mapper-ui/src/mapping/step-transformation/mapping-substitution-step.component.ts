@@ -24,7 +24,7 @@ import {
   RepairStrategy,
   ALERT_INFO_TIMEOUT
 } from '../../shared';
-import { EditorMode, SubstitutionModel } from '../../shared/mapping/stepper.model';
+import { SubstitutionModel } from '../../shared/mapping/stepper.model';
 import { SubstitutionGridComponent } from '../substitution/substitution-grid.component';
 import { AiPromptComponent } from '../prompt/ai-prompt.component';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
@@ -79,7 +79,6 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   readonly COLOR_HIGHLIGHTED = COLOR_HIGHLIGHTED;
-  readonly EditorMode = EditorMode;
   readonly Direction = Direction;
 
   get identitySubstitutionHint(): string {
@@ -174,7 +173,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
         templateOptions: {
           label: 'Source Expression',
           class: 'input-sm',
-          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+          disabled: this.stepperConfiguration.readOnly ||
             !this.stepperConfiguration.allowDefiningSubstitutions,
           placeholder: '$join([$substring(txt,5), id]) or $number(id)/10',
           description: MappingSubstitutionStepComponent.JSONATA_DESCRIPTION,
@@ -216,7 +215,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
         templateOptions: {
           label: 'Target Expression',
           class: 'input-sm',
-          disabled: this.stepperConfiguration.editorMode == EditorMode.READ_ONLY ||
+          disabled: this.stepperConfiguration.readOnly ||
             !this.stepperConfiguration.allowDefiningSubstitutions,
           description: MappingSubstitutionStepComponent.JSONATA_DESCRIPTION,
           required: true,
@@ -442,7 +441,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     }
 
     const drawer = this.bottomDrawerService.openDrawer(AiPromptComponent, {
-      initialState: { mapping: testMapping, aiAgent: this.aiAgent, editorMode: this.stepperConfiguration.editorMode }
+      initialState: { mapping: testMapping, aiAgent: this.aiAgent, existingMapping: this.stepperConfiguration.persistence === 'draft' }
     });
 
     try {
@@ -484,14 +483,14 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
     // would otherwise stay clickable too and push a near-duplicate of the row being edited.
     // Cancel/New substitution (selectedSubstitution = -1) is the explicit way back to add-mode.
     return !this.stepperConfiguration.showEditorSource ||
-      this.stepperConfiguration.editorMode === EditorMode.READ_ONLY ||
+      this.stepperConfiguration.readOnly ||
       this.selectedSubstitution !== -1 ||
       !this.isSubstitutionValid();
   }
 
   updateSubstitutionDisabled(): boolean {
     return !this.stepperConfiguration.showEditorSource ||
-      this.stepperConfiguration.editorMode === EditorMode.READ_ONLY ||
+      this.stepperConfiguration.readOnly ||
       this.selectedSubstitution === -1 ||
       !this.isSubstitutionValid();
   }
