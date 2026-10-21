@@ -8,18 +8,24 @@ package dynamic.mapper.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.ai.AIAgentService;
+import dynamic.mapper.ai.MappingResultTools;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.core.io.ClassPathResource;
@@ -54,18 +60,43 @@ class AgentDefinitionControllerTest {
         }
     }
 
-    @Test
-    void jsonataAgentReferencesExposedMcpServerAndTool() throws Exception {
+    /** Names of all tools the service registers with its MCP server (see App#tools). */
+    private static Set<String> registeredToolNames() {
+        Set<String> names = new HashSet<>();
+        for (Class<?> toolClass : List.of(AIAgentService.class, MappingResultTools.class)) {
+            for (Method method : toolClass.getDeclaredMethods()) {
+                Tool tool = method.getAnnotation(Tool.class);
+                if (tool != null)
+                    names.add(tool.name());
+            }
+        }
+        return names;
+    }
+
+    private void assertAgentToolsAreExposedAndRegistered(String agentFile, Set<String> expectedTools) throws Exception {
         JsonNode manifest = objectMapper.readTree(Files.readString(Path.of("src/main/configuration/cumulocity.json")));
-        JsonNode agent = objectMapper.readTree(new ClassPathResource("agents/jsonata_agent.json")
-                .getContentAsByteArray());
+        JsonNode agent = objectMapper.readTree(new ClassPathResource(agentFile).getContentAsByteArray());
         JsonNode mcp = agent.path("mcp").get(0);
         assertEquals(manifest.path("exposeMcpServers").get(0).path("name").asText(),
                 mcp.path("serverName").asText());
-        String toolName = AIAgentService.class.getMethod("evaluateJsonataExpression", String.class, String.class)
-                .getAnnotation(Tool.class).name();
-        assertEquals(1, mcp.path("tools").size());
-        assertEquals(toolName, mcp.path("tools").get(0).asText());
+
+        Set<String> tools = new HashSet<>();
+        mcp.path("tools").forEach(t -> tools.add(t.asText()));
+        assertEquals(expectedTools, tools);
+        // An agent naming a tool the MCP server does not serve would fail at the first call.
+        assertTrue(registeredToolNames().containsAll(tools), "unregistered tool in " + agentFile);
+    }
+
+    @Test
+    void jsonataAgentReferencesExposedMcpServerAndTools() throws Exception {
+        assertAgentToolsAreExposedAndRegistered("agents/jsonata_agent.json",
+                Set.of("evaluate-jsonata-expression", MappingResultTools.SUBMIT_SUBSTITUTIONS_TOOL_NAME));
+    }
+
+    @Test
+    void smartFunctionAgentReferencesExposedMcpServerAndTool() throws Exception {
+        assertAgentToolsAreExposedAndRegistered("agents/smartfunction_agent.json",
+                Set.of(MappingResultTools.SUBMIT_SMART_FUNCTION_TOOL_NAME));
     }
 
     @Test

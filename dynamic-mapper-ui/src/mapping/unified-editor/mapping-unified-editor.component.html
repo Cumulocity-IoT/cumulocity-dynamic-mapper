@@ -161,9 +161,12 @@
       <button type="button" class="btn btn-default" (click)="onCancel()" translate data-cy="dm-unified-editor-cancel">
         Close
       </button>
+      <!-- Only blockers the user cannot fix from inside the editor disable Save. A missing connector or
+           topic does not: onCommitButton() reports it and jumps to the right tab, which is far easier to
+           discover than a silently greyed-out button. -->
       <button type="button" class="btn btn-primary" (click)="onCommitButton()"
-        [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.editorMode === EditorMode.READ_ONLY || mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE || (isButtonDisabled$ | async) || (stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim())"
-        [title]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) ? ('Requires the Mapping Admin or Mapping Create role.' | translate) : mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : ((isButtonDisabled$ | async) ? ('Select at least one connector before saving.' | translate) : ((stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim()) ? ('Mapping Topic is required.' | translate) : ''))"
+        [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.editorMode === EditorMode.READ_ONLY || mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE"
+        [title]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) ? ('Requires the Mapping Admin or Mapping Create role.' | translate) : mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : ''"
         translate data-cy="dm-unified-editor-save">
         Save
       </button>

@@ -458,9 +458,9 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
         if (Array.isArray(resultOf) && resultOf.length > 0) {
           this.alertService.success(`Generated ${resultOf.length} substitutions.`);
           this.selectedSubstitution = -1;
-          // Bulk-replace rather than looping addSubstitution(): that method is fire-and-forget
-          // and opens a blocking confirmation modal per duplicate/expert-mode hit, which stacks
-          // dialogs when applying a freshly-generated set wholesale.
+          // Bulk-replace rather than looping addSubstitution(): that method collapses duplicate
+          // targets and raises an info alert per hit, which is noise when applying a
+          // freshly-generated set wholesale.
           this.substitutionService.replaceAllSubstitutions(
             resultOf,
             this.mapping,

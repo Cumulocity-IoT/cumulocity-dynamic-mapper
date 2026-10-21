@@ -162,12 +162,14 @@ public class AIAgentService {
             agent.setSystem(prompts.get(file));
             aiAgent.setAgent(agent);
             aiAgent.setType("text");
+            MCPUsage tools = new MCPUsage();
+            tools.setServerName(MCP_SERVER_NAME);
             if (aiAgent.getName().equals(DEFAULT_JSONATA_AGENT_NAME)) {
-                MCPUsage tools = new MCPUsage();
-                tools.setServerName(MCP_SERVER_NAME);
-                tools.setTools(new String[] { JSONATA_TOOL_NAME });
-                aiAgent.setMcp(List.of(tools));
+                tools.setTools(new String[] { JSONATA_TOOL_NAME, MappingResultTools.SUBMIT_SUBSTITUTIONS_TOOL_NAME });
+            } else {
+                tools.setTools(new String[] { MappingResultTools.SUBMIT_SMART_FUNCTION_TOOL_NAME });
             }
+            aiAgent.setMcp(List.of(tools));
             ResponseEntity<String> response = createAIAgent(aiAgent);
             if (!response.getStatusCode().is2xxSuccessful())
                 log.error("{} - Failed to create AIAgent: {}", contextService.getContext().getTenant(),

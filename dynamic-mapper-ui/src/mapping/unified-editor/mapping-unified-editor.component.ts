@@ -821,31 +821,34 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
           }
 
         } else {
-          // this.raiseAlert({ type: 'warning', text: 'No valid JavaScript code was generated.' });
+          this.alertService.warning('No valid JavaScript code was generated.');
         }
       } else {
         if (Array.isArray(result) && result.length > 0) {
           this.alertService.success(`Generated ${result.length} substitutions.`);
-          this.mapping.substitutions.splice(0);
-          result.forEach(sub => {
-            this.substitutionService.addSubstitution(
-              sub,
-              this.mapping,
-              () => {
-                this.stepperService.refreshSubstitutionValidity(
-                  this.mapping,
-                  this.stepperConfiguration,
-                  this.currentStepIndex < TAB_DEFINE_TRANSFORMATION
-                );
-              }
-            );
-          });
+          // Same bulk replace as the transformation step: the generated set replaces the whole
+          // list atomically, with one validity refresh instead of one per item.
+          this.substitutionService.replaceAllSubstitutions(
+            result,
+            this.mapping,
+            () => {
+              this.stepperService.refreshSubstitutionValidity(
+                this.mapping,
+                this.stepperConfiguration,
+                this.currentStepIndex < TAB_DEFINE_TRANSFORMATION
+              );
+            }
+          );
         } else {
-          // this.raiseAlert({ type: 'warning', text: 'No substitutions were generated.' });
+          this.alertService.warning('No substitutions were generated.');
         }
       }
     } catch (error) {
-      console.error('AI generation error:', error);
+      // The drawer rejects with this exact string when the user clicks "Cancel" — not a failure.
+      if (error !== 'User canceled') {
+        console.error('AI generation error:', error);
+        this.alertService.danger('AI generation failed. Please try again.');
+      }
     }
 
     this.isGenerateSubstitutionOpen = false;

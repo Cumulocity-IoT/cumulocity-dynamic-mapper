@@ -871,8 +871,9 @@ export class MappingStepperService {
         const { mapping, deploymentMapEntry, stepperConfiguration, forms } = request;
         const editorMode = stepperConfiguration.editorMode;
 
-        // A mapping must be bound to at least one connector. Both editors also disable the save
-        // button on this condition, so in practice this is a backstop.
+        // A mapping must be bound to at least one connector. The stepper also disables its save
+        // button on this condition; the unified editor deliberately does not, so for it this is the
+        // check that tells the user why saving was refused and jumps to the Connector tab.
         if (isConnectorSelectionEmpty(deploymentMapEntry)) {
             return {
                 status: 'blocked',

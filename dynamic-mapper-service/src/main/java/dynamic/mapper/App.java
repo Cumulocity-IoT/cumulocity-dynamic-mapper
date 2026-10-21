@@ -48,6 +48,7 @@ import dynamic.mapper.model.MappingTreeNodeSerializer;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.SneakyThrows;
 import org.joda.time.DateTime;
+import dynamic.mapper.ai.MappingResultTools;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -106,9 +107,9 @@ public class App {
     }
 
     @Bean
-    public ToolCallbackProvider tools(AIAgentService aiAgentService) {
+    public ToolCallbackProvider tools(AIAgentService aiAgentService, MappingResultTools mappingResultTools) {
         return MethodToolCallbackProvider.builder()
-                .toolObjects(aiAgentService)
+                .toolObjects(aiAgentService, mappingResultTools)
                 .build();
     }
 

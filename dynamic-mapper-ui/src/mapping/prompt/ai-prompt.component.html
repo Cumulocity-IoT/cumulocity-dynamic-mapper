@@ -50,9 +50,13 @@
     [suggestions]="suggestions"
     [groundingContextProvider]="groundingContextProvider"
     [skipHealthCheck]="true"
+    [telemetry]="telemetryEnabled"
+    [initialChatHistory]="initialChatHistory"
     [chatConfig]="chatConfig"
     [assistantMessageDisplayConfig]="assistantMessageDisplayConfig"
-    (onMessageFinish)="onMessageFinish($event)">
+    (onMessageFinish)="onMessageFinish($event)"
+    (onToolResult)="onToolResult($event)"
+    (onMessagesChange)="onMessagesChange($event)">
   </c8y-agent-chat>
   }
 </div>

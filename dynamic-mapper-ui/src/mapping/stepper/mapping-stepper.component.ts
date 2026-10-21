@@ -754,20 +754,19 @@ export class MappingStepperComponent implements OnInit, AfterViewInit, OnDestroy
       } else {
         if (Array.isArray(result) && result.length > 0) {
           this.alertService.success(`Generated ${result.length} substitutions.`);
-          this.mapping.substitutions.splice(0);
-          result.forEach(sub => {
-            this.substitutionService.addSubstitution(
-              sub,
-              this.mapping,
-              () => {
-                this.stepperService.refreshSubstitutionValidity(
-                  this.mapping,
-                  this.stepperConfiguration,
-                  this.currentStepIndex < STEP_DEFINE_SUBSTITUTIONS
-                );
-              }
-            );
-          });
+          // Same bulk replace as the transformation step: the generated set replaces the whole
+          // list atomically, with one validity refresh instead of one per item.
+          this.substitutionService.replaceAllSubstitutions(
+            result,
+            this.mapping,
+            () => {
+              this.stepperService.refreshSubstitutionValidity(
+                this.mapping,
+                this.stepperConfiguration,
+                this.currentStepIndex < STEP_DEFINE_SUBSTITUTIONS
+              );
+            }
+          );
         } else {
           this.alertService.warning('No substitutions were generated.');
         }
