@@ -559,9 +559,7 @@ describe('MappingUnifiedEditorComponent', () => {
       expect(mockStepperService.commitMapping.calls.mostRecent().args[0].forms?.validateExtensionSelection).toBe(true);
     });
 
-    // Saving deliberately keeps the editor open so the user can carry on to the Testing tab.
-    // Leaving is Cancel's job.
-    it('alerts and stays in the editor on a successful save', async () => {
+    it('alerts and closes the editor on a successful save', async () => {
       await component.onCommitButton();
 
       // add() rather than success(): the toast needs an explicit timeout, because Cumulocity
@@ -570,17 +568,17 @@ describe('MappingUnifiedEditorComponent', () => {
       const alert = mockAlertService.add.calls.mostRecent().args[0];
       expect(alert.type).toBe('success');
       expect(alert.timeout).toBeGreaterThan(3000);
-      expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+      expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/mappings/inbound');
     });
 
-    it('stays in the editor without an alert when an update changed nothing', async () => {
+    it('closes the editor without an alert when an update changed nothing', async () => {
       commitResolvesTo(saved(false, false));
 
       await component.onCommitButton();
 
       expect(mockAlertService.success).not.toHaveBeenCalled();
       expect(mockAlertService.add).not.toHaveBeenCalled();
-      expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+      expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/mappings/inbound');
     });
 
     it('adopts the lastUpdate the server issued, so the next save is not a conflict', async () => {

@@ -575,20 +575,21 @@ export class MappingUnifiedEditorComponent implements OnInit, AfterViewInit, OnD
     // auto-dismisses a detail-less success alert after 3s — too short to read an instruction.
     if (alert) this.alertService.add({ text: alert.text, type: 'success', timeout: alert.timeout });
 
-    // Saving deliberately does NOT leave the editor: the user is typically mid-flow and still
-    // wants the Testing tab (or another round of edits) afterwards. Leaving is Cancel's job.
-    // Staying open means the editor is now showing stale baselines, so re-establish them.
+    // Saving closes the editor. Re-baselining first matters: navigation is guarded by
+    // unsavedChangesGuard, which would otherwise see the just-saved edits as unsaved and prompt.
     this.rebaselineAfterSave(result.persisted);
 
     // Shared with the stepper's commit path (mapping.component.ts::onCommitMapping) so both
     // editors apply the same post-save check — an OUTBOUND mapping with no device subscribed
     // to receive it otherwise silently does nothing once activated.
     await this.subscriptionService.validateSubscriptionOutbound(this.stepperConfiguration.direction);
+
+    this.navigateToGrid();
   }
 
   /**
-   * Makes the still-open editor consistent with what the server just stored, so a second Save
-   * behaves like a first one.
+   * Makes the editor consistent with what the server just stored, so the leave guard sees no
+   * unsaved changes and, if the editor is still open, a second Save behaves like a first one.
    *
    * The `lastUpdate` adoption is the load-bearing part: it is the optimistic-concurrency token,
    * the server issues a new one on every draft save, and re-sending the stale one makes the next
