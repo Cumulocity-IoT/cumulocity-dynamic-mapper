@@ -33,6 +33,7 @@ import {
   ConnectorStatusHistoryComponent,
   EventMetadata,
   getEventMetadata as getEventMetadataShared,
+  getEventSubject,
   getSeverityBadgeClass,
   LoggingEventType,
   LoggingEventTypeMap,
@@ -79,9 +80,21 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
   filterForm: FormGroup;
 
   events$: Observable<IResultList<IEvent>>;
-  /** Distinct values present in the loaded page, used to populate the component/connector selects. */
-  componentOptions$: Observable<string[]>;
-  connectorOptions$: Observable<string[]>;
+  /** Distinct subjects (connector, mapping, cache, ...) in the loaded page, for the subject select. */
+  subjectOptions$: Observable<string[]>;
+
+  /** Event types grouped by component, for the grouped event-type select. */
+  readonly typeGroups: { component: string; types: string[] }[] = (() => {
+    const groups = new Map<string, string[]>();
+    for (const [key, details] of Object.entries(LoggingEventTypeMap)) {
+      if (key === LoggingEventType.ALL) {
+        continue;
+      }
+      const name = details.componentDisplayName ?? 'Other';
+      groups.set(name, [...(groups.get(name) ?? []), key]);
+    }
+    return [...groups].map(([component, types]) => ({ component, types }));
+  })();
   LoggingEventTypeMap = LoggingEventTypeMap;
   filterSubject$ = new BehaviorSubject<void>(null);
   destroy$ = new Subject<void>();
@@ -98,8 +111,8 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
       dateTo: new FormControl(null),
       onlyOpenSessions: new FormControl(false),
       onlyErrors: new FormControl(false),
-      component: new FormControl('ALL'),
-      connector: new FormControl('ALL'),
+      severity: new FormControl('ALL'),
+      subject: new FormControl('ALL'),
       search: new FormControl('')
     });
   }
@@ -178,11 +191,8 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
       shareReplay({ bufferSize: 1, refCount: true })
     );
 
-    this.componentOptions$ = fetched$.pipe(
-      map(result => this.distinct((result.data ?? []).map(e => this.getComponentName(e))))
-    );
-    this.connectorOptions$ = fetched$.pipe(
-      map(result => this.distinct((result.data ?? []).map(e => this.getConnectorName(e))))
+    this.subjectOptions$ = fetched$.pipe(
+      map(result => this.distinct((result.data ?? []).map(e => this.getSubject(e)).filter(Boolean)))
     );
 
     // These filters are applied client-side on top of the already-fetched page: they're
@@ -205,17 +215,17 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
           if (f.onlyErrors && !this.getConnectorStatusHistory(event)?.hadError) {
             return false;
           }
-          if (f.component !== 'ALL' && this.getComponentName(event) !== f.component) {
+          if (f.severity !== 'ALL' && this.getSeverity(event) !== f.severity) {
             return false;
           }
-          if (f.connector !== 'ALL' && this.getConnectorName(event) !== f.connector) {
+          if (f.subject !== 'ALL' && this.getSubject(event) !== f.subject) {
             return false;
           }
           return !search || (event.text ?? '').toLowerCase().includes(search)
-            || this.getConnectorName(event).toLowerCase().includes(search);
+            || (this.getSubject(event) ?? '').toLowerCase().includes(search);
         });
         const localFilterActive = !!search || f.onlyOpenSessions || f.onlyErrors
-          || f.component !== 'ALL' || f.connector !== 'ALL';
+          || f.severity !== 'ALL' || f.subject !== 'ALL';
         // c8yFor's auto load-more follows paging.nextPage and appends the raw server page, which
         // would bypass the filter above (a short filtered list never fills the viewport, so it
         // keeps loading). While a local filter is active, report the page as the last one.
@@ -231,12 +241,12 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
     return [...new Set(values)].sort((a, b) => a.localeCompare(b));
   }
 
-  getComponentName(event: IEvent): string {
-    return getEventMetadataShared(event)?.componentDisplayName ?? 'Unknown';
+  getSubject(event: IEvent): string | null {
+    return getEventSubject(event);
   }
 
-  getConnectorName(event: IEvent): string {
-    return event?.['d11r_connector']?.['connectorName'] ?? 'System';
+  getSeverity(event: IEvent): string {
+    return getEventMetadataShared(event)?.severity ?? 'info';
   }
 
   /** Events pushed by the backend that match the current filter. Silent while realtime is paused. */
@@ -306,8 +316,7 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
   get activeAdvancedFilterCount(): number {
     const f = this.filterForm.getRawValue();
     return [
-      f.component !== 'ALL',
-      f.connector !== 'ALL',
+      f.subject !== 'ALL',
       !!f.dateFrom,
       !!f.dateTo,
       f.onlyOpenSessions,
@@ -322,8 +331,8 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
       dateTo: null,
       onlyOpenSessions: false,
       onlyErrors: false,
-      component: 'ALL',
-      connector: 'ALL',
+      severity: 'ALL',
+      subject: 'ALL',
       search: ''
     });
     delete this.baseFilter['type'];

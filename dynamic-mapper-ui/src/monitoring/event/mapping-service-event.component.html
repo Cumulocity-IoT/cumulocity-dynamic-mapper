@@ -28,11 +28,24 @@
   <form [formGroup]="filterForm" class="d-flex a-i-center gap-8">
     <div class="c8y-select-wrapper">
       <select class="form-control filter-select" formControlName="type" id="listLabel" [attr.aria-label]="'Event type' | translate">
-        @for (lt of LoggingEventTypeMap | keyvalue; track lt) {
-        <option [ngValue]="lt.key">
-          {{ lt.key | formatStringAsWords:1 }}
-        </option>
+        <option value="ALL">{{ 'All event types' | translate }}</option>
+        @for (group of typeGroups; track group.component) {
+        <optgroup [label]="group.component">
+          @for (key of group.types; track key) {
+          <option [ngValue]="key">{{ key | formatStringAsWords:1 }}</option>
+          }
+        </optgroup>
         }
+      </select>
+      <span></span>
+    </div>
+
+    <div class="c8y-select-wrapper">
+      <select class="form-control" formControlName="severity" [attr.aria-label]="'Severity' | translate">
+        <option value="ALL">{{ 'All severities' | translate }}</option>
+        <option value="error">{{ 'Error' | translate }}</option>
+        <option value="warning">{{ 'Warning' | translate }}</option>
+        <option value="info">{{ 'Info' | translate }}</option>
       </select>
       <span></span>
     </div>
@@ -52,24 +65,11 @@
       </button>
       <div class="dropdown-menu dropdown-menu-right p-16" *dropdownMenu style="min-width: 340px">
         <div class="form-group">
-          <label for="componentFilter" translate>Component</label>
+          <label for="subjectFilter" translate>Subject (connector, mapping, ...)</label>
           <div class="c8y-select-wrapper">
-            <select id="componentFilter" class="form-control" formControlName="component">
-              <option value="ALL">{{ 'All components' | translate }}</option>
-              @for (c of componentOptions$ | async; track c) {
-              <option [value]="c">{{ c }}</option>
-              }
-            </select>
-            <span></span>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="connectorFilter" translate>Connector</label>
-          <div class="c8y-select-wrapper">
-            <select id="connectorFilter" class="form-control" formControlName="connector">
-              <option value="ALL">{{ 'All connectors' | translate }}</option>
-              @for (c of connectorOptions$ | async; track c) {
+            <select id="subjectFilter" class="form-control" formControlName="subject">
+              <option value="ALL">{{ 'All subjects' | translate }}</option>
+              @for (c of subjectOptions$ | async; track c) {
               <option [value]="c">{{ c }}</option>
               }
             </select>
@@ -153,9 +153,10 @@
         <div class="c8y-list__item__block flex-grow">
           <div class="c8y-list__item__body">
             <div class="d-flex m-r-48">
-              <div class="col-md-8" translate>Message</div>
+              <div class="col-md-6" translate>Message</div>
               <div class="col-md-2" translate>Component</div>
-              <div class="col-md-2" translate>Connector or System</div>
+              <div class="col-md-1" translate>Severity</div>
+              <div class="col-md-3" translate>Subject</div>
             </div>
           </div>
         </div>
@@ -167,7 +168,7 @@
         {{ event.time | c8yDate: 'MMM d, y, h:mm:ss a' }}
         <c8y-li role="listitem">
           <div class="d-flex">
-            <div class="col-md-8">
+            <div class="col-md-6">
               <span>
                 {{ event.text }}
               </span>
@@ -184,19 +185,28 @@
             </div>
             <div class="col-md-2">
               @if (getEventMetadata(event); as metadata) {
-              <span class="text-10 label" [ngClass]="getSeverityClass(metadata.severity)"
-                [title]="metadata.description">
+              <span class="text-10 label label-default" [title]="metadata.description">
                 {{ metadata.componentDisplayName }}
               </span>
               } @else {
               <span class="text-10 label label-default">Unknown</span>
               }
             </div>
-            <div class="col-md-2">
-              <span class="text-10 label label-primary">
-                {{ event?.d11r_connector?.connectorName ? ( event?.d11r_connector?.connectorName ) : 'System'
-                }}
-              </span>
+            <div class="col-md-1">
+              @if (getSeverity(event); as severity) {
+              @if (severity === 'info') {
+              <span class="text-10 text-muted">{{ 'Info' | translate }}</span>
+              } @else {
+              <span class="text-10 label" [ngClass]="getSeverityClass(severity)">{{ severity | titlecase }}</span>
+              }
+              }
+            </div>
+            <div class="col-md-3">
+              @if (getSubject(event); as subject) {
+              <span class="text-10 label label-primary">{{ subject }}</span>
+              } @else {
+              <span class="text-muted">–</span>
+              }
               @if (getConnectorStatusHistory(event); as connectorStatusHistory) {
               <span class="text-10 label label-default m-l-4"
                 title="{{ connectorStatusHistory.historyTruncated

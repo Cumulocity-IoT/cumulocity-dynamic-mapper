@@ -347,3 +347,23 @@ export function getSeverityBadgeClass(severity: string): string {
     default: return 'label-primary';
   }
 }
+
+/**
+ * Resolves what an event is *about* — the connector, mapping, cache, device or resynced type —
+ * from the event's own component fragment (`d11r_mapping`, `d11r_cache`, `d11r_subscription`, ...).
+ * The backend stores an event's properties under the fragment named by its component, so reading
+ * only `d11r_connector` misses every non-connector event. Returns null for events without a
+ * subject (e.g. system-wide events).
+ */
+export function getEventSubject(event: { type?: string; [key: string]: any }): string | null {
+  const component = getEventMetadata(event)?.component;
+  const fragment = (component && event?.[component]) || event?.['d11r_connector'];
+  if (!fragment) {
+    return null;
+  }
+  return fragment.connectorName
+    ?? fragment.mappingName
+    ?? fragment.cache
+    ?? (fragment.deviceId ? `Device ${fragment.deviceId}` : null)
+    ?? (fragment.type ? `Type ${fragment.type}` : null);
+}
