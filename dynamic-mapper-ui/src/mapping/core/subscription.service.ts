@@ -220,7 +220,7 @@ export class SubscriptionService {
       'resyncTypeSubscription',
       async () => {
         const response = await this.client.fetch(
-          `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/type/resync/${encodeURIComponent(type)}`,
+          `${BASE_URL}/${PATH_SUBSCRIPTION_ENDPOINT}/type/resync?type=${encodeURIComponent(type)}`,
           {
             headers: {
               'content-type': 'application/json'

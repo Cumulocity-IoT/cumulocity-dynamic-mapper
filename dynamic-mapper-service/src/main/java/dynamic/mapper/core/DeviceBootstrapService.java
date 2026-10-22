@@ -171,9 +171,14 @@ public class DeviceBootstrapService {
      * inventory scan into a {@link List} before processing a single device. The whole paged scan
      * is consumed inside the tenant-scoped callable — as with every other paged-iterator use in
      * this service — so lazily-fetched later pages still run with the correct tenant context.
+     *
+     * @throws IllegalStateException if the scan fails part-way (devices already passed to
+     *                               {@code consumer} stay processed)
      */
     public void forEachManagedObjectByType(String tenant, String type, Boolean testing,
             java.util.function.Consumer<ManagedObjectRepresentation> consumer) {
+        java.util.concurrent.atomic.AtomicReference<RuntimeException> failure =
+                new java.util.concurrent.atomic.AtomicReference<>();
         subscriptionsService.runForTenant(tenant, () -> {
             try {
                 InventoryFilter filter = new InventoryFilter().byType(type);
@@ -183,7 +188,13 @@ public class DeviceBootstrapService {
                 }
             } catch (SDKException e) {
                 log.warn("{} - Error querying devices of type {}: {}", tenant, type, e.getMessage());
+                failure.set(new IllegalStateException(
+                        "Inventory scan for type '" + type + "' failed: " + e.getMessage(), e));
             }
         });
+        // Surface a part-way scan failure instead of letting the caller treat it as a complete scan
+        if (failure.get() != null) {
+            throw failure.get();
+        }
     }
 }

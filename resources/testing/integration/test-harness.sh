@@ -590,18 +590,11 @@ _DM_LAST_SUB_COUNT=0
 # Count notification2 subscriptions for a device.
 # Sets _DM_LAST_SUB_COUNT and prints the raw subscription list JSON.
 dm_count_subscriptions() {  # <device_id>
-    local _device=$1 _subs
-    _subs=$(c8y notification2 subscriptions list \
-        --source "$_device" --output json 2>/dev/null || printf '[]')
-    _DM_LAST_SUB_COUNT=$(printf '%s' "$_subs" | jq -r '
-        if type == "array" then
-            length
-        elif type == "object" then
-            (.subscriptions // .data // [] | length)
-        else
-            0
-        end
-    ' 2>/dev/null || printf '0')
+    # Raw REST via dm_device_subscriptions_json: the c8y CLI list rendering (array vs. NDJSON vs.
+    # bare object) made the count come out as 0 whenever a device had more than one subscription.
+    local _subs
+    _subs=$(dm_device_subscriptions_json "$1")
+    _DM_LAST_SUB_COUNT=$(printf '%s' "$_subs" | jq -r 'length' 2>/dev/null || printf '0')
     printf '%s' "$_subs"
 }
 
