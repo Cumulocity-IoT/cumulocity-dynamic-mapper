@@ -318,6 +318,12 @@ public class WebHook extends AConnectorClient {
         } else if ("Bearer".equalsIgnoreCase(authentication) && !StringUtils.isEmpty(token)) {
             builder.defaultHeader("Authorization", "Bearer " + token);
             log.debug("{} - Using Bearer authentication", tenant);
+        } else if ("Basic".equalsIgnoreCase(authentication)) {
+            log.warn("{} - Authentication is 'Basic' but user or password is empty: requests will be sent without Authorization header", tenant);
+        } else if ("Bearer".equalsIgnoreCase(authentication)) {
+            log.warn("{} - Authentication is 'Bearer' but token is empty: requests will be sent without Authorization header", tenant);
+        } else {
+            log.warn("{} - No usable authentication configured (authentication='{}'): requests will be sent without Authorization header", tenant, authentication);
         }
 
         // Add custom headers
@@ -788,7 +794,14 @@ public class WebHook extends AConnectorClient {
     private Mono<Throwable> handleClientError(
             org.springframework.web.reactive.function.client.ClientResponse response) {
         String error = "Client error: " + response.statusCode();
-        log.error("{} - {}", tenant, error);
+        if (response.statusCode().value() == 401) {
+            log.error("{} - {} for {} {} (WWW-Authenticate: {})", tenant, error,
+                    response.request().getMethod(), response.request().getURI(),
+                    response.headers().header("WWW-Authenticate"));
+        } else {
+            log.error("{} - {} for {} {}", tenant, error,
+                    response.request().getMethod(), response.request().getURI());
+        }
         return Mono.error(new ProcessingException(error, response.statusCode().value()));
     }
 
