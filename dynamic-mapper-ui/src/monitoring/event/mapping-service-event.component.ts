@@ -25,8 +25,9 @@ import { EventService, IEvent, IResultList, InventoryService } from '@c8y/client
 import { CoreModule, EventRealtimeService, Pagination, RealtimeButtonComponent, RealtimeSubjectService } from '@c8y/ngx-components';
 import { saveAs } from 'file-saver';
 import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
+import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { filter } from 'rxjs/operators';
-import { BehaviorSubject, catchError, combineLatest, EMPTY, from, map, Observable, of, scan, startWith, Subject, switchMap, takeUntil, tap } from 'rxjs';
+import { BehaviorSubject, catchError, shareReplay, combineLatest, EMPTY, from, map, Observable, of, scan, startWith, Subject, switchMap, takeUntil, tap } from 'rxjs';
 import {
   ConnectorStatusHistory,
   ConnectorStatusHistoryComponent,
@@ -45,7 +46,7 @@ import {
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CommonModule, SharedModule, BsDatepickerModule, ReactiveFormsModule, ConnectorStatusHistoryComponent, RealtimeButtonComponent]
+  imports: [CoreModule, CommonModule, SharedModule, BsDatepickerModule, BsDropdownModule, ReactiveFormsModule, ConnectorStatusHistoryComponent, RealtimeButtonComponent]
 })
 export class MappingServiceEventComponent implements OnInit, OnDestroy {
 
@@ -78,6 +79,9 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
   filterForm: FormGroup;
 
   events$: Observable<IResultList<IEvent>>;
+  /** Distinct values present in the loaded page, used to populate the component/connector selects. */
+  componentOptions$: Observable<string[]>;
+  connectorOptions$: Observable<string[]>;
   LoggingEventTypeMap = LoggingEventTypeMap;
   filterSubject$ = new BehaviorSubject<void>(null);
   destroy$ = new Subject<void>();
@@ -92,7 +96,11 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
       type: new FormControl('ALL'),
       dateFrom: new FormControl(null),
       dateTo: new FormControl(null),
-      onlyOpenSessions: new FormControl(false)
+      onlyOpenSessions: new FormControl(false),
+      onlyErrors: new FormControl(false),
+      component: new FormControl('ALL'),
+      connector: new FormControl('ALL'),
+      search: new FormControl('')
     });
   }
 
@@ -164,30 +172,71 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
         scan((acc, event) => this.upsertEvent(acc, event), result),
         startWith(result)
       )),
+      takeUntil(this.destroy$),
+      // events$, componentOptions$ and connectorOptions$ all derive from this; share it so the
+      // template's multiple async pipes don't each trigger their own fetch.
+      shareReplay({ bufferSize: 1, refCount: true })
+    );
+
+    this.componentOptions$ = fetched$.pipe(
+      map(result => this.distinct((result.data ?? []).map(e => this.getComponentName(e))))
+    );
+    this.connectorOptions$ = fetched$.pipe(
+      map(result => this.distinct((result.data ?? []).map(e => this.getConnectorName(e))))
+    );
+
+    // These filters are applied client-side on top of the already-fetched page: they're
+    // properties of unindexed fragments (d11r_connectorStatusLog, d11r_connector) or derived
+    // display names, not something the event API can filter by, and re-fetching for a purely
+    // local toggle would be wasteful.
+    const localFilters$ = this.filterForm.valueChanges.pipe(
+      startWith(this.filterForm.getRawValue()),
+      map(() => this.filterForm.getRawValue()),
       takeUntil(this.destroy$)
     );
 
-    // "Only open sessions" is applied client-side on top of the already-fetched page: it's a
-    // property of the (unindexed) d11r_connectorStatusLog fragment, not something the event API
-    // can filter by, and re-fetching for a purely local toggle would be wasteful.
-    const onlyOpenSessions$ = this.filterForm.get('onlyOpenSessions').valueChanges.pipe(
-      startWith(false)
-    );
-
-    this.events$ = combineLatest([
-      fetched$,
-      onlyOpenSessions$.pipe(takeUntil(this.destroy$))
-    ]).pipe(
-      map(([result, onlyOpenSessions]) => {
-        if (!onlyOpenSessions) {
-          return result;
-        }
-        const filtered = (result.data ?? []).filter(event =>
-          this.getConnectorStatusHistory(event)?.sessionClosed === false
-        );
-        return { ...result, data: filtered };
+    this.events$ = combineLatest([fetched$, localFilters$]).pipe(
+      map(([result, f]) => {
+        const search = (f.search ?? '').trim().toLowerCase();
+        const data = (result.data ?? []).filter(event => {
+          if (f.onlyOpenSessions && this.getConnectorStatusHistory(event)?.sessionClosed !== false) {
+            return false;
+          }
+          if (f.onlyErrors && !this.getConnectorStatusHistory(event)?.hadError) {
+            return false;
+          }
+          if (f.component !== 'ALL' && this.getComponentName(event) !== f.component) {
+            return false;
+          }
+          if (f.connector !== 'ALL' && this.getConnectorName(event) !== f.connector) {
+            return false;
+          }
+          return !search || (event.text ?? '').toLowerCase().includes(search)
+            || this.getConnectorName(event).toLowerCase().includes(search);
+        });
+        const localFilterActive = !!search || f.onlyOpenSessions || f.onlyErrors
+          || f.component !== 'ALL' || f.connector !== 'ALL';
+        // c8yFor's auto load-more follows paging.nextPage and appends the raw server page, which
+        // would bypass the filter above (a short filtered list never fills the viewport, so it
+        // keeps loading). While a local filter is active, report the page as the last one.
+        const paging = localFilterActive && result.paging
+          ? { ...result.paging, nextPage: null, totalPages: result.paging.currentPage }
+          : result.paging;
+        return { ...result, data, paging } as IResultList<IEvent>;
       })
     );
+  }
+
+  private distinct(values: string[]): string[] {
+    return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+  }
+
+  getComponentName(event: IEvent): string {
+    return getEventMetadataShared(event)?.componentDisplayName ?? 'Unknown';
+  }
+
+  getConnectorName(event: IEvent): string {
+    return event?.['d11r_connector']?.['connectorName'] ?? 'System';
   }
 
   /** Events pushed by the backend that match the current filter. Silent while realtime is paused. */
@@ -253,12 +302,29 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
     this.filterSubject$.next();
   }
 
+  /** Number of filters set inside the "Filters" dropdown, shown as a badge on its button. */
+  get activeAdvancedFilterCount(): number {
+    const f = this.filterForm.getRawValue();
+    return [
+      f.component !== 'ALL',
+      f.connector !== 'ALL',
+      !!f.dateFrom,
+      !!f.dateTo,
+      f.onlyOpenSessions,
+      f.onlyErrors
+    ].filter(Boolean).length;
+  }
+
   resetFilters(): void {
     this.filterForm.patchValue({
       type: 'ALL',
       dateFrom: null,
       dateTo: null,
-      onlyOpenSessions: false
+      onlyOpenSessions: false,
+      onlyErrors: false,
+      component: 'ALL',
+      connector: 'ALL',
+      search: ''
     });
     delete this.baseFilter['type'];
     delete this.baseFilter['dateFrom'];

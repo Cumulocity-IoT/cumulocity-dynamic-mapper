@@ -25,44 +25,99 @@
     data-cy="dm-service-events-realtime-toggle"></c8y-realtime-btn>
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'left'" itemClass="navbar-form min-width-fit">
-  <form [formGroup]="filterForm" class="d-flex a-i-center">
-    <div class="">
-      <div class="c8y-select-wrapper">
-        <select class="form-control filter-select" formControlName="type" id="listLabel" [attr.aria-label]="'Event type' | translate">
-          @for (lt of LoggingEventTypeMap | keyvalue; track lt) {
-          <option [ngValue]="lt.key">
-            {{ lt.key | formatStringAsWords:1 }}
-          </option>
-          }
-        </select>
-        <span></span>
+  <form [formGroup]="filterForm" class="d-flex a-i-center gap-8">
+    <div class="c8y-select-wrapper">
+      <select class="form-control filter-select" formControlName="type" id="listLabel" [attr.aria-label]="'Event type' | translate">
+        @for (lt of LoggingEventTypeMap | keyvalue; track lt) {
+        <option [ngValue]="lt.key">
+          {{ lt.key | formatStringAsWords:1 }}
+        </option>
+        }
+      </select>
+      <span></span>
+    </div>
+
+    <input type="search" formControlName="search" class="form-control" style="width: 240px"
+      [attr.aria-label]="'Search' | translate" placeholder="{{ 'Search message or connector' | translate }}" />
+
+    <div class="dropdown" dropdown [insideClick]="true">
+      <button type="button" class="btn btn-default dropdown-toggle" dropdownToggle aria-haspopup="true"
+        data-cy="dm-service-events-more-filters">
+        <i c8yIcon="filter"></i>
+        {{ 'Filters' | translate }}
+        @if (activeAdvancedFilterCount > 0) {
+        <span class="badge badge-info m-l-4">{{ activeAdvancedFilterCount }}</span>
+        }
+        <span class="caret"></span>
+      </button>
+      <div class="dropdown-menu dropdown-menu-right p-16" *dropdownMenu style="min-width: 340px">
+        <div class="form-group">
+          <label for="componentFilter" translate>Component</label>
+          <div class="c8y-select-wrapper">
+            <select id="componentFilter" class="form-control" formControlName="component">
+              <option value="ALL">{{ 'All components' | translate }}</option>
+              @for (c of componentOptions$ | async; track c) {
+              <option [value]="c">{{ c }}</option>
+              }
+            </select>
+            <span></span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="connectorFilter" translate>Connector</label>
+          <div class="c8y-select-wrapper">
+            <select id="connectorFilter" class="form-control" formControlName="connector">
+              <option value="ALL">{{ 'All connectors' | translate }}</option>
+              @for (c of connectorOptions$ | async; track c) {
+              <option [value]="c">{{ c }}</option>
+              }
+            </select>
+            <span></span>
+          </div>
+        </div>
+
+        <div class="d-flex gap-8 form-group">
+          <div class="flex-grow">
+            <label for="fromPicker" translate>Date from</label>
+            <input id="fromPicker" formControlName="dateFrom" class="form-control"
+              placeholder="{{ 'Date from' | translate }}" container="body" [bsConfig]="{
+                dateInputFormat: 'YYYY-MM-DD',
+                customTodayClass: 'today',
+                adaptivePosition: true
+              }" bsDatepicker />
+          </div>
+          <div class="flex-grow">
+            <label for="toPicker" translate>Date to</label>
+            <input id="toPicker" formControlName="dateTo" class="form-control"
+              placeholder="{{ 'Date to' | translate }}" container="body" [bsConfig]="{
+                dateInputFormat: 'YYYY-MM-DD',
+                customTodayClass: 'today',
+                adaptivePosition: true
+              }" bsDatepicker />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="c8y-switch">
+            <input type="checkbox" formControlName="onlyOpenSessions" />
+            <span></span>
+            <span translate>Only open sessions</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="c8y-switch">
+            <input type="checkbox" formControlName="onlyErrors" />
+            <span></span>
+            <span translate>Only with errors</span>
+          </label>
+        </div>
+
+        <div class="d-flex j-c-end">
+          <button type="button" class="btn btn-link" (click)="resetFilters()" translate>Reset filters</button>
+        </div>
       </div>
-    </div>
-
-    <div class="p-l-16">
-      <input id="fromPicker" formControlName="dateFrom" class="form-control" [attr.aria-label]="'Date from' | translate"
-        placeholder="{{ 'Date from' | translate }}" [bsConfig]="{
-            dateInputFormat: 'YYYY-MM-DD',
-            customTodayClass: 'today',
-            adaptivePosition: true
-          }" bsDatepicker />
-    </div>
-
-    <div class="p-l-16">
-      <input id="toPicker" formControlName="dateTo" class="form-control" [attr.aria-label]="'Date to' | translate"
-        placeholder="{{ 'Date to' | translate }}" [bsConfig]="{
-            dateInputFormat: 'YYYY-MM-DD',
-            customTodayClass: 'today',
-            adaptivePosition: true
-          }" bsDatepicker />
-    </div>
-
-    <div class="p-l-16 d-flex a-i-center">
-      <label class="c8y-switch m-b-0">
-        <input type="checkbox" formControlName="onlyOpenSessions" />
-        <span></span>
-        <span translate>Only open sessions</span>
-      </label>
     </div>
   </form>
 </c8y-action-bar-item>
