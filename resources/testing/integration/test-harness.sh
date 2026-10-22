@@ -559,6 +559,31 @@ dm_api_must() {     # <method> <path> [json_body]
     fi
 }
 
+# Assert that a request is REJECTED (non-2xx, so c8y exits non-zero). The error text is kept in
+# _DM_LAST_REJECTION for diagnostics. Unlike dm_api this does not swallow the failure, which is
+# the whole point: the request must not succeed.
+_DM_LAST_REJECTION=""
+dm_assert_rejected() {   # <label> <method> <path> [json_body]
+    local _label=$1 _method=$2 _path=$3 _body=${4:-} _err _rc=0
+    _err=$(mktemp)
+    if [ -n "$_body" ]; then
+        c8y api --method "$_method" --url "${DM_SERVICE}${_path}" --data "$_body" \
+            --header 'Content-Type: application/json' --force --output json </dev/null >/dev/null 2>"$_err" || _rc=$?
+    else
+        c8y api --method "$_method" --url "${DM_SERVICE}${_path}" \
+            --force --output json </dev/null >/dev/null 2>"$_err" || _rc=$?
+    fi
+    _DM_LAST_REJECTION=$(tr '\n' ' ' <"$_err" | head -c 300)
+    rm -f "$_err"
+    if [ "$_rc" -ne 0 ]; then
+        _DM_PASS_COUNT=$((_DM_PASS_COUNT + 1))
+        dm_success "[${_label}] rejected (${_DM_LAST_REJECTION:-exit $_rc})"
+    else
+        _DM_FAIL_COUNT=$((_DM_FAIL_COUNT + 1))
+        dm_fail "[${_label}] request unexpectedly succeeded"
+    fi
+}
+
 # ── Subscription helpers ───────────────────────────────────────────────────────
 _DM_LAST_SUB_COUNT=0
 

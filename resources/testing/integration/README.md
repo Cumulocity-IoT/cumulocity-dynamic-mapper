@@ -435,6 +435,8 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-inbound-operation` | JSON / DEFAULT → OPERATION |
 | `test-inbound-alarm-dedup-upsert` | Two messages, same source+type → exactly one alarm; with `DM_EXPECT_ALARM_UPSERT=true` also asserts upsert refresh (#522, not yet implemented) |
 | `test-inbound-deployment-reconcile` | Un-deploy / re-deploy via `PUT /deployment/defined/{id}` takes effect live (no reconnect); unknown connector rejected |
+| `test-inbound-deployment-reset` | `RESET_DEPLOYMENT_MAP` undeploys live (no reconnect), empties the map and the effective view, writes a service event; re-deploy resumes. **Destructive** (empties the whole tenant's deployment map, restored from a snapshot afterwards) — skipped unless `DM_ALLOW_DEPLOYMENT_RESET=true` |
+| `test-inbound-mapping-versioning` | Draft → publish → activate → rollback via the REST API; each version emits a different measurement type so the switch is proven in the pipeline; duplicate / non-canonical / unparseable labels rejected; active version protected; reads do not write version records; deleting the mapping removes its records |
 | `test-inbound-rest-polling` | REST_POLLING connector polls the http-polling-mock → MEASUREMENT; un-deploy stops polling (~2 min, 30s minimum poll interval) |
 | `test-inbound-inventory` | JSON / DEFAULT → INVENTORY — updates **device metadata** (type + custom fragment) on an existing managed object (`updateExistingDevice: true`) |
 
@@ -474,6 +476,8 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-outbound-type-subscription-resync` | `POST /subscription/type/resync/{type}` backfills pre-existing devices; idempotent; unconfigured type rejected |
 | `test-outbound-group-subscription` | Dynamic group subscription |
 | `test-outbound-group-subscription-removal` | Group subscription removal |
+| `test-outbound-group-subscription-desired-state` | `PUT /subscription/group` as desired state: removing a group unsubscribes only devices without another reason (other group, configured type); `[]` clears; missing list rejected |
+| `test-outbound-type-subscription-removal` | Removing a type from `PUT /subscription/type` unsubscribes its devices in the background; devices still in a subscribed group keep theirs |
 | `test-outbound-subscription-persistence` | Subscription persistence after restart |
 | `test-outbound-extension-alarm-to-sparkplugb` | Extension: Alarm → Sparkplug B DCMD |
 

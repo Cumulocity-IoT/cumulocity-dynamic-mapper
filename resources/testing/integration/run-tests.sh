@@ -74,6 +74,8 @@ declare -a TESTS=(
     "inbound|test-inbound-inventory|JSON / DEFAULT → INVENTORY (device metadata update)"
     "inbound|test-inbound-alarm-dedup-upsert|Repeated ALARM (same source+type) → one alarm; upsert semantics via DM_EXPECT_ALARM_UPSERT=true"
     "inbound|test-inbound-deployment-reconcile|Deployment change applies live (un-deploy / re-deploy, no reconnect)"
+    "inbound|test-inbound-deployment-reset|RESET_DEPLOYMENT_MAP applies live (destructive: needs DM_ALLOW_DEPLOYMENT_RESET=true)"
+    "inbound|test-inbound-mapping-versioning|Mapping versioning (draft, publish, activate, rollback)"
     "inbound|test-inbound-rest-polling|REST_POLLING connector → MEASUREMENT (needs http-polling-mock)"
     "inbound|test-inbound-filter|filterMapping / filterInventory — inbound"
     # ── Inbound (Smart Function patterns) ──────────────────────────────────────
@@ -106,6 +108,8 @@ declare -a TESTS=(
     "outbound|test-outbound-type-subscription-resync|Type subscription resync (backfill of pre-existing devices)"
     "outbound|test-outbound-group-subscription|Dynamic group subscription"
     "outbound|test-outbound-group-subscription-removal|Group subscription removal"
+    "outbound|test-outbound-group-subscription-desired-state|Group subscription desired-state update (removal keeps still-covered devices)"
+    "outbound|test-outbound-type-subscription-removal|Type subscription removal unsubscribes devices"
     "outbound|test-outbound-subscription-persistence|Subscription persistence after restart"
     # ── Reliability ───────────────────────────────────────────────────────────
     "reliability|test-multi-tenant|Mapping CRUD / tenant isolation"

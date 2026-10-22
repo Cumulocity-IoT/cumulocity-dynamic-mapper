@@ -867,11 +867,12 @@ public class NotificationConnectionManager {
                 // Wait and retry — do NOT unsubscribe, as that would drop any backlogged messages.
                 if (client.isConflict()) {
                     for (int attempt = 1; attempt <= Utils.CONFLICT_RETRY_COUNT; attempt++) {
+                        int delaySeconds = Utils.CONFLICT_RETRY_DELAYS_SECONDS[attempt - 1];
                         log.warn("{} - WebSocket 409 Conflict for connector {} — waiting {}s before retry {}/{}",
-                                tenant, connectorId.getName(), Utils.CONFLICT_RETRY_DELAY_SECONDS,
+                                tenant, connectorId.getName(), delaySeconds,
                                 attempt, Utils.CONFLICT_RETRY_COUNT);
                         try {
-                            TimeUnit.SECONDS.sleep(Utils.CONFLICT_RETRY_DELAY_SECONDS);
+                            TimeUnit.SECONDS.sleep(delaySeconds);
                         } catch (InterruptedException ie) {
                             Thread.currentThread().interrupt();
                             return null;

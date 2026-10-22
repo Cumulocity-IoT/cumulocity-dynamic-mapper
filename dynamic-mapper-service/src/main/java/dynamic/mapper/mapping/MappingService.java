@@ -561,7 +561,13 @@ public class MappingService {
                         DateTime.now(),
                         tenant,
                         null);
-                log.error("{} - Failed to set activation for mapping {}", tenant, mappingId, e);
+                if (e instanceof IllegalArgumentException) {
+                    // Caller error (unknown mapping/version): the REST layer logs it once at WARN
+                    // and answers 400; the service event above records it for the user.
+                    log.debug("{} - Failed to set activation for mapping {}: {}", tenant, mappingId, e.getMessage());
+                } else {
+                    log.error("{} - Failed to set activation for mapping {}", tenant, mappingId, e);
+                }
                 throw e;
             }
         } finally {
