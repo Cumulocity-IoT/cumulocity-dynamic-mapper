@@ -19,7 +19,7 @@
  */
 import { inject, Injectable } from '@angular/core';
 import { InventoryService, FetchClient } from '@c8y/client';
-import { BehaviorSubject, map, Observable, Subject, takeUntil } from 'rxjs';
+import { BehaviorSubject, from, map, Observable, Subject, switchMap, takeUntil } from 'rxjs';
 import { BASE_URL, MAPPING_FRAGMENT, MappingStatus, SharedService } from '../../shared';
 import {
   ManagedObjectRealtimeService,
@@ -157,6 +157,20 @@ export class MonitoringService {
           takeUntil(this.unsubscribe$)
         )
         .subscribe((status) => this.state$.next({ status, error: null }));
+
+      // Pushes sent while the realtime connection was down are lost, so re-read the state.
+      this.managedObjectRealtimeService.reconnect$
+        .pipe(
+          switchMap(() => from(this.inventory.detail(agentId))),
+          takeUntil(this.unsubscribe$)
+        )
+        .subscribe({
+          next: ({ data }) => {
+            const fragment = data?.[MAPPING_FRAGMENT];
+            if (Array.isArray(fragment)) this.state$.next({ status: fragment, error: null });
+          },
+          error: (e) => console.warn('Failed to re-sync mapping status after reconnect:', e)
+        });
     } catch (error) {
       console.error('Failed to start monitoring:', error);
       this.activeConsumers = Math.max(0, this.activeConsumers - 1);

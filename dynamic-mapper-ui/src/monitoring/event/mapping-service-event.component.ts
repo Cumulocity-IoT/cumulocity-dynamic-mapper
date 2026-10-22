@@ -22,10 +22,11 @@ import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { EventService, IEvent, IResultList, InventoryService } from '@c8y/client';
-import { CoreModule, Pagination } from '@c8y/ngx-components';
+import { CoreModule, EventRealtimeService, Pagination, RealtimeButtonComponent, RealtimeSubjectService } from '@c8y/ngx-components';
 import { saveAs } from 'file-saver';
 import { BsDatepickerModule } from 'ngx-bootstrap/datepicker';
-import { BehaviorSubject, catchError, combineLatest, from, map, Observable, of, startWith, Subject, switchMap, takeUntil, tap } from 'rxjs';
+import { filter } from 'rxjs/operators';
+import { BehaviorSubject, catchError, combineLatest, EMPTY, from, map, Observable, of, scan, startWith, Subject, switchMap, takeUntil, tap } from 'rxjs';
 import {
   ConnectorStatusHistory,
   ConnectorStatusHistoryComponent,
@@ -44,7 +45,7 @@ import {
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CommonModule, SharedModule, BsDatepickerModule, ReactiveFormsModule, ConnectorStatusHistoryComponent]
+  imports: [CoreModule, CommonModule, SharedModule, BsDatepickerModule, ReactiveFormsModule, ConnectorStatusHistoryComponent, RealtimeButtonComponent]
 })
 export class MappingServiceEventComponent implements OnInit, OnDestroy {
 
@@ -53,10 +54,14 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
     private inventoryService: InventoryService,
     private sharedService: SharedService,
     private fb: FormBuilder,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    realtimeSubjectService: RealtimeSubjectService
   ) {
+    this.eventRealtimeService = new EventRealtimeService(realtimeSubjectService);
     this.createForm();
   }
+
+  readonly eventRealtimeService: EventRealtimeService;
 
   readonly baseFilter = {
     pageSize: 1000,
@@ -94,6 +99,9 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.setupFormSubscriptions();
     this.setupEventsObservable();
+    this.eventRealtimeService.reconnect$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.filterSubject$.next());
 
     // Pre-select filter from query param (e.g. when navigated from subscription page)
     const typeParam = this.route.snapshot.queryParamMap.get('type');
@@ -150,6 +158,12 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
         this.error$.next('Failed to load service events. Please try again.');
         return of({ data: [], paging: {} } as IResultList<IEvent>);
       }),
+      // Live updates: fold each pushed event into the freshly fetched page. A new fetch
+      // (filter change, reload) restarts the fold from that page.
+      switchMap(result => this.liveEvents$().pipe(
+        scan((acc, event) => this.upsertEvent(acc, event), result),
+        startWith(result)
+      )),
       takeUntil(this.destroy$)
     );
 
@@ -176,7 +190,46 @@ export class MappingServiceEventComponent implements OnInit, OnDestroy {
     );
   }
 
+  /** Events pushed by the backend that match the current filter. Silent while realtime is paused. */
+  private liveEvents$(): Observable<IEvent> {
+    return from(this.sharedService.getDynamicMappingServiceAgent()).pipe(
+      switchMap(agentId => this.eventRealtimeService.onAll$(agentId)),
+      map(message => message.data as IEvent),
+      filter(event => this.matchesCurrentFilter(event)),
+      catchError(error => {
+        console.error('Realtime service events failed:', error);
+        return EMPTY;
+      })
+    );
+  }
+
+  private matchesCurrentFilter(event: IEvent): boolean {
+    const { type, dateFrom, dateTo } = this.baseFilter as { type?: string; dateFrom?: string; dateTo?: string };
+    const time = new Date(event.time).getTime();
+    return (!type || event.type === type)
+      && (!dateFrom || time >= new Date(dateFrom).getTime())
+      && (!dateTo || time <= new Date(dateTo).getTime());
+  }
+
+  /** Replaces an already listed event (sessions are updated in place) or prepends a new one. */
+  private upsertEvent(result: IResultList<IEvent>, event: IEvent): IResultList<IEvent> {
+    const data = result.data ?? [];
+    const index = data.findIndex(e => e.id === event.id);
+    const next = index >= 0
+      ? data.map((e, i) => (i === index ? event : e))
+      : [event, ...data];
+    return { ...result, data: next } as IResultList<IEvent>;
+  }
+
+  onRealtimeToggle(active: boolean): void {
+    // Events pushed while realtime was paused were not received; catch up.
+    if (active) {
+      this.filterSubject$.next();
+    }
+  }
+
   ngOnDestroy(): void {
+    this.eventRealtimeService.stop();
     this.destroy$.next();
     this.destroy$.complete();
     this.reload$.complete();

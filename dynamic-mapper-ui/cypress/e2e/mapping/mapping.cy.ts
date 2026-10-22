@@ -66,12 +66,14 @@ describe('Mapping — toolbar & add drawer (data-cy example)', () => {
 
   it('shows the mapping toolbar actions', () => {
     toolbar('dm-mapping-add').should('be.enabled');
+    toolbar('dm-mapping-refresh').should('be.visible');
+    // the less frequent actions live in the "More..." dropdown, which renders lazily
+    cy.getByData('action-bar--button-more').filter(':visible').first().click();
     cy.getByData('dm-mapping-add-sample').should('exist');
     cy.getByData('dm-mapping-reload').should('exist');
     cy.getByData('dm-mapping-export').should('exist');
     cy.getByData('dm-mapping-import').should('exist');
     cy.getByData('dm-mapping-reset-cache').should('exist');
-    toolbar('dm-mapping-refresh').should('be.visible');
 
     cy.screenshot('mapping-toolbar');
   });

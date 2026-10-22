@@ -356,6 +356,7 @@ export const MAPPING_TEST_DEVICE_TYPE = 'd11r_testDevice';
 export const MAPPING_TEST_DEVICE_FRAGMENT = 'd11r_testDevice';
 export const MAPPING_FRAGMENT = 'd11r_mapping';
 export const CONNECTOR_FRAGMENT = 'd11r_connector';
+export const DEPLOYMENT_MAP_FRAGMENT = 'd11r_deploymentMap';
 export const MAPPING_GENERATED_TEST_DEVICE = 'd11r_device_generatedType';
 
 export const ALERT_INFO_TIMEOUT = 10000;

@@ -20,6 +20,10 @@
 -->
 
 <c8y-title translate>Service events</c8y-title>
+<c8y-action-bar-item [placement]="'right'">
+  <c8y-realtime-btn [service]="eventRealtimeService" (onToggle)="onRealtimeToggle($event)"
+    data-cy="dm-service-events-realtime-toggle"></c8y-realtime-btn>
+</c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'left'" itemClass="navbar-form min-width-fit">
   <form [formGroup]="filterForm" class="d-flex a-i-center">
     <div class="">

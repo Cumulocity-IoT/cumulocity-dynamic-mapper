@@ -20,6 +20,9 @@
 
 import { TestBed } from '@angular/core/testing';
 import { FetchClient } from '@c8y/client';
+import { RealtimeSubjectService } from '@c8y/ngx-components';
+import { NEVER } from 'rxjs';
+import { SharedService } from './shared.service';
 import { ConnectorConfigurationService } from './connector-configuration.service';
 import {
   BASE_URL,
@@ -61,7 +64,16 @@ describe('ConnectorConfigurationService', () => {
     TestBed.configureTestingModule({
       providers: [
         ConnectorConfigurationService,
-        { provide: FetchClient, useValue: mockClient }
+        { provide: FetchClient, useValue: mockClient },
+        { provide: SharedService, useValue: { getDynamicMappingServiceAgent: async () => 'agent-1' } },
+        {
+          provide: RealtimeSubjectService,
+          useValue: {
+            getObservableForChannel: () => NEVER,
+            reconnect$: NEVER,
+            connectionStatus$: NEVER
+          }
+        }
       ]
     });
 

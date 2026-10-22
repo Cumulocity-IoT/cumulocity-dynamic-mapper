@@ -1057,6 +1057,14 @@ export class MappingComponent implements OnInit, OnDestroy {
     // console.log('Final configuration:', this.stepperConfiguration);
   }
 
+  get realtimeActive(): boolean {
+    return this.mappingService.realtimeActive;
+  }
+
+  toggleRealtime(): void {
+    this.mappingService.setRealtimeActive(!this.mappingService.realtimeActive);
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();

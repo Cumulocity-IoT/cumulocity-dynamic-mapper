@@ -34,6 +34,9 @@ import {
   filter,
   takeUntil,
   catchError,
+  distinctUntilChanged,
+  debounceTime,
+  merge,
   of
 } from 'rxjs';
 import { AlertService } from '@c8y/ngx-components';
@@ -53,10 +56,12 @@ import {
   PATH_MAPPING_ENDPOINT,
   LoggingEventTypeMap,
   LoggingEventType,
+  DEPLOYMENT_MAP_FRAGMENT,
 } from '../../shared';
 
 import {
   EventRealtimeService,
+  ManagedObjectRealtimeService,
   RealtimeSubjectService
 } from '@c8y/ngx-components';
 import { buildBackendErrorMessage } from '../../shared/mapping/util';
@@ -68,6 +73,7 @@ import { toBackendError } from '../../shared/mapping/mapping-validation-error';
 export class MappingService {
   // Core dependencies
   private readonly eventRealtimeService: EventRealtimeService;
+  private readonly managedObjectRealtimeService: ManagedObjectRealtimeService;
 
   // Observables and subjects
   private readonly updateMappingEnriched$ = new Subject<MappingEnriched>();
@@ -90,7 +96,9 @@ export class MappingService {
     private readonly sharedService: SharedService,
     private readonly client: FetchClient
   ) {
-    this.eventRealtimeService = new EventRealtimeService(inject(RealtimeSubjectService));
+    const realtimeSubjectService = inject(RealtimeSubjectService);
+    this.eventRealtimeService = new EventRealtimeService(realtimeSubjectService);
+    this.managedObjectRealtimeService = new ManagedObjectRealtimeService(realtimeSubjectService);
     this.reloadInbound$ = this.sharedService.reloadInbound$;
     this.reloadOutbound$ = this.sharedService.reloadOutbound$;
     this.initializeMappingsEnriched();
@@ -100,9 +108,8 @@ export class MappingService {
   ngOnDestroy(): void {
     this.unsubscribe$.next();
     this.unsubscribe$.complete();
-    if (this.eventRealtimeService) {
-      this.eventRealtimeService.stop();
-    }
+    this.eventRealtimeService?.stop();
+    this.managedObjectRealtimeService?.stop();
   }
 
   // ===== MAPPING OPERATIONS =====
@@ -556,9 +563,28 @@ export class MappingService {
     );
   }
 
+  get realtimeActive(): boolean {
+    return this.eventRealtimeService.active;
+  }
+
+  /** Pauses/resumes live updates without tearing down the subscriptions; resuming catches up. */
+  setRealtimeActive(active: boolean): void {
+    if (active === this.realtimeActive) return;
+    if (active) {
+      this.eventRealtimeService.start();
+      this.managedObjectRealtimeService.start();
+      this.reloadInbound$.next();
+      this.reloadOutbound$.next();
+    } else {
+      this.eventRealtimeService.stop();
+      this.managedObjectRealtimeService.stop();
+    }
+  }
+
   async stopChangedMappingEvents() {
     if (this.eventRealtimeService) {
       this.eventRealtimeService.stop();
+      this.managedObjectRealtimeService.stop();
       this.unsubscribe$.next();
       this.unsubscribe$.complete();
       this.unsubscribe$ = new Subject<void>();
@@ -571,7 +597,9 @@ export class MappingService {
     }
 
     this.eventRealtimeService.start();
-    this.eventRealtimeService
+    this.managedObjectRealtimeService.start();
+
+    const mappingChanged$ = this.eventRealtimeService
       .onAll$(this._agentId)
       .pipe(
         map((p) => p['data']),
@@ -579,9 +607,27 @@ export class MappingService {
           (payload) =>
             payload['type'] ==
             LoggingEventTypeMap[LoggingEventType.MAPPING_CHANGED_EVENT_TYPE].type
-        ),
-        takeUntil(this.unsubscribe$)
-      )
+        )
+      );
+
+    // The effective deployment map is derived in the backend from the d11r_deploymentMap
+    // fragment of the agent managed object, so a change there means every mapping's deployed
+    // connectors may have changed. Every agent update (e.g. mapping statistics) can carry the
+    // whole fragment, hence compare before reloading.
+    const deploymentChanged$ = this.managedObjectRealtimeService
+      .onAll$(this._agentId)
+      .pipe(
+        map((update) => update?.data?.[DEPLOYMENT_MAP_FRAGMENT]),
+        filter((deploymentMap) => deploymentMap !== undefined),
+        map((deploymentMap) => JSON.stringify(deploymentMap)),
+        distinctUntilChanged()
+      );
+
+    // Pushes sent while the realtime connection was down are lost, so re-sync on reconnect.
+    const reconnected$ = this.eventRealtimeService.reconnect$;
+
+    merge(mappingChanged$, deploymentChanged$, reconnected$)
+      .pipe(debounceTime(200), takeUntil(this.unsubscribe$))
       .subscribe(() => {
         this.reloadInbound$.next();
         this.reloadOutbound$.next();
