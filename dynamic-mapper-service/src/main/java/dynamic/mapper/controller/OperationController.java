@@ -387,6 +387,28 @@ public class OperationController {
 
     private ResponseEntity<?> handleResetDeploymentMap(String tenant) throws Exception {
         deploymentMapService.initializeTenantDeploymentMap(tenant, true);
+
+        // Apply the now-empty deployment live (same as a deployment PUT): without this,
+        // connectors keep their inbound subscriptions until a reconnect or reload.
+        Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
+        if (connectorMap != null) {
+            connectorMap.values().forEach(client -> {
+                try {
+                    client.reconcileSubscriptions();
+                } catch (Exception e) {
+                    log.error("{} - Error reconciling connector {} after deployment map reset",
+                            tenant, client.getConnectorIdentifier(), e);
+                }
+            });
+        }
+
+        c8YAgent.createLoggingEvent(
+                "Deployment map reset: all mappings are now undeployed",
+                LoggingEventType.MAPPING_CHANGED_EVENT_TYPE,
+                DateTime.now(),
+                tenant,
+                null);
+
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

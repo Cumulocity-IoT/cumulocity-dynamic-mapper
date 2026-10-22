@@ -1205,6 +1205,15 @@ describe('MappingStepperService', () => {
         .toContain('Connector assignments for M saved');
     });
 
+    it('does not claim connector assignments saved when the deployment write failed', () => {
+      const failed = (contentChanged: boolean, deploymentChanged: boolean) =>
+        ({ status: 'saved', contentChanged, deploymentChanged, deploymentFailed: true }) as
+          Extract<CommitResult, { status: 'saved' }>;
+
+      expect(commitSuccessMessage(failed(false, true), 'M', 'draft')).toBeUndefined();
+      expect(commitSuccessMessage(failed(true, true), 'M', 'draft')?.text).toContain('Saved draft for M');
+    });
+
     it('keeps the draft messages up longer, because they ask for a follow-up action', () => {
       // Cumulocity auto-dismisses a detail-less success alert after 3s; these two tell the user
       // to publish and activate afterwards, so they must outlast that.

@@ -1156,11 +1156,9 @@ public abstract class AConnectorClient {
      * Check if mapping is deployed in this connector
      */
     private Boolean isDeployedInConnector(Mapping mapping) {
-        List<String> deploymentMapEntry = mappingService.getDeploymentMapEntry(tenant, mapping.getIdentifier());
         // Explicit deployment required: if no deployment entry is configured,
         // the mapping is NOT deployed (default is no-deployment, not deploy-everywhere).
-        // Only return true if deployment entry exists AND contains this connector's identifier.
-        return deploymentMapEntry != null && deploymentMapEntry.contains(getConnectorIdentifier());
+        return mappingService.isMappingDeployedToConnector(tenant, mapping.getIdentifier(), getConnectorIdentifier());
     }
 
     /**

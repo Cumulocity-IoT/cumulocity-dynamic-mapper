@@ -392,7 +392,11 @@ public class ConfigurationController {
                     log.warn("{} - Error shutting down connector {} during delete: {}", tenant, identifier, e.getMessage());
                 }
                 connectorConfigurationService.deleteConnectorConfiguration(identifier);
-                mappingService.removeConnectorFromDeploymentMap(tenant, identifier);
+                try {
+                    mappingService.removeConnectorFromDeploymentMap(tenant, identifier);
+                } catch (Exception e) {
+                    log.warn("{} - Error removing connector {} from deployment map during delete: {}", tenant, identifier, e.getMessage());
+                }
                 connectorRegistry.removeClientFromStatusMap(tenant, identifier);
             }
         } catch (Exception ex) {

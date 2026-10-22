@@ -22,11 +22,11 @@
 package dynamic.mapper.controller;
 
 import dynamic.mapper.util.MappingLogContext;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
@@ -139,7 +139,7 @@ public class DeploymentController {
 	@GetMapping(value = "/effective", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, DeploymentMapEntry>> getMappingsDeployed() {
 		String tenant = contextService.getContext().getTenant();
-		Map<String, DeploymentMapEntry> mappingsDeployed = new HashMap<>();
+		Map<String, DeploymentMapEntry> mappingsDeployed = new ConcurrentHashMap<>();
 		try {
 			Map<String, AConnectorClient> connectorMap = connectorRegistry
 					.getClientsForTenant(tenant);

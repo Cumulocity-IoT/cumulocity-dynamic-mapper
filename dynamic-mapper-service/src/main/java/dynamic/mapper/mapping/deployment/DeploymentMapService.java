@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -74,6 +75,16 @@ public class DeploymentMapService {
     // Structure: <Tenant, <MappingIdentifier, List<ConnectorIdentifier>>>
     private final Map<String, Map<String, List<String>>> deploymentMaps = new ConcurrentHashMap<>();
 
+    // One monitor per tenant. Every mutation (read-modify-write on the lists) and the
+    // persist that follows it run under it, so (a) check-then-act sequences are atomic and
+    // (b) persists reach the inventory in the same order as the in-memory changes — an older
+    // snapshot can never overwrite a newer one.
+    private final Map<String, Object> tenantLocks = new ConcurrentHashMap<>();
+
+    private Object lockFor(String tenant) {
+        return tenantLocks.computeIfAbsent(tenant, k -> new Object());
+    }
+
     /**
      * Initializes the deployment map for a tenant.
      * 
@@ -84,6 +95,7 @@ public class DeploymentMapService {
      * @param reset if true, creates a new empty deployment map; if false, loads existing configuration
      */
     public void initializeTenantDeploymentMap(String tenant, boolean reset) {
+        synchronized (lockFor(tenant)) {
         MapperServiceRepresentation serviceRep = serviceRegistry.getMapperServiceRepresentation(tenant);
 
         if (serviceRep.getDeploymentMap() != null && !reset) {
@@ -105,6 +117,7 @@ public class DeploymentMapService {
         }
         persistDeploymentMap(tenant);
         log.info("{} - Deployment map initialized", tenant);
+        }
     }
 
     /**
@@ -116,7 +129,10 @@ public class DeploymentMapService {
      * @param tenant the tenant identifier
      */
     public void removeTenantDeploymentMap(String tenant) {
-        deploymentMaps.remove(tenant);
+        synchronized (lockFor(tenant)) {
+            deploymentMaps.remove(tenant);
+        }
+        tenantLocks.remove(tenant);
         log.debug("{} - Deployment map removed", tenant);
     }
 
@@ -162,15 +178,19 @@ public class DeploymentMapService {
      * @param connectors the complete list of connector identifiers to deploy this mapping to
      */
     public void updateDeployment(String tenant, String mappingIdentifier, @Valid List<String> connectors) {
-        Map<String, List<String>> tenantMap = getOrCreateDeploymentMap(tenant);
-        // De-duplicate and store in a thread-safe list (connector threads read it concurrently).
-        tenantMap.put(mappingIdentifier,
-                new CopyOnWriteArrayList<>(connectors.stream().distinct().collect(Collectors.toList())));
-        
-        log.debug("{} - Updated deployment for mapping {}: {} connectors", 
-            tenant, mappingIdentifier, connectors.size());
-        
-        persistDeploymentMap(tenant);
+        // A null list means "deployed nowhere", same as an empty one.
+        List<String> requested = connectors == null ? List.of() : connectors;
+        synchronized (lockFor(tenant)) {
+            Map<String, List<String>> tenantMap = getOrCreateDeploymentMap(tenant);
+            // De-duplicate and store in a thread-safe list (connector threads read it concurrently).
+            tenantMap.put(mappingIdentifier,
+                    new CopyOnWriteArrayList<>(requested.stream().distinct().collect(Collectors.toList())));
+
+            log.debug("{} - Updated deployment for mapping {}: {} connectors",
+                tenant, mappingIdentifier, requested.size());
+
+            persistDeploymentMap(tenant);
+        }
     }
 
     /**
@@ -184,23 +204,25 @@ public class DeploymentMapService {
      * @return true if any mappings were modified; false if the connector wasn't deployed anywhere
      */
     public boolean removeConnectorFromAllMappings(String tenant, String connectorIdentifier) {
-        Map<String, List<String>> tenantMap = getOrCreateDeploymentMap(tenant);
-        boolean modified = false;
+        synchronized (lockFor(tenant)) {
+            Map<String, List<String>> tenantMap = getOrCreateDeploymentMap(tenant);
+            boolean modified = false;
 
-        for (Map.Entry<String, List<String>> entry : tenantMap.entrySet()) {
-            List<String> connectors = entry.getValue();
-            if (connectors.remove(connectorIdentifier)) {
-                modified = true;
-                log.debug("{} - Removed connector {} from mapping {}", 
-                    tenant, connectorIdentifier, entry.getKey());
+            for (Map.Entry<String, List<String>> entry : tenantMap.entrySet()) {
+                List<String> connectors = entry.getValue();
+                if (connectors.remove(connectorIdentifier)) {
+                    modified = true;
+                    log.debug("{} - Removed connector {} from mapping {}",
+                        tenant, connectorIdentifier, entry.getKey());
+                }
             }
-        }
 
-        if (modified) {
-            persistDeploymentMap(tenant);
-        }
+            if (modified) {
+                persistDeploymentMap(tenant);
+            }
 
-        return modified;
+            return modified;
+        }
     }
 
     /**
@@ -213,20 +235,21 @@ public class DeploymentMapService {
      * @return true if the mapping had deployments and was removed; false if it wasn't in the deployment map
      */
     public boolean removeMappingDeployment(String tenant, String mappingIdentifier) {
-        Map<String, List<String>> tenantMap = getOrCreateDeploymentMap(tenant);
-        List<String> removed = tenantMap.remove(mappingIdentifier);
+        synchronized (lockFor(tenant)) {
+            List<String> removed = getOrCreateDeploymentMap(tenant).remove(mappingIdentifier);
 
-        // Persist whenever an entry was actually removed from the in-memory map, even if
-        // the connector list was empty. Otherwise in-memory and persisted state diverge
-        // (the entry is gone from memory but reappears from inventory on restart).
-        boolean wasRemoved = removed != null;
+            // Persist whenever an entry was actually removed from the in-memory map, even if
+            // the connector list was empty. Otherwise in-memory and persisted state diverge
+            // (the entry is gone from memory but reappears from inventory on restart).
+            boolean wasRemoved = removed != null;
 
-        if (wasRemoved) {
-            log.debug("{} - Removed deployment for mapping {}", tenant, mappingIdentifier);
-            persistDeploymentMap(tenant);
+            if (wasRemoved) {
+                log.debug("{} - Removed deployment for mapping {}", tenant, mappingIdentifier);
+                persistDeploymentMap(tenant);
+            }
+
+            return wasRemoved;
         }
-
-        return wasRemoved;
     }
 
     /**
@@ -239,14 +262,16 @@ public class DeploymentMapService {
      * @param connectorIdentifier the connector to add
      */
     public void addConnectorToMapping(String tenant, String mappingIdentifier, String connectorIdentifier) {
-        List<String> connectors = getOrCreateDeploymentMap(tenant)
-            .computeIfAbsent(mappingIdentifier, k -> new CopyOnWriteArrayList<>());
+        synchronized (lockFor(tenant)) {
+            List<String> connectors = getOrCreateDeploymentMap(tenant)
+                .computeIfAbsent(mappingIdentifier, k -> new CopyOnWriteArrayList<>());
 
-        if (!connectors.contains(connectorIdentifier)) {
-            connectors.add(connectorIdentifier);
-            log.debug("{} - Added connector {} to mapping {}", 
-                tenant, connectorIdentifier, mappingIdentifier);
-            persistDeploymentMap(tenant);
+            if (!connectors.contains(connectorIdentifier)) {
+                connectors.add(connectorIdentifier);
+                log.debug("{} - Added connector {} to mapping {}",
+                    tenant, connectorIdentifier, mappingIdentifier);
+                persistDeploymentMap(tenant);
+            }
         }
     }
 
@@ -259,16 +284,18 @@ public class DeploymentMapService {
      * @return true if the connector was found and removed; false otherwise
      */
     public boolean removeConnectorFromMapping(String tenant, String mappingIdentifier, String connectorIdentifier) {
-        List<String> connectors = getOrCreateDeploymentMap(tenant).get(mappingIdentifier);
-        
-        if (connectors != null && connectors.remove(connectorIdentifier)) {
-            log.debug("{} - Removed connector {} from mapping {}", 
-                tenant, connectorIdentifier, mappingIdentifier);
-            persistDeploymentMap(tenant);
-            return true;
+        synchronized (lockFor(tenant)) {
+            List<String> connectors = getOrCreateDeploymentMap(tenant).get(mappingIdentifier);
+
+            if (connectors != null && connectors.remove(connectorIdentifier)) {
+                log.debug("{} - Removed connector {} from mapping {}",
+                    tenant, connectorIdentifier, mappingIdentifier);
+                persistDeploymentMap(tenant);
+                return true;
+            }
+
+            return false;
         }
-        
-        return false;
     }
 
     /**
@@ -300,24 +327,32 @@ public class DeploymentMapService {
      * @return true if any stale entries were removed and the map was persisted; false otherwise
      */
     public boolean cleanupStaleConnectors(String tenant, Set<String> validConnectorIdentifiers) {
-        Map<String, List<String>> tenantMap = getOrCreateDeploymentMap(tenant);
-        boolean modified = false;
+        synchronized (lockFor(tenant)) {
+            Map<String, List<String>> tenantMap = getOrCreateDeploymentMap(tenant);
+            boolean modified = false;
 
-        for (Map.Entry<String, List<String>> entry : tenantMap.entrySet()) {
-            List<String> connectors = entry.getValue();
-            boolean removed = connectors.removeIf(id -> !validConnectorIdentifiers.contains(id));
-            if (removed) {
-                modified = true;
-                log.info("{} - Removed stale connector identifiers from mapping {}, remaining: {}",
-                        tenant, entry.getKey(), connectors);
+            for (Map.Entry<String, List<String>> entry : tenantMap.entrySet()) {
+                List<String> connectors = entry.getValue();
+                boolean removed = connectors.removeIf(id -> !validConnectorIdentifiers.contains(id));
+                if (removed) {
+                    modified = true;
+                    log.info("{} - Removed stale connector identifiers from mapping {}, remaining: {}",
+                            tenant, entry.getKey(), connectors);
+                }
             }
-        }
 
-        if (modified) {
-            persistDeploymentMap(tenant);
-        }
+            if (modified) {
+                try {
+                    persistDeploymentMap(tenant);
+                } catch (RuntimeException e) {
+                    // Startup housekeeping: the in-memory map is already clean and the next
+                    // change (or startup) persists it; don't abort tenant initialization.
+                    log.warn("{} - Stale connector cleanup could not be persisted: {}", tenant, e.getMessage());
+                }
+            }
 
-        return modified;
+            return modified;
+        }
     }
 
     // ========== Private Helper Methods ==========
@@ -331,25 +366,42 @@ public class DeploymentMapService {
 
     /**
      * Persists the current in-memory deployment map to the Cumulocity inventory.
-     * 
-     * <p>Updates the {@link MapperServiceRepresentation} object with the current deployment configuration.
+     *
+     * <p>Must be called with the tenant lock held. Updates the {@link MapperServiceRepresentation}
+     * object with the current deployment configuration and keeps its cached copy in sync, so a
+     * later {@link #initializeTenantDeploymentMap} does not resurrect stale deployments.
+     *
+     * @throws IllegalStateException if the inventory update failed (the in-memory map is already
+     *                               changed; callers must not report success)
      */
     private void persistDeploymentMap(String tenant) {
+        AtomicReference<RuntimeException> failure = new AtomicReference<>();
         subscriptionsService.runForTenant(tenant, () -> {
-            MapperServiceRepresentation serviceRep = serviceRegistry.getMapperServiceRepresentation(tenant);
-            
-            Map<String, List<String>> deploymentMap = getOrCreateDeploymentMap(tenant);
-            
-            log.info("{} - Persisting deployment map with {} entries", tenant, deploymentMap.size());
+            try {
+                MapperServiceRepresentation serviceRep = serviceRegistry.getMapperServiceRepresentation(tenant);
 
-            Map<String, Object> fragment = new ConcurrentHashMap<>();
-            fragment.put(MapperServiceRepresentation.DEPLOYMENT_MAP_FRAGMENT, deploymentMap);
+                // Snapshot: a plain deep copy is serialized, never the live concurrent lists.
+                Map<String, List<String>> snapshot = getDeploymentMap(tenant);
 
-            ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
-            updateMor.setId(GId.asGId(serviceRep.getId()));
-            updateMor.setAttrs(fragment);
+                log.debug("{} - Persisting deployment map with {} entries", tenant, snapshot.size());
 
-            inventoryApi.update(updateMor, false);
+                Map<String, Object> fragment = new ConcurrentHashMap<>();
+                fragment.put(MapperServiceRepresentation.DEPLOYMENT_MAP_FRAGMENT, snapshot);
+
+                ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
+                updateMor.setId(GId.asGId(serviceRep.getId()));
+                updateMor.setAttrs(fragment);
+
+                inventoryApi.update(updateMor, false);
+                serviceRep.setDeploymentMap(snapshot);
+            } catch (RuntimeException e) {
+                failure.set(e);
+            }
         });
+        if (failure.get() != null) {
+            log.error("{} - Failed to persist deployment map", tenant, failure.get());
+            throw new IllegalStateException(
+                    "Deployment map could not be persisted: " + failure.get().getMessage(), failure.get());
+        }
     }
 }

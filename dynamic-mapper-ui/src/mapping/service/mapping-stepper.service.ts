@@ -967,11 +967,13 @@ export class MappingStepperService {
         // something to write: the backend PUT reconciles subscriptions across all connectors
         // live, so a redundant write is not free. See §4 of IMPLEMENTATION-PLAN-COMMIT-MAPPING.md
         // for why this is the editor's condition rather than the stepper parent's.
+        let deploymentFailed = false;
         if (mappingPersisted && (deploymentChanged || persistence !== 'draft')) {
             try {
                 await this.mappingService.updateDefinedDeploymentMapEntry(deploymentMapEntry);
             } catch (error) {
                 // Surfaced rather than swallowed: the deployment was not applied.
+                deploymentFailed = true;
                 this.alertService.danger(
                     gettext(`Failed to deploy mapping ${mapping.name} to connectors: `) + error.message
                 );
@@ -980,7 +982,7 @@ export class MappingStepperService {
 
         this.mappingService.refreshMappings(stepperConfiguration.direction);
 
-        return { status: 'saved', contentChanged, deploymentChanged, persisted };
+        return { status: 'saved', contentChanged, deploymentChanged, deploymentFailed, persisted };
     }
 
     encodeMappingForCommit(
@@ -1042,7 +1044,15 @@ export type CommitResult =
      * the optimistic-concurrency check with "modified concurrently". It is the request's own
      * mapping when nothing was written (a connector-only change).
      */
-    | { status: 'saved'; contentChanged: boolean; deploymentChanged: boolean; persisted: Mapping };
+    | {
+        status: 'saved';
+        contentChanged: boolean;
+        deploymentChanged: boolean;
+        /** The connector assignment PUT failed (already alerted): the editor must not treat the
+         *  selection as persisted, or the next Save would skip the retry. */
+        deploymentFailed?: boolean;
+        persisted: Mapping;
+    };
 
 export interface CommitMappingRequest {
     mapping: Mapping;
@@ -1104,8 +1114,10 @@ export function commitSuccessMessage(
             timeout: ALERT_SUCCESS_TIMEOUT
         };
     }
+    // A failed deployment write was already reported with an error alert; don't claim it saved.
+    const deploymentChanged = result.deploymentChanged && !result.deploymentFailed;
     // The two draft messages instruct a follow-up action, so they get the longer dwell time.
-    if (result.contentChanged && result.deploymentChanged) {
+    if (result.contentChanged && deploymentChanged) {
         return {
             text: gettext(`Saved draft and connector assignments for ${mappingName}. Publish and activate it (Versions) to apply the changes.`),
             timeout: ALERT_ACTION_REQUIRED_TIMEOUT
@@ -1117,7 +1129,7 @@ export function commitSuccessMessage(
             timeout: ALERT_ACTION_REQUIRED_TIMEOUT
         };
     }
-    if (result.deploymentChanged) {
+    if (deploymentChanged) {
         return {
             text: gettext(`Connector assignments for ${mappingName} saved.`),
             timeout: ALERT_SUCCESS_TIMEOUT

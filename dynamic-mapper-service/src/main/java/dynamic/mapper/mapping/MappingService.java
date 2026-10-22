@@ -1082,10 +1082,10 @@ public class MappingService {
     }
 
     /**
-     * Removes a mapping from deployment map
+     * Checks whether a mapping is deployed to a connector (no list copy).
      */
-    public boolean removeMappingFromDeploymentMap(String tenant, String mappingIdentifier) {
-        return deploymentMapService.removeMappingDeployment(tenant, mappingIdentifier);
+    public boolean isMappingDeployedToConnector(String tenant, String mappingIdentifier, String connectorIdentifier) {
+        return deploymentMapService.isConnectorDeployed(tenant, mappingIdentifier, connectorIdentifier);
     }
 
     // ========== Dirty Mapping Management ==========

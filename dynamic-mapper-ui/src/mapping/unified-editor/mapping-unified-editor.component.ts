@@ -386,7 +386,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
 
     // Saving closes the editor. Re-baselining first matters: navigation is guarded by
     // unsavedChangesGuard, which would otherwise see the just-saved edits as unsaved and prompt.
-    this.rebaselineAfterSave(result.persisted);
+    this.rebaselineAfterSave(result.persisted, !!result.deploymentFailed);
 
     // Shared with the stepper's commit path (mapping.component.ts::onCommitMapping) so both
     // editors apply the same post-save check — an OUTBOUND mapping with no device subscribed
@@ -400,6 +400,10 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
       this.alertService.warning(gettext('The mapping was saved, but checking the device subscriptions failed.'));
     }
 
+    // The mapping is saved but its connector assignment is not (error alert already raised):
+    // stay in the editor so the selection isn't lost and Save can retry the deployment.
+    if (result.deploymentFailed) return;
+
     this.navigateToGrid();
   }
 
@@ -412,7 +416,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
    * save fail with "modified concurrently". Re-taking the two snapshots is what stops that second
    * save from writing a draft, or rewriting the deployment, when nothing has changed since.
    */
-  private rebaselineAfterSave(persisted: Mapping): void {
+  private rebaselineAfterSave(persisted: Mapping, deploymentFailed: boolean): void {
     if (persisted) {
       this.mapping.lastUpdate = persisted.lastUpdate;
       this.mapping.version = persisted.version;
@@ -428,7 +432,11 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
       this.targetTemplate,
       this.mappingCode
     );
-    this.initialDeploymentConnectors = snapshotConnectors(this.deploymentMapEntry);
+    // Keep the old baseline when the deployment write failed, so the selection still counts as
+    // changed (unsaved-changes guard) and the next Save retries it.
+    if (!deploymentFailed) {
+      this.initialDeploymentConnectors = snapshotConnectors(this.deploymentMapEntry);
+    }
   }
 
   onCancel(): void {
