@@ -22,7 +22,7 @@ import { HttpStatusCode } from '@angular/common/http';
 import { ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { AlertService, CellRendererContext, CoreModule } from '@c8y/ngx-components';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { ALERT_INFO_TIMEOUT, DEPRECATION_NOTICE_VERSION, Direction, Feature, SharedService, TransformationType } from '../../shared';
+import { DEPRECATION_NOTICE_VERSION, Direction, Feature, SharedService, TransformationType } from '../../shared';
 import { DeprecationNoticeModalComponent } from '../deprecation-notice/deprecation-notice-modal.component';
 import { MappingService } from '../core/mapping.service';
 import { SubscriptionService } from '../core/subscription.service';
@@ -108,7 +108,7 @@ export class MappingStatusActivationRendererComponent implements OnInit {
     const newActive = !mapping.active;
 
     if (mapping.direction === Direction.OUTBOUND && newActive) {
-      const isValid = await this.validateSubscriptionOutbound();
+      const isValid = await this.subscriptionService.validateSubscriptionOutbound(Direction.OUTBOUND);
       if (!isValid) {
         return;
       }
@@ -132,21 +132,6 @@ export class MappingStatusActivationRendererComponent implements OnInit {
 
   handleDeprecation(_mapping: any): void {
     // Deprecation notice disabled for 6.3.2 — no active deprecations to surface.
-  }
-
-  private async validateSubscriptionOutbound(): Promise<boolean> {
-    const [dynamicResult, staticResult] = await Promise.all([
-      this.subscriptionService.getSubscriptionDevice(this.subscriptionService.DYNAMIC_DEVICE_SUBSCRIPTION),
-      this.subscriptionService.getSubscriptionDevice(this.subscriptionService.STATIC_DEVICE_SUBSCRIPTION)
-    ]);
-
-    const hasSubscriptions = (dynamicResult.devices?.length > 0) || (staticResult.devices?.length > 0);
-
-    if (!hasSubscriptions) {
-      this.alertService.add({ text: "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'.", type: 'info', timeout: ALERT_INFO_TIMEOUT });
-    }
-
-    return hasSubscriptions;
   }
 
   private async handleActivationFailure(response: Response): Promise<void> {

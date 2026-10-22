@@ -1123,6 +1123,9 @@ export interface NotificationSubscriptionResponse {
   /** Current subscription status */
   status?: SubscriptionStatus;
 
+  /** Ids of devices whose subscription could not be created (status ERROR) */
+  failedDeviceIds?: string[];
+
   /** Pagination metadata; only present when the request opted into paging */
   paging?: NotificationSubscriptionPaging;
 

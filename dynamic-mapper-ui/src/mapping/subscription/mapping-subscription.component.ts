@@ -58,7 +58,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { SharedService } from '../../shared';
 import { MappingService } from '../core/mapping.service';
-import { Device, NotificationSubscriptionResponse } from '../../shared/mapping/mapping.model';
+import { Device, NotificationSubscriptionResponse, SubscriptionStatus } from '../../shared/mapping/mapping.model';
 import { SubscriptionService } from '../core/subscription.service';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { PopoverModule } from 'ngx-bootstrap/popover';
@@ -429,17 +429,41 @@ export class MappingSubscriptionComponent implements OnInit {
     return result;
   }
 
+  /**
+   * Reports the outcome of a subscription update: failed devices are surfaced as a warning,
+   * a request still running when the backend stopped waiting as "pending", otherwise the
+   * generic info (the type/resync flows remain fully asynchronous).
+   */
+  private reportSubscriptionResult(response?: NotificationSubscriptionResponse): void {
+    if (response?.status === SubscriptionStatus.ERROR) {
+      const failed = response.failedDeviceIds ?? [];
+      this.alertService.warning(
+        gettext('Some subscriptions could not be created:') + ` ${failed.length} ` +
+        gettext('device(s) failed. Check Service Events for details.'),
+        failed.join(', ')
+      );
+      return;
+    }
+    this.alertService.add({
+      text: response?.status === SubscriptionStatus.PENDING
+        ? gettext('Subscription request is still being processed – verify the result in the list below and check Service Events for details.')
+        : gettext('Subscription request submitted. Subscriptions are processed asynchronously – verify the result in the list below and check Service Events for details.'),
+      type: 'info',
+      timeout: ALERT_INFO_TIMEOUT
+    });
+  }
+
   async onCommitSubscriptionDevice(deviceList: IIdentified[]): Promise<void> {
     const subscriptionDevices = {
       api: API.ALL.name,
       devices: deviceList as Device[]
     };
     try {
-      await this.subscriptionService.updateSubscriptionDevice(
+      const response = await this.subscriptionService.updateSubscriptionDevice(
         subscriptionDevices
       );
       this.subscriptionGrid?.reload();
-      this.alertService.add({ text: gettext('Subscription request submitted. Subscriptions are processed asynchronously – verify the result in the list below and check Service Events for details.'), type: 'info', timeout: ALERT_INFO_TIMEOUT });
+      this.reportSubscriptionResult(response);
     } catch (error) {
       this.alertService.danger(
         gettext('Failed to update subscriptions:') + error
@@ -455,12 +479,12 @@ export class MappingSubscriptionComponent implements OnInit {
       devices: deviceList as Device[]
     };
     try {
-      await this.subscriptionService.updateSubscriptionByDeviceGroup(
+      const response = await this.subscriptionService.updateSubscriptionByDeviceGroup(
         subscriptionDevices
       );
       await this.loadSubscriptionByDeviceGroup();
       this.subscriptionGrid?.reload();
-      this.alertService.add({ text: gettext('Subscription request submitted. Subscriptions are processed asynchronously – verify the result in the list below and check Service Events for details.'), type: 'info', timeout: ALERT_INFO_TIMEOUT });
+      this.reportSubscriptionResult(response);
     } catch (error) {
       this.alertService.danger(
         gettext('Failed to update subscriptions:') + error

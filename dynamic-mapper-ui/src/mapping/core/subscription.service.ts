@@ -83,12 +83,26 @@ export class SubscriptionService {
   async validateSubscriptionOutbound(direction: Direction): Promise<boolean> {
     if (direction !== Direction.OUTBOUND) return true;
 
-    const [staticSubscription, dynamicSubscription] = await Promise.all([
-      this.getSubscriptionDevice(this.STATIC_DEVICE_SUBSCRIPTION),
-      this.getSubscriptionDevice(this.DYNAMIC_DEVICE_SUBSCRIPTION)
-    ]);
+    const [staticSubscription, dynamicSubscription, groupSubscription, typeSubscription] =
+      await Promise.all([
+        this.getSubscriptionDevice(this.STATIC_DEVICE_SUBSCRIPTION),
+        this.getSubscriptionDevice(this.DYNAMIC_DEVICE_SUBSCRIPTION),
+        this.getSubscriptionByDeviceGroup(),
+        this.getSubscriptionByDeviceType()
+      ]);
 
-    if (staticSubscription?.devices?.length === 0 && dynamicSubscription?.devices?.length === 0) {
+    // null = outbound mapping disabled / unknown: nothing to warn about.
+    if (!staticSubscription && !dynamicSubscription) return true;
+
+    // A configured group or type counts too: it may match no device yet (e.g. a new type with
+    // no devices created so far) but it is a deliberate subscription, not a missing one.
+    const hasSubscription =
+      (staticSubscription?.devices?.length ?? 0) > 0 ||
+      (dynamicSubscription?.devices?.length ?? 0) > 0 ||
+      (groupSubscription?.devices?.length ?? 0) > 0 ||
+      (typeSubscription?.types?.length ?? 0) > 0;
+
+    if (!hasSubscription) {
       this.alertService.add({
         text: "To enable the outbound mapping, a subscription is required. Please proceed with creating the necessary 'Subscription outbound'.",
         type: 'info',
@@ -128,7 +142,7 @@ export class SubscriptionService {
         );
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          throw await this.toHttpError(response);
         }
 
         return await response.json();
@@ -157,7 +171,7 @@ export class SubscriptionService {
         );
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          throw await this.toHttpError(response);
         }
 
         return await response.json();
@@ -186,7 +200,7 @@ export class SubscriptionService {
         );
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          throw await this.toHttpError(response);
         }
 
         return await response.json();
@@ -216,7 +230,7 @@ export class SubscriptionService {
         );
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          throw await this.toHttpError(response);
         }
 
         return;
@@ -245,7 +259,7 @@ export class SubscriptionService {
         );
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          throw await this.toHttpError(response);
         }
 
         return await response.json();
@@ -275,7 +289,7 @@ export class SubscriptionService {
         );
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          throw await this.toHttpError(response);
         }
 
         return;
@@ -305,7 +319,7 @@ export class SubscriptionService {
         );
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          throw await this.toHttpError(response);
         }
 
         return;
@@ -356,7 +370,7 @@ export class SubscriptionService {
         );
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          throw await this.toHttpError(response);
         }
 
         return await response.json();
@@ -388,7 +402,7 @@ export class SubscriptionService {
         );
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          throw await this.toHttpError(response);
         }
 
         return await response.json();
@@ -420,7 +434,7 @@ export class SubscriptionService {
         );
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          throw await this.toHttpError(response);
         }
 
         return await response.json();
@@ -433,10 +447,11 @@ export class SubscriptionService {
    */
   async getAllSubscriptions(): Promise<{
     devices: NotificationSubscriptionResponse | null;
+    dynamicDevices: NotificationSubscriptionResponse | null;
     groups: NotificationSubscriptionResponse | null;
     types: NotificationSubscriptionResponse | null;
   }> {
-    const [devices, groups, types] = await Promise.allSettled([
+    const [devices, dynamicDevices, groups, types] = await Promise.allSettled([
       this.getSubscriptionDevice(this.STATIC_DEVICE_SUBSCRIPTION),
       this.getSubscriptionDevice(this.DYNAMIC_DEVICE_SUBSCRIPTION),
       this.getSubscriptionByDeviceGroup(),
@@ -445,12 +460,11 @@ export class SubscriptionService {
 
     return {
       devices: devices.status === 'fulfilled' ? devices.value : null,
+      dynamicDevices: dynamicDevices.status === 'fulfilled' ? dynamicDevices.value : null,
       groups: groups.status === 'fulfilled' ? groups.value : null,
       types: types.status === 'fulfilled' ? types.value : null
     };
   }
-
-
 
   // ===== UTILITY METHODS =====
 
@@ -511,6 +525,22 @@ export class SubscriptionService {
   }
 
   /**
+   * Builds the `HTTP <status>: ...` error for a failed response. The status line is what
+   * handleSubscriptionError parses; the backend's message (e.g. "Outbound mapping is disabled!")
+   * is carried alongside it so the user sees the real reason instead of just the status text.
+   */
+  private async toHttpError(response: Response): Promise<Error> {
+    let detail = '';
+    try {
+      const body = await response.clone().json();
+      detail = typeof body?.message === 'string' ? body.message : '';
+    } catch {
+      // non-JSON body (or no clone support): fall back to the status text
+    }
+    return new Error(`HTTP ${response.status}: ${detail || response.statusText}`);
+  }
+
+  /**
    * Handles subscription-related errors (updated for FetchClient)
    */
   private handleSubscriptionError(error: any, operationName: string): SubscriptionError {
@@ -547,6 +577,10 @@ export class SubscriptionService {
             break;
           default:
             message += `: HTTP ${statusCode}`;
+        }
+        const detail = error.message.replace(/^HTTP \d+:\s*/, '').trim();
+        if (detail) {
+          message += ` (${detail})`;
         }
       }
     } else if (error instanceof ValidationError) {

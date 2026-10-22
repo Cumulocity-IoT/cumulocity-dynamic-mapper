@@ -59,6 +59,9 @@ public class NotificationSubscriptionResponse {
     @Schema(description = "Current subscription status")
     private SubscriptionStatus status;
 
+    @Schema(description = "Ids of devices whose subscription could not be created (status ERROR)")
+    private List<String> failedDeviceIds;
+
     @Schema(description = "Pagination metadata for the returned devices")
     private Paging paging;
 

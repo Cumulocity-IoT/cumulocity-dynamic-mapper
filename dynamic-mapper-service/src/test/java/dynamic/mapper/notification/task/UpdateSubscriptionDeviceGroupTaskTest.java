@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -35,6 +36,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -54,6 +56,8 @@ import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.notification.GroupCacheManager;
 import dynamic.mapper.notification.NotificationSubscriber;
+import dynamic.mapper.notification.NotificationSubscriptionResponse;
+import dynamic.mapper.notification.Utils;
 import dynamic.mapper.processor.model.C8YMessage;
 
 /**
@@ -107,6 +111,48 @@ class UpdateSubscriptionDeviceGroupTaskTest {
 
         assertEquals(1, result.getAddedCount(), "device-b must be subscribed");
         assertEquals(0, result.getRemovedCount(), "device-a is still present — must not be removed");
+    }
+
+    /**
+     * The incoming group notification is an INVENTORY notification (message.getApi() == INVENTORY).
+     * New members must still be subscribed with API.ALL, not inherit that INVENTORY filter —
+     * otherwise their measurements/events/alarms never reach outbound mappings.
+     */
+    @Test
+    void call_newMember_isSubscribedWithApiAll_notTheNotificationApi() throws Exception {
+        groupCacheManager.addGroup(group(GROUP_ID));
+        groupCacheManager.updateSubscribedDevices(GROUP_ID, Collections.singleton(DEVICE_A));
+        C8YMessage msg = message(GROUP_ID, List.of(DEVICE_A, DEVICE_B));
+        assertEquals(API.INVENTORY, msg.getApi());
+        when(c8yAgent.getManagedObjectForId(eq(TENANT), eq(DEVICE_B), anyBoolean()))
+                .thenReturn(device(DEVICE_B));
+
+        task(msg).call();
+
+        verify(notificationSubscriber).subscribeDeviceAndConnect(
+                eq(TENANT), any(), eq(API.ALL), eq(Utils.DYNAMIC_DEVICE_SUBSCRIPTION));
+    }
+
+    @Test
+    void call_removedMember_stillInAnotherCachedGroup_keepsSubscription() throws Exception {
+        groupCacheManager.addGroup(group(GROUP_ID));
+        groupCacheManager.updateSubscribedDevices(GROUP_ID, Set.of(DEVICE_A, DEVICE_B));
+        groupCacheManager.addGroup(group("group-2"));
+        groupCacheManager.updateSubscribedDevices("group-2", Collections.singleton(DEVICE_A));
+
+        // payload: device-a and device-b both leave group-1
+        C8YMessage msg = message(GROUP_ID, List.of());
+        when(c8yAgent.getManagedObjectForId(eq(TENANT), eq(DEVICE_A), anyBoolean())).thenReturn(device(DEVICE_A));
+        when(c8yAgent.getManagedObjectForId(eq(TENANT), eq(DEVICE_B), anyBoolean())).thenReturn(device(DEVICE_B));
+        when(notificationSubscriber.getSubscriptionsByDeviceType(TENANT))
+                .thenReturn(NotificationSubscriptionResponse.builder().types(List.of()).build());
+
+        task(msg).call();
+
+        verify(notificationSubscriber).unsubscribeDeviceAndDisconnect(
+                eq(TENANT), argThat(m -> DEVICE_B.equals(m.getId().getValue())), eq(Utils.DYNAMIC_DEVICE_SUBSCRIPTION));
+        verify(notificationSubscriber, never()).unsubscribeDeviceAndDisconnect(
+                eq(TENANT), argThat(m -> DEVICE_A.equals(m.getId().getValue())), any());
     }
 
     // ------------------------------------------------------------------

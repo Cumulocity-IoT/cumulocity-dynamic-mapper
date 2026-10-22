@@ -428,6 +428,20 @@ public class NotificationConnectionManager {
         log.info("{} - Successfully disconnected", tenant);
     }
 
+    /**
+     * Closes only the per-connector device WebSockets (static + dynamic). The management client
+     * (type/group watcher) and cache-inventory client stay up, so type/group subscriptions that
+     * currently match no devices keep discovering new ones.
+     */
+    public void disconnectDeviceSubscribers(String tenant) {
+        if (tenant == null) {
+            log.warn("Cannot disconnect device clients: tenant is null");
+            return;
+        }
+        disconnectDeviceClients(tenant);
+        deviceWSStatusCodes.remove(tenant);
+    }
+
     public void initializeConnectionsIfNeeded(String tenant) {
         try {
             // Check if static device connections need initialization

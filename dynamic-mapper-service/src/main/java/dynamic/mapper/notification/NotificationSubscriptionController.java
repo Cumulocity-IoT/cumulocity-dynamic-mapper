@@ -113,6 +113,7 @@ public class NotificationSubscriptionController {
 
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
+        validateDeviceListPresent(request.getDevices());
 
         try {
             NotificationSubscriptionResponse response = subscriptionService.updateDeviceSubscription(tenant, request, subscription);
@@ -190,6 +191,7 @@ public class NotificationSubscriptionController {
 
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);
+        validateDeviceListPresent(request.getDevices());
 
         try {
             NotificationSubscriptionResponse response = subscriptionService.updateGroupSubscription(tenant, request);
@@ -326,6 +328,13 @@ public class NotificationSubscriptionController {
         ServiceConfiguration config = serviceConfigurationService.getServiceConfiguration(tenant);
         if (!config.getOutboundMappingEnabled()) {
             throw new OutboundMappingDisabledException(OUTBOUND_MAPPING_DISABLED_MESSAGE);
+        }
+    }
+
+    /** Desired-state endpoints: an empty list is valid (clear all), a missing one is not. */
+    private void validateDeviceListPresent(List<Device> devices) {
+        if (devices == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Device list is required");
         }
     }
 
