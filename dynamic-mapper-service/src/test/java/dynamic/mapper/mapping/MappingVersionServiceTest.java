@@ -243,6 +243,31 @@ class MappingVersionServiceTest {
     }
 
     @Test
+    void retentionKeepsHighestSemverNotMostRecentlyPublished() {
+        config.setMappingVersionRetention(2);
+
+        service.publish(TENANT, mapping(IDENTIFIER), "1.0.0", "v1", null);
+        service.publish(TENANT, mapping(IDENTIFIER), "2.0.0", "v2", "2.0.0");
+        service.publish(TENANT, mapping(IDENTIFIER), "1.0.5", "hotfix", "2.0.0");
+        service.publish(TENANT, mapping(IDENTIFIER), "1.0.6", "hotfix2", "2.0.0");
+
+        List<String> versions = service.listVersions(TENANT, IDENTIFIER).stream()
+                .map(MappingVersion::getVersion).sorted().toList();
+        assertEquals(List.of("1.0.6", "2.0.0"), versions);
+    }
+
+    @Test
+    void previewBackfillDoesNotPersist() {
+        int before = versionCount();
+
+        MappingVersion preview = service.previewBackfill(mapping(IDENTIFIER));
+
+        assertEquals(before, versionCount(), "a preview must not write to the inventory");
+        assertEquals("1.0.0", preview.getVersion());
+        assertNull(preview.getId());
+    }
+
+    @Test
     void retentionNeverPrunesActiveVersion() {
         config.setMappingVersionRetention(3);
 
@@ -426,7 +451,41 @@ class MappingVersionServiceTest {
         assertEquals(0, versionCount(), "a malformed semver must never be persisted");
     }
 
+    @Test
+    void publishRejectsSemverComponentsThatOverflowInt() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.publish(TENANT, mapping(IDENTIFIER), "99999999999.0.0", "overflow", null));
+        assertEquals(0, versionCount(), "an unparseable semver would break listing and suggestions forever");
+    }
+
+    @Test
+    void publishTreatsEquivalentSemverSpellingsAsDuplicates() {
+        service.publish(TENANT, mapping(IDENTIFIER), "1.0.0", "first", null);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.publish(TENANT, mapping(IDENTIFIER), "01.0.0", "dup", "1.0.0"));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.publish(TENANT, mapping(IDENTIFIER), " 1.0.0 ", "dup", "1.0.0"));
+        assertEquals(1, versionCount());
+    }
+
+    @Test
+    void publishStoresCanonicalVersionLabel() {
+        MappingVersion mv = service.publish(TENANT, mapping(IDENTIFIER), " 02.0.1 ", "n", null);
+
+        assertEquals("2.0.1", mv.getVersion());
+        assertEquals("2.0.1", mv.getSnapshot().getVersion());
+    }
+
     // ========== suggestNextVersions ==========
+
+    @Test
+    void suggestNextVersionsBumpsGenuineZeroNineNine() {
+        service.publish(TENANT, mapping(IDENTIFIER), "0.9.9", "v", null);
+
+        assertArrayEquals(new String[] { "0.9.10", "0.10.0", "1.0.0" },
+                service.suggestNextVersions(TENANT, IDENTIFIER));
+    }
 
     @Test
     void suggestNextVersionsWhenNoneExistSuggestsOneZeroZero() {

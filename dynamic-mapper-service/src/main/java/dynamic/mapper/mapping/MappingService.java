@@ -335,28 +335,44 @@ public class MappingService {
      * Deletes a mapping
      */
     public Mapping deleteMapping(String tenant, String id) {
-        Mapping mapping = subscriptionsService.callForTenant(tenant, () -> {
-            try {
-                ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id), false);
-                Optional<Mapping> found = mappingRepository.findById(tenant, id, mo);
-                if (found.isEmpty()) {
+        // Same per-line lock as publish/activate, so a publish cannot add a version record between
+        // the version cleanup and the delete of the line (which would orphan it).
+        java.util.concurrent.locks.ReentrantLock lock = activationLockFor(tenant, id);
+        lock.lock();
+        Mapping mapping;
+        try {
+            mapping = subscriptionsService.callForTenant(tenant, () -> {
+                try {
+                    ManagedObjectRepresentation mo = inventoryApi.get(GId.asGId(id), false);
+                    Optional<Mapping> found = mappingRepository.findById(tenant, id, mo);
+                    if (found.isEmpty()) {
+                        return null;
+                    }
+
+                    Mapping m = found.get();
+                    mappingRepository.prepareForDelete(tenant, id, m);
+                    // Delete the line first: if that fails the history is still intact. Version
+                    // records go afterwards so they do not leak (FR-18); a failure there is only an
+                    // orphan, never lost history of a mapping that still exists.
+                    inventoryApi.delete(GId.asGId(id), false);
+                    try {
+                        mappingVersionService.deleteAllVersions(tenant, m.getIdentifier());
+                    } catch (Exception e) {
+                        log.warn("{} - Mapping {} deleted but its version records could not be removed: {}",
+                                tenant, id, e.getMessage());
+                    }
+
+                    MappingLogContext.run(m.getIdentifier(),
+                            () -> log.info("{} - Mapping deleted from Inventory: {}", tenant, id));
+                    return m;
+                } catch (SDKException e) {
+                    log.warn("{} - Failed to find managed object for mapping: {}", tenant, id, e);
                     return null;
                 }
-
-                Mapping m = found.get();
-                mappingRepository.prepareForDelete(tenant, id, m);
-                // Remove the line's version records too so they do not leak (FR-18).
-                mappingVersionService.deleteAllVersions(tenant, m.getIdentifier());
-                inventoryApi.delete(GId.asGId(id), false);
-
-                MappingLogContext.run(m.getIdentifier(),
-                        () -> log.info("{} - Mapping deleted from Inventory: {}", tenant, id));
-                return m;
-            } catch (SDKException e) {
-                log.warn("{} - Failed to find managed object for mapping: {}", tenant, id, e);
-                return null;
-            }
-        });
+            });
+        } finally {
+            lock.unlock();
+        }
 
         if (mapping != null) {
             cacheManager.removeMapping(tenant, mapping);
@@ -777,10 +793,16 @@ public class MappingService {
         if (runnable == null) {
             throw new IllegalArgumentException("Mapping not found: " + id);
         }
-        // Lazily create the v1 record for imported / pre-versioning mappings that have
-        // never been published or activated through the versioning flow.
-        mappingVersionService.ensureBackfilled(tenant, runnable);
-        return mappingVersionService.listVersions(tenant, runnable.getIdentifier());
+        List<dynamic.mapper.model.version.MappingVersion> versions = mappingVersionService
+                .listVersions(tenant, runnable.getIdentifier());
+        if (versions.isEmpty()) {
+            // Imported / pre-versioning mapping: show its running configuration as the first
+            // version without persisting it. A read must not mutate the inventory; the real record
+            // is created by the first publish or activation (ensureBackfilled, under the line lock).
+            dynamic.mapper.model.version.MappingVersion virtual = mappingVersionService.previewBackfill(runnable);
+            return virtual == null ? versions : List.of(virtual);
+        }
+        return versions;
     }
 
     /** Returns a single published version of a mapping line, or {@code null} if not found. */
@@ -806,13 +828,21 @@ public class MappingService {
 
     /** Deletes an inactive published version; the active version cannot be deleted (FR-17). */
     public void deleteVersion(String tenant, String id, String version) {
-        Mapping runnable = getMapping(tenant, id);
-        if (runnable == null) {
-            throw new IllegalArgumentException("Mapping not found: " + id);
-        }
-        try (MappingLogContext ignored = MappingLogContext.open(runnable.getIdentifier())) {
-            mappingVersionService.deleteVersion(tenant, runnable.getIdentifier(), version,
-                    runnable.getVersion());
+        // Under the line lock so "which version is active" cannot change between the check and the
+        // delete (a concurrent activation of this very version would otherwise lose its snapshot).
+        java.util.concurrent.locks.ReentrantLock lock = activationLockFor(tenant, id);
+        lock.lock();
+        try {
+            Mapping runnable = getMapping(tenant, id);
+            if (runnable == null) {
+                throw new IllegalArgumentException("Mapping not found: " + id);
+            }
+            try (MappingLogContext ignored = MappingLogContext.open(runnable.getIdentifier())) {
+                mappingVersionService.deleteVersion(tenant, runnable.getIdentifier(), version,
+                        runnable.getVersion());
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -825,18 +855,27 @@ public class MappingService {
     }
 
     public void deleteDraftMapping(String tenant, String id) {
-        Mapping runnable = getMapping(tenant, id);
-        if (runnable == null) {
-            throw new IllegalArgumentException("Mapping not found: " + id);
-        }
-        try (MappingLogContext ignored = MappingLogContext.open(runnable.getIdentifier())) {
-            mappingVersionService.deleteDraft(tenant, runnable.getIdentifier());
-            if (runnable.isDraftDirty()) {
-                runnable.setDraftDirty(false);
-                updateMapping(tenant, runnable, true, true);
-                updateCacheAfterChange(tenant, runnable);
+        // The runnable is read-modify-written below, so this must hold the same per-line lock as
+        // save/publish/activate; unlocked, a concurrent activation's state was overwritten with
+        // the stale copy read here.
+        java.util.concurrent.locks.ReentrantLock lock = activationLockFor(tenant, id);
+        lock.lock();
+        try {
+            Mapping runnable = getMapping(tenant, id);
+            if (runnable == null) {
+                throw new IllegalArgumentException("Mapping not found: " + id);
             }
-            log.info("{} - Discarded draft of mapping {}", tenant, id);
+            try (MappingLogContext ignored = MappingLogContext.open(runnable.getIdentifier())) {
+                mappingVersionService.deleteDraft(tenant, runnable.getIdentifier());
+                if (runnable.isDraftDirty()) {
+                    runnable.setDraftDirty(false);
+                    updateMapping(tenant, runnable, true, true);
+                    updateCacheAfterChange(tenant, runnable);
+                }
+                log.info("{} - Discarded draft of mapping {}", tenant, id);
+            }
+        } finally {
+            lock.unlock();
         }
     }
 

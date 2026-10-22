@@ -365,6 +365,17 @@ public class MappingController {
             
             // Ensure the ID matches
             mapping.setId(id);
+
+            // Version bookkeeping is owned by the publish/activate flow, never by this endpoint:
+            // a client-supplied version would desynchronise the line from its published versions
+            // (active-version protection then guards the wrong label), and a stale draftDirty
+            // would hide or invent unpublished edits.
+            Mapping stored = mappingService.getMapping(tenant, id);
+            if (stored != null) {
+                mapping.setVersion(stored.getVersion());
+                mapping.setVersionNote(stored.getVersionNote());
+                mapping.setDraftDirty(stored.isDraftDirty());
+            }
             
             // Update the mapping
             Mapping updatedMapping = mappingService.updateMapping(tenant, mapping, false, false);

@@ -376,7 +376,22 @@ export class MappingService {
    * version, C-1).
    */
   async activateVersion(id: string, version: string): Promise<IFetchResponse> {
-    return this.changeActivationMapping({ id, active: true, version });
+    const response = await this.changeActivationMapping({ id, active: true, version });
+    // runOperation resolves for any HTTP status; without this a failed activation (unknown
+    // version, validation, connector subscription failure) was reported to the user as success.
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      const failedConnectors = response.status === 400 && error && !error.message
+        ? Object.values(error).join(', ')
+        : '';
+      throw new Error(
+        failedConnectors
+          ? `Could not update subscriptions on connector(s): ${failedConnectors}`
+          : (error?.message ?? response.statusText)
+      );
+    }
+    this.clearVersionsCache(id);
+    return response;
   }
 
   // ===== DEPLOYMENT OPERATIONS =====
