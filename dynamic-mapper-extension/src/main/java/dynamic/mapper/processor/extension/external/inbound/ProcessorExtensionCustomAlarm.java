@@ -58,7 +58,6 @@ import java.util.Map;
  * <p>This replaces the legacy pattern where extensions directly called
  * {@code c8yAgent.createMEAO()} with side effects.</p>
  *
- * @see ProcessorExtensionCustomAlarm for the legacy implementation
  */
 @Slf4j
 public class ProcessorExtensionCustomAlarm implements ProcessorExtensionInbound<byte[]> {

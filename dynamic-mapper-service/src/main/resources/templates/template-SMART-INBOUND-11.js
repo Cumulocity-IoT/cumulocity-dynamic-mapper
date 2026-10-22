@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * @name Sample persistent state - per-device running statistics
+ * @name Sample persistent state - running statistics per device
  * @description Tracks message count and running average temperature per device, using the MQTT
  *              client ID from context (not the payload) as the device identifier.
  * @templateType INBOUND_SMART_FUNCTION

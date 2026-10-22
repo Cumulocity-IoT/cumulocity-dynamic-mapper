@@ -35,6 +35,7 @@ import java.util.Map;
 
 /**
  * Java Extension demonstrating bulk measurement collection (since 6.3).
+ * It has no Smart Function template counterpart.
  *
  * <p>Sends all measurements from a single incoming message in one Cumulocity REST
  * call using {@code CumulocityType.MEASUREMENT} with a {@code payload.measurements} collection. This avoids N separate
@@ -66,7 +67,7 @@ import java.util.Map;
  * @since 6.3
  */
 @Slf4j
-public class ProcessorExtensionSmartInbound07 implements ProcessorExtensionInbound<byte[]> {
+public class ProcessorExtensionBulkMeasurement implements ProcessorExtensionInbound<byte[]> {
 
     @Override
     public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContext context) {

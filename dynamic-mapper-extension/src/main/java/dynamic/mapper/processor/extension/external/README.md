@@ -11,21 +11,23 @@ external/
 │   ├── ProcessorExtensionCustomAlarm.java
 │   ├── ProcessorExtensionCustomMeasurement.java
 │   ├── ProcessorExtensionSparkplugBMeasurement.java (Protobuf / SparkplugB)
-│   ├── ProcessorExtensionSmartInbound01/02/03/04/06/07.java (SMART function examples)
+│   ├── ProcessorExtensionSmartInbound01/02/03/04/06.java (Java equivalents of Smart Function templates)
+│   ├── ProcessorExtensionBulkMeasurement.java (bulk measurement collection, no template counterpart)
 │   └── CustomEventOuter.java (Protobuf definition)
 │
 └── outbound/         # Extensions for Cumulocity → device processing
     ├── ProcessorExtensionAlarmToCustomJson.java
-    └── ProcessorExtensionSmartOutbound01/02/03.java (SMART function examples)
+    ├── ProcessorExtensionAlarmToSparkplugB.java (Protobuf / SparkplugB)
+    └── ProcessorExtensionSmartOutbound01/03.java (Java equivalents of Smart Function templates)
 ```
 
 > **Note:** The `SmartInbound`/`SmartOutbound` samples are Java equivalents of a *subset* of the
-> JS Smart Function templates under `dynamic-mapper-service/src/main/resources/templates/`. The JS
-> side has 11 inbound templates (`template-SMART-INBOUND-01.js` .. `-11.js`) and 5 outbound
-> templates (`template-SMART-OUTBOUND-01.js` .. `-05.js`), but only `01, 02, 03, 04, 06, 07`
-> (inbound) and `01, 02, 03` (outbound) currently have a Java sample. Inbound `05, 08–11` and
-> outbound `04, 05` have no Java equivalent yet — do not assume full parity when using these as a
-> reference for a template you don't see listed here.
+> JS Smart Function templates under `dynamic-mapper-service/src/main/resources/templates/`, and
+> the number in the class name is the number of the template. Inbound `01, 02, 03, 04, 06` and
+> outbound `01, 03` have a Java sample; the other templates (inbound `05, 07–12`, outbound
+> `02, 04–06`) do not — do not assume full parity. Where a Java sample deliberately differs from
+> its template, its class Javadoc says so. Smart Function templates are numbered with gaps:
+> removed templates keep their number free.
 
 ## Directory Purpose
 
@@ -57,16 +59,24 @@ Extensions in this package process Cumulocity data and convert it to device-spec
 
 ## Extension Registration
 
-Extensions are registered in `extension-external.properties`:
+Extensions are registered in `extension-external.yaml` (`dynamic-mapper-extension/src/main/resources`):
 
-```properties
-# Inbound Extensions (Device → Cumulocity)
-CustomEvent=dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomEvent
-CustomMeasurement=dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomMeasurement
-CustomAlarm=dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomAlarm
+```yaml
+extensions:
+  # Inbound (Device → Cumulocity)
+  - eventName: CustomMeasurement
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionCustomMeasurement
+    description: Custom measurement processor
+    version: "2.0"
 
-# Outbound Extensions (Cumulocity → Device)
-AlarmToCustomJson=dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionAlarmToCustomJson
+  # Outbound (Cumulocity → Device)
+  - eventName: AlarmToSparkplugB
+    className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionAlarmToSparkplugB
+    parameter:            # optional, available as context.getConfigAsMap().get("parameter")
+      metricPrefix: Alarms
+      qos: "1"
+    description: Alarm to Sparkplug B alarm metrics
+    version: "2.0"
 ```
 
 ## Package Validation
@@ -84,7 +94,7 @@ The framework validates that external extensions are in the allowed package:
 2. Implement `ProcessorExtensionInbound<byte[]>`
 3. Override `onMessage(Message<byte[]> message, JavaExtensionContext context)`
 4. Parse device payload, build `CumulocityObject[]` using the builder API, and return it
-5. Register in `extension-external.properties`
+5. Register in `extension-external.yaml`
 
 ```java
 package dynamic.mapper.processor.extension.external.inbound;
@@ -118,7 +128,7 @@ public class ProcessorExtensionMyDevice implements ProcessorExtensionInbound<byt
 2. Implement `ProcessorExtensionOutbound<Object>`
 3. Override `onMessage(Message<Object> message, JavaExtensionContext context)`
 4. Parse Cumulocity payload, build `DeviceMessage[]` using the builder API, and return it
-5. Register in `extension-external.properties`
+5. Register in `extension-external.yaml`
 
 ```java
 package dynamic.mapper.processor.extension.external.outbound;
@@ -171,11 +181,13 @@ This is validated at runtime to prevent misuse.
 - Log at appropriate levels (DEBUG for details, INFO for major steps, WARN/ERROR for issues)
 - Include payload information for debugging (if not sensitive)
 
-### 4. Substitutions
-- Use meaningful substitution keys
-- Choose correct TYPE (TEXTUAL, NUMBER, BOOLEAN)
-- Use RepairStrategy.DEFAULT unless specific handling needed
-- Set expandArray to false unless handling arrays
+### 4. Return values
+- Extensions return their result (`CumulocityObject[]` / `DeviceMessage[]`); they do not call the
+  Cumulocity API themselves
+- Return an empty array to produce nothing, and call `context.addWarning(...)` to tell the user why
+- Use the builders (`CumulocityObject.measurement()`, `.alarm()`, `.event()`, ...) and always set
+  `externalId(...)`; add `deviceName`/`deviceType` when the device should be created implicitly
+- Use `context.setNativeState`/`getNativeState` for state that must survive across messages
 
 ### 5. Testing
 - Test with actual device payloads
@@ -236,7 +248,7 @@ if (device != null) {
 ## Troubleshooting
 
 ### Extension Not Found
-- Check `extension-external.properties` registration
+- Check `extension-external.yaml` registration
 - Verify fully qualified class name is correct
 - Ensure class is in `dynamic.mapper.processor.extension.external.*` package
 
@@ -264,14 +276,15 @@ Extension has direction INBOUND but is being used in OUTBOUND processing
 2. **ProcessorExtensionCustomMeasurement** - JSON measurement parsing
 3. **ProcessorExtensionCustomAlarm** - Complex alarm processing with device lookup
 4. **ProcessorExtensionSparkplugBMeasurement** - SparkplugB / Protobuf measurement parsing
-5. **ProcessorExtensionSmartInbound01/02/03/04/06/07** - Java equivalents of the matching
-   `template-SMART-INBOUND-NN.js` templates (`05, 08–11` have no Java sample yet, see note above)
+5. **ProcessorExtensionSmartInbound01/02/03/04/06** - Java equivalents of the matching
+   `template-SMART-INBOUND-NN.js` templates (see note above)
+6. **ProcessorExtensionBulkMeasurement** - sends all readings of one message as one bulk collection
 
 ### Outbound Examples
 1. **ProcessorExtensionAlarmToCustomJson** - Alarm to custom JSON conversion
 2. **ProcessorExtensionAlarmToSparkplugB** - Alarm to SparkplugB / Protobuf conversion
-3. **ProcessorExtensionSmartOutbound01/02/03** - Java equivalents of the matching
-   `template-SMART-OUTBOUND-NN.js` templates (`04, 05` have no Java sample yet, see note above)
+3. **ProcessorExtensionSmartOutbound01/03** - Java equivalents of the matching
+   `template-SMART-OUTBOUND-NN.js` templates (see note above)
 
 ## Further Reading
 

@@ -1,7 +1,9 @@
 // @ts-check
 /**
  * @name Creates one measurement and key for messages to Kafka connectors
- * @description Creates one measurement as array, set key for messages to Kafka connectors
+ * @description Creates one measurement as array, set key for messages to Kafka connectors.
+ *              The payload of an element may itself be an array, e.g. payload: [{ ... }], for
+ *              devices that expect batch payloads.
  * @templateType OUTBOUND_SMART_FUNCTION
  *
  * Sample Cumulocity measurement payload (source)

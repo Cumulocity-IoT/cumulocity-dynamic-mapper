@@ -55,7 +55,6 @@ import lombok.extern.slf4j.Slf4j;
  *
  * Covers PDF TestCases_6.2.0 functional tests:
  *   #51 / #52  – template-SMART-OUTBOUND-01.js  (single result, plain object)
- *   #53        – template-SMART-OUTBOUND-02.js  (array result, payload array)
  *   #54        – template-SMART-OUTBOUND-03.js  (array result with transportFields/Kafka key)
  *   #55        – template-SMART-OUTBOUND-05.js  (custom routing to microservice)
  *
@@ -156,44 +155,6 @@ class SmartFunctionOutboundTest {
                         "PDF-#52 different temperature",
                         measurementPayload("c8y_TemperatureMeasurement", "T", 99.9, "12345"),
                         99.9));
-    }
-
-    // =========================================================================
-    // template-SMART-OUTBOUND-02 (PDF #53) – array result, payload array
-    // =========================================================================
-
-    /**
-     * PDF test #53 – template-SMART-OUTBOUND-02:
-     * Returns an array of results where each result's payload is itself an array.
-     */
-    @Test
-    void testTemplate02_ArrayResult_PayloadArray() throws Exception {
-        String code = loadTemplate("template-SMART-OUTBOUND-02.js");
-        Value onMessage = evalTemplate(code);
-
-        Map<String, Object> c8yPayload = measurementPayload("c8y_TemperatureMeasurement", "T", 23.5, "12345");
-        InputMessage msg = new InputMessage(c8yPayload, "measurements/12345", null, "12345", "measurement");
-        Value result = onMessage.execute(graalContext.asValue(msg), graalContext.asValue(smartFunctionContext));
-
-        assertNotNull(result, "Result must not be null");
-        assertTrue(result.hasArrayElements(), "template-02 should return an array");
-        assertEquals(1, result.getArraySize(), "Should return one entry");
-
-        Value first = result.getArrayElement(0);
-        assertTrue(first.hasMember("topic"), "Entry must have topic");
-        assertEquals("measurements/" + EXTERNAL_ID, first.getMember("topic").asString(),
-                "Topic should use resolved externalId");
-
-        // In template-02 the payload is itself an array
-        Value payloadArray = first.getMember("payload");
-        assertTrue(payloadArray.hasArrayElements(), "Payload should be an array in template-02");
-        assertEquals(1, payloadArray.getArraySize(), "Payload array should have one measurement");
-
-        double actualTemp = payloadArray.getArrayElement(0)
-                .getMember("c8y_Steam").getMember("Temperature").getMember("value").asDouble();
-        assertEquals(23.5, actualTemp, 0.001, "Temperature value mismatch");
-
-        log.info("✅ template-SMART-OUTBOUND-02: array result with payload array, temp={}", actualTemp);
     }
 
     // =========================================================================

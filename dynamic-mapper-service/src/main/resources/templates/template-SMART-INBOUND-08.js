@@ -1,13 +1,14 @@
 // @ts-check
 /**
- * @name SparkPlugB DDATA/NDATA decoder
- * @description Decodes a SparkPlugB protobuf payload received via the ANY_PAYLOAD mapping type.
- *              msg.payload is a Base64-encoded binary string containing the serialised
- *              sparkplug_b.proto Payload message. Each numeric or boolean metric is mapped
- *              to a fragment/series in a single Cumulocity measurement. String metrics are
- *              emitted as events. The device is identified by the edge-node-id (and optional
- *              device-id) extracted from the SparkPlugB topic.
- *              Base64 decoding is done in pure ECMAScript (no Java interop required).
+ * @name Decode a protobuf payload by hand (Sparkplug B example)
+ * @description Advanced example of decoding a protobuf message inside a Smart Function, using
+ *              Sparkplug B as the schema. The ANY_PAYLOAD mapping type delivers the raw bytes as a
+ *              Base64 string in msg.payload; a minimal protobuf reader decodes the sparkplug_b.proto
+ *              Payload. Each numeric or boolean metric is mapped to a fragment/series in a single
+ *              measurement, string metrics are emitted as events.
+ *              For Sparkplug B itself use the SPARKPLUGB mapping type instead, which decodes the
+ *              payload for you (see the metrics array template). For a simple binary frame see
+ *              the "Decode a binary frame" template.
  * @templateType INBOUND_SMART_FUNCTION
  *
  * Requires:

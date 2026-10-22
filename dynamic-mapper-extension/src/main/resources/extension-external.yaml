@@ -87,6 +87,11 @@ extensions:
     description: Measurement processor with sourceId override to route data to parent devices (since 6.2)
     version: "2.0"
 
+  - eventName: BulkMeasurement
+    className: dynamic.mapper.processor.extension.external.inbound.ProcessorExtensionBulkMeasurement
+    description: Sends all readings of one message as a single bulk measurement collection (since 6.3)
+    version: "2.0"
+
   # Outbound Extensions (Cumulocity → Device)
   - eventName: AlarmToCustomJson
     className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionAlarmToCustomJson
@@ -97,11 +102,6 @@ extensions:
   - eventName: MeasurementToCustomJson
     className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionSmartOutbound01
     description: Measurement to custom JSON converter with flexible formatting
-    version: "2.0"
-
-  - eventName: MeasurementToJsonArray
-    className: dynamic.mapper.processor.extension.external.outbound.ProcessorExtensionSmartOutbound02
-    description: Measurement to JSON array converter for batch processing
     version: "2.0"
 
   - eventName: MeasurementToKafkaJson
