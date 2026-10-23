@@ -76,20 +76,41 @@ group_subscribed() {   # <group_id>
           | select((.id | tostring) == $gid) ] | length' 2>/dev/null || printf '0'
 }
 
+# Group membership is expressed by the dynamic device subscription. Devices can carry other
+# subscriptions that group removal deliberately leaves alone — notably
+# DynamicMapperCacheInventorySubscription, created when the device enters the inventory cache and
+# removed only when the cache evicts it — so count only the dynamic one, not every subscription.
+DYNAMIC_SUBSCRIPTION="DynamicMapperDynamicDeviceSubscription"
+
+dynamic_sub_count() {   # <device_id>
+    dm_device_subscriptions_json "$1" \
+        | jq -r --arg s "$DYNAMIC_SUBSCRIPTION" '[ .[] | select(.subscription == $s) ] | length' 2>/dev/null \
+        || printf '0'
+}
+
+# Poll until dynamic_sub_count satisfies the condition; sets _LAST_DYNAMIC_COUNT.
+_LAST_DYNAMIC_COUNT=0
+wait_for_dynamic_subs() {   # <device_id> <present|absent>
+    local _elapsed=0
+    while [ "$_elapsed" -lt "$WAIT_TIMEOUT" ]; do
+        _LAST_DYNAMIC_COUNT=$(dynamic_sub_count "$1")
+        if [ "$2" = present ] && [ "$_LAST_DYNAMIC_COUNT" -gt 0 ]; then return 0; fi
+        if [ "$2" = absent ] && [ "$_LAST_DYNAMIC_COUNT" -eq 0 ]; then return 0; fi
+        sleep 3
+        _elapsed=$((_elapsed + 3))
+    done
+    _LAST_DYNAMIC_COUNT=$(dynamic_sub_count "$1")
+    return 1
+}
+
 assert_subscribed() {   # <label> <device_id>
-    if dm_wait_for_subscription_present "$2" "$WAIT_TIMEOUT" 3; then
-        dm_assert_gt "$1" "$_DM_LAST_SUB_COUNT" "0"
-    else
-        dm_assert_gt "$1" "0" "0"
-    fi
+    wait_for_dynamic_subs "$2" present || true
+    dm_assert_gt "$1" "$_LAST_DYNAMIC_COUNT" "0"
 }
 
 assert_unsubscribed() {   # <label> <device_id>
-    if dm_wait_for_subscription_absent "$2" "$WAIT_TIMEOUT" 3; then
-        dm_assert_eq_zero "$1" "0"
-    else
-        dm_assert_eq_zero "$1" "$_DM_LAST_SUB_COUNT"
-    fi
+    wait_for_dynamic_subs "$2" absent || true
+    dm_assert_eq_zero "$1" "$_LAST_DYNAMIC_COUNT"
 }
 
 dm_parse_args "$@"
@@ -140,16 +161,16 @@ put_groups "$GROUP_A_ID" >/dev/null
 assert_unsubscribed "dev-b (only in the removed group) unsubscribed" "$DEV_B"
 dm_assert_eq "Group B no longer listed" "0" "$(group_subscribed "$GROUP_B_ID")"
 dm_assert_eq "Group A still listed" "1" "$(group_subscribed "$GROUP_A_ID")"
-dm_assert_gt "dev-a keeps its subscription" "$(dm_device_subscription_count "$DEV_A")" "0"
-dm_assert_gt "dev-ab keeps its subscription (still in group A)" "$(dm_device_subscription_count "$DEV_AB")" "0"
-dm_assert_gt "dev-t keeps its subscription (covered by its type)" "$(dm_device_subscription_count "$DEV_T")" "0"
+dm_assert_gt "dev-a keeps its subscription" "$(dynamic_sub_count "$DEV_A")" "0"
+dm_assert_gt "dev-ab keeps its subscription (still in group A)" "$(dynamic_sub_count "$DEV_AB")" "0"
+dm_assert_gt "dev-t keeps its subscription (covered by its type)" "$(dynamic_sub_count "$DEV_T")" "0"
 
 dm_step 5 "PUT [] is valid and clears all group subscriptions"
 put_groups >/dev/null
 assert_unsubscribed "dev-a unsubscribed"  "$DEV_A"
 assert_unsubscribed "dev-ab unsubscribed" "$DEV_AB"
 dm_assert_eq "Group A no longer listed" "0" "$(group_subscribed "$GROUP_A_ID")"
-dm_assert_gt "dev-t still subscribed (type subscription remains)" "$(dm_device_subscription_count "$DEV_T")" "0"
+dm_assert_gt "dev-t still subscribed (type subscription remains)" "$(dynamic_sub_count "$DEV_T")" "0"
 
 dm_step 6 "A request without a device list is rejected"
 dm_assert_rejected "Missing devices field" PUT /subscription/group '{"api":"MEASUREMENT"}'

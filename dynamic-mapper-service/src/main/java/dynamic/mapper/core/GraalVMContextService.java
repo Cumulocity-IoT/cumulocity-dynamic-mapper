@@ -23,6 +23,17 @@ package dynamic.mapper.core;
 
 import dynamic.mapper.util.MappingLogContext;
 import java.lang.management.ManagementFactory;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryUsage;
 import java.time.Duration;
@@ -40,12 +51,21 @@ import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
+import org.graalvm.polyglot.proxy.ProxyExecutable;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.model.RepairStrategy;
+import dynamic.mapper.processor.flow.JavaScriptConsole;
+import dynamic.mapper.processor.model.DataPrepContext;
+import dynamic.mapper.processor.model.ExternalId;
+import dynamic.mapper.processor.model.InputMessage;
+import dynamic.mapper.processor.model.SubstituteValue;
+import dynamic.mapper.processor.model.SubstitutionResult;
 import dynamic.mapper.processor.runtime.PooledGraalContext;
+import dynamic.mapper.processor.runtime.SubstitutionContext;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import lombok.extern.slf4j.Slf4j;
 
@@ -149,32 +169,37 @@ public class GraalVMContextService {
     static final int DEFAULT_POOL_SIZE = 20;
 
     /**
-     * Polyfill for browser-standard {@code atob()} / {@code btoa()} functions.
-     * GraalVM's JS engine is ECMAScript-only — it does not include Web APIs.
-     * The polyfill uses the already-sandboxed {@code java.util.Base64} host class so no
-     * additional host-class permissions are required.
+     * {@code atob()} / {@code btoa()}: GraalVM's JS engine is ECMAScript-only and has no Web APIs.
      *
-     * <p>Kept here (rather than in {@code AbstractFlowProcessor}) so the pool can
-     * evaluate it once when creating a new context, avoiding the per-message cost.
+     * <p>Injected as host functions ({@link ProxyExecutable}) instead of a JavaScript polyfill:
+     * no {@code Java.type} lookups and no script evaluation per context, no host-access entries,
+     * no dependency on {@code js.text-encoding}, and Java speed (a pure-JS implementation is
+     * 100x slower under the interpreter, see {@code Base64PolyfillBenchmarkTest}).
+     *
+     * <p>Semantics: {@code btoa} encodes the string as UTF-8 first; {@code atob} returns the UTF-8
+     * decoded string (not a binary string as in browsers). Whitespace in the {@code atob} input is
+     * ignored; any other invalid input throws.
      */
-    static final Source BASE64_POLYFILL_SOURCE = Source.newBuilder("js", """
-            (function() {
-              var _Base64   = Java.type('java.util.Base64');
-              var _JString  = Java.type('java.lang.String');
-              var _Charsets = Java.type('java.nio.charset.StandardCharsets');
-              var _Arrays   = Java.type('java.util.Arrays');
-              globalThis.atob = function(encoded) {
-                return new _JString(_Base64.getDecoder().decode(encoded), _Charsets.UTF_8);
-              };
-              globalThis.btoa = function(plain) {
-                var buf = _Charsets.UTF_8.encode(plain);
-                return _Base64.getEncoder().encodeToString(
-                  _Arrays.copyOfRange(buf.array(), buf.position(), buf.limit()));
-              };
-            })();
-            """, "__base64_polyfill__.js")
-            .cached(true)
-            .buildLiteral();
+    private static final ProxyExecutable BTOA = args ->
+            Base64.getEncoder().encodeToString(stringArg(args).getBytes(StandardCharsets.UTF_8));
+
+    private static final ProxyExecutable ATOB = args ->
+            new String(Base64.getDecoder().decode(stringArg(args).replaceAll("\\s", "")),
+                    StandardCharsets.UTF_8);
+
+    private static String stringArg(Value[] args) {
+        if (args.length == 0 || args[0].isNull()) {
+            throw new IllegalArgumentException("Base64 function requires a string argument");
+        }
+        return args[0].isString() ? args[0].asString() : args[0].toString();
+    }
+
+    /** Defines {@code atob} and {@code btoa} on the context's global scope. */
+    public static void installBase64Functions(Context context) {
+        Value globals = context.getBindings("js");
+        globals.putMember("btoa", BTOA);
+        globals.putMember("atob", ATOB);
+    }
 
     // Structure: < Tenant, Engine >
     private final Map<String, Engine> graalEngines = new ConcurrentHashMap<>();
@@ -219,23 +244,73 @@ public class GraalVMContextService {
     private final Map<String, java.util.function.Supplier<Map<String, String>>> mappingCodeSuppliers =
             new ConcurrentHashMap<>();
 
-    /** Lazily initialised; the same HostAccess config is shared across all tenants and contexts. */
-    private HostAccess hostAccess;
+    /**
+     * Java classes whose public constructors, methods and fields are visible to Smart Functions.
+     * Everything else is closed: a script that obtains an instance of any other class (for example
+     * through a returned value) cannot call into it, and {@code Object} members such as
+     * {@code getClass()} are never exposed. Keep in sync with {@link #isAllowedHostClass}, which
+     * governs what {@code Java.type(...)} may load; this list additionally covers the objects the
+     * allowed classes hand back.
+     *
+     * <p>{@link DataPrepContext} is the script-facing {@code context} API; the implementing class
+     * ({@code SmartFunctionContext}) is deliberately not listed so its internal setters stay hidden
+     * (access is inherited from the interface, see {@code allowAccessInheritance}).
+     */
+    static final List<Class<?>> SCRIPT_ACCESSIBLE_CLASSES = List.of(
+            // mapper API
+            DataPrepContext.class,
+            InputMessage.class,
+            ExternalId.class,
+            JavaScriptConsole.class,
+            SubstitutionContext.class,
+            SubstitutionResult.class,
+            SubstituteValue.class,
+            SubstituteValue.TYPE.class,
+            RepairStrategy.class,
+            // JDK classes reachable through Java.type
+            String.class,
+            ArrayList.class,
+            HashMap.class,
+            HashSet.class,
+            Arrays.class,
+            Base64.class,
+            Base64.Encoder.class,
+            Base64.Decoder.class,
+            StandardCharsets.class,
+            Charset.class,
+            ByteBuffer.class);
+
+    private static final HostAccess HOST_ACCESS = buildHostAccess();
+
+    private static HostAccess buildHostAccess() {
+        HostAccess.Builder builder = HostAccess.newBuilder()
+                .allowPublicAccess(false)
+                .allowAccessInheritance(true)
+                .allowArrayAccess(true)
+                .allowListAccess(true)
+                .allowMapAccess(true);
+        for (Class<?> clazz : SCRIPT_ACCESSIBLE_CLASSES) {
+            for (Constructor<?> constructor : clazz.getConstructors()) {
+                builder.allowAccess(constructor);
+            }
+            for (Method method : clazz.getMethods()) {
+                if (method.getDeclaringClass() != Object.class) {
+                    builder.allowAccess(method);
+                }
+            }
+            for (Field field : clazz.getFields()) {
+                builder.allowAccess(field);
+            }
+        }
+        return builder.build();
+    }
 
     /**
      * Returns the shared {@link HostAccess} configuration used by all GraalVM
-     * contexts. Lazily initialised on first call.
+     * contexts: an explicit allow-list, see {@link #SCRIPT_ACCESSIBLE_CLASSES}.
      */
     public HostAccess getHostAccess() {
-        if (hostAccess == null) {
-            hostAccess = HostAccess.newBuilder()
-                    .allowPublicAccess(true)
-                    .allowArrayAccess(true)
-                    .allowListAccess(true)
-                    .allowMapAccess(true)
-                    .build();
-        }
-        return hostAccess;
+        return HOST_ACCESS;
     }
 
     /**
@@ -450,7 +525,7 @@ public class GraalVMContextService {
             Context ctx = createFreshGraalContext(engine, supportESM);
 
             // Base64 polyfill — sets atob/btoa on globalThis
-            ctx.eval(BASE64_POLYFILL_SOURCE);
+            installBase64Functions(ctx);
 
             // Shared and system code — sets helpers on globalThis
             if (sharedSource != null) {

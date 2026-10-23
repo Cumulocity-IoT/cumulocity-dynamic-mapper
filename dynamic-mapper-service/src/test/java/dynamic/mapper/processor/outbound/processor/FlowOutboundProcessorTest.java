@@ -310,8 +310,8 @@ class FlowOutboundProcessorTest {
         // When
         processor.process(processingContext);
 
-        // Then - polyfill + shared code + main code = 3 eval calls
-        verify(graalContext, times(3)).eval(any(Source.class));
+        // Then - shared code + main code = 2 eval calls (atob/btoa are injected host functions, not evaluated)
+        verify(graalContext, times(2)).eval(any(Source.class));
 
         log.info("✅ Shared code test passed");
     }
@@ -325,8 +325,8 @@ class FlowOutboundProcessorTest {
         // When
         processor.process(processingContext);
 
-        // Then - polyfill + main code = 2 eval calls (system code cached as Source, no separate eval)
-        verify(graalContext, times(2)).eval(any(Source.class));
+        // Then - main code = 1 eval call (system code cached as Source, atob/btoa injected, not evaluated)
+        verify(graalContext, times(1)).eval(any(Source.class));
 
         log.info("✅ System code test passed");
     }
@@ -487,8 +487,8 @@ class FlowOutboundProcessorTest {
             // When
             processor.process(processingContext);
 
-            // Then - polyfill + shared + system + main = 4 eval calls
-            verify(graalContext, times(4)).eval(any(Source.class));
+            // Then - shared + system + main = 3 eval calls (atob/btoa injected, not evaluated)
+            verify(graalContext, times(3)).eval(any(Source.class));
 
             log.info("✅ Both shared and system code test passed");
         }
