@@ -222,6 +222,34 @@ class MappingTreeTest {
         }
 
         @Test
+        @DisplayName("Multi-level wildcard should also match the parent topic (MQTT spec)")
+        void testMultiLevelWildcardMatchesParent() throws ResolveException {
+            MappingTreeNode tree = MappingTreeNode.createRootNode("TEST_TENANT");
+            tree.addMapping(Mapping.builder().id("h1").name("Hash").mappingTopic("a/b/#").active(true).build());
+
+            assertEquals(1, tree.resolveMapping("a/b").size(), "a/b/# must match a/b");
+            assertEquals(1, tree.resolveMapping("a/b/c/d").size(), "a/b/# must match deeper topics");
+            assertTrue(tree.resolveMapping("a").isEmpty(), "a/b/# must not match a");
+        }
+
+        @Test
+        @DisplayName("Re-adding a mapping replaces its node instead of duplicating it")
+        void testAddSameMappingTwiceDoesNotDuplicate() throws ResolveException {
+            MappingTreeNode tree = MappingTreeNode.createRootNode("TEST_TENANT");
+            Mapping m = Mapping.builder().id("d1").name("Dup").mappingTopic("x/y").active(true).build();
+            tree.addMapping(m);
+            tree.addMapping(m);
+
+            assertEquals(1, tree.resolveMapping("x/y").size());
+        }
+
+        @Test
+        @DisplayName("A node built via the builder without a lock still has a usable lock")
+        void testBuilderWithoutLockHasLock() {
+            assertNotNull(MappingTreeNode.builder().mappingNode(false).build().getTreeLock());
+        }
+
+        @Test
         @DisplayName("Should ignore mappings without a usable mapping topic")
         void testAddAndDeleteMappingWithBlankTopicIsIgnored() throws ResolveException {
             MappingTreeNode tree = MappingTreeNode.createRootNode("TEST_TENANT");

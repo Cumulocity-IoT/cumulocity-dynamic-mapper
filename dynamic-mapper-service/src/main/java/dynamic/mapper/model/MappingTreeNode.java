@@ -23,6 +23,7 @@ package dynamic.mapper.model;
 
 import dynamic.mapper.model.validation.ResolveException;
 
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -33,10 +34,12 @@ import org.apache.commons.lang3.mutable.MutableInt;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -57,8 +60,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public class MappingTreeNode {
     // Constants
     private static final String TENANT_LOG_PREFIX = "{} - ";
+    // Topics are split including their separators, so "/" is a tree level of its own.
+    private static final String TOPIC_SEPARATOR_LEVEL = "/";
 
-    // Core properties
+    // Core properties. Child lists are CopyOnWriteArrayLists: writers hold the tree write lock,
+    // but serializers (monitoring endpoint) read the structure without taking the lock.
+    @Getter(AccessLevel.NONE)
     @Builder.Default
     private final Map<String, List<MappingTreeNode>> childNodes = new ConcurrentHashMap<>();
     private Mapping mapping;
@@ -78,18 +85,25 @@ public class MappingTreeNode {
     // A single ReadWriteLock guards the whole tree. All public operations are invoked on the
     // root node (see MappingCacheManager), so every node shares the root's lock by reference
     // instead of allocating its own — this avoids one lock instance per tree node.
+    // Defaults to a fresh lock so a node built without one (e.g. via toBuilder()) can't NPE;
+    // factory methods overwrite it with the parent's lock.
+    @Builder.Default
     @ToString.Exclude
-    private final ReadWriteLock treeLock;
+    private final ReadWriteLock treeLock = new ReentrantReadWriteLock();
 
     // Helper class for context; children list is mutable (nodes are added during tree building)
     @AllArgsConstructor
     @Getter
     private static class MappingContext {
         String currentLevel;
-        String currentPathMonitoring;
         List<MappingTreeNode> children;
         int level;
         List<String> levels;
+
+        // Only built when logged, not on every add/delete step.
+        String pathMonitoring() {
+            return createPathMonitoring(levels, level);
+        }
     }
 
     // Factory methods
@@ -159,6 +173,23 @@ public class MappingTreeNode {
         }
     }
 
+    /**
+     * Replaces {@code oldMapping} by {@code newMapping} under a single write lock, so concurrent
+     * resolvers never observe the tree without the mapping (as with delete followed by add).
+     * {@code oldMapping} may be null (plain add); its topic may differ from the new one.
+     */
+    public void replaceMapping(Mapping oldMapping, Mapping newMapping) throws ResolveException {
+        treeLock.writeLock().lock();
+        try {
+            if (oldMapping != null) {
+                deleteMapping(oldMapping);
+            }
+            addMapping(newMapping);
+        } finally {
+            treeLock.writeLock().unlock();
+        }
+    }
+
     public void deleteMapping(Mapping mapping) throws ResolveException {
         if (!hasResolvableTopic(mapping, "delete"))
             return;
@@ -189,6 +220,11 @@ public class MappingTreeNode {
             return false;
         }
         return true;
+    }
+
+    /** Read-only view of the child map; use the tree's public operations to modify it. */
+    public Map<String, List<MappingTreeNode>> getChildNodes() {
+        return Collections.unmodifiableMap(childNodes);
     }
 
     // Helper methods for node operations
@@ -225,6 +261,12 @@ public class MappingTreeNode {
             getChildrenOptional(Mapping.TOPIC_WILDCARD_MULTI)
                     .ifPresent(nodes -> nodes.forEach(results::add));
         } else if (topicLevels.size() == currentTopicLevelIndex) {
+            // MQTT: "a/b/#" also matches "a/b" (the multi-level wildcard covers the parent level).
+            // Separators are tree levels of their own, so the "#" sits below the "/" child.
+            getChildrenOptional(TOPIC_SEPARATOR_LEVEL)
+                    .ifPresent(separators -> separators.forEach(separator -> separator
+                            .getChildrenOptional(Mapping.TOPIC_WILDCARD_MULTI)
+                            .ifPresent(nodes -> nodes.forEach(results::add))));
             if (getMappingNode()) {
                 results.add(this);
             } else if (log.isDebugEnabled()) {
@@ -253,8 +295,7 @@ public class MappingTreeNode {
     private MappingContext createMappingContext(List<String> levels, int currentLevel) {
         return new MappingContext(
                 levels.get(currentLevel),
-                createPathMonitoring(levels, currentLevel),
-                getChildNodes().getOrDefault(levels.get(currentLevel), new ArrayList<>()),
+                childNodes.getOrDefault(levels.get(currentLevel), List.of()),
                 currentLevel,
                 levels);
     }
@@ -269,6 +310,12 @@ public class MappingTreeNode {
 
     private void addMappingNode(Mapping mapping, MappingContext context) {
         logMappingNodeAddition(mapping, context);
+        // Re-adding a mapping (e.g. after an update) replaces its node instead of duplicating it.
+        List<MappingTreeNode> existing = childNodes.get(context.currentLevel);
+        if (existing != null) {
+            existing.removeIf(n -> n.getMappingNode() && n.getMapping() != null
+                    && java.util.Objects.equals(n.getMapping().getId(), mapping.getId()));
+        }
         MappingTreeNode child = createMappingNode(this, context.currentLevel, mapping);
         updateChildNodes(context, child);
     }
@@ -308,7 +355,7 @@ public class MappingTreeNode {
     }
 
     private void updateChildNodes(MappingContext context, MappingTreeNode child) {
-        childNodes.computeIfAbsent(context.currentLevel, k -> new ArrayList<>()).add(child);
+        childNodes.computeIfAbsent(context.currentLevel, k -> new CopyOnWriteArrayList<>()).add(child);
     }
 
     private MappingTreeNode findOrCreateInnerNode(MappingContext context) throws ResolveException {
@@ -375,7 +422,7 @@ public class MappingTreeNode {
             return shouldDeleteNode(deleted, context.level, branchingLevel);
         } catch (ResolveException e) {
             log.error(TENANT_LOG_PREFIX + "Deleting mapping error: currentPathMonitoring [{}], branchingLevel [{}]",
-                    tenant, context.currentPathMonitoring, branchingLevel, e);
+                    tenant, context.pathMonitoring(), branchingLevel, e);
             return false;
         }
     }
@@ -402,7 +449,7 @@ public class MappingTreeNode {
         return Optional.ofNullable(node.getMapping())
                 .map(m -> m.getId().equals(mapping.getId()))
                 .map(matches -> {
-                    if (matches && countGrandChildren() > 1) {
+                    if (matches && countChildren() > 1) {
                         branchingLevel.setValue(context.level);
                     }
                     return matches;
@@ -411,7 +458,7 @@ public class MappingTreeNode {
     }
 
     private void updateBranchingLevelIfNeeded(MappingContext context, MutableInt branchingLevel) {
-        if (countGrandChildren() > 1) {
+        if (countChildren() > 1) {
             branchingLevel.setValue(context.level);
         }
     }
@@ -425,35 +472,47 @@ public class MappingTreeNode {
         return deleted;
     }
 
-    private int countGrandChildren() {
+    private int countChildren() {
         return childNodes.values().stream().mapToInt(List::size).sum();
     }
 
     // Logging methods
     private void logMappingNodeAddition(Mapping mapping, MappingContext context) {
+        if (!log.isDebugEnabled()) {
+            return;
+        }
         log.debug(TENANT_LOG_PREFIX
                 + "Adding mappingNode  : currentPathMonitoring [{}], currentNode.absolutePath [{}], mappingId [{}]",
-                tenant, context.currentPathMonitoring, getAbsolutePath(), mapping.getId());
+                tenant, context.pathMonitoring(), getAbsolutePath(), mapping.getId());
     }
 
     private void logInnerNodeAddition(MappingContext context) {
+        if (!log.isDebugEnabled()) {
+            return;
+        }
         log.debug(TENANT_LOG_PREFIX + "Adding innerNode    : currentPathMonitoring [{}], currentNode.absolutePath [{}]",
-                tenant, context.currentPathMonitoring, getAbsolutePath());
+                tenant, context.pathMonitoring(), getAbsolutePath());
     }
 
     private void logMappingNodeDeletion(Mapping mapping, MappingContext context, MutableInt branchingLevel) {
+        if (!log.isDebugEnabled()) {
+            return;
+        }
         log.debug(
                 TENANT_LOG_PREFIX
                         + "Deleting mappingNode: currentPathMonitoring [{}], branchingLevel [{}], mappingId [{}]",
-                tenant, context.currentPathMonitoring, branchingLevel, mapping.getId());
+                tenant, context.pathMonitoring(), branchingLevel, mapping.getId());
     }
 
     private void logInnerNodeDeletion(MappingContext context, MutableInt branchingLevel) {
+        if (!log.isDebugEnabled()) {
+            return;
+        }
         log.debug(TENANT_LOG_PREFIX + "Deleting innerNode  : currentPathMonitoring [{}], branchingLevel [{}]",
-                tenant, context.currentPathMonitoring, branchingLevel);
+                tenant, context.pathMonitoring(), branchingLevel);
     }
 
-    private String createPathMonitoring(List<String> levels, int currentLevel) {
+    private static String createPathMonitoring(List<String> levels, int currentLevel) {
         StringBuilder pathBuilder = new StringBuilder();
         for (int i = 0; i < levels.size(); i++) {
             if (i > 0) {
