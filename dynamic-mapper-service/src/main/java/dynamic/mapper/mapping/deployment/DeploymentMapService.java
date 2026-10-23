@@ -399,6 +399,13 @@ public class DeploymentMapService {
             }
         });
         if (failure.get() != null) {
+            // Roll memory back to what is actually persisted so the two don't diverge.
+            MapperServiceRepresentation serviceRep = serviceRegistry.getMapperServiceRepresentation(tenant);
+            if (serviceRep != null && serviceRep.getDeploymentMap() != null) {
+                Map<String, List<String>> restored = new ConcurrentHashMap<>();
+                serviceRep.getDeploymentMap().forEach((k, v) -> restored.put(k, new CopyOnWriteArrayList<>(v == null ? List.of() : v)));
+                deploymentMaps.put(tenant, restored);
+            }
             log.error("{} - Failed to persist deployment map", tenant, failure.get());
             throw new IllegalStateException(
                     "Deployment map could not be persisted: " + failure.get().getMessage(), failure.get());

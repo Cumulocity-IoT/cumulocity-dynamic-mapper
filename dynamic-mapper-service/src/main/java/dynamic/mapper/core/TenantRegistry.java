@@ -31,8 +31,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -83,16 +85,43 @@ public class TenantRegistry {
 
     // ─── External-ID resolution cache & per-ID creation locks ────────────────
 
-    // Structure: < tenant|externalIdType|externalId, internalC8YId >
-    private final Map<String, String> externalIdCache = new ConcurrentHashMap<>();
+    /** Upper bound of cached external-ID resolutions across all tenants (least recently used evicted). */
+    private static final int EXTERNAL_ID_CACHE_MAX_ENTRIES = 100_000;
 
-    // Structure: < tenant|internalC8YId, tenant|externalIdType|externalId > — reverse index
-    // enabling eviction of a stale externalIdCache entry when only the internal id (e.g. from a
-    // deleted managed object) is known.
-    private final Map<String, String> externalIdCacheReverse = new ConcurrentHashMap<>();
+    // Number of striped creation locks; a fixed array, so locks never accumulate per external id.
+    private static final int EXTERNAL_ID_LOCK_STRIPES = 256;
 
-    // Structure: < tenant|externalIdType|externalId, lock object > — per-ID monitor for double-check locking during implicit device creation
-    private final Map<String, Object> externalIdLocks = new ConcurrentHashMap<>();
+    // Guards externalIdCache and externalIdCacheReverse together (they must change atomically).
+    private final Object externalIdMonitor = new Object();
+
+    // Structure: < tenant|externalIdType|externalId, internalC8YId >, access-ordered and bounded
+    private final Map<String, String> externalIdCache = new java.util.LinkedHashMap<>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
+            if (size() > EXTERNAL_ID_CACHE_MAX_ENTRIES) {
+                unindexReverse(eldest.getKey(), eldest.getValue());
+                return true;
+            }
+            return false;
+        }
+    };
+
+    // Structure: < tenant|internalC8YId, {tenant|externalIdType|externalId} > — reverse index
+    // enabling eviction of stale externalIdCache entries when only the internal id (e.g. from a
+    // deleted managed object) is known. One device can have several external ids, so multi-valued.
+    private final Map<String, Set<String>> externalIdCacheReverse = new java.util.HashMap<>();
+
+    // Striped monitors for double-check locking during implicit device creation. Striping instead
+    // of one lock per key means a lock can never be removed while another thread holds it.
+    private final Object[] externalIdLocks = newLocks(EXTERNAL_ID_LOCK_STRIPES);
+
+    private static Object[] newLocks(int n) {
+        Object[] locks = new Object[n];
+        for (int i = 0; i < n; i++) {
+            locks[i] = new Object();
+        }
+        return locks;
+    }
 
     // =========================================================================
     // Credentials
@@ -254,40 +283,61 @@ public class TenantRegistry {
     // =========================================================================
 
     /**
-     * Returns the lock object for the given cache key, creating one atomically if
-     * absent. Callers use this for the double-check locking pattern when creating
-     * implicit devices.
+     * Returns the lock object for the given cache key (one of a fixed set of striped monitors).
+     * Callers use this for the double-check locking pattern when creating implicit devices.
+     * Different keys may share a lock, which only serializes their creation needlessly.
      */
     public Object getOrCreateExternalIdLock(String cacheKey) {
-        return externalIdLocks.computeIfAbsent(cacheKey, k -> new Object());
+        return externalIdLocks[Math.floorMod(cacheKey.hashCode(), externalIdLocks.length)];
     }
 
     public String getCachedExternalId(String cacheKey) {
-        return externalIdCache.get(cacheKey);
+        synchronized (externalIdMonitor) {
+            return externalIdCache.get(cacheKey);
+        }
     }
 
     public void cacheExternalId(String cacheKey, String internalId) {
-        externalIdCache.put(cacheKey, internalId);
         String tenant = cacheKey.substring(0, cacheKey.indexOf('|'));
-        externalIdCacheReverse.put(tenant + "|" + internalId, cacheKey);
+        synchronized (externalIdMonitor) {
+            String previous = externalIdCache.put(cacheKey, internalId);
+            if (previous != null && !previous.equals(internalId)) {
+                unindexReverse(cacheKey, previous);
+            }
+            externalIdCacheReverse.computeIfAbsent(tenant + "|" + internalId, k -> new HashSet<>()).add(cacheKey);
+        }
+    }
+
+    /** Caller holds {@link #externalIdMonitor} (or is inside a cache mutation under it). */
+    private void unindexReverse(String cacheKey, String internalId) {
+        String tenant = cacheKey.substring(0, cacheKey.indexOf('|'));
+        String reverseKey = tenant + "|" + internalId;
+        Set<String> keys = externalIdCacheReverse.get(reverseKey);
+        if (keys != null) {
+            keys.remove(cacheKey);
+            if (keys.isEmpty()) {
+                externalIdCacheReverse.remove(reverseKey);
+            }
+        }
     }
 
     /**
-     * Removes a single entry from the external-ID cache and its associated lock.
+     * Removes a single entry from the external-ID cache.
      * Used after a 422 response to force re-resolution on the next message.
      */
     public void removeFromExternalIdCache(String tenant, ID identity) {
         String cacheKey = tenant + "|" + identity.getType() + "|" + identity.getValue();
-        String internalId = externalIdCache.remove(cacheKey);
-        externalIdLocks.remove(cacheKey);
-        if (internalId != null) {
-            externalIdCacheReverse.remove(tenant + "|" + internalId);
+        synchronized (externalIdMonitor) {
+            String internalId = externalIdCache.remove(cacheKey);
+            if (internalId != null) {
+                unindexReverse(cacheKey, internalId);
+            }
         }
         log.debug("{} - Removed external ID from cache: {}", tenant, cacheKey);
     }
 
     /**
-     * Removes the external-ID cache entry that resolves to {@code internalId}, if any.
+     * Removes every external-ID cache entry that resolves to {@code internalId}.
      * Used when a cached device id is discovered to no longer exist upstream (e.g. the managed
      * object was deleted from inventory) so the next message for the same external ID
      * re-triggers resolution instead of indefinitely reusing the stale, deleted id.
@@ -296,12 +346,13 @@ public class TenantRegistry {
         if (internalId == null) {
             return;
         }
-        String cacheKey = externalIdCacheReverse.remove(tenant + "|" + internalId);
-        if (cacheKey != null) {
-            externalIdCache.remove(cacheKey);
-            externalIdLocks.remove(cacheKey);
-            log.debug("{} - Removed stale external ID cache entry for deleted device {}: {}",
-                    tenant, internalId, cacheKey);
+        synchronized (externalIdMonitor) {
+            Set<String> cacheKeys = externalIdCacheReverse.remove(tenant + "|" + internalId);
+            if (cacheKeys != null) {
+                cacheKeys.forEach(externalIdCache::remove);
+                log.debug("{} - Removed stale external ID cache entries for deleted device {}: {}",
+                        tenant, internalId, cacheKeys);
+            }
         }
     }
 
@@ -311,19 +362,17 @@ public class TenantRegistry {
      * cleared.
      */
     public void clearExternalIdCache(String tenant) {
-        if (tenant == null) {
-            externalIdCache.clear();
-            externalIdCacheReverse.clear();
-            externalIdLocks.clear();
-            log.info("Cleared entire external ID cache");
-        } else {
-            String prefix = tenant + "|";
-            externalIdCache.entrySet().removeIf(entry -> entry.getKey().startsWith(prefix));
-            externalIdCacheReverse.entrySet().removeIf(entry -> entry.getKey().startsWith(prefix));
-            // The locks are keyed identically and were previously left behind, so they grew by
-            // one entry per distinct external ID ever seen and were never reclaimed.
-            externalIdLocks.entrySet().removeIf(entry -> entry.getKey().startsWith(prefix));
-            log.debug("{} - Cleared external ID cache", tenant);
+        synchronized (externalIdMonitor) {
+            if (tenant == null) {
+                externalIdCache.clear();
+                externalIdCacheReverse.clear();
+                log.info("Cleared entire external ID cache");
+            } else {
+                String prefix = tenant + "|";
+                externalIdCache.keySet().removeIf(key -> key.startsWith(prefix));
+                externalIdCacheReverse.keySet().removeIf(key -> key.startsWith(prefix));
+                log.debug("{} - Cleared external ID cache", tenant);
+            }
         }
     }
 
