@@ -644,4 +644,86 @@ class ServiceConfigurationServiceTest {
         assertTrue(json.contains("\"direction\":\"INBOUND\""), "clients still read direction: " + json);
     }
 
+
+    // ── adoptHeaderMetadataEdits ──────────────────────────────────────────
+
+    /** A stored template whose header was generated from its fields, as after any save. */
+    private CodeTemplate storedTemplate() {
+        CodeTemplate t = template("function onMessage(msg, context) { return []; }\n");
+        service.rectifyHeaderInCodeTemplate(t);
+        return t;
+    }
+
+    /** The stored template as the editor would send it back, with its code header hand-edited. */
+    private CodeTemplate editedInEditor(CodeTemplate stored, String from, String to) {
+        CodeTemplate t = template(decode(stored.code).replace(from, to));
+        t.name = stored.name;
+        t.description = stored.description;
+        return t;
+    }
+
+    @Test
+    void adoptHeaderMetadataEdits_takesANameEditedInTheHeader() {
+        CodeTemplate stored = storedTemplate();
+        CodeTemplate incoming = editedInEditor(stored, "@name My Template", "@name Renamed In Header");
+
+        service.adoptHeaderMetadataEdits(incoming, stored);
+        service.rectifyHeaderInCodeTemplate(incoming);
+
+        assertEquals("Renamed In Header", incoming.name);
+        assertEquals("Renamed In Header", service.extractAnnotation(decode(incoming.code), "@name"));
+    }
+
+    @Test
+    void adoptHeaderMetadataEdits_takesADescriptionEditedInTheHeader() {
+        CodeTemplate stored = storedTemplate();
+        CodeTemplate incoming = editedInEditor(stored, "@description A description", "@description New text");
+
+        service.adoptHeaderMetadataEdits(incoming, stored);
+
+        assertEquals("New text", incoming.description);
+        assertEquals("My Template", incoming.name);
+    }
+
+    @Test
+    void adoptHeaderMetadataEdits_lets_aFormRenameWinOverTheEditorsStaleHeader() {
+        CodeTemplate stored = storedTemplate();
+        CodeTemplate incoming = template(stored.code == null ? "" : decode(stored.code));
+        incoming.name = "Renamed By Form";
+        incoming.description = "Described by form";
+
+        service.adoptHeaderMetadataEdits(incoming, stored);
+        service.rectifyHeaderInCodeTemplate(incoming);
+
+        assertEquals("Renamed By Form", incoming.name);
+        assertEquals("Described by form", incoming.description);
+        assertEquals("Renamed By Form", service.extractAnnotation(decode(incoming.code), "@name"));
+    }
+
+    @Test
+    void adoptHeaderMetadataEdits_ignoresABlankedName() {
+        CodeTemplate stored = storedTemplate();
+        CodeTemplate incoming = editedInEditor(stored, "@name My Template", "@name");
+
+        service.adoptHeaderMetadataEdits(incoming, stored);
+
+        assertEquals("My Template", incoming.name);
+    }
+
+    @Test
+    void adoptHeaderMetadataEdits_ignoresAnnotationsInFreeFormDocsBelowTheMarker() {
+        CodeTemplate stored = storedTemplate();
+        String code = decode(stored.code).replace(" */\n", " * @name Not The Name\n */\n");
+        CodeTemplate incoming = template(code);
+
+        service.adoptHeaderMetadataEdits(incoming, stored);
+
+        assertEquals("My Template", incoming.name);
+    }
+
+    @Test
+    void rectifyHeader_tellsAuthorsThatNameAndDescriptionAreEditable() {
+        assertTrue(decode(storedTemplate().code).contains("can be edited here"));
+    }
+
 }

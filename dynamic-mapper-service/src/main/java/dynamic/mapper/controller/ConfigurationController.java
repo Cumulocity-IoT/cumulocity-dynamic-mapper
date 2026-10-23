@@ -775,6 +775,11 @@ public class ConfigurationController {
                         String.format("Template '%s' is read-only and cannot be modified", id));
             }
 
+            // A hand-edit of @name / @description in the header is adopted before the header is
+            // regenerated from the fields, which would otherwise overwrite it.
+            if (existing != null) {
+                serviceConfigurationService.adoptHeaderMetadataEdits(codeTemplate, existing);
+            }
             serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate);
             codeTemplates.put(id, codeTemplate);
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);

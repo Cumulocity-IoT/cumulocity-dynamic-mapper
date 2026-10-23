@@ -43,10 +43,11 @@
       @if (action === 'CREATE' || action === 'RENAME') {
         <c8y-form-group>
           <label>Description</label>
-          <input
+          <textarea
             class="form-control"
+            rows="4"
             [(ngModel)]="codeTemplate.description"
-            />
+            ></textarea>
         </c8y-form-group>
       }
     </div>

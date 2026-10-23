@@ -509,6 +509,41 @@ public class ServiceConfigurationService {
     }
 
     /**
+     * Adopts a hand-edit of {@code @name} / {@code @description} in the header of an updated
+     * template. Call before {@link #rectifyHeaderInCodeTemplate}, which would otherwise overwrite
+     * the edit with the POJO fields.
+     *
+     * <p>A header value only counts as an edit when it differs from the stored template's value.
+     * The "Edit metadata" form sends the new POJO fields together with the editor's code, whose
+     * header still carries the old values; treating that header as an edit would undo the rename.
+     * When the POJO field itself changed, it wins. Only the section above the auto-generated
+     * marker is read, so free-form documentation can never be mistaken for the real annotation,
+     * and an empty header value is ignored rather than blanking the field.
+     */
+    public void adoptHeaderMetadataEdits(CodeTemplate incoming, CodeTemplate stored) {
+        if (incoming == null || stored == null || incoming.code == null || incoming.code.isEmpty()) {
+            return;
+        }
+        String decoded = decode(incoming.code);
+        int markerPos = decoded.indexOf(SYSTEM_SECTION_MARKER);
+        if (markerPos == -1) {
+            return;
+        }
+        String systemSection = decoded.substring(0, markerPos);
+
+        String headerName = extractAnnotation(systemSection, "@name");
+        if (!headerName.isEmpty() && !headerName.equals(stored.name)
+                && Objects.equals(incoming.name, stored.name)) {
+            incoming.name = headerName;
+        }
+        String headerDescription = extractAnnotation(systemSection, "@description");
+        if (!headerDescription.isEmpty() && !headerDescription.equals(stored.description)
+                && Objects.equals(incoming.description, stored.description)) {
+            incoming.description = headerDescription;
+        }
+    }
+
+    /**
      * Synchronizes the JSDoc header inside the code with the POJO fields.
      * The POJO is always the single source of truth — header annotations are
      * a write-only artefact generated from the POJO, never parsed back.
@@ -822,6 +857,7 @@ public class ServiceConfigurationService {
         // template they are request data that a comment cannot change. Emitting them invited an
         // author to edit a line that nothing reads back. They stay in SYSTEM_SECTION_ANNOTATIONS so
         // that headers stored before this change are cleaned up on the next save.
+        sb.append(" * (the name and description above can be edited here; the other tags are managed automatically)\n");
         sb.append(SYSTEM_SECTION_MARKER);
         return sb.toString();
     }
