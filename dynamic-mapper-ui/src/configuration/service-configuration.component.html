@@ -21,8 +21,8 @@
 
 <c8y-title translate>Service configuration</c8y-title>
 @if (section == 'processing'){
-<c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Rotate GraalVM Engine' | translate }}" (click)="clickedRotateGraalVMEngine()"
+<c8y-action-bar-item [placement]="'more'" [priority]="-100">
+  <button title="{{ 'Rotate GraalVM Engine' | translate }}" (click)="clickedRotateGraalVMEngine()"
     [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="restore"></i>
     {{ 'Rotate GraalVM Engine' | translate }}
@@ -30,46 +30,44 @@
 </c8y-action-bar-item>
 }
 @if (section == 'caching'){
-<c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Clear inbound external ID cache' | translate }}"
-    (click)="clickedClearInboundExternalIdCache()" [disabled]="!feature?.userHasMappingAdminRole">
+<c8y-action-bar-item [placement]="'more'" [priority]="-100">
+  <button title="{{ 'Clear inbound external ID cache' | translate }}" (click)="clickedClearInboundExternalIdCache()"
+    [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="clear"></i>
     {{ 'Clear inbound external ID cache' | translate }}
   </button>
 </c8y-action-bar-item>
-<c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Clear outbound external ID cache' | translate }}"
-    (click)="clickedClearOutboundExternalIdCache()" [disabled]="!feature?.userHasMappingAdminRole">
+<c8y-action-bar-item [placement]="'more'" [priority]="-101">
+  <button title="{{ 'Clear outbound external ID cache' | translate }}" (click)="clickedClearOutboundExternalIdCache()"
+    [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="clear"></i>
     {{ 'Clear outbound external ID cache' | translate }}
   </button>
 </c8y-action-bar-item>
-<c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Clear inventory cache' | translate }}" (click)="clickedClearInventoryCache()"
+<c8y-action-bar-item [placement]="'more'" [priority]="-102">
+  <button title="{{ 'Clear inventory cache' | translate }}" (click)="clickedClearInventoryCache()"
     [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="clear"></i>
     {{ 'Clear inventory cache' | translate }}
   </button>
 </c8y-action-bar-item>
-<c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Clear flow state' | translate }}" (click)="clickedClearFlowStateCache()"
+<c8y-action-bar-item [placement]="'more'" [priority]="-103">
+  <button title="{{ 'Clear flow state' | translate }}" (click)="clickedClearFlowStateCache()"
     [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="clear"></i>
     {{ 'Clear flow state' | translate }}
   </button>
 </c8y-action-bar-item>
 }
-<c8y-action-bar-item [placement]="'right'" [priority]="-800">
-  <button class="btn btn-link" title="{{ 'Export service configuration' | translate }}"
-    (click)="clickedExportServiceConfiguration()" data-cy="dm-service-config-export">
+<c8y-action-bar-item [placement]="'more'" [priority]="-800">
+  <button data-cy="dm-service-config-export" title="{{ 'Export service configuration' | translate }}" (click)="clickedExportServiceConfiguration()">
     <i c8yIcon="download"></i>
     {{ 'Export' | translate }}
   </button>
 </c8y-action-bar-item>
-<c8y-action-bar-item [placement]="'right'" [priority]="-900">
-  <button class="btn btn-link" title="{{ 'Import service configuration' | translate }}"
-    (click)="clickedImportServiceConfiguration()" [disabled]="!feature?.userHasMappingAdminRole"
-    data-cy="dm-service-config-import">
+<c8y-action-bar-item [placement]="'more'" [priority]="-900">
+  <button data-cy="dm-service-config-import" title="{{ 'Import service configuration' | translate }}" (click)="clickedImportServiceConfiguration()"
+    [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="upload"></i>
     {{ 'Import' | translate }}
   </button>

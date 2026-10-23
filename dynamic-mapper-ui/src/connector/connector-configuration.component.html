@@ -29,32 +29,27 @@
   </button>
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" title="{{ 'Reconnect notification endpoint' | translate }}"
-    (click)="clickedReconnect2NotificationEndpoint()" [disabled]="!feature?.userHasMappingAdminRole">
-    <i c8yIcon="reset"></i>
-    {{ 'Reconnect Subscription outbound' | translate }}
-  </button>
-  <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
-      'Reconnect Subscription outbound endpoint.'
-        | translate
-    }}" placement="bottom" triggers="focus" type="button"></button>
-</c8y-action-bar-item>
-<c8y-action-bar-item [placement]="'right'">
   <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="refresh()">
     <i c8yIcon="refresh"></i>
     {{ 'Refresh' | translate }}
   </button>
 </c8y-action-bar-item>
-<c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" data-cy="dm-connector-export" title="{{ 'Export all connectors' | translate }}"
-    (click)="onExportAll()">
+<c8y-action-bar-item [placement]="'more'" [priority]="-100">
+  <button data-cy="dm-connector-reconnect" title="{{ 'Reconnect Subscription outbound endpoint.' | translate }}"
+    (click)="clickedReconnect2NotificationEndpoint()" [disabled]="!feature?.userHasMappingAdminRole">
+    <i c8yIcon="reset"></i>
+    {{ 'Reconnect Subscription outbound' | translate }}
+  </button>
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'more'" [priority]="-101">
+  <button data-cy="dm-connector-export" title="{{ 'Export all connectors' | translate }}" (click)="onExportAll()">
     <i c8yIcon="download"></i>
     {{ 'Export all connectors' | translate }}
   </button>
 </c8y-action-bar-item>
-<c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link" data-cy="dm-connector-import" title="{{ 'Import connectors' | translate }}"
-    (click)="onImport()" [disabled]="!feature?.userHasMappingAdminRole">
+<c8y-action-bar-item [placement]="'more'" [priority]="-102">
+  <button data-cy="dm-connector-import" title="{{ 'Import connectors' | translate }}" (click)="onImport()"
+    [disabled]="!feature?.userHasMappingAdminRole">
     <i c8yIcon="upload"></i>
     {{ 'Import connectors' | translate }}
   </button>
