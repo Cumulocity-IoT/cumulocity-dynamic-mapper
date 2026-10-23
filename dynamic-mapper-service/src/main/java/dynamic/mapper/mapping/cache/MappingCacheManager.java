@@ -31,31 +31,54 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
- * Manages caching for mappings with thread-safe operations
+ * Manages caching for mappings with thread-safe operations.
+ *
+ * <p>Per tenant, the inbound side (mappings by id, by stable identifier, and the topic resolver
+ * tree) lives in one {@link InboundState} that a rebuild swaps in a single volatile write, so a
+ * reader never sees the map and the tree out of sync. Incremental changes are serialized per
+ * tenant. Getters never create tenant state; only {@link #createTenantCache} and the rebuilds do,
+ * so a late call after {@link #removeTenantCache} cannot resurrect (and leak) a removed tenant.
  */
 @Slf4j
 @Component
 public class MappingCacheManager {
 
-    // Structure: <Tenant, <MappingId, Mapping>>
-    private final Map<String, Map<String, Mapping>> cacheMappingInbound = new ConcurrentHashMap<>();
-    private final Map<String, Map<String, Mapping>> cacheMappingOutbound = new ConcurrentHashMap<>();
+    private static final class InboundState {
+        final Map<String, Mapping> byId = new ConcurrentHashMap<>();
+        final Map<String, Mapping> byIdentifier = new ConcurrentHashMap<>();
+        final MappingTreeNode tree;
 
-    // Structure: <Tenant, MappingTreeNode>
-    private final Map<String, MappingTreeNode> resolverMappingInbound = new ConcurrentHashMap<>();
+        InboundState(MappingTreeNode tree) {
+            this.tree = tree;
+        }
+    }
+
+    private static final class OutboundState {
+        final Map<String, Mapping> byId = new ConcurrentHashMap<>();
+        final Map<String, Mapping> byIdentifier = new ConcurrentHashMap<>();
+    }
+
+    private static final class TenantCache {
+        // Serializes incremental changes and rebuilds of this tenant
+        final Object lock = new Object();
+        volatile InboundState inbound;
+        volatile OutboundState outbound = new OutboundState();
+
+        TenantCache(String tenant) {
+            this.inbound = new InboundState(MappingTreeNode.createRootNode(tenant));
+        }
+    }
+
+    // Structure: <Tenant, TenantCache>
+    private final Map<String, TenantCache> tenants = new ConcurrentHashMap<>();
 
     /**
-     * Initializes cache structures for a tenant
+     * Initializes cache structures for a tenant (idempotent)
      */
     public void createTenantCache(String tenant) {
-        cacheMappingInbound.put(tenant, new ConcurrentHashMap<>());
-        cacheMappingOutbound.put(tenant, new ConcurrentHashMap<>());
-        resolverMappingInbound.put(tenant, MappingTreeNode.createRootNode(tenant));
-        
+        tenants.computeIfAbsent(tenant, TenantCache::new);
         log.debug("{} - Cache structures created", tenant);
     }
 
@@ -63,10 +86,7 @@ public class MappingCacheManager {
      * Removes all cache data for a tenant
      */
     public void removeTenantCache(String tenant) {
-        cacheMappingInbound.remove(tenant);
-        cacheMappingOutbound.remove(tenant);
-        resolverMappingInbound.remove(tenant);
-
+        tenants.remove(tenant);
         log.debug("{} - Cache structures removed", tenant);
     }
 
@@ -74,63 +94,91 @@ public class MappingCacheManager {
      * Clears all caches for a tenant without removing the structure
      */
     public void clearTenantCache(String tenant) {
-        getCacheInbound(tenant).clear();
-        getCacheOutbound(tenant).clear();
-        resolverMappingInbound.put(tenant, MappingTreeNode.createRootNode(tenant));
-        
+        TenantCache tc = tenants.get(tenant);
+        if (tc == null) {
+            return;
+        }
+        synchronized (tc.lock) {
+            tc.inbound = new InboundState(MappingTreeNode.createRootNode(tenant));
+            tc.outbound = new OutboundState();
+        }
         log.debug("{} - Cache cleared", tenant);
     }
 
     // ========== Inbound Cache Operations ==========
 
     /**
-     * Rebuilds the entire inbound cache from a list of mappings
+     * Rebuilds the entire inbound cache from a list of mappings. The new state is built off to
+     * the side and swapped in atomically.
      */
     public List<Mapping> rebuildInboundCache(String tenant, List<Mapping> mappings, ConnectorId connectorId) {
         log.debug("{} - Rebuilding inbound cache with {} mappings (triggered by {})",
-            tenant, mappings.size(), connectorId.getName());
+                tenant, mappings.size(), connectorId.getName());
 
-        Map<String, Mapping> newCache = mappings.stream()
-            .collect(Collectors.toMap(Mapping::getId, Function.identity()));
-        
-        cacheMappingInbound.put(tenant, new ConcurrentHashMap<>(newCache));
+        InboundState state = new InboundState(MappingTreeNode.createRootNode(tenant));
+        for (Mapping mapping : mappings) {
+            // Last one wins on duplicate ids instead of failing the whole rebuild
+            index(state.byId, state.byIdentifier, mapping);
+            try {
+                state.tree.addMapping(mapping);
+            } catch (ResolveException e) {
+                log.error("{} - Could not add mapping {} to tree, skipping", tenant, mapping.getId(), e);
+            }
+        }
 
-        // Rebuild resolver tree
-        MappingTreeNode newTree = buildMappingTree(tenant, mappings);
-        resolverMappingInbound.put(tenant, newTree);
-
+        TenantCache tc = tenants.computeIfAbsent(tenant, TenantCache::new);
+        synchronized (tc.lock) {
+            tc.inbound = state;
+        }
         return mappings;
     }
 
     /**
-     * Adds a single mapping to the inbound cache
+     * Adds or replaces a single mapping in the inbound cache. A previous version of the same
+     * mapping (even with a different topic) is swapped out under one tree lock.
      */
     public void addInboundMapping(String tenant, Mapping mapping) {
-        getCacheInbound(tenant).put(mapping.getId(), mapping);
-        
-        try {
-            getResolverTreeInbound(tenant).addMapping(mapping);
-            log.debug("{} - Added inbound mapping to cache: {}", tenant, mapping.getId());
-        } catch (ResolveException e) {
-            log.error("{} - Failed to add mapping {} to resolver tree", tenant, mapping.getId(), e);
+        TenantCache tc = tenants.get(tenant);
+        if (tc == null) {
+            log.warn("{} - No mapping cache for tenant, ignoring inbound mapping {}", tenant, mapping.getId());
+            return;
         }
+        synchronized (tc.lock) {
+            InboundState state = tc.inbound;
+            Mapping previous = state.byId.get(mapping.getId());
+            try {
+                state.tree.replaceMapping(previous, mapping);
+            } catch (ResolveException e) {
+                log.error("{} - Failed to add mapping {} to resolver tree", tenant, mapping.getId(), e);
+            }
+            unindex(state.byId, state.byIdentifier, previous);
+            index(state.byId, state.byIdentifier, mapping);
+        }
+        log.debug("{} - Added inbound mapping to cache: {}", tenant, mapping.getId());
     }
 
     /**
      * Removes a mapping from the inbound cache
      */
     public Optional<Mapping> removeInboundMapping(String tenant, String mappingId) {
-        Mapping removed = getCacheInbound(tenant).remove(mappingId);
-        
-        if (removed != null) {
-            try {
-                getResolverTreeInbound(tenant).deleteMapping(removed);
+        TenantCache tc = tenants.get(tenant);
+        if (tc == null) {
+            return Optional.empty();
+        }
+        Mapping removed;
+        synchronized (tc.lock) {
+            InboundState state = tc.inbound;
+            removed = state.byId.get(mappingId);
+            if (removed != null) {
+                try {
+                    state.tree.deleteMapping(removed);
+                } catch (ResolveException e) {
+                    log.error("{} - Failed to remove mapping {} from resolver tree", tenant, mappingId, e);
+                }
+                unindex(state.byId, state.byIdentifier, removed);
                 log.debug("{} - Removed inbound mapping from cache: {}", tenant, mappingId);
-            } catch (ResolveException e) {
-                log.error("{} - Failed to remove mapping {} from resolver tree", tenant, mappingId, e);
             }
         }
-        
         return Optional.ofNullable(removed);
     }
 
@@ -138,14 +186,14 @@ public class MappingCacheManager {
      * Retrieves a mapping from the inbound cache
      */
     public Optional<Mapping> getInboundMapping(String tenant, String mappingId) {
-        return Optional.ofNullable(getCacheInbound(tenant).get(mappingId));
+        return inbound(tenant).map(s -> s.byId.get(mappingId));
     }
 
     /**
      * Checks if an inbound mapping exists in cache
      */
     public boolean containsInboundMapping(String tenant, String mappingId) {
-        return getCacheInbound(tenant).containsKey(mappingId);
+        return inbound(tenant).map(s -> s.byId.containsKey(mappingId)).orElse(false);
     }
 
     /**
@@ -153,9 +201,7 @@ public class MappingCacheManager {
      * Uses the stable identifier (UUID) rather than the mutable MO id.
      */
     public boolean containsInboundMappingByIdentifier(String tenant, String identifier) {
-        if (identifier == null) return false;
-        return getCacheInbound(tenant).values().stream()
-                .anyMatch(m -> identifier.equals(m.getIdentifier()));
+        return getInboundMappingByIdentifier(tenant, identifier).isPresent();
     }
 
     /**
@@ -163,23 +209,22 @@ public class MappingCacheManager {
      */
     public Optional<Mapping> getInboundMappingByIdentifier(String tenant, String identifier) {
         if (identifier == null) return Optional.empty();
-        return getCacheInbound(tenant).values().stream()
-                .filter(m -> identifier.equals(m.getIdentifier()))
-                .findFirst();
+        return inbound(tenant).map(s -> s.byIdentifier.get(identifier));
     }
 
     /**
      * Gets all inbound mappings for a tenant
      */
     public Map<String, Mapping> getAllInboundMappings(String tenant) {
-        return new HashMap<>(getCacheInbound(tenant));
+        return inbound(tenant).map(s -> (Map<String, Mapping>) new HashMap<>(s.byId)).orElseGet(HashMap::new);
     }
 
     /**
      * Resolves inbound mappings by topic
      */
     public List<Mapping> resolveInboundMappings(String tenant, String topic) throws ResolveException {
-        return getResolverTreeInbound(tenant).resolveMapping(topic);
+        Optional<InboundState> state = inbound(tenant);
+        return state.isPresent() ? state.get().tree.resolveMapping(topic) : List.of();
     }
 
     // ========== Outbound Cache Operations ==========
@@ -189,22 +234,33 @@ public class MappingCacheManager {
      */
     public List<Mapping> rebuildOutboundCache(String tenant, List<Mapping> mappings, ConnectorId connectorId) {
         log.debug("{} - Rebuilding outbound cache with {} mappings (triggered by {})",
-            tenant, mappings.size(), connectorId.getName());
+                tenant, mappings.size(), connectorId.getName());
 
-        Map<String, Mapping> newCache = mappings.stream()
-            .collect(Collectors.toMap(Mapping::getId, Function.identity()));
-        
-        cacheMappingOutbound.put(tenant, new ConcurrentHashMap<>(newCache));
+        OutboundState state = new OutboundState();
+        mappings.forEach(m -> index(state.byId, state.byIdentifier, m));
 
+        TenantCache tc = tenants.computeIfAbsent(tenant, TenantCache::new);
+        synchronized (tc.lock) {
+            tc.outbound = state;
+        }
         return mappings;
     }
 
     /**
-     * Adds a single mapping to the outbound cache
+     * Adds or replaces a single mapping in the outbound cache
      */
     public void addOutboundMapping(String tenant, Mapping mapping) {
-        getCacheOutbound(tenant).put(mapping.getId(), mapping);
-
+        TenantCache tc = tenants.get(tenant);
+        if (tc == null) {
+            log.warn("{} - No mapping cache for tenant, ignoring outbound mapping {}", tenant, mapping.getId());
+            return;
+        }
+        synchronized (tc.lock) {
+            OutboundState state = tc.outbound;
+            Mapping previous = state.byId.get(mapping.getId());
+            unindex(state.byId, state.byIdentifier, previous);
+            index(state.byId, state.byIdentifier, mapping);
+        }
         log.debug("{} - Added outbound mapping to cache: {}", tenant, mapping.getId());
     }
 
@@ -212,12 +268,19 @@ public class MappingCacheManager {
      * Removes a mapping from the outbound cache
      */
     public Optional<Mapping> removeOutboundMapping(String tenant, String mappingId) {
-        Mapping removed = getCacheOutbound(tenant).remove(mappingId);
-
+        TenantCache tc = tenants.get(tenant);
+        if (tc == null) {
+            return Optional.empty();
+        }
+        Mapping removed;
+        synchronized (tc.lock) {
+            OutboundState state = tc.outbound;
+            removed = state.byId.get(mappingId);
+            unindex(state.byId, state.byIdentifier, removed);
+        }
         if (removed != null) {
             log.debug("{} - Removed outbound mapping from cache: {}", tenant, mappingId);
         }
-
         return Optional.ofNullable(removed);
     }
 
@@ -225,14 +288,14 @@ public class MappingCacheManager {
      * Retrieves a mapping from the outbound cache
      */
     public Optional<Mapping> getOutboundMapping(String tenant, String mappingId) {
-        return Optional.ofNullable(getCacheOutbound(tenant).get(mappingId));
+        return outbound(tenant).map(s -> s.byId.get(mappingId));
     }
 
     /**
      * Checks if an outbound mapping exists in cache
      */
     public boolean containsOutboundMapping(String tenant, String mappingId) {
-        return getCacheOutbound(tenant).containsKey(mappingId);
+        return outbound(tenant).map(s -> s.byId.containsKey(mappingId)).orElse(false);
     }
 
     /**
@@ -240,9 +303,7 @@ public class MappingCacheManager {
      * Uses the stable identifier (UUID) rather than the mutable MO id.
      */
     public boolean containsOutboundMappingByIdentifier(String tenant, String identifier) {
-        if (identifier == null) return false;
-        return getCacheOutbound(tenant).values().stream()
-                .anyMatch(m -> identifier.equals(m.getIdentifier()));
+        return getOutboundMappingByIdentifier(tenant, identifier).isPresent();
     }
 
     /**
@@ -250,16 +311,14 @@ public class MappingCacheManager {
      */
     public Optional<Mapping> getOutboundMappingByIdentifier(String tenant, String identifier) {
         if (identifier == null) return Optional.empty();
-        return getCacheOutbound(tenant).values().stream()
-                .filter(m -> identifier.equals(m.getIdentifier()))
-                .findFirst();
+        return outbound(tenant).map(s -> s.byIdentifier.get(identifier));
     }
 
     /**
      * Gets all outbound mappings for a tenant
      */
     public Map<String, Mapping> getAllOutboundMappings(String tenant) {
-        return new HashMap<>(getCacheOutbound(tenant));
+        return outbound(tenant).map(s -> (Map<String, Mapping>) new HashMap<>(s.byId)).orElseGet(HashMap::new);
     }
 
     // ========== Generic Operations ==========
@@ -276,7 +335,7 @@ public class MappingCacheManager {
     }
 
     /**
-     * Adds a mapping to the appropriate cache based on direction
+     * Adds (or replaces) a mapping in the appropriate cache based on direction
      */
     public void addMapping(String tenant, Mapping mapping) {
         if (Direction.OUTBOUND.equals(mapping.getDirection())) {
@@ -284,6 +343,14 @@ public class MappingCacheManager {
         } else {
             addInboundMapping(tenant, mapping);
         }
+    }
+
+    /**
+     * Replaces a mapping in its cache. Unlike remove followed by add, a concurrent message never
+     * finds the mapping missing.
+     */
+    public void replaceMapping(String tenant, Mapping mapping) {
+        addMapping(tenant, mapping);
     }
 
     /**
@@ -296,33 +363,37 @@ public class MappingCacheManager {
 
     // ========== Helper Methods ==========
 
-    private Map<String, Mapping> getCacheInbound(String tenant) {
-        return cacheMappingInbound.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
+    private Optional<InboundState> inbound(String tenant) {
+        TenantCache tc = tenants.get(tenant);
+        return tc == null ? Optional.empty() : Optional.of(tc.inbound);
     }
 
-    private Map<String, Mapping> getCacheOutbound(String tenant) {
-        return cacheMappingOutbound.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
+    private Optional<OutboundState> outbound(String tenant) {
+        TenantCache tc = tenants.get(tenant);
+        return tc == null ? Optional.empty() : Optional.of(tc.outbound);
     }
 
-    private MappingTreeNode getResolverTreeInbound(String tenant) {
-        return resolverMappingInbound.computeIfAbsent(tenant, MappingTreeNode::createRootNode);
-    }
-
-    private MappingTreeNode buildMappingTree(String tenant, List<Mapping> mappings) {
-        MappingTreeNode tree = MappingTreeNode.createRootNode(tenant);
-        
-        for (Mapping mapping : mappings) {
-            try {
-                tree.addMapping(mapping);
-            } catch (ResolveException e) {
-                log.error("{} - Could not add mapping {} to tree, skipping", tenant, mapping.getId(), e);
-            }
+    private static void index(Map<String, Mapping> byId, Map<String, Mapping> byIdentifier, Mapping mapping) {
+        byId.put(mapping.getId(), mapping);
+        if (mapping.getIdentifier() != null) {
+            byIdentifier.put(mapping.getIdentifier(), mapping);
         }
-        
-        return tree;
     }
 
+    private static void unindex(Map<String, Mapping> byId, Map<String, Mapping> byIdentifier, Mapping mapping) {
+        if (mapping == null) {
+            return;
+        }
+        byId.remove(mapping.getId());
+        if (mapping.getIdentifier() != null) {
+            byIdentifier.remove(mapping.getIdentifier(), mapping);
+        }
+    }
+
+    /**
+     * The live resolver tree. A rebuild installs a new tree, so do not keep the reference.
+     */
     public MappingTreeNode getResolverMappingInbound(String tenant) {
-        return getResolverTreeInbound(tenant);
+        return inbound(tenant).map(s -> s.tree).orElseGet(() -> MappingTreeNode.createRootNode(tenant));
     }
 }

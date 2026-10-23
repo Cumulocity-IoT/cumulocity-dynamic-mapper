@@ -42,10 +42,10 @@ public class InventoryCache extends MetricLRUCache<String, Map<String, Object>> 
     }
 
     public Map<String, Object> getMOBySource(String key) {
-        return cache.get(key);
+        return getEntry(key);
     }
 
     public void removeMO(String sourceId) {
-        cache.remove(sourceId);
+        removeEntry(sourceId);
     }
 }

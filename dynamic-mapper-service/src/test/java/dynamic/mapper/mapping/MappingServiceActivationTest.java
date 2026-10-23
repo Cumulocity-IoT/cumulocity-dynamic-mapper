@@ -165,7 +165,7 @@ class MappingServiceActivationTest {
         assertTrue(persisted.isDraftDirty(), "line-level draft flag preserved from runnable");
         assertTrue(persisted.getActive());
 
-        verify(cacheManager).addMapping(TENANT, persisted);
+        verify(cacheManager).replaceMapping(TENANT, persisted);
         verify(statusService).resetFailureCount(TENANT, IDENTIFIER);
         assertEquals("2.0.0", result.getVersion());
     }
@@ -181,7 +181,7 @@ class MappingServiceActivationTest {
 
         assertThrows(MappingValidationException.class, () -> service.setActivationMapping(TENANT, MO_ID, true, "2.0.0"));
 
-        verify(cacheManager, never()).addMapping(any(), any());
+        verify(cacheManager, never()).replaceMapping(any(), any());
         verify(statusService, never()).resetFailureCount(any(), any());
         verify(c8yAgent).createLoggingEvent(any(), eq(dynamic.mapper.model.status.LoggingEventType.MAPPING_ACTIVATION_ERROR_EVENT_TYPE),
                 any(), eq(TENANT), any());

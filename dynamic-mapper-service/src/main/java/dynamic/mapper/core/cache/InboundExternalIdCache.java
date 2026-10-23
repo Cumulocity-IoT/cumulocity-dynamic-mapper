@@ -44,7 +44,7 @@ public class InboundExternalIdCache extends MetricLRUCache<ID, ExternalIDReprese
 
     // Method to get ID by external ID
     public ExternalIDRepresentation getIdByExternalId(ID key) {
-        return cache.get(key);
+        return getEntry(key);
     }
 
     // Method to put a new entry in the cache
@@ -54,7 +54,7 @@ public class InboundExternalIdCache extends MetricLRUCache<ID, ExternalIDReprese
 
     // Method to remove an entry from the cache
     public void removeIdForExternalId(ID key) {
-        cache.remove(key);
+        removeEntry(key);
     }
 
     /**
@@ -69,6 +69,7 @@ public class InboundExternalIdCache extends MetricLRUCache<ID, ExternalIDReprese
             cache.values().removeIf(rep -> rep != null && rep.getManagedObject() != null
                     && rep.getManagedObject().getId() != null
                     && sourceId.equals(rep.getManagedObject().getId().getValue()));
+            pruneWriteTimes();
         }
     }
 }

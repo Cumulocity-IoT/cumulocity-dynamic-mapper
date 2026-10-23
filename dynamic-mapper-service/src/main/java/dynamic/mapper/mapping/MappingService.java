@@ -905,8 +905,7 @@ public class MappingService {
      * Updates caches after a mapping change
      */
     private void updateCacheAfterChange(String tenant, Mapping mapping) {
-        cacheManager.removeMapping(tenant, mapping);
-        cacheManager.addMapping(tenant, mapping);
+        cacheManager.replaceMapping(tenant, mapping);
         removeDirtyMapping(tenant, mapping);
     }
 
