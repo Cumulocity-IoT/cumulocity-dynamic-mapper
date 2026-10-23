@@ -1,0 +1,68 @@
+<!--
+~ Copyright (c) 2025 Cumulocity GmbH.
+~
+~ SPDX-License-Identifier: Apache-2.0
+~
+~  Licensed under the Apache License, Version 2.0 (the "License");
+~  you may not use this file except in compliance with the License.
+~  You may obtain a copy of the License at
+~
+~       http://www.apache.org/licenses/LICENSE-2.0
+~
+~  Unless required by applicable law or agreed to in writing, software
+~  distributed under the License is distributed on an "AS IS" BASIS,
+~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~  See the License for the specific language governing permissions and
+~  limitations under the License.
+~
+~  @authors Christof Strack
+-->
+
+@if (aiCapabilitiesDisabled) {
+<div class="alert alert-info m-16" data-cy="dm-shared-ai-disabled-info">
+  <i c8yIcon="info"></i>
+  {{ 'AI capabilities are disabled in this tenant.' | translate }}
+</div>
+}
+@if (aiAvailabilityCheckFailed) {
+<div class="alert alert-warning m-16" data-cy="dm-shared-ai-settings-unavailable">
+  <i c8yIcon="exclamation-triangle"></i>
+  {{ 'AI settings could not be verified. The AI assistant is unavailable.' | translate }}
+</div>
+}
+
+@if (aiChatEnabled && aiAgent) {
+<div class="card-header separator" style="justify-content: center">
+  <h4 class="card-title d-flex">
+    <i class="btn btn-ai btn-sm btn-ai-hint ai-icon m-r-8" style="margin-top:4px;"><span></span></i>
+    <span class="m-t-8">{{ 'Shared code with agent:' | translate }}</span>
+    <span class="label label-success m-l-8 m-t-8 m-b-8 text-16">{{ aiAgent.name }}</span>
+  </h4>
+</div>
+}
+
+<div class="card-inner-scroll fit-h">
+  @if (aiChatEnabled && aiAgent && clientAgentDefinition) {
+  <c8y-agent-chat
+    [agent]="clientAgentDefinition"
+    [variables]="variables"
+    [suggestions]="suggestions"
+    [groundingContextProvider]="groundingContextProvider"
+    [skipHealthCheck]="true"
+    [telemetry]="telemetryEnabled"
+    [chatConfig]="chatConfig"
+    (onMessageFinish)="onMessageFinish($event)">
+  </c8y-agent-chat>
+  }
+</div>
+
+<div class="card-footer separator text-center flex-no-shrink">
+  <div class="form-group">
+    <button type="button" class="btn btn-primary" (click)="save()" [disabled]="!valid" data-cy="dm-shared-ai-save" translate>
+      Save
+    </button>
+    <button type="button" class="btn btn-primary" (click)="cancel()" data-cy="dm-shared-ai-cancel" translate>
+      Cancel
+    </button>
+  </div>
+</div>

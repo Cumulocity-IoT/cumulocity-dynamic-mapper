@@ -22,7 +22,7 @@ import { HttpStatusCode } from '@angular/common/http';
 import { AfterViewInit, Component, OnDestroy, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AlertService, CoreModule } from '@c8y/ngx-components';
+import { AlertService, BottomDrawerService, CoreModule } from '@c8y/ngx-components';
 import { EditorComponent } from '@c8y/ngx-components/editor';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { BsModalService } from 'ngx-bootstrap/modal';
@@ -33,6 +33,10 @@ import { ConfirmationModalComponent, Direction, Feature, ManageTemplateComponent
 import { SharedService } from '../../shared/service/shared.service';
 import { CodeTemplate, CodeTemplateMap, TemplateType, decodeCodeTemplates } from '../../shared/configuration/configuration.model';
 import { createCompletionProviderFlowFunction } from '../../shared/mapping/stepper.model';
+import { AiAgentService, resolveRequiredAgentName } from '../../mapping/core/ai-agent.service';
+import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
+import { TransformationType } from '../../shared';
+import { SharedCodeAiPromptComponent } from './shared-code-ai-prompt.component';
 
 interface CodeTemplateEntry {
   key: string;
@@ -73,6 +77,10 @@ export class CodeTemplateComponent implements OnInit, AfterViewInit, OnDestroy {
   };
   feature!: Feature;
   private completionProviderDisposable: any;
+  /** Code of the selected template as last loaded/saved; Save is only enabled when the editor differs. */
+  private savedCode = '';
+  aiAgent: AgentObjectDefinition | AgentTextDefinition | null = null;
+  aiCapabilitiesDisabled = false;
 
 
   codeEditorHelp = `A <b>Code Template</b> is copied into each new mapping — edits here do <em>not</em> affect existing mappings. <b>Shared</b> templates provide globals available in all Smart Functions without any import.<br><br>Shared code is evaluated across all mappings that utilize  <b>Smart Function JavaScript</b> or <b>Substitutions as JavaScript</b> for creating substitutions. The templates <b>Inbound</b> and <b>Outbound</b> are available in the code editor and can be customized according to your requirements per mapping.`;
@@ -82,8 +90,9 @@ export class CodeTemplateComponent implements OnInit, AfterViewInit, OnDestroy {
     private sharedService: SharedService,
     private alertService: AlertService,
     private router: Router,
-    private route: ActivatedRoute
-
+    private route: ActivatedRoute,
+    private bottomDrawerService: BottomDrawerService,
+    private aiAgentService: AiAgentService
   ) { }
 
   async ngOnInit(): Promise<void> {
@@ -92,6 +101,58 @@ export class CodeTemplateComponent implements OnInit, AfterViewInit, OnDestroy {
     this.template = this.defaultTemplate;
 
     await this.updateCodeTemplateEntries();
+    if (this.templateType === TemplateType.SHARED) {
+      await this.checkAIAgentAvailability();
+    }
+  }
+
+  /** The shared code is written in Smart Function JavaScript, so the Smart Function agent is used. */
+  private async checkAIAgentAvailability(): Promise<void> {
+    try {
+      const settings = await this.aiAgentService.getAISettings(true);
+      if (settings.killSwitch) {
+        this.aiCapabilitiesDisabled = true;
+        return;
+      }
+      const serviceConfiguration = await this.sharedService.getServiceConfiguration();
+      const agentName = resolveRequiredAgentName(TransformationType.SMART_FUNCTION, serviceConfiguration);
+      const agents = await this.aiAgentService.getAIAgents(true);
+      this.aiAgent = agents.find(agent => agent.name === agentName) ?? null;
+    } catch (error) {
+      console.error('Failed to check AI agent deployment:', error);
+      this.aiAgent = null;
+    }
+  }
+
+  get isDirty(): boolean {
+    return !!this.codeTemplateDecoded && this.codeTemplateDecoded.code !== this.savedCode;
+  }
+
+  /** Only the editable SHARED template (not SYSTEM) can be created/modified with AI. */
+  get canUseAI(): boolean {
+    return !!this.aiAgent
+      && this.codeTemplateDecoded?.templateType === TemplateType.SHARED
+      && !this.codeTemplateDecoded.readonly
+      && !!this.feature?.userHasMappingAdminRole;
+  }
+
+  async onGenerateWithAI(): Promise<void> {
+    if (!this.canUseAI || !this.codeTemplateDecoded) return;
+    const systemCode = [...this.codeTemplatesDecoded.values()]
+      .find(t => t.templateType === TemplateType.SYSTEM)?.code ?? '';
+    const drawer = this.bottomDrawerService.openDrawer(SharedCodeAiPromptComponent, {
+      initialState: { code: this.codeTemplateDecoded.code, systemCode, aiAgent: this.aiAgent }
+    });
+    try {
+      const result = await drawer.instance.result;
+      if (result?.trim()) {
+        // Only placed in the editor — the user reviews it and saves explicitly.
+        this.codeTemplateDecoded.code = result;
+        this.alertService.info(gettext('AI result applied to the editor. Review it and press Save to keep it.'));
+      }
+    } catch {
+      // drawer cancelled
+    }
   }
 
   private determineTemplateTypeFromUrl(): void {
@@ -332,6 +393,7 @@ export class CodeTemplateComponent implements OnInit, AfterViewInit, OnDestroy {
     // May legitimately miss: the selected key can have been deleted, or the tab's default set can
     // exclude it. Everything downstream already guards on a falsy codeTemplateDecoded.
     this.codeTemplateDecoded = this.codeTemplatesDecoded.get(this.template);
+    this.savedCode = this.codeTemplateDecoded?.code ?? '';
     this.editorOptions = { ...this.editorOptions, readOnly: !!this.codeTemplateDecoded?.readonly };
   }
 

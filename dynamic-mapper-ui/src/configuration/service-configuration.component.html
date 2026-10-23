@@ -955,7 +955,7 @@
   <div class="card-footer separator">
     <div class="d-flex j-c-center">
       <button type="button" name="update" class="btn btn-primary" (click)="clickedSaveServiceConfiguration()" translate
-        [disabled]="!feature?.userHasMappingAdminRole">
+        [disabled]="!feature?.userHasMappingAdminRole || !isDirty">
         Save
       </button>
     </div>

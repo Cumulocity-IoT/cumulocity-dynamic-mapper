@@ -279,6 +279,22 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     this.serviceForm.patchValue({
       ...this.serviceConfiguration,
     });
+    this.savedSnapshot = this.currentSnapshot();
+  }
+
+  /** Form values plus the cached-fragments list (which lives outside the form) as last loaded/saved. */
+  private savedSnapshot = '';
+
+  private currentSnapshot(): string {
+    return JSON.stringify([
+      this.serviceForm.getRawValue(),
+      this.inventoryFragmentsList.map(f => f.trim()).filter(f => f.length > 0)
+    ]);
+  }
+
+  /** Save is only enabled when something differs from the loaded/saved configuration. */
+  get isDirty(): boolean {
+    return this.currentSnapshot() !== this.savedSnapshot;
   }
 
   async clickedClearInboundExternalIdCache() {
@@ -386,6 +402,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
 
     if (response.status >= 200 && response.status < 300) {
       this.alertService.success(gettext('Update successful'));
+      this.savedSnapshot = this.currentSnapshot();
     } else {
       this.alertService.danger(gettext('Failed to update service configuration'));
     }
