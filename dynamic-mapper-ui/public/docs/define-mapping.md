@@ -147,7 +147,7 @@ transformation without waiting for a real device message:
   than one request — e.g. a measurement for a device that does not exist yet and is implicitly created also
   produces an inventory request. Use **Show Next Test Result** to step through all of them.
 
-![Dry Run](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_DryRun.png "The Testing step showing the result of a Dry Run.")
+![Dry Run](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Dry_Run.png "The Testing step showing the result of a Dry Run.")
 
 If the device named in the message does not exist and the mapping setting **Create device** is off, the Dry Run
 does not invent one silently. It reports that the device does not exist and asks whether to **assume for this test
@@ -155,7 +155,7 @@ that the device exists**. Confirm to run the test again with a throwaway device 
 your tenant. The choice applies to that one run only: the next Dry Run asks again, and a Live Test is never offered
 this choice, because it runs against a test device (see below).
 
-![Device does not exist](../../../resources/image/Dynamic_Mapper_Mapping_Editor_DryRun_Confirm.png "The confirmation a Dry Run offers when the device does not exist and Create device is off.")
+![Device does not exist](../../../resources/image/Dynamic_Mapper_Mapping_Editor_Dry_Run_Confirm.png "The confirmation a Dry Run offers when the device does not exist and Create device is off.")
 
 - **Reset Dry Run** — clears the test results and lets you run the Dry Run again, e.g. after editing the
   source payload or a substitution.
@@ -174,7 +174,7 @@ this choice, because it runs against a test device (see below).
   SparkPlug B: a Live Test of NDATA/DDATA messages reads the alias map of the real node, so metrics may be shown
   without alias names; a Dry Run never finds an alias map, because it only sees mocked data.
 
-![Live Test](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_LiveTest.png "A Live Test sending a transformed test message to a test device in Cumulocity.")
+![Live Test](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Live_Test.png "A Live Test sending a transformed test message to a test device in Cumulocity.")
 
 ##### Testing a Smart Function and reading its console output {#testing-smart-function}
 
@@ -187,7 +187,7 @@ It is collapsed by default — click the header to expand it. This is the quicke
 actually received and how far it got: print the incoming payload, an intermediate value or a device lookup result,
 run the test, and read it back.
 
-![Testing a Smart Function](../../../resources/image/Dynamic_Mapper_Mapping_Editor_DryRun.png "The Testing tab: broker payload on the left, resulting Cumulocity request on the right, and the Console output panel showing the JS LOG lines written by the Smart Function.")
+![Testing a Smart Function](../../../resources/image/Dynamic_Mapper_Mapping_Editor_Dry_Run.png "The Testing tab: broker payload on the left, resulting Cumulocity request on the right, and the Console output panel showing the JS LOG lines written by the Smart Function.")
 
 Each line is prefixed with the level it was logged at, and colour-coded accordingly:
 
@@ -225,7 +225,7 @@ Every time a **Live Test** needs a new device, the mapper creates a real managed
 object in inventory tagged with the fragment `d11r_testDevice`. Over a few testing sessions these accumulate, so
 the mapper keeps them in one place: **Monitoring → Test device**.
 
-![Test devices](../../../resources/image/Dynamic_Mapper_Monitoring_TestDevices.png "The Test device page under Monitoring, listing the devices created by Live Test.")
+![Test devices](../../../resources/image/Dynamic_Mapper_Monitoring_Test_Devices.png "The Test device page under Monitoring, listing the devices created by Live Test.")
 
 The page lists only devices carrying that fragment — never your production devices — with their **ID**, **Name**,
 **Date Created** and **Type**. ID, Name and Type are filterable and sortable, so you can narrow a long list down

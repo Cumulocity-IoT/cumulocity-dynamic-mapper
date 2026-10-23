@@ -39,7 +39,7 @@ The **Webhook** connector has a setting **Cumulocity Internal** which can be use
 processed and sent back to Cumulocity Core as transformed MEA, e.g. receive an `EVENT` of type `c8y_Uplink` and use
 a **SMART_FUNCTION** to decode the payload and transform it into a `MEASUREMENT`.
 
-![Webhook connector settings](../../../resources/image/Dynamic_Mapper_Connector_WebHook.png "Webhook connector configuration properties.")
+![Webhook connector settings](../../../resources/image/Dynamic_Mapper_Connector_Webhook.png "Webhook connector configuration properties.")
 
 ### REST Polling connector
 

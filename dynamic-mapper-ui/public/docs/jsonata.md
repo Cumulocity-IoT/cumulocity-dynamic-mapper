@@ -31,7 +31,7 @@ To use this option you have to toggle the button **Expert Mode**.
 - Date formatting: `$now()` for current timestamp
 - Array operations: `sensors[type="temperature"].value`
 
-![Defining Substitutions in ExpertMode](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png "Screenshot showing the definition of substitutions in ExpertMode using JSONata.")
+![Defining Substitutions in ExpertMode](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Expert_Mode.png "Screenshot showing the definition of substitutions in ExpertMode using JSONata.")
 
 ### Repair strategy {#jsonata-repair-strategy}
 

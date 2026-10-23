@@ -38,16 +38,16 @@ export default {
         to: 'image/Dynamic_Mapper_Configuration_Configuration.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Configuration_ProcessorExtension.png',
-        to: 'image/Dynamic_Mapper_Configuration_ProcessorExtension.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Configuration_Processor_Extension.png',
+        to: 'image/Dynamic_Mapper_Configuration_Processor_Extension.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Configuration_ProcessorExtension_Upload.png',
-        to: 'image/Dynamic_Mapper_Configuration_ProcessorExtension_Upload.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Configuration_Processor_Extension_Upload.png',
+        to: 'image/Dynamic_Mapper_Configuration_Processor_Extension_Upload.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Monitoring_TestDevices.png',
-        to: 'image/Dynamic_Mapper_Monitoring_TestDevices.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Monitoring_Test_Devices.png',
+        to: 'image/Dynamic_Mapper_Monitoring_Test_Devices.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Monitoring_Microservice_Log.png',
@@ -70,12 +70,12 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Stepper_Topic_Definition.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Smart_Function.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Smart_Function.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_ExpertMode.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Substitution_Expert_Mode.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Expert_Mode.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Substitution_Generate_JSONata.png',
@@ -102,12 +102,12 @@ export default {
         to: 'image/Dynamic_Mapper_Connector_New.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Substitution_ProcessorExtension.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_ProcessorExtension.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Substitution_Processor_Extension.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Substitution_Processor_Extension.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Configuration_ProcessorExtension_Plugin_Installed.png',
-        to: 'image/Dynamic_Mapper_Configuration_ProcessorExtension_Plugin_Installed.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Configuration_Processor_Extension_Plugin_Installed.png',
+        to: 'image/Dynamic_Mapper_Configuration_Processor_Extension_Plugin_Installed.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Message_Explorer.png',
@@ -134,20 +134,20 @@ export default {
         to: 'image/Dynamic_Mapper_Mapping_Table_Import.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_DryRun.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_DryRun.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Dry_Run.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Dry_Run.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Editor_DryRun.png',
-        to: 'image/Dynamic_Mapper_Mapping_Editor_DryRun.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Editor_Dry_Run.png',
+        to: 'image/Dynamic_Mapper_Mapping_Editor_Dry_Run.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Editor_DryRun_Confirm.png',
-        to: 'image/Dynamic_Mapper_Mapping_Editor_DryRun_Confirm.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Editor_Dry_Run_Confirm.png',
+        to: 'image/Dynamic_Mapper_Mapping_Editor_Dry_Run_Confirm.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_LiveTest.png',
-        to: 'image/Dynamic_Mapper_Mapping_Stepper_LiveTest.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Mapping_Stepper_Live_Test.png',
+        to: 'image/Dynamic_Mapper_Mapping_Stepper_Live_Test.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Connector_Overview.png',
@@ -158,8 +158,8 @@ export default {
         to: 'image/Dynamic_Mapper_Connector_Details.png'
       },
       {
-        from: '../resources/image-optimized/Dynamic_Mapper_Connector_WebHook.png',
-        to: 'image/Dynamic_Mapper_Connector_WebHook.png'
+        from: '../resources/image-optimized/Dynamic_Mapper_Connector_Webhook.png',
+        to: 'image/Dynamic_Mapper_Connector_Webhook.png'
       },
       {
         from: '../resources/image-optimized/Dynamic_Mapper_Connector_Rest_Polling.png',

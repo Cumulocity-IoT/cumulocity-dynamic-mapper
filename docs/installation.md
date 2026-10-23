@@ -66,7 +66,7 @@ The Web App is part of the community store and should be available directly in y
 For the blueprint go to "Administration" -> "Ecosystem" -> "dynamic-mapper" -> "Deploy application"
 
 <p align="center">
-<img src="../resources/image/Dynamic_Mapper_BlueprintDeploy.png" style="width: 50%;" />
+<img src="../resources/image/Dynamic_Mapper_Installation_Blueprint_Deploy.png" style="width: 50%;" />
 </p>
 
 Enter an application key and path and click on "Deploy".
@@ -74,7 +74,7 @@ Enter an application key and path and click on "Deploy".
 After successful deployment you can find the dynamic-mapper App in the Application Switcher
 
 <p align="center">
-<img src="../resources/image/Dynamic_Mapper_BlueprintApp.png" style="width: 40%;" />
+<img src="../resources/image/Dynamic_Mapper_Installation_Blueprint_App.png" style="width: 40%;" />
 </p>
 #### Manual
 
