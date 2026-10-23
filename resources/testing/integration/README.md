@@ -53,9 +53,15 @@ bash run-tests.sh --cleanup-only        # lists, asks for confirmation, deletes
 bash run-tests.sh --cleanup-only -y     # no prompt
 ```
 
-It deletes, by name: mappings `test-*`, devices `test-*` / `dmtest-*`, and trusted
-certificates `dmtest*`. Device groups and connectors (e.g. `test-mqtt-connector`)
-are **not** swept — their names are too generic; remove them by hand.
+It deletes, by name: mappings `test-*`, devices `test-*` / `dmtest-*`, trusted
+certificates `dmtest*`, and the connectors the tests create, matched by identifier
+(`test-*`, `testc8ymqttservice*`, `testrestpolling*`, `testwebhook*`). A connector you
+configured yourself is only touched if its identifier starts with one of those prefixes.
+Device groups are **not** swept — their names are too generic; remove them by hand.
+
+`test-cumulocity-mqtt-service` deletes every existing `CUMULOCITY_MQTT_SERVICE_PULSAR`
+connector (the type is a singleton). If one exists that the test did not create, the test
+is **skipped** unless `DM_ALLOW_DELETE_EXISTING_CONNECTOR=true` is set.
 
 Full keep-then-clean cycle:
 
@@ -430,6 +436,8 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-inbound-http-connector` | HTTP connector → MEASUREMENT |
 | `test-inbound-implicit-device` | Implicit device auto-creation |
 | `test-inbound-implicit-device-recreate-after-delete` | Regression: an implicit device is recreated after the original is deleted from inventory (stale-cache bug) |
+| `test-inbound-multilevel-wildcard` | Regression: a mapping on `a/b/#` also matches the parent topic `a/b` (MQTT spec) as well as deeper topics |
+| `test-inbound-mapping-topic-change` | Regression: changing a mapping's topic (deactivate, PUT, reactivate) moves it in the resolver tree; the old topic stops producing data |
 | `test-inbound-multi-device` | Array payload → multiple devices |
 | `test-inbound-alarm` | JSON / DEFAULT → ALARM |
 | `test-inbound-operation` | JSON / DEFAULT → OPERATION |

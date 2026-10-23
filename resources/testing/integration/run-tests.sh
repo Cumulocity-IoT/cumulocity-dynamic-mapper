@@ -5,7 +5,7 @@
 # Usage:  ./run-tests.sh [SUITE ...] [CONNECTOR] [--connector g|m] [--keep]
 #   --connector, -c <g|m>  Same as the positional CONNECTOR token.
 #   --keep, -k             Keep all created test data (same as DM_KEEP=true).
-#   --cleanup-only [-y]    Sweep data kept by --keep (see _cleanup_only) and exit.
+#   --cleanup-only [-y]    Sweep data kept by --keep (mappings, devices, certs, test connectors) and exit.
 #   SUITE      a/all i/inbound o/outbound e/extension s/smartfunc r/reliability,
 #             a <script-name>, menu number(s), or omit for the interactive menu.
 #   CONNECTOR  g = generic MQTT (public broker, default)
@@ -68,6 +68,8 @@ declare -a TESTS=(
     "inbound|test-inbound-http-connector|HTTP connector → MEASUREMENT"
     "inbound|test-inbound-implicit-device|Implicit device auto-creation"
     "inbound|test-inbound-implicit-device-recreate-after-delete|Implicit device recreation after delete (inconsistent-cache regression)"
+    "inbound|test-inbound-multilevel-wildcard|Multi-level wildcard # matches parent and deeper topics"
+    "inbound|test-inbound-mapping-topic-change|Mapping topic change moves to the new topic"
     "inbound|test-inbound-multi-device|Array payload → multiple devices"
     "inbound|test-inbound-alarm|JSON / DEFAULT → ALARM"
     "inbound|test-inbound-operation|JSON / DEFAULT → OPERATION"
@@ -206,8 +208,10 @@ Usage:
     -c, --connector <g|m>            Choose the connector (same as the g/m token)
     -k, --keep                       Keep all created test data (= DM_KEEP=true)
     --cleanup-only [-y]              Delete kept test data (mappings test-*, devices
-                                     test-*/dmtest-*, certs dmtest*) and exit; -y skips
-                                     the confirmation. Groups/connectors: remove by hand.
+                                     test-*/dmtest-*, certs dmtest*, test connectors
+                                     test-*/testc8ymqttservice*/testrestpolling*/
+                                     testwebhook*) and exit; -y skips the confirmation.
+                                     Device groups: remove by hand.
 
   SUITE — which tests to run:
     a | all                          Run every test
@@ -642,10 +646,13 @@ _interactive() {
 # Removes what tests leave behind under --keep / DM_KEEP=true, matched by name:
 #   mappings  test-*            devices  test-* | dmtest-*
 #   trusted certificates dmtest*
-# Device groups and connectors are NOT swept (names too generic) — remove by hand.
+#   connectors (by identifier) test-*, testc8ymqttservice*, testrestpolling*, testwebhook*
+#     — exactly the identifiers the tests create; a connector you configured yourself
+#       is never matched unless its identifier starts with one of these.
+# Device groups are NOT swept (names too generic) — remove by hand.
 _cleanup_only() {   # [assume_yes]
     local _yes="${1:-false}" _svc="${DM_SERVICE:-/service/dynamic-mapper-service}"
-    local _maps _devs _certs _reply id name
+    local _maps _devs _certs _conns _reply id name
 
     _check_c8y_session || exit 1
 
@@ -657,10 +664,17 @@ _cleanup_only() {   # [assume_yes]
     _certs=$(c8y devicemanagement certificates list --includeAll --output json </dev/null 2>/dev/null \
         | jq -r 'select((.name // "")|startswith("dmtest")) | .name')
 
+    _conns=$(c8y api --method GET --url "${_svc}/configuration/connector/instance" --output json </dev/null 2>/dev/null \
+        | jq -rs '[ .[] | if type == "array" then .[] else . end ] | map(select(type == "object")) | .[]
+                  | (.identifier // "") as $i
+                  | select($i | test("^(test-|testc8ymqttservice|testrestpolling|testwebhook)"))
+                  | "\($i)\t\(.name // "")"' 2>/dev/null)
+
     printf "${C_BOLD}Mappings (test-*):${C_RESET}\n%s\n" "${_maps:-  (none)}"
     printf "${C_BOLD}Devices (test-*, dmtest-*):${C_RESET}\n%s\n" "${_devs:-  (none)}"
     printf "${C_BOLD}Trusted certificates (dmtest*):${C_RESET}\n%s\n" "${_certs:-  (none)}"
-    if [ -z "$_maps$_devs$_certs" ]; then echo "Nothing to clean up."; return 0; fi
+    printf "${C_BOLD}Connectors (test-*, testc8ymqttservice*, testrestpolling*, testwebhook*):${C_RESET}\n%s\n" "${_conns:-  (none)}"
+    if [ -z "$_maps$_devs$_certs$_conns" ]; then echo "Nothing to clean up."; return 0; fi
 
     if [ "$_yes" != "true" ]; then
         printf "\nDelete all of the above? [y/N] "
@@ -676,6 +690,12 @@ _cleanup_only() {   # [assume_yes]
         c8y api --method DELETE --url "${_svc}/mapping/$id" --force </dev/null >/dev/null 2>&1 || true
         printf "Deleted mapping: %s (%s)\n" "$id" "$name"
     done <<< "$_maps"
+    # Connectors after the mappings: mappings deployed to them are already gone.
+    while IFS=$'\t' read -r id name; do
+        [ -z "$id" ] && continue
+        c8y api --method DELETE --url "${_svc}/configuration/connector/instance/$id" --force </dev/null >/dev/null 2>&1 || true
+        printf "Deleted connector: %s (%s)\n" "$id" "$name"
+    done <<< "$_conns"
     while IFS=$'\t' read -r id name; do
         [ -z "$id" ] && continue
         c8y devices delete --id "$id" --force </dev/null >/dev/null 2>&1 || true

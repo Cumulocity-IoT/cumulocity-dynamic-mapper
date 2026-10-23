@@ -21,6 +21,10 @@
 #
 # The connector identifier can be overridden with DM_C8Y_MQTT_CONNECTOR_ID.
 #
+# CAUTION: the type is a singleton, so the test deletes every existing connector of it. If one
+# exists that this test did not create, the test is SKIPPED unless
+# DM_ALLOW_DELETE_EXISTING_CONNECTOR=true is set.
+#
 # Prerequisites:
 #   - Dynamic mapper service running
 #   - Tenant has the Cumulocity MQTT Service (Pulsar) available and reachable
@@ -105,6 +109,15 @@ dm_banner "$TEST_TITLE"
 dm_step "Waiting for Dynamic Mapper service ..."
 dm_test_setup_and_validate false
 dm_validate_only_exit
+
+# The type is a singleton, so the test must delete every existing connector of it. Refuse to
+# silently delete one that is not this test's own (e.g. configured by hand for real use).
+FOREIGN_CONNECTORS=$(dm_list_connector_ids_by_type "$CONNECTOR_TYPE" | grep -vx "$CONNECTOR_ID" || true)
+if [ -n "$FOREIGN_CONNECTORS" ] && [ "${DM_ALLOW_DELETE_EXISTING_CONNECTOR:-false}" != "true" ]; then
+    dm_skip_exit \
+        "Existing $CONNECTOR_TYPE connector(s) not created by this test: $(printf '%s' "$FOREIGN_CONNECTORS" | tr '\n' ' ')" \
+        "This test deletes every connector of that type. Re-run with DM_ALLOW_DELETE_EXISTING_CONNECTOR=true to allow it."
+fi
 
 dm_step "Deleting any existing Cumulocity MQTT Service connector(s) ..."
 delete_existing_c8y_mqtt_service_connectors
