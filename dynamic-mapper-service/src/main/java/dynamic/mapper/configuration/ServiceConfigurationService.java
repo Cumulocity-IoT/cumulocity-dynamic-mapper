@@ -483,8 +483,7 @@ public class ServiceConfigurationService {
     }
 
     private void applyDefaults(ServiceConfiguration config) {
-        if (config.getEngineRotationThreshold() == null) config.setEngineRotationThreshold(100);
-        if (config.getEngineMaxAgeMinutes() == null)      config.setEngineMaxAgeMinutes(0);
+        if (config.getEngineRotationThreshold() == null) config.setEngineRotationThreshold(1000);
     }
 
     public void deleteServiceConfigurations(String tenant) {
