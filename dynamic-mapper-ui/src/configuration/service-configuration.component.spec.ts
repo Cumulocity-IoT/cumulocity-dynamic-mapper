@@ -47,8 +47,8 @@ describe('ServiceConfigurationComponent', () => {
     });
 
     it('reports how many settings the current tab is hiding', () => {
-      // GraalVM engine sizing: supportESM, rotation threshold, max age, context pool size.
-      expect(componentOn('processing').hiddenExpertCount).toBe(4);
+      // GraalVM engine sizing: supportESM, rotation threshold, context pool size.
+      expect(componentOn('processing').hiddenExpertCount).toBe(3);
       expect(componentOn('caching').hiddenExpertCount).toBe(1);
       expect(componentOn('monitoring').hiddenExpertCount).toBe(2);
     });

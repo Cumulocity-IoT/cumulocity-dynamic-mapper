@@ -795,99 +795,90 @@ For more examples and complete code templates, navigate to
 [Code Templates](/c8y-pkg-dynamic-mapper/node3/codeTemplate/INBOUND_SMART_FUNCTION) to see comprehensive
 JavaScript Smart Function samples.
 
-#### GraalVM Engine and Metaspace Management {#graalvm-metaspace}
+#### GraalVM Engine and Memory Management {#graalvm-metaspace}
 
-Every Smart Function is executed inside a **GraalVM Polyglot Engine**. The Engine JIT-compiles your JavaScript to
-native code and stores the result in the JVM **Metaspace** — a native memory region that sits outside the Java
-heap and is not subject to normal garbage collection. Over time, as more mapping contexts are created, Metaspace
-grows. The Dynamic Mapper manages this automatically through a two-trigger **Engine rotation** mechanism.
+Every Smart Function is executed inside a **GraalVM Polyglot Engine**, one per tenant. The Engine keeps what it has
+parsed and prepared for each distinct JavaScript source until the Engine is closed: roughly 6 KB of heap per small
+source, up to about 50 KB for a mapping of typical template size. Running unchanged code again reuses it and adds
+nothing. The standard deployment runs the Engine without a JIT compiler (interpreter-only), so no compiled machine
+code is produced. The Dynamic Mapper bounds the accumulation with an automatic **Engine rotation**.
 
 ##### Engine Rotation
 
-Each tenant has its own GraalVM Engine. The Engine is replaced (rotated) when either of the following conditions is
-met:
+Each tenant has its own GraalVM Engine. The Engine is replaced (rotated) when the compilation count reaches the
+threshold:
 
 | Trigger | Details |
 |---|---|
-| **Compilation-based (primary)** | The Engine is rotated after **100 unique JS source compilations** (configurable via `engineRotationThreshold`, default: 100). A compilation is counted only when a new (sourceName, contentHash) pair is evaluated — repeated execution of the same code is a GraalVM source-cache hit and does not count. Warmup compilations at Engine creation are registered but do not count toward the threshold, so only code changes after startup drive rotation. |
-| **Time-based (opt-in)** | Disabled by default (`engineMaxAgeMinutes = 0`). When set to a positive value the Engine is rotated after that many minutes regardless of compilation count. Use only as an additional safeguard on top of the compilation-count trigger. |
+| **Compilation-based** | The Engine is rotated after **1000 unique JS source compilations** (configurable via `engineRotationThreshold`, default: 1000; tenants that stored an earlier value keep it until changed). A compilation is counted only when a new (sourceName, contentHash) pair is evaluated — repeated execution of the same code is a GraalVM source-cache hit and does not count. Warmup compilations at Engine creation are registered but do not count toward the threshold, so only code changes after startup drive rotation. |
+
+There is no time-based rotation: an Engine only grows when new distinct sources are compiled into it, so an idle
+Engine holds the same after a day as after a minute. To rotate a tenant's Engine on demand, run the
+`ROTATE_GRAALVM_ENGINE` operation.
 
 When rotation fires, the old Engine is *retired* — no new contexts are created against it, but any in-flight
-messages continue to completion. The old Engine's Metaspace is reclaimed by the JVM once the last in-flight
+messages continue to completion. The old Engine is closed, and the memory it held released, once the last in-flight
 context closes. A replacement Engine is created immediately and pre-warmed with all active SmartFunction mapping
-codes before the first real message arrives.
+codes before the first real message arrives. Each rotation therefore has a cost (re-warming every active mapping),
+which is why the default threshold is not low.
 
-##### What Grows Metaspace
+##### What Grows the Engine
 
-Not all usage patterns stress Metaspace equally. Four distinct scenarios drive growth:
+Not all usage patterns add to what the Engine holds:
 
 | Scenario | Growth pattern | Primary rotation trigger |
 |---|---|---|
-| **High message volume — same mapping, same code** | Bounded. The source cache is hit on every call (same content hash → same compiled code). Growth occurs only as the JIT escalates through optimization tiers (interpreter → partial eval → full optimization). Once fully optimised, Metaspace usage for that mapping plateaus. | *No rotation triggered.* Repeated execution of the same code is a cache hit and does not increment the compilation counter. |
-| **Mapping iteration — delete & recreate with new JS code** | Unbounded until rotation. Every unique code string produces a new GraalVM `Source` (different content hash), which is compiled to a new native code block in Metaspace. The compiled code from deleted or superseded mappings remains in Metaspace for the lifetime of the Engine — even a single character edit creates a new compilation. | Compilation-based (`engineRotationThreshold`) — each unique code version increments the counter. Rotation fires once the threshold is reached. |
-| **Editing an existing mapping's JS code** | Unbounded until rotation. Each save of a modified mapping produces a new content hash and therefore a new native code block in Metaspace. The block compiled from the previous version remains resident for the lifetime of the Engine. A mapping edited 20 times before going to production has accumulated 20 compiled blocks, of which 19 are permanently unreachable. | Compilation-based (`engineRotationThreshold`) — every code edit increments the counter, making development sessions the primary driver of rotation. |
-| **Activate / deactivate a mapping** | *No additional Metaspace* if the code is unchanged. On reactivation the Engine's source cache is hit (same content hash → same compiled block reused). If the code was edited between deactivation and reactivation, one new block is compiled and the old one remains — equivalent to a single code edit. | Activate/deactivate alone does not increment the compilation counter. Only a code change paired with reactivation adds to the count. |
+| **High message volume — same mapping, same code** | None. The source cache is hit on every call (same content hash). | *No rotation triggered.* Repeated execution of the same code does not increment the compilation counter. |
+| **Mapping iteration — delete & recreate with new JS code** | Grows with every distinct code string: each is a new GraalVM `Source` (different content hash) that stays in the Engine until it is closed, even if the mapping was deleted or superseded. A single character edit creates a new source. | Compilation-based (`engineRotationThreshold`) — each unique code version increments the counter. |
+| **Editing an existing mapping's JS code** | Grows with every save of modified code. A mapping edited 20 times before going to production has left 20 sources in the Engine, 19 of them unreachable. | Compilation-based (`engineRotationThreshold`) — every code edit increments the counter, making development sessions the primary driver of rotation. |
+| **Activate / deactivate a mapping** | Nothing if the code is unchanged (same content hash, cache hit). If the code was edited in between, one new source is added — equivalent to a single code edit. | Activate/deactivate alone does not increment the compilation counter. |
 
-##### Code churn is the primary Metaspace risk
+##### Code churn is what accumulates
 
-Active development on SmartFunction code — whether through edits to existing mappings, delete-and-recreate cycles,
-or deactivate-edit-reactivate workflows — is the dominant driver of Metaspace growth. Each unique code version
-leaves a permanent compiled block until the Engine is rotated. The compilation counter tracks exactly this: it
-increments only when a new (sourceName, contentHash) pair is compiled, not on repeated execution of unchanged
-code. Tune `engineRotationThreshold` to control how many code changes accumulate before a rotation is triggered.
+Active development on SmartFunction code — edits to existing mappings, delete-and-recreate cycles, or
+deactivate-edit-reactivate workflows — is the only usage that adds to the Engine over time. As a guide, 1000
+distinct sources hold on the order of 6 to 50 MB of heap in the Engine, which is what the default threshold allows
+per tenant before the Engine is replaced. Tune `engineRotationThreshold` to control how many code changes accumulate
+before a rotation is triggered.
 
-##### Reading the Metaspace Logs
+##### Reading the Logs
 
-The service emits a **baseline** Metaspace reading every time an Engine is created, and the current usage at the
-moment of every rotation. Comparing the two shows exactly how much Metaspace was accumulated over the Engine's
-lifetime.
+The service logs a **baseline** reading every time an Engine is created and the current usage at the moment of every
+rotation, in the form `Metaspace <used> MB / <max> MB (<percent>%)`:
 
 ```
-# Engine created — baseline reading (before any JS is compiled)
-t2050305588 - GraalVM Engine created — baseline Metaspace 112 MB (no max set)
-
-# After warm-up and pre-compilation of 39 mappings
-t2050305588 - GraalVM JIT warm-up complete
-t2050305588 - GraalVM pre-compiled 39 mapping JavaScript source(s)
-
-# 100 contexts later — rotation fires, current usage logged
-t2050305588 - Rotating GraalVM Engine to release Metaspace
-              (0 retired engine(s) pending drain) — Metaspace 287 MB (no max set)
-
-# New Engine baseline immediately after rotation
-t2050305588 - GraalVM Engine created — baseline Metaspace 287 MB (no max set)
+t2050305588 - GraalVM Engine created — baseline Metaspace <used> MB / <max> MB (<percent>%)
+t2050305588 - GraalVM warm-up complete
+t2050305588 - Rotating GraalVM Engine (0 retired engine(s) pending drain) — Metaspace <used> MB / <max> MB (<percent>%)
 ```
 
-##### Interpreting the delta
-
-The difference between the baseline at creation and the value at rotation is the Metaspace consumed by the Engine
-over its lifetime. In the example above: **287 − 112 = 175 MB** across 39 pre-warmed mappings plus subsequent code
-changes. If this delta grows between rotations over time, consider lowering `engineRotationThreshold` (in
-**Service Configuration → General**) or setting an explicit `-XX:MaxMetaspaceSize` JVM flag.
+The Metaspace figure is informational: the GraalVM and JavaScript runtime classes are loaded once per JVM, so it
+levels off after start-up rather than growing with each source, and closing an Engine does not reduce it. The memory
+that rotation releases is Java heap. The `retired engine(s) pending drain` count shows old Engines that still have
+in-flight messages; if it stays above zero, a long-running SmartFunction execution is holding a retired Engine open.
 
 :::caution Caution — "no max set"
-When the log shows `(no max set)`, the JVM Metaspace is unbounded. The JVM will allocate native memory until the
-OS refuses. In container environments (Kubernetes) this can cause the pod to be OOM-killed without a clear
-Java-side exception. Set `-XX:MaxMetaspaceSize=512m` (or a value appropriate for your workload) in the
-microservice JVM flags to make the boundary explicit.
+When the log shows `(no max set)`, the JVM Metaspace has no limit configured. The standard microservice image sets
+`-XX:MaxMetaspaceSize=500m`. If you run the service with your own JVM flags, set an explicit limit so a problem
+shows up as a Java `OutOfMemoryError: Metaspace` with a stack trace instead of an OS-level kill.
 :::
 
 ##### Tuning Recommendations
 
 | Symptom / Situation | Recommended Action |
 |---|---|
-| Metaspace delta per rotation is large (> 200 MB) | Lower `engineRotationThreshold` (e.g. to 50) in **Service Configuration → General** so rotation fires more frequently and reclaims Metaspace earlier. |
-| Metaspace baseline keeps rising after each rotation | The old Engine is not being fully released. Check for long-running SmartFunction executions that keep the retired Engine's contexts open. Review the `retired engine(s) pending drain` count in the rotation log line. |
-| Pod OOM-killed without a Java exception | Add `-XX:MaxMetaspaceSize=512m` to JVM flags. This produces a Java `OutOfMemoryError: Metaspace` with a stack trace instead of a silent OS-level kill, and makes the problem diagnosable. |
-| Low message volume, Metaspace growing over days (active development) | The compilation counter handles this — each code change increments it regardless of message volume. If rotation is still too infrequent, lower `engineRotationThreshold`. As a last resort, enable the time-based trigger by setting `engineMaxAgeMinutes` to a positive value in **Service Configuration → General**. |
-| High message volume, rotation fires too often | Increase `engineRotationThreshold` in **Service Configuration → General**. Each rotation briefly pauses context creation for the tenant while the new Engine warms up. |
+| Heavy mapping development on a tenant and memory held by the Engine matters | Lower `engineRotationThreshold` (e.g. to 200) in **Service Configuration → General**, accepting a re-warm after each rotation. |
+| Rotation fires too often (brief pauses while the new Engine warms up) | Increase `engineRotationThreshold` in **Service Configuration → General**. Each rotation briefly pauses context creation for the tenant while the new Engine warms up. |
+| `retired engine(s) pending drain` stays above zero | A long-running SmartFunction execution keeps a retired Engine's contexts open. Look for slow or blocked executions. |
+| Pod OOM-killed without a Java exception | Check the microservice's memory request first; the service's heap and Metaspace limits are derived from it. If you use custom JVM flags, set `-XX:MaxMetaspaceSize` explicitly. |
+| Low message volume, long uptime, Engine suspected to be in a bad state | Rotation only advances on code changes, which is intended. Rotate the tenant's Engine on demand with the `ROTATE_GRAALVM_ENGINE` operation. |
 
 ##### Pre-compilation Warnings
 
 At startup (and after each Engine rotation), the service pre-compiles all active SmartFunction mapping codes into
 the new Engine's source cache. If a mapping code cannot be pre-compiled, a `WARN` log entry is emitted. The
 mapping still executes correctly at runtime — the warning only means the first message after rotation pays the
-full JIT cold-start cost instead of hitting the pre-warmed cache.
+one-time cold-start cost (class initialisation, parsing, specialisation) instead of hitting the pre-warmed cache.
 
 ```
 WARN - Failed to pre-compile mapping onMessage_qxvjgxmt.js:
@@ -912,6 +903,6 @@ in the mapping grid. Use it to locate the affected mapping.
 ##### Pre-compilation warnings do not affect correctness
 
 A mapping that fails to pre-compile still executes correctly on every real message. The only consequence is a
-slightly slower first execution after Engine rotation (typically an extra 1–2 seconds for GraalVM JIT cold-start).
+slightly slower first execution after Engine rotation (the one-time cold start).
 Fix the warnings to restore optimal warm-up performance, but treat them as low-priority unless cold-start latency
 is a concern.

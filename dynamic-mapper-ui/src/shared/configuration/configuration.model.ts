@@ -52,7 +52,6 @@ export interface ServiceConfiguration {
   externalIdBinding?: boolean;
   explorerSessionTTLMinutes?: number;
   engineRotationThreshold?: number;
-  engineMaxAgeMinutes?: number;
   contextPoolSize?: number;
   serviceLogs?: ServiceLogsConfiguration;
 }

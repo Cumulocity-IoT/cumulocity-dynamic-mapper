@@ -134,8 +134,6 @@ class GraalVMContextCancellationRaceTest {
         templates.put(TemplateType.SYSTEM.name(), system);
 
         config.setCodeTemplates(templates);
-        // Disable time-based rotation — irrelevant here and must not fire mid-test.
-        config.setEngineMaxAgeMinutes(0);
         return config;
     }
 

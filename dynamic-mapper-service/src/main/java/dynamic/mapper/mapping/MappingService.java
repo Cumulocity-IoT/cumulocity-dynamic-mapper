@@ -514,7 +514,8 @@ public class MappingService {
                 log.info("{} - Mapping {} set to active={}{}", tenant, mappingId, active, versionInfo);
 
                 // Pre-compile the mapping's JavaScript code on the current GraalVM Engine so
-                // the first real message does not pay the full JIT cold-start penalty (~30 s).
+                // the first real message does not pay the one-time cold-start cost (parsing,
+                // AST specialisation; the runtime is interpreter-only, there is no JIT).
                 // Submitted as a virtual thread so the activation REST call is not delayed.
                 if (Boolean.TRUE.equals(active)
                         && TransformationType.SMART_FUNCTION.equals(toPersist.getTransformationType())

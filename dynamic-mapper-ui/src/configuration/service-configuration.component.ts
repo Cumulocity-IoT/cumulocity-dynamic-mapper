@@ -77,8 +77,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     inventoryFragmentsToCache: ['type'],  // always add type
     maxCPUTimeMS: 5000,  // 5 seconds
     pipelineTimeoutMS: 8000,  // 8 seconds
-    engineRotationThreshold: 100,
-    engineMaxAgeMinutes: 0,
+    engineRotationThreshold: 1000,
     contextPoolSize: 20,
     explorerSessionTTLMinutes: 10,
     jsonataAgent: undefined,
@@ -147,7 +146,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
    * *everything* hidden would be misleading on a tab that hides nothing.
    */
   private static readonly EXPERT_SETTINGS: Readonly<Record<string, string[]>> = {
-    processing: ['supportESM', 'engineRotationThreshold', 'engineMaxAgeMinutes', 'contextPoolSize'],
+    processing: ['supportESM', 'engineRotationThreshold', 'contextPoolSize'],
     caching: ['cacheAliasMaps'],
     monitoring: ['logSubstitution', 'logConnectorErrorInBackend']
   };
@@ -219,7 +218,6 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       maxCPUTimeMS: [''],
       pipelineTimeoutMS: [''],
       engineRotationThreshold: [''],
-      engineMaxAgeMinutes: [''],
       contextPoolSize: [''],
       explorerSessionTTLMinutes: [''],
       supportESM: [''],

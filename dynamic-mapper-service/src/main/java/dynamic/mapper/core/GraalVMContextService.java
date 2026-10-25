@@ -36,8 +36,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryUsage;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Base64;
 import java.util.Deque;
 import java.util.Map;
@@ -80,53 +78,54 @@ import lombok.extern.slf4j.Slf4j;
  * <p>This component has no Spring service dependencies and can therefore be
  * injected anywhere without risk of circular dependencies.
  *
- * <h2>Why Metaspace matters</h2>
+ * <h2>Runtime and memory: what is verified</h2>
  *
- * <p>Every JavaScript source compiled through a GraalVM {@link Engine} causes the Truffle
- * interpreter and Graal JIT to emit native machine code (Truffle ASTs, Graal IR graphs,
- * compiled stubs). This data is stored in JVM <em>Metaspace</em> — a native-memory region
- * that is <strong>separate from the Java heap</strong> and is only partially bounded by
- * {@code -XX:MaxMetaspaceSize}. Inside a container the effective ceiling is typically around
- * 10 % of the container's RAM limit (≈ 184 MB for a 2 GB deployment). Once a tenant's Engine
- * has been used long enough and accumulated enough distinct compiled sources, Metaspace fills
- * up and the JVM throws {@code OutOfMemoryError: Metaspace}.
+ * <p><b>Interpreter-only.</b> The production image ({@code src/main/docker/Dockerfile}) runs a
+ * stock OpenJDK built with {@code jlink}, without JVMCI and without the Graal compiler. Truffle
+ * therefore uses its fallback runtime, which has no runtime compilation: JavaScript runs in the
+ * AST interpreter and no JIT-compiled JS code is ever produced. That is why
+ * {@code engine.WarnInterpreterOnly} is set to {@code false} in {@link #createGraalsResources}.
+ * {@code resources/testing/performance/graalvm-memory/verify-graalvm-runtime.sh} checks this on a given JDK or image.
  *
- * <p>Metaspace data is tied to the {@link Engine} that produced it. It can only be reclaimed
- * after the Engine itself is garbage-collected <em>and</em> the GC collects the native frames —
- * which does not happen predictably. Calling {@link Engine#close()} forces an immediate release.
+ * <p><b>Where the memory is.</b> Truffle ASTs and the per-{@link Context} state live on the Java
+ * <em>heap</em>. The Truffle/GraalJS classes themselves are loaded once per JVM and sit in
+ * Metaspace regardless of how many Engines or Contexts exist. In the measurements of that script
+ * (300 distinct sources in one Engine) Metaspace grew by only a few MB and was not released by
+ * {@link Engine#close()}, while closing the Contexts released the heap they held.
  *
- * <h2>Engine rotation strategies</h2>
+ * <p><b>Metaspace limit.</b> The container entrypoint sets {@code -XX:MetaspaceSize=300m
+ * -XX:MaxMetaspaceSize=500m} (the {@code metaspace} block of the packaging plugin in
+ * {@code pom.xml}); it is a fixed cap, not a share of the container's memory.
  *
- * <p>Two complementary strategies prevent unbounded Metaspace growth:
+ * <p><b>Status of the rotation below.</b> It was introduced against an observed
+ * {@code OutOfMemoryError: Metaspace}. The measurements above do not reproduce Metaspace growth
+ * with the number of mapping sources, so what rotation reclaims is, at most, Engine-held heap.
+ * Whether it is worth its re-warm-up cost is to be decided from a real-load measurement (see
+ * {@code docs/planning/IMPLEMENTATION-PLAN-GRAALVM-JS-IMPROVEMENTS.md}, §4).
  *
- * <ol>
- *   <li><b>Count-based rotation</b> ({@link #ENGINE_ROTATION_THRESHOLD}): After every
- *       {@value #ENGINE_ROTATION_THRESHOLD} {@link Context} creations for a tenant the current
- *       Engine is retired and replaced with a fresh one. This caps the number of compiled
- *       sources that accumulate per Engine lifecycle. High-traffic tenants that process many
- *       messages per hour will rotate frequently; the threshold should be tuned so that the
- *       expected Metaspace footprint per Engine (number of distinct mapping sources × compiled
- *       size) stays safely below the container budget. Lower values rotate more often, giving
- *       GC more opportunities to reclaim memory, but incur a JIT warm-up penalty on the first
- *       few requests after each rotation (~1–7 s for the first message, dropping rapidly as the
- *       JIT re-profiles the new Engine). Higher values amortise the warm-up cost but risk
- *       larger Metaspace spikes.</li>
+ * <h2>Engine rotation</h2>
  *
- *   <li><b>Time-based rotation</b> ({@link #ENGINE_MAX_AGE}): Even if a tenant is idle or
- *       processes fewer than {@value #ENGINE_ROTATION_THRESHOLD} messages in
- *       {@value #ENGINE_MAX_AGE} hours, the Engine is rotated once it exceeds that wall-clock
- *       age. This bounds worst-case memory retention for low-traffic or bursty tenants that
- *       would otherwise never reach the count threshold. The two strategies are independent and
- *       OR-ed: whichever condition fires first triggers the rotation.</li>
- * </ol>
+ * <p>Rotation bounds how much a long-lived Engine can accumulate. It is count-based
+ * ({@link #ENGINE_ROTATION_THRESHOLD}): after every {@value #ENGINE_ROTATION_THRESHOLD} unique
+ * source compilations for a tenant the current Engine is retired and replaced with a fresh one.
+ * This caps the number of distinct sources (and the parsed code and caches they leave in the
+ * Engine) per Engine lifecycle. Lower values rotate more often, giving the GC more opportunities
+ * to reclaim memory, but incur a warm-up cost on the first requests after each rotation: class
+ * initialisation, parsing and AST specialisation of the new Engine (not JIT compilation — see
+ * above). Higher values amortise that cost but let the Engine hold more.
+ *
+ * <p>There is deliberately no time-based trigger: an Engine only grows when new distinct sources
+ * are compiled into it, so an idle or low-traffic Engine holds the same after a day as after a
+ * minute, and rotating it by the clock would only cost a re-warm-up. An operator can still
+ * rotate a tenant's Engine on demand through the {@code ROTATE_GRAALVM_ENGINE} operation.
  *
  * <h2>Explicit Engine closing and active-context tracking</h2>
  *
  * <p>Simply dereferencing a retired Engine is not sufficient — the JVM GC is not guaranteed
- * to collect it promptly, leaving Metaspace allocated for an unbounded period. Instead, this
+ * to collect it promptly, leaving what it holds allocated for an unbounded period. Instead, this
  * service tracks every open {@link Context} via {@code engineActiveContexts}. When the last
  * in-flight Context belonging to a retired Engine is closed, {@link #releaseEngine(Engine)}
- * calls {@link Engine#close()} explicitly, triggering an immediate Metaspace release.
+ * calls {@link Engine#close()} explicitly, releasing the Engine's resources immediately.
  *
  * <p>The lifecycle for a retired Engine is:
  * <ol>
@@ -150,16 +149,13 @@ public class GraalVMContextService {
      * is rotated for a tenant. Each distinct (sourceName, content) pair compiled into
      * the Engine increments the counter — repeated execution of the same code does not.
      * Warmup compilations at Engine creation do not count toward this threshold.
+     *
+     * <p>Measured retention is about 6 KB of heap per small source and roughly 50 KB per
+     * template-sized one, so 1000 sources bound the Engine's held heap to about 6-50 MB per tenant
+     * (see docs/planning/IMPLEMENTATION-PLAN-GRAALVM-JS-IMPROVEMENTS.md, section 4.2). Lower values
+     * rotate more often and pay the re-warm-up cost of every active mapping each time.
      */
-    static final int ENGINE_ROTATION_THRESHOLD = 100;
-
-    /**
-     * Maximum wall-clock age of a tenant's {@link Engine} before it is rotated,
-     * regardless of the compilation count. Disabled by default (0 = off). Set to a
-     * positive value (minutes) only as an additional safeguard on top of the
-     * compilation-count trigger.
-     */
-    static final Duration ENGINE_MAX_AGE = Duration.ofHours(24);
+    static final int ENGINE_ROTATION_THRESHOLD = 1000;
 
     /**
      * Default maximum number of idle {@link PooledGraalContext} instances kept per
@@ -235,11 +231,8 @@ public class GraalVMContextService {
     // Engines that have been retired (rotated out or removed) but still have open Contexts
     private final Set<Engine> retiredEngines = ConcurrentHashMap.newKeySet();
 
-    // When each tenant's current Engine was created (for time-based rotation)
-    private final Map<String, Instant> engineCreatedAt = new ConcurrentHashMap<>();
-
     // Optional per-tenant supplier of mapping JS code — called after each Engine rotation
-    // so the new Engine's JIT is primed with all active mapping code before the first message.
+    // so the new Engine has parsed and initialised all active mapping code before the first message.
     // Registered by BootstrapService during tenant initialisation.
     private final Map<String, java.util.function.Supplier<Map<String, String>>> mappingCodeSuppliers =
             new ConcurrentHashMap<>();
@@ -330,7 +323,6 @@ public class GraalVMContextService {
                 .build();
         graalEngines.put(tenant, eng);
         engineActiveContexts.put(eng, new AtomicInteger(0));
-        engineCreatedAt.put(tenant, Instant.now());
         log.info("{} - GraalVM Engine created — baseline {}", tenant, metaspaceUsageSummary());
 
         boolean supportESM = Boolean.TRUE.equals(serviceConfiguration.getSupportESM());
@@ -360,10 +352,13 @@ public class GraalVMContextService {
         graalSourceShared.put(tenant, sharedSource);
         graalSourceSystem.put(tenant, systemSource);
 
-        // Warm up the GraalVM JIT by running a throw-away Context through the
-        // shared/system sources and a trivial onMessage stub. This triggers Graal's
-        // JIT compiler at startup so the first real mapping executes in ~1 s instead
-        // of ~7 s.
+        // Warm up the Engine by running a throw-away Context through the shared/system
+        // sources and a trivial onMessage stub. There is no JIT here (the runtime is
+        // interpreter-only, see the class comment); what this front-loads is one-time work:
+        // Truffle/GraalJS class loading and initialisation, parsing of the shared/system
+        // sources into the Engine's source cache, and AST specialisation. A first execution
+        // that skips it was observed to take several seconds instead of about one; that figure
+        // predates the interpreter-only finding and has not been re-measured.
         Context.Builder warmupBuilder = Context.newBuilder("js")
                 .engine(eng)
                 .allowHostAccess(getHostAccess())
@@ -378,7 +373,7 @@ public class GraalVMContextService {
             warmupCtx.eval(Source.newBuilder("js",
                     "function __warmup__(msg, ctx) { return []; } __warmup__({}, null);",
                     "__warmup__.js").buildLiteral());
-            log.info("{} - GraalVM JIT warm-up complete", tenant);
+            log.info("{} - GraalVM warm-up complete", tenant);
         } catch (Exception e) {
             log.warn("{} - GraalVM warm-up failed (non-fatal): {}", tenant, e.getMessage());
         }
@@ -389,27 +384,10 @@ public class GraalVMContextService {
     /**
      * Returns the shared GraalVM {@link Engine} for the tenant.
      *
-     * <p>Rotation is now driven by {@link #recordCompilation} (unique source count).
-     * An optional time-based rotation fires here only when
-     * {@code engineMaxAgeMinutes > 0} in the tenant's {@link ServiceConfiguration}.
+     * <p>Rotation is driven by {@link #recordCompilation} (unique source count).
      */
     public Engine getGraalEngine(String tenant) {
         Engine currentEngine = graalEngines.get(tenant);
-
-        // Time-based rotation — opt-in only (engineMaxAgeMinutes == 0 means disabled)
-        ServiceConfiguration config = tenantServiceConfigs.get(tenant);
-        int maxAgeMinutes = (config != null && config.getEngineMaxAgeMinutes() != null)
-                ? config.getEngineMaxAgeMinutes()
-                : 0;
-        if (maxAgeMinutes > 0) {
-            Instant createdAt = engineCreatedAt.get(tenant);
-            boolean tooOld = createdAt != null
-                    && Duration.between(createdAt, Instant.now()).compareTo(Duration.ofMinutes(maxAgeMinutes)) > 0;
-            if (tooOld) {
-                rotateEngine(tenant);
-                currentEngine = graalEngines.get(tenant);
-            }
-        }
 
         // Track this in-flight Context so we know when the Engine can be safely closed
         AtomicInteger activeCount = engineActiveContexts.get(currentEngine);
@@ -428,23 +406,7 @@ public class GraalVMContextService {
      * {@link #returnContext} at return/discard time.
      */
     public Engine peekGraalEngine(String tenant) {
-        Engine currentEngine = graalEngines.get(tenant);
-
-        // Same time-based rotation check as getGraalEngine
-        ServiceConfiguration config = tenantServiceConfigs.get(tenant);
-        int maxAgeMinutes = (config != null && config.getEngineMaxAgeMinutes() != null)
-                ? config.getEngineMaxAgeMinutes()
-                : 0;
-        if (maxAgeMinutes > 0) {
-            Instant createdAt = engineCreatedAt.get(tenant);
-            boolean tooOld = createdAt != null
-                    && Duration.between(createdAt, Instant.now()).compareTo(Duration.ofMinutes(maxAgeMinutes)) > 0;
-            if (tooOld) {
-                rotateEngine(tenant);
-                currentEngine = graalEngines.get(tenant);
-            }
-        }
-        return currentEngine;
+        return graalEngines.get(tenant);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -786,9 +748,9 @@ public class GraalVMContextService {
     }
 
     /**
-     * Replaces the tenant's {@link Engine} with a fresh instance so that the old
-     * Engine's Metaspace (JIT-compiled JS code) can be reclaimed by the GC once
-     * every in-flight {@link Context} referencing it has been closed.
+     * Replaces the tenant's {@link Engine} with a fresh instance so that what the old
+     * Engine holds (parsed sources, caches) can be reclaimed once every in-flight
+     * {@link Context} referencing it has been closed.
      */
     public void rotateEngine(String tenant) {
         ServiceConfiguration config = tenantServiceConfigs.get(tenant);
@@ -796,7 +758,7 @@ public class GraalVMContextService {
             log.warn("{} - Cannot rotate GraalVM Engine: ServiceConfiguration not cached; skipping rotation", tenant);
             return;
         }
-        log.info("{} - Rotating GraalVM Engine to release Metaspace ({} retired engine(s) pending drain) — {}",
+        log.info("{} - Rotating GraalVM Engine ({} retired engine(s) pending drain) — {}",
                 tenant, retiredEngines.size(), metaspaceUsageSummary());
         // Close all idle pooled contexts before retiring the engine so their references
         // to the old engine are released immediately.
@@ -815,7 +777,7 @@ public class GraalVMContextService {
             closeEngineIfDrained(oldEngine);
         }
         // Re-warm all active mapping codes on the new Engine so the first real message after
-        // rotation does not pay the full JIT cold-start penalty.
+        // rotation does not pay the full warm-up cost (class init, parsing, AST specialisation).
         java.util.function.Supplier<Map<String, String>> codeSupplier = mappingCodeSuppliers.get(tenant);
         if (codeSupplier != null) {
             try {
@@ -862,8 +824,8 @@ public class GraalVMContextService {
 
     /**
      * Signals that one in-flight GraalVM {@link Context} has been closed.  When the
-     * retired engine's active count drops to zero it is explicitly closed so the JVM
-     * can reclaim its Metaspace rather than waiting for GC.
+     * retired engine's active count drops to zero it is explicitly closed so its
+     * resources are released rather than waiting for GC.
      *
      * <p>Called from {@link dynamic.mapper.processor.runtime.ProcessingContext#close()}
      * via a callback set by {@link dynamic.mapper.processor.AbstractEnrichmentProcessor}.
@@ -1062,7 +1024,6 @@ public class GraalVMContextService {
         compilationCounters.remove(tenant);
         compiledSourceKeys.remove(tenant);
         tenantServiceConfigs.remove(tenant);
-        engineCreatedAt.remove(tenant);
         mappingCodeSuppliers.remove(tenant);
         log.info("{} - Removed GraalVM engine and cached sources", tenant);
     }

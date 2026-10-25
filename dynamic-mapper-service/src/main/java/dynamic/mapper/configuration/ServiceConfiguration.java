@@ -73,8 +73,7 @@ public class ServiceConfiguration implements Cloneable {
         this.cacheAliasMaps = false;
         this.externalIdBinding = true;
         this.mappingVersionRetention = 5;
-        this.engineRotationThreshold = 100;
-        this.engineMaxAgeMinutes = 0;
+        this.engineRotationThreshold = 1000;
         this.explorerSessionTTLMinutes = 10;
         this.contextPoolSize = 20;
         this.serviceLogs = new ServiceLogsConfiguration();
@@ -288,15 +287,10 @@ public class ServiceConfiguration implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     private Integer mappingVersionRetention;
 
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Number of GraalVM context creations after which the shared Engine is rotated for a tenant to reclaim JVM Metaspace. Lower values free memory more frequently; higher values retain JIT warm-up longer.", example = "100", minimum = "1")
+    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Number of distinct JavaScript sources compiled into a tenant's GraalVM Engine after which the Engine is rotated (replaced) to release the memory it holds for them: about 6 KB (small sources) to roughly 50 KB (typical templates) of heap per distinct source. Re-running unchanged code does not count. Lower values release memory sooner but re-warm all mappings more often. Default 1000.", example = "1000", minimum = "1")
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     private Integer engineRotationThreshold;
-
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Maximum wall-clock age in minutes of the GraalVM Engine before it is rotated, regardless of context-creation count. Prevents low-traffic tenants from accumulating unbounded Metaspace over time.", example = "1440", minimum = "1")
-    @NotNull
-    @JsonSetter(nulls = Nulls.SKIP)
-    private Integer engineMaxAgeMinutes;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Maximum number of GraalVM contexts kept idle in the per-mapping context pool. Higher values reduce per-message context-creation overhead at high throughput; lower values reduce memory usage. Each pooled context holds a pre-loaded onMessage function and shared/system code.", example = "20", minimum = "1", maximum = "100")
     @NotNull

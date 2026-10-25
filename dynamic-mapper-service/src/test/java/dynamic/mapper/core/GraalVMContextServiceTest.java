@@ -24,7 +24,6 @@ package dynamic.mapper.core;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.lang.reflect.Field;
-import java.time.Instant;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -45,7 +44,6 @@ import lombok.extern.slf4j.Slf4j;
  * Unit tests for {@link GraalVMContextService} covering:
  * <ul>
  *   <li>Count-based engine rotation</li>
- *   <li>Time-based engine rotation</li>
  *   <li>Active-context tracking via {@code engineActiveContexts}</li>
  *   <li>Explicit {@link Engine#close()} after all in-flight contexts drain</li>
  *   <li>Correct behaviour of {@link GraalVMContextService#removeGraalsResources}</li>
@@ -116,8 +114,6 @@ class GraalVMContextServiceTest {
         templates.put(TemplateType.SYSTEM.name(), system);
 
         config.setCodeTemplates(templates);
-        // Enable time-based rotation for tests (mirrors ENGINE_MAX_AGE = 24 h)
-        config.setEngineMaxAgeMinutes((int) GraalVMContextService.ENGINE_MAX_AGE.toMinutes());
         return config;
     }
 
@@ -131,12 +127,6 @@ class GraalVMContextServiceTest {
     private Engine currentEngine() throws Exception {
         Map<String, Engine> engines = field(service, "graalEngines");
         return engines.get(TENANT);
-    }
-
-    /** Injects an old creation timestamp so the time-based rotation fires. */
-    private void makeEngineLookOld() throws Exception {
-        Map<String, Instant> createdAt = field(service, "engineCreatedAt");
-        createdAt.put(TENANT, Instant.now().minus(GraalVMContextService.ENGINE_MAX_AGE).minusSeconds(1));
     }
 
     /** Sets the compilation counter for TENANT to {@code value} via reflection. */
@@ -278,43 +268,6 @@ class GraalVMContextServiceTest {
                 "All contexts closed — engine should have been removed from retiredEngines");
 
         log.info("✅ Retired engine stays open until all in-flight contexts drain");
-    }
-
-    // -------------------------------------------------------------------------
-    // Time-based rotation
-    // -------------------------------------------------------------------------
-
-    @Test
-    void timeBasedRotation_replacesEngineWhenOlderThanMaxAge() throws Exception {
-        Engine originalEngine = currentEngine();
-        makeEngineLookOld();
-
-        Engine returned = service.getGraalEngine(TENANT);
-        Engine newEngine = currentEngine();
-
-        assertNotSame(originalEngine, newEngine,
-                "Engine older than ENGINE_MAX_AGE should be rotated");
-        assertSame(newEngine, returned,
-                "getGraalEngine should return the new engine after time-based rotation");
-
-        log.info("✅ Time-based rotation fires when engine exceeds ENGINE_MAX_AGE");
-    }
-
-    @Test
-    void timeBasedRotation_updatesCreationTimestamp() throws Exception {
-        makeEngineLookOld();
-        Instant before = Instant.now();
-
-        service.getGraalEngine(TENANT); // triggers time-based rotation
-
-        Map<String, Instant> createdAt = field(service, "engineCreatedAt");
-        Instant newTimestamp = createdAt.get(TENANT);
-
-        assertNotNull(newTimestamp, "Creation timestamp must be set after rotation");
-        assertFalse(newTimestamp.isBefore(before),
-                "New timestamp should be at or after the rotation call");
-
-        log.info("✅ Time-based rotation resets engine creation timestamp");
     }
 
     // -------------------------------------------------------------------------
@@ -461,9 +414,6 @@ class GraalVMContextServiceTest {
 
         Map<String, AtomicInteger> counters = field(service, "compilationCounters");
         assertNull(counters.get(TENANT), "compilationCounters should not contain tenant after remove");
-
-        Map<String, Instant> createdAt = field(service, "engineCreatedAt");
-        assertNull(createdAt.get(TENANT), "engineCreatedAt should not contain tenant after remove");
 
         assertNull(service.getGraalsSourceShared(TENANT), "Shared source should be removed");
         assertNull(service.getGraalsSourceSystem(TENANT), "System source should be removed");
