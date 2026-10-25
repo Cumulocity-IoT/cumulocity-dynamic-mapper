@@ -1,0 +1,46 @@
+# Runtime and Engine-retention probe — 4000 distinct sources, one Engine, -Xmx1g
+# date: 2026-10-25 09:34  host: Darwin arm64
+# command: HEAP=1g resources/testing/performance/graalvm-memory/verify-graalvm-runtime.sh --sources 4000
+
+==============================================================
+ GraalVM runtime verification
+==============================================================
+JDK under test : openjdk version "25.0.3" 2026-04-21 LTS  (/Users/ck/.sdkman/candidates/java/current/bin/java)
+Resolving polyglot/js classpath from dynamic-mapper-service (offline)...
+JVM flags      : -Xmx1g -XX:+UseG1GC
+== 1. Runtime ==
+java.vm.name        : OpenJDK 64-Bit Server VM
+java.vendor         : Azul Systems, Inc.
+java.vendor.version : Zulu25.34+17-CA
+java.version        : 25.0.3
+module jdk.graal.compiler        : absent
+module jdk.internal.vm.compiler  : absent
+module jdk.internal.vm.ci        : absent
+Truffle warning     : [engine] WARNING: The polyglot engine uses a fallback runtime that does not support runtime compilation to native code. Execution without runtime compilation will negatively impact the guest application performance. The following cause was found: JVMCI is not enabled for this JVM. Enable JVMCI using -XX:+EnableJVMCI. For more information see: https://www.graalvm.org/latest/reference-manual/embed-languages/#runtime-optimization-support. To disable this warning use the '--engine.WarnInterpreterOnly=false' option or the '-Dpolyglot.engine.WarnInterpreterOnly=false' system property.
+engine.TraceCompilation option known: false
+hot loop (3e7 iterations), ms per run:
+  [557, 540, 546, 547]
+VERDICT: INTERPRETER-ONLY (no Graal compiler in effect) — the 'Graal JIT fills Metaspace' comments do not apply
+  signals: truffleWarning=true traceOptionUnknown=true loopDidNotSpeedUp=true
+== 2. Memory while loading 4000 distinct sources into ONE Engine ==
+step                               metaspace MB codecache MB      heap MB
+baseline (Truffle classes already loaded by part 1)         32.4          7.5         68.2
+engine created                             32.5          7.5         68.4
+after 1333 sources (1333 ctx open)         36.3         11.5        165.6
+after 2666 sources (2666 ctx open)         36.3         12.4        262.6
+after 3999 sources (3999 ctx open)         36.4         12.3        357.9
+after 4000 sources (4000 ctx open)         36.4         12.3        358.0
+loaded, contexts open                      36.4         12.3        358.0
+contexts closed, engine open               36.5         12.6         93.1
+engine closed, references dropped          36.5         12.6         69.1
+Metaspace  : loaded +3.9 MB vs engine-created;  closing the Engine freed -0.0 MB
+Heap       : loaded +289.6 MB vs engine-created;  closing contexts freed 264.9 MB, Engine 24.0 MB
+READING:
+  Metaspace stays flat across sources and Engine.close() -> the Metaspace theory behind engine rotation is NOT supported; rotation can only reclaim heap.
+  (Compare with ENGINE_ROTATION_THRESHOLD=100 in GraalVMContextService.)
+Next steps:
+  * Run again with the GraalVM JDK (JAVA_HOME=...) to see what the Metaspace/heap numbers
+    look like when the Graal compiler IS active.
+  * --nmt prints the JVM's native memory breakdown at exit (Class, Code, Arena, ...).
+  * Production uses -XX:MaxMetaspaceSize=500m and a heap sized from MEMORY_LIMIT
+    (dynamic-mapper-service/target/docker-work/resources/entrypoint.sh).

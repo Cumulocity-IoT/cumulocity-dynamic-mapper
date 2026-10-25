@@ -101,7 +101,16 @@
 _DM_HARNESS_LOADED=1
 
 # ── Configuration ──────────────────────────────────────────────────────────────
-DM_SERVICE="${DM_SERVICE:-/service/dynamic-mapper-service}"
+# DM_SERVICE_HOST (optional): talk to a mapper instance running on this host (e.g. localhost:8080)
+# instead of the tenant's /service/dynamic-mapper-service route, which always reaches the
+# *deployed* instance. When set, DM_SERVICE defaults to "" (a locally hosted microservice serves
+# its API at the root). Unset = unchanged behaviour.
+DM_SERVICE_HOST="${DM_SERVICE_HOST:-}"
+if [ -n "$DM_SERVICE_HOST" ]; then
+    DM_SERVICE="${DM_SERVICE-}"
+else
+    DM_SERVICE="${DM_SERVICE:-/service/dynamic-mapper-service}"
+fi
 
 # Reserved exit code a test uses to signal "skipped" (prerequisite absent) rather
 # than passed or failed. run-tests.sh classifies this code as SKIP. Keep in sync
@@ -451,7 +460,7 @@ dm_api() {      # <method> <path> [json_body]
     _err=$(mktemp)
     if [ -n "$_body" ]; then
         if _out=$(c8y api --method "$_method" \
-                --url "${DM_SERVICE}${_path}" \
+                ${DM_SERVICE_HOST:+--host $DM_SERVICE_HOST} --url "${DM_SERVICE}${_path}" \
                 --data "$_body" \
                 --header 'Content-Type: application/json' \
                 --force \
@@ -465,7 +474,7 @@ dm_api() {      # <method> <path> [json_body]
         fi
     else
         if _out=$(c8y api --method "$_method" \
-                --url "${DM_SERVICE}${_path}" \
+                ${DM_SERVICE_HOST:+--host $DM_SERVICE_HOST} --url "${DM_SERVICE}${_path}" \
                 --force \
                 --output json </dev/null 2>"$_err"); then
             rm -f "$_err"
@@ -484,7 +493,7 @@ dm_api_json_array() {   # <method> <path> [json_body]
     _err=$(mktemp)
     if [ -n "$_body" ]; then
         if _out=$(c8y api --method "$_method" \
-                --url "${DM_SERVICE}${_path}" \
+                ${DM_SERVICE_HOST:+--host $DM_SERVICE_HOST} --url "${DM_SERVICE}${_path}" \
                 --data "$_body" \
                 --header 'Content-Type: application/json' \
                 --force \
@@ -498,7 +507,7 @@ dm_api_json_array() {   # <method> <path> [json_body]
         fi
     else
         if _out=$(c8y api --method "$_method" \
-                --url "${DM_SERVICE}${_path}" \
+                ${DM_SERVICE_HOST:+--host $DM_SERVICE_HOST} --url "${DM_SERVICE}${_path}" \
                 --force \
                 --output json </dev/null 2>"$_err"); then
             rm -f "$_err"
@@ -518,7 +527,7 @@ dm_api_must() {     # <method> <path> [json_body]
     if [ -n "$_body" ]; then
         if printf '%s' "$_body" | grep -Eq '^[[:space:]]*\['; then
             if _out=$(printf '%s\n' "$_body" | c8y api --method "$_method" \
-                    --url "${DM_SERVICE}${_path}" \
+                    ${DM_SERVICE_HOST:+--host $DM_SERVICE_HOST} --url "${DM_SERVICE}${_path}" \
                     --template "input" \
                     --header 'Content-Type: application/json' \
                     --output json 2>"$_err"); then
@@ -531,7 +540,7 @@ dm_api_must() {     # <method> <path> [json_body]
                 dm_error "dm_api_must ${_method} ${_path} failed${_msg:+: $_msg}"
             fi
         elif _out=$(c8y api --method "$_method" \
-                --url "${DM_SERVICE}${_path}" \
+                ${DM_SERVICE_HOST:+--host $DM_SERVICE_HOST} --url "${DM_SERVICE}${_path}" \
                 --data "$_body" \
                 --header 'Content-Type: application/json' \
                 --output json 2>"$_err"); then
@@ -545,7 +554,7 @@ dm_api_must() {     # <method> <path> [json_body]
         fi
     else
         if _out=$(c8y api --method "$_method" \
-                --url "${DM_SERVICE}${_path}" \
+                ${DM_SERVICE_HOST:+--host $DM_SERVICE_HOST} --url "${DM_SERVICE}${_path}" \
                 --header 'Content-Type: application/json' \
                 --output json 2>"$_err"); then
             rm -f "$_err"
@@ -567,10 +576,10 @@ dm_assert_rejected() {   # <label> <method> <path> [json_body]
     local _label=$1 _method=$2 _path=$3 _body=${4:-} _err _rc=0
     _err=$(mktemp)
     if [ -n "$_body" ]; then
-        c8y api --method "$_method" --url "${DM_SERVICE}${_path}" --data "$_body" \
+        c8y api --method "$_method" ${DM_SERVICE_HOST:+--host $DM_SERVICE_HOST} --url "${DM_SERVICE}${_path}" --data "$_body" \
             --header 'Content-Type: application/json' --force --output json </dev/null >/dev/null 2>"$_err" || _rc=$?
     else
-        c8y api --method "$_method" --url "${DM_SERVICE}${_path}" \
+        c8y api --method "$_method" ${DM_SERVICE_HOST:+--host $DM_SERVICE_HOST} --url "${DM_SERVICE}${_path}" \
             --force --output json </dev/null >/dev/null 2>"$_err" || _rc=$?
     fi
     _DM_LAST_REJECTION=$(tr '\n' ' ' <"$_err" | head -c 300)
@@ -865,7 +874,7 @@ dm_wait_for_service() {     # [max_retries] [interval_secs]
     # Java process is up (unlike GET /health which aggregates connector state).
     # c8y api exits 0 on success, non-0 on any error — no jq needed.
     for _i in $(seq 1 "$_retries"); do
-        if c8y api --method GET --url "${DM_SERVICE}/mapping" \
+        if c8y api --method GET ${DM_SERVICE_HOST:+--host $DM_SERVICE_HOST} --url "${DM_SERVICE}/mapping" \
                 --output json >/dev/null 2>&1; then
             dm_success "Service is UP."
             return 0
@@ -1159,7 +1168,7 @@ dm_deploy_mapping_to_connector() {  # <mapping_id> <connector_identifier>
     _err=$(mktemp)
     local _put_body; _put_body=$(printf '["%s"]' "${_conn}")
     c8y api --method PUT \
-            --url "${DM_SERVICE}/deployment/defined/${_deployment_key}" \
+            ${DM_SERVICE_HOST:+--host $DM_SERVICE_HOST} --url "${DM_SERVICE}/deployment/defined/${_deployment_key}" \
             --template "${_put_body}" \
             --header 'Content-Type: application/json' \
             --force --output rawResponse </dev/null 2>"$_err" >/dev/null; _put_exit=$?
@@ -1174,7 +1183,7 @@ dm_deploy_mapping_to_connector() {  # <mapping_id> <connector_identifier>
     # --output json silently discards string-array responses; --raw returns the raw HTTP body.
     local _raw_resp _assigned
     _raw_resp=$(c8y api --method GET \
-            --url "${DM_SERVICE}/deployment/defined/${_deployment_key}" \
+            ${DM_SERVICE_HOST:+--host $DM_SERVICE_HOST} --url "${DM_SERVICE}/deployment/defined/${_deployment_key}" \
             --header 'Content-Type: application/json' \
             --force --raw </dev/null 2>/dev/null)
     local _deployment="${_raw_resp:-[]}"
@@ -2412,7 +2421,7 @@ dm_undeploy_mapping() {   # <mapping_id_or_identifier>
     local _ref=$1 _key
     _key=$(dm_api GET "/mapping/${_ref}" 2>/dev/null | jq -r '.identifier // empty' 2>/dev/null)
     _key=${_key:-$_ref}
-    c8y api --method PUT --url "${DM_SERVICE}/deployment/defined/${_key}" \
+    c8y api --method PUT ${DM_SERVICE_HOST:+--host $DM_SERVICE_HOST} --url "${DM_SERVICE}/deployment/defined/${_key}" \
         --template '[]' --header 'Content-Type: application/json' \
         --force --output rawResponse </dev/null >/dev/null \
         || dm_error "Undeploy PUT failed for ${_key}"
