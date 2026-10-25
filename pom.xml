@@ -107,7 +107,7 @@
 			<artifactId>opentelemetry-api-incubator</artifactId>
 			<!-- must match the SDK version the instrumentation BOM resolves (opentelemetry-sdk-*): 1.66 dropped
 			     ExtendedAttributes, which SDK 1.62 loads at runtime (NoClassDefFoundError in BatchLogRecordProcessor) -->
-			<version>1.62.0-alpha</version>
+			<version>1.67.0-alpha</version>
 		</dependency>
 
 		<dependency>
