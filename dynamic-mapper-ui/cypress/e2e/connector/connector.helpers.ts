@@ -1,4 +1,5 @@
 import type { IUser } from '@c8y/client';
+import { adminAuth } from '../../support/dm-api';
 
 /**
  * Shared helpers for connector configuration tests
@@ -22,10 +23,6 @@ const CONNECTOR_INSTANCE_URL =
  * calls (role assignment, connector cleanup) must authenticate explicitly —
  * otherwise they silently 401 and, with failOnStatusCode:false, leak resources.
  */
-const adminAuth = (): { user: string; pass: string } => ({
-  user: Cypress.env('C8Y_USERNAME'),
-  pass: Cypress.env('C8Y_PASSWORD'),
-});
 
 /**
  * Test user for connector tests - follows official Cumulocity pattern

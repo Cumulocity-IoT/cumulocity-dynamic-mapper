@@ -56,7 +56,7 @@ Principles:
 |---|---|---|---|
 | 1 | Audit the existing 9 specs, run them green locally | 1–2 d | done (2026-10-26) |
 | 2 | Fill the `data-cy` gaps in the main components | 1–2 d | in progress |
-| 3 | Page objects and API helpers for setup/teardown | 2 d | open |
+| 3 | Page objects and API helpers for setup/teardown | 2 d | done as helper modules (2026-10-26); full page objects deferred until a spec needs them |
 | 4 | New journey specs (outbound, Smart Function editor, deployment, subscriptions, test/debug) | 4–6 d | open |
 | 5 | CI job: dedicated tenant, secrets, MQTT broker container, artifacts on failure | 2–3 d | open |
 | 6 | Stabilisation and flake hunting | 2–3 d | open |
@@ -131,3 +131,7 @@ Each new hook gets used by a spec in the same change, or it is not added.
   last failure fixed and re-run green on its own). Added `cypress/README.md` with prerequisites.
   Cypress spec files lint clean. Open: the `-dev` workaround is still a manual local step;
   CI (item 5) needs a clean tenant where the loop does not occur.
+- 2026-10-26: item 3: extracted `cypress/support/dm-api.ts` (admin auth, create/get/delete mapping
+  via REST) and `cypress/support/dm-ui.ts` (deprecation modal, inbound route, c8y-select,
+  stepper buttons, toolbar). The three mapping specs shrank by ~110 lines; 6 tests re-verified green.
+  Decision: no page-object classes yet; plain helper functions are enough until a journey needs state.

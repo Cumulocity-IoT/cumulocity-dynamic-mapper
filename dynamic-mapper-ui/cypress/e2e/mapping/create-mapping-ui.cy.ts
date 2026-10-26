@@ -4,13 +4,15 @@ import {
   setupTestUser,
   cleanupTestUser,
 } from '../connector/connector.helpers';
+import { DM_SERVICE, deleteMappingsByName } from '../../support/dm-api';
+import {
+  dismissDeprecationNotice,
+  openInboundMappings,
+  selectC8yOption,
+  stepperButton,
+} from '../../support/dm-ui';
 
 
-const DM = '/service/dynamic-mapper-service';
-const adminAuth = () => ({
-  user: Cypress.env('C8Y_USERNAME'),
-  pass: Cypress.env('C8Y_PASSWORD'),
-});
 
 /**
  * Creates a *very simple* inbound mapping entirely through the UI stepper, using the
@@ -25,24 +27,6 @@ describe('Mapping — create a simple mapping via the UI stepper', () => {
   const mappingName = `cypress-ui-mapping-${stamp}`;
   const mappingTopic = `cyui/${stamp}`;
 
-  const dismissDeprecationNotice = () => {
-    cy.get('body').then(($b) => {
-      if ($b.find('[data-cy="dm-deprecation-accept"]').length) {
-        cy.getByData('dm-deprecation-accept').click();
-      }
-    });
-  };
-
-  // Pick an option in a c8y-select identified by its data-cy hook.
-  const selectC8yOption = (hook: string, optionText: string) => {
-    cy.getByData(hook).click();
-    cy.get('.dropdown-menu').filter(':visible').contains(optionText).click();
-  };
-
-  // The c8y-stepper-buttons host carries the data-cy; click the labelled button inside.
-  const stepperButton = (hook: string, label: string) =>
-    cy.getByData(hook).find('button').contains(label).click();
-
   before(() => {
     Cypress.session.clearAllSavedSessions();
     testUser = createConnectorTestUser();
@@ -50,48 +34,19 @@ describe('Mapping — create a simple mapping via the UI stepper', () => {
   });
 
   after(() => {
-    cy.clearCookies();
-    cy.request({ url: `${DM}/mapping`, auth: adminAuth(), failOnStatusCode: false }).then(
-      (resp) => {
-        const arr = Array.isArray(resp.body) ? resp.body : resp.body?.mappings || [];
-        arr
-          .filter((m: { name?: string }) => m.name === mappingName)
-          .forEach((m: { id: string }) => {
-            cy.clearCookies();
-            cy.request({
-              method: 'POST',
-              url: `${DM}/operation`,
-              auth: adminAuth(),
-              body: { operation: 'ACTIVATE_MAPPING', parameter: { id: m.id, active: 'false' } },
-              failOnStatusCode: false,
-            });
-            cy.clearCookies();
-            cy.request({
-              method: 'DELETE',
-              url: `${DM}/mapping/${m.id}`,
-              auth: adminAuth(),
-              failOnStatusCode: false,
-            });
-          });
-      }
-    );
+    deleteMappingsByName(mappingName);
     cleanupTestUser(testUser);
   });
 
   beforeEach(() => {
     cy.getAuth(testUser.userName, testUser.password as string).login().disableGainsight();
-    cy.visitShellAndWaitForSelector(
-      'c8y-pkg-dynamic-mapper/node1/mappings/inbound',
-      'en',
-      'body',
-      60000
-    );
+    openInboundMappings();
     cy.get('c8y-data-grid', { timeout: 60000 }).should('exist');
     dismissDeprecationNotice();
   });
 
   it('creates a SMART_FUNCTION inbound mapping through the stepper', () => {
-    cy.intercept('POST', `${DM}/mapping`).as('createMapping');
+    cy.intercept('POST', `${DM_SERVICE}/mapping`).as('createMapping');
 
     // 1. Open the Add-mapping type drawer.
     cy.getByData('dm-mapping-add').filter(':visible').first().click();
