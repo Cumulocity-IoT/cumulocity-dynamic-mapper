@@ -32,7 +32,9 @@ public final class ExceptionText {
 
     /** The exception's message, else its cause's, else its class name. */
     public static String of(Throwable e) {
-        for (Throwable t = e; t != null; t = t.getCause() == t ? null : t.getCause()) {
+        java.util.Set<Throwable> seen =
+                java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        for (Throwable t = e; t != null && seen.add(t); t = t.getCause()) {
             String message = t.getMessage();
             if (message != null && !message.isBlank()) {
                 return message;
