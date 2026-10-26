@@ -146,8 +146,23 @@ public class PulsarConnectorClient extends AConnectorClient {
 
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTING, true, true);
 
-            // Build Pulsar client
-            pulsarClient = buildPulsarClient();
+            // Build Pulsar client. The client connects lazily, so verify the broker is reachable and accepts the
+            // credentials; otherwise the connector would report CONNECTED while every subscription silently fails.
+            String unresolvedHost = findUnresolvableHost((String) connectorConfiguration.getProperties().get("serviceUrl"));
+            if (unresolvedHost != null) {
+                throw new PulsarClientException(unresolvableHostResult(unresolvedHost).message());
+            }
+            PulsarClient client = buildPulsarClient();
+            ConnectionTestResult probe = probeBroker(client);
+            if (!probe.success()) {
+                try {
+                    client.close();
+                } catch (PulsarClientException closeError) {
+                    log.debug("{} - Error closing Pulsar client after failed probe: {}", tenant, closeError.getMessage());
+                }
+                throw new PulsarClientException(probe.message());
+            }
+            pulsarClient = client;
 
             // Create callback
             pulsarCallback = new PulsarCallback(
@@ -201,8 +216,28 @@ public class PulsarConnectorClient extends AConnectorClient {
         } catch (Exception e) {
             return ConnectionTestResult.failed("The configured certificate could not be loaded: " + e.getMessage(), null);
         }
+        String unresolvedHost = findUnresolvableHost((String) connectorConfiguration.getProperties().get("serviceUrl"));
+        if (unresolvedHost != null) {
+            return unresolvableHostResult(unresolvedHost);
+        }
         try (PulsarClient probe = buildPulsarClient()) {
-            probe.getPartitionsForTopic("persistent://public/default/dm-connection-test").get(15, TimeUnit.SECONDS);
+            return probeBroker(probe);
+        } catch (Exception e) {
+            return ConnectionTestResult.failed("Connection failed: " + e.getMessage(), null);
+        }
+    }
+
+    private ConnectionTestResult unresolvableHostResult(String host) {
+        return ConnectionTestResult.failed("Host '" + host
+                + "' cannot be resolved from the service. It may be a name that only exists in a private network.", null);
+    }
+
+    /**
+     * Forces the (otherwise lazy) connection and authentication with a topic lookup on the given client.
+     */
+    private ConnectionTestResult probeBroker(PulsarClient client) {
+        try {
+            client.getPartitionsForTopic("persistent://public/default/dm-connection-test").get(15, TimeUnit.SECONDS);
             return ConnectionTestResult.ok("Connected to Pulsar", null);
         } catch (java.util.concurrent.ExecutionException e) {
             Throwable cause = e.getCause() != null ? e.getCause() : e;
@@ -219,6 +254,30 @@ public class PulsarConnectorClient extends AConnectorClient {
         } catch (Exception e) {
             return ConnectionTestResult.failed("Connection failed: " + e.getMessage(), null);
         }
+    }
+
+    /**
+     * Returns the first host of the service URL (a comma separated list is allowed) that DNS cannot resolve, or
+     * null if all resolve. The Pulsar client retries an unresolvable host until the operation times out, which
+     * would otherwise surface only as a generic timeout.
+     */
+    private String findUnresolvableHost(String serviceUrl) {
+        if (StringUtils.isEmpty(serviceUrl)) {
+            return null;
+        }
+        String hosts = serviceUrl.substring(serviceUrl.indexOf("://") + 3);
+        for (String entry : hosts.split(",")) {
+            String host = entry.trim().split("[:/]")[0];
+            if (host.isEmpty()) {
+                continue;
+            }
+            try {
+                java.net.InetAddress.getByName(host);
+            } catch (java.net.UnknownHostException e) {
+                return host;
+            }
+        }
+        return null;
     }
 
     /**

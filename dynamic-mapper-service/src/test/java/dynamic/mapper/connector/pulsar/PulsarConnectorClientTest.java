@@ -114,6 +114,22 @@ class PulsarConnectorClientTest {
         assertEquals(expected, client.isSslRequired());
     }
 
+    @Test
+    void connectionTestReportsUnresolvableHostInsteadOfTimingOut() {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        // .invalid is reserved (RFC 2606) and never resolves
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "serviceUrl", "pulsar+ssl://broker.example.invalid:6651",
+                "enableTls", true));
+
+        TestPulsarConnectorClient client = new TestPulsarConnectorClient(mock(PulsarClient.class), configuration);
+
+        var result = client.testConnection();
+
+        assertFalse(result.success());
+        assertTrue(result.message().contains("broker.example.invalid"));
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {
             "persistent://public/default/measurements",
