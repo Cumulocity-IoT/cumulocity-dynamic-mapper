@@ -1,5 +1,6 @@
 import type { IUser } from '@c8y/client';
 import { adminAuth } from '../../support/dm-api';
+import { formField } from '../../support/dm-ui';
 
 /**
  * Shared helpers for connector configuration tests
@@ -117,6 +118,9 @@ export const getConnector = (
   // and the status fetch can lag when connectors are actively (re)connecting.
   cy.get(`[data-cy="dm-connector-name-${identifier}"]`, { timeout: 15000 });
 
+/** A broker property field of the connector form (Formly key `properties.<name>`). */
+const connectorProperty = (name: string) => formField(`properties-${name}`);
+
 /**
  * Fill MQTT connector form with provided values
  */
@@ -124,25 +128,23 @@ export const fillMqttConnectorForm = (
   mqttConnectionInput: MqttConnectionInput,
   connectorName: string
 ): void => {
-  cy.get('#connectorType').should('exist').should('be.visible');
+  formField('connectorType').should('be.visible');
   // The type <option>s populate asynchronously from the connector specifications;
   // wait for them to load (beyond the placeholder) before selecting to avoid a race.
-  cy.get('#connectorType option').should('have.length.greaterThan', 1);
-  cy.get('#connectorType').select('MQTT');
-  cy.get('#name').clear();
-  cy.get('#name').type(connectorName);
-  cy.get('#mqttHost').clear();
-  cy.get('#mqttHost').type(mqttConnectionInput.mqttHost);
-  cy.get('#mqttPort').clear();
-  cy.get('#mqttPort').type(String(mqttConnectionInput.mqttPort));
-  cy.get('#user').clear();
-  cy.get('#user').type(mqttConnectionInput.user);
-  // `#password` also matches the <c8y-password-input id="password"> host element (not
-  // clearable); target the real input inside it.
-  cy.get('c8y-password-input#password input').clear();
-  cy.get('c8y-password-input#password input').type(mqttConnectionInput.password);
-  cy.get('#clientId').clear();
-  cy.get('#clientId').type(mqttConnectionInput.clientId);
+  formField('connectorType').find('option').should('have.length.greaterThan', 1);
+  formField('connectorType').select('MQTT');
+  formField('name').clear();
+  formField('name').type(connectorName);
+  connectorProperty('mqttHost').clear();
+  connectorProperty('mqttHost').type(mqttConnectionInput.mqttHost);
+  connectorProperty('mqttPort').clear();
+  connectorProperty('mqttPort').type(String(mqttConnectionInput.mqttPort));
+  connectorProperty('user').clear();
+  connectorProperty('user').type(mqttConnectionInput.user);
+  connectorProperty('password').clear();
+  connectorProperty('password').type(mqttConnectionInput.password);
+  connectorProperty('clientId').clear();
+  connectorProperty('clientId').type(mqttConnectionInput.clientId);
 };
 
 /**

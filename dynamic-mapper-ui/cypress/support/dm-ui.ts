@@ -31,6 +31,16 @@ export const openOutboundMappings = (): void => {
   cy.visitShellAndWaitForSelector(OUTBOUND_MAPPINGS_ROUTE, 'en', 'body', 60000);
 };
 
+/**
+ * A form field by its key (`data-cy="dm-field-<key>"`, stamped on every Formly field by the
+ * dm-field-data-cy extension in shared.module.ts). Resolves to the editable control itself, in
+ * case a custom field type puts the hook on its host element instead of the inner input.
+ */
+export const formField = (key: string): Cypress.Chainable<JQuery<HTMLElement>> =>
+  cy.getByData(`dm-field-${key}`).then(($el) =>
+    $el.is('input,textarea,select') ? cy.wrap($el) : cy.wrap($el).find('input,textarea,select')
+  );
+
 /** Pick an option in a c8y-select identified by its data-cy hook. */
 export const selectC8yOption = (hook: string, optionText: string): void => {
   cy.getByData(hook).click();
@@ -98,12 +108,12 @@ export const driveSmartFunctionStepperToTestStep = (name: string, topic: string)
 
   // 4. General settings: name + topic. The sample must have the same number of topic levels
   //    as the mapping topic; ours has no wildcards, so the sample is identical.
-  cy.get('#mappingName').clear();
-  cy.get('#mappingName').type(name);
-  cy.get('#mappingTopic').clear();
-  cy.get('#mappingTopic').type(topic);
-  cy.get('#mappingTopicSample').clear();
-  cy.get('#mappingTopicSample').type(topic);
+  formField('name').clear();
+  formField('name').type(name);
+  formField('mappingTopic').clear();
+  formField('mappingTopic').type(topic);
+  formField('mappingTopicSample').clear();
+  formField('mappingTopicSample').type(topic);
   cy.getByData('dm-mapping-stepper-buttons-general')
     .find('button')
     .contains('Next')

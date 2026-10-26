@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { NgModule } from '@angular/core';
-import { FORMLY_CONFIG } from '@ngx-formly/core';
+import { FORMLY_CONFIG, FormlyFieldConfig } from '@ngx-formly/core';
 import { TextareaTypeComponent } from './component/formly/textarea.type.component';
 import { FormatStringPipe } from './misc/format-string.pipe';
 import { InputListFormlyComponent } from './component/formly/input-list-formly.component';
@@ -77,6 +77,25 @@ import { CustomFormFieldWrapperComponent } from './component/formly/custom-form-
           {
             name: 'd11r-wrapper-form-field',
             component: CustomFormFieldWrapperComponent
+          }
+        ],
+        extensions: [
+          {
+            // Stamp every leaf form field with data-cy="dm-field-<key>" so end-to-end tests
+            // can address fields without relying on generated ids or labels.
+            name: 'dm-field-data-cy',
+            extension: {
+              onPopulate(field: FormlyFieldConfig) {
+                if (field.key !== undefined && field.key !== null && !field.fieldGroup) {
+                  // path segments and dots become dashes: 'properties.mqttHost' -> dm-field-properties-mqttHost
+                  const key = ([] as (string | number)[]).concat(field.key as never).join('-').replace(/\./g, '-');
+                  field.props = {
+                    ...field.props,
+                    attributes: { 'data-cy': `dm-field-${key}`, ...field.props?.attributes }
+                  };
+                }
+              }
+            }
           }
         ],
       }

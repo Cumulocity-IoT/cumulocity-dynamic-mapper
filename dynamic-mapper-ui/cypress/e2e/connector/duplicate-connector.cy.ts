@@ -10,6 +10,7 @@ import {
   setupTestUser,
   type MqttConnectionInput,
 } from './connector.helpers';
+import { formField } from '../../support/dm-ui';
 
 describe('Connector — Duplicate connector', () => {
   const createdConnectorIds: string[] = [];
@@ -61,9 +62,9 @@ describe('Connector — Duplicate connector', () => {
 
       // The drawer opens in "create" mode, pre-filled from the original: the type is fixed and
       // the broker properties are copied. Only the name has to be made unique.
-      cy.get('#name').should('be.visible').clear();
-      cy.get('#name').type(copyName);
-      cy.get('#mqttHost').should('have.value', mqttConnectionInput.mqttHost);
+      formField('name').should('be.visible').clear();
+      formField('name').type(copyName);
+      formField('properties-mqttHost').should('have.value', mqttConnectionInput.mqttHost);
       cy.getByData('dm-connector-save').should('be.enabled').click();
 
       cy.wait('@postConnector').then((interception) => {

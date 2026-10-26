@@ -27,13 +27,14 @@ Karma unit specs and the backend integration tests in `resources/testing`.
   connector-details, monitoring (5), formly input types, confirmation modal,
   JSON editor, code-editor drawer, manage-template.
 - CI (`.github/workflows/ci.yml`) runs backend tests only; no UI or Cypress job.
-- Karma baseline: 31 of 443 unit specs fail on clean `develop` (separate work).
+- Karma baseline: 725 of 725 unit specs pass (measured 2026-10-26; an older note about 31
+  failures is stale).
 
 ## Strategy
 
 | Layer | Tool | Scope |
 |---|---|---|
-| Logic, pure functions, small components | Karma/Jasmine | Fix the 31 red specs first; a red baseline hides regressions |
+| Logic, pure functions, small components | Karma/Jasmine | Green baseline (725/725); a failure here is real |
 | UI journeys | Cypress (10–15 tests) | Connector lifecycle, create inbound and outbound mapping, test/debug step, deploy, role visibility |
 | Does the mapping really transform? | Backend integration tests / REST via `c8yclient` | Assert on Cumulocity data, not UI toasts |
 
@@ -55,7 +56,7 @@ Principles:
 | # | Item | Effort | Status |
 |---|---|---|---|
 | 1 | Audit the existing 9 specs, run them green locally | 1–2 d | done (2026-10-26) |
-| 2 | Fill the `data-cy` gaps in the main components | 1–2 d | in progress |
+| 2 | Fill the `data-cy` gaps in the main components | 1–2 d | done for form fields (2026-10-26); other hooks only when a journey needs them |
 | 3 | Page objects and API helpers for setup/teardown | 2 d | done as helper modules (2026-10-26); full page objects deferred until a spec needs them |
 | 4 | New journey specs (outbound, Smart Function editor, deployment, subscriptions, test/debug) | 4–6 d | 5 journeys done (activate, stepper dry-run, outbound listing, connector duplicate, navigation smoke); open: subscriptions, Smart Function editor, outbound creation via stepper, deployment |
 | 5 | CI job: dedicated tenant, secrets, MQTT broker container, artifacts on failure | 2–3 d | open |
@@ -164,6 +165,15 @@ Each new hook gets used by a spec in the same change, or it is not added.
   "ResizeObserver loop" warning from the editors. **Full suite: 14 specs, 21/21 green.**
   Smoke-test lesson: a check that runs before the page has loaded cannot fail (first version
   passed 21 pages in 7 s); wait for pending backend calls before asserting.
+- 2026-10-26: item 2: instead of editing ~25 components, one Formly extension in
+  `src/shared/shared.module.ts` stamps `data-cy="dm-field-<key>"` on every leaf form field
+  (dots and path segments become dashes: `properties.mqttHost` -> `dm-field-properties-mqttHost`).
+  Specs use `formField(key)` (support/dm-ui.ts), which resolves to the inner input if a custom
+  field type puts the hook on its host (fixes the `#password` host/input ambiguity for good).
+  All `#id` selectors for app-owned fields are gone. Unit tests 725/725 green. Remaining
+  non-hook selectors are c8y-owned (`c8y-data-grid`, its search input, `.dropdown-menu`).
+  Hooks for the version modals, confirmation modal, code-editor drawer etc. are deliberately NOT
+  added until a journey needs them.
 
 ## Findings (product, not test issues)
 
