@@ -925,15 +925,20 @@ public class PulsarConnectorClient extends AConnectorClient {
                         .order(4)
                         .condition("trustCustomCertificate", "true"))
 
+                .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
+                        .order(5)
+                        .description("Either enter certificate in PEM format or identify certificate by name and fingerprint (must be uploaded as Trusted Certificate in Device Management)")
+                        .condition("useSelfSignedCertificate", "true"))
+
                 // Authentication
                 .property("authenticationMethod", ConnectorPropertyBuilder.optionalOption()
-                        .order(5)
+                        .order(6)
                         .defaultValue("none")
                         .optionsWithLabels("none", "None", "token", "Token", "oauth2", "OAuth2",
                                 "tls", "TLS", "basic", "Basic"))
 
                 .property("authenticationParams", ConnectorPropertyBuilder.optionalSensitive()
-                        .order(6)
+                        .order(7)
                         .description("Parameters for the selected method. Token: the token string. "
                                 + "Basic: JSON with user and password, e.g. {\"userId\":\"myUser\",\"password\":\"myPassword\"}. "
                                 + "TLS and OAuth2: the JSON parameters of the corresponding Pulsar authentication plugin.")
@@ -941,46 +946,46 @@ public class PulsarConnectorClient extends AConnectorClient {
 
                 // Timeouts
                 .property("connectionTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
-                        .order(7)
+                        .order(8)
                         .defaultValue(DEFAULT_CONNECTION_TIMEOUT))
 
                 .property("operationTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
-                        .order(8)
+                        .order(9)
                         .defaultValue(DEFAULT_OPERATION_TIMEOUT))
 
                 .property("keepAliveIntervalSeconds", ConnectorPropertyBuilder.requiredNumeric()
-                        .order(9)
+                        .order(10)
                         .defaultValue(DEFAULT_KEEP_ALIVE))
 
                 // Subscription settings
                 .property("subscriptionType", ConnectorPropertyBuilder.optionalOption()
-                        .order(10)
+                        .order(11)
                         .defaultValue("Shared")
                         .optionsWithLabels("Exclusive", "Exclusive", "Shared", "Shared",
                                 "Failover", "Failover", "Key_Shared", "Key Shared"))
 
                 .property("subscriptionName", ConnectorPropertyBuilder.optionalString()
-                        .order(11)
+                        .order(12)
                         .description("Controls how Pulsar subscription names are generated"))
 
                 // Wildcard support (read-only)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(12)
+                        .order(13)
                         .readonly(true)
                         .defaultValue(true))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(13)
+                        .order(14)
                         .readonly(true)
                         .defaultValue(false))
 
                 // Pulsar-specific settings
                 .property("pulsarTenant", ConnectorPropertyBuilder.optionalString()
-                        .order(14)
+                        .order(15)
                         .defaultValue("public"))
 
                 .property("pulsarNamespace", ConnectorPropertyBuilder.optionalString()
-                        .order(15)
+                        .order(16)
                         .defaultValue("default"))
 
                 .build();

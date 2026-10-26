@@ -50,6 +50,70 @@ class PulsarConnectorClientTest {
         assertFalse(properties.containsKey("sparkplugHostId"));
     }
 
+    @Test
+    void configValidWithInlinePemCertificate() {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "serviceUrl", "pulsar+ssl://localhost:6651",
+                "enableTls", true,
+                "useSelfSignedCertificate", true,
+                "certificateChainInPemFormat",
+                "-----BEGIN CERTIFICATE-----\nMIIB...\n-----END CERTIFICATE-----",
+                "connectionTimeoutSeconds", 30,
+                "operationTimeoutSeconds", 30,
+                "keepAliveIntervalSeconds", 30));
+
+        assertTrue(new PulsarConnectorClient().isConfigValid(configuration));
+    }
+
+    @Test
+    void configValidWithNamedCertificateReference() {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "serviceUrl", "pulsar+ssl://localhost:6651",
+                "enableTls", true,
+                "useSelfSignedCertificate", true,
+                "nameCertificate", "my-ca",
+                "fingerprintSelfSignedCertificate", "AA:BB:CC",
+                "connectionTimeoutSeconds", 30,
+                "operationTimeoutSeconds", 30,
+                "keepAliveIntervalSeconds", 30));
+
+        assertTrue(new PulsarConnectorClient().isConfigValid(configuration));
+    }
+
+    @Test
+    void configInvalidWhenSelfSignedCertificateHasNoCertificateSource() {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "serviceUrl", "pulsar+ssl://localhost:6651",
+                "enableTls", true,
+                "useSelfSignedCertificate", true,
+                "connectionTimeoutSeconds", 30,
+                "operationTimeoutSeconds", 30,
+                "keepAliveIntervalSeconds", 30));
+
+        assertFalse(new PulsarConnectorClient().isConfigValid(configuration));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "pulsar://localhost:6650, false, false",
+            "pulsar+ssl://localhost:6651, false, true",
+            "pulsar://localhost:6650, true, true",
+            "https://localhost:8443, false, true"
+    })
+    void sslRequiredWhenTlsEnabledOrServiceUrlUsesTlsScheme(String serviceUrl, boolean enableTls, boolean expected) {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "serviceUrl", serviceUrl,
+                "enableTls", enableTls));
+
+        TestPulsarConnectorClient client = new TestPulsarConnectorClient(mock(PulsarClient.class), configuration);
+
+        assertEquals(expected, client.isSslRequired());
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {
             "persistent://public/default/measurements",
