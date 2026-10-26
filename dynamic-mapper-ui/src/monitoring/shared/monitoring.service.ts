@@ -19,7 +19,7 @@
  */
 import { inject, Injectable } from '@angular/core';
 import { InventoryService, FetchClient } from '@c8y/client';
-import { BehaviorSubject, from, map, Observable, Subject, switchMap, takeUntil } from 'rxjs';
+import { BehaviorSubject, catchError, EMPTY, from, map, Observable, Subject, switchMap, takeUntil } from 'rxjs';
 import { BASE_URL, MAPPING_FRAGMENT, MappingStatus, SharedService } from '../../shared';
 import {
   ManagedObjectRealtimeService,
@@ -161,15 +161,21 @@ export class MonitoringService {
       // Pushes sent while the realtime connection was down are lost, so re-read the state.
       this.managedObjectRealtimeService.reconnect$
         .pipe(
-          switchMap(() => from(this.inventory.detail(agentId))),
+          // Handle the rejection per reconnect: an error reaching the outer stream would end it,
+          // and later reconnects would never re-sync.
+          switchMap(() =>
+            from(this.inventory.detail(agentId)).pipe(
+              catchError((e) => {
+                console.warn('Failed to re-sync mapping status after reconnect:', e);
+                return EMPTY;
+              })
+            )
+          ),
           takeUntil(this.unsubscribe$)
         )
-        .subscribe({
-          next: ({ data }) => {
-            const fragment = data?.[MAPPING_FRAGMENT];
-            if (Array.isArray(fragment)) this.state$.next({ status: fragment, error: null });
-          },
-          error: (e) => console.warn('Failed to re-sync mapping status after reconnect:', e)
+        .subscribe(({ data }) => {
+          const fragment = data?.[MAPPING_FRAGMENT];
+          if (Array.isArray(fragment)) this.state$.next({ status: fragment, error: null });
         });
     } catch (error) {
       console.error('Failed to start monitoring:', error);

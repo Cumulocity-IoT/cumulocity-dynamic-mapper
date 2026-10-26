@@ -55,12 +55,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriBuilder;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
+import java.util.function.Function;
 
 /**
  * WebHook Connector Client.
@@ -266,7 +270,7 @@ public class WebHook extends AConnectorClient {
         boolean hasHealth = !StringUtils.isEmpty(healthEndpoint);
         try {
             WebClient client = buildWebClient();
-            ResponseEntity<String> response = (hasHealth ? client.get().uri(healthEndpoint) : client.get())
+            ResponseEntity<String> response = (hasHealth ? client.get().uri(healthUri(healthEndpoint)) : client.get())
                     .retrieve()
                     .onStatus(status -> true, r -> Mono.empty())
                     .toEntity(String.class)
@@ -340,6 +344,30 @@ public class WebHook extends AConnectorClient {
     }
 
     /**
+     * Resolve the configured health endpoint against the configured {@code baseUrl}.
+     * <p>
+     * The health endpoint must be a relative path (optionally with a query). A value carrying a
+     * scheme or host would redirect the request, with the connector's credentials, to an arbitrary
+     * server (SSRF), so it is rejected. Only the path and query are taken over, so the result can
+     * never leave the base URL's host.
+     */
+    static Function<UriBuilder, URI> healthUri(String healthEndpoint) throws ConnectorException {
+        final URI parsed;
+        try {
+            parsed = new URI(healthEndpoint.trim());
+        } catch (URISyntaxException e) {
+            throw new ConnectorException("Invalid health endpoint: " + e.getReason());
+        }
+        if (parsed.isAbsolute() || parsed.getRawAuthority() != null || parsed.getRawFragment() != null) {
+            throw new ConnectorException(
+                    "Health endpoint must be a relative path (e.g. /health), not a full URL or host");
+        }
+        final String path = parsed.getRawPath();
+        final String query = parsed.getRawQuery();
+        return uriBuilder -> uriBuilder.path(path).replaceQuery(query).build();
+    }
+
+    /**
      * Check health of the webhook endpoint
      */
     public Mono<ResponseEntity<String>> checkHealth() {
@@ -348,8 +376,15 @@ public class WebHook extends AConnectorClient {
 
         log.debug("{} - Checking health of webHook endpoint: {}", tenant, healthEndpoint);
 
+        final Function<UriBuilder, URI> healthUri;
+        try {
+            healthUri = healthUri(healthEndpoint);
+        } catch (ConnectorException e) {
+            return Mono.error(e);
+        }
+
         return webhookClient.get()
-                .uri(healthEndpoint)
+                .uri(healthUri)
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, response -> {
                     String error = "Health check failed with client error: " + response.statusCode();

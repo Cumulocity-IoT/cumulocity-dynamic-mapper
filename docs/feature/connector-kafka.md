@@ -136,13 +136,13 @@ another (de)serializer, set it in `defaultPropertiesProducer` / `defaultProperti
 | Consumer | `auto.offset.reset` | `latest` | A new consumer group starts at the end of the topic. |
 | Consumer | `max.poll.records` | `100` | Keeps a batch within `max.poll.interval.ms` (5 min) when processing is slow; otherwise the consumer is evicted and rebalances in a loop. |
 | Producer | `acks` | `all` | A failed write surfaces as an error on the request. With `acks=0` the send future always succeeds and failures are silent. |
-| Producer | `enable.idempotence` | `true` | Avoids duplicates from retries; requires `acks=all`. |
+| Producer | `enable.idempotence` | not set (Kafka default `true`) | Avoids duplicates from retries. Left implicit on purpose: Kafka disables it automatically when `acks` is overridden to 0/1, whereas an explicit `true` would make such connectors fail at producer creation. |
 | Producer | `linger.ms` | `1` | Sends are synchronous per record, so batching gives no gain. |
 | Producer | `request.timeout.ms` / `delivery.timeout.ms` | `10000` / `15000` | Keeps delivery close to the 10s `future.get()`. `delivery.timeout.ms` must be >= `linger.ms` + `request.timeout.ms`. |
 
 Duplicates are possible after a restart (redelivery of uncommitted offsets), so mappings
-should tolerate them. For fire-and-forget publishing, set `acks=0` and
-`enable.idempotence=false` in `defaultPropertiesProducer` (idempotence needs `acks=all`).
+should tolerate them. For fire-and-forget publishing, set `acks=0` in `defaultPropertiesProducer` (idempotence is
+then disabled automatically).
 The `AdminClient` is created from the producer properties.
 
 ### Supported directions and QoS

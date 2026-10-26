@@ -671,7 +671,7 @@ public class KafkaClientV2 extends AConnectorClient {
                                 .poll(Duration.ofMillis(CONSUMER_POLL_TIMEOUT_MS));
 
                         for (ConsumerRecord<String, String> record : records) {
-                            processKafkaMessage(record);
+                            processKafkaMessage(record, wrapper);
                         }
 
                         // Reset failed count on successful poll
@@ -742,7 +742,7 @@ public class KafkaClientV2 extends AConnectorClient {
     /**
      * Process individual Kafka message
      */
-    private void processKafkaMessage(ConsumerRecord<String, String> record) {
+    private void processKafkaMessage(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper) {
         String topic = record.topic();
         String value = record.value();
         String key = record.key();
@@ -768,9 +768,9 @@ public class KafkaClientV2 extends AConnectorClient {
         int timeout = processedResults.getPipelineTimeoutMS();
 
         if (mappingQos > 0) {
-            virtualThreadPool.submit(() -> processMessageWithQos(record, processedResults, timeout));
+            virtualThreadPool.submit(() -> processMessageWithQos(record, wrapper, processedResults, timeout));
         } else {
-            handleSuccessfulProcessing(record);
+            handleSuccessfulProcessing(record, wrapper);
         }
     }
 
@@ -778,6 +778,7 @@ public class KafkaClientV2 extends AConnectorClient {
      * Process message with QoS handling
      */
     private Void processMessageWithQos(ConsumerRecord<String, String> record,
+            KafkaConsumerWrapper wrapper,
             ProcessingResultWrapper<?> processedResults,
             int timeout) {
         String topic = record.topic();
@@ -817,7 +818,7 @@ public class KafkaClientV2 extends AConnectorClient {
             }
 
             if (!hasErrors || httpStatusCode < 500) {
-                handleSuccessfulProcessing(record);
+                handleSuccessfulProcessing(record, wrapper);
             } else {
                 handleProcessingError(record, httpStatusCode);
             }
@@ -849,12 +850,13 @@ public class KafkaClientV2 extends AConnectorClient {
      * foreign thread, which is not thread-safe. The queued offset is committed by
      * {@link #drainPendingCommits} on the consumer's own thread on its next loop iteration.
      */
-    private void handleSuccessfulProcessing(ConsumerRecord<String, String> record) {
+    private void handleSuccessfulProcessing(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper) {
         // Manual commit if auto-commit is disabled
         boolean autoCommit = "true".equals(kafkaConsumerProperties.getOrDefault("enable.auto.commit", "true"));
 
         if (!autoCommit) {
-            KafkaConsumerWrapper wrapper = topicConsumers.get(record.topic());
+            // The owning wrapper is passed in, not looked up by record.topic(): topicConsumers is
+            // keyed by the subscription (which may be a wildcard pattern), not the record's topic.
             if (wrapper != null) {
                 wrapper.requestCommit(
                         new TopicPartition(record.topic(), record.partition()),
