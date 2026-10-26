@@ -111,10 +111,39 @@ Synchronous send with a 10s wait: `kafkaProducer.send(record).get(10, TimeUnit.S
 — effectively sync-over-async. The Kafka record key is whatever value the mapping
 bound to `_CONTEXT_DATA_.key` (`context.getKey()`), so mappings can control Kafka
 partitioning via that binding. Topic is the mapping's own publish topic if set, else
-the resolved default. There's no explicit `acks` config in code — that's controlled via
-`kafka-producer.properties`/`defaultPropertiesProducer` overrides. One failed request
+the resolved default. Durability is not set in code — it comes from the producer defaults
+below (`acks=all`), overridable via `defaultPropertiesProducer`. One failed request
 records an error on that request and on the context but doesn't stop the rest of the
 batch.
+
+### Default client properties
+
+Defaults are loaded from `src/main/resources/kafka-consumer.properties` and
+`kafka-producer.properties`, then overlaid by connector config (bootstrap servers,
+`group.id`, security/SASL/TLS, serializers) and finally by the free-form
+`defaultPropertiesConsumer` / `defaultPropertiesProducer` maps, which win.
+`security.protocol` in the files is always overridden by the code. The (de)serializer
+entries are also forced to the String classes in `buildKafkaProperties()` before the custom
+maps are applied, so the file entries are documentation of the default only; to use
+another (de)serializer, set it in `defaultPropertiesProducer` / `defaultPropertiesConsumer`
+(the connector's send/receive code is typed `String`, so a non-String class will not work).
+
+| Side | Property | Default | Why |
+|------|----------|---------|-----|
+| Consumer | `key.deserializer` / `value.deserializer` | `StringDeserializer` | Keys and payloads are handled as UTF-8 strings; mappings parse the payload themselves. |
+| Producer | `key.serializer` / `value.serializer` | `StringSerializer` | The record key is the string bound to `_CONTEXT_DATA_.key`, the value is the mapped payload string. |
+| Consumer | `enable.auto.commit` | `false` | Offsets are committed by the connector only after the pipeline succeeds (at-least-once). With `true`, Kafka commits on a timer and a failed message can be lost. |
+| Consumer | `auto.offset.reset` | `latest` | A new consumer group starts at the end of the topic. |
+| Consumer | `max.poll.records` | `100` | Keeps a batch within `max.poll.interval.ms` (5 min) when processing is slow; otherwise the consumer is evicted and rebalances in a loop. |
+| Producer | `acks` | `all` | A failed write surfaces as an error on the request. With `acks=0` the send future always succeeds and failures are silent. |
+| Producer | `enable.idempotence` | `true` | Avoids duplicates from retries; requires `acks=all`. |
+| Producer | `linger.ms` | `1` | Sends are synchronous per record, so batching gives no gain. |
+| Producer | `request.timeout.ms` / `delivery.timeout.ms` | `10000` / `15000` | Keeps delivery close to the 10s `future.get()`. `delivery.timeout.ms` must be >= `linger.ms` + `request.timeout.ms`. |
+
+Duplicates are possible after a restart (redelivery of uncommitted offsets), so mappings
+should tolerate them. For fire-and-forget publishing, set `acks=0` and
+`enable.idempotence=false` in `defaultPropertiesProducer` (idempotence needs `acks=all`).
+The `AdminClient` is created from the producer properties.
 
 ### Supported directions and QoS
 
