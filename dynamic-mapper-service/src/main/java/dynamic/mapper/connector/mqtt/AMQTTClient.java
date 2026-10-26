@@ -491,18 +491,23 @@ public abstract class AMQTTClient extends AConnectorClient {
 
         // TLS/SSL Certificate configuration (only visible for secure protocols)
         configProps.put("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                .label("Trust custom server certificate")
+                .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates.")
                 .order(7)
                 .defaultValue(false)
                 .condition("protocol", MQTT_PROTOCOL_MQTTS, MQTT_PROTOCOL_WSS)
                 .build());
 
         configProps.put("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.largeText()
+                .label("Trusted certificate fingerprint")
                 .order(8)
-                .description("SHA 1 fingerprint of CA or Self Signed Certificate")
+                .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
                 .condition("useSelfSignedCertificate", "true")
                 .build());
 
         configProps.put("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                .label("Trusted certificate name")
+                .description("Name of the certificate in the Cumulocity trusted-certificate store.")
                 .order(9)
                 .condition("useSelfSignedCertificate", "true")
                 .build());

@@ -63,6 +63,7 @@ export interface ConnectorPropertyCondition {
 }
 export interface ConnectorProperty {
   description: string;
+  label?: string;
   required: boolean;
   order: number;
   readonly: boolean;

@@ -68,6 +68,15 @@ public class ConnectorProperty implements Cloneable {
 
     public ConnectorPropertyCondition condition;
 
+    /** Optional display label; when absent the UI derives one from the property key. */
+    public String label;
+
+    public ConnectorProperty(String description, Boolean required, Integer order, ConnectorPropertyType type,
+            Boolean readonly, Boolean hidden, Object defaultValue, Map<String, String> options,
+            ConnectorPropertyCondition condition) {
+        this(description, required, order, type, readonly, hidden, defaultValue, options, condition, null);
+    }
+
     @Override
     public ConnectorProperty clone() {
         try {

@@ -103,8 +103,6 @@ import {
   MappingStepperService,
   snapshotConnectors
 } from '../service/mapping-stepper.service';
-import { DeprecationNoticeModalComponent } from '../deprecation-notice/deprecation-notice-modal.component';
-import { DEPRECATION_NOTICE_VERSION } from '../../shared';
 import { provideGridPersistence } from '../../shared/misc/grid-persistence';
 
 @Component({
@@ -224,18 +222,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         .subscribe(maps => {
           this.mappingsCount = maps.length;
         });
-
-      // Show deprecation notice for the 6.4.0 feature removal if not yet accepted for this version
-      const noticeAccepted =
-        this.feature?.suppressDeprecationWarning ||
-        this.feature?.acceptedDeprecationNotice === DEPRECATION_NOTICE_VERSION;
-      if (!noticeAccepted && !this.mappingService.deprecationModalShown) {
-        this.mappingService.deprecationModalShown = true;
-        this.bsModalService.show(DeprecationNoticeModalComponent, {
-          class: 'modal-lg',
-          initialState: { acceptedVersion: this.feature?.acceptedDeprecationNotice ?? null }
-        });
-      }
 
       // Start listening to mapping changes
       await this.mappingService.startChangedMappingEvents();

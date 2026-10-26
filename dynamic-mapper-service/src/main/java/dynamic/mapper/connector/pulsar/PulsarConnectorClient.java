@@ -313,6 +313,16 @@ public class PulsarConnectorClient extends AConnectorClient {
      */
     private void configureAuthentication(ClientBuilder clientBuilder, String authMethod, String authParams)
             throws PulsarClientException {
+        if (ClientCredentialsAuthentication.AUTH_NAME.equals(authMethod)) {
+            String clientId = (String) connectorConfiguration.getProperties().get("clientId");
+            String clientSecret = (String) connectorConfiguration.getProperties().get("clientSecret");
+            if (StringUtils.isEmpty(clientId) || StringUtils.isEmpty(clientSecret)) {
+                throw new PulsarClientException("Client ID and client secret are required for client_creds authentication");
+            }
+            clientBuilder.authentication(new ClientCredentialsAuthentication(clientId, clientSecret));
+            log.debug("{} - Using client credentials authentication", tenant);
+            return;
+        }
         if (!"none".equals(authMethod) && !StringUtils.isEmpty(authParams)) {
             try {
                 switch (authMethod) {
@@ -907,15 +917,21 @@ public class PulsarConnectorClient extends AConnectorClient {
                         .defaultValue(false))
 
                 .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                        .label("Trust custom server certificate")
+                        .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates.")
                         .order(2)
                         .defaultValue(false)
                         .condition("enableTls", "true"))
 
                 .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.optionalString()
+                        .label("Trusted certificate fingerprint")
+                        .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
                         .order(3)
                         .condition("useSelfSignedCertificate", "true"))
 
                 .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                        .label("Trusted certificate name")
+                        .description("Name of the certificate in the Cumulocity trusted-certificate store.")
                         .order(4)
                         .condition("useSelfSignedCertificate", "true"))
 
@@ -924,54 +940,67 @@ public class PulsarConnectorClient extends AConnectorClient {
                         .order(5)
                         .defaultValue("none")
                         .optionsWithLabels("none", "None", "token", "Token", "oauth2", "OAuth2",
-                                "tls", "TLS", "basic", "Basic"))
+                                "tls", "TLS", "basic", "Basic",
+                                "client_creds", "Client credentials"))
 
                 .property("authenticationParams", ConnectorPropertyBuilder.optionalSensitive()
                         .order(6)
                         .condition("authenticationMethod", "token", "oauth2", "tls", "basic"))
 
+                .property("clientId", ConnectorPropertyBuilder.optionalString()
+                        .order(7)
+                        .label("Client ID")
+                        .description("Client ID sent to the broker as base64(clientId:clientSecret) using the custom 'client_creds' authentication method.")
+                        .condition("authenticationMethod", "client_creds"))
+
+                .property("clientSecret", ConnectorPropertyBuilder.optionalSensitive()
+                        .order(8)
+                        .label("Client secret")
+                        .description("Client secret for the 'client_creds' authentication method.")
+                        .condition("authenticationMethod", "client_creds"))
+
                 // Timeouts
                 .property("connectionTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
-                        .order(7)
+                        .order(9)
                         .defaultValue(DEFAULT_CONNECTION_TIMEOUT))
 
                 .property("operationTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
-                        .order(8)
+                        .order(10)
                         .defaultValue(DEFAULT_OPERATION_TIMEOUT))
 
                 .property("keepAliveIntervalSeconds", ConnectorPropertyBuilder.requiredNumeric()
-                        .order(9)
+                        .order(11)
                         .defaultValue(DEFAULT_KEEP_ALIVE))
 
                 // Subscription settings
                 .property("subscriptionType", ConnectorPropertyBuilder.optionalOption()
-                        .order(10)
+                        .order(12)
                         .defaultValue("Shared")
                         .optionsWithLabels("Exclusive", "Exclusive", "Shared", "Shared",
                                 "Failover", "Failover", "Key_Shared", "Key Shared"))
 
                 .property("subscriptionName", ConnectorPropertyBuilder.optionalString()
-                        .order(11)
+                        .order(13)
                         .description("Controls how Pulsar subscription names are generated"))
 
                 // Wildcard support (read-only)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(12)
+                        .order(14)
                         .readonly(true)
                         .defaultValue(true))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(13)
+                        .order(15)
                         .readonly(true)
                         .defaultValue(false))
 
                 // Pulsar-specific settings
                 .property("pulsarTenant", ConnectorPropertyBuilder.optionalString()
-                        .order(14)
+                        .order(16)
                         .defaultValue("public"))
 
                 .property("pulsarNamespace", ConnectorPropertyBuilder.optionalString()
-                        .order(15)
+                        .order(17)
                         .defaultValue("default"))
 
                 .build();

@@ -192,6 +192,10 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     };
   }
 
+  private labelFor(entry: PropertyEntry): string {
+    return entry.property.label || this.formatStringPipe.transform(entry.key);
+  }
+
   private createBaseFormField(entry: PropertyEntry, type: string, additionalProps = {}): FormlyFieldConfig {
     return {
       fieldGroup: [{
@@ -201,7 +205,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
         type,
         wrappers: ['c8y-form-field'],
         props: {
-          label: this.formatStringPipe.transform(entry.key),
+          label: this.labelFor(entry),
           required: entry.property.required,
           disabled: entry.property.readonly || this.readOnly,
           description: entry.property.description || undefined,
@@ -240,7 +244,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   }
 
   private createBooleanField(entry: PropertyEntry): FormlyFieldConfig {
-    return this.createBaseFormField(entry, 'switch');
+    return this.createBaseFormField(entry, 'switch', { hideLabel: true });
   }
 
   private createOptionField(entry: PropertyEntry): FormlyFieldConfig {
@@ -277,7 +281,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
         type: 'd11r-input-list',
         wrappers: ['c8y-form-field'],
         props: {
-          label: this.formatStringPipe.transform(entry.key),
+          label: this.labelFor(entry),
           required: entry.property.required,
           disabled: entry.property.readonly || this.readOnly,
           description: entry.property.description || undefined,

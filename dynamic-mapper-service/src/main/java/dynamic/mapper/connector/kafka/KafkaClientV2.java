@@ -1213,18 +1213,21 @@ public class KafkaClientV2 extends AConnectorClient {
 
                 // TLS / custom CA trust (optional) - same pattern as the MQTT/AMQP/Pulsar connectors
                 .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                        .label("Trust custom server certificate")
                         .order(1)
                         .defaultValue(false)
-                        .description("Trust a self-signed/internal CA certificate for TLS connections"))
+                        .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates."))
 
                 .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                        .label("Trusted certificate name")
                         .order(2)
-                        .description("Name of the certificate in the Cumulocity certificate store")
+                        .description("Name of the certificate in the Cumulocity trusted-certificate store.")
                         .condition("useSelfSignedCertificate", "true"))
 
                 .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.optionalString()
+                        .label("Trusted certificate fingerprint")
                         .order(3)
-                        .description("Fingerprint of the certificate in the Cumulocity certificate store")
+                        .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
                         .condition("useSelfSignedCertificate", "true"))
 
                 .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
