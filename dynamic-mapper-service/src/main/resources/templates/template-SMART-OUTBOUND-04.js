@@ -6,6 +6,14 @@
  *              SparkPlug B protobuf binary by the mapper before publishing.
  * @templateType OUTBOUND_SMART_FUNCTION
  * @mappingType SPARKPLUGB
+ * @samplePayload
+ *   {
+ *     "id": "99001",
+ *     "deviceId": "12345",
+ *     "c8y_Command": {
+ *       "text": "rebirth"
+ *     }
+ *   }
  *
  * Expected use-case:
  *   A Cumulocity operation (e.g. c8y_Command) triggers an NCMD message to the

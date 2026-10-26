@@ -3,16 +3,15 @@
  * @name Smart Function using device data for enrichment
  * @description Creates either c8y_CurrentMeasurement or c8y_VoltageMeasurement, depending on the inventory data (enrichment)
  * @templateType INBOUND_SMART_FUNCTION
- *
- * Sample payload
- * {
+ * @sampleTopic testSmartInbound/sensor-berlin-01
+ * @samplePayload
+ *   {
  *     "messageId": "msg-001",
  *     "deviceId": "12345",
  *     "sensorData": {
- *         "val": 230.5
+ *       "val": 230.5
  *     }
- * }
- * topic 'testSmartInbound/sensor-berlin-01'
+ *   }
  * The externalId is extracted from context.getConfig().topic split by '/' at index 1, e.g. "sensor-berlin-01".
  * Note: The device inventory must have c8y_Sensor.type.voltage=true or c8y_Sensor.type.current=true
 */

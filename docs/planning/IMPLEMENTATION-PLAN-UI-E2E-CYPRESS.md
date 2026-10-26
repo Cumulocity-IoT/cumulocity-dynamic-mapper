@@ -177,13 +177,16 @@ Each new hook gets used by a spec in the same change, or it is not added.
 
 ## Findings (product, not test issues)
 
-- **Default Smart Function template does not match the default sample payload.** A new inbound
-  Smart Function mapping preselects `template-SMART-INBOUND-04` (reads
-  `payload.sensorData.temp_val`), but the test step starts with a different sample payload
-  (`{Temperature:{value,unit}, time, externalId}`). The first Dry Run therefore logs
-  `TypeError: Cannot read property 'temp_val' of undefined (line 24)` and produces no request
-  (HTTP 200, empty result). Possibly intended, but a new user's first dry run fails. The spec
-  deliberately does not assert a produced result; once this is decided it should.
+- **Default Smart Function template did not match the default sample payload. FIXED (2026-10-26).**
+  Two causes: the type drawer preselected `codeTemplateOptions[0]` (the first entry of an unordered
+  server-side map, e.g. `-04`) instead of the template flagged `@defaultTemplate`; and a new mapping
+  got the generic per-target sample, not the template's own sample. Now: the drawer preselects the
+  flagged default; templates declare `@samplePayload` / `@sampleTopic` (all 17 shipped Smart
+  Function templates; `-08` and `-13` are raw-byte templates and declare only a topic), the backend
+  stores them on `CodeTemplate` and refreshes stored tenant copies on startup, and
+  `applyCodeTemplateSample()` seeds JSON mappings from them. **The dry-run spec
+  (`test-mapping-step.cy.ts`) still asserts only the mechanics because the tenant's deployed
+  microservice predates the fix; tighten it to expect a produced result once the new backend is deployed.**
 - The Add-connector button is usable before the connector specifications have loaded (drawer then
   shows "No items").
 - The dry run console also warns that the template uses ES `export` syntax, which is stripped

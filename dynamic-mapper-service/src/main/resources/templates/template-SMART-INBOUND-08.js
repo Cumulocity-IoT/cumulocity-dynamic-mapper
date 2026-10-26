@@ -10,6 +10,7 @@
  *              payload for you (see the metrics array template). For a simple binary frame see
  *              the "Decode a binary frame" template.
  * @templateType INBOUND_SMART_FUNCTION
+ * @sampleTopic spBv1.0/factory-01/DDATA/edge-node-01/device-01
  *
  * Requires:
  *   MappingType  : ANY_PAYLOAD

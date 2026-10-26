@@ -22,10 +22,12 @@ import * as _ from 'lodash';
 import * as jsYaml from 'js-yaml';
 import {
   API,
+  CodeTemplate,
   DeploymentMapEntry,
   Direction,
   JsonEditorComponent,
   Mapping,
+  MappingType,
   TransformationType
 } from '../../shared';
 import { ValidationFormlyError } from './mapping.model';
@@ -1063,4 +1065,38 @@ export /**
   });
 
   return sortedObj;
+}
+
+/**
+ * Seeds a new mapping's sample message from the code template it was created from.
+ *
+ * A code template declares the message it is written for (`samplePayload`, `sampleTopic`). Without
+ * this the stepper substitutes a generic per-target sample for the empty source, and the first
+ * dry run of the template's own code fails on fields that sample does not have.
+ *
+ * The sample is the source template (the broker message for INBOUND, the Cumulocity message for
+ * OUTBOUND) and the matching topic sample. Only JSON mappings take it: the sample is a JSON
+ * document, and other mapping types (raw bytes, flat file, ...) shape their source differently.
+ * Fields the template does not declare are left untouched.
+ */
+export function applyCodeTemplateSample(
+  mapping: Mapping,
+  codeTemplate: CodeTemplate | undefined,
+  mappingType: MappingType,
+  direction: Direction
+): void {
+  if (!codeTemplate || mappingType !== MappingType.JSON) {
+    return;
+  }
+  const { samplePayload, sampleTopic } = codeTemplate;
+  if (samplePayload) {
+    mapping.sourceTemplate = samplePayload;
+  }
+  if (sampleTopic) {
+    if (direction === Direction.INBOUND) {
+      mapping.mappingTopicSample = sampleTopic;
+    } else {
+      mapping.publishTopicSample = sampleTopic;
+    }
+  }
 }

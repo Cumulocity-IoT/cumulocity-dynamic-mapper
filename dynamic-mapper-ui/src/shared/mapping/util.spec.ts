@@ -20,6 +20,7 @@
 
 import { FormControl, FormGroup } from '@angular/forms';
 import {
+  applyCodeTemplateSample,
   deriveSampleTopicFromTopic,
   isFilterOutboundUnique,
   isMappingTopicUnique,
@@ -42,7 +43,7 @@ import {
   describeMappingContentChanges,
   TemplateEditorRef
 } from './util';
-import { Direction, Mapping, MappingType, RepairStrategy, TransformationType } from '../../shared';
+import { CodeTemplate, Direction, Mapping, MappingType, RepairStrategy, TransformationType } from '../../shared';
 import { MappingValidationError, toBackendError } from './mapping-validation-error';
 
 // ---------------------------------------------------------------------------
@@ -835,5 +836,55 @@ describe('unsaved-changes comparison (captureMappingContentSnapshot / hasMapping
       expect(describeChanges(makeMapping(), makeMapping(), { a: 1 })).toEqual(['source template']);
       expect(describeChanges(makeMapping(), makeMapping())).toEqual([]);
     });
+  });
+});
+
+describe('applyCodeTemplateSample', () => {
+  const template = (overrides: Partial<CodeTemplate> = {}): CodeTemplate =>
+    ({
+      id: 't',
+      name: 'T',
+      code: '',
+      samplePayload: '{"sensorData":{"temp_val":23.5}}',
+      sampleTopic: 'testSmartInbound/sensor-berlin-01',
+      ...overrides
+    } as CodeTemplate);
+
+  it('seeds the source template and the mapping topic sample for an INBOUND JSON mapping', () => {
+    const mapping = makeMapping({ sourceTemplate: '{}', mappingTopicSample: '' });
+
+    applyCodeTemplateSample(mapping, template(), MappingType.JSON, Direction.INBOUND);
+
+    expect(mapping.sourceTemplate).toBe('{"sensorData":{"temp_val":23.5}}');
+    expect(mapping.mappingTopicSample).toBe('testSmartInbound/sensor-berlin-01');
+  });
+
+  it('seeds the source template and the PUBLISH topic sample for an OUTBOUND mapping', () => {
+    const mapping = makeMapping({ direction: Direction.OUTBOUND, sourceTemplate: '{}' });
+
+    applyCodeTemplateSample(mapping, template({ sampleTopic: 'measurements/berlin_01' }), MappingType.JSON, Direction.OUTBOUND);
+
+    expect(mapping.sourceTemplate).toBe('{"sensorData":{"temp_val":23.5}}');
+    expect(mapping.publishTopicSample).toBe('measurements/berlin_01');
+    expect(mapping.mappingTopicSample).not.toBe('measurements/berlin_01');
+  });
+
+  it('leaves fields the template does not declare untouched', () => {
+    const mapping = makeMapping({ sourceTemplate: '{}', mappingTopicSample: 'keep/me' });
+
+    applyCodeTemplateSample(mapping, template({ samplePayload: undefined, sampleTopic: undefined }), MappingType.JSON, Direction.INBOUND);
+
+    expect(mapping.sourceTemplate).toBe('{}');
+    expect(mapping.mappingTopicSample).toBe('keep/me');
+  });
+
+  it('does nothing without a template, or for a mapping type that does not take a JSON sample', () => {
+    const mapping = makeMapping({ sourceTemplate: '{}', mappingTopicSample: '' });
+
+    applyCodeTemplateSample(mapping, undefined, MappingType.JSON, Direction.INBOUND);
+    applyCodeTemplateSample(mapping, template(), MappingType.FLAT_FILE, Direction.INBOUND);
+
+    expect(mapping.sourceTemplate).toBe('{}');
+    expect(mapping.mappingTopicSample).toBe('');
   });
 });

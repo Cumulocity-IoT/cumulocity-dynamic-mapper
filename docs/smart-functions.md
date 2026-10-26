@@ -148,6 +148,35 @@ the device took the reading. Whenever the device sends its own timestamp, prefer
 > `new Date().toISOString()`. That was a misdiagnosis: `msg.time` is populated in both directions, 14 of the 18 shipped
 > templates use it, and none use `new Date()`.
 
+## Code template headers: sample message
+
+A shipped code template starts with a JSDoc header. Besides `@name`, `@description`, `@templateType` and
+`@defaultTemplate`, it can declare the message the template is written for:
+
+```js
+/**
+ * @name Default template for Smart Function
+ * @templateType INBOUND_SMART_FUNCTION
+ * @defaultTemplate true
+ * @sampleTopic testSmartInbound/sensor-berlin-01
+ * @samplePayload
+ *   {
+ *     "messageId": "msg-001",
+ *     "sensorData": { "temp_val": 23.5 }
+ *   }
+ */
+```
+
+- `@samplePayload` is JSON. It may span several lines; each continuation line is indented by at least two
+  spaces after the `*`, and a blank ` *` line ends it. A value that is not valid JSON is ignored with a warning.
+- `@sampleTopic` is a topic that matches the payload (the publish topic for an outbound template).
+- When a new **JSON** mapping is created from the template, they become the mapping's sample message, so the
+  first dry run exercises the template's own fields. Without them the generic per-target sample is used, which
+  usually lacks the fields the template reads. Templates for raw bytes (`ANY_PAYLOAD`) do not declare a payload.
+- The values are read when the template is loaded and stored on the template (`samplePayload`, `sampleTopic`
+  in the `/configuration/code` API). On startup, a stored template that has none receives them from the
+  packaged version; a value the tenant already has is never overwritten. "Reset System Templates" also reloads them.
+
 ## Build & test
 
 ```bash

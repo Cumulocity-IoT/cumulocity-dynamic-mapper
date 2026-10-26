@@ -7,12 +7,12 @@
  *              The targetPath must start with /service/ and point to a microservice
  *              that is subscribed to the same Cumulocity tenant.
  * @templateType INBOUND_SMART_FUNCTION
- *
- * Sample payload (MQTT topic: testCustomRouting/sensor-berlin-01)
- * {
+ * @sampleTopic testCustomRouting/sensor-berlin-01
+ * @samplePayload
+ *   {
  *     "externalId": "sensor-berlin-01",
  *     "temperature": 23.5
- * }
+ *   }
  */
 /**
  * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg

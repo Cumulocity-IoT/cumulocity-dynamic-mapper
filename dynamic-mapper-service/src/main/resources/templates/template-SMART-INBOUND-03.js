@@ -7,16 +7,15 @@
  *              for the first time. The deviceGroups list names the device groups the device is added to
  *              as a child asset; missing groups are created automatically.
  * @templateType INBOUND_SMART_FUNCTION
- *
- * Sample payload
- * {
+ * @sampleTopic testSmartInbound/sensor-berlin-01
+ * @samplePayload
+ *   {
  *     "messageId": "msg-001",
  *     "clientId": "sensor-berlin-01",
  *     "sensorData": {
- *         "temp_val": 23.5
+ *       "temp_val": 23.5
  *     }
- * }
- * topic 'testSmartInbound/sensor-berlin-01'
+ *   }
 */
 
 /**

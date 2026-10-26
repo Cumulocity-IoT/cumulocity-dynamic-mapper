@@ -5,6 +5,11 @@
  *              client ID from context (not the payload) as the device identifier.
  * @templateType INBOUND_SMART_FUNCTION
  * @since 6.2
+ * @sampleTopic perDevStats/sensor-001
+ * @samplePayload
+ *   {
+ *     "temperature": 23.5
+ *   }
  *
  * Demonstrates per-device state management using composite state keys:
  * - The device identifier is taken from context.getClientId() (MQTT client ID)

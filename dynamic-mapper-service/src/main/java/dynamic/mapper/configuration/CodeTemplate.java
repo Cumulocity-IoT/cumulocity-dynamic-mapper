@@ -71,6 +71,21 @@ public class CodeTemplate implements Cloneable {
     public boolean defaultTemplate = false;
 
     /**
+     * A message the template is written for (JSON text), declared in the template header as
+     * {@code @samplePayload}. The UI uses it as the sample payload of a new mapping, so the first
+     * dry run exercises the template's own fields instead of a generic sample. Optional: absent
+     * for templates that do not declare one.
+     */
+    @JsonSetter(nulls = Nulls.SKIP)
+    public String samplePayload;
+
+    /**
+     * A topic matching {@link #samplePayload}, declared as {@code @sampleTopic}. Optional.
+     */
+    @JsonSetter(nulls = Nulls.SKIP)
+    public String sampleTopic;
+
+    /**
      * The direction this template applies to, derived from its {@link TemplateType} and serialized
      * for clients that group templates by direction.
      *

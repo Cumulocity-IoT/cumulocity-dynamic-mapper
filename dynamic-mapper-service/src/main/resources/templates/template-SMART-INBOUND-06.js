@@ -6,16 +6,15 @@
  *              by looking up the parent from assetParents in the inventory cache.
  * @templateType INBOUND_SMART_FUNCTION
  * @since 6.2
- *
- * Sample payload
- * {
+ * @sampleTopic testSmartInbound/child-sensor-01
+ * @samplePayload
+ *   {
  *     "messageId": "msg-001",
  *     "clientId": "child-sensor-01",
  *     "sensorData": {
- *         "temp_val": 23.5
+ *       "temp_val": 23.5
  *     }
- * }
- * topic 'testSmartInbound/child-sensor-01'
+ *   }
  *
  * Prerequisites:
  * - Enable inventory cache in connector configuration

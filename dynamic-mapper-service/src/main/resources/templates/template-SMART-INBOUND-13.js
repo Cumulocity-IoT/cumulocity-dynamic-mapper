@@ -6,6 +6,7 @@
  *              in msg.payload, so the function decodes it to bytes and reads the fields by offset.
  *              Use it as a starting point for any simple binary device protocol.
  * @templateType INBOUND_SMART_FUNCTION
+ * @sampleTopic testBinary/sensor-berlin-01
  *
  * Requires:
  *   MappingType  : ANY_PAYLOAD

@@ -446,7 +446,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       mappingType: [initialMappingType],
       transformationType: [initialTransformationType],
       codeTemplateSource: [defaultCodeTemplateSource],
-      codeTemplate: [defaultCodeTemplateSource === 'ai' ? null : (this.codeTemplateOptions[0] || null)],
+      codeTemplate: [defaultCodeTemplateSource === 'ai' ? null : this.defaultCodeTemplateOption()],
       extensionName: [null],
       eventName: [null],
       extensionParameter: [null]
@@ -477,7 +477,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
         if (source === 'ai') {
           this.formGroup.patchValue({ codeTemplate: null }, { emitEvent: false });
         } else if (!this.formGroup.get('codeTemplate')?.value && this.codeTemplateOptions.length > 0) {
-          this.formGroup.patchValue({ codeTemplate: this.codeTemplateOptions[0] }, { emitEvent: false });
+          this.formGroup.patchValue({ codeTemplate: this.defaultCodeTemplateOption() }, { emitEvent: false });
         }
       });
 
@@ -528,7 +528,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     await this.loadCodeTemplates(option.value);
 
     if (defaultCodeTemplateSource === 'template' && this.codeTemplateOptions.length > 0) {
-      this.formGroup.patchValue({ codeTemplate: this.codeTemplateOptions[0] }, { emitEvent: false });
+      this.formGroup.patchValue({ codeTemplate: this.defaultCodeTemplateOption() }, { emitEvent: false });
     }
 
     if (option.value === TransformationType.EXTENSION_JAVA) {
@@ -741,6 +741,17 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       transformationControl.clearValidators();
     }
     transformationControl.updateValueAndValidity({ emitEvent: false });
+  }
+
+  /**
+   * The template flagged as the default for the type, falling back to the first one. The list is
+   * built from an unordered map on the server, so "the first" alone is arbitrary: it used to
+   * preselect e.g. the stateful example instead of the plain default.
+   */
+  private defaultCodeTemplateOption(): CodeTemplateOption | null {
+    return this.codeTemplateOptions.find(option => option.value?.defaultTemplate)
+      ?? this.codeTemplateOptions[0]
+      ?? null;
   }
 
   private async loadCodeTemplates(transformationType: TransformationType): Promise<void> {

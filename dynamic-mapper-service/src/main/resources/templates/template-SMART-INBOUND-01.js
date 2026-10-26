@@ -4,17 +4,16 @@
  * @description Default template for Smart Function, creates one measurement
  * @templateType INBOUND_SMART_FUNCTION
  * @defaultTemplate true
- *
- * Sample payload
- * {
+ * @sampleTopic testSmartInbound/sensor-berlin-01
+ * @samplePayload
+ *   {
  *     "messageId": "msg-001",
  *     "clientId": "sensor-berlin-01",
  *     "deviceId": "12345",
  *     "sensorData": {
- *         "temp_val": 23.5
+ *       "temp_val": 23.5
  *     }
- * }
- * topic 'testSmartInbound/sensor-berlin-01'
+ *   }
 */
 
 /**

@@ -779,6 +779,14 @@ public class ConfigurationController {
             // regenerated from the fields, which would otherwise overwrite it.
             if (existing != null) {
                 serviceConfigurationService.adoptHeaderMetadataEdits(codeTemplate, existing);
+                // A client that predates the sample fields drops them on a round-trip; keep the
+                // stored values rather than persisting a null over them.
+                if (codeTemplate.samplePayload == null) {
+                    codeTemplate.samplePayload = existing.samplePayload;
+                }
+                if (codeTemplate.sampleTopic == null) {
+                    codeTemplate.sampleTopic = existing.sampleTopic;
+                }
             }
             serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate);
             codeTemplates.put(id, codeTemplate);

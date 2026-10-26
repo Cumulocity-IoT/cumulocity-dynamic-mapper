@@ -107,6 +107,13 @@ export interface CodeTemplate {
   internal: boolean;
   readonly: boolean;
   defaultTemplate: boolean;
+  /**
+   * A message the template is written for (JSON text), declared in the template header as
+   * `@samplePayload`. Seeds the sample payload of a new mapping created from this template.
+   */
+  samplePayload?: string;
+  /** A topic matching {@link samplePayload} (`@sampleTopic`). */
+  sampleTopic?: string;
 }
 
 export interface CodeTemplateMap {

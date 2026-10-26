@@ -726,4 +726,93 @@ class ServiceConfigurationServiceTest {
         assertTrue(decode(storedTemplate().code).contains("can be edited here"));
     }
 
+
+    // ── @samplePayload / @sampleTopic ─────────────────────────────────────
+
+    @Test
+    void extractSamplePayload_readsAMultiLineValueAsPrettyPrintedJson() {
+        String header = "/**\n * @name X\n * @samplePayload\n *   {\n *     \"a\": 1,\n *     \"b\": [1, 2]\n *   }\n *\n * docs\n */";
+
+        String sample = service.extractSamplePayload(header);
+
+        assertNotNull(sample);
+        assertEquals("{\"a\":1,\"b\":[1,2]}", sample.replaceAll("\\s", ""));
+    }
+
+    @Test
+    void extractSamplePayload_dropsAValueThatIsNotJson_andReturnsNullWhenAbsent() {
+        assertNull(service.extractSamplePayload("/**\n * @samplePayload\n *   {not json\n */"));
+        assertNull(service.extractSamplePayload("/**\n * @name X\n */"));
+    }
+
+    @Test
+    void shippedSmartFunctionTemplates_allDeclareASample_andTheDefaultsDeclareBoth() {
+        ServiceConfiguration configuration = new ServiceConfiguration();
+        service.initCodeTemplates(configuration, false);
+
+        for (CodeTemplate t : configuration.getCodeTemplates().values()) {
+            if (t.templateType != TemplateType.INBOUND_SMART_FUNCTION
+                    && t.templateType != TemplateType.OUTBOUND_SMART_FUNCTION) {
+                continue;
+            }
+            assertTrue(t.samplePayload != null || t.sampleTopic != null,
+                    "template '" + t.name + "' declares neither @samplePayload nor @sampleTopic");
+            if (t.defaultTemplate) {
+                assertNotNull(t.samplePayload, "default template '" + t.name + "' needs a sample payload");
+                assertNotNull(t.sampleTopic, "default template '" + t.name + "' needs a sample topic");
+            }
+        }
+    }
+
+    @Test
+    void shippedInboundDefault_sampleMatchesTheFieldsItsCodeReads() {
+        ServiceConfiguration configuration = new ServiceConfiguration();
+        service.initCodeTemplates(configuration, false);
+        CodeTemplate inboundDefault = configuration.getCodeTemplates().get(TemplateType.INBOUND_SMART_FUNCTION.name());
+
+        // The default template reads payload["sensorData"]["temp_val"]; a generic sample once
+        // made its first dry run fail with a TypeError.
+        assertTrue(decode(inboundDefault.code).contains("sensorData"));
+        assertTrue(inboundDefault.samplePayload.contains("\"sensorData\""), inboundDefault.samplePayload);
+        assertTrue(inboundDefault.samplePayload.contains("\"temp_val\""), inboundDefault.samplePayload);
+        assertEquals("testSmartInbound/sensor-berlin-01", inboundDefault.sampleTopic);
+    }
+
+    @Test
+    void shippedTemplates_keepTheirSampleInTheHeaderAfterBeingLoaded_andStayStableOnResave() {
+        ServiceConfiguration configuration = new ServiceConfiguration();
+        service.initCodeTemplates(configuration, false);
+        CodeTemplate inboundDefault = configuration.getCodeTemplates().get(TemplateType.INBOUND_SMART_FUNCTION.name());
+
+        String loaded = decode(inboundDefault.code);
+        service.rectifyHeaderInCodeTemplate(inboundDefault);
+        String resaved = decode(inboundDefault.code);
+
+        assertTrue(loaded.contains("temp_val"), "the sample must survive header rectification");
+        assertEquals(loaded, resaved, "re-saving a loaded template must not change it");
+    }
+
+    @Test
+    void addMissingInternalTemplates_fillsInSamplesOfStoredTemplates_withoutOverwritingExistingOnes() {
+        ServiceConfiguration fresh = new ServiceConfiguration();
+        service.initCodeTemplates(fresh, false);
+        CodeTemplate packaged = fresh.getCodeTemplates().get(TemplateType.INBOUND_SMART_FUNCTION.name());
+
+        // A tenant upgraded from a version that did not know the sample fields
+        ServiceConfiguration upgraded = new ServiceConfiguration();
+        service.initCodeTemplates(upgraded, false);
+        CodeTemplate stored = upgraded.getCodeTemplates().get(TemplateType.INBOUND_SMART_FUNCTION.name());
+        stored.samplePayload = null;
+        stored.sampleTopic = null;
+
+        assertTrue(service.addMissingInternalTemplates(upgraded), "a refreshed template must be reported for persisting");
+        assertEquals(packaged.samplePayload, stored.samplePayload);
+        assertEquals(packaged.sampleTopic, stored.sampleTopic);
+
+        // A sample the tenant already has (or edited) is never overwritten
+        stored.samplePayload = "{\"mine\":true}";
+        assertFalse(service.addMissingInternalTemplates(upgraded));
+        assertEquals("{\"mine\":true}", stored.samplePayload);
+    }
+
 }

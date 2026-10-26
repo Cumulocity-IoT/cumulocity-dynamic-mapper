@@ -7,6 +7,28 @@
  *              sent; booleans are converted to 0/1 and non-numeric metrics are skipped.
  *              The unit lookup table is an example - adapt it to your metric names.
  * @templateType INBOUND_SMART_FUNCTION
+ * @sampleTopic spBv1.0/factory-01/DDATA/edge-node-01/device-01
+ * @samplePayload
+ *   {
+ *     "groupId": "factory-01",
+ *     "edgeNodeId": "edge-node-01",
+ *     "deviceId": "device-01",
+ *     "timestamp": 1767268800000,
+ *     "metrics": [
+ *       {
+ *         "name": "Temperature",
+ *         "value": 21.5
+ *       },
+ *       {
+ *         "name": "Pressure",
+ *         "value": 1.2
+ *       },
+ *       {
+ *         "name": "Pump Running",
+ *         "value": true
+ *       }
+ *     ]
+ *   }
  */
 /**
  * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg

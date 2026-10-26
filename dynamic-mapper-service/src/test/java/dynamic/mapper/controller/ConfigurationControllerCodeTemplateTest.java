@@ -188,6 +188,35 @@ class ConfigurationControllerCodeTemplateTest {
         assertEquals("b3RoZXI=", codeTemplates.get("custom").code);
     }
 
+    @Test
+    void updateKeepsTheStoredSampleWhenTheClientDoesNotSendOne() {
+        CodeTemplate stored = template("custom", false, false);
+        stored.samplePayload = "{\"a\":1}";
+        stored.sampleTopic = "t/1";
+        codeTemplates.put("custom", stored);
+        // A client that predates the sample fields sends none
+        CodeTemplate replacement = template("custom", false, false);
+        replacement.code = "b3RoZXI=";
+
+        controller.updateCodeTemplate("custom", replacement);
+
+        assertEquals("{\"a\":1}", codeTemplates.get("custom").samplePayload);
+        assertEquals("t/1", codeTemplates.get("custom").sampleTopic);
+    }
+
+    @Test
+    void updateReplacesTheSampleWhenTheClientSendsOne() {
+        CodeTemplate stored = template("custom", false, false);
+        stored.samplePayload = "{\"a\":1}";
+        codeTemplates.put("custom", stored);
+        CodeTemplate replacement = template("custom", false, false);
+        replacement.samplePayload = "{\"b\":2}";
+
+        controller.updateCodeTemplate("custom", replacement);
+
+        assertEquals("{\"b\":2}", codeTemplates.get("custom").samplePayload);
+    }
+
     // ---- create ----
 
     @Test

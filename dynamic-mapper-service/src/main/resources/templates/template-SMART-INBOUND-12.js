@@ -7,14 +7,14 @@
  *              Repeated messages for the same device and alarm type update the existing alarm
  *              instead of creating a second one.
  * @templateType INBOUND_SMART_FUNCTION
- *
- * Sample payload (topic 'testAlarm/sensor-berlin-01')
- * {
+ * @sampleTopic testAlarm/sensor-berlin-01
+ * @samplePayload
+ *   {
  *     "code": "Overheat",
  *     "level": 3,
  *     "message": "Temperature above limit",
  *     "limit": 80
- * }
+ *   }
  * Send the same message with "level": 0 to clear the alarm.
 */
 

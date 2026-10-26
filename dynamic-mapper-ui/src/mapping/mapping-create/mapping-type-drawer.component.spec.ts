@@ -188,6 +188,40 @@ describe('MappingTypeDrawerComponent', () => {
     });
   });
 
+  describe('code template preselection', () => {
+    const codeTemplate = (id: string, defaultTemplate: boolean) =>
+      ({ id, name: id, code: 'Y29kZQ==', defaultTemplate, samplePayload: `{"from":"${id}"}` }) as any;
+
+    it('preselects the template flagged as default, not just the first one in the list', async () => {
+      mockAIAgentService.getAIAgents.and.resolveTo([]);
+      mockSharedService.getCodeTemplatesByType.and.resolveTo([
+        codeTemplate('stateful-example', false),
+        codeTemplate('the-default', true)
+      ]);
+
+      const component = await createComponent(Direction.INBOUND);
+      component.onContinue();
+      const result = await component.result;
+
+      expect(component.formGroup.get('codeTemplate')?.value?.id).toBe('the-default');
+      expect((result as any).codeTemplate.id).toBe('the-default');
+      // the chosen template travels with its sample, so the new mapping can be seeded from it
+      expect((result as any).codeTemplate.samplePayload).toBe('{"from":"the-default"}');
+    });
+
+    it('falls back to the first template when none is flagged as default', async () => {
+      mockAIAgentService.getAIAgents.and.resolveTo([]);
+      mockSharedService.getCodeTemplatesByType.and.resolveTo([
+        codeTemplate('first', false),
+        codeTemplate('second', false)
+      ]);
+
+      const component = await createComponent(Direction.INBOUND);
+
+      expect(component.formGroup.get('codeTemplate')?.value?.id).toBe('first');
+    });
+  });
+
   describe('AI generation choice', () => {
     it('defaults to "Generate with AI" and offers the choice when an agent is deployed for the default transformation type (SMART_FUNCTION)', async () => {
       mockSharedService.getServiceConfiguration.and.resolveTo({

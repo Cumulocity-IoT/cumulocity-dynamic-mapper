@@ -93,7 +93,7 @@ import {
   PayloadWrapper
 } from '../../shared/mapping/mapping.model';
 import { MappingPersistence } from '../../shared/mapping/stepper.model';
-import { CONTEXT_DATA_KEY_NAME, isCodeOrExtensionTransformation } from '../../shared/mapping/util';
+import { applyCodeTemplateSample, CONTEXT_DATA_KEY_NAME, isCodeOrExtensionTransformation } from '../../shared/mapping/util';
 import { MappingTokens } from '../../shared/mapping/processor/processor.constants';
 import { CommonModule } from '@angular/common';
 import { MappingStepperComponent } from '../stepper/mapping-stepper.component';
@@ -632,6 +632,12 @@ export class MappingComponent implements OnInit, OnDestroy {
         ...mapping,
         sourceTemplate: sampleSource
       };
+    }
+
+    // Seed the sample from the chosen code template (see applyCodeTemplateSample); the Message
+    // Explorer pre-fill below still takes precedence.
+    if (this.substitutionsAsCode) {
+      applyCodeTemplateSample(mapping, this.codeTemplate, this.mappingType, direction);
     }
 
     // Apply pre-fill from Message Explorer (topic + payload + targetAPI)

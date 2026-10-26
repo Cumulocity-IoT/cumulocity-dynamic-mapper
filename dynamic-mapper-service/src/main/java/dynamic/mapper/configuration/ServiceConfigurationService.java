@@ -131,7 +131,8 @@ public class ServiceConfigurationService {
      * already exist, so newly deployed internal templates are picked up automatically
      * without requiring a manual "Reset System Templates" operation.
      *
-     * @return {@code true} if at least one template was added (caller should persist)
+     * @return {@code true} if at least one template was added, or a stored template received its
+     *         sample payload/topic from the packaged version (caller should persist)
      */
     public boolean addMissingInternalTemplates(ServiceConfiguration configuration) {
         Map<String, CodeTemplate> codeTemplates = configuration.getCodeTemplates();
@@ -144,9 +145,11 @@ public class ServiceConfigurationService {
         // The key is @templateType + @name, not @name alone: the inbound and the outbound
         // default both ship as "Default template for Smart Function", and matching on the
         // name alone meant a tenant that had one of them never received the other.
-        Set<String> existingTemplates = codeTemplates.values().stream()
-                .map(t -> templateKey(t.templateType != null ? t.templateType.name() : "", t.name))
-                .collect(Collectors.toSet());
+        Map<String, CodeTemplate> existingByKey = new HashMap<>();
+        for (CodeTemplate t : codeTemplates.values()) {
+            existingByKey.putIfAbsent(templateKey(t.templateType != null ? t.templateType.name() : "", t.name), t);
+        }
+        Set<String> existingTemplates = existingByKey.keySet();
 
         // Track which templateTypes already have a default registered
         Map<TemplateType, Boolean> defaultTemplateRegistered = new EnumMap<>(TemplateType.class);
@@ -180,8 +183,28 @@ public class ServiceConfigurationService {
                 String name = extractAnnotation(header, "@name");
                 String templateType = extractAnnotation(header, "@templateType");
 
-                if (existingTemplates.contains(templateKey(templateType, name))) {
-                    continue; // Already stored — skip
+                CodeTemplate stored = existingByKey.get(templateKey(templateType, name));
+                if (stored != null) {
+                    // Already stored, so the template itself is left alone (the tenant may have
+                    // edited it). Only the sample payload/topic, which stored copies from before
+                    // those fields existed lack, are filled in from the packaged header; a value
+                    // that is already there is never overwritten.
+                    String packaged = packagedHeader(content);
+                    if (stored.samplePayload == null) {
+                        String samplePayload = extractSamplePayload(packaged);
+                        if (samplePayload != null) {
+                            stored.samplePayload = samplePayload;
+                            anyAdded = true;
+                        }
+                    }
+                    if (stored.sampleTopic == null) {
+                        String sampleTopic = extractAnnotation(packaged, "@sampleTopic");
+                        if (!sampleTopic.isEmpty()) {
+                            stored.sampleTopic = sampleTopic;
+                            anyAdded = true;
+                        }
+                    }
+                    continue;
                 }
 
                 int sizeBefore = codeTemplates.size();
@@ -337,7 +360,8 @@ public class ServiceConfigurationService {
 
         CodeTemplate template = new CodeTemplate(
                 templateId, name, description, templateType,
-                encode(content), internal, readonly, defaultTemplate);
+                encode(content), internal, readonly, defaultTemplate,
+                extractSamplePayload(header), extractAnnotation(header, "@sampleTopic"));
 
         // Migrate header to two-section format on load so the divider is always present
         rectifyHeaderInCodeTemplate(template);
@@ -422,6 +446,38 @@ public class ServiceConfigurationService {
         }
         String text = matcher.group(1);
         return text.startsWith("---") ? null : text;
+    }
+
+    /**
+     * Reads {@code @samplePayload} from a template header. A multi-line value comes back as the
+     * continuation lines joined by single spaces (see {@link #extractAnnotation}), which is
+     * still valid JSON; it is re-rendered pretty-printed. A value that is not valid JSON is
+     * dropped with a warning rather than handed to the UI, so a typo in a template can never
+     * put a broken sample payload into a new mapping.
+     *
+     * @return pretty-printed JSON, or {@code null} when the header declares none (or an invalid one)
+     */
+    String extractSamplePayload(String header) {
+        String raw = extractAnnotation(header, "@samplePayload");
+        if (raw.isEmpty()) {
+            return null;
+        }
+        try {
+            return objectMapper.writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(objectMapper.readTree(raw));
+        } catch (JsonProcessingException e) {
+            log.warn("Ignoring @samplePayload that is not valid JSON: {}", e.getOriginalMessage());
+            return null;
+        }
+    }
+
+    /**
+     * The JSDoc header of a packaged template file, without a leading {@code // @ts-check}.
+     */
+    private String packagedHeader(String content) {
+        String body = content.substring(leadingDirectives(content).length());
+        int headerEnd = findJSDocHeaderEnd(body);
+        return (headerEnd != -1) ? body.substring(0, headerEnd) : body;
     }
 
     public String validateAndConvert(Resource resource) {
