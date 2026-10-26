@@ -946,7 +946,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                 .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
                         .order(5)
                         .description("Either enter certificate in PEM format or identify certificate by name and fingerprint (must be uploaded as Trusted Certificate in Device Management)")
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
                 // Authentication
                 .property("authenticationMethod", ConnectorPropertyBuilder.optionalOption()
