@@ -56,7 +56,7 @@ class PulsarConnectorClientTest {
         when(configuration.getProperties()).thenReturn(Map.of(
                 "serviceUrl", "pulsar+ssl://localhost:6651",
                 "enableTls", true,
-                "useSelfSignedCertificate", true,
+                "trustCustomCertificate", true,
                 "certificateChainInPemFormat",
                 "-----BEGIN CERTIFICATE-----\nMIIB...\n-----END CERTIFICATE-----",
                 "connectionTimeoutSeconds", 30,
@@ -72,9 +72,9 @@ class PulsarConnectorClientTest {
         when(configuration.getProperties()).thenReturn(Map.of(
                 "serviceUrl", "pulsar+ssl://localhost:6651",
                 "enableTls", true,
-                "useSelfSignedCertificate", true,
+                "trustCustomCertificate", true,
                 "nameCertificate", "my-ca",
-                "fingerprintSelfSignedCertificate", "AA:BB:CC",
+                "trustedCertificateFingerprint", "AA:BB:CC",
                 "connectionTimeoutSeconds", 30,
                 "operationTimeoutSeconds", 30,
                 "keepAliveIntervalSeconds", 30));
@@ -88,7 +88,7 @@ class PulsarConnectorClientTest {
         when(configuration.getProperties()).thenReturn(Map.of(
                 "serviceUrl", "pulsar+ssl://localhost:6651",
                 "enableTls", true,
-                "useSelfSignedCertificate", true,
+                "trustCustomCertificate", true,
                 "connectionTimeoutSeconds", 30,
                 "operationTimeoutSeconds", 30,
                 "keepAliveIntervalSeconds", 30));

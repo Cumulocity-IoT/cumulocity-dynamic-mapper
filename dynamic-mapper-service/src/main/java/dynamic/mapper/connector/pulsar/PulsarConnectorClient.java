@@ -258,6 +258,20 @@ public class PulsarConnectorClient extends AConnectorClient {
     }
 
     /**
+     * TLS is used when enabled explicitly or when the service URL already uses a TLS scheme. The base class
+     * only inspects a "url" property, which Pulsar does not have (it uses "serviceUrl").
+     */
+    @Override
+    protected boolean isSslRequired() {
+        Map<String, Object> properties = connectorConfiguration.getProperties();
+        if (Boolean.TRUE.equals(properties.get("enableTls"))) {
+            return true;
+        }
+        Object serviceUrl = properties.get("serviceUrl");
+        return serviceUrl instanceof String && isUsingTls((String) serviceUrl);
+    }
+
+    /**
      * Adjust service URL for TLS
      */
     private String adjustServiceUrlForTls(String originalUrl, Boolean enableTls) {
@@ -636,8 +650,12 @@ public class PulsarConnectorClient extends AConnectorClient {
                 .getOrDefault("trustCustomCertificate", false);
 
         if (trustCustomCertificate) {
-            if (configuration.getProperties().get("trustedCertificateFingerprint") == null ||
-                    configuration.getProperties().get("nameCertificate") == null) {
+            // Either an inline PEM chain or a reference (name + fingerprint) to the trusted-certificate store
+            Object pem = configuration.getProperties().get("certificateChainInPemFormat");
+            boolean hasInlinePem = pem instanceof String && !((String) pem).isBlank();
+            boolean hasStoreReference = configuration.getProperties().get("trustedCertificateFingerprint") != null
+                    && configuration.getProperties().get("nameCertificate") != null;
+            if (!hasInlinePem && !hasStoreReference) {
                 return false;
             }
         }
