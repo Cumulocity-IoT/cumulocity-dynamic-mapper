@@ -110,10 +110,10 @@ public abstract class AMQTTClient extends AConnectorClient {
         loadConfiguration();
 
         try {
-            Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
-                    .getOrDefault("useSelfSignedCertificate", false);
+            Boolean trustCustomCertificate = (Boolean) connectorConfiguration.getProperties()
+                    .getOrDefault("trustCustomCertificate", false);
 
-            if (useSelfSignedCertificate) {
+            if (trustCustomCertificate) {
                 initializeMqttSslConfiguration();
             }
 
@@ -403,10 +403,10 @@ public abstract class AMQTTClient extends AConnectorClient {
         }
 
         // Use base class certificate validation
-        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
+        Boolean trustCustomCertificate = (Boolean) configuration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
 
-        if (useSelfSignedCertificate) {
+        if (trustCustomCertificate) {
             if (!validateCertificateConfig(configuration)) {
                 return false;
             }
@@ -490,7 +490,7 @@ public abstract class AMQTTClient extends AConnectorClient {
                 .build());
 
         // TLS/SSL Certificate configuration (only visible for secure protocols)
-        configProps.put("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+        configProps.put("trustCustomCertificate", ConnectorPropertyBuilder.optionalBoolean()
                 .label("Trust custom server certificate")
                 .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates.")
                 .order(7)
@@ -498,30 +498,30 @@ public abstract class AMQTTClient extends AConnectorClient {
                 .condition("protocol", MQTT_PROTOCOL_MQTTS, MQTT_PROTOCOL_WSS)
                 .build());
 
-        configProps.put("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.largeText()
+        configProps.put("trustedCertificateFingerprint", ConnectorPropertyBuilder.largeText()
                 .label("Trusted certificate fingerprint")
                 .order(8)
                 .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
-                .condition("useSelfSignedCertificate", "true")
+                .condition("trustCustomCertificate", "true")
                 .build());
 
         configProps.put("nameCertificate", ConnectorPropertyBuilder.optionalString()
                 .label("Trusted certificate name")
                 .description("Name of the certificate in the Cumulocity trusted-certificate store.")
                 .order(9)
-                .condition("useSelfSignedCertificate", "true")
+                .condition("trustCustomCertificate", "true")
                 .build());
 
         configProps.put("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
                 .order(10)
                 .description("Either enter certificate in PEM format or identify certificate by name and fingerprint (must be uploaded as Trusted Certificate in Device Management)")
-                .condition("useSelfSignedCertificate", "true")
+                .condition("trustCustomCertificate", "true")
                 .build());
 
         configProps.put("disableHostnameValidation", ConnectorPropertyBuilder.optionalBoolean()
                 .order(11)
                 .defaultValue(false)
-                .condition("useSelfSignedCertificate", "true")
+                .condition("trustCustomCertificate", "true")
                 .build());
 
         // Wildcard support flags

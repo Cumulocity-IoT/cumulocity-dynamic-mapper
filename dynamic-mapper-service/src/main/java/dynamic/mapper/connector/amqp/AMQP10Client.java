@@ -529,11 +529,11 @@ public class AMQP10Client extends AConnectorClient {
 
         String protocol = (String) configuration.getProperties()
                 .getOrDefault("protocol", "amqp://");
-        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
+        Boolean trustCustomCertificate = (Boolean) configuration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
 
-        if ("amqps://".equals(protocol) && useSelfSignedCertificate) {
-            if (configuration.getProperties().get("fingerprintSelfSignedCertificate") == null ||
+        if ("amqps://".equals(protocol) && trustCustomCertificate) {
+            if (configuration.getProperties().get("trustedCertificateFingerprint") == null ||
                     configuration.getProperties().get("nameCertificate") == null) {
                 return false;
             }
@@ -585,15 +585,15 @@ public class AMQP10Client extends AConnectorClient {
         Integer port = (Integer) connectorConfiguration.getProperties().get("port");
         Boolean automaticRecovery = (Boolean) connectorConfiguration.getProperties()
                 .getOrDefault("automaticRecovery", true);
-        Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
+        Boolean trustCustomCertificate = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
 
         StringBuilder baseUri = new StringBuilder();
         baseUri.append(protocol).append(host).append(":").append(port);
 
         // Append SSL transport options for amqps://
         if ("amqps://".equals(protocol)) {
-            if (useSelfSignedCertificate) {
+            if (trustCustomCertificate) {
                 baseUri.append("?transport.trustAll=true&transport.verifyHost=false");
             }
             // For standard amqps:// the JVM default truststore is used automatically
@@ -697,30 +697,30 @@ public class AMQP10Client extends AConnectorClient {
                         .order(7))
 
                 // TLS/SSL certificate configuration (only for amqps://)
-                .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                .property("trustCustomCertificate", ConnectorPropertyBuilder.optionalBoolean()
                         .label("Trust custom server certificate")
                         .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates.")
                         .order(8)
                         .defaultValue(false)
                         .condition("protocol", "amqps://"))
 
-                .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.largeText()
+                .property("trustedCertificateFingerprint", ConnectorPropertyBuilder.largeText()
                         .label("Trusted certificate fingerprint")
                         .order(9)
                         .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
                 .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
                         .label("Trusted certificate name")
                         .description("Name of the certificate in the Cumulocity trusted-certificate store.")
                         .order(10)
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
                 .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
                         .order(11)
                         .description("Certificate in PEM format, or identify by name/fingerprint " +
                                 "(must be uploaded as Trusted Certificate in Device Management)")
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
                 // Connection behaviour
                 .property("automaticRecovery", ConnectorPropertyBuilder.optionalBoolean()

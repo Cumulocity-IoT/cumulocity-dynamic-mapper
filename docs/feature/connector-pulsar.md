@@ -36,7 +36,7 @@ Built via `ConnectorSpecificationBuilder.create("Apache Pulsar", ConnectorType.P
 |---|---|---|---|---|
 | `serviceUrl` | string | yes | `pulsar://localhost:6650` | |
 | `enableTls` | boolean | no | `false` | |
-| `useSelfSignedCertificate` + cert fields | boolean / string | no | `false` | shown when `enableTls=true` |
+| `trustCustomCertificate` + cert fields | boolean / string | no | `false` | shown when `enableTls=true` |
 | `authenticationMethod` | option | no | `none` | `none`/`token`/`oauth2`/`tls`/`basic` |
 | `authenticationParams` | sensitive | no | — | shown for non-`none` methods; for `basic` use JSON `{"userId":"…","password":"…"}` |
 | `connectionTimeoutSeconds` / `operationTimeoutSeconds` / `keepAliveIntervalSeconds` | numeric | yes | `30` each | |

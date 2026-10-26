@@ -973,7 +973,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                         .hidden(true)
                         .defaultValue(false))
 
-                .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                .property("trustCustomCertificate", ConnectorPropertyBuilder.optionalBoolean()
                         .label("Trust custom server certificate")
                         .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates.")
                         .order(2)
@@ -982,7 +982,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                         .defaultValue(false)
                         .condition("enableTls", "true"))
 
-                .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.optionalString()
+                .property("trustedCertificateFingerprint", ConnectorPropertyBuilder.optionalString()
                         .label("Trusted certificate fingerprint")
                         .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
                         .order(3)

@@ -124,7 +124,7 @@ public class MQTT5Client extends AMQTTClient {
                 }
                 builder.simpleAuth(authBuilder.build());
             }
-            if ((Boolean) connectorConfiguration.getProperties().getOrDefault("useSelfSignedCertificate", false)) {
+            if ((Boolean) connectorConfiguration.getProperties().getOrDefault("trustCustomCertificate", false)) {
                 initializeMqttSslConfiguration();
                 builder.sslConfig(mqttSslConfig);
             } else if (MQTT_PROTOCOL_MQTTS.equals(protocol) || MQTT_PROTOCOL_WSS.equals(protocol)) {
@@ -192,10 +192,10 @@ public class MQTT5Client extends AMQTTClient {
         }
 
         // Add SSL if needed
-        boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
+        boolean trustCustomCertificate = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
 
-        if (useSelfSignedCertificate && mqttSslConfig != null) {
+        if (trustCustomCertificate && mqttSslConfig != null) {
             builder.sslConfig(mqttSslConfig);
             log.debug("{} - Using self-signed certificate for MQTT5", tenant);
         } else if (MQTT_PROTOCOL_MQTTS.equals(protocol) || MQTT_PROTOCOL_WSS.equals(protocol)) {

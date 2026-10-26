@@ -331,6 +331,13 @@ describe('ConnectorConfigurationDrawerComponent', () => {
       expect(field.fieldGroup?.[0]?.props?.label).toBe('Formatted String');
     });
 
+    it('should prefer the backend-provided label over the formatted key', () => {
+      mockEntry.property.label = 'Trust custom server certificate';
+      const field = component['createStringField'](mockEntry);
+
+      expect(field.fieldGroup?.[0]?.props?.label).toBe('Trust custom server certificate');
+    });
+
     it('should create sensitive string field with password type', () => {
       mockEntry.property.type = ConnectorPropertyType.SENSITIVE_STRING_PROPERTY;
       const field = component['createSensitiveStringField'](mockEntry);

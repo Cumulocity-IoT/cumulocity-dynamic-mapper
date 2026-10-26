@@ -114,8 +114,8 @@ the MQTT, AMQP and Pulsar connectors:
 
 | Property | Description |
 |---|---|
-| `useSelfSignedCertificate` | Enables custom CA trust. The remaining properties below only appear once it is on. |
-| `nameCertificate` + `fingerprintSelfSignedCertificate` | Reference a certificate already uploaded to the Cumulocity trusted-certificate store (**Device Management → Management → Trusted certificates**). |
+| `trustCustomCertificate` | Enables custom CA trust. The remaining properties below only appear once it is on. |
+| `nameCertificate` + `trustedCertificateFingerprint` | Reference a certificate already uploaded to the Cumulocity trusted-certificate store (**Device Management → Management → Trusted certificates**). |
 | `certificateChainInPemFormat` | Paste the CA certificate chain inline in PEM format, as an alternative to the certificate store. |
 | `disableHostnameValidation` | Skips TLS hostname verification. **Insecure — development and testing only.** |
 

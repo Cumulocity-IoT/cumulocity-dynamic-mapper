@@ -568,10 +568,10 @@ public boolean initialize() {
     loadConfiguration();
 
     try {
-        Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration
-            .getProperties().getOrDefault("useSelfSignedCertificate", false);
+        Boolean trustCustomCertificate = (Boolean) connectorConfiguration
+            .getProperties().getOrDefault("trustCustomCertificate", false);
 
-        if (useSelfSignedCertificate) {
+        if (trustCustomCertificate) {
             // 30+ lines of SSL setup code
             cert = loadCertificateFromConfiguration();
             // ... create truststore

@@ -554,11 +554,11 @@ public class AMQPClient extends AConnectorClient {
         // Check SSL certificate requirements
         String protocol = (String) configuration.getProperties()
                 .getOrDefault("protocol", "amqp://");
-        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
+        Boolean trustCustomCertificate = (Boolean) configuration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
 
-        if ("amqps://".equals(protocol) && useSelfSignedCertificate) {
-            if (configuration.getProperties().get("fingerprintSelfSignedCertificate") == null ||
+        if ("amqps://".equals(protocol) && trustCustomCertificate) {
+            if (configuration.getProperties().get("trustedCertificateFingerprint") == null ||
                     configuration.getProperties().get("nameCertificate") == null) {
                 return false;
             }
@@ -661,29 +661,29 @@ public class AMQPClient extends AConnectorClient {
                         .defaultValue(false))
 
                 // TLS/SSL Certificate configuration (only for amqps://)
-                .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                .property("trustCustomCertificate", ConnectorPropertyBuilder.optionalBoolean()
                         .label("Trust custom server certificate")
                         .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates.")
                         .order(10)
                         .defaultValue(false)
                         .condition("protocol", "amqps://"))
 
-                .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.largeText()
+                .property("trustedCertificateFingerprint", ConnectorPropertyBuilder.largeText()
                         .label("Trusted certificate fingerprint")
                         .order(11)
                         .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
                 .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
                         .label("Trusted certificate name")
                         .description("Name of the certificate in the Cumulocity trusted-certificate store.")
                         .order(12)
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
                 .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
                         .order(13)
                         .description("Either enter certificate in PEM format or identify certificate by name and fingerprint (must be uploaded as Trusted Certificate in Device Management)")
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
                 // Connection behavior
                 .property("automaticRecovery", ConnectorPropertyBuilder.optionalBoolean()

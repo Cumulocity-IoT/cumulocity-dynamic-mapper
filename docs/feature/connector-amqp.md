@@ -46,7 +46,7 @@ Built via `ConnectorSpecificationBuilder.create("AMQP Connector", ConnectorType.
 | `exchangeType` | option | no | `topic` | `topic`/`direct`/`fanout`/`headers` |
 | `queuePrefix` | string | no | `""` | |
 | `autoDeleteQueue` | boolean | no | `false` | |
-| `useSelfSignedCertificate` + cert fields | boolean / string / large text | no | `false` | shown when `protocol=amqps://` |
+| `trustCustomCertificate` + cert fields | boolean / string / large text | no | `false` | shown when `protocol=amqps://` |
 | `automaticRecovery` | boolean | no | `true` | |
 | `supportsWildcardInTopicInbound` / `Outbound` | boolean | no | `true` / `false` | |
 
@@ -115,7 +115,7 @@ Built via `ConnectorSpecificationBuilder.create("AMQP 1.0 Connector", ConnectorT
 | `clientId` | string | no | — | JMS client/container ID |
 | `destinationType` | option | yes | `queue` | `queue`/`topic` |
 | `contentType` | string | no | — | e.g. `application/json;charset=utf-8` |
-| `useSelfSignedCertificate` + cert fields | boolean / string / large text | no | `false` | shown when `protocol=amqps://` |
+| `trustCustomCertificate` + cert fields | boolean / string / large text | no | `false` | shown when `protocol=amqps://` |
 | `automaticRecovery` | boolean | no | `true` | see failover transport, below |
 | `supportsWildcardInTopicInbound` / `Outbound` | boolean | no | `false` / `false` | no wildcard support either direction |
 

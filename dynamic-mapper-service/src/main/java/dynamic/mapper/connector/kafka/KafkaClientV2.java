@@ -280,8 +280,8 @@ public class KafkaClientV2 extends AConnectorClient {
         String saslMechanism = (String) connectorConfiguration.getProperties()
                 .getOrDefault("saslMechanism", "SCRAM-SHA-256");
         String groupId = (String) connectorConfiguration.getProperties().get("groupId");
-        boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
+        boolean trustCustomCertificate = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
         boolean disableHostnameValidation = (Boolean) connectorConfiguration.getProperties()
                 .getOrDefault("disableHostnameValidation", false);
 
@@ -320,7 +320,7 @@ public class KafkaClientV2 extends AConnectorClient {
             producerProps.put("sasl.jaas.config", jaasCfg);
             producerProps.put("sasl.mechanism", saslMechanism);
             producerProps.put("security.protocol", "SASL_SSL");
-        } else if (useSelfSignedCertificate) {
+        } else if (trustCustomCertificate) {
             log.info("{} - Using SSL security protocol (no authentication, custom CA trust)", tenant);
             consumerProps.put("security.protocol", "SSL");
             producerProps.put("security.protocol", "SSL");
@@ -332,7 +332,7 @@ public class KafkaClientV2 extends AConnectorClient {
 
         // Custom/self-signed CA trust - Kafka's client supports inline PEM truststores natively
         // (KIP-651), so no manual KeyStore/SSLContext plumbing is needed here, unlike MQTT/AMQP.
-        if (useSelfSignedCertificate) {
+        if (trustCustomCertificate) {
             try {
                 dynamic.mapper.connector.core.client.Certificate cert = loadCertificateFromConfiguration();
                 String certPem = cert.getCertInPemFormat();
@@ -1068,9 +1068,9 @@ public class KafkaClientV2 extends AConnectorClient {
             }
         }
 
-        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
-        if (useSelfSignedCertificate && !validateCertificateConfig(configuration)) {
+        Boolean trustCustomCertificate = (Boolean) configuration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
+        if (trustCustomCertificate && !validateCertificateConfig(configuration)) {
             return false;
         }
 
@@ -1212,7 +1212,7 @@ public class KafkaClientV2 extends AConnectorClient {
                         .order(0))
 
                 // TLS / custom CA trust (optional) - same pattern as the MQTT/AMQP/Pulsar connectors
-                .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                .property("trustCustomCertificate", ConnectorPropertyBuilder.optionalBoolean()
                         .label("Trust custom server certificate")
                         .order(1)
                         .defaultValue(false)
@@ -1222,24 +1222,24 @@ public class KafkaClientV2 extends AConnectorClient {
                         .label("Trusted certificate name")
                         .order(2)
                         .description("Name of the certificate in the Cumulocity trusted-certificate store.")
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
-                .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.optionalString()
+                .property("trustedCertificateFingerprint", ConnectorPropertyBuilder.optionalString()
                         .label("Trusted certificate fingerprint")
                         .order(3)
                         .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
                 .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
                         .order(4)
                         .description("Certificate chain in PEM format (alternative to referencing the Cumulocity certificate store)")
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
                 .property("disableHostnameValidation", ConnectorPropertyBuilder.optionalBoolean()
                         .order(5)
                         .defaultValue(false)
                         .description("Disable TLS hostname verification (insecure, for development/testing only)")
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
                 // SASL authentication (optional)
                 .property("username", ConnectorPropertyBuilder.optionalString()

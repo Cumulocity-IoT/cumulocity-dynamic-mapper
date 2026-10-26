@@ -194,7 +194,7 @@ public class PulsarConnectorClient extends AConnectorClient {
         try {
             // The probe is never initialize()d (that would change connector status), so the trust certificate that
             // buildPulsarClient() installs for a self-signed broker has to be loaded here.
-            if (Boolean.TRUE.equals(connectorConfiguration.getProperties().get("useSelfSignedCertificate"))
+            if (Boolean.TRUE.equals(connectorConfiguration.getProperties().get("trustCustomCertificate"))
                     && cert == null) {
                 cert = loadCertificateFromConfiguration();
             }
@@ -284,10 +284,10 @@ public class PulsarConnectorClient extends AConnectorClient {
      * Configure TLS settings
      */
     private void configureTls(ClientBuilder clientBuilder) throws PulsarClientException {
-        Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
+        Boolean trustCustomCertificate = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
 
-        if (useSelfSignedCertificate && cert != null) {
+        if (trustCustomCertificate && cert != null) {
             try {
                 Path certFile = writeCertificateToTempFile(cert.getCertInPemFormat());
                 clientBuilder.tlsTrustCertsFilePath(certFile.toString());
@@ -632,11 +632,11 @@ public class PulsarConnectorClient extends AConnectorClient {
             return false;
         }
 
-        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
+        Boolean trustCustomCertificate = (Boolean) configuration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
 
-        if (useSelfSignedCertificate) {
-            if (configuration.getProperties().get("fingerprintSelfSignedCertificate") == null ||
+        if (trustCustomCertificate) {
+            if (configuration.getProperties().get("trustedCertificateFingerprint") == null ||
                     configuration.getProperties().get("nameCertificate") == null) {
                 return false;
             }
@@ -906,24 +906,24 @@ public class PulsarConnectorClient extends AConnectorClient {
                         .order(1)
                         .defaultValue(false))
 
-                .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                .property("trustCustomCertificate", ConnectorPropertyBuilder.optionalBoolean()
                         .label("Trust custom server certificate")
                         .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates.")
                         .order(2)
                         .defaultValue(false)
                         .condition("enableTls", "true"))
 
-                .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.optionalString()
+                .property("trustedCertificateFingerprint", ConnectorPropertyBuilder.optionalString()
                         .label("Trusted certificate fingerprint")
                         .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
                         .order(3)
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
                 .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
                         .label("Trusted certificate name")
                         .description("Name of the certificate in the Cumulocity trusted-certificate store.")
                         .order(4)
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
                 // Authentication
                 .property("authenticationMethod", ConnectorPropertyBuilder.optionalOption()

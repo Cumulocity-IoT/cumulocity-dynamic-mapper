@@ -122,3 +122,10 @@ add a tenant-keyed store.
 
 - **INBOUND** = Broker → C8Y
 - **OUTBOUND** = C8Y → Broker. `filterMapping` is a JSONata expression required on all outbound mappings (default `'true'`).
+
+## Renamed connector properties
+
+Connector property names are stored per tenant, so a rename needs a migration. `ConnectorConfiguration.LEGACY_PROPERTY_NAMES`
+maps old to new names and `setProperties` applies it (also on JSON deserialization and import); a value under the new name
+wins. Current renames: `useSelfSignedCertificate` -> `trustCustomCertificate`, `fingerprintSelfSignedCertificate` ->
+`trustedCertificateFingerprint`. Keep an entry for as long as old configurations or exports may exist.

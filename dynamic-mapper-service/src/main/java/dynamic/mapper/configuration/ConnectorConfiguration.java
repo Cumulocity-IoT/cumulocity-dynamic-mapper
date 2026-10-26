@@ -73,6 +73,35 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
     @JsonProperty("properties")
     private Map<String, Object> properties = new HashMap<>();
 
+    /**
+     * Legacy property names (key) and the names that replace them (value). Stored configurations and
+     * imports may still carry the old names, so they are renamed whenever the properties are set.
+     */
+    private static final Map<String, String> LEGACY_PROPERTY_NAMES = Map.of(
+            "useSelfSignedCertificate", "trustCustomCertificate",
+            "fingerprintSelfSignedCertificate", "trustedCertificateFingerprint");
+
+    public void setProperties(Map<String, Object> properties) {
+        this.properties = properties;
+        migrateLegacyProperties();
+    }
+
+    /**
+     * Renames deprecated property names to their current names. A value under the new name wins over
+     * one under the old name.
+     */
+    private void migrateLegacyProperties() {
+        if (properties == null) {
+            return;
+        }
+        LEGACY_PROPERTY_NAMES.forEach((legacy, current) -> {
+            if (properties.containsKey(legacy)) {
+                Object value = properties.remove(legacy);
+                properties.putIfAbsent(current, value);
+            }
+        });
+    }
+
     @Override
     public ConnectorConfiguration clone() {
         ConnectorConfiguration cloned = new ConnectorConfiguration();

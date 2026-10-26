@@ -46,8 +46,8 @@ Built in `createConnectorSpecification()`
 | Property | Type | Required | Default | Notes |
 |---|---|---|---|---|
 | `bootstrapServers` | string | yes | — | |
-| `useSelfSignedCertificate` | boolean | no | `false` | trust a self-signed/internal CA |
-| `nameCertificate`, `fingerprintSelfSignedCertificate`, `certificateChainInPemFormat` | string / large text | no | — | shown when `useSelfSignedCertificate=true` |
+| `trustCustomCertificate` | boolean | no | `false` | trust a self-signed/internal CA |
+| `nameCertificate`, `trustedCertificateFingerprint`, `certificateChainInPemFormat` | string / large text | no | — | shown when `trustCustomCertificate=true` |
 | `disableHostnameValidation` | boolean | no | `false` | insecure, dev/test only |
 | `username` | string | no | — | e.g. a Confluent Cloud API key |
 | `password` | sensitive | no | — | shown when `username` set |
@@ -64,7 +64,7 @@ if not configured.
 `buildKafkaProperties()`: if `username`+`password` are set, uses `SASL_SSL` with a
 JAAS config built for the selected mechanism (`PLAIN`→`PlainLoginModule`,
 `SCRAM-SHA-256`/`-512`→`ScramLoginModule`, unknown mechanisms fall back to Scram with a
-warning). Else if `useSelfSignedCertificate` is set, uses `security.protocol=SSL` only
+warning). Else if `trustCustomCertificate` is set, uses `security.protocol=SSL` only
 (no auth) with an inline PEM truststore (`ssl.truststore.type=PEM`,
 `ssl.truststore.certificates=<PEM>` — Kafka natively supports inline PEM per KIP-651,
 unlike MQTT/AMQP which need a manual KeyStore/SSLContext). Otherwise `PLAINTEXT`.
