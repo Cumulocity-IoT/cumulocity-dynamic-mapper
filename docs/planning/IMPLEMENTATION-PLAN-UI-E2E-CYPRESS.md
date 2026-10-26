@@ -57,7 +57,7 @@ Principles:
 | 1 | Audit the existing 9 specs, run them green locally | 1–2 d | done (2026-10-26) |
 | 2 | Fill the `data-cy` gaps in the main components | 1–2 d | in progress |
 | 3 | Page objects and API helpers for setup/teardown | 2 d | done as helper modules (2026-10-26); full page objects deferred until a spec needs them |
-| 4 | New journey specs (outbound, Smart Function editor, deployment, subscriptions, test/debug) | 4–6 d | started: activate/deactivate inbound mapping done; rest open |
+| 4 | New journey specs (outbound, Smart Function editor, deployment, subscriptions, test/debug) | 4–6 d | started: activate/deactivate and stepper dry-run done; rest open |
 | 5 | CI job: dedicated tenant, secrets, MQTT broker container, artifacts on failure | 2–3 d | open |
 | 6 | Stabilisation and flake hunting | 2–3 d | open |
 
@@ -154,3 +154,20 @@ Each new hook gets used by a spec in the same change, or it is not added.
     edit while a run is in progress.
 - 2026-10-26: verification: full suite 17/17 green (1 run), then 2 fixes for remaining flakes
   (dropdown), `configuration` + `delete-connector` 3/3 green. Not yet: several consecutive full runs.
+- 2026-10-26: item 4: `mapping/test-mapping-step.cy.ts` (stepper test step: dry run hits
+  POST /test/mapping, console panel shows, cancel creates nothing). The stepper steps 1-6 are now
+  `driveSmartFunctionStepperToTestStep()` in `support/dm-ui.ts`, shared with `create-mapping-ui`.
+
+## Findings (product, not test issues)
+
+- **Default Smart Function template does not match the default sample payload.** A new inbound
+  Smart Function mapping preselects `template-SMART-INBOUND-04` (reads
+  `payload.sensorData.temp_val`), but the test step starts with a different sample payload
+  (`{Temperature:{value,unit}, time, externalId}`). The first Dry Run therefore logs
+  `TypeError: Cannot read property 'temp_val' of undefined (line 24)` and produces no request
+  (HTTP 200, empty result). Possibly intended, but a new user's first dry run fails. The spec
+  deliberately does not assert a produced result; once this is decided it should.
+- The Add-connector button is usable before the connector specifications have loaded (drawer then
+  shows "No items").
+- The dry run console also warns that the template uses ES `export` syntax, which is stripped
+  because "Support ESM modules" is disabled.

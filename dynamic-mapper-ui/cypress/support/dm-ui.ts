@@ -56,3 +56,58 @@ export const leaveApp = (): void => {
   });
   cy.visit('/cypress-blank');
 };
+
+/**
+ * Drive the Add-mapping flow for an inbound SMART_FUNCTION mapping up to (and including) the
+ * test step of the stepper: type drawer (expert mode, Smart Function), connector, general
+ * settings (name + topic), default templates and default code. Leaves the stepper on the test
+ * step; the caller decides whether to dry-run, confirm or cancel.
+ *
+ * A SMART_FUNCTION is used on purpose: it needs no device-identifier substitution, so the
+ * validity gate passes without clicking template-tree nodes. Hooks: dm-mapping-*, plus the Formly
+ * ids #mappingName / #mappingTopic / #mappingTopicSample (stable, defined in the form).
+ */
+export const driveSmartFunctionStepperToTestStep = (name: string, topic: string): void => {
+  // 1. Open the Add-mapping type drawer.
+  cy.getByData('dm-mapping-add').filter(':visible').first().click();
+
+  // 2. Type drawer: expert mode -> Smart Function transformation -> Continue. Wait for the
+  //    code-template select to load + auto-select a template, otherwise the new mapping has no
+  //    code and the stepper won't open.
+  cy.getByData('dm-mapping-type-expert-mode-toggle').click({ force: true });
+  selectC8yOption('dm-mapping-type-transformation-type-select', 'Smart Function');
+  cy.getByData('dm-mapping-type-code-template-select').should('be.visible');
+  cy.getByData('dm-mapping-type-continue').should('be.enabled').click();
+
+  // 3. Connector step: selecting a row enables Next (the header select-all has no hook).
+  cy.getByData('dm-mapping-stepper-buttons-connector').should('be.visible');
+  cy.get('d11r-mapping-connector [data-cy="c8y-data-grid--checkbox"]')
+    .first()
+    .click({ force: true });
+  cy.getByData('dm-mapping-stepper-buttons-connector')
+    .find('button')
+    .contains('Next')
+    .should('not.be.disabled');
+  stepperButton('dm-mapping-stepper-buttons-connector', 'Next');
+
+  // 4. General settings: name + topic. The sample must have the same number of topic levels
+  //    as the mapping topic; ours has no wildcards, so the sample is identical.
+  cy.get('#mappingName').clear();
+  cy.get('#mappingName').type(name);
+  cy.get('#mappingTopic').clear();
+  cy.get('#mappingTopic').type(topic);
+  cy.get('#mappingTopicSample').clear();
+  cy.get('#mappingTopicSample').type(topic);
+  cy.getByData('dm-mapping-stepper-buttons-general')
+    .find('button')
+    .contains('Next')
+    .should('not.be.disabled');
+  stepperButton('dm-mapping-stepper-buttons-general', 'Next');
+
+  // 5. Templates and 6. transformation code: accept the defaults.
+  stepperButton('dm-mapping-stepper-buttons-templates', 'Next');
+  stepperButton('dm-mapping-stepper-buttons-transformation', 'Next');
+
+  // 7. The test step is now showing.
+  cy.getByData('dm-mapping-stepper-buttons-test').should('be.visible');
+};

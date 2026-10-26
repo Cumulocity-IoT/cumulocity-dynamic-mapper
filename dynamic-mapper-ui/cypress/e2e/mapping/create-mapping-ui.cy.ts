@@ -7,9 +7,9 @@ import {
 import { DM_SERVICE, deleteMappingsByName } from '../../support/dm-api';
 import {
   dismissDeprecationNotice,
+  driveSmartFunctionStepperToTestStep,
   leaveApp,
   openInboundMappings,
-  selectC8yOption,
   stepperButton,
 } from '../../support/dm-ui';
 
@@ -50,51 +50,8 @@ describe('Mapping — create a simple mapping via the UI stepper', () => {
   it('creates a SMART_FUNCTION inbound mapping through the stepper', () => {
     cy.intercept('POST', `${DM_SERVICE}/mapping`).as('createMapping');
 
-    // 1. Open the Add-mapping type drawer.
-    cy.getByData('dm-mapping-add').filter(':visible').first().click();
-
-    // 2. Type drawer: expert mode → Smart Function transformation → Continue.
-    cy.getByData('dm-mapping-type-expert-mode-toggle').click({ force: true });
-    selectC8yOption('dm-mapping-type-transformation-type-select', 'Smart Function');
-    // Wait for the code-template select to load + auto-select a template before
-    // continuing — otherwise the new mapping has no code and the stepper won't open.
-    cy.getByData('dm-mapping-type-code-template-select').should('be.visible');
-    cy.getByData('dm-mapping-type-continue').should('be.enabled').click();
-
-    // 3. Stepper step 1 (connector): wait for the stepper to open, select a connector
-    //    so Next enables, then Next.
-    cy.getByData('dm-mapping-stepper-buttons-connector').should('be.visible');
-    // Data-row select checkboxes carry data-cy="c8y-data-grid--checkbox" (the header
-    // select-all has none); selecting one enables the step's Next button.
-    cy.get('d11r-mapping-connector [data-cy="c8y-data-grid--checkbox"]')
-      .first()
-      .click({ force: true });
-    cy.getByData('dm-mapping-stepper-buttons-connector')
-      .find('button')
-      .contains('Next')
-      .should('not.be.disabled');
-    stepperButton('dm-mapping-stepper-buttons-connector', 'Next');
-
-    // 4. Step 2 (general settings): name + topic (Formly id hooks).
-    cy.get('#mappingName').clear();
-    cy.get('#mappingName').type(mappingName);
-    cy.get('#mappingTopic').clear();
-    cy.get('#mappingTopic').type(mappingTopic);
-    // The sample must have the SAME number of topic levels as the mapping topic;
-    // our topic has no wildcards, so the sample is identical.
-    cy.get('#mappingTopicSample').clear();
-    cy.get('#mappingTopicSample').type(mappingTopic);
-    cy.getByData('dm-mapping-stepper-buttons-general')
-      .find('button')
-      .contains('Next')
-      .should('not.be.disabled');
-    stepperButton('dm-mapping-stepper-buttons-general', 'Next');
-
-    // 5. Step 3 (templates): accept defaults → Next.
-    stepperButton('dm-mapping-stepper-buttons-templates', 'Next');
-
-    // 6. Step 4 (transformation, code editor): default code → Next.
-    stepperButton('dm-mapping-stepper-buttons-transformation', 'Next');
+    // 1-6. Type drawer, connector, general settings, templates and code -> test step.
+    driveSmartFunctionStepperToTestStep(mappingName, mappingTopic);
 
     // 7. Step 5 (test): Confirm → save.
     stepperButton('dm-mapping-stepper-buttons-test', 'Confirm');
