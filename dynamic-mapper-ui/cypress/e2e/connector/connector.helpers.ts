@@ -137,8 +137,10 @@ export const fillMqttConnectorForm = (
   cy.get('#mqttPort').type(String(mqttConnectionInput.mqttPort));
   cy.get('#user').clear();
   cy.get('#user').type(mqttConnectionInput.user);
-  cy.get('#password').clear();
-  cy.get('#password').type(mqttConnectionInput.password);
+  // `#password` also matches the <c8y-password-input id="password"> host element (not
+  // clearable); target the real input inside it.
+  cy.get('c8y-password-input#password input').clear();
+  cy.get('c8y-password-input#password input').type(mqttConnectionInput.password);
   cy.get('#clientId').clear();
   cy.get('#clientId').type(mqttConnectionInput.clientId);
 };
@@ -194,9 +196,18 @@ export const openConnectorRowAction = (
     return;
   }
 
-  cy.get('@connectorRow')
-    .find('[data-cy="c8y-data-grid--row-actions-dropdown"]')
-    .click({ force: true });
+  // Open the overflow menu. A forced click can land on a stale element when the grid
+  // re-renders (connector status updates arrive in real time), so click normally (Cypress waits
+  // for an attached, stable element) and retry if the menu did not open.
+  const openMenu = (attempt: number): void => {
+    cy.get('@connectorRow').find('[data-cy="c8y-data-grid--row-actions-dropdown"]').click();
+    cy.get('body').then(($body) => {
+      if ($body.find('.dropdown-menu:visible').length === 0 && attempt < 3) {
+        openMenu(attempt + 1);
+      }
+    });
+  };
+  openMenu(1);
   cy.get('.dropdown-menu').filter(':visible').contains(actionLabel).click({
     force: true,
   });

@@ -41,3 +41,18 @@ export const stepperButton = (hook: string, label: string): Cypress.Chainable =>
  */
 export const toolbarButton = (hook: string): Cypress.Chainable<JQuery<HTMLElement>> =>
   cy.getByData(hook).filter(':visible').first();
+
+/**
+ * Navigate away from the app before teardown code that clears cookies (REST cleanup does).
+ * Otherwise the still-open app loses its session, redirects to a login page and the next
+ * command can hang on a page load that never completes.
+ */
+export const leaveApp = (): void => {
+  // cy.visit('about:blank') is not supported (resolved against baseUrl -> 404), so serve a
+  // stub page from the dev server's origin and visit that.
+  cy.intercept('GET', '/cypress-blank', {
+    headers: { 'content-type': 'text/html' },
+    body: '<!doctype html><title>blank</title>',
+  });
+  cy.visit('/cypress-blank');
+};

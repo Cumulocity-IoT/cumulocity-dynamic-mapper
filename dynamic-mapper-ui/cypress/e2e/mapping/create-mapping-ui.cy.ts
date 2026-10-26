@@ -7,6 +7,7 @@ import {
 import { DM_SERVICE, deleteMappingsByName } from '../../support/dm-api';
 import {
   dismissDeprecationNotice,
+  leaveApp,
   openInboundMappings,
   selectC8yOption,
   stepperButton,
@@ -34,6 +35,7 @@ describe('Mapping — create a simple mapping via the UI stepper', () => {
   });
 
   after(() => {
+    leaveApp();
     deleteMappingsByName(mappingName);
     cleanupTestUser(testUser);
   });

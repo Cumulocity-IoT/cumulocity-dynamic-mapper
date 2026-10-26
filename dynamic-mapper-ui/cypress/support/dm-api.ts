@@ -26,7 +26,13 @@ export const createMappingViaApi = (payload: object): Cypress.Chainable<string> 
     });
 };
 
-/** Read a mapping (GET /mapping/<id>). */
+/**
+ * Read a mapping (GET /mapping/<id>) with admin basic auth. Call it only while no UI session is
+ * open (before login, or in teardown): cy.request attaches the browser's session cookie, and a
+ * cookie plus basic auth conflict with a 401. Clearing cookies is not an option while the UI is
+ * under test, because it logs the test user out. While the UI is open, assert on the UI's own
+ * network calls with cy.intercept instead.
+ */
 export const getMappingViaApi = (id: string): Cypress.Chainable<Cypress.Response<any>> => {
   cy.clearCookies();
   return cy.request({ url: `${DM_SERVICE}/mapping/${id}`, auth: adminAuth() });

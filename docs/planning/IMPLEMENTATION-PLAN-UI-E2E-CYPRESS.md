@@ -57,7 +57,7 @@ Principles:
 | 1 | Audit the existing 9 specs, run them green locally | 1–2 d | done (2026-10-26) |
 | 2 | Fill the `data-cy` gaps in the main components | 1–2 d | in progress |
 | 3 | Page objects and API helpers for setup/teardown | 2 d | done as helper modules (2026-10-26); full page objects deferred until a spec needs them |
-| 4 | New journey specs (outbound, Smart Function editor, deployment, subscriptions, test/debug) | 4–6 d | open |
+| 4 | New journey specs (outbound, Smart Function editor, deployment, subscriptions, test/debug) | 4–6 d | started: activate/deactivate inbound mapping done; rest open |
 | 5 | CI job: dedicated tenant, secrets, MQTT broker container, artifacts on failure | 2–3 d | open |
 | 6 | Stabilisation and flake hunting | 2–3 d | open |
 
@@ -135,3 +135,22 @@ Each new hook gets used by a spec in the same change, or it is not added.
   via REST) and `cypress/support/dm-ui.ts` (deprecation modal, inbound route, c8y-select,
   stepper buttons, toolbar). The three mapping specs shrank by ~110 lines; 6 tests re-verified green.
   Decision: no page-object classes yet; plain helper functions are enough until a journey needs state.
+- 2026-10-26: item 4 started: `mapping/activate-mapping.cy.ts` (API-created mapping, toggle in the
+  grid, assert via `cy.intercept` on the ACTIVATE_MAPPING operation, persisted state checked in
+  teardown). Payload builder moved to `support/dm-fixtures.ts`.
+- 2026-10-26: lessons learned (all fixed, keep in mind for new specs):
+  - `cy.clearCookies()` logs the browser's test user out. Never call a cookie-clearing API helper
+    while the UI is under test; assert on the UI's own network calls (`cy.intercept`) instead.
+  - `cy.request` with basic auth fails with 401 when a session cookie is attached; GET helpers
+    must run before login or in teardown.
+  - `cy.visit('about:blank')` is not supported; `leaveApp()` serves a stub page via intercept.
+    Call it before teardown that clears cookies (otherwise the open app redirects to a login page
+    and the next command can hang 5 minutes on a page load).
+  - `#password` matches the `<c8y-password-input>` host as well as the input; use
+    `c8y-password-input#password input`.
+  - The row-action dropdown was clicked with `force: true` and flaked when the grid re-rendered;
+    it now clicks normally and retries.
+  - Editing files under `dynamic-mapper-ui` makes `ng serve` recompile and reload the page; do not
+    edit while a run is in progress.
+- 2026-10-26: verification: full suite 17/17 green (1 run), then 2 fixes for remaining flakes
+  (dropdown), `configuration` + `delete-connector` 3/3 green. Not yet: several consecutive full runs.

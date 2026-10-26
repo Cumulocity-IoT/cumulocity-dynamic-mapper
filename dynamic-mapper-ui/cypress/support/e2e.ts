@@ -15,6 +15,7 @@
 
 import 'cumulocity-cypress/commands';
 import { registerCommands } from './commands';
+import { leaveApp } from './dm-ui';
 import { deleteAllCypressConnectors } from '../e2e/connector/connector.helpers';
 
 registerCommands();
@@ -27,5 +28,6 @@ before(() => {
 // the API (admin auth). This returns the tenant to its original state even if a
 // test failed before its afterEach ran, or leaked an untracked connector.
 after(() => {
+  leaveApp();
   deleteAllCypressConnectors();
 });
