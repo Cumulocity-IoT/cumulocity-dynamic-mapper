@@ -3,6 +3,7 @@
  */
 
 export const INBOUND_MAPPINGS_ROUTE = 'c8y-pkg-dynamic-mapper/node1/mappings/inbound';
+export const OUTBOUND_MAPPINGS_ROUTE = 'c8y-pkg-dynamic-mapper/node1/mappings/outbound';
 
 /**
  * The mappings page may show a one-off deprecation notice modal that covers the toolbar;
@@ -23,6 +24,11 @@ export const dismissDeprecationNotice = (): void => {
  */
 export const openInboundMappings = (): void => {
   cy.visitShellAndWaitForSelector(INBOUND_MAPPINGS_ROUTE, 'en', 'body', 60000);
+};
+
+/** Open the outbound mappings page (see openInboundMappings for the loading caveat). */
+export const openOutboundMappings = (): void => {
+  cy.visitShellAndWaitForSelector(OUTBOUND_MAPPINGS_ROUTE, 'en', 'body', 60000);
 };
 
 /** Pick an option in a c8y-select identified by its data-cy hook. */

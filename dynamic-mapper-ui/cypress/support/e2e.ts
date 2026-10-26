@@ -20,6 +20,11 @@ import { deleteAllCypressConnectors } from '../e2e/connector/connector.helpers';
 
 registerCommands();
 
+// "ResizeObserver loop completed with undelivered notifications" is a harmless browser warning
+// raised by resizable editors (the code/JSON editors); it must not fail a test. Any other
+// uncaught application error still does.
+Cypress.on('uncaught:exception', (err) => !err.message.includes('ResizeObserver loop'));
+
 before(() => {
   Cypress.session.clearAllSavedSessions();
 });

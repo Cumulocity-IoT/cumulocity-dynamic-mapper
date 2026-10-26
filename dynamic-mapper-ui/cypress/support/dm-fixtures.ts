@@ -41,3 +41,37 @@ export const buildInboundEventMapping = (suffix: number) => ({
   genericDeviceIdentifier: '_IDENTITY_.externalId',
   qos: 'AT_LEAST_ONCE',
 });
+
+/**
+ * Outbound C8Y EVENT -> broker mapping payload, a port of
+ * resources/testing/integration/test-outbound-event.sh (inactive, DEFAULT transformation).
+ */
+export const buildOutboundEventMapping = (suffix: number) => ({
+  name: `test-outbound-event-${suffix}`,
+  identifier: `oevt${suffix}`,
+  mappingTopic: 'dmtest/out/event',
+  mappingTopicSample: 'dmtest/out/event',
+  publishTopic: 'dmtest/out/event',
+  publishTopicSample: 'dmtest/out/event',
+  targetAPI: 'EVENT',
+  direction: 'OUTBOUND',
+  mappingType: 'JSON',
+  transformationType: 'DEFAULT',
+  filterMapping: 'true',
+  sourceTemplate:
+    '{"text":"event text","time":"2022-08-05T00:14:49.389+02:00","type":"c8y_TestEvent"}',
+  targetTemplate: '{"type":"c8y_TestEvent","text":"hello","deviceId":"source-id"}',
+  substitutions: [
+    {
+      pathSource: '_IDENTITY_.externalId',
+      pathTarget: 'deviceId',
+      repairStrategy: 'DEFAULT',
+      expandArray: false,
+    },
+  ],
+  active: false,
+  debug: false,
+  useExternalId: true,
+  externalIdType: 'c8y_Serial',
+  qos: 'AT_LEAST_ONCE',
+});

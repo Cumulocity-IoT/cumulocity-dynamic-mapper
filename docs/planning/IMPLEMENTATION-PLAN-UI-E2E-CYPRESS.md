@@ -57,7 +57,7 @@ Principles:
 | 1 | Audit the existing 9 specs, run them green locally | 1–2 d | done (2026-10-26) |
 | 2 | Fill the `data-cy` gaps in the main components | 1–2 d | in progress |
 | 3 | Page objects and API helpers for setup/teardown | 2 d | done as helper modules (2026-10-26); full page objects deferred until a spec needs them |
-| 4 | New journey specs (outbound, Smart Function editor, deployment, subscriptions, test/debug) | 4–6 d | started: activate/deactivate and stepper dry-run done; rest open |
+| 4 | New journey specs (outbound, Smart Function editor, deployment, subscriptions, test/debug) | 4–6 d | 5 journeys done (activate, stepper dry-run, outbound listing, connector duplicate, navigation smoke); open: subscriptions, Smart Function editor, outbound creation via stepper, deployment |
 | 5 | CI job: dedicated tenant, secrets, MQTT broker container, artifacts on failure | 2–3 d | open |
 | 6 | Stabilisation and flake hunting | 2–3 d | open |
 
@@ -157,6 +157,13 @@ Each new hook gets used by a spec in the same change, or it is not added.
 - 2026-10-26: item 4: `mapping/test-mapping-step.cy.ts` (stepper test step: dry run hits
   POST /test/mapping, console panel shows, cancel creates nothing). The stepper steps 1-6 are now
   `driveSmartFunctionStepperToTestStep()` in `support/dm-ui.ts`, shared with `create-mapping-ui`.
+- 2026-10-26: item 4, more journeys: `mapping/outbound-mapping.cy.ts` (API-created outbound mapping
+  listed in the outbound grid), `connector/duplicate-connector.cy.ts` (Duplicate -> rename -> POST),
+  `navigation.cy.ts` (all 21 pages load, no backend 4xx/5xx, no error toast). `edit-connector`
+  already existed. Global `uncaught:exception` filter ignores only the benign
+  "ResizeObserver loop" warning from the editors. **Full suite: 14 specs, 21/21 green.**
+  Smoke-test lesson: a check that runs before the page has loaded cannot fail (first version
+  passed 21 pages in 7 s); wait for pending backend calls before asserting.
 
 ## Findings (product, not test issues)
 
