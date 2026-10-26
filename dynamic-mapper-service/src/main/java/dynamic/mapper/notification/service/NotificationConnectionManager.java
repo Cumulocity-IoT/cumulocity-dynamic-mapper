@@ -616,7 +616,7 @@ public class NotificationConnectionManager {
         }
 
         for (OutboundMessageDispatcher dispatcher : dispatchers.values()) {
-            if (!isValidDispatcher(dispatcher)) {
+            if (!isValidDispatcher(dispatcher) || isTestConnector(dispatcher)) {
                 continue;
             }
 
@@ -677,7 +677,7 @@ public class NotificationConnectionManager {
         }
 
         for (OutboundMessageDispatcher dispatcher : dispatchers.values()) {
-            if (!isValidDispatcher(dispatcher)) {
+            if (!isValidDispatcher(dispatcher) || isTestConnector(dispatcher)) {
                 continue;
             }
 
@@ -1116,6 +1116,14 @@ public class NotificationConnectionManager {
                         state == ReadyState.CLOSED ||
                         state == ReadyState.NOT_YET_CONNECTED ||
                         (statusCode != null && statusCode == 401));
+    }
+
+    /**
+     * The TEST connector is driven via TestController only; OutboundMessageDispatcher.onNotification
+     * drops live notifications for it, so a Notification 2.0 WebSocket would be pure overhead.
+     */
+    private boolean isTestConnector(OutboundMessageDispatcher dispatcher) {
+        return dispatcher.getConnectorClient().getConnectorType() == ConnectorType.TEST;
     }
 
     private Boolean isValidDispatcher(OutboundMessageDispatcher dispatcher) {
