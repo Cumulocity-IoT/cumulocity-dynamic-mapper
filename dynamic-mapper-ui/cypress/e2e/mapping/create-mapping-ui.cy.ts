@@ -1,12 +1,10 @@
 import type { IUser } from '@c8y/client';
-import { slowCypressDown } from 'cypress-slow-down';
 import {
   createConnectorTestUser,
   setupTestUser,
   cleanupTestUser,
 } from '../connector/connector.helpers';
 
-slowCypressDown();
 
 const DM = '/service/dynamic-mapper-service';
 const adminAuth = () => ({
@@ -146,8 +144,10 @@ describe('Mapping — create a simple mapping via the UI stepper', () => {
     cy.wait('@createMapping').its('response.statusCode').should('be.oneOf', [200, 201]);
 
     // 8. Verify it is listed in the inbound grid (search to beat pagination).
-    cy.get('c8y-data-grid input[type="search"]').clear();
-    cy.get('c8y-data-grid input[type="search"]').type(mappingName);
+    // The "mapping created" toast (c8y-alert-outlet) overlays the search box; it is only
+    // a transient overlay, so interact through it.
+    cy.get('c8y-data-grid input[type="search"]').clear({ force: true });
+    cy.get('c8y-data-grid input[type="search"]').type(mappingName, { force: true });
     cy.get('c8y-data-grid').contains(mappingName).should('exist');
 
     cy.screenshot('mapping-ui-created');

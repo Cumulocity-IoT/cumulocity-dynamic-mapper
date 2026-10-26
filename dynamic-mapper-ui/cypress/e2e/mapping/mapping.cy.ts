@@ -1,12 +1,10 @@
 import type { IUser } from '@c8y/client';
-import { slowCypressDown } from 'cypress-slow-down';
 import {
   createConnectorTestUser,
   setupTestUser,
   cleanupTestUser,
 } from '../connector/connector.helpers';
 
-slowCypressDown();
 
 /**
  * Example mapping specs demonstrating the `dm-mapping-*` data-cy hooks added to

@@ -1,12 +1,10 @@
 import type { IUser } from '@c8y/client';
-import { slowCypressDown } from 'cypress-slow-down';
 import {
   createConnectorTestUser,
   setupTestUser,
   cleanupTestUser,
 } from '../connector/connector.helpers';
 
-slowCypressDown();
 
 const DM = '/service/dynamic-mapper-service';
 

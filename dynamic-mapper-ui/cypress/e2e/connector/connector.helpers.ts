@@ -153,8 +153,10 @@ export const addConnectorViaUi = (
   mqttConnectionInput: MqttConnectionInput,
   connectorName: string
 ): Cypress.Chainable<string> => {
-  cy.getByData('dm-connector-add').should('be.enabled').click();
+  // Wait for the specifications BEFORE opening the drawer: it builds its connector-type
+  // options once from the grid's already-loaded list, so opening it early shows "No items".
   cy.wait('@getConnectorSpecifications');
+  cy.getByData('dm-connector-add').should('be.enabled').click();
   fillMqttConnectorForm(mqttConnectionInput, connectorName);
   // The drawer's save button stays disabled until the form is valid, so wait
   // for it to enable before clicking.
