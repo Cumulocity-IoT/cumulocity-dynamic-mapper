@@ -795,7 +795,8 @@ public class ServiceConfigurationService {
     }
 
     private static final Set<String> SYSTEM_ANNOTATIONS =
-            Set.of("@name", "@description", "@templateType", "@direction", "@defaultTemplate", "@internal", "@readonly");
+            Set.of("@name", "@description", "@templateType", "@direction", "@defaultTemplate", "@internal", "@readonly",
+                    "@sampleTopic", "@samplePayload");
     // Note: @direction is no longer parsed or emitted -- it is listed only so that legacy headers
     // still carrying it have the line stripped on the next rectify. See TemplateType#getDirection.
 
@@ -907,6 +908,16 @@ public class ServiceConfigurationService {
         sb.append(renderDescription(codeTemplate.description)).append("\n");
         sb.append(" * @templateType ").append(codeTemplate.templateType.name()).append("\n");
         sb.append(" * @defaultTemplate ").append(codeTemplate.defaultTemplate).append("\n");
+        if (codeTemplate.sampleTopic != null && !codeTemplate.sampleTopic.isBlank()) {
+            sb.append(" * @sampleTopic ").append(codeTemplate.sampleTopic.trim()).append("\n");
+        }
+        if (codeTemplate.samplePayload != null && !codeTemplate.samplePayload.isBlank()) {
+            // Continuation lines are indented past the tag so extractAnnotation reads them back.
+            sb.append(" * @samplePayload\n");
+            for (String line : codeTemplate.samplePayload.strip().split("\\R")) {
+                sb.append(" *   ").append(line.strip().isEmpty() ? "" : line).append("\n");
+            }
+        }
         // @internal and @readonly are deliberately not written: for a shipped template they follow
         // from @templateType (TemplateType.isFrameworkOwnedWhenShipped), and for a tenant's own
         // template they are request data that a comment cannot change. Emitting them invited an
