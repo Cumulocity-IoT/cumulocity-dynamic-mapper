@@ -402,18 +402,49 @@ public class Mapping implements Serializable {
                 Arrays.asList(Mapping.splitTopicIncludingSeparatorAsArray(topic)));
     }
 
+    // Linear scans instead of regular expressions like "/+$": those backtrack quadratically on a topic made of
+    // many slashes, and topics come from outside.
+    private static String stripLeadingSlashes(String s) {
+        int start = 0;
+        while (start < s.length() && s.charAt(start) == '/') {
+            start++;
+        }
+        return s.substring(start);
+    }
+
+    private static String stripTrailingSlashes(String s) {
+        int end = s.length();
+        while (end > 0 && s.charAt(end - 1) == '/') {
+            end--;
+        }
+        return s.substring(0, end);
+    }
+
+    /** Reduces a run of two or more leading or trailing slashes to a single one. */
+    private static String reduceLeadingTrailingSlashes(String s) {
+        int leading = s.length() - stripLeadingSlashes(s).length();
+        if (leading >= 2) {
+            s = "/" + s.substring(leading);
+        }
+        int trailing = s.length() - stripTrailingSlashes(s).length();
+        if (trailing >= 2) {
+            s = s.substring(0, s.length() - trailing) + "/";
+        }
+        return s;
+    }
+
     public static String[] splitTopicExcludingSeparatorAsArray(String topic, boolean cutOffLeadingSlash) {
         String topix = topic.trim();
 
         if (cutOffLeadingSlash) {
             // Original behavior: remove both leading and trailing slashes
-            topix = topix.replaceAll("(\\/{1,}$)|(^\\/{1,})", "");
+            topix = stripTrailingSlashes(stripLeadingSlashes(topix));
             return topix.split("\\/");
         } else {
             // New behavior: keep leading slash, remove only trailing slashes
-            topix = topix.replaceAll("\\/{1,}$", "");
+            topix = stripTrailingSlashes(topix);
             if (topix.startsWith("//")) {
-                topix = "/" + topix.replaceAll("^/+", "");
+                topix = "/" + stripLeadingSlashes(topix);
             }
 
             if (topix.startsWith("/")) {
@@ -460,7 +491,7 @@ public class Mapping implements Serializable {
         if (topic == null)
             topic = "";
         // reduce multiple leading or trailing "/" to just one "/"
-        String nt = topic.trim().replaceAll(REGEXP_REDUCE_LEADING_TRAILING_SLASHES, "/");
+        String nt = reduceLeadingTrailingSlashes(topic.trim());
         // do not use starting slashes, see as well
         // https://www.hivemq.com/blog/mqtt-essentials-part-5-mqtt-topics-best-practices/
         nt = nt.replaceAll(REGEXP_REMOVE_TRAILING_SLASHES, "#");

@@ -58,6 +58,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriBuilder;
 import reactor.core.publisher.Mono;
 
+import dynamic.mapper.util.OutboundUrlValidator;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -300,6 +301,7 @@ public class WebHook extends AConnectorClient {
      * Build WebClient with authentication and headers
      */
     private WebClient buildWebClient() {
+        OutboundUrlValidator.requireSafe(baseUrl);
         String authentication = (String) connectorConfiguration.getProperties().get("authentication");
         String user = (String) connectorConfiguration.getProperties().get("user");
         String password = (String) connectorConfiguration.getProperties().get("password");

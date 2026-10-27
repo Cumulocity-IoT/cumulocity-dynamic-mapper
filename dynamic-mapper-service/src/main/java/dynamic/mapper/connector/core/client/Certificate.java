@@ -411,6 +411,44 @@ public class Certificate {
     // ========== UTILITY METHODS ==========
 
     /**
+     * True if the text holds a BEGIN/END block whose body is whitespace-separated base64. A linear scan on purpose:
+     * the equivalent regex has overlapping quantifiers and backtracks polynomially on crafted input.
+     */
+    private static boolean containsWellFormedCertificate(String pem) {
+        final String begin = "-----BEGIN CERTIFICATE-----";
+        final String end = "-----END CERTIFICATE-----";
+        int from = 0;
+        while (true) {
+            int start = pem.indexOf(begin, from);
+            if (start < 0) {
+                return false;
+            }
+            int bodyStart = start + begin.length();
+            int stop = pem.indexOf(end, bodyStart);
+            if (stop < 0) {
+                return false;
+            }
+            if (bodyStart < stop && Character.isWhitespace(pem.charAt(bodyStart))
+                    && isBase64Body(pem, bodyStart, stop)) {
+                return true;
+            }
+            from = bodyStart;
+        }
+    }
+
+    private static boolean isBase64Body(String pem, int from, int to) {
+        for (int i = from; i < to; i++) {
+            char c = pem.charAt(i);
+            boolean valid = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
+                    || c == '+' || c == '/' || c == '=' || Character.isWhitespace(c);
+            if (!valid) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Normalize PEM format - ensures proper line breaks
      */
     private static String normalizePemFormat(String pem) {
@@ -419,8 +457,7 @@ public class Certificate {
         }
 
         // If already properly formatted, return as-is
-        if (pem.contains("\n") && pem
-                .matches("(?s).*-----BEGIN CERTIFICATE-----\\s+[A-Za-z0-9+/=\\s]+-----END CERTIFICATE-----.*")) {
+        if (pem.contains("\n") && containsWellFormedCertificate(pem)) {
             return pem.trim();
         }
 

@@ -56,6 +56,7 @@ import com.dashjoin.jsonata.json.Json;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
+import dynamic.mapper.util.OutboundUrlValidator;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -794,6 +795,7 @@ public class HttpPollingConnector extends AConnectorClient {
     }
 
     private WebClient buildWebClient() {
+        OutboundUrlValidator.requireSafe(baseUrl);
         String authentication = (String) connectorConfiguration.getProperties().get("authentication");
         String user = (String) connectorConfiguration.getProperties().get("user");
         String password = (String) connectorConfiguration.getProperties().get("password");
