@@ -248,12 +248,97 @@ public class PulsarConnectorClient extends AConnectorClient {
                 return ConnectionTestResult.ok(
                         "Connected and authenticated (not authorized for the probe topic, which is expected)", null);
             }
-            return ConnectionTestResult.failed("Connection failed: " + cause.getMessage(), null);
+            return ConnectionTestResult.failed(explainFailure("Connection failed: " + cause.getMessage()), null);
         } catch (java.util.concurrent.TimeoutException e) {
-            return ConnectionTestResult.failed("Connection timed out", null);
+            return ConnectionTestResult.failed(explainFailure("Connection timed out"), null);
         } catch (Exception e) {
             return ConnectionTestResult.failed("Connection failed: " + e.getMessage(), null);
         }
+    }
+
+    /**
+     * The Pulsar client swallows connection-level errors (TLS, refused, unreachable) and retries until the operation
+     * times out, so the probe only sees a generic timeout while the actual cause is just in the log. Re-diagnose with
+     * a plain socket/TLS handshake against the first broker and return its message, or the generic one if the
+     * socket-level check finds nothing wrong.
+     */
+    private String explainFailure(String genericMessage) {
+        try {
+            String serviceUrl = (String) connectorConfiguration.getProperties().get("serviceUrl");
+            if (StringUtils.isEmpty(serviceUrl) || !serviceUrl.contains("://")) {
+                return genericMessage;
+            }
+            boolean tls = isSslRequired();
+            String first = serviceUrl.substring(serviceUrl.indexOf("://") + 3).split(",")[0].trim().split("/")[0];
+            String host = first;
+            int port = tls ? 6651 : 6650;
+            int colon = first.lastIndexOf(':');
+            if (colon > 0) {
+                host = first.substring(0, colon);
+                port = Integer.parseInt(first.substring(colon + 1));
+            }
+            java.net.Socket socket = new java.net.Socket();
+            try {
+                socket.connect(new java.net.InetSocketAddress(host, port), 5000);
+                if (tls) {
+                    javax.net.ssl.SSLSocket ssl = (javax.net.ssl.SSLSocket) buildTrustContext().getSocketFactory()
+                            .createSocket(socket, host, port, true);
+                    ssl.setSoTimeout(5000);
+                    ssl.startHandshake();
+                }
+            } finally {
+                socket.close();
+            }
+            return genericMessage;
+        } catch (javax.net.ssl.SSLHandshakeException e) {
+            boolean custom = Boolean.TRUE.equals(connectorConfiguration.getProperties().get("trustCustomCertificate"));
+            if (isCertificateTrustFailure(e)) {
+                return custom
+                        ? "The broker's TLS certificate is not signed by the configured custom certificate. Check that "
+                        + "the certificate (chain) matches the broker's certificate."
+                        : "The broker's TLS certificate is not trusted by the service. Enable 'Trust custom server "
+                        + "certificate' and provide the broker's (CA) certificate.";
+            }
+            return "TLS handshake with the broker failed: " + e.getMessage();
+        } catch (java.net.SocketTimeoutException e) {
+            return "The broker did not answer within 5 seconds. Check host, port and firewall rules.";
+        } catch (java.net.ConnectException e) {
+            return "The broker refused the connection: " + e.getMessage() + ". Check the port and that the broker is running.";
+        } catch (Exception e) {
+            return genericMessage;
+        }
+    }
+
+    private static boolean isCertificateTrustFailure(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause() == t ? null : t.getCause()) {
+            if (t instanceof java.security.cert.CertPathBuilderException
+                    || t instanceof java.security.cert.CertificateException) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** SSL context trusting the configured custom certificate(s), or the JVM defaults when none is configured. */
+    private javax.net.ssl.SSLContext buildTrustContext() throws Exception {
+        javax.net.ssl.TrustManagerFactory tmf = javax.net.ssl.TrustManagerFactory
+                .getInstance(javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm());
+        if (Boolean.TRUE.equals(connectorConfiguration.getProperties().get("trustCustomCertificate")) && cert != null) {
+            java.security.KeyStore store = java.security.KeyStore.getInstance(java.security.KeyStore.getDefaultType());
+            store.load(null, null);
+            int i = 0;
+            for (java.security.cert.Certificate c : java.security.cert.CertificateFactory.getInstance("X.509")
+                    .generateCertificates(new java.io.ByteArrayInputStream(
+                            cert.getCertInPemFormat().getBytes(StandardCharsets.UTF_8)))) {
+                store.setCertificateEntry("custom-" + i++, c);
+            }
+            tmf.init(store);
+        } else {
+            tmf.init((java.security.KeyStore) null);
+        }
+        javax.net.ssl.SSLContext context = javax.net.ssl.SSLContext.getInstance("TLS");
+        context.init(null, tmf.getTrustManagers(), null);
+        return context;
     }
 
     /**
