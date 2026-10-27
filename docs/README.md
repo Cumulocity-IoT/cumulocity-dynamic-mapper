@@ -11,6 +11,7 @@ looking for how to *use* the deployed app, that lives in the app itself (Help me
 | [installation.md](installation.md) | Prerequisites, roles/permissions, deploying the microservice and the web app plugin |
 | [limitations.md](limitations.md) | Supported C8Y APIs, JSONata engine differences, transformation type overview |
 | [architecture.md](architecture.md) | System-level component overview, module structure, message flow |
+| [how_to_pulsar_kafka_mqtt.md](how_to_pulsar_kafka_mqtt.md) | How Pulsar (tenant, namespace, topic, subscription), Kafka, and MQTT terms map to mapping and connector settings |
 
 ## For developers and agents working on the code
 

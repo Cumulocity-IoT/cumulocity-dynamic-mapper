@@ -882,11 +882,17 @@ public class PulsarConnectorClient extends AConnectorClient {
     // ===== Helper Methods =====
 
     /**
-     * Build subscription name
+     * Build subscription name. By default the configured name is a prefix and the sanitized topic is appended, so
+     * every topic gets its own subscription. With "useSubscriptionNameAsIs" the configured name is used unchanged,
+     * for brokers that only authorize a pre-provisioned subscription name. A subscription is scoped per topic in
+     * Pulsar, so the same name can be used for several topics.
      */
-    private String buildSubscriptionName(String topic) {
-        String baseName = (String) connectorConfiguration.getProperties()
-                .getOrDefault("subscriptionName", "dynamic-mapper-subscription");
+    String buildSubscriptionName(String topic) {
+        Map<String, Object> properties = connectorConfiguration.getProperties();
+        String baseName = (String) properties.getOrDefault("subscriptionName", "dynamic-mapper-subscription");
+        if (Boolean.TRUE.equals(properties.get("useSubscriptionNameAsIs")) && StringUtils.isNotBlank(baseName)) {
+            return baseName + (additionalSubscriptionIdTest != null ? additionalSubscriptionIdTest : "");
+        }
         String sanitizedTopic = sanitizeTopicForSubscriptionName(topic);
         String suffix = additionalSubscriptionIdTest != null ? additionalSubscriptionIdTest : "";
         return baseName + "-" + sanitizedTopic + suffix;
@@ -940,9 +946,29 @@ public class PulsarConnectorClient extends AConnectorClient {
             // Already a full Pulsar name: only the wildcards need translating
             return escapeRegexCharacters(mqttTopic).replace("+", "[^/]+").replace("#", ".*");
         }
-        String pulsarTenant = (String) connectorConfiguration.getProperties().getOrDefault("pulsarTenant", "public");
-        String namespace = (String) connectorConfiguration.getProperties().getOrDefault("pulsarNamespace", "default");
-        return buildPulsarTopicRegex(mqttTopic, pulsarTenant, namespace);
+        String[] location = resolveTopicLocation();
+        return buildPulsarTopicRegex(mqttTopic, location[1], location[2], location[0]);
+    }
+
+    /**
+     * Resolves {domain, tenant, namespace} used to turn a logical topic into a full Pulsar name. The namespace
+     * property may hold the combined form {@code tenant/namespace}, which then takes precedence over
+     * {@code pulsarTenant}. The domain is "persistent" unless {@code pulsarTopicDomain} is "non-persistent".
+     */
+    String[] resolveTopicLocation() {
+        Map<String, Object> properties = connectorConfiguration.getProperties();
+        String tenantName = (String) properties.getOrDefault("pulsarTenant", "public");
+        String namespace = (String) properties.getOrDefault("pulsarNamespace", "default");
+        if (namespace != null && namespace.contains("/")) {
+            String combined = namespace.trim();
+            int slash = combined.indexOf('/');
+            tenantName = combined.substring(0, slash).trim();
+            namespace = combined.substring(slash + 1).trim();
+        }
+        Object configuredDomain = properties.get("pulsarTopicDomain");
+        String domain = "non-persistent".equalsIgnoreCase(String.valueOf(configuredDomain)) ? "non-persistent"
+                : "persistent";
+        return new String[] { domain, tenantName, namespace };
     }
 
     /**
@@ -952,6 +978,10 @@ public class PulsarConnectorClient extends AConnectorClient {
      * flattening. {@code +} matches exactly one level (no {@code -} or {@code /}), {@code #} the remaining levels.
      */
     static String buildPulsarTopicRegex(String mqttTopic, String pulsarTenant, String namespace) {
+        return buildPulsarTopicRegex(mqttTopic, pulsarTenant, namespace, "persistent");
+    }
+
+    static String buildPulsarTopicRegex(String mqttTopic, String pulsarTenant, String namespace, String domain) {
         String[] levels = mqttTopic.split("/", -1);
         StringBuilder local = new StringBuilder();
         for (int i = 0; i < levels.length; i++) {
@@ -969,7 +999,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                 local.append(level.replace(" ", "_").replaceAll("[^a-zA-Z0-9._-]", "_").replace(".", "\\."));
             }
         }
-        return "persistent://" + pulsarTenant.replace(".", "\\.") + "/" + namespace.replace(".", "\\.")
+        return domain + "://" + pulsarTenant.replace(".", "\\.") + "/" + namespace.replace(".", "\\.")
                 + "/" + local;
     }
 
@@ -1032,10 +1062,9 @@ public class PulsarConnectorClient extends AConnectorClient {
         }
 
         String pulsarTopicName = convertMqttTopicToPulsarTopicName(topicPattern);
-        String pulsarTenant = (String) connectorConfiguration.getProperties().getOrDefault("pulsarTenant", "public");
-        String namespace = (String) connectorConfiguration.getProperties().getOrDefault("pulsarNamespace", "default");
+        String[] location = resolveTopicLocation();
 
-        return String.format("persistent://%s/%s/%s", pulsarTenant, namespace, pulsarTopicName);
+        return String.format("%s://%s/%s/%s", location[0], location[1], location[2], pulsarTopicName);
     }
 
     /**
@@ -1159,27 +1188,41 @@ public class PulsarConnectorClient extends AConnectorClient {
 
                 .property("subscriptionName", ConnectorPropertyBuilder.optionalString()
                         .order(14)
-                        .description("Controls how Pulsar subscription names are generated"))
+                        .description("Prefix of the generated Pulsar subscription names, or the exact subscription name if 'Use subscription name as is' is enabled"))
+
+                .property("useSubscriptionNameAsIs", ConnectorPropertyBuilder.optionalBoolean()
+                        .order(15)
+                        .label("Use subscription name as is")
+                        .description("Use the subscription name unchanged instead of appending the topic. Enable this if the broker only allows a pre-provisioned subscription name.")
+                        .defaultValue(false))
 
                 // Wildcard support (read-only)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(15)
+                        .order(16)
                         .readonly(true)
                         .defaultValue(true))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(16)
+                        .order(17)
                         .readonly(true)
                         .defaultValue(false))
 
                 // Pulsar-specific settings
                 .property("pulsarTenant", ConnectorPropertyBuilder.optionalString()
-                        .order(17)
+                        .order(18)
                         .defaultValue("public"))
 
                 .property("pulsarNamespace", ConnectorPropertyBuilder.optionalString()
-                        .order(18)
+                        .order(19)
+                        .description("Namespace for topics that are not given as a full Pulsar name. May also be entered as 'tenant/namespace', which overrides the tenant above.")
                         .defaultValue("default"))
+
+                .property("pulsarTopicDomain", ConnectorPropertyBuilder.optionalOption()
+                        .order(20)
+                        .label("Topic type")
+                        .description("Applies to topics that are not given as a full Pulsar name.")
+                        .defaultValue("persistent")
+                        .optionsWithLabels("persistent", "Persistent", "non-persistent", "Non-persistent"))
 
                 .build();
     }

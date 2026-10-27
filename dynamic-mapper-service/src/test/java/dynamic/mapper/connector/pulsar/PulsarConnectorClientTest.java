@@ -304,6 +304,51 @@ class PulsarConnectorClientTest {
         assertTrue(context.getErrors().isEmpty());
     }
 
+    @Test
+    void subscriptionNameIsPrefixedWithTopicByDefault() {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of("subscriptionName", "my-sub"));
+
+        String name = new TestPulsarConnectorClient(mock(PulsarClient.class), configuration)
+                .buildSubscriptionName("devices/+/data");
+
+        assertEquals("my-sub-devices-wildcard-data", name);
+    }
+
+    @Test
+    void subscriptionNameIsUsedAsIsWhenEnabled() {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "subscriptionName", "example-subscription",
+                "useSubscriptionNameAsIs", true));
+
+        String name = new TestPulsarConnectorClient(mock(PulsarClient.class), configuration)
+                .buildSubscriptionName("PERSISTENT://example-tenant/example-namespace/COMMON");
+
+        assertEquals("example-subscription", name);
+    }
+
+    @Test
+    void combinedTenantAndNamespaceIsSplit() {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "pulsarTenant", "ignored", "pulsarNamespace", "example-tenant/example-namespace"));
+
+        assertArrayEquals(new String[] { "persistent", "example-tenant", "example-namespace" },
+                new TestPulsarConnectorClient(mock(PulsarClient.class), configuration).resolveTopicLocation());
+    }
+
+    @Test
+    void nonPersistentDomainIsHonored() {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "pulsarTenant", "t", "pulsarNamespace", "n", "pulsarTopicDomain", "non-persistent"));
+
+        assertArrayEquals(new String[] { "non-persistent", "t", "n" },
+                new TestPulsarConnectorClient(mock(PulsarClient.class), configuration).resolveTopicLocation());
+        assertEquals("non-persistent://t/n/a-b", PulsarConnectorClient.buildPulsarTopicRegex("a/b", "t", "n", "non-persistent"));
+    }
+
     private static class TestPulsarConnectorClient extends PulsarConnectorClient {
         TestPulsarConnectorClient(PulsarClient client, ConnectorConfiguration configuration) {
             pulsarClient = client;
