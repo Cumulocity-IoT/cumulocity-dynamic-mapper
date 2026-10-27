@@ -936,7 +936,7 @@ public class PulsarConnectorClient extends AConnectorClient {
         }
 
         validateMqttWildcards(mqttTopic);
-        if (mqttTopic.startsWith("persistent://") || mqttTopic.startsWith("non-persistent://")) {
+        if (startsWithIgnoreCase(mqttTopic, "persistent://") || startsWithIgnoreCase(mqttTopic, "non-persistent://")) {
             // Already a full Pulsar name: only the wildcards need translating
             return escapeRegexCharacters(mqttTopic).replace("+", "[^/]+").replace("#", ".*");
         }
@@ -1016,10 +1016,18 @@ public class PulsarConnectorClient extends AConnectorClient {
     }
 
     /**
+     * Case-insensitive variant of String#startsWith, since Pulsar topic schemes
+     * (persistent://, non-persistent://) may be configured with any letter casing.
+     */
+    private static boolean startsWithIgnoreCase(String value, String prefix) {
+        return value.regionMatches(true, 0, prefix, 0, prefix.length());
+    }
+
+    /**
      * Ensure Pulsar topic format
      */
     private String ensurePulsarTopicFormat(String topicPattern) {
-        if (topicPattern.startsWith("persistent://") || topicPattern.startsWith("non-persistent://")) {
+        if (startsWithIgnoreCase(topicPattern, "persistent://") || startsWithIgnoreCase(topicPattern, "non-persistent://")) {
             return topicPattern;
         }
 
