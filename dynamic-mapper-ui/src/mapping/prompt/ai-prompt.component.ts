@@ -30,6 +30,7 @@ import { Mapping, Substitution, MappingType, RepairStrategy, SAMPLE_TEMPLATES_C8
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
 import { AgentChatConfig, AIMessage, ToolCallPart, AssistantMessageDisplayConfig, ChatHistory, ClientAgentDefinition, Suggestion } from '@c8y/ngx-components/ai';
+import { EditorComponent } from '@c8y/ngx-components/editor';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { TranslateService } from '@ngx-translate/core';
 import { AiAgentService, toClientAgentDefinition } from '../core/ai-agent.service';
@@ -57,7 +58,7 @@ const SUBMIT_SUBSTITUTIONS_TOOL = 'submit-substitutions';
   styleUrls: ['./ai-prompt.component.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports:[CoreModule, AgentChatComponent],
+  imports:[CoreModule, AgentChatComponent, EditorComponent],
   host: { class: 'd-contents' }
 })
 export class AiPromptComponent implements OnInit {
@@ -160,6 +161,13 @@ export class AiPromptComponent implements OnInit {
       gettext('AI-generated responses can contain errors. Verify the details before use.')
     ),
     showCumulativeUsage: true
+  };
+
+  /** Read-only preview of `generatedCode`, so the user can check it before pressing Save. */
+  readonly codePreviewEditorOptions: EditorComponent['editorOptions'] = {
+    language: 'javascript',
+    readOnly: true,
+    minimap: { enabled: false }
   };
 
   /** Exposed for the template header */
