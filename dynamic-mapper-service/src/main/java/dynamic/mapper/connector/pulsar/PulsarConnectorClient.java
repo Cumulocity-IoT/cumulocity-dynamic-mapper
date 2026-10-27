@@ -471,6 +471,16 @@ public class PulsarConnectorClient extends AConnectorClient {
      */
     private void configureAuthentication(ClientBuilder clientBuilder, String authMethod, String authParams)
             throws PulsarClientException {
+        if (ClientCredentialsAuthentication.AUTH_NAME.equals(authMethod)) {
+            String clientId = (String) connectorConfiguration.getProperties().get("clientId");
+            String clientSecret = (String) connectorConfiguration.getProperties().get("clientSecret");
+            if (StringUtils.isEmpty(clientId) || StringUtils.isEmpty(clientSecret)) {
+                throw new PulsarClientException("Client ID and client secret are required for client_creds authentication");
+            }
+            clientBuilder.authentication(new ClientCredentialsAuthentication(clientId, clientSecret));
+            log.debug("{} - Using client credentials authentication", tenant);
+            return;
+        }
         if (!"none".equals(authMethod) && !StringUtils.isEmpty(authParams)) {
             try {
                 switch (authMethod) {
@@ -1098,6 +1108,8 @@ public class PulsarConnectorClient extends AConnectorClient {
                         .defaultValue("none")
                         .optionsWithLabels("none", "None", "token", "Token", "oauth2", "OAuth2",
                                 "tls", "TLS", "basic", "Basic"))
+                        // "client_creds" is implemented (ClientCredentialsAuthentication, clientId/clientSecret below)
+                        // but disabled: add ("client_creds", "Client credentials") to the options to offer it again.
 
                 .property("authenticationParams", ConnectorPropertyBuilder.optionalSensitive()
                         .order(7)
@@ -1106,48 +1118,60 @@ public class PulsarConnectorClient extends AConnectorClient {
                                 + "TLS and OAuth2: the JSON parameters of the corresponding Pulsar authentication plugin.")
                         .condition("authenticationMethod", "token", "oauth2", "tls", "basic"))
 
+                .property("clientId", ConnectorPropertyBuilder.optionalString()
+                        .order(8)
+                        .label("Client ID")
+                        .description("Client ID sent to the broker as base64(clientId:clientSecret) using the custom 'client_creds' authentication method.")
+                        .condition("authenticationMethod", "client_creds"))
+
+                .property("clientSecret", ConnectorPropertyBuilder.optionalSensitive()
+                        .order(9)
+                        .label("Client secret")
+                        .description("Client secret for the 'client_creds' authentication method.")
+                        .condition("authenticationMethod", "client_creds"))
+
                 // Timeouts
                 .property("connectionTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
-                        .order(8)
+                        .order(10)
                         .defaultValue(DEFAULT_CONNECTION_TIMEOUT))
 
                 .property("operationTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
-                        .order(9)
+                        .order(11)
                         .defaultValue(DEFAULT_OPERATION_TIMEOUT))
 
                 .property("keepAliveIntervalSeconds", ConnectorPropertyBuilder.requiredNumeric()
-                        .order(10)
+                        .order(12)
                         .defaultValue(DEFAULT_KEEP_ALIVE))
 
                 // Subscription settings
                 .property("subscriptionType", ConnectorPropertyBuilder.optionalOption()
-                        .order(11)
+                        .order(13)
                         .defaultValue("Shared")
                         .optionsWithLabels("Exclusive", "Exclusive", "Shared", "Shared",
                                 "Failover", "Failover", "Key_Shared", "Key Shared"))
 
                 .property("subscriptionName", ConnectorPropertyBuilder.optionalString()
-                        .order(12)
+                        .order(14)
                         .description("Controls how Pulsar subscription names are generated"))
 
                 // Wildcard support (read-only)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(13)
+                        .order(15)
                         .readonly(true)
                         .defaultValue(true))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(14)
+                        .order(16)
                         .readonly(true)
                         .defaultValue(false))
 
                 // Pulsar-specific settings
                 .property("pulsarTenant", ConnectorPropertyBuilder.optionalString()
-                        .order(15)
+                        .order(17)
                         .defaultValue("public"))
 
                 .property("pulsarNamespace", ConnectorPropertyBuilder.optionalString()
-                        .order(16)
+                        .order(18)
                         .defaultValue("default"))
 
                 .build();
