@@ -1107,9 +1107,8 @@ public class PulsarConnectorClient extends AConnectorClient {
                         .order(6)
                         .defaultValue("none")
                         .optionsWithLabels("none", "None", "token", "Token", "oauth2", "OAuth2",
-                                "tls", "TLS", "basic", "Basic"))
-                        // "client_creds" is implemented (ClientCredentialsAuthentication, clientId/clientSecret below)
-                        // but disabled: add ("client_creds", "Client credentials") to the options to offer it again.
+                                "tls", "TLS", "basic", "Basic",
+                                "client_creds", "Client credentials (custom)"))
 
                 .property("authenticationParams", ConnectorPropertyBuilder.optionalSensitive()
                         .order(7)
@@ -1121,7 +1120,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                 .property("clientId", ConnectorPropertyBuilder.optionalString()
                         .order(8)
                         .label("Client ID")
-                        .description("Client ID sent to the broker as base64(clientId:clientSecret) using the custom 'client_creds' authentication method.")
+                        .description("Custom authentication method for brokers that register a 'client_creds' provider (not standard Pulsar). Client ID sent to the broker as base64(clientId:clientSecret).")
                         .condition("authenticationMethod", "client_creds"))
 
                 .property("clientSecret", ConnectorPropertyBuilder.optionalSensitive()
