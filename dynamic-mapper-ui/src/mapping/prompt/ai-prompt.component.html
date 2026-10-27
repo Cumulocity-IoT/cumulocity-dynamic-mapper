@@ -66,10 +66,10 @@
   <strong translate>Review before saving</strong>
   @if (isCodeMapping) {
   <c8y-editor [editorOptions]="codePreviewEditorOptions" [ngModel]="generatedCode" class="form-control"
-    style="min-height: 200px; max-height: 320px" data-cy="dm-ai-prompt-preview-code">
+    style="min-height: 500px; max-height: 60vh" data-cy="dm-ai-prompt-preview-code">
   </c8y-editor>
   } @else {
-  <div style="max-height: 320px; overflow-y: auto">
+  <div style="max-height: 60vh; overflow-y: auto">
     <table class="table table-condensed m-b-0" data-cy="dm-ai-prompt-preview-substitutions">
       <thead>
         <tr>
