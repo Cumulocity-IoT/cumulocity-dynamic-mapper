@@ -25,6 +25,7 @@ import com.hivemq.client.mqtt.MqttClientSslConfig;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
@@ -455,6 +456,7 @@ public abstract class AMQTTClient extends AConnectorClient {
 
         // MQTT Version selection
         configProps.put("version", ConnectorPropertyBuilder.requiredOption()
+                .group(ConnectorPropertyGroup.CONNECTION)
                 .order(0)
                 .defaultValue(defaultVersion)
                 .options(MQTT_VERSION_3_1_1, MQTT_VERSION_5_0)
@@ -462,6 +464,7 @@ public abstract class AMQTTClient extends AConnectorClient {
 
         // Protocol selection (mqtt://, mqtts://, ws://, wss://)
         configProps.put("protocol", ConnectorPropertyBuilder.requiredOption()
+                .group(ConnectorPropertyGroup.CONNECTION)
                 .order(1)
                 .defaultValue(MQTT_PROTOCOL_MQTT)
                 .options(MQTT_PROTOCOL_MQTT, MQTT_PROTOCOL_MQTTS, MQTT_PROTOCOL_WS, MQTT_PROTOCOL_WSS)
@@ -469,28 +472,34 @@ public abstract class AMQTTClient extends AConnectorClient {
 
         // Basic connection properties
         configProps.put("mqttHost", ConnectorPropertyBuilder.requiredString()
+                .group(ConnectorPropertyGroup.CONNECTION)
                 .order(2)
                 .build());
 
         configProps.put("mqttPort", ConnectorPropertyBuilder.requiredNumeric()
+                .group(ConnectorPropertyGroup.CONNECTION)
                 .order(3)
                 .build());
 
         // Optional authentication
         configProps.put("user", ConnectorPropertyBuilder.optionalString()
+                .group(ConnectorPropertyGroup.AUTHENTICATION)
                 .order(4)
                 .build());
 
         configProps.put("password", ConnectorPropertyBuilder.optionalSensitive()
+                .group(ConnectorPropertyGroup.AUTHENTICATION)
                 .order(5)
                 .build());
 
         configProps.put("clientId", ConnectorPropertyBuilder.requiredString()
+                .group(ConnectorPropertyGroup.SESSION)
                 .order(6)
                 .build());
 
         // TLS/SSL Certificate configuration (only visible for secure protocols)
         configProps.put("trustCustomCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                .group(ConnectorPropertyGroup.TLS)
                 .label("Trust custom server certificate")
                 .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates.")
                 .order(7)
@@ -499,6 +508,7 @@ public abstract class AMQTTClient extends AConnectorClient {
                 .build());
 
         configProps.put("trustedCertificateFingerprint", ConnectorPropertyBuilder.largeText()
+                .group(ConnectorPropertyGroup.TLS)
                 .label("Trusted certificate fingerprint")
                 .order(8)
                 .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
@@ -506,6 +516,7 @@ public abstract class AMQTTClient extends AConnectorClient {
                 .build());
 
         configProps.put("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                .group(ConnectorPropertyGroup.TLS)
                 .label("Trusted certificate name")
                 .description("Name of the certificate in the Cumulocity trusted-certificate store.")
                 .order(9)
@@ -513,12 +524,14 @@ public abstract class AMQTTClient extends AConnectorClient {
                 .build());
 
         configProps.put("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
+                .group(ConnectorPropertyGroup.TLS)
                 .order(10)
                 .description("Either enter certificate in PEM format or identify certificate by name and fingerprint (must be uploaded as Trusted Certificate in Device Management)")
                 .condition("trustCustomCertificate", "true")
                 .build());
 
         configProps.put("disableHostnameValidation", ConnectorPropertyBuilder.optionalBoolean()
+                .group(ConnectorPropertyGroup.TLS)
                 .order(11)
                 .defaultValue(false)
                 .condition("trustCustomCertificate", "true")
@@ -526,29 +539,34 @@ public abstract class AMQTTClient extends AConnectorClient {
 
         // Wildcard support flags
         configProps.put("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                .group(ConnectorPropertyGroup.ADVANCED)
                 .order(12)
                 .defaultValue(true)
                 .build());
 
         configProps.put("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                .group(ConnectorPropertyGroup.ADVANCED)
                 .order(13)
                 .defaultValue(true)
                 .build());
 
         // WebSocket specific configuration (only visible for WS/WSS protocols)
         configProps.put("serverPath", ConnectorPropertyBuilder.optionalString()
+                .group(ConnectorPropertyGroup.CONNECTION)
                 .order(14)
                 .condition("protocol", MQTT_PROTOCOL_WS, MQTT_PROTOCOL_WSS)
                 .build());
 
         // MQTT session behavior
         configProps.put("cleanSession", ConnectorPropertyBuilder.optionalBoolean()
+                 .group(ConnectorPropertyGroup.SESSION)
                  .order(15)
                  .defaultValue(true)
                  .build());
 
         // Error handling and reconnection control
         configProps.put("reconnectOnProcessingError", ConnectorPropertyBuilder.optionalBoolean()
+                .group(ConnectorPropertyGroup.RELIABILITY)
                 .order(16)
                 .defaultValue(false)
                 .condition("cleanSession", "false")
@@ -557,12 +575,14 @@ public abstract class AMQTTClient extends AConnectorClient {
 
         // Sparkplug Host support
         configProps.put("isSparkplugHost", ConnectorPropertyBuilder.optionalBoolean()
+                .group(ConnectorPropertyGroup.SPARKPLUG)
                 .order(17)
                 .defaultValue(false)
                 .description("Enable Sparkplug Host mode to publish Birth/Death certificates on connection/disconnection")
                 .build());
 
         configProps.put("sparkplugHostId", ConnectorPropertyBuilder.optionalString()
+                .group(ConnectorPropertyGroup.SPARKPLUG)
                 .order(18)
                 .description("Sparkplug Host ID (used for Birth/Death certificates)")
                 .condition("isSparkplugHost", "true")

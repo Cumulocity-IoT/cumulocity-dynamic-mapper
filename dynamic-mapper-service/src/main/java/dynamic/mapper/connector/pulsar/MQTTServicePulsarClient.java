@@ -960,6 +960,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
                 // Connection settings (pre-configured, read-only)
                 .property("serviceUrl", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.CONNECTION)
                         .order(0)
                         .description("Pulsar service URL for Cumulocity MQTT Service")
                         .readonly(true)
@@ -968,12 +969,14 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
                 // TLS configuration (read-only)
                 .property("enableTls", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.TLS)
                         .order(1)
                         .readonly(true)
                         .hidden(true)
                         .defaultValue(false))
 
                 .property("trustCustomCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.TLS)
                         .label("Trust custom server certificate")
                         .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates.")
                         .order(2)
@@ -983,6 +986,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                         .condition("enableTls", "true"))
 
                 .property("trustedCertificateFingerprint", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.TLS)
                         .label("Trusted certificate fingerprint")
                         .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
                         .order(3)
@@ -990,6 +994,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                         .hidden(true))
 
                 .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.TLS)
                         .label("Trusted certificate name")
                         .description("Name of the certificate in the Cumulocity trusted-certificate store.")
                         .order(4)
@@ -998,6 +1003,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
                 // Authentication (pre-configured, read-only)
                 .property("authenticationMethod", ConnectorPropertyBuilder.optionalOption()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(5)
                         .readonly(true)
                         .hidden(true)
@@ -1006,6 +1012,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                                 "tls", "TLS", "basic", "Basic"))
 
                 .property("authenticationParams", ConnectorPropertyBuilder.optionalSensitive()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(6)
                         .readonly(true)
                         .hidden(true)
@@ -1013,18 +1020,21 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
                 // Timeouts (read-only)
                 .property("connectionTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
+                        .group(ConnectorPropertyGroup.TIMEOUTS)
                         .order(7)
                         .readonly(true)
                         .hidden(true)
                         .defaultValue(DEFAULT_CONNECTION_TIMEOUT))
 
                 .property("operationTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
+                        .group(ConnectorPropertyGroup.TIMEOUTS)
                         .order(8)
                         .readonly(true)
                         .hidden(true)
                         .defaultValue(DEFAULT_OPERATION_TIMEOUT))
 
                 .property("keepAliveIntervalSeconds", ConnectorPropertyBuilder.requiredNumeric()
+                        .group(ConnectorPropertyGroup.TIMEOUTS)
                         .order(9)
                         .readonly(true)
                         .hidden(true)
@@ -1032,6 +1042,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
                 // Subscription settings (read-only)
                 .property("subscriptionType", ConnectorPropertyBuilder.optionalOption()
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
                         .order(10)
                         .readonly(true)
                         .hidden(true)
@@ -1040,6 +1051,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                                 "Failover", "Failover", "Key_Shared", "Key Shared"))
 
                 .property("subscriptionName", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
                         .order(11)
                         .description("Pulsar subscription name")
                         .readonly(true)
@@ -1047,40 +1059,47 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
                 // Wildcard support (read-only)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
                         .order(12)
                         .readonly(true)
                         .defaultValue(true))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
                         .order(13)
                         .readonly(true)
                         .defaultValue(true))
 
                 // Pulsar-specific settings (read-only, hidden)
                 .property("pulsarTenant", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.TOPICS)
                         .order(14)
                         .readonly(true)
                         .hidden(true)
                         .defaultValue("public"))
 
                 .property("pulsarNamespace", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.TOPICS)
                         .order(15)
                         .readonly(true)
                         .hidden(true)
                         .defaultValue(PULSAR_NAMESPACE))
 
                 .property("negativeAckRedeliveryDelay", ConnectorPropertyBuilder.requiredNumeric()
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
                         .order(16)
                         .description("Delay for redelivery of negatively acknowledged messages in s (Default: 60")
                         .defaultValue(60))
 
                 // Sparkplug Host support
                 .property("isSparkplugHost", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.SPARKPLUG)
                         .order(17)
                         .defaultValue(false)
                         .description("Enable Sparkplug Host mode to publish Birth/Death certificates on connection/disconnection"))
 
                 .property("sparkplugHostId", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.SPARKPLUG)
                         .order(18)
                         .description("Sparkplug Host ID (used for Birth/Death certificates)")
                         .defaultValue(tenant)

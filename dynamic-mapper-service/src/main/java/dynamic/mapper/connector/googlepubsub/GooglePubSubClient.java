@@ -35,6 +35,7 @@ import com.google.pubsub.v1.PubsubMessage;
 import com.google.pubsub.v1.TopicName;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
@@ -577,16 +578,19 @@ public class GooglePubSubClient extends AConnectorClient {
                 .supportedDirections(supportedDirections())
 
                 .property("projectId", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.CONNECTION)
                         .order(0)
                         .description("Google Cloud project ID that owns the Pub/Sub topic and subscription"))
 
                 .property("topicId", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.TOPICS)
                         .order(1)
                         .defaultValue("input-messages")
                         .description("Default Pub/Sub topic to publish to (outbound). A mapping's own publish topic, " +
                                 "if set, overrides this per request."))
 
                 .property("subscriptionId", ConnectorPropertyBuilder.create(ConnectorPropertyType.STRING_PROPERTY)
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
                         .required(false)
                         .order(2)
                         .description("Name of the pre-existing Pub/Sub subscription to consume from (inbound). " +
@@ -595,6 +599,7 @@ public class GooglePubSubClient extends AConnectorClient {
                                 "The service account needs the roles/pubsub.subscriber role."))
 
                 .property("authMode", ConnectorPropertyBuilder.create(ConnectorPropertyType.OPTION_PROPERTY)
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .required(true)
                         .order(3)
                         .defaultValue("serviceAccountKey")
@@ -604,6 +609,7 @@ public class GooglePubSubClient extends AConnectorClient {
                         .description("Authentication method used to connect to Google Cloud Pub/Sub."))
 
                 .property("serviceAccountKey", ConnectorPropertyBuilder.create(ConnectorPropertyType.SENSITIVE_STRING_LARGE_PROPERTY)
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .required(true)
                         .order(4)
                         .condition("authMode", "serviceAccountKey")
@@ -611,6 +617,7 @@ public class GooglePubSubClient extends AConnectorClient {
                                 "against Pub/Sub (requires roles/pubsub.publisher and/or roles/pubsub.subscriber)."))
 
                 .property("adcCredentialsJson", ConnectorPropertyBuilder.create(ConnectorPropertyType.SENSITIVE_STRING_LARGE_PROPERTY)
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .required(false)
                         .order(5)
                         .condition("authMode", "applicationDefaultCredentials")
@@ -618,6 +625,7 @@ public class GooglePubSubClient extends AConnectorClient {
                                 "'gcloud auth application-default login' (typically ~/.config/gcloud/application_default_credentials.json)."))
 
                 .property("publishTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
+                        .group(ConnectorPropertyGroup.TIMEOUTS)
                         .order(6)
                         .defaultValue(DEFAULT_PUBLISH_TIMEOUT_SECONDS)
                         .description("How long to wait for a publish acknowledgement before treating the request as failed."))

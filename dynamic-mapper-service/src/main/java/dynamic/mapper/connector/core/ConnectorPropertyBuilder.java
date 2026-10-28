@@ -41,6 +41,7 @@ import java.util.Map;
 public class ConnectorPropertyBuilder {
     private String description;
     private String label;
+    private String group;
     private Boolean required = false;
     private Integer order = 0;
     private ConnectorPropertyType type;
@@ -144,6 +145,14 @@ public class ConnectorPropertyBuilder {
         return this;
     }
 
+    /**
+     * Sets the display group, use one of the constants in {@link ConnectorPropertyGroup}.
+     */
+    public ConnectorPropertyBuilder group(String group) {
+        this.group = group;
+        return this;
+    }
+
     public ConnectorPropertyBuilder description(String description) {
         this.description = description;
         return this;
@@ -241,7 +250,8 @@ public class ConnectorPropertyBuilder {
             defaultValue,
             options,
             condition,
-            label
+            label,
+            group
         );
     }
 }

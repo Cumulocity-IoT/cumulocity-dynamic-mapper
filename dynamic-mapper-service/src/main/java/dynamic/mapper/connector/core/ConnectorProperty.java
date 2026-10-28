@@ -71,10 +71,16 @@ public class ConnectorProperty implements Cloneable {
     /** Optional display label; when absent the UI derives one from the property key. */
     public String label;
 
+    /**
+     * Optional display group (see {@link ConnectorPropertyGroup}). The UI shows the properties of a group together
+     * under a legend, groups in a fixed order and properties inside a group by {@link #order}.
+     */
+    public String group;
+
     public ConnectorProperty(String description, Boolean required, Integer order, ConnectorPropertyType type,
             Boolean readonly, Boolean hidden, Object defaultValue, Map<String, String> options,
             ConnectorPropertyCondition condition) {
-        this(description, required, order, type, readonly, hidden, defaultValue, options, condition, null);
+        this(description, required, order, type, readonly, hidden, defaultValue, options, condition, null, null);
     }
 
     @Override

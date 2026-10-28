@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
@@ -947,43 +948,52 @@ public class WebHook extends AConnectorClient {
 
                 // Cumulocity internal mode toggle
                 .property("cumulocityInternal", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.CONNECTION)
                         .order(7)
                         .description("When checked the webHook connector can automatically connect to the Cumulocity instance the mapper is deployed to.")
                         .defaultValue(false))
 
                 // External URL configuration (only when not using internal mode)
                 .property("baseUrl", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.CONNECTION)
                         .order(0)
                         .condition("cumulocityInternal", "false"))
 
                 .property("authentication", ConnectorPropertyBuilder.optionalOption()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(1)
                         .options("Basic", "Bearer")
                         .condition("cumulocityInternal", "false"))
 
                 .property("user", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(2)
                         .condition("authentication", "Basic"))
 
                 .property("password", ConnectorPropertyBuilder.optionalSensitive()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(3)
                         .condition("authentication", "Basic"))
 
                 .property("token", ConnectorPropertyBuilder.optionalSensitive()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(4)
                         .condition("authentication", "Bearer"))
 
                 .property("headerAccept", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.REQUEST)
                         .order(5)
                         .defaultValue("application/json")
                         .condition("cumulocityInternal", "false"))
 
                 .property("baseUrlHealthEndpoint", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.REQUEST)
                         .order(6)
                         .description("health endpoint for GET request")
                         .condition("cumulocityInternal", "false"))
 
                 .property("headers", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
+                        .group(ConnectorPropertyGroup.REQUEST)
                         .order(8)
                         .description("Define additional headers")
                         .required(false)
@@ -992,12 +1002,14 @@ public class WebHook extends AConnectorClient {
 
                 // Wildcard support (read-only)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
                         .order(9)
                         .readonly(true)
                         .hidden(true)
                         .defaultValue(false))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
                         .order(10)
                         .readonly(true)
                         .defaultValue(true))

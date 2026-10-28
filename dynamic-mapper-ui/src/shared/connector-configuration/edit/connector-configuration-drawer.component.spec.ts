@@ -285,6 +285,77 @@ describe('ConnectorConfigurationDrawerComponent', () => {
       expect(hasHiddenField).toBe(false);
     });
 
+    describe('property groups', () => {
+      const props = () => mockSpecifications[0].properties;
+      let original: { [key: string]: string | undefined };
+
+      beforeEach(() => {
+        original = Object.fromEntries(Object.entries(props()).map(([k, p]) => [k, p.group]));
+      });
+
+      afterEach(() => {
+        Object.entries(props()).forEach(([k, p]) => (p.group = original[k]));
+      });
+
+      const legends = () =>
+        component.dynamicFormFields
+          .filter(f => f.type === 'template')
+          .map(f => /legend form-block">(.*)<\/div>/.exec(f.template as string)?.[1]);
+
+      it('should show groups in the fixed group order, not in property order', async () => {
+        props()['mqttHost'].group = 'Subscription';
+        props()['mqttPort'].group = 'Connection';
+        props()['enableSSL'].group = 'Authentication';
+
+        await component['createDynamicForm'](ConnectorType.MQTT);
+
+        expect(legends()).toEqual(['Connection', 'Authentication', 'Subscription']);
+      });
+
+      it('should create one legend per group and keep a group together', async () => {
+        props()['mqttHost'].group = 'Connection';
+        props()['mqttPort'].group = 'Connection';
+        props()['enableSSL'].group = 'TLS';
+
+        await component['createDynamicForm'](ConnectorType.MQTT);
+
+        expect(legends()).toEqual(['Connection', 'TLS']);
+      });
+
+      it('should add no legend for properties without a group', async () => {
+        await component['createDynamicForm'](ConnectorType.MQTT);
+
+        expect(legends()).toEqual([]);
+      });
+
+      it('should escape the group name', async () => {
+        props()['mqttHost'].group = '<b>x</b>';
+
+        await component['createDynamicForm'](ConnectorType.MQTT);
+
+        expect(legends()).toEqual(['&lt;b&gt;x&lt;/b&gt;']);
+      });
+
+      it('should hide a legend only when all properties of its group are hidden', async () => {
+        props()['mqttHost'].group = 'TLS';
+        props()['mqttHost'].condition = { key: 'enableSSL', anyOf: ['true'] };
+        props()['mqttPort'].group = 'TLS';
+        props()['mqttPort'].condition = { key: 'enableSSL', anyOf: ['true'] };
+
+        try {
+          await component['createDynamicForm'](ConnectorType.MQTT);
+          const legend = component.dynamicFormFields.find(f => f.type === 'template');
+          const hide = legend.hideExpression as (model: any) => boolean;
+
+          expect(hide({ properties: { enableSSL: false } })).toBe(true);
+          expect(hide({ properties: { enableSSL: true } })).toBe(false);
+        } finally {
+          delete props()['mqttHost'].condition;
+          delete props()['mqttPort'].condition;
+        }
+      });
+    });
+
     it('should trigger change detection after creating form', async () => {
       // ChangeDetectorRef is a framework-provided token resolved through the component's own
       // NodeInjector, which a TestBed-module-level `{ provide: ChangeDetectorRef, useValue: ... }`

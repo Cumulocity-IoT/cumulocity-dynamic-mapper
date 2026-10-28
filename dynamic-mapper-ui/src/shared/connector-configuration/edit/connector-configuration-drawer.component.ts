@@ -22,6 +22,7 @@ import { BottomDrawerRef, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { FormlyFieldConfig, FormlyModule } from '@ngx-formly/core';
 import { FormGroup, FormsModule } from '@angular/forms';
 import {
+  CONNECTOR_PROPERTY_GROUP_ORDER,
   ConnectionTestResult,
   ConnectorConfiguration,
   ConnectorProperty,
@@ -354,16 +355,50 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   private createDynamicFormFields(dynamicFields: ConnectorSpecification): void {
     const sortedFields = this.getSortedFields(dynamicFields);
 
+    let currentGroup: string | undefined;
     sortedFields.forEach(entry => {
       if (!entry) return;
 
       const formConfigFn = this.propertyTypeToFormConfig.get(entry.property.type);
       if (formConfigFn) {
+        const group = entry.property.group;
+        if (group && group !== currentGroup) {
+          this.dynamicFormFields.push(
+            this.createGroupLegend(group, sortedFields.filter(e => e?.property.group === group))
+          );
+        }
+        currentGroup = group;
         this.dynamicFormFields.push(formConfigFn(entry));
       } else {
         console.warn(`Unsupported property type: ${entry.property.type} for field: ${entry.key}`);
       }
     });
+  }
+
+  /**
+   * Legend above the properties of a group, same look as the section legends in the mapping's General Settings.
+   * It is hidden together with its properties, so a group whose fields are all conditional (e.g. TLS) leaves no
+   * orphaned heading.
+   */
+  private createGroupLegend(group: string, members: PropertyEntry[]): FormlyFieldConfig {
+    const memberHidden = members.map(member => this.createHideExpression(member.property));
+    return {
+      type: 'template',
+      template: `<div class="legend form-block">${this.escapeHtml(group)}</div>`,
+      hideExpression: (model) => memberHidden.every(isHidden => isHidden(model))
+    };
+  }
+
+  private escapeHtml(value: string): string {
+    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  private groupRank(group: string | undefined): number {
+    if (!group) {
+      return Number.MAX_SAFE_INTEGER;
+    }
+    const index = CONNECTOR_PROPERTY_GROUP_ORDER.indexOf(group);
+    return index === -1 ? CONNECTOR_PROPERTY_GROUP_ORDER.length : index;
   }
 
   private getSortedFields(dynamicFields: ConnectorSpecification): PropertyEntry[] {
@@ -383,8 +418,17 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
       }
     });
 
-    // Sort by order, handling missing or invalid order values
+    // Sort by group (fixed group order), then by order inside the group; missing or invalid values go last.
+    // Groups outside the known list follow alphabetically.
     return entries.sort((a, b) => {
+      const groupDiff = this.groupRank(a.property.group) - this.groupRank(b.property.group);
+      if (groupDiff !== 0) {
+        return groupDiff;
+      }
+      if (a.property.group !== b.property.group) {
+        // Two groups outside the known list: keep each group together
+        return (a.property.group ?? '').localeCompare(b.property.group ?? '');
+      }
       const orderA = a.property.order ?? Number.MAX_SAFE_INTEGER;
       const orderB = b.property.order ?? Number.MAX_SAFE_INTEGER;
       return orderA - orderB;

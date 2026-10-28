@@ -26,6 +26,7 @@ import dynamic.mapper.util.TenantLogContext;
 import com.cumulocity.sdk.client.SDKException;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
@@ -1209,33 +1210,39 @@ public class KafkaClientV2 extends AConnectorClient {
 
                 // Basic connection
                 .property("bootstrapServers", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.CONNECTION)
                         .order(0))
 
                 // TLS / custom CA trust (optional) - same pattern as the MQTT/AMQP/Pulsar connectors
                 .property("trustCustomCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.TLS)
                         .label("Trust custom server certificate")
                         .order(1)
                         .defaultValue(false)
                         .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates."))
 
                 .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.TLS)
                         .label("Trusted certificate name")
                         .order(2)
                         .description("Name of the certificate in the Cumulocity trusted-certificate store.")
                         .condition("trustCustomCertificate", "true"))
 
                 .property("trustedCertificateFingerprint", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.TLS)
                         .label("Trusted certificate fingerprint")
                         .order(3)
                         .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
                         .condition("trustCustomCertificate", "true"))
 
                 .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
+                        .group(ConnectorPropertyGroup.TLS)
                         .order(4)
                         .description("Certificate chain in PEM format (alternative to referencing the Cumulocity certificate store)")
                         .condition("trustCustomCertificate", "true"))
 
                 .property("disableHostnameValidation", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.TLS)
                         .order(5)
                         .defaultValue(false)
                         .description("Disable TLS hostname verification (insecure, for development/testing only)")
@@ -1243,15 +1250,18 @@ public class KafkaClientV2 extends AConnectorClient {
 
                 // SASL authentication (optional)
                 .property("username", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(6)
                         .description("API Key, e.g. for Confluent Cloud. Reveals Password below."))
 
                 .property("password", ConnectorPropertyBuilder.optionalSensitive()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(7)
                         .description("API Secret, e.g. for Confluent Cloud/Aiven.")
                         .condition("username", "*"))
 
                 .property("saslMechanism", ConnectorPropertyBuilder.optionalOption()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(8)
                         .defaultValue("SCRAM-SHA-256")
                         .options("SCRAM-SHA-256", "SCRAM-SHA-512", "PLAIN")
@@ -1260,16 +1270,19 @@ public class KafkaClientV2 extends AConnectorClient {
 
                 // Consumer group
                 .property("groupId", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
                         .order(9))
 
                 // Custom properties
                 .property("defaultPropertiesProducer", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
+                        .group(ConnectorPropertyGroup.ADVANCED)
                         .order(10)
                         .description("Producer properties")
                         .required(false)
                         .defaultValue(new HashMap<String, String>()))
 
                 .property("defaultPropertiesConsumer", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
+                        .group(ConnectorPropertyGroup.ADVANCED)
                         .order(12)
                         .description("Consumer properties")
                         .required(false)
@@ -1281,6 +1294,7 @@ public class KafkaClientV2 extends AConnectorClient {
             defaultPropertiesProducer.store(writerProducer,
                     "properties can only be edited in the property file: kafka-producer.properties");
             builder.property("propertiesProducer", ConnectorPropertyBuilder.largeText()
+                    .group(ConnectorPropertyGroup.ADVANCED)
                     .order(11)
                     .description("Predefined producer properties")
                     .readonly(true)
@@ -1290,6 +1304,7 @@ public class KafkaClientV2 extends AConnectorClient {
             defaultPropertiesConsumer.store(writerConsumer,
                     "properties can only be edited in the property file: kafka-consumer.properties");
             builder.property("propertiesConsumer", ConnectorPropertyBuilder.largeText()
+                    .group(ConnectorPropertyGroup.ADVANCED)
                     .order(13)
                     .description("Predefined consumer properties")
                     .readonly(true)

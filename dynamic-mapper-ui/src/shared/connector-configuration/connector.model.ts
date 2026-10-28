@@ -61,9 +61,31 @@ export interface ConnectorPropertyCondition {
   key: string;
   anyOf: string[];
 }
+/**
+ * Display order of the property groups in the connector form. Keep in sync with the constants in the backend class
+ * ConnectorPropertyGroup. Groups that are not listed here are shown after these, alphabetically.
+ */
+export const CONNECTOR_PROPERTY_GROUP_ORDER: string[] = [
+  'Connection',
+  'TLS',
+  'Authentication',
+  'Topics',
+  'Subscription',
+  'Session',
+  'Request',
+  'Polling',
+  'Pagination',
+  'Timeouts',
+  'Reliability',
+  'Sparkplug',
+  'Advanced'
+];
+
 export interface ConnectorProperty {
   description: string;
   label?: string;
+  /** Display group, shown as a legend above the properties of that group. */
+  group?: string;
   required: boolean;
   order: number;
   readonly: boolean;

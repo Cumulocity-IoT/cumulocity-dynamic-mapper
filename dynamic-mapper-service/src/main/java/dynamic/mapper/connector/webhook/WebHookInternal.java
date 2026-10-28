@@ -23,6 +23,7 @@ package dynamic.mapper.connector.webhook;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.ConnectorType;
@@ -118,6 +119,7 @@ public class WebHookInternal extends WebHook {
 
                 // Hidden property that is always true for internal connector
                 .property("cumulocityInternal", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.CONNECTION)
                         .order(0)
                         .description("This connector automatically connects to the Cumulocity instance the mapper is deployed to.")
                         .readonly(true)
@@ -126,12 +128,14 @@ public class WebHookInternal extends WebHook {
 
                 // Wildcard support (read-only and hidden)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
                         .order(1)
                         .readonly(true)
                         .hidden(true)
                         .defaultValue(true))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
                         .order(2)
                         .readonly(true)
                         .hidden(true)

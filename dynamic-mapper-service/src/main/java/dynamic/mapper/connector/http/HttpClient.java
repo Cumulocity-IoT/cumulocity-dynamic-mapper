@@ -23,6 +23,7 @@ package dynamic.mapper.connector.http;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
@@ -331,17 +332,20 @@ public class HttpClient extends AConnectorClient {
 
                 // HTTP path configuration (read-only)
                 .property("path", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.CONNECTION)
                         .order(0)
                         .readonly(true)
                         .defaultValue(httpPath))
 
                 // Wildcard support (read-only)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
                         .order(1)
                         .readonly(true)
                         .defaultValue(true))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
                         .order(2)
                         .readonly(true)
                         .hidden(true)
@@ -349,6 +353,7 @@ public class HttpClient extends AConnectorClient {
 
                 // Leading slash configuration
                 .property(PROPERTY_CUTOFF_LEADING_SLASH, ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.CONNECTION)
                         .order(3)
                         .defaultValue(true))
 

@@ -24,6 +24,7 @@ package dynamic.mapper.connector.test;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.AConnectorClient;
@@ -295,10 +296,12 @@ public class TestClient extends AConnectorClient {
 
                 // Minimal configuration - test connector doesn't need real connection properties
                 .property("enabled", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
                         .order(0)
                         .defaultValue(true))
 
                 .property("description", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.ADVANCED)
                         .order(1)
                         .defaultValue("Test Connector for mapping validation"))
 

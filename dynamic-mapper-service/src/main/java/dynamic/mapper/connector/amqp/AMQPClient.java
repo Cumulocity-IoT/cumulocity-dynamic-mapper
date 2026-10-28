@@ -26,6 +26,7 @@ import com.rabbitmq.client.*;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.AConnectorClient;
@@ -616,52 +617,63 @@ public class AMQPClient extends AConnectorClient {
 
                 // Protocol selection
                 .property("protocol", ConnectorPropertyBuilder.requiredOption()
+                        .group(ConnectorPropertyGroup.CONNECTION)
                         .order(0)
                         .defaultValue("amqp://")
                         .options("amqp://", "amqps://"))
 
                 // Basic connection properties
                 .property("host", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.CONNECTION)
                         .order(1)
                         .defaultValue("localhost"))
 
                 .property("port", ConnectorPropertyBuilder.requiredNumeric()
+                        .group(ConnectorPropertyGroup.CONNECTION)
                         .order(2)
                         .defaultValue(5672))
 
                 .property("virtualHost", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.CONNECTION)
                         .order(3)
                         .defaultValue("/"))
 
                 // Authentication
                 .property("username", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(4)
                         .defaultValue("guest"))
 
                 .property("password", ConnectorPropertyBuilder.optionalSensitive()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(5))
 
                 // AMQP exchange configuration
                 .property("exchange", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
                         .order(6)
                         .defaultValue(""))
 
                 .property("exchangeType", ConnectorPropertyBuilder.optionalOption()
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
                         .order(7)
                         .defaultValue("topic")
                         .optionsWithLabels("topic", "Topic", "direct", "Direct", "fanout", "Fanout", "headers", "Headers"))
 
                 // Queue configuration
                 .property("queuePrefix", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
                         .order(8)
                         .defaultValue(""))
 
                 .property("autoDeleteQueue", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
                         .order(9)
                         .defaultValue(false))
 
                 // TLS/SSL Certificate configuration (only for amqps://)
                 .property("trustCustomCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.TLS)
                         .label("Trust custom server certificate")
                         .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates.")
                         .order(10)
@@ -669,33 +681,39 @@ public class AMQPClient extends AConnectorClient {
                         .condition("protocol", "amqps://"))
 
                 .property("trustedCertificateFingerprint", ConnectorPropertyBuilder.largeText()
+                        .group(ConnectorPropertyGroup.TLS)
                         .label("Trusted certificate fingerprint")
                         .order(11)
                         .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
                         .condition("trustCustomCertificate", "true"))
 
                 .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.TLS)
                         .label("Trusted certificate name")
                         .description("Name of the certificate in the Cumulocity trusted-certificate store.")
                         .order(12)
                         .condition("trustCustomCertificate", "true"))
 
                 .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
+                        .group(ConnectorPropertyGroup.TLS)
                         .order(13)
                         .description("Either enter certificate in PEM format or identify certificate by name and fingerprint (must be uploaded as Trusted Certificate in Device Management)")
                         .condition("trustCustomCertificate", "true"))
 
                 // Connection behavior
                 .property("automaticRecovery", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.RELIABILITY)
                         .order(14)
                         .defaultValue(true))
 
                 // Wildcard support flags
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
                         .order(15)
                         .defaultValue(true))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
                         .order(16)
                         .defaultValue(false))
 

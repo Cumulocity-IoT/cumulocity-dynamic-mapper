@@ -25,6 +25,7 @@ import dynamic.mapper.util.TenantLogContext;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.AConnectorClient;
@@ -662,42 +663,51 @@ public class AMQP10Client extends AConnectorClient {
 
                 // Protocol selection
                 .property("protocol", ConnectorPropertyBuilder.requiredOption()
+                        .group(ConnectorPropertyGroup.CONNECTION)
                         .order(0)
                         .defaultValue("amqp://")
                         .options("amqp://", "amqps://"))
 
                 // Connection
                 .property("host", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.CONNECTION)
                         .order(1)
                         .defaultValue("localhost"))
 
                 .property("port", ConnectorPropertyBuilder.requiredNumeric()
+                        .group(ConnectorPropertyGroup.CONNECTION)
                         .order(2)
                         .defaultValue(5672))
 
                 // Authentication
                 .property("username", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(3))
 
                 .property("password", ConnectorPropertyBuilder.optionalSensitive()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(4))
 
                 // AMQP container ID / JMS client ID (e.g. device ID for Azure IoT Hub)
                 .property("clientId", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.SESSION)
                         .order(5))
 
                 // AMQP 1.0 destination type — no exchange/routing-key concept
                 .property("destinationType", ConnectorPropertyBuilder.requiredOption()
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
                         .order(6)
                         .defaultValue("queue")
                         .optionsWithLabels("queue", "Queue", "topic", "Topic"))
 
                 // Content type set on outbound AMQP messages (e.g. application/json;charset=utf-8)
                 .property("contentType", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
                         .order(7))
 
                 // TLS/SSL certificate configuration (only for amqps://)
                 .property("trustCustomCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.TLS)
                         .label("Trust custom server certificate")
                         .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates.")
                         .order(8)
@@ -705,18 +715,21 @@ public class AMQP10Client extends AConnectorClient {
                         .condition("protocol", "amqps://"))
 
                 .property("trustedCertificateFingerprint", ConnectorPropertyBuilder.largeText()
+                        .group(ConnectorPropertyGroup.TLS)
                         .label("Trusted certificate fingerprint")
                         .order(9)
                         .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
                         .condition("trustCustomCertificate", "true"))
 
                 .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.TLS)
                         .label("Trusted certificate name")
                         .description("Name of the certificate in the Cumulocity trusted-certificate store.")
                         .order(10)
                         .condition("trustCustomCertificate", "true"))
 
                 .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
+                        .group(ConnectorPropertyGroup.TLS)
                         .order(11)
                         .description("Certificate in PEM format, or identify by name/fingerprint " +
                                 "(must be uploaded as Trusted Certificate in Device Management)")
@@ -724,15 +737,18 @@ public class AMQP10Client extends AConnectorClient {
 
                 // Connection behaviour
                 .property("automaticRecovery", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.RELIABILITY)
                         .order(12)
                         .defaultValue(true))
 
                 // Wildcard support (broker-dependent for AMQP 1.0)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
                         .order(13)
                         .defaultValue(false))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
                         .order(14)
                         .defaultValue(false))
 
