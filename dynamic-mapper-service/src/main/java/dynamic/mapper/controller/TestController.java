@@ -121,8 +121,9 @@ public class TestController {
         }
         Boolean send = Boolean.TRUE.equals(context.getSend()); // absent means Dry Run
         String tenant = contextService.getContext().getTenant();
-        log.info("{} - Test mapping: {}, {}, {}, {}", tenant, mapping.getName(), mapping.getId(), send,
-                payload);
+        log.info("{} - Test mapping: {}, {}, send={}", tenant, mapping.getName(), mapping.getId(), send);
+        // debug, not info: the payload is arbitrary user content that should not land in the tenant's log by default.
+        log.debug("{} - Test payload: {}", tenant, payload);
 
         // Reset mock caches for this tenant so state from previous test runs does not leak
         clearMockCaches(tenant);
@@ -232,18 +233,26 @@ public class TestController {
                 }
 
                 if (processingResult != null && !processingResult.isEmpty()) {
-                    if (processingResult.size() > 1) {
-                        log.warn("{} - Test mapping produced {} result(s), only returning the first result", tenant,
-                                processingResult.size());
-                    }
-                    var firstResult = processingResult.get(0);
-                    result.setRequests(firstResult.getRequests());
-                    result.setWarnings(firstResult.getWarnings());
-                    result.setLogs(firstResult.getLogs());
-                    result.setKey(firstResult.getKey());
-                    // Errors of every result, not just the first: only the first result's requests
-                    // are returned, but a failure in a later one must not make the test look green.
+                    // Every context's requests, warnings and logs: a payload that fans out into several
+                    // contexts (e.g. an array) used to show only the first one, although a Live Test had
+                    // already sent all of them.
                     for (var processingContext : processingResult) {
+                        if (processingContext.getRequests() != null) {
+                            result.getRequests().addAll(processingContext.getRequests());
+                        }
+                        if (processingContext.getWarnings() != null) {
+                            for (String warning : processingContext.getWarnings()) {
+                                if (!result.getWarnings().contains(warning)) {
+                                    result.getWarnings().add(warning);
+                                }
+                            }
+                        }
+                        if (processingContext.getLogs() != null) {
+                            result.getLogs().addAll(processingContext.getLogs());
+                        }
+                        if (result.getKey() == null) {
+                            result.setKey(processingContext.getKey());
+                        }
                         if (processingContext.getErrors() == null) {
                             continue;
                         }
@@ -593,7 +602,7 @@ public class TestController {
                 log.debug("Test payload for ANY_PAYLOAD mapping '{}' is not base64, sending as is", mapping.getName());
             }
         }
-        return payloadMessage.getBytes();
+        return payloadMessage.getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
 
 

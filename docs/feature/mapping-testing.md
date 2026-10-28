@@ -236,7 +236,17 @@ Key interactions in `MappingStepTestingComponent`:
   metrics may be decoded without alias names. A Dry Run never finds an alias map: it only sees the mock, and nothing is stored in a Dry Run.
 - **Operational metrics:** an inbound Live Test still counts its identity lookups in
   `dynmapper_inbound_identity_requests_total`.
-- **Same tenant, two tests at once** share the tenant's mock and clear each other's.
+- **Same tenant, two tests at once** share the tenant's mock. `TestController` clears the mock identity and inventory
+  caches at the start and end of every run, so a second test (another user, or a double submit) can wipe the mock
+  device of a test that is still running. The visible result is a spurious "device not found" or a missing
+  device-creation request in a Dry Run. A Live Test is less exposed because it works on a real test device. The
+  limit is accepted: a per-tenant lock would queue tests for up to the 60 s pipeline timeout. Run tests for one
+  tenant one at a time. Tests of different tenants do not interact.
+- **Every processing context is reported.** A payload that fans out into several contexts (for example an array)
+  returns the requests and warnings of all of them, in order; the UI steps through them with "Show Next Test Result".
+- **A result belongs to the payload that produced it.** Editing the payload in the testing step discards the shown
+  result and re-enables Dry Run. A mapping that produces no request is reported in the console, and a Live Test then
+  says that nothing was sent.
 - **Live Test needs a Dry Run first** in the UI (it is disabled until a result exists; the tooltip says so), and it
   can be clicked repeatedly, sending again each time.
 - **The editor's source template** receives the test payload patch (a random id) because the testing step emits it

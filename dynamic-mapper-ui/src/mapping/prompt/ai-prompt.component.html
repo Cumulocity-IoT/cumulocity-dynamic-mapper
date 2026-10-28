@@ -62,14 +62,28 @@
 </div>
 
 @if (valid) {
+<div class="ai-preview-splitter" role="separator" aria-orientation="horizontal" tabindex="0"
+  [attr.aria-valuenow]="previewHeight" title="Drag to resize (double-click to reset)"
+  (pointerdown)="startPreviewResize($event)" (dblclick)="previewHeight = 240"
+  (keydown.arrowUp)="previewHeight = clampPreviewHeight(previewHeight + 40)"
+  (keydown.arrowDown)="previewHeight = clampPreviewHeight(previewHeight - 40)"
+  data-cy="dm-ai-prompt-preview-splitter"></div>
 <div class="m-l-16 m-r-16 m-b-8 flex-no-shrink" data-cy="dm-ai-prompt-preview">
-  <strong translate>Review before saving</strong>
-  @if (isCodeMapping) {
-  <c8y-editor [editorOptions]="codePreviewEditorOptions" [ngModel]="generatedCode" class="form-control"
-    style="min-height: 500px; max-height: 60vh" data-cy="dm-ai-prompt-preview-code">
-  </c8y-editor>
+  <button type="button" class="btn-clean d-flex a-i-center" (click)="previewCollapsed = !previewCollapsed"
+    [attr.aria-expanded]="!previewCollapsed" data-cy="dm-ai-prompt-preview-toggle">
+    <i [c8yIcon]="previewCollapsed ? 'angle-right' : 'angle-down'" class="m-r-4"></i>
+    <strong translate>Review before saving</strong>
+  </button>
+  @if (previewCollapsed) {
+  <!-- collapsed: keep the preview out of the layout so the chat gets the space -->
+  } @else if (isCodeMapping) {
+  <div class="ai-preview-resizable" [style.height.px]="previewHeight" data-cy="dm-ai-prompt-preview-resizable">
+    <c8y-editor [editorOptions]="codePreviewEditorOptions" [ngModel]="generatedCode" class="form-control"
+      style="height: 100%" data-cy="dm-ai-prompt-preview-code">
+    </c8y-editor>
+  </div>
   } @else {
-  <div style="max-height: 60vh; overflow-y: auto">
+  <div style="max-height: 30vh; overflow-y: auto">
     <table class="table table-condensed m-b-0" data-cy="dm-ai-prompt-preview-substitutions">
       <thead>
         <tr>

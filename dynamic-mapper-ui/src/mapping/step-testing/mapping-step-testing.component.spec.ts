@@ -418,6 +418,53 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
       expect(alert.text).toContain('created alarm 99 on device 4711');
     });
 
+    it('a Live Test that produced no request says nothing was sent instead of claiming a creation', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve(ok));
+
+      await component.onSendTest();
+
+      const alert = alertService.add.calls.mostRecent().args[0] as { text: string; type: string };
+      expect(alert.type).toBe('warning');
+      expect(alert.text).toContain('nothing was sent');
+      expect(alert.text).not.toContain('created');
+      expect(component.testingModel.logs).toContain('INFO The mapping produced no request, so nothing was sent.');
+    });
+
+    it('a Dry Run without a request explains the empty result in the console', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve(ok));
+
+      await component.onTestTransformation();
+
+      expect(alertService.add).not.toHaveBeenCalled();
+      expect(component.testingModel.logs).toContain('INFO The mapping produced no request for this payload.');
+    });
+
+    it('editing the payload discards the result of the previous payload and re-enables Dry Run', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve({
+        success: true, errors: [], warnings: [],
+        requests: [{ api: 'ALARM', request: '{}' } as DynamicMapperRequest]
+      }));
+      await component.onTestTransformation();
+      expect(component.testingModel.results.length).toBe(1);
+
+      component.onSourceTemplateChanged({ updatedContent: { json: { a: 2 } } } as any);
+
+      expect(component.testingModel.results.length).toBe(0);
+      expect(component.selectedResult$.getValue()).toBe(-1);
+    });
+
+    it('a change event that is no edit keeps the shown result', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve({
+        success: true, errors: [], warnings: [],
+        requests: [{ api: 'ALARM', request: '{}' } as DynamicMapperRequest]
+      }));
+      await component.onTestTransformation();
+
+      component.onSourceTemplateChanged({ updatedContent: { json: { a: 1 } } } as any);
+
+      expect(component.testingModel.results.length).toBe(1);
+    });
+
     it('a Dry Run raises no success alert', async () => {
       testingService.testMapping.and.returnValue(Promise.resolve(ok));
 

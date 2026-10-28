@@ -199,6 +199,12 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     // whitespace, or on load). Treating that as an edit would mark the mapping as changed.
     const unchanged = stableStringify(contentAsJson) === stableStringify(this.sourceTemplate);
     this.syncPayload(contentAsJson, this.extractTopicSample(contentAsJson), !unchanged);
+    // A shown result belongs to the previous payload. Keeping it would present stale output as the
+    // result of the edited payload, and Dry Run stays disabled while a result is shown.
+    if (!unchanged && this.testingModel.results.length > 0) {
+      this.resetTestingModel();
+      this.updateEditors();
+    }
   }
 
   /**
@@ -472,6 +478,19 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     if (!result.success) {
       const errorLogs = (result.errors ?? []).map(e => `ERROR: ${e}`);
       this.testingModel.logs = [...(this.testingModel.logs ?? []), ...errorLogs];
+      return;
+    }
+
+    if (result.requests.length === 0) {
+      // Success without a request (filter, a Smart Function returning nothing, ...). Without a line
+      // here the console reads "No console output" and a Live Test would claim it created something.
+      const note = 'INFO ' + this.t(sendPayload
+        ? gettext('The mapping produced no request, so nothing was sent.')
+        : gettext('The mapping produced no request for this payload.'));
+      this.testingModel.logs = [...(this.testingModel.logs ?? []), note];
+      if (sendPayload) {
+        this.alertService.add({ text: this.t(gettext('Live test ran, but the mapping produced no request: nothing was sent.')), type: 'warning', timeout: ALERT_INFO_TIMEOUT });
+      }
       return;
     }
 

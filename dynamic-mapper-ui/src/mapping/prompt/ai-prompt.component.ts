@@ -90,6 +90,10 @@ export class AiPromptComponent implements OnInit {
 
   substitutions: Substitution[] = [];
   generatedCode: string = '';
+  /** Collapses the "Review before saving" preview so the chat can use the full drawer height. */
+  previewCollapsed = false;
+  /** Height in px of the code preview; changed by dragging the splitter above it. */
+  previewHeight = 240;
 
   /**
    * Problems found in the AI's most recent answer. Shown in the drawer so the user sees them
@@ -167,8 +171,32 @@ export class AiPromptComponent implements OnInit {
   readonly codePreviewEditorOptions: EditorComponent['editorOptions'] = {
     language: 'javascript',
     readOnly: true,
-    minimap: { enabled: false }
+    minimap: { enabled: false },
+    automaticLayout: true
   };
+
+  clampPreviewHeight(h: number): number {
+    return Math.max(100, Math.min(h, Math.round(window.innerHeight * 0.7)));
+  }
+
+  startPreviewResize(event: PointerEvent): void {
+    const target = event.currentTarget as HTMLElement;
+    const startY = event.clientY;
+    const startHeight = this.previewHeight;
+    target.setPointerCapture(event.pointerId);
+    const onMove = (e: PointerEvent) => {
+      this.previewHeight = this.clampPreviewHeight(startHeight + (startY - e.clientY));
+    };
+    const onUp = () => {
+      target.removeEventListener('pointermove', onMove);
+      target.removeEventListener('pointerup', onUp);
+      target.removeEventListener('pointercancel', onUp);
+    };
+    target.addEventListener('pointermove', onMove);
+    target.addEventListener('pointerup', onUp);
+    target.addEventListener('pointercancel', onUp);
+    event.preventDefault();
+  }
 
   /** Exposed for the template header */
   drawerTitle = 'AI Mapping Assistant';

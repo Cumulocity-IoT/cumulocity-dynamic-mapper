@@ -645,6 +645,29 @@ class TestControllerTest {
     }
 
     @Test
+    void testMapping_requestsAndWarningsOfEveryContextAreReturned() throws Exception {
+        ProcessingContext<Object> first = contextWithExternalId();
+        ProcessingContext<Object> second = contextWithExternalId();
+        first.addRequest(DynamicMapperRequest.builder().api(API.ALARM).build());
+        second.addRequest(DynamicMapperRequest.builder().api(API.EVENT).build());
+        first.getWarnings().add("same");
+        second.getWarnings().add("same");
+        second.getWarnings().add("other");
+        when(connectorRegistry.getClientForTenant(TENANT, TestClient.TEST_CONNECTOR_IDENTIFIER)).thenReturn(connectorClient);
+        when(connectorClient.getDispatcher()).thenReturn(dispatcher);
+        when(connectorClient.getConnectorIdentifier()).thenReturn(TestClient.TEST_CONNECTOR_IDENTIFIER);
+        ProcessingResultWrapper wrapper = ProcessingResultWrapper.builder()
+                .processingResult(CompletableFuture.completedFuture(List.of((ProcessingContext) first, (ProcessingContext) second)))
+                .build();
+        org.mockito.Mockito.doReturn(wrapper).when(dispatcher).onTestMessage(any(ConnectorMessage.class), any(Mapping.class));
+
+        TestResult result = controller.testMapping(dryRunContext()).getBody();
+
+        assertEquals(2, result.getRequests().size());
+        assertEquals(List.of("same", "other"), result.getWarnings());
+    }
+
+    @Test
     void testMapping_liveTest_externalIdFallsBackToTheSourceTemplate() throws Exception {
         // the dry run derived nothing (e.g. it failed), the static template names the identity
         stubDispatcherResult(ProcessingContext.builder().mapping(makeInboundMapping()).build());
