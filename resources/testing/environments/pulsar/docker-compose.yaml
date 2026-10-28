@@ -4,7 +4,9 @@ services:
     container_name: pulsar-standalone
     ports:
       - "6650:6650"   # broker (pulsar://localhost:6650)
-      - "8080:8080"   # admin / REST (http://localhost:8080)
+      # admin / REST (http://localhost:9090); host port moved off 8080, which the local
+      # dynamic-mapper-service uses. Override with PULSAR_ADMIN_PORT.
+      - "${PULSAR_ADMIN_PORT:-9090}:8080"
     environment:
       # keep the standalone JVMs small enough for a dev laptop
       - PULSAR_MEM=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=512m
@@ -26,7 +28,7 @@ services:
         condition: service_healthy
     restart: "no"
     environment:
-      - TENANT=${TENANT:-t2050305588}
+      - TENANT=${TENANT:-example-tenant}
     # $$ escapes compose interpolation so the container's own TENANT is used
     command: >
       bash -c '

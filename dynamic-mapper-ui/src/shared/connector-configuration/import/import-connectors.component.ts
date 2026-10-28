@@ -110,7 +110,19 @@ export class ImportConnectorsComponent implements OnDestroy {
           config.enabled = false;
           // skipRefresh: avoid one redundant configurations refetch per imported connector —
           // refresh once after the whole batch completes instead.
-          await this.connectorConfigurationService.createConfiguration(config, true);
+          // client.fetch resolves on 4xx/5xx, so the status must be checked here — otherwise a
+          // rejected POST is counted as imported and the error never reaches the user.
+          const response = await this.connectorConfigurationService.createConfiguration(config, true);
+          if (!response.ok) {
+            let detail = '';
+            try {
+              const body = await response.json();
+              detail = body?.message ?? body?.error ?? '';
+            } catch {
+              // body is empty or not JSON
+            }
+            throw new Error(`HTTP ${response.status}${detail ? `: ${detail}` : response.statusText ? `: ${response.statusText}` : ''}`);
+          }
           successCount++;
           this.progress$.next((100 * (i + 1)) / countConfigurations);
         } catch (ex) {
