@@ -22,6 +22,7 @@ import { BottomDrawerRef, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { FormlyFieldConfig, FormlyModule } from '@ngx-formly/core';
 import { FormGroup, FormsModule } from '@angular/forms';
 import {
+  CONNECTOR_PROPERTY_GROUP_GENERAL,
   CONNECTOR_PROPERTY_GROUP_ORDER,
   ConnectionTestResult,
   ConnectorConfiguration,
@@ -312,6 +313,9 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
 
   private initializeBasicFormFields(): void {
     this.dynamicFormFields = [{
+      type: 'template',
+      template: `<div class="legend form-block">${this.escapeHtml(CONNECTOR_PROPERTY_GROUP_GENERAL)}</div>`
+    }, {
       fieldGroup: [
         {
           className: 'col-lg-12',

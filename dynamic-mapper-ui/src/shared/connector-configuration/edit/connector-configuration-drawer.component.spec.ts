@@ -297,9 +297,12 @@ describe('ConnectorConfigurationDrawerComponent', () => {
         Object.entries(props()).forEach(([k, p]) => (p.group = original[k]));
       });
 
+      // The fixed "General" legend above name/description has no hideExpression; property-group legends always do.
+      const groupLegendFields = () =>
+        component.dynamicFormFields.filter(f => f.type === 'template' && f.hideExpression);
+
       const legends = () =>
-        component.dynamicFormFields
-          .filter(f => f.type === 'template')
+        groupLegendFields()
           .map(f => /legend form-block">(.*)<\/div>/.exec(f.template as string)?.[1]);
 
       it('should show groups in the fixed group order, not in property order', async () => {
@@ -320,6 +323,15 @@ describe('ConnectorConfigurationDrawerComponent', () => {
         await component['createDynamicForm'](ConnectorType.MQTT);
 
         expect(legends()).toEqual(['Connection', 'TLS']);
+      });
+
+      it('should show a General legend above name and description', async () => {
+        await component['createDynamicForm'](ConnectorType.MQTT);
+
+        const [first, second] = component.dynamicFormFields;
+        expect(first.type).toBe('template');
+        expect(first.template).toContain('General');
+        expect(second.fieldGroup.map(f => f.key)).toEqual(['name', 'description']);
       });
 
       it('should add no legend for properties without a group', async () => {
@@ -344,7 +356,7 @@ describe('ConnectorConfigurationDrawerComponent', () => {
 
         try {
           await component['createDynamicForm'](ConnectorType.MQTT);
-          const legend = component.dynamicFormFields.find(f => f.type === 'template');
+          const legend = groupLegendFields()[0];
           const hide = legend.hideExpression as (model: any) => boolean;
 
           expect(hide({ properties: { enableSSL: false } })).toBe(true);

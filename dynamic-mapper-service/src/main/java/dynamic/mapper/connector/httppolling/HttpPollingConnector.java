@@ -1004,6 +1004,7 @@ public class HttpPollingConnector extends AConnectorClient {
 
                 .property("url", ConnectorPropertyBuilder.requiredString()
                         .group(ConnectorPropertyGroup.CONNECTION)
+                        .label("URL")
                         .order(0)
                         .description("Base REST endpoint. Each mapping's topic is appended as the request " +
                                 "path — e.g. url=https://api.example.com/v1, mapping topic=devices/measurements " +
@@ -1012,6 +1013,7 @@ public class HttpPollingConnector extends AConnectorClient {
 
                 .property("pollIntervalSeconds", ConnectorPropertyBuilder.create(ConnectorPropertyType.NUMERIC_PROPERTY)
                         .group(ConnectorPropertyGroup.POLLING)
+                        .label("Poll interval (s)")
                         .order(1)
                         .required(false)
                         .defaultValue(DEFAULT_POLL_INTERVAL_SECONDS)
@@ -1019,21 +1021,25 @@ public class HttpPollingConnector extends AConnectorClient {
 
                 .property("authentication", ConnectorPropertyBuilder.optionalOption()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("Authentication sent with each poll request.")
                         .order(2)
                         .options("None", "Basic", "Bearer"))
 
                 .property("user", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("User name for Basic authentication.")
                         .order(3)
                         .condition("authentication", "Basic"))
 
                 .property("password", ConnectorPropertyBuilder.optionalSensitive()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("Password for Basic authentication.")
                         .order(4)
                         .condition("authentication", "Basic"))
 
                 .property("token", ConnectorPropertyBuilder.optionalSensitive()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("Bearer token sent in the Authorization header.")
                         .order(5)
                         .condition("authentication", "Bearer"))
 
@@ -1045,6 +1051,7 @@ public class HttpPollingConnector extends AConnectorClient {
 
                 .property("cursorParam", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.POLLING)
+                        .label("Cursor parameter")
                         .order(7)
                         .description("Query parameter name used to send the incremental-fetch cursor with " +
                                 "each poll (e.g. \"since\"). Leave empty to disable incremental fetch — every " +
@@ -1052,6 +1059,7 @@ public class HttpPollingConnector extends AConnectorClient {
 
                 .property("cursorExtractionExpression", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.POLLING)
+                        .label("Cursor expression")
                         .order(8)
                         .description("JSONata expression evaluated against each response to compute the next " +
                                 "cursor value (e.g. \"items[-1].timestamp\"). Only takes effect together with " +
@@ -1060,6 +1068,7 @@ public class HttpPollingConnector extends AConnectorClient {
 
                 .property("paginationMode", ConnectorPropertyBuilder.optionalOption()
                         .group(ConnectorPropertyGroup.PAGINATION)
+                        .label("Pagination mode")
                         .order(9)
                         .options("None", "NextLinkHeader", "NextFieldInBody", "PageNumber")
                         .description("How to drain multiple pages within one poll cycle. None (default): a " +
@@ -1070,6 +1079,7 @@ public class HttpPollingConnector extends AConnectorClient {
 
                 .property("maxPagesPerPoll", ConnectorPropertyBuilder.create(ConnectorPropertyType.NUMERIC_PROPERTY)
                         .group(ConnectorPropertyGroup.PAGINATION)
+                        .label("Maximum pages per poll")
                         .order(10)
                         .required(false)
                         .defaultValue(HttpPollingRequestHelper.DEFAULT_MAX_PAGES_PER_POLL)
@@ -1080,6 +1090,7 @@ public class HttpPollingConnector extends AConnectorClient {
 
                 .property("pageParam", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.PAGINATION)
+                        .label("Page parameter")
                         .order(11)
                         .condition("paginationMode", "NextFieldInBody", "PageNumber")
                         .description("Query parameter name the next page's token/number is sent under " +
@@ -1088,6 +1099,7 @@ public class HttpPollingConnector extends AConnectorClient {
 
                 .property("nextPageExpression", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.PAGINATION)
+                        .label("Next page expression")
                         .order(12)
                         .condition("paginationMode", "NextFieldInBody")
                         .description("JSONata expression evaluated against each response to extract the next " +
@@ -1096,6 +1108,7 @@ public class HttpPollingConnector extends AConnectorClient {
 
                 .property("pageStartValue", ConnectorPropertyBuilder.create(ConnectorPropertyType.NUMERIC_PROPERTY)
                         .group(ConnectorPropertyGroup.PAGINATION)
+                        .label("First page number")
                         .order(13)
                         .required(false)
                         .defaultValue(HttpPollingRequestHelper.DEFAULT_PAGE_START_VALUE)
@@ -1104,12 +1117,16 @@ public class HttpPollingConnector extends AConnectorClient {
 
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
                         .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in inbound topics")
+                        .description("Allow wildcards (+ and #) in the topic of inbound mappings.")
                         .order(14)
                         .readonly(true)
                         .defaultValue(false))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
                         .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in outbound topics")
+                        .description("Allow wildcards (+ and #) in the publish topic of outbound mappings.")
                         .order(15)
                         .readonly(true)
                         .hidden(true)

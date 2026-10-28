@@ -61,11 +61,15 @@ export interface ConnectorPropertyCondition {
   key: string;
   anyOf: string[];
 }
+/** Group of the fixed name and description fields. No connector property uses it. */
+export const CONNECTOR_PROPERTY_GROUP_GENERAL = 'General';
+
 /**
  * Display order of the property groups in the connector form. Keep in sync with the constants in the backend class
  * ConnectorPropertyGroup. Groups that are not listed here are shown after these, alphabetically.
  */
 export const CONNECTOR_PROPERTY_GROUP_ORDER: string[] = [
+  CONNECTOR_PROPERTY_GROUP_GENERAL,
   'Connection',
   'TLS',
   'Authentication',

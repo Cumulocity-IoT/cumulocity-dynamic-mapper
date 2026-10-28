@@ -1211,6 +1211,8 @@ public class KafkaClientV2 extends AConnectorClient {
                 // Basic connection
                 .property("bootstrapServers", ConnectorPropertyBuilder.requiredString()
                         .group(ConnectorPropertyGroup.CONNECTION)
+                        .label("Bootstrap servers")
+                        .description("Comma-separated list of Kafka brokers as host:port, for example broker1:9092,broker2:9092.")
                         .order(0))
 
                 // TLS / custom CA trust (optional) - same pattern as the MQTT/AMQP/Pulsar connectors
@@ -1237,12 +1239,14 @@ public class KafkaClientV2 extends AConnectorClient {
 
                 .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
                         .group(ConnectorPropertyGroup.TLS)
+                        .label("Certificate chain (PEM)")
                         .order(4)
                         .description("Certificate chain in PEM format (alternative to referencing the Cumulocity certificate store)")
                         .condition("trustCustomCertificate", "true"))
 
                 .property("disableHostnameValidation", ConnectorPropertyBuilder.optionalBoolean()
                         .group(ConnectorPropertyGroup.TLS)
+                        .label("Disable hostname validation")
                         .order(5)
                         .defaultValue(false)
                         .description("Disable TLS hostname verification (insecure, for development/testing only)")
@@ -1262,6 +1266,7 @@ public class KafkaClientV2 extends AConnectorClient {
 
                 .property("saslMechanism", ConnectorPropertyBuilder.optionalOption()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .label("SASL mechanism")
                         .order(8)
                         .defaultValue("SCRAM-SHA-256")
                         .options("SCRAM-SHA-256", "SCRAM-SHA-512", "PLAIN")
@@ -1271,20 +1276,24 @@ public class KafkaClientV2 extends AConnectorClient {
                 // Consumer group
                 .property("groupId", ConnectorPropertyBuilder.requiredString()
                         .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .label("Consumer group ID")
+                        .description("Consumer group the connector joins to read inbound messages.")
                         .order(9))
 
                 // Custom properties
                 .property("defaultPropertiesProducer", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
                         .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Additional producer properties")
                         .order(10)
-                        .description("Producer properties")
+                        .description("Additional Kafka producer properties as key-value pairs.")
                         .required(false)
                         .defaultValue(new HashMap<String, String>()))
 
                 .property("defaultPropertiesConsumer", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
                         .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Additional consumer properties")
                         .order(12)
-                        .description("Consumer properties")
+                        .description("Additional Kafka consumer properties as key-value pairs.")
                         .required(false)
                         .defaultValue(new HashMap<String, String>()));
 
@@ -1295,6 +1304,7 @@ public class KafkaClientV2 extends AConnectorClient {
                     "properties can only be edited in the property file: kafka-producer.properties");
             builder.property("propertiesProducer", ConnectorPropertyBuilder.largeText()
                     .group(ConnectorPropertyGroup.ADVANCED)
+                    .label("Predefined producer properties")
                     .order(11)
                     .description("Predefined producer properties")
                     .readonly(true)
@@ -1305,6 +1315,7 @@ public class KafkaClientV2 extends AConnectorClient {
                     "properties can only be edited in the property file: kafka-consumer.properties");
             builder.property("propertiesConsumer", ConnectorPropertyBuilder.largeText()
                     .group(ConnectorPropertyGroup.ADVANCED)
+                    .label("Predefined consumer properties")
                     .order(13)
                     .description("Predefined consumer properties")
                     .readonly(true)

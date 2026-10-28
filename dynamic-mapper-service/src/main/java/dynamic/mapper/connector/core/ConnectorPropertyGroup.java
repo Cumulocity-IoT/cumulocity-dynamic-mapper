@@ -28,6 +28,8 @@ package dynamic.mapper.connector.core;
  */
 public final class ConnectorPropertyGroup {
 
+    /** Name and description of the connector. The UI shows them as fixed fields; no connector property uses this group. */
+    public static final String GENERAL = "General";
     /** Host, port, URL, protocol: where the broker or endpoint is. */
     public static final String CONNECTION = "Connection";
     /** TLS and server certificate trust. */

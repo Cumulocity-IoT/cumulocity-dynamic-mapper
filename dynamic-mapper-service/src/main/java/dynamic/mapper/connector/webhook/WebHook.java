@@ -166,7 +166,7 @@ public class WebHook extends AConnectorClient {
                             true, true, "application/json", null, null));
 
             props.put("baseUrlHealthEndpoint",
-                    new ConnectorProperty("health endpoint for GET request", false, 6,
+                    new ConnectorProperty("Endpoint called with a GET request to test the connection.", false, 6,
                             ConnectorPropertyType.STRING_PROPERTY, true, true,
                             "http://cumulocity:8111/notification2", null, null));
         }
@@ -949,6 +949,7 @@ public class WebHook extends AConnectorClient {
                 // Cumulocity internal mode toggle
                 .property("cumulocityInternal", ConnectorPropertyBuilder.optionalBoolean()
                         .group(ConnectorPropertyGroup.CONNECTION)
+                        .label("Use Cumulocity API of this tenant")
                         .order(7)
                         .description("When checked the webHook connector can automatically connect to the Cumulocity instance the mapper is deployed to.")
                         .defaultValue(false))
@@ -956,46 +957,55 @@ public class WebHook extends AConnectorClient {
                 // External URL configuration (only when not using internal mode)
                 .property("baseUrl", ConnectorPropertyBuilder.requiredString()
                         .group(ConnectorPropertyGroup.CONNECTION)
+                        .label("Base URL")
+                        .description("Base URL of the REST endpoint. The publish topic of each mapping is appended to it.")
                         .order(0)
                         .condition("cumulocityInternal", "false"))
 
                 .property("authentication", ConnectorPropertyBuilder.optionalOption()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("Authentication sent with each request.")
                         .order(1)
                         .options("Basic", "Bearer")
                         .condition("cumulocityInternal", "false"))
 
                 .property("user", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("User name for Basic authentication.")
                         .order(2)
                         .condition("authentication", "Basic"))
 
                 .property("password", ConnectorPropertyBuilder.optionalSensitive()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("Password for Basic authentication.")
                         .order(3)
                         .condition("authentication", "Basic"))
 
                 .property("token", ConnectorPropertyBuilder.optionalSensitive()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("Bearer token sent in the Authorization header.")
                         .order(4)
                         .condition("authentication", "Bearer"))
 
                 .property("headerAccept", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.REQUEST)
+                        .label("Accept header")
+                        .description("Value of the Accept header sent with each request.")
                         .order(5)
                         .defaultValue("application/json")
                         .condition("cumulocityInternal", "false"))
 
                 .property("baseUrlHealthEndpoint", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.REQUEST)
+                        .label("Health endpoint")
                         .order(6)
-                        .description("health endpoint for GET request")
+                        .description("Endpoint called with a GET request to test the connection.")
                         .condition("cumulocityInternal", "false"))
 
                 .property("headers", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
                         .group(ConnectorPropertyGroup.REQUEST)
                         .order(8)
-                        .description("Define additional headers")
+                        .description("Additional headers sent with every request.")
                         .required(false)
                         .defaultValue(new HashMap<String, String>())
                         .condition("cumulocityInternal", "false"))
@@ -1003,6 +1013,8 @@ public class WebHook extends AConnectorClient {
                 // Wildcard support (read-only)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
                         .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in inbound topics")
+                        .description("Allow wildcards (+ and #) in the topic of inbound mappings.")
                         .order(9)
                         .readonly(true)
                         .hidden(true)
@@ -1010,6 +1022,8 @@ public class WebHook extends AConnectorClient {
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
                         .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in outbound topics")
+                        .description("Allow wildcards (+ and #) in the publish topic of outbound mappings.")
                         .order(10)
                         .readonly(true)
                         .defaultValue(true))

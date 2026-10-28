@@ -664,6 +664,7 @@ public class AMQP10Client extends AConnectorClient {
                 // Protocol selection
                 .property("protocol", ConnectorPropertyBuilder.requiredOption()
                         .group(ConnectorPropertyGroup.CONNECTION)
+                        .description("amqp:// is an unencrypted connection, amqps:// uses TLS.")
                         .order(0)
                         .defaultValue("amqp://")
                         .options("amqp://", "amqps://"))
@@ -671,31 +672,39 @@ public class AMQP10Client extends AConnectorClient {
                 // Connection
                 .property("host", ConnectorPropertyBuilder.requiredString()
                         .group(ConnectorPropertyGroup.CONNECTION)
+                        .description("Host name or IP address of the AMQP broker.")
                         .order(1)
                         .defaultValue("localhost"))
 
                 .property("port", ConnectorPropertyBuilder.requiredNumeric()
                         .group(ConnectorPropertyGroup.CONNECTION)
+                        .description("Port of the AMQP broker, usually 5672 for amqp:// and 5671 for amqps://.")
                         .order(2)
                         .defaultValue(5672))
 
                 // Authentication
                 .property("username", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("User name for the broker.")
                         .order(3))
 
                 .property("password", ConnectorPropertyBuilder.optionalSensitive()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("Password of the broker user.")
                         .order(4))
 
                 // AMQP container ID / JMS client ID (e.g. device ID for Azure IoT Hub)
                 .property("clientId", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.SESSION)
+                        .label("Client ID")
+                        .description("Client ID the connector uses at the broker. Leave empty to let the client library generate one.")
                         .order(5))
 
                 // AMQP 1.0 destination type — no exchange/routing-key concept
                 .property("destinationType", ConnectorPropertyBuilder.requiredOption()
                         .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .label("Destination type")
+                        .description("Use queue for point-to-point delivery or topic for publish and subscribe.")
                         .order(6)
                         .defaultValue("queue")
                         .optionsWithLabels("queue", "Queue", "topic", "Topic"))
@@ -703,6 +712,8 @@ public class AMQP10Client extends AConnectorClient {
                 // Content type set on outbound AMQP messages (e.g. application/json;charset=utf-8)
                 .property("contentType", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .label("Content type")
+                        .description("AMQP content type set on outbound messages, for example application/json. Leave empty to not set it.")
                         .order(7))
 
                 // TLS/SSL certificate configuration (only for amqps://)
@@ -730,6 +741,7 @@ public class AMQP10Client extends AConnectorClient {
 
                 .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
                         .group(ConnectorPropertyGroup.TLS)
+                        .label("Certificate chain (PEM)")
                         .order(11)
                         .description("Certificate in PEM format, or identify by name/fingerprint " +
                                 "(must be uploaded as Trusted Certificate in Device Management)")
@@ -738,17 +750,23 @@ public class AMQP10Client extends AConnectorClient {
                 // Connection behaviour
                 .property("automaticRecovery", ConnectorPropertyBuilder.optionalBoolean()
                         .group(ConnectorPropertyGroup.RELIABILITY)
+                        .label("Automatic recovery")
+                        .description("Reconnect automatically after a connection loss.")
                         .order(12)
                         .defaultValue(true))
 
                 // Wildcard support (broker-dependent for AMQP 1.0)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
                         .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in inbound topics")
+                        .description("Allow wildcards (+ and #) in the topic of inbound mappings.")
                         .order(13)
                         .defaultValue(false))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
                         .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in outbound topics")
+                        .description("Allow wildcards (+ and #) in the publish topic of outbound mappings.")
                         .order(14)
                         .defaultValue(false))
 

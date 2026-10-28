@@ -579,11 +579,13 @@ public class GooglePubSubClient extends AConnectorClient {
 
                 .property("projectId", ConnectorPropertyBuilder.requiredString()
                         .group(ConnectorPropertyGroup.CONNECTION)
+                        .label("Project ID")
                         .order(0)
                         .description("Google Cloud project ID that owns the Pub/Sub topic and subscription"))
 
                 .property("topicId", ConnectorPropertyBuilder.requiredString()
                         .group(ConnectorPropertyGroup.TOPICS)
+                        .label("Topic ID")
                         .order(1)
                         .defaultValue("input-messages")
                         .description("Default Pub/Sub topic to publish to (outbound). A mapping's own publish topic, " +
@@ -591,6 +593,7 @@ public class GooglePubSubClient extends AConnectorClient {
 
                 .property("subscriptionId", ConnectorPropertyBuilder.create(ConnectorPropertyType.STRING_PROPERTY)
                         .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .label("Subscription ID")
                         .required(false)
                         .order(2)
                         .description("Name of the pre-existing Pub/Sub subscription to consume from (inbound). " +
@@ -600,6 +603,7 @@ public class GooglePubSubClient extends AConnectorClient {
 
                 .property("authMode", ConnectorPropertyBuilder.create(ConnectorPropertyType.OPTION_PROPERTY)
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .label("Authentication mode")
                         .required(true)
                         .order(3)
                         .defaultValue("serviceAccountKey")
@@ -610,6 +614,7 @@ public class GooglePubSubClient extends AConnectorClient {
 
                 .property("serviceAccountKey", ConnectorPropertyBuilder.create(ConnectorPropertyType.SENSITIVE_STRING_LARGE_PROPERTY)
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .label("Service account key")
                         .required(true)
                         .order(4)
                         .condition("authMode", "serviceAccountKey")
@@ -618,6 +623,7 @@ public class GooglePubSubClient extends AConnectorClient {
 
                 .property("adcCredentialsJson", ConnectorPropertyBuilder.create(ConnectorPropertyType.SENSITIVE_STRING_LARGE_PROPERTY)
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .label("ADC credentials JSON")
                         .required(false)
                         .order(5)
                         .condition("authMode", "applicationDefaultCredentials")
@@ -626,6 +632,7 @@ public class GooglePubSubClient extends AConnectorClient {
 
                 .property("publishTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
                         .group(ConnectorPropertyGroup.TIMEOUTS)
+                        .label("Publish timeout (s)")
                         .order(6)
                         .defaultValue(DEFAULT_PUBLISH_TIMEOUT_SECONDS)
                         .description("How long to wait for a publish acknowledgement before treating the request as failed."))

@@ -1108,6 +1108,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                 // Connection settings
                 .property("serviceUrl", ConnectorPropertyBuilder.requiredString()
                         .group(ConnectorPropertyGroup.CONNECTION)
+                        .label("Service URL")
                         .order(0)
                         .description("This can be in the format: pulsar://localhost:6650 for non-TLS or pulsar+ssl://localhost:6651 for TLS")
                         .defaultValue("pulsar://localhost:6650"))
@@ -1115,6 +1116,8 @@ public class PulsarConnectorClient extends AConnectorClient {
                 // TLS configuration
                 .property("enableTls", ConnectorPropertyBuilder.optionalBoolean()
                         .group(ConnectorPropertyGroup.TLS)
+                        .label("Enable TLS")
+                        .description("Use TLS for the connection. The service URL must then start with pulsar+ssl://.")
                         .order(1)
                         .defaultValue(false))
 
@@ -1142,13 +1145,16 @@ public class PulsarConnectorClient extends AConnectorClient {
 
                 .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
                         .group(ConnectorPropertyGroup.TLS)
+                        .label("Certificate chain (PEM)")
                         .order(5)
-                        .description("Either enter certificate in PEM format or identify certificate by name and fingerprint (must be uploaded as Trusted Certificate in Device Management)")
+                        .description("Certificate chain in PEM format. Alternatively, identify the certificate by name and fingerprint; it must be uploaded to Device Management > Trusted certificates.")
                         .condition("trustCustomCertificate", "true"))
 
                 // Authentication
                 .property("authenticationMethod", ConnectorPropertyBuilder.optionalOption()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .label("Authentication method")
+                        .description("Authentication method of the broker. Select None for a broker without authentication.")
                         .order(6)
                         .defaultValue("none")
                         .optionsWithLabels("none", "None", "token", "Token", "oauth2", "OAuth2",
@@ -1157,6 +1163,7 @@ public class PulsarConnectorClient extends AConnectorClient {
 
                 .property("authenticationParams", ConnectorPropertyBuilder.optionalSensitive()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .label("Authentication parameters")
                         .order(7)
                         .description("Parameters for the selected method. Token: the token string. "
                                 + "Basic: JSON with user and password, e.g. {\"userId\":\"myUser\",\"password\":\"myPassword\"}. "
@@ -1180,22 +1187,30 @@ public class PulsarConnectorClient extends AConnectorClient {
                 // Timeouts
                 .property("connectionTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
                         .group(ConnectorPropertyGroup.TIMEOUTS)
+                        .label("Connection timeout (s)")
+                        .description("Maximum time in seconds to wait for the connection to the broker.")
                         .order(10)
                         .defaultValue(DEFAULT_CONNECTION_TIMEOUT))
 
                 .property("operationTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
                         .group(ConnectorPropertyGroup.TIMEOUTS)
+                        .label("Operation timeout (s)")
+                        .description("Maximum time in seconds to wait for a broker operation such as subscribe or publish.")
                         .order(11)
                         .defaultValue(DEFAULT_OPERATION_TIMEOUT))
 
                 .property("keepAliveIntervalSeconds", ConnectorPropertyBuilder.requiredNumeric()
                         .group(ConnectorPropertyGroup.TIMEOUTS)
+                        .label("Keep-alive interval (s)")
+                        .description("Interval in seconds between keep-alive pings to the broker.")
                         .order(12)
                         .defaultValue(DEFAULT_KEEP_ALIVE))
 
                 // Subscription settings
                 .property("subscriptionType", ConnectorPropertyBuilder.optionalOption()
                         .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .label("Subscription type")
+                        .description("Pulsar subscription type. Shared distributes messages over all consumers, Exclusive allows one consumer, Failover keeps a standby consumer, and Key Shared routes messages with the same key to the same consumer.")
                         .order(13)
                         .defaultValue("Shared")
                         .optionsWithLabels("Exclusive", "Exclusive", "Shared", "Shared",
@@ -1203,6 +1218,7 @@ public class PulsarConnectorClient extends AConnectorClient {
 
                 .property("subscriptionName", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .label("Subscription name")
                         .order(14)
                         .description("Prefix of the generated Pulsar subscription names, or the exact subscription name if 'Use subscription name as is' is enabled"))
 
@@ -1216,12 +1232,16 @@ public class PulsarConnectorClient extends AConnectorClient {
                 // Wildcard support (read-only)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
                         .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in inbound topics")
+                        .description("Allow wildcards (+ and #) in the topic of inbound mappings.")
                         .order(16)
                         .readonly(true)
                         .defaultValue(true))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
                         .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in outbound topics")
+                        .description("Allow wildcards (+ and #) in the publish topic of outbound mappings.")
                         .order(17)
                         .readonly(true)
                         .defaultValue(false))
@@ -1229,11 +1249,14 @@ public class PulsarConnectorClient extends AConnectorClient {
                 // Pulsar-specific settings
                 .property("pulsarTenant", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.TOPICS)
+                        .label("Tenant")
+                        .description("Pulsar tenant of topics that are not given as a full Pulsar name. A tenant/namespace entry in Namespace overrides it.")
                         .order(18)
                         .defaultValue("public"))
 
                 .property("pulsarNamespace", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.TOPICS)
+                        .label("Namespace")
                         .order(19)
                         .description("Namespace for topics that are not given as a full Pulsar name. May also be entered as 'tenant/namespace', which overrides the tenant above.")
                         .defaultValue("default"))

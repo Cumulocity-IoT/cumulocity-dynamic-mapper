@@ -618,6 +618,7 @@ public class AMQPClient extends AConnectorClient {
                 // Protocol selection
                 .property("protocol", ConnectorPropertyBuilder.requiredOption()
                         .group(ConnectorPropertyGroup.CONNECTION)
+                        .description("amqp:// is an unencrypted connection, amqps:// uses TLS.")
                         .order(0)
                         .defaultValue("amqp://")
                         .options("amqp://", "amqps://"))
@@ -625,37 +626,46 @@ public class AMQPClient extends AConnectorClient {
                 // Basic connection properties
                 .property("host", ConnectorPropertyBuilder.requiredString()
                         .group(ConnectorPropertyGroup.CONNECTION)
+                        .description("Host name or IP address of the AMQP broker.")
                         .order(1)
                         .defaultValue("localhost"))
 
                 .property("port", ConnectorPropertyBuilder.requiredNumeric()
                         .group(ConnectorPropertyGroup.CONNECTION)
+                        .description("Port of the AMQP broker, usually 5672 for amqp:// and 5671 for amqps://.")
                         .order(2)
                         .defaultValue(5672))
 
                 .property("virtualHost", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.CONNECTION)
+                        .label("Virtual host")
+                        .description("Virtual host on the broker. The default is /.")
                         .order(3)
                         .defaultValue("/"))
 
                 // Authentication
                 .property("username", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("User name for the broker. The RabbitMQ default is guest.")
                         .order(4)
                         .defaultValue("guest"))
 
                 .property("password", ConnectorPropertyBuilder.optionalSensitive()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("Password of the broker user.")
                         .order(5))
 
                 // AMQP exchange configuration
                 .property("exchange", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .description("Exchange that inbound queues are bound to and that outbound messages are published to. Leave empty to use the default exchange.")
                         .order(6)
                         .defaultValue(""))
 
                 .property("exchangeType", ConnectorPropertyBuilder.optionalOption()
                         .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .label("Exchange type")
+                        .description("Type used when the exchange is declared. Use topic to route by the mapping topic.")
                         .order(7)
                         .defaultValue("topic")
                         .optionsWithLabels("topic", "Topic", "direct", "Direct", "fanout", "Fanout", "headers", "Headers"))
@@ -663,11 +673,15 @@ public class AMQPClient extends AConnectorClient {
                 // Queue configuration
                 .property("queuePrefix", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .label("Queue prefix")
+                        .description("Prefix of the generated queue names. A queue is named <prefix>.<topic>, with / in the topic replaced by a dot.")
                         .order(8)
                         .defaultValue(""))
 
                 .property("autoDeleteQueue", ConnectorPropertyBuilder.optionalBoolean()
                         .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .label("Auto-delete queues")
+                        .description("Delete a queue when its last consumer disconnects.")
                         .order(9)
                         .defaultValue(false))
 
@@ -696,24 +710,31 @@ public class AMQPClient extends AConnectorClient {
 
                 .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
                         .group(ConnectorPropertyGroup.TLS)
+                        .label("Certificate chain (PEM)")
                         .order(13)
-                        .description("Either enter certificate in PEM format or identify certificate by name and fingerprint (must be uploaded as Trusted Certificate in Device Management)")
+                        .description("Certificate chain in PEM format. Alternatively, identify the certificate by name and fingerprint; it must be uploaded to Device Management > Trusted certificates.")
                         .condition("trustCustomCertificate", "true"))
 
                 // Connection behavior
                 .property("automaticRecovery", ConnectorPropertyBuilder.optionalBoolean()
                         .group(ConnectorPropertyGroup.RELIABILITY)
+                        .label("Automatic recovery")
+                        .description("Reconnect and restore queues and bindings automatically after a connection loss.")
                         .order(14)
                         .defaultValue(true))
 
                 // Wildcard support flags
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
                         .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in inbound topics")
+                        .description("Allow wildcards (+ and #) in the topic of inbound mappings.")
                         .order(15)
                         .defaultValue(true))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
                         .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in outbound topics")
+                        .description("Allow wildcards (+ and #) in the publish topic of outbound mappings.")
                         .order(16)
                         .defaultValue(false))
 
