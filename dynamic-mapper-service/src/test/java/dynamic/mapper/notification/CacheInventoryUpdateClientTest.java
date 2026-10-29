@@ -68,7 +68,8 @@ class CacheInventoryUpdateClientTest {
 
     @Test
     void onNotification_delete_evictsCachesAndUnsubscribes() {
-        Notification notification = parseNotification("DELETE", "{\"id\":\"" + SOURCE_ID + "\"}");
+        // Real DELETE notifications have an empty body; the id is the last segment of the channel header.
+        Notification notification = parseNotification("DELETE", "", SOURCE_ID);
 
         client.onNotification(notification);
 
@@ -110,8 +111,12 @@ class CacheInventoryUpdateClientTest {
      * {@code Notification.parse} maps to {@code API.INVENTORY}. Header line 2 is the operation.
      */
     private Notification parseNotification(String operation, String payload) {
+        return parseNotification(operation, payload, null);
+    }
+
+    private Notification parseNotification(String operation, String payload, String sourceIdInHeader) {
         String raw = "ack-1\n"
-                + "rt/" + TENANT + "/managedobjects\n"
+                + "/" + TENANT + "/managedobjects" + (sourceIdInHeader != null ? "/" + sourceIdInHeader : "") + "\n"
                 + operation + "\n"
                 + "\n"
                 + payload;

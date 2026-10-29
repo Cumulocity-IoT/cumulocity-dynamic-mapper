@@ -474,6 +474,7 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-outbound-inventory` | C8Y managed-object change (**device metadata**) → MQTT broker |
 | `test-outbound-filter` | `filterMapping` — selective forwarding |
 | `test-outbound-filter-inventory` | `filterInventory` (device type) and `filterMapping` on a partial inventory change |
+| `test-outbound-inventory-cache-eviction` | A deleted device is evicted from the inventory cache (`GET /cache?cacheId=INVENTORY_CACHE`) via the Notification 2.0 DELETE |
 | `test-outbound-topic-resolution` | Dynamic publish topic resolution |
 | `test-outbound-json-smartfunction` | Smart Function: Measurement → MQTT JSON |
 | `test-outbound-smartfunction-externalsource` | Smart Function `externalSource` resolves the `_externalId_` topic token — verified by a real broker round-trip (`mosquitto_sub -v`) |

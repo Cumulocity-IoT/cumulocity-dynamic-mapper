@@ -113,10 +113,21 @@ public class CacheInventoryUpdateClient implements NotificationCallback {
             String notificationTenant = NotificationHelper.extractTenant(
                 notification.getNotificationHeaders(), tenant);
 
-            Map<String, Object> payload = NotificationHelper.parsePayload(notification.getMessage());
-            String sourceId = NotificationHelper.extractSourceId(payload, notification.getApi());
+            // A DELETE notification has an empty body, so the id comes from the channel header.
+            String message = notification.getMessage();
+            String sourceId = null;
+            if (message != null && !message.isBlank()) {
+                Map<String, Object> payload = NotificationHelper.parsePayload(message);
+                sourceId = NotificationHelper.extractSourceId(payload, notification.getApi());
+            }
+            if (sourceId == null) {
+                sourceId = NotificationHelper.extractSourceIdFromHeaders(notification.getNotificationHeaders());
+            }
 
-            if (sourceId != null) {
+            if (sourceId == null) {
+                log.warn("{} - DELETE notification without a resolvable source id, cache not evicted. headers={}",
+                        notificationTenant, notification.getNotificationHeaders());
+            } else {
                 c8yAgent.evictDeletedManagedObjectFromCaches(notificationTenant, sourceId);
 
                 ManagedObjectRepresentation mor = new ManagedObjectRepresentation();

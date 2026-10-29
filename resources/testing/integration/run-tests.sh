@@ -99,6 +99,7 @@ declare -a TESTS=(
     "outbound|test-outbound-inventory|C8Y managed-object change → MQTT broker (metadata)"
     "outbound|test-outbound-filter|filterMapping — selective forwarding"
     "outbound|test-outbound-filter-inventory|filterInventory / filterMapping — outbound inventory"
+    "outbound|test-outbound-inventory-cache-eviction|Inventory cache — eviction on device delete"
     "outbound|test-outbound-topic-resolution|Dynamic publish topic resolution"
     "outbound|test-outbound-json-smartfunction|Smart Function: Measurement → MQTT JSON"
     "outbound|test-outbound-smartfunction-externalsource|Smart Function externalSource → _externalId_ topic (broker round-trip)"

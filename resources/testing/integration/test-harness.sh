@@ -650,6 +650,13 @@ dm_wait_for_subscription_present() {  # <device_id> [timeout_secs=30] [interval_
 }
 
 # Wait until no notification2 subscriptions exist for <device_id>.
+# Current entry count of a mapper cache (INVENTORY_CACHE | INBOUND_ID_CACHE | OUTBOUND_ID_CACHE),
+# the same figure the Monitoring > Cache statistic page shows. Outputs -1 when it cannot be read.
+dm_cache_size() {   # <cache_id>
+    dm_api GET "/cache?cacheId=$1" | jq -r 'if type == "number" then . else -1 end' 2>/dev/null \
+        || printf -- '-1'
+}
+
 dm_wait_for_subscription_absent() {  # <device_id> [timeout_secs=30] [interval_secs=1]
     local _device=$1 _timeout=${2:-30} _interval=${3:-1} _elapsed=0
     while [ "$_elapsed" -lt "$_timeout" ]; do
