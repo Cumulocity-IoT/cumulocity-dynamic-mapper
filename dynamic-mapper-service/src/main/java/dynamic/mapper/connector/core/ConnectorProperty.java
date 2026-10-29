@@ -68,13 +68,28 @@ public class ConnectorProperty implements Cloneable {
 
     public ConnectorPropertyCondition condition;
 
+    /** Optional display label; when absent the UI derives one from the property key. */
+    public String label;
+
+    /**
+     * Optional display group (see {@link ConnectorPropertyGroup}). The UI shows the properties of a group together
+     * under a legend, groups in a fixed order and properties inside a group by {@link #order}.
+     */
+    public String group;
+
+    public ConnectorProperty(String description, Boolean required, Integer order, ConnectorPropertyType type,
+            Boolean readonly, Boolean hidden, Object defaultValue, Map<String, String> options,
+            ConnectorPropertyCondition condition) {
+        this(description, required, order, type, readonly, hidden, defaultValue, options, condition, null, null);
+    }
+
     @Override
     public ConnectorProperty clone() {
         try {
             ConnectorProperty cloned = (ConnectorProperty) super.clone();
             // Deep clone mutable collections
             if (this.options != null) {
-                cloned.options = new java.util.HashMap<>(this.options);
+                cloned.options = new java.util.LinkedHashMap<>(this.options);
             }
             if (this.condition != null) {
                 cloned.condition = this.condition.clone();

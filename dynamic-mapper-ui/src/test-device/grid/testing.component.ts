@@ -30,7 +30,7 @@ import {
   Pagination,
   ServerSideDataResult
 } from '@c8y/ngx-components';
-import { TestingDeviceService } from '../testing.service';
+import { TestingDeviceService } from '../testing-device.service';
 import { ActivatedRoute } from '@angular/router';
 import { Feature } from '../../shared';
 

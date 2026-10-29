@@ -38,6 +38,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Value;
+import org.graalvm.polyglot.proxy.ProxyExecutable;
+import org.graalvm.polyglot.proxy.ProxyObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -132,8 +134,6 @@ class GraalVMContextCancellationRaceTest {
         templates.put(TemplateType.SYSTEM.name(), system);
 
         config.setCodeTemplates(templates);
-        // Disable time-based rotation — irrelevant here and must not fire mid-test.
-        config.setEngineMaxAgeMinutes(0);
         return config;
     }
 
@@ -187,22 +187,17 @@ class GraalVMContextCancellationRaceTest {
     }
 
     /**
-     * JS-callable bridge (must be a {@code public} class with a {@code public} method for
-     * GraalVM's default {@code HostAccess} to expose it — an anonymous/package-private class
-     * fails reflectively with "Unknown identifier"). Signals the instant the busy-loop JS starts
-     * running, so the test thread can synchronize on "worker has borrowed the context and
-     * started JS" rather than guessing with {@code Thread.sleep(...)}.
+     * JS-callable bridge, a {@link ProxyObject} so it needs no host access (the production
+     * {@code HostAccess} is an explicit allow-list that does not cover test classes). Signals
+     * the instant the busy-loop JS starts running, so the test thread can synchronize on
+     * "worker has borrowed the context and started JS" rather than guessing with
+     * {@code Thread.sleep(...)}.
      */
-    public static class TestSyncBridge {
-        private final CountDownLatch startedLatch;
-
-        public TestSyncBridge(CountDownLatch startedLatch) {
-            this.startedLatch = startedLatch;
-        }
-
-        public void workerStarted() {
+    private static ProxyObject syncBridge(CountDownLatch startedLatch) {
+        return ProxyObject.fromMap(Map.of("workerStarted", (ProxyExecutable) args -> {
             startedLatch.countDown();
-        }
+            return null;
+        }));
     }
 
     /** Minimal concrete AbstractFlowProcessor — mirrors FlowInboundProcessor's error handling
@@ -289,7 +284,7 @@ class GraalVMContextCancellationRaceTest {
         // thread knows the context has genuinely been borrowed and JS execution has begun —
         // no Thread.sleep() timing guesses.
         CountDownLatch workerStarted = new CountDownLatch(1);
-        pooledCtx.getGraalContext().getBindings("js").putMember("__testSync", new TestSyncBridge(workerStarted));
+        pooledCtx.getGraalContext().getBindings("js").putMember("__testSync", syncBridge(workerStarted));
 
         ProcessingResultWrapper<Object> wrapper = ProcessingResultWrapper.<Object>builder()
                 .pipelineTimeoutMS(30_000)
@@ -423,7 +418,7 @@ class GraalVMContextCancellationRaceTest {
                         () -> graalVMContextService.returnContext(poolKey, pooledCtx, engine));
 
                 CountDownLatch started = new CountDownLatch(1);
-                pooledCtx.getGraalContext().getBindings("js").putMember("__testSync", new TestSyncBridge(started));
+                pooledCtx.getGraalContext().getBindings("js").putMember("__testSync", syncBridge(started));
 
                 ProcessingResultWrapper<Object> wrapper = ProcessingResultWrapper.<Object>builder()
                         .pipelineTimeoutMS(30_000)
@@ -549,7 +544,7 @@ class GraalVMContextCancellationRaceTest {
                 directContext, TENANT, mock(InventoryEnrichmentClient.class), false));
 
         CountDownLatch workerStarted = new CountDownLatch(1);
-        directContext.getBindings("js").putMember("__testSync", new TestSyncBridge(workerStarted));
+        directContext.getBindings("js").putMember("__testSync", syncBridge(workerStarted));
 
         ProcessingResultWrapper<Object> wrapper = ProcessingResultWrapper.<Object>builder()
                 .pipelineTimeoutMS(30_000)

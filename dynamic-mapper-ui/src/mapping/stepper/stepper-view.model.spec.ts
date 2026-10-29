@@ -19,21 +19,21 @@
  */
 
 import { StepperConfiguration } from '../../shared';
-import { StepperViewModelFactory } from './stepper-view.model';
+import { createStepperViewModel } from './stepper-view.model';
 
 /**
- * Pure-logic unit tests for {@link StepperViewModelFactory}. The factory derives a set
+ * Pure-logic unit tests for {@link createStepperViewModel}. The factory derives a set
  * of boolean "show*" flags from a {@link StepperConfiguration}; these flags drive the
  * stepper/unified-editor templates, so the boolean algebra here is worth pinning down
  * exhaustively. No Angular TestBed is required — the factory is a pure function.
  */
-describe('StepperViewModelFactory', () => {
+describe('createStepperViewModel', () => {
   /** An empty config: every optional flag is undefined. */
   const emptyConfig = (): StepperConfiguration => ({});
 
   describe('create() with an empty configuration', () => {
     it('defaults every show* flag sensibly when nothing is set', () => {
-      const vm = StepperViewModelFactory.create(emptyConfig());
+      const vm = createStepperViewModel(emptyConfig());
 
       expect(vm.showSourceEditor).toBe(false);
       expect(vm.showTargetEditor).toBe(false);
@@ -47,53 +47,53 @@ describe('StepperViewModelFactory', () => {
 
     it('shows filter controls by default (only an explicit false hides them)', () => {
       // showFilterControls is the one flag that defaults to TRUE.
-      expect(StepperViewModelFactory.create(emptyConfig()).showFilterControls).toBe(true);
+      expect(createStepperViewModel(emptyConfig()).showFilterControls).toBe(true);
     });
 
     it('passes the original config through unchanged', () => {
       const config = emptyConfig();
-      expect(StepperViewModelFactory.create(config).config).toBe(config);
+      expect(createStepperViewModel(config).config).toBe(config);
     });
   });
 
   describe('showSourceEditor', () => {
     it('is true when showEditorSource is true', () => {
-      expect(StepperViewModelFactory.create({ showEditorSource: true }).showSourceEditor).toBe(true);
+      expect(createStepperViewModel({ showEditorSource: true }).showSourceEditor).toBe(true);
     });
 
     it('is true when only the code editor is shown (no JSON source editor)', () => {
       // A code-based mapping has showEditorSource undefined but showCodeEditor true.
-      expect(StepperViewModelFactory.create({ showCodeEditor: true }).showSourceEditor).toBe(true);
+      expect(createStepperViewModel({ showCodeEditor: true }).showSourceEditor).toBe(true);
     });
 
     it('is false when showEditorSource is explicitly false, even if the code editor is on', () => {
       // Explicit false is a hard override: a hidden source area stays hidden.
-      const vm = StepperViewModelFactory.create({ showEditorSource: false, showCodeEditor: true });
+      const vm = createStepperViewModel({ showEditorSource: false, showCodeEditor: true });
       expect(vm.showSourceEditor).toBe(false);
     });
   });
 
   describe('showCodeEditorSection', () => {
     it('mirrors showCodeEditor', () => {
-      expect(StepperViewModelFactory.create({ showCodeEditor: true }).showCodeEditorSection).toBe(true);
-      expect(StepperViewModelFactory.create({ showCodeEditor: false }).showCodeEditorSection).toBe(false);
+      expect(createStepperViewModel({ showCodeEditor: true }).showCodeEditorSection).toBe(true);
+      expect(createStepperViewModel({ showCodeEditor: false }).showCodeEditorSection).toBe(false);
     });
   });
 
   describe('showFilterControls', () => {
     it('is false only when showFilterExpression is explicitly false', () => {
-      expect(StepperViewModelFactory.create({ showFilterExpression: false }).showFilterControls).toBe(false);
+      expect(createStepperViewModel({ showFilterExpression: false }).showFilterControls).toBe(false);
     });
 
     it('is true when showFilterExpression is true or undefined', () => {
-      expect(StepperViewModelFactory.create({ showFilterExpression: true }).showFilterControls).toBe(true);
-      expect(StepperViewModelFactory.create({}).showFilterControls).toBe(true);
+      expect(createStepperViewModel({ showFilterExpression: true }).showFilterControls).toBe(true);
+      expect(createStepperViewModel({}).showFilterControls).toBe(true);
     });
   });
 
   describe('extension selectors', () => {
     it('reflects source/target/internal flags individually', () => {
-      const vm = StepperViewModelFactory.create({
+      const vm = createStepperViewModel({
         showProcessorExtensionsSource: true,
         showProcessorExtensionsTarget: false,
         showProcessorExtensionsInternal: false
@@ -105,44 +105,44 @@ describe('StepperViewModelFactory', () => {
 
     it('showExtensionSelectors is the OR of source, target and internal', () => {
       expect(
-        StepperViewModelFactory.create({ showProcessorExtensionsSource: true }).showExtensionSelectors
+        createStepperViewModel({ showProcessorExtensionsSource: true }).showExtensionSelectors
       ).toBe(true);
       expect(
-        StepperViewModelFactory.create({ showProcessorExtensionsTarget: true }).showExtensionSelectors
+        createStepperViewModel({ showProcessorExtensionsTarget: true }).showExtensionSelectors
       ).toBe(true);
       expect(
-        StepperViewModelFactory.create({ showProcessorExtensionsInternal: true }).showExtensionSelectors
+        createStepperViewModel({ showProcessorExtensionsInternal: true }).showExtensionSelectors
       ).toBe(true);
-      expect(StepperViewModelFactory.create({}).showExtensionSelectors).toBe(false);
+      expect(createStepperViewModel({}).showExtensionSelectors).toBe(false);
     });
   });
 
   describe('showTargetContent', () => {
     it('is true when the target editor is shown', () => {
-      expect(StepperViewModelFactory.create({ showEditorTarget: true }).showTargetContent).toBe(true);
+      expect(createStepperViewModel({ showEditorTarget: true }).showTargetContent).toBe(true);
     });
 
     it('is true when target extension selectors are shown (without a target editor)', () => {
-      const vm = StepperViewModelFactory.create({ showProcessorExtensionsTarget: true });
+      const vm = createStepperViewModel({ showProcessorExtensionsTarget: true });
       expect(vm.showTargetContent).toBe(true);
     });
 
     it('is true when the internal extension note is shown', () => {
       expect(
-        StepperViewModelFactory.create({ showProcessorExtensionsInternal: true }).showTargetContent
+        createStepperViewModel({ showProcessorExtensionsInternal: true }).showTargetContent
       ).toBe(true);
     });
 
     it('is false when no target editor, target extensions, or internal note are configured', () => {
       // Source-only extensions must NOT light up target content.
-      const vm = StepperViewModelFactory.create({ showProcessorExtensionsSource: true });
+      const vm = createStepperViewModel({ showProcessorExtensionsSource: true });
       expect(vm.showTargetContent).toBe(false);
     });
   });
 
   it('produces a fresh view model per call (no shared mutable state)', () => {
-    const a = StepperViewModelFactory.create({ showEditorSource: true });
-    const b = StepperViewModelFactory.create({ showEditorSource: false });
+    const a = createStepperViewModel({ showEditorSource: true });
+    const b = createStepperViewModel({ showEditorSource: false });
     expect(a.showSourceEditor).toBe(true);
     expect(b.showSourceEditor).toBe(false);
   });

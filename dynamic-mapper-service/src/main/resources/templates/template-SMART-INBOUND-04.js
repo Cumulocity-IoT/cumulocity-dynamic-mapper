@@ -3,6 +3,16 @@
  * @name Create either measurement or event
  * @description Create either measurement or event, with persistent state for message counting and error deduplication
  * @templateType INBOUND_SMART_FUNCTION
+ * @sampleTopic flowState/sensor-berlin-01
+ * @samplePayload
+ *   {
+ *     "messageId": "msg-001",
+ *     "externalId": "sensor-berlin-01",
+ *     "payloadType": "telemetry",
+ *     "sensorData": {
+ *       "temp_val": 23.5
+ *     }
+ *   }
  *
  * Demonstrates two state use cases:
  * 1. Message counters — count telemetry and error messages across invocations
@@ -34,7 +44,7 @@
 function onMessage(msg, context) {
     var payload = msg.payload;
 
-    console.log("Payload Raw:" + payload);
+    console.log("Payload Raw: " + JSON.stringify(payload));
     console.log("Payload messageId: " + payload["messageId"]);
 
     // Prefer context clientId (MQTT client id), fall back to payload field

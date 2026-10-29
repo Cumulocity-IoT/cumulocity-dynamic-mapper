@@ -26,6 +26,7 @@ import {
   isSubstitutionsAsCode,
   Mapping,
   MappingTypeDescriptionMap,
+  SharedService,
   StepperConfiguration,
   TransformationType
 } from '../../shared';
@@ -33,7 +34,6 @@ import {
   StepperConfigurationContext,
   StepperConfigurationResolver
 } from '../../shared/mapping/stepper-configuration.strategy';
-import { EditorMode } from '../../shared/mapping/stepper.model';
 import { MappingService } from './mapping.service';
 
 export interface MappingEditData {
@@ -44,12 +44,14 @@ export interface MappingEditData {
 
 export const mappingEditResolver: ResolveFn<MappingEditData> = async (route) => {
   const mappingService = inject(MappingService);
+  const sharedService = inject(SharedService);
   const identifier = route.paramMap.get('identifier');
   const direction = route.data['direction'] as Direction;
 
-  const [mappings, deploymentMapEntry] = await Promise.all([
+  const [mappings, deploymentMapEntry, feature] = await Promise.all([
     mappingService.getMappings(direction),
-    mappingService.getDefinedDeploymentMapEntry(identifier)
+    mappingService.getDefinedDeploymentMapEntry(identifier),
+    sharedService.getFeatures()
   ]);
 
   const mapping = mappings.find(m => m.identifier === identifier);
@@ -68,17 +70,22 @@ export const mappingEditResolver: ResolveFn<MappingEditData> = async (route) => 
     editable.version = mapping.version;
   }
 
-  // Deprecated SUBSTITUTION_AS_CODE mappings are always read-only (export/delete only).
-  // Active mappings are no longer read-only: editing them saves to a draft and never
-  // changes the running configuration until the draft is published and activated.
+  // Deprecated SUBSTITUTION_AS_CODE mappings are always read-only (export/delete only), and so is
+  // every mapping for a user without a manage role. Active mappings are not read-only: editing
+  // them saves to a draft and never changes the running configuration until the draft is
+  // published and activated.
   // eslint-disable-next-line @typescript-eslint/no-deprecated
   const isDeprecated = mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE;
+
+  const canManage = !!(feature?.userHasMappingAdminRole || feature?.userHasMappingCreateRole);
 
   const context: StepperConfigurationContext = {
     mappingType: editable.mappingType,
     transformationType: editable.transformationType,
     direction,
-    editorMode: isDeprecated ? EditorMode.READ_ONLY : EditorMode.UPDATE,
+    // Every edit of an existing mapping goes to its draft, whether or not it is active.
+    persistence: 'draft',
+    readOnly: isDeprecated || !canManage,
     substitutionsAsCode: isSubstitutionsAsCode(editable),
     hasDeployedConnector: deploymentMapEntry.connectors.length > 0
   };

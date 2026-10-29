@@ -17,8 +17,11 @@
  *
  * @authors Christof Strack
  */
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { FetchClient, IFetchResponse } from '@c8y/client';
+import { EventRealtimeService, RealtimeSubjectService } from '@c8y/ngx-components';
+import { SharedService } from './shared.service';
+import { CONNECTOR_FRAGMENT } from '../mapping/mapping.constants';
 import {
   BehaviorSubject,
   Observable,
@@ -26,6 +29,8 @@ import {
   combineLatest,
   from,
   merge,
+  defer,
+  EMPTY,
   of,
   timer,
   NEVER
@@ -38,9 +43,11 @@ import {
   takeUntil,
   startWith,
   distinctUntilChanged,
+  filter,
+  scan,
   tap,
 } from 'rxjs/operators';
-import { BASE_URL, ConnectorConfiguration, ConnectorSpecification, ConnectorStatus, ConnectorStatusEvent, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_STATUS_CONNECTORS_ENDPOINT, PollingInterval } from '..';
+import { BASE_URL, ConnectionTestResult, ConnectorConfiguration, ConnectorSpecification, ConnectorStatus, ConnectorStatusEvent, PATH_CONFIGURATION_CONNECTION_ENDPOINT, PATH_STATUS_CONNECTORS_ENDPOINT, PollingInterval } from '..';
 
 @Injectable({ providedIn: 'root' })
 export class ConnectorConfigurationService {
@@ -74,9 +81,14 @@ export class ConnectorConfigurationService {
   private configurationsWithStatus$?: Observable<ConnectorConfiguration[]>;
   private specifications$?: Observable<ConnectorSpecification[]>;
 
+  private readonly sharedService = inject(SharedService);
+  private readonly eventRealtimeService: EventRealtimeService;
+
   constructor(
     private readonly client: FetchClient
-  ) {}
+  ) {
+    this.eventRealtimeService = new EventRealtimeService(inject(RealtimeSubjectService));
+  }
 
   cleanUp(): void {
     // destroy$ must be completed before all subjects so takeUntil unsubscribes streams first
@@ -145,8 +157,15 @@ export class ConnectorConfigurationService {
   }
 
   // Polling control — enables or disables the background status polling timer.
+  // The realtime status patches follow the same switch, so one "Auto refresh" toggle pauses
+  // everything; re-enabling takes a fresh snapshot (timer(0)) and so catches up.
   setPollingEnabled(enabled: boolean): void {
     this.pollingEnabled$.next(enabled);
+    if (enabled) {
+      this.eventRealtimeService.start();
+    } else {
+      this.eventRealtimeService.stop();
+    }
   }
 
   isPollingEnabled(): boolean {
@@ -178,6 +197,26 @@ export class ConnectorConfigurationService {
     } catch (error) {
       console.error('Failed to create connector configuration:', error);
       throw error;
+    }
+  }
+
+  /** Verifies connectivity/auth of an unsaved configuration; nothing is saved on the backend. */
+  async testConfiguration(configuration: Partial<ConnectorConfiguration>): Promise<ConnectionTestResult> {
+    try {
+      const response = await this.client.fetch(
+        `${BASE_URL}/${PATH_CONFIGURATION_CONNECTION_ENDPOINT}/test`,
+        {
+          headers: { 'content-type': 'application/json', accept: 'application/json' },
+          body: JSON.stringify(configuration),
+          method: 'POST'
+        }
+      );
+      if (!response.ok) {
+        return { success: false, message: `HTTP ${response.status}: ${response.statusText}` };
+      }
+      return await response.json();
+    } catch (error) {
+      return { success: false, message: error?.message ?? 'Test request failed' };
     }
   }
 
@@ -282,13 +321,36 @@ export class ConnectorConfigurationService {
     const timerTrigger$ = combineLatest([this.pollingInterval$, this.pollingEnabled$]).pipe(
       switchMap(([interval, enabled]) => enabled ? timer(0, interval) : NEVER)
     );
-    return merge(timerTrigger$, this.refreshTrigger$).pipe(
+    // After a dropped realtime connection pushes were missed, so take a fresh snapshot.
+    const snapshot$ = merge(timerTrigger$, this.refreshTrigger$, this.eventRealtimeService.reconnect$).pipe(
       switchMap(() => this.loadConnectorStatus().pipe(
         catchError(error => {
           console.error('Failed to load connector status:', error);
           return of(this.lastStatusMap);
         })
-      )),
+      ))
+    );
+    // Status transitions are also written as Cumulocity events by the backend; applying them as
+    // patches shows a change immediately instead of at the next poll. Polling stays as the
+    // authoritative snapshot (events are only sent when connector lifecycle events are enabled).
+    const patch$ = defer(() => from(this.sharedService.getDynamicMappingServiceAgent())).pipe(
+      switchMap(agentId => this.eventRealtimeService.onAll$(agentId)),
+      map(message => message.data?.[CONNECTOR_FRAGMENT]),
+      filter(fragment => !!fragment?.connectorIdentifier && !!fragment?.status),
+      catchError(error => {
+        console.error('Realtime connector status failed, falling back to polling:', error);
+        return EMPTY;
+      })
+    );
+    return merge(
+      snapshot$.pipe(map(statusMap => ({ statusMap, patch: null as ConnectorStatusEvent | null }))),
+      patch$.pipe(map(patch => ({ statusMap: null, patch: patch as ConnectorStatusEvent })))
+    ).pipe(
+      scan((acc, update) => update.statusMap
+        ? update.statusMap
+        : { ...acc, [update.patch.connectorIdentifier]: { ...acc[update.patch.connectorIdentifier], ...update.patch } },
+        {} as { [identifier: string]: ConnectorStatusEvent }),
+      tap(statusMap => { this.lastStatusMap = statusMap; }),
       shareReplay(1),
       takeUntil(this.destroy$)
     );

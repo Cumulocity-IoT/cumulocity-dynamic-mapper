@@ -56,6 +56,6 @@ public class Device {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name);
+        return Objects.hash(id); // must agree with equals(), which compares id only
     }
 }

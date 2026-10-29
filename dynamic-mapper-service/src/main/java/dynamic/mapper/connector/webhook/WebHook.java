@@ -21,12 +21,14 @@
 
 package dynamic.mapper.connector.webhook;
 
+import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
@@ -54,12 +56,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriBuilder;
 import reactor.core.publisher.Mono;
 
+import dynamic.mapper.util.OutboundUrlValidator;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
+import java.util.function.Function;
 
 /**
  * WebHook Connector Client.
@@ -159,7 +166,7 @@ public class WebHook extends AConnectorClient {
                             true, true, "application/json", null, null));
 
             props.put("baseUrlHealthEndpoint",
-                    new ConnectorProperty("health endpoint for GET request", false, 6,
+                    new ConnectorProperty("Endpoint called with a GET request to test the connection.", false, 6,
                             ConnectorPropertyType.STRING_PROPERTY, true, true,
                             "http://cumulocity:8111/notification2", null, null));
         }
@@ -245,10 +252,57 @@ public class WebHook extends AConnectorClient {
         }
     }
 
+    @Override
+    public boolean supportsConnectionTest() {
+        return true;
+    }
+
+    /**
+     * GET only, never POST: a webhook receiver's data endpoint may have side effects. Uses the
+     * configured health endpoint when there is one (same check as {@link #connect()}), else the
+     * base URL, where 404/405 still prove the host is reachable and the credentials were accepted.
+     */
+    @Override
+    public ConnectionTestResult testConnection() {
+        baseUrl = (String) connectorConfiguration.getProperties().getOrDefault("baseUrl", null);
+        if (StringUtils.isEmpty(baseUrl)) {
+            return ConnectionTestResult.failed("baseUrl is required", null);
+        }
+        String healthEndpoint = (String) connectorConfiguration.getProperties().get("baseUrlHealthEndpoint");
+        boolean hasHealth = !StringUtils.isEmpty(healthEndpoint);
+        try {
+            WebClient client = buildWebClient();
+            ResponseEntity<String> response = (hasHealth ? client.get().uri(healthUri(healthEndpoint)) : client.get())
+                    .retrieve()
+                    .onStatus(status -> true, r -> Mono.empty())
+                    .toEntity(String.class)
+                    .timeout(REQUEST_TIMEOUT)
+                    .block();
+            int code = response == null ? -1 : response.getStatusCode().value();
+            if (code == 401 || code == 403) {
+                return ConnectionTestResult.failed("Authentication failed (HTTP " + code
+                        + "): the server rejected the configured credentials", code);
+            }
+            if (code >= 200 && code < 300) {
+                return ConnectionTestResult.ok("Connected, HTTP " + code
+                        + (hasHealth ? " (health endpoint)" : ""), code);
+            }
+            if (!hasHealth && code >= 400 && code < 500) {
+                return ConnectionTestResult.ok("Connection OK: host reachable and credentials accepted. The base URL "
+                        + "itself returned HTTP " + code + ", which is typical for POST-only receivers; configure a "
+                        + "health endpoint for a definitive check.", code);
+            }
+            return ConnectionTestResult.failed("Server returned HTTP " + code, code);
+        } catch (Exception e) {
+            return ConnectionTestResult.failed("Connection failed: " + e.getMessage(), null);
+        }
+    }
+
     /**
      * Build WebClient with authentication and headers
      */
     private WebClient buildWebClient() {
+        OutboundUrlValidator.requireSafe(baseUrl);
         String authentication = (String) connectorConfiguration.getProperties().get("authentication");
         String user = (String) connectorConfiguration.getProperties().get("user");
         String password = (String) connectorConfiguration.getProperties().get("password");
@@ -271,6 +325,12 @@ public class WebHook extends AConnectorClient {
         } else if ("Bearer".equalsIgnoreCase(authentication) && !StringUtils.isEmpty(token)) {
             builder.defaultHeader("Authorization", "Bearer " + token);
             log.debug("{} - Using Bearer authentication", tenant);
+        } else if ("Basic".equalsIgnoreCase(authentication)) {
+            log.warn("{} - Authentication is 'Basic' but user or password is empty: requests will be sent without Authorization header", tenant);
+        } else if ("Bearer".equalsIgnoreCase(authentication)) {
+            log.warn("{} - Authentication is 'Bearer' but token is empty: requests will be sent without Authorization header", tenant);
+        } else {
+            log.warn("{} - No usable authentication configured (authentication='{}'): requests will be sent without Authorization header", tenant, authentication);
         }
 
         // Add custom headers
@@ -287,6 +347,30 @@ public class WebHook extends AConnectorClient {
     }
 
     /**
+     * Resolve the configured health endpoint against the configured {@code baseUrl}.
+     * <p>
+     * The health endpoint must be a relative path (optionally with a query). A value carrying a
+     * scheme or host would redirect the request, with the connector's credentials, to an arbitrary
+     * server (SSRF), so it is rejected. Only the path and query are taken over, so the result can
+     * never leave the base URL's host.
+     */
+    static Function<UriBuilder, URI> healthUri(String healthEndpoint) throws ConnectorException {
+        final URI parsed;
+        try {
+            parsed = new URI(healthEndpoint.trim());
+        } catch (URISyntaxException e) {
+            throw new ConnectorException("Invalid health endpoint: " + e.getReason());
+        }
+        if (parsed.isAbsolute() || parsed.getRawAuthority() != null || parsed.getRawFragment() != null) {
+            throw new ConnectorException(
+                    "Health endpoint must be a relative path (e.g. /health), not a full URL or host");
+        }
+        final String path = parsed.getRawPath();
+        final String query = parsed.getRawQuery();
+        return uriBuilder -> uriBuilder.path(path).replaceQuery(query).build();
+    }
+
+    /**
      * Check health of the webhook endpoint
      */
     public Mono<ResponseEntity<String>> checkHealth() {
@@ -295,8 +379,15 @@ public class WebHook extends AConnectorClient {
 
         log.debug("{} - Checking health of webHook endpoint: {}", tenant, healthEndpoint);
 
+        final Function<UriBuilder, URI> healthUri;
+        try {
+            healthUri = healthUri(healthEndpoint);
+        } catch (ConnectorException e) {
+            return Mono.error(e);
+        }
+
         return webhookClient.get()
-                .uri(healthEndpoint)
+                .uri(healthUri)
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, response -> {
                     String error = "Health check failed with client error: " + response.statusCode();
@@ -741,7 +832,14 @@ public class WebHook extends AConnectorClient {
     private Mono<Throwable> handleClientError(
             org.springframework.web.reactive.function.client.ClientResponse response) {
         String error = "Client error: " + response.statusCode();
-        log.error("{} - {}", tenant, error);
+        if (response.statusCode().value() == 401) {
+            log.error("{} - {} for {} {} (WWW-Authenticate: {})", tenant, error,
+                    response.request().getMethod(), response.request().getURI(),
+                    response.headers().header("WWW-Authenticate"));
+        } else {
+            log.error("{} - {} for {} {}", tenant, error,
+                    response.request().getMethod(), response.request().getURI());
+        }
         return Mono.error(new ProcessingException(error, response.statusCode().value()));
     }
 
@@ -785,10 +883,8 @@ public class WebHook extends AConnectorClient {
         }
 
         // Check required properties
-        for (Map.Entry<String, ConnectorProperty> entry : connectorSpecification.getProperties().entrySet()) {
-            if (entry.getValue().getRequired() && configuration.getProperties().get(entry.getKey()) == null) {
-                return false;
-            }
+        if (!validateSpecifiedProperties(configuration)) {
+            return false;
         }
 
         return true;
@@ -850,57 +946,83 @@ public class WebHook extends AConnectorClient {
 
                 // Cumulocity internal mode toggle
                 .property("cumulocityInternal", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.CONNECTION)
+                        .label("Use Cumulocity API of this tenant")
                         .order(7)
                         .description("When checked the webHook connector can automatically connect to the Cumulocity instance the mapper is deployed to.")
                         .defaultValue(false))
 
                 // External URL configuration (only when not using internal mode)
                 .property("baseUrl", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.CONNECTION)
+                        .label("Base URL")
+                        .description("Base URL of the REST endpoint. The publish topic of each mapping is appended to it.")
                         .order(0)
                         .condition("cumulocityInternal", "false"))
 
                 .property("authentication", ConnectorPropertyBuilder.optionalOption()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("Authentication sent with each request.")
                         .order(1)
-                        .options("Basic", "Bearer")
+                        .options("None", "Basic", "Bearer")
+                        .defaultValue("None")
                         .condition("cumulocityInternal", "false"))
 
-                .property("user", ConnectorPropertyBuilder.optionalString()
+                .property("user", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("User name for Basic authentication.")
                         .order(2)
                         .condition("authentication", "Basic"))
 
-                .property("password", ConnectorPropertyBuilder.optionalSensitive()
+                .property("password", ConnectorPropertyBuilder.requiredSensitive()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("Password for Basic authentication.")
                         .order(3)
                         .condition("authentication", "Basic"))
 
-                .property("token", ConnectorPropertyBuilder.optionalSensitive()
+                .property("token", ConnectorPropertyBuilder.requiredSensitive()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("Bearer token sent in the Authorization header.")
                         .order(4)
                         .condition("authentication", "Bearer"))
 
                 .property("headerAccept", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.REQUEST)
+                        .label("Accept header")
+                        .description("Value of the Accept header sent with each request.")
                         .order(5)
                         .defaultValue("application/json")
                         .condition("cumulocityInternal", "false"))
 
                 .property("baseUrlHealthEndpoint", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.REQUEST)
+                        .label("Health endpoint")
                         .order(6)
-                        .description("health endpoint for GET request")
+                        .description("Endpoint called with a GET request to test the connection.")
                         .condition("cumulocityInternal", "false"))
 
                 .property("headers", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
+                        .group(ConnectorPropertyGroup.REQUEST)
                         .order(8)
-                        .description("Define additional headers")
+                        .description("Additional headers sent with every request.")
                         .required(false)
                         .defaultValue(new HashMap<String, String>())
                         .condition("cumulocityInternal", "false"))
 
                 // Wildcard support (read-only)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in inbound topics")
+                        .description("Allow wildcards (+ and #) in the topic of inbound mappings.")
                         .order(9)
                         .readonly(true)
                         .hidden(true)
                         .defaultValue(false))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in outbound topics")
+                        .description("Allow wildcards (+ and #) in the publish topic of outbound mappings.")
                         .order(10)
                         .readonly(true)
                         .defaultValue(true))

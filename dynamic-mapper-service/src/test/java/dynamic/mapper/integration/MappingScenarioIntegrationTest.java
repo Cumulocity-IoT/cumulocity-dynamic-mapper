@@ -59,8 +59,8 @@ class MappingScenarioIntegrationTest {
     private List<Mapping> outboundMappings;
 
     // Relative paths from project root to samples directory
-    private static final String INBOUND_MAPPINGS_PATH = "resources/samples/mappings-INBOUND.json";
-    private static final String OUTBOUND_MAPPINGS_PATH = "resources/samples/mappings-OUTBOUND.json";
+    private static final String INBOUND_MAPPINGS_PATH = "dynamic-mapper-service/src/test/resources/mappings-fixture-INBOUND.json";
+    private static final String OUTBOUND_MAPPINGS_PATH = "dynamic-mapper-service/src/test/resources/mappings-fixture-OUTBOUND.json";
 
     @BeforeEach
     void setUp() throws IOException {

@@ -79,21 +79,21 @@ import { MappingService } from '../core/mapping.service';
 import { MappingBulkOperationsService } from '../core/mapping-bulk-operations.service';
 import { ExplorerMappingHandoffService } from '../core/explorer-mapping-handoff.service';
 import { SubscriptionService } from '../core/subscription.service';
-import { ImportMappingsComponent } from '../import/import-modal.component';
+import { ImportMappingsComponent } from '../import/import-mappings.component';
 import { MappingVersionDrawerComponent } from '../versions/mapping-version-drawer.component';
 import { MappingPublishService } from '../versions/mapping-publish.service';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
 import { MappingDeploymentRendererComponent } from '../renderer/mapping-deployment.renderer.component';
-import { MappingIdCellRendererComponent } from '../renderer/mapping-id.renderer.component';
-import { MappingStatusActivationRendererComponent } from '../renderer/status-activation.renderer.component';
+import { MappingIdCellRendererComponent } from '../renderer/mapping-id-cell.renderer.component';
+import { MappingStatusActivationRendererComponent } from '../renderer/mapping-status-activation.renderer.component';
 import { StatusRendererComponent } from '../renderer/status.renderer.component';
 import {
   PayloadWrapper
 } from '../../shared/mapping/mapping.model';
-import { EditorMode } from '../../shared/mapping/stepper.model';
-import { CONTEXT_DATA_KEY_NAME, isCodeOrExtensionTransformation } from '../../shared/mapping/util';
+import { MappingPersistence } from '../../shared/mapping/stepper.model';
+import { applyCodeTemplateSample, CONTEXT_DATA_KEY_NAME, isCodeOrExtensionTransformation } from '../../shared/mapping/util';
 import { MappingTokens } from '../../shared/mapping/processor/processor.constants';
 import { CommonModule } from '@angular/common';
 import { MappingStepperComponent } from '../stepper/mapping-stepper.component';
@@ -103,8 +103,6 @@ import {
   MappingStepperService,
   snapshotConnectors
 } from '../service/mapping-stepper.service';
-import { DeprecationNoticeModalComponent } from '../deprecation-notice/deprecation-notice-modal.component';
-import { DEPRECATION_NOTICE_VERSION } from '../../shared';
 import { provideGridPersistence } from '../../shared/misc/grid-persistence';
 
 @Component({
@@ -224,18 +222,6 @@ export class MappingComponent implements OnInit, OnDestroy {
         .subscribe(maps => {
           this.mappingsCount = maps.length;
         });
-
-      // Show deprecation notice for the 6.4.0 feature removal if not yet accepted for this version
-      const noticeAccepted =
-        this.feature?.suppressDeprecationWarning ||
-        this.feature?.acceptedDeprecationNotice === DEPRECATION_NOTICE_VERSION;
-      if (!noticeAccepted && !this.mappingService.deprecationModalShown) {
-        this.mappingService.deprecationModalShown = true;
-        this.bsModalService.show(DeprecationNoticeModalComponent, {
-          class: 'modal-lg',
-          initialState: { acceptedVersion: this.feature?.acceptedDeprecationNotice ?? null }
-        });
-      }
 
       // Start listening to mapping changes
       await this.mappingService.startChangedMappingEvents();
@@ -530,7 +516,7 @@ export class MappingComponent implements OnInit, OnDestroy {
       this.mappingType,
       this.transformationType,
       this.stepperConfiguration.direction,
-      EditorMode.CREATE, this.substitutionsAsCode
+      'create', this.substitutionsAsCode
     );
 
     // setStepperConfiguration() always builds a fresh StepperConfiguration object, so this flag
@@ -634,6 +620,12 @@ export class MappingComponent implements OnInit, OnDestroy {
       };
     }
 
+    // Seed the sample from the chosen code template (see applyCodeTemplateSample); the Message
+    // Explorer pre-fill below still takes precedence.
+    if (this.substitutionsAsCode) {
+      applyCodeTemplateSample(mapping, this.codeTemplate, this.mappingType, direction);
+    }
+
     // Apply pre-fill from Message Explorer (topic + payload + targetAPI)
     if (this.explorerPreFill) {
       const isInbound = direction === Direction.INBOUND;
@@ -713,35 +705,13 @@ export class MappingComponent implements OnInit, OnDestroy {
     this.showConfigMapping = true;
   }
 
-  async updateMapping(m: MappingEnriched) {
-    const { mapping } = m;
-    mapping.lastUpdate = Date.now();
-
-    this.setStepperConfiguration(
-      mapping.mappingType,
-      mapping.transformationType,
-      this.stepperConfiguration.direction,
-      this.canManageMappings ? EditorMode.UPDATE : EditorMode.READ_ONLY,
-      isSubstitutionsAsCode(mapping)
-    );
-
-    // create deep copy of existing mapping, in case user cancels changes
-    this.mappingToUpdate = structuredClone(mapping);
-
-    // for backward compatibility set direction of mapping to inbound
-    if (
-      !this.mappingToUpdate.direction ||
-      this.mappingToUpdate.direction == null
-    )
-      this.mappingToUpdate.direction = Direction.INBOUND;
-    const deploymentMapEntry =
-      await this.mappingService.getDefinedDeploymentMapEntry(mapping.identifier);
-    this.deploymentMapEntry = {
-      identifier: this.mappingToUpdate.identifier,
-      connectors: deploymentMapEntry.connectors
-    };
-    this.initialDeploymentConnectors = snapshotConnectors(this.deploymentMapEntry);
-    this.router.navigate(['edit', mapping.identifier], { relativeTo: this.route });
+  /**
+   * Opens the mapping in the unified editor. Everything the editor needs — the mapping or its
+   * draft, the deployment entry, the stepper configuration — is loaded by `mappingEditResolver`,
+   * so nothing is prepared here: the edit route replaces this grid, it does not nest in it.
+   */
+  updateMapping(m: MappingEnriched): void {
+    this.router.navigate(['edit', m.mapping.identifier], { relativeTo: this.route });
   }
 
   async publishDraft(m: MappingEnriched): Promise<void> {
@@ -770,8 +740,9 @@ export class MappingComponent implements OnInit, OnDestroy {
       mapping.mappingType,
       mapping.transformationType,
       mapping.direction,
-      EditorMode.COPY,
-      isSubstitutionsAsCode(mapping)
+      'create',
+      isSubstitutionsAsCode(mapping),
+      true
     );
     // create deep copy of existing mapping, in case user cancels changes
     this.mappingToUpdate = structuredClone(mapping) as Mapping;
@@ -864,7 +835,7 @@ export class MappingComponent implements OnInit, OnDestroy {
     const alert = commitSuccessMessage(
       result,
       editorState.mapping.name,
-      this.stepperConfiguration.editorMode
+      this.stepperConfiguration.persistence
     );
     // add() rather than success(): success() leaves the timeout unset, and Cumulocity then
     // auto-dismisses a detail-less success alert after 3s — too short to read an instruction.
@@ -1050,8 +1021,9 @@ export class MappingComponent implements OnInit, OnDestroy {
     mappingType: MappingType,
     transformationType: TransformationType,
     direction: Direction,
-    editorMode: EditorMode,
-    substitutionsAsCode: boolean
+    persistence: MappingPersistence,
+    substitutionsAsCode: boolean,
+    isCopy = false
   ) {
     const baseConfig = MappingTypeDescriptionMap[mappingType].stepperConfiguration;
 
@@ -1059,7 +1031,8 @@ export class MappingComponent implements OnInit, OnDestroy {
       mappingType,
       transformationType,
       direction,
-      editorMode,
+      persistence,
+      isCopy,
       substitutionsAsCode
     };
 
@@ -1074,6 +1047,14 @@ export class MappingComponent implements OnInit, OnDestroy {
     // console.log('Applied configuration overrides:', appliedOverrides);
     // console.log('Override descriptions:', descriptions);
     // console.log('Final configuration:', this.stepperConfiguration);
+  }
+
+  get realtimeActive(): boolean {
+    return this.mappingService.realtimeActive;
+  }
+
+  toggleRealtime(): void {
+    this.mappingService.setRealtimeActive(!this.mappingService.realtimeActive);
   }
 
   ngOnDestroy(): void {

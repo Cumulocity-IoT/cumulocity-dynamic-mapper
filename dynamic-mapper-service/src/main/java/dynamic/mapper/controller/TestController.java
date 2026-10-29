@@ -23,6 +23,7 @@ package dynamic.mapper.controller;
 
 import com.cumulocity.model.ID;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -38,8 +39,10 @@ import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TestContext;
 import dynamic.mapper.model.TestResult;
+import dynamic.mapper.processor.outbound.serializer.SparkPlugBSerializer;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.processor.util.APITopicUtil;
@@ -82,6 +85,7 @@ public class TestController {
     private final ConnectorRegistry connectorRegistry;
     private final C8YAgent c8YAgent;
     private final ContextService<UserCredentials> contextService;
+    private final SparkPlugBSerializer sparkPlugBSerializer;
 
     @Value("${APP.externalExtensionsEnabled}")
     private Boolean externalExtensionsEnabled;
@@ -117,8 +121,9 @@ public class TestController {
         }
         Boolean send = Boolean.TRUE.equals(context.getSend()); // absent means Dry Run
         String tenant = contextService.getContext().getTenant();
-        log.info("{} - Test mapping: {}, {}, {}, {}", tenant, mapping.getName(), mapping.getId(), send,
-                payload);
+        log.info("{} - Test mapping: {}, {}, send={}", tenant, mapping.getName(), mapping.getId(), send);
+        // debug, not info: the payload is arbitrary user content that should not land in the tenant's log by default.
+        log.debug("{} - Test payload: {}", tenant, payload);
 
         // Reset mock caches for this tenant so state from previous test runs does not leak
         clearMockCaches(tenant);
@@ -171,7 +176,7 @@ public class TestController {
 
             ProcessingResultWrapper<?> processingResultWrapper = null;
             if (mapping.getDirection().equals(Direction.INBOUND)) {
-                ConnectorMessage testMessage = createTestMessage(tenant, connectorClient,
+                ConnectorMessage testMessage = createTestMessage(tenant, connectorClient, mapping,
                         mapping.getMappingTopicSample(), send, payload);
                 if (Boolean.TRUE.equals(send)) {
                     testMessage.setTestExternalIdPrefix(ProcessingContext.TEST_EXTERNAL_ID_PREFIX);
@@ -215,7 +220,7 @@ public class TestController {
                     if (recreated != null) {
                         result.setTestDeviceId(recreated.id());
                         result.setTestDeviceCreated(recreated.created());
-                        ConnectorMessage retryMessage = createTestMessage(tenant, connectorClient,
+                        ConnectorMessage retryMessage = createTestMessage(tenant, connectorClient, mapping,
                                 mapping.getMappingTopicSample(), send, payload);
                         retryMessage.setTestExternalIdPrefix(ProcessingContext.TEST_EXTERNAL_ID_PREFIX);
                         ProcessingResultWrapper<?> retryWrapper = connectorClient.getDispatcher()
@@ -228,18 +233,26 @@ public class TestController {
                 }
 
                 if (processingResult != null && !processingResult.isEmpty()) {
-                    if (processingResult.size() > 1) {
-                        log.warn("{} - Test mapping produced {} result(s), only returning the first result", tenant,
-                                processingResult.size());
-                    }
-                    var firstResult = processingResult.get(0);
-                    result.setRequests(firstResult.getRequests());
-                    result.setWarnings(firstResult.getWarnings());
-                    result.setLogs(firstResult.getLogs());
-                    result.setKey(firstResult.getKey());
-                    // Errors of every result, not just the first: only the first result's requests
-                    // are returned, but a failure in a later one must not make the test look green.
+                    // Every context's requests, warnings and logs: a payload that fans out into several
+                    // contexts (e.g. an array) used to show only the first one, although a Live Test had
+                    // already sent all of them.
                     for (var processingContext : processingResult) {
+                        if (processingContext.getRequests() != null) {
+                            result.getRequests().addAll(processingContext.getRequests());
+                        }
+                        if (processingContext.getWarnings() != null) {
+                            for (String warning : processingContext.getWarnings()) {
+                                if (!result.getWarnings().contains(warning)) {
+                                    result.getWarnings().add(warning);
+                                }
+                            }
+                        }
+                        if (processingContext.getLogs() != null) {
+                            result.getLogs().addAll(processingContext.getLogs());
+                        }
+                        if (result.getKey() == null) {
+                            result.setKey(processingContext.getKey());
+                        }
                         if (processingContext.getErrors() == null) {
                             continue;
                         }
@@ -509,7 +522,7 @@ public class TestController {
     private String resolveExternalIdViaDryRun(String tenant, AConnectorClient connectorClient,
             Mapping mapping, String payload) throws InterruptedException, TimeoutException {
         try {
-            ConnectorMessage dryRunMessage = createTestMessage(tenant, connectorClient,
+            ConnectorMessage dryRunMessage = createTestMessage(tenant, connectorClient, mapping,
                     mapping.getMappingTopicSample(), false, payload);
             ProcessingResultWrapper<?> dryRunWrapper = connectorClient.getDispatcher()
                     .onTestMessage(dryRunMessage, mapping);
@@ -550,17 +563,46 @@ public class TestController {
         return null;
     }
 
-    private ConnectorMessage createTestMessage(String tenant, AConnectorClient connectorClient, String topic,
-            boolean sendPayload,
-            String payloadMessage) {
+    private ConnectorMessage createTestMessage(String tenant, AConnectorClient connectorClient, Mapping mapping,
+            String topic, boolean sendPayload, String payloadMessage) {
         return ConnectorMessage.builder()
                 .tenant(tenant)
                 .topic(topic)
                 .sendPayload(sendPayload)
                 .testRun(true)
                 .connectorIdentifier(connectorClient.getConnectorIdentifier())
-                .payload(payloadMessage.getBytes())
+                .payload(testPayloadBytes(mapping, payloadMessage))
                 .build();
+    }
+
+    /**
+     * The bytes a test message carries. A SparkPlug B mapping receives protobuf from the broker, which
+     * cannot be typed into the test tab, so a payload written as a JSON object is encoded as SparkPlug B
+     * protobuf first (the same encoder the outbound NCMD/DCMD path uses). Anything else — including text
+     * that is not a JSON object — is passed through unchanged, so a payload that is already binary or
+     * invalid still reaches the decoder and fails there with its own message.
+     */
+    private byte[] testPayloadBytes(Mapping mapping, String payloadMessage) {
+        if (MappingType.SPARKPLUGB.equals(mapping.getMappingType()) && payloadMessage != null
+                && payloadMessage.stripLeading().startsWith("{")) {
+            try {
+                return sparkPlugBSerializer.serializeJson(payloadMessage);
+            } catch (IllegalArgumentException e) {
+                log.warn("Test payload for SparkPlug B mapping '{}' is not valid SparkPlug B JSON, sending as is: {}",
+                        mapping.getName(), e.getMessage());
+            }
+        }
+        if (MappingType.ANY_PAYLOAD.equals(mapping.getMappingType()) && payloadMessage != null) {
+            // The test tab holds binary as base64 text; the live flow base64-encodes the broker bytes
+            // for the Smart Function, so decode here or the function would see it encoded twice.
+            // Text that is not valid base64 is passed through unchanged.
+            try {
+                return Base64.getDecoder().decode(payloadMessage.strip());
+            } catch (IllegalArgumentException e) {
+                log.debug("Test payload for ANY_PAYLOAD mapping '{}' is not base64, sending as is", mapping.getName());
+            }
+        }
+        return payloadMessage.getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
 
 

@@ -66,7 +66,7 @@ Each step in detail:
 When creating a mapping, you can select from installed Java Extensions that define the transformation logic. The
 mapping stepper displays all available extensions along with their associated templates:
 
-![Java Extension in Mapping Stepper](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_ProcessorExtension.png "Screenshot showing step 4 / tab Transformation of the mapping stepper with Java Extension templates. The dropdown displays available extensions for payload parsing, including various custom extensions like CustomEvent, CustomMeasurement, and MeasurementWithImplicitDevice. Each extension provides pre-configured templates for both source and target payloads.")
+![Java Extension in Mapping Stepper](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Substitution_Processor_Extension.png "Screenshot showing step 4 / tab Transformation of the mapping stepper with Java Extension templates. The dropdown displays available extensions for payload parsing, including various custom extensions like CustomEvent, CustomMeasurement, and MeasurementWithImplicitDevice. Each extension provides pre-configured templates for both source and target payloads.")
 
 ##### Uploading a Java Extension
 
@@ -77,12 +77,12 @@ microservice is required. Build the jar first — the **End-to-end overview** ab
    each card showing whether it is **External** (uploaded by you) or **Internal** (shipped with the service), and
    how many processors it contributed under **Loaded**.
 
-![Processor extension page](../../../resources/image/Dynamic_Mapper_Configuration_ProcessorExtension.png "The Processor extension page listing the external and internal extensions with the number of loaded processors on each card.")
+![Processor extension page](../../../resources/image/Dynamic_Mapper_Configuration_Processor_Extension.png "The Processor extension page listing the external and internal extensions with the number of loaded processors on each card.")
 
 2. Choose **Add extension**. In the **Add Processor Extension** dialog, drop your jar onto the upload area or
    click it to pick the file, then confirm with **Done**.
 
-![Add processor extension](../../../resources/image/Dynamic_Mapper_Configuration_ProcessorExtension_Upload.png "The Add Processor Extension dialog with the area for uploading a *.jar file.")
+![Add processor extension](../../../resources/image/Dynamic_Mapper_Configuration_Processor_Extension_Upload.png "The Add Processor Extension dialog with the area for uploading a *.jar file.")
 
 3. The service loads the jar and registers every `ProcessorExtensionInbound` / `ProcessorExtensionOutbound`
    implementation declared in its `extension-external.yaml`. Use **Reload** if the card does not yet show your
@@ -100,7 +100,7 @@ survives microservice restarts — it is stored in the tenant, not on the contai
 To manage and view installed Java Extensions, navigate to the Processor Extension configuration page. This page
 displays all deployed extensions with their properties, implementation details, and supported message types:
 
-![Processor Extension Configuration](../../../resources/image/Dynamic_Mapper_Configuration_ProcessorExtension_Plugin_Installed.png "Screenshot showing the Processor Extension configuration page with installed plugins. Each extension displays its name (e.g., CustomEvent, MeasurementToCustomJson), implementation class path, message type, direction (Outbound/Inbound), and active status. The interface allows you to view extension properties and verify that plugins are correctly installed and operational.")
+![Processor Extension Configuration](../../../resources/image/Dynamic_Mapper_Configuration_Processor_Extension_Plugin_Installed.png "Screenshot showing the Processor Extension configuration page with installed plugins. Each extension displays its name (e.g., CustomEvent, MeasurementToCustomJson), implementation class path, message type, direction (Outbound/Inbound), and active status. The interface allows you to view extension properties and verify that plugins are correctly installed and operational.")
 
 A Java Extension implements one of two interfaces, depending on the direction it serves:
 

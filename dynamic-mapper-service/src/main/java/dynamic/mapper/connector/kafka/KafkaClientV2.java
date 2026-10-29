@@ -21,9 +21,12 @@
 
 package dynamic.mapper.connector.kafka;
 
+import dynamic.mapper.connector.core.client.ConnectionTestResult;
+import dynamic.mapper.util.TenantLogContext;
 import com.cumulocity.sdk.client.SDKException;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
@@ -278,8 +281,8 @@ public class KafkaClientV2 extends AConnectorClient {
         String saslMechanism = (String) connectorConfiguration.getProperties()
                 .getOrDefault("saslMechanism", "SCRAM-SHA-256");
         String groupId = (String) connectorConfiguration.getProperties().get("groupId");
-        boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
+        boolean trustCustomCertificate = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
         boolean disableHostnameValidation = (Boolean) connectorConfiguration.getProperties()
                 .getOrDefault("disableHostnameValidation", false);
 
@@ -318,7 +321,7 @@ public class KafkaClientV2 extends AConnectorClient {
             producerProps.put("sasl.jaas.config", jaasCfg);
             producerProps.put("sasl.mechanism", saslMechanism);
             producerProps.put("security.protocol", "SASL_SSL");
-        } else if (useSelfSignedCertificate) {
+        } else if (trustCustomCertificate) {
             log.info("{} - Using SSL security protocol (no authentication, custom CA trust)", tenant);
             consumerProps.put("security.protocol", "SSL");
             producerProps.put("security.protocol", "SSL");
@@ -330,7 +333,7 @@ public class KafkaClientV2 extends AConnectorClient {
 
         // Custom/self-signed CA trust - Kafka's client supports inline PEM truststores natively
         // (KIP-651), so no manual KeyStore/SSLContext plumbing is needed here, unlike MQTT/AMQP.
-        if (useSelfSignedCertificate) {
+        if (trustCustomCertificate) {
             try {
                 dynamic.mapper.connector.core.client.Certificate cert = loadCertificateFromConfiguration();
                 String certPem = cert.getCertInPemFormat();
@@ -372,6 +375,41 @@ public class KafkaClientV2 extends AConnectorClient {
         this.kafkaProducerProperties = producerProps;
 
         log.debug("{} - Kafka properties configured for: {}", tenant, bootstrapServers);
+    }
+
+    @Override
+    public boolean supportsConnectionTest() {
+        return true;
+    }
+
+    /**
+     * Probes with an {@link AdminClient} only (describeCluster): no consumer is created, so the
+     * live connector's consumer group is never joined and no rebalance is triggered.
+     */
+    @Override
+    public ConnectionTestResult testConnection() {
+        try {
+            buildKafkaProperties();
+            Properties props = new Properties();
+            props.putAll(kafkaProducerProperties);
+            props.put("request.timeout.ms", "10000");
+            props.put("default.api.timeout.ms", "10000");
+            try (AdminClient probe = AdminClient.create(props)) {
+                int brokers = probe.describeCluster().nodes().get(10, TimeUnit.SECONDS).size();
+                return ConnectionTestResult.ok("Connected to Kafka cluster (" + brokers + " broker(s))", null);
+            }
+        } catch (java.util.concurrent.ExecutionException e) {
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            if (cause instanceof org.apache.kafka.common.errors.AuthenticationException) {
+                return ConnectionTestResult.failed("Authentication failed: " + cause.getMessage(), null);
+            }
+            return ConnectionTestResult.failed("Connection failed: " + cause.getMessage(), null);
+        } catch (java.util.concurrent.TimeoutException e) {
+            return ConnectionTestResult.failed(
+                    "Could not reach the bootstrap servers within 10s (check host, port, security settings)", null);
+        } catch (Exception e) {
+            return ConnectionTestResult.failed("Connection failed: " + e.getMessage(), null);
+        }
     }
 
     @Override
@@ -619,65 +657,67 @@ public class KafkaClientV2 extends AConnectorClient {
      */
     private void consumeMessages(KafkaConsumerWrapper wrapper, Map<String, KafkaConsumerWrapper> consumersMap,
             Map<String, Future<?>> tasksMap, Map<String, MutableInt> failureCountsMap) {
-        KafkaConsumer<String, String> consumer = wrapper.getConsumer();
-        String topic = wrapper.getTopic();
+        try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
+            KafkaConsumer<String, String> consumer = wrapper.getConsumer();
+            String topic = wrapper.getTopic();
 
-        log.debug("{} - Starting message consumption for topic: [{}]", tenant, topic);
+            log.debug("{} - Starting message consumption for topic: [{}]", tenant, topic);
 
-        try {
-            while (!wrapper.isCloseRequested()) {
-                try {
-                    drainPendingCommits(wrapper);
-
-                    ConsumerRecords<String, String> records = consumer
-                            .poll(Duration.ofMillis(CONSUMER_POLL_TIMEOUT_MS));
-
-                    for (ConsumerRecord<String, String> record : records) {
-                        processKafkaMessage(record);
-                    }
-
-                    // Reset failed count on successful poll
-                    failureCountsMap.remove(topic);
-
-                } catch (WakeupException we) {
-                    // Only triggered by our own requestClose(); the while condition will exit next.
-                    break;
-                } catch (Exception e) {
-                    log.error("{} - Error consuming messages from topic: [{}]", tenant, topic, e);
-                    handleConsumerError(topic, e);
-
-                    MutableInt failCount = failureCountsMap.computeIfAbsent(topic, k -> new MutableInt(0));
-                    failCount.increment();
-
-                    if (failCount.intValue() > MAX_CONSECUTIVE_FAILURES) {
-                        log.error("{} - Too many consecutive failures for topic: [{}], stopping this consumer; housekeeping will retry it", tenant, topic);
-                        // Hand off to the slower housekeeping-driven retry cycle (monitorSubscriptions())
-                        // instead of leaving the count above MAX_RETRY_ATTEMPTS, where it would never
-                        // be picked up again.
-                        failCount.setValue(1);
-                        break;
-                    }
-
+            try {
+                while (!wrapper.isCloseRequested()) {
                     try {
-                        Thread.sleep(CONSUMER_RESTART_DELAY_MS);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
+                        drainPendingCommits(wrapper);
+
+                        ConsumerRecords<String, String> records = consumer
+                                .poll(Duration.ofMillis(CONSUMER_POLL_TIMEOUT_MS));
+
+                        for (ConsumerRecord<String, String> record : records) {
+                            processKafkaMessage(record, wrapper);
+                        }
+
+                        // Reset failed count on successful poll
+                        failureCountsMap.remove(topic);
+
+                    } catch (WakeupException we) {
+                        // Only triggered by our own requestClose(); the while condition will exit next.
                         break;
+                    } catch (Exception e) {
+                        log.error("{} - Error consuming messages from topic: [{}]", tenant, topic, e);
+                        handleConsumerError(topic, e);
+
+                        MutableInt failCount = failureCountsMap.computeIfAbsent(topic, k -> new MutableInt(0));
+                        failCount.increment();
+
+                        if (failCount.intValue() > MAX_CONSECUTIVE_FAILURES) {
+                            log.error("{} - Too many consecutive failures for topic: [{}], stopping this consumer; housekeeping will retry it", tenant, topic);
+                            // Hand off to the slower housekeeping-driven retry cycle (monitorSubscriptions())
+                            // instead of leaving the count above MAX_RETRY_ATTEMPTS, where it would never
+                            // be picked up again.
+                            failCount.setValue(1);
+                            break;
+                        }
+
+                        try {
+                            Thread.sleep(CONSUMER_RESTART_DELAY_MS);
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
                     }
                 }
+            } finally {
+                drainPendingCommits(wrapper);
+                try {
+                    consumer.close();
+                } catch (Exception e) {
+                    log.warn("{} - Error closing Kafka consumer for topic: [{}]", tenant, topic, e);
+                }
+                // Conditional remove: don't clobber a newer wrapper/task a concurrent subscribe()
+                // may already have installed for this topic.
+                consumersMap.remove(topic, wrapper);
+                tasksMap.remove(topic);
+                log.debug("{} - Stopped message consumption for topic: [{}]", tenant, topic);
             }
-        } finally {
-            drainPendingCommits(wrapper);
-            try {
-                consumer.close();
-            } catch (Exception e) {
-                log.warn("{} - Error closing Kafka consumer for topic: [{}]", tenant, topic, e);
-            }
-            // Conditional remove: don't clobber a newer wrapper/task a concurrent subscribe()
-            // may already have installed for this topic.
-            consumersMap.remove(topic, wrapper);
-            tasksMap.remove(topic);
-            log.debug("{} - Stopped message consumption for topic: [{}]", tenant, topic);
         }
     }
 
@@ -703,7 +743,7 @@ public class KafkaClientV2 extends AConnectorClient {
     /**
      * Process individual Kafka message
      */
-    private void processKafkaMessage(ConsumerRecord<String, String> record) {
+    private void processKafkaMessage(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper) {
         String topic = record.topic();
         String value = record.value();
         String key = record.key();
@@ -729,9 +769,9 @@ public class KafkaClientV2 extends AConnectorClient {
         int timeout = processedResults.getPipelineTimeoutMS();
 
         if (mappingQos > 0) {
-            virtualThreadPool.submit(() -> processMessageWithQos(record, processedResults, timeout));
+            virtualThreadPool.submit(() -> processMessageWithQos(record, wrapper, processedResults, timeout));
         } else {
-            handleSuccessfulProcessing(record);
+            handleSuccessfulProcessing(record, wrapper);
         }
     }
 
@@ -739,6 +779,7 @@ public class KafkaClientV2 extends AConnectorClient {
      * Process message with QoS handling
      */
     private Void processMessageWithQos(ConsumerRecord<String, String> record,
+            KafkaConsumerWrapper wrapper,
             ProcessingResultWrapper<?> processedResults,
             int timeout) {
         String topic = record.topic();
@@ -778,15 +819,15 @@ public class KafkaClientV2 extends AConnectorClient {
             }
 
             if (!hasErrors || httpStatusCode < 500) {
-                handleSuccessfulProcessing(record);
+                handleSuccessfulProcessing(record, wrapper);
             } else {
-                handleProcessingError(record, httpStatusCode);
+                handleProcessingError(record, wrapper, httpStatusCode);
             }
 
         } catch (InterruptedException | ExecutionException e) {
             log.warn("{} - Processing interrupted for topic: [{}], offset: {}",
                     tenant, topic, record.offset(), e);
-            handleProcessingError(record, 0);
+            handleProcessingError(record, wrapper, 0);
         } catch (TimeoutException e) {
             // cancelAndDrain, not Future.cancel(true): the bare cancel only interrupts the worker
             // thread, which CPU-bound GraalVM JavaScript ignores — the registered cancel actions
@@ -794,7 +835,7 @@ public class KafkaClientV2 extends AConnectorClient {
             boolean drained = processedResults.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
             log.warn("{} - Processing timed out for topic: [{}], offset: {}, worker drained: {}",
                     tenant, topic, record.offset(), drained);
-            handleProcessingTimeout(record);
+            handleProcessingTimeout(record, wrapper);
         }
 
         return null;
@@ -810,12 +851,13 @@ public class KafkaClientV2 extends AConnectorClient {
      * foreign thread, which is not thread-safe. The queued offset is committed by
      * {@link #drainPendingCommits} on the consumer's own thread on its next loop iteration.
      */
-    private void handleSuccessfulProcessing(ConsumerRecord<String, String> record) {
+    private void handleSuccessfulProcessing(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper) {
         // Manual commit if auto-commit is disabled
         boolean autoCommit = "true".equals(kafkaConsumerProperties.getOrDefault("enable.auto.commit", "true"));
 
         if (!autoCommit) {
-            KafkaConsumerWrapper wrapper = topicConsumers.get(record.topic());
+            // The owning wrapper is passed in, not looked up by record.topic(): topicConsumers is
+            // keyed by the subscription (which may be a wildcard pattern), not the record's topic.
             if (wrapper != null) {
                 wrapper.requestCommit(
                         new TopicPartition(record.topic(), record.partition()),
@@ -827,7 +869,9 @@ public class KafkaClientV2 extends AConnectorClient {
     /**
      * Handle processing error
      */
-    private void handleProcessingError(ConsumerRecord<String, String> record, int httpStatusCode) {
+    // package-private for KafkaClientV2RestartTest
+    void handleProcessingError(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper,
+            int httpStatusCode) {
         log.error("{} - Processing error for topic: [{}], partition: {}, offset: {}, HTTP status: {}",
                 tenant, record.topic(), record.partition(), record.offset(), httpStatusCode);
 
@@ -839,9 +883,12 @@ public class KafkaClientV2 extends AConnectorClient {
             log.error("{} - Too many processing errors for topic: [{}], considering consumer restart",
                     tenant, record.topic());
 
+            // Restart by the subscription key (may be a wildcard pattern), not record.topic():
+            // topicConsumers is keyed by the subscription.
+            String subscription = wrapper != null ? wrapper.getTopic() : record.topic();
             virtualThreadPool.submit(() -> {
                 try {
-                    restartConsumerForTopic(record.topic());
+                    restartConsumerForTopic(subscription);
                     processingErrorCounts.remove(errorKey);
                 } catch (ConnectorException e) {
                     log.error("{} - Failed to restart consumer for topic: [{}]", tenant, record.topic(), e);
@@ -853,10 +900,10 @@ public class KafkaClientV2 extends AConnectorClient {
     /**
      * Handle processing timeout
      */
-    private void handleProcessingTimeout(ConsumerRecord<String, String> record) {
+    private void handleProcessingTimeout(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper) {
         log.warn("{} - Processing timeout for topic: [{}], partition: {}, offset: {}",
                 tenant, record.topic(), record.partition(), record.offset());
-        handleProcessingError(record, 0);
+        handleProcessingError(record, wrapper, 0);
     }
 
     /**
@@ -1013,23 +1060,13 @@ public class KafkaClientV2 extends AConnectorClient {
             return false;
         }
 
-        String bootstrapServers = (String) configuration.getProperties().get("bootstrapServers");
-        if (bootstrapServers == null || bootstrapServers.trim().isEmpty()) {
+        if (!validateSpecifiedProperties(configuration)) {
             return false;
         }
 
-        String username = (String) configuration.getProperties().get("username");
-        String password = (String) configuration.getProperties().get("password");
-
-        if (username != null && !username.trim().isEmpty()) {
-            if (password == null || password.trim().isEmpty()) {
-                return false;
-            }
-        }
-
-        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
-        if (useSelfSignedCertificate && !validateCertificateConfig(configuration)) {
+        Boolean trustCustomCertificate = (Boolean) configuration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
+        if (trustCustomCertificate && !validateCertificateConfig(configuration)) {
             return false;
         }
 
@@ -1105,7 +1142,7 @@ public class KafkaClientV2 extends AConnectorClient {
      * close, use {@code consumer.wakeup()} — the one KafkaConsumer method documented as safe to
      * call from another thread) for the owning thread to act on.
      */
-    private static class KafkaConsumerWrapper {
+    static class KafkaConsumerWrapper {
         @Getter
         private final KafkaConsumer<String, String> consumer;
         @Getter
@@ -1168,46 +1205,63 @@ public class KafkaClientV2 extends AConnectorClient {
 
                 // Basic connection
                 .property("bootstrapServers", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.CONNECTION)
+                        .label("Bootstrap servers")
+                        .description("Comma-separated list of Kafka brokers as host:port, for example broker1:9092,broker2:9092.")
                         .order(0))
 
                 // TLS / custom CA trust (optional) - same pattern as the MQTT/AMQP/Pulsar connectors
-                .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                .property("trustCustomCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.TLS)
+                        .label("Trust custom server certificate")
                         .order(1)
                         .defaultValue(false)
-                        .description("Trust a self-signed/internal CA certificate for TLS connections"))
+                        .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates."))
 
                 .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.TLS)
+                        .label("Trusted certificate name")
                         .order(2)
-                        .description("Name of the certificate in the Cumulocity certificate store")
-                        .condition("useSelfSignedCertificate", "true"))
+                        .description("Name of the certificate in the Cumulocity trusted-certificate store.")
+                        .condition("trustCustomCertificate", "true"))
 
-                .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.optionalString()
+                .property("trustedCertificateFingerprint", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.TLS)
+                        .label("Trusted certificate fingerprint")
                         .order(3)
-                        .description("Fingerprint of the certificate in the Cumulocity certificate store")
-                        .condition("useSelfSignedCertificate", "true"))
+                        .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
+                        .condition("trustCustomCertificate", "true"))
 
                 .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
+                        .group(ConnectorPropertyGroup.TLS)
+                        .label("Certificate chain (PEM)")
                         .order(4)
                         .description("Certificate chain in PEM format (alternative to referencing the Cumulocity certificate store)")
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
                 .property("disableHostnameValidation", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.TLS)
+                        .label("Disable hostname validation")
                         .order(5)
                         .defaultValue(false)
                         .description("Disable TLS hostname verification (insecure, for development/testing only)")
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
                 // SASL authentication (optional)
                 .property("username", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(6)
                         .description("API Key, e.g. for Confluent Cloud. Reveals Password below."))
 
-                .property("password", ConnectorPropertyBuilder.optionalSensitive()
+                .property("password", ConnectorPropertyBuilder.requiredSensitive()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(7)
                         .description("API Secret, e.g. for Confluent Cloud/Aiven.")
                         .condition("username", "*"))
 
                 .property("saslMechanism", ConnectorPropertyBuilder.optionalOption()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .label("SASL mechanism")
                         .order(8)
                         .defaultValue("SCRAM-SHA-256")
                         .options("SCRAM-SHA-256", "SCRAM-SHA-512", "PLAIN")
@@ -1216,18 +1270,25 @@ public class KafkaClientV2 extends AConnectorClient {
 
                 // Consumer group
                 .property("groupId", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .label("Consumer group ID")
+                        .description("Consumer group the connector joins to read inbound messages.")
                         .order(9))
 
                 // Custom properties
                 .property("defaultPropertiesProducer", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
+                        .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Additional producer properties")
                         .order(10)
-                        .description("Producer properties")
+                        .description("Additional Kafka producer properties as key-value pairs.")
                         .required(false)
                         .defaultValue(new HashMap<String, String>()))
 
                 .property("defaultPropertiesConsumer", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
+                        .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Additional consumer properties")
                         .order(12)
-                        .description("Consumer properties")
+                        .description("Additional Kafka consumer properties as key-value pairs.")
                         .required(false)
                         .defaultValue(new HashMap<String, String>()));
 
@@ -1237,6 +1298,8 @@ public class KafkaClientV2 extends AConnectorClient {
             defaultPropertiesProducer.store(writerProducer,
                     "properties can only be edited in the property file: kafka-producer.properties");
             builder.property("propertiesProducer", ConnectorPropertyBuilder.largeText()
+                    .group(ConnectorPropertyGroup.ADVANCED)
+                    .label("Predefined producer properties")
                     .order(11)
                     .description("Predefined producer properties")
                     .readonly(true)
@@ -1246,6 +1309,8 @@ public class KafkaClientV2 extends AConnectorClient {
             defaultPropertiesConsumer.store(writerConsumer,
                     "properties can only be edited in the property file: kafka-consumer.properties");
             builder.property("propertiesConsumer", ConnectorPropertyBuilder.largeText()
+                    .group(ConnectorPropertyGroup.ADVANCED)
+                    .label("Predefined consumer properties")
                     .order(13)
                     .description("Predefined consumer properties")
                     .readonly(true)

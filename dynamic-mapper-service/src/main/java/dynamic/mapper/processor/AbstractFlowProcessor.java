@@ -26,6 +26,7 @@ import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -35,6 +36,8 @@ import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
+import org.graalvm.polyglot.proxy.ProxyExecutable;
+import org.graalvm.polyglot.proxy.ProxyObject;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Mapping;
@@ -55,33 +58,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public abstract class AbstractFlowProcessor extends CommonProcessor {
-
-    /**
-     * Polyfill for browser-standard atob() / btoa() functions.
-     * GraalVM's JS engine is ECMAScript-only — it does not include Web APIs.
-     * The polyfill uses the already-sandboxed java.util.Base64 host class so no
-     * additional host-class permissions are required.
-     */
-    private static final Source BASE64_POLYFILL_SOURCE = Source.newBuilder("js", """
-            (function() {
-              var _Base64   = Java.type('java.util.Base64');
-              var _JString  = Java.type('java.lang.String');
-              var _Charsets = Java.type('java.nio.charset.StandardCharsets');
-              var _Arrays   = Java.type('java.util.Arrays');
-              globalThis.atob = function(encoded) {
-                return new _JString(_Base64.getDecoder().decode(encoded), _Charsets.UTF_8);
-              };
-              globalThis.btoa = function(plain) {
-                // String.getBytes(Charset) has overload-resolution issues in GraalVM;
-                // use Charset.encode(String) → ByteBuffer and extract exact bytes via Arrays.copyOfRange.
-                var buf = _Charsets.UTF_8.encode(plain);
-                return _Base64.getEncoder().encodeToString(
-                  _Arrays.copyOfRange(buf.array(), buf.position(), buf.limit()));
-              };
-            })();
-            """, "__base64_polyfill__.js")
-            .cached(true)
-            .buildLiteral();
 
     /**
      * Fires the CPU-budget deadlines. Only ever *schedules* — the kill itself is handed to
@@ -288,16 +264,15 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                           context.getProcessingResultWrapper();
                   if (wrapper != null) {
                       // Create a helper object that JS can call to check if it's been cancelled
-                      Object cancellationHelper = new Object() {
-                          @SuppressWarnings("unused")
-                          public boolean isCancelled() {
-                              boolean cancelled = wrapper.getCancellationRequested().get();
-                              if (cancelled) {
-                                  log.warn("{} - CANCELLATION CHECK: Code has been CANCELLED, returning true", tenant);
-                              }
-                              return cancelled;
-                          }
-                      };
+                      // ProxyObject instead of a host object: needs no host access
+                      Object cancellationHelper = ProxyObject.fromMap(Map.of("isCancelled",
+                              (ProxyExecutable) args -> {
+                                  boolean cancelled = wrapper.getCancellationRequested().get();
+                                  if (cancelled) {
+                                      log.warn("{} - CANCELLATION CHECK: Code has been CANCELLED, returning true", tenant);
+                                  }
+                                  return cancelled;
+                              }));
                       bindings.putMember("__cancellationHelper", cancellationHelper);
                       log.debug("{} - Injected cancellation helper into JavaScript bindings for thread: {}",
                                tenant, Thread.currentThread().getName());
@@ -465,7 +440,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
         }
 
         // Inject atob()/btoa() — GraalVM is ECMAScript-only; these are Web APIs not in the spec.
-        graalContext.eval(BASE64_POLYFILL_SOURCE);
+        GraalVMContextService.installBase64Functions(graalContext);
 
         // Use pre-cached Source if available - no decoding or parsing needed
         if (context.getSharedSource() != null) {

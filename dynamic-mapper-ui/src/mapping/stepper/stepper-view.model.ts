@@ -78,52 +78,44 @@ export interface StepperViewModel {
 }
 
 /**
- * Factory for creating StepperViewModel instances from StepperConfiguration.
- * Consolidates complex OR conditions and boolean logic into clear, semantic properties.
+ * Creates a view model from a stepper configuration, consolidating complex OR conditions and
+ * boolean logic into clear, semantic properties computed once instead of in every template check.
+ *
+ * Three-state rule for `showSourceEditor`: an explicit `showEditorSource: false` always wins and
+ * hides the source editor even when `showCodeEditor` is set; otherwise either flag shows it.
+ * `showFilterControls` is the one flag that defaults to true — only an explicit `false` hides it.
+ *
+ * @param config - The stepper configuration
+ * @returns A view model with computed properties for template usage
  */
-export class StepperViewModelFactory {
-  /**
-   * Creates a view model from a stepper configuration.
-   *
-   * @param config - The stepper configuration
-   * @returns A view model with computed properties for template usage
-   */
-  static create(config: StepperConfiguration): StepperViewModel {
-    // Compute derived properties once instead of in every template check
-    const showExtensionSelectorsSource =
-      config.showProcessorExtensionsSource || false;
-    const showExtensionSelectorsTarget =
-      config.showProcessorExtensionsTarget || false;
-    const showInternalExtensionNote =
-      config.showProcessorExtensionsInternal || false;
+export function createStepperViewModel(config: StepperConfiguration): StepperViewModel {
+  const showExtensionSelectorsSource = config.showProcessorExtensionsSource || false;
+  const showExtensionSelectorsTarget = config.showProcessorExtensionsTarget || false;
+  const showInternalExtensionNote = config.showProcessorExtensionsInternal || false;
 
-    const showExtensionSelectors =
-      showExtensionSelectorsSource ||
-      showExtensionSelectorsTarget ||
-      showInternalExtensionNote;
+  const showExtensionSelectors =
+    showExtensionSelectorsSource || showExtensionSelectorsTarget || showInternalExtensionNote;
 
-    const showTargetContent =
-      config.showEditorTarget ||
-      showExtensionSelectorsTarget ||
-      showInternalExtensionNote ||
-      false;
+  const showTargetContent =
+    config.showEditorTarget ||
+    showExtensionSelectorsTarget ||
+    showInternalExtensionNote ||
+    false;
 
-    return {
-      // Consolidate OR conditions into computed properties
-      showSourceEditor: config.showEditorSource === false
-        ? false
-        : (config.showEditorSource || config.showCodeEditor || false),
-      showTargetEditor: config.showEditorTarget || false,
-      showExtensionSelectors,
-      showExtensionSelectorsSource,
-      showExtensionSelectorsTarget,
-      showInternalExtensionNote,
-      showFilterControls: config.showFilterExpression !== false,
-      showCodeEditorSection: config.showCodeEditor || false,
-      showTargetContent,
+  return {
+    showSourceEditor: config.showEditorSource === false
+      ? false
+      : (config.showEditorSource || config.showCodeEditor || false),
+    showTargetEditor: config.showEditorTarget || false,
+    showExtensionSelectors,
+    showExtensionSelectorsSource,
+    showExtensionSelectorsTarget,
+    showInternalExtensionNote,
+    showFilterControls: config.showFilterExpression !== false,
+    showCodeEditorSection: config.showCodeEditor || false,
+    showTargetContent,
 
-      // Pass through original config for edge cases
-      config
-    };
-  }
+    // Pass through original config for edge cases
+    config
+  };
 }

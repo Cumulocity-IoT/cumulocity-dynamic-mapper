@@ -5,7 +5,7 @@ title: Monitoring
 ### Monitoring {#monitoring}
 
 The **Monitoring** section in the left navigation contains views for **Statistic processed**, **Chart
-processed**, **Cache statistic**, **Service events**, and **Hierarchy mapping**. Each gives a different
+processed**, **Cache statistic**, **Service events**, **Service logs**, and **Hierarchy mapping**. Each gives a different
 operational perspective on what the mapper is doing at runtime.
 
 #### Statistic processed (Inbound / Outbound)
@@ -44,7 +44,7 @@ Counters accumulate since the last reset (or since microservice startup). Use th
 the action bar to zero all counters — useful for measuring throughput during a specific time window. Test runs
 from the mapping editor are not counted.
 
-![Statistic processed](../../../resources/image/Dynamic_Mapper_Monitoring.png "The Statistic processed (Inbound) view listing received/error counts per mapping.")
+![Statistic processed](../../../resources/image/Dynamic_Mapper_Monitoring_Statistic.png "The Statistic processed (Inbound) view listing received/error counts per mapping.")
 
 #### Chart processed
 
@@ -118,6 +118,140 @@ Service events are stored in an in-memory ring buffer and are lost on microservi
 trails, configure the Cumulocity platform's built-in audit log or forward events to an external monitoring
 system.
 :::
+
+#### Service logs {#service-logs}
+
+The Service logs view shows the log of the `dynamic-mapper-service` microservice inside the Dynamic Mapper, so you
+can follow what the mapper did for your tenant without opening the Administration application. Where the lines come
+from depends on who owns the microservice. The badge at the left of the action bar tells you which one you are
+looking at:
+
+| Badge | What you see | When |
+|---|---|---|
+| **Platform log** | The complete log of the microservice instance, including the lines of every tenant that shares it. | You are in the tenant that owns the microservice and your user may read applications. |
+| **Collected log** | Only the lines that were logged for **your** tenant. | Every other case: your tenant only subscribes to the microservice, or you own it but your user may not read its log in Administration. |
+
+![Service logs](../../../resources/image/Dynamic_Mapper_Monitoring_Service_Logs.png "The Service logs view showing the collected log of a tenant: badge and note in the action bar, mapping filter and start time above the log, paging buttons below.")
+
+The page picks the source itself. Both look and behave the same. Only if you own the microservice **and** the collected
+log holds lines, a **Collected log** switch in the action bar lets you change between the two; the platform log stays
+the default.
+
+##### The collected log
+
+The service stores the lines of each tenant as events in that tenant and this view reads them back. What that means
+for you:
+
+- **Only your tenant's lines.** A line is shown to a tenant only if it was logged for that tenant. Lines of other
+  tenants, and lines that belong to no tenant (start-up, shared infrastructure), never appear.
+- **The level you choose.** Only lines at or above the level set in the service log settings are stored (**INFO** by
+  default). Informational lines contain what the mapper did, including message payloads; choose **WARN** to store
+  warnings and errors only.
+- **Limited and slightly late.** Lines are kept for a limited time (24 hours by default) and arrive within about half a
+  minute. Lines that do not fit into one storage run are stored in the next. If a very busy period overflows the in-memory
+  backlog, the oldest lines are lost and the view says how many.
+- **Same line format** as the platform log: time (UTC), level, thread, logger and message. A stack trace stays with
+  the line it belongs to.
+
+##### Controls
+
+| Control | What it does |
+|---|---|
+| **Collected log** | A switch, shown only when both sources are available. Off: the live platform log. On: the stored log of your tenant. Selecting a mapping switches it on for you (see [Following one mapping](#service-logs-mapping)). |
+| **Fetch now** | Collected log only. Has the service store the lines it holds for your tenant right away, instead of at the next collection interval, and then shows the newest lines. Only the instance that answers the request is flushed, so with several instances some lines can still arrive at their next interval. |
+| **Mapping** | A searchable list: open it and type part of a mapping name to narrow the list. Selecting a mapping shows only the lines written while it processed a payload (see [Following one mapping](#service-logs-mapping)). The **×** in the field clears the selection and shows all lines again. |
+| **All / Inbound / Outbound** | In front of **Mapping**. Narrows the list of mappings to the inbound or the outbound ones. It does not filter the log by itself: with no mapping selected the whole log is shown whatever it says. If the selected mapping is not in the narrowed list, the selection is cleared and the whole log is shown again. |
+| **From** and **Apply** | Jumps to a start time. The time is in **UTC**, not your local time. |
+| **First / Previous / Next / Last** | Pages through the log. **Last** shows the newest lines. **Next** and **Last** are disabled while auto refresh is on, because it already follows the newest lines. |
+| **Help (?)** | In the action bar, next to the badge. The bar itself shows a short text; the help holds the details for the source you are looking at (for the collected log: the collection delay and **Fetch now**) and for the mapping filter. |
+| **Auto refresh** | Reloads the newest lines every 10 seconds. |
+| **Download** | Saves the whole log of the source you are looking at as `<instance>.log`. With a mapping selected, only that mapping's lines are saved, as `<instance>-<mapping identifier>.log`. |
+
+##### Following one mapping {#service-logs-mapping}
+
+Choose a mapping in the **Mapping** list to see only what the mapper logged **while it processed a payload for that
+mapping** — inbound or outbound: the transformation, the substitutions, the requests it sent and the errors it ran
+into. The connector's own lines (connect, subscribe, reconnect) are not part of it, because they belong to no mapping.
+
+Each such line carries the mapping's **identifier** in square brackets right in front of the logger, for example
+`[m:l19zjk]`. The list shows the mapping's name; the identifier is what you can search for in the downloaded log.
+
+The **debug** label in the mapping list links here and opens the page with that mapping already selected, so one
+click takes you from "debug is on for this mapping" to its detailed output. If the mapping no longer exists, the page
+says so and shows all lines.
+
+What to keep in mind:
+
+- **The level decides what there is to see.** Most per-message lines are written at **DEBUG**. With the default
+  level **INFO** a mapping that works without problems logs very little. To follow a mapping in detail, lower the
+  level under [Service log settings](#service-logs-settings) while you investigate, and raise it again afterwards.
+- **Only lines collected from now on.** Lines that were collected before this filter existed carry no mapping and
+  never appear when a mapping is selected.
+- **Collected log:** the whole stored log is searched, so the result can reach back further than one page; use
+  **Previous** and **Next** as usual. A window can be empty while more lines exist further back: the page then says so,
+  and **Previous** keeps looking.
+- **Platform log:** the filter only applies to the lines that are loaded right now — the platform cannot filter its
+  log. Use **Previous** and **Next** to look at other parts of the log.
+- **Both sources available** (you own the microservice and the collected log holds lines): a **Collected log** switch
+  appears in the action bar. Selecting a mapping switches to the collected log automatically, because only it can
+  search its whole range; the header then reads *Filtered by mapping (collected log)*. Clearing the selection returns to
+  the platform log. Switching to the platform log yourself drops the mapping filter, and a switch you make by hand is
+  never undone by the page. Opening the page from the **debug** label starts on the collected log. If the collected log is off or empty, there is no switch and the
+  platform log is filtered as described above.
+- A line that spans several rows (a stack trace) stays together with the line it belongs to.
+
+##### Who can open it
+
+The view requires `ROLE_DYNAMIC_MAPPER_ADMIN`; users without it do not see the menu entry. Changing its settings
+requires the same role. See
+[Managing permissions](/c8y-pkg-dynamic-mapper/introduction/access-control).
+
+:::info
+The collected log is stored as ordinary Cumulocity events of type `d11r_serviceLog`, attached to a managed object
+named **Dynamic Mapper service log** in your tenant. Anyone who may read events in your tenant can also list them
+there, independent of the Dynamic Mapper roles.
+:::
+
+##### Service log settings {#service-logs-settings}
+
+Each tenant decides for itself what is stored for it, under **Configuration → Service configuration → Monitoring →
+Service logs**. The settings are part of the service configuration, so **Save** applies them to the next log line:
+there is no restart. A value you leave out keeps its default, and a value outside its range is clamped to the nearest
+allowed one, so a setting can never overload the microservice that all tenants share.
+
+| Setting | Default | Allowed | Meaning |
+|---|---|---|---|
+| **Store service logs** | on | on / off | Stores this tenant's log lines. Off: nothing is stored and lines still waiting are discarded. |
+| **Lowest level stored** | `INFO` | `ERROR`, `WARN`, `INFO` | Lines below it are not stored. |
+| **Keep stored lines for** | 24 | 1 to 720 hours | Older stored lines are deleted. |
+
+**Expert settings** show these as well:
+
+| Setting | Default | Allowed | Meaning |
+|---|---|---|---|
+| **Store every** | 30000 ms | 5000 to 3600000 | How often the waiting lines are stored. |
+| **Most lines per run** | 500 | 1 to 5000 | Lines beyond it are stored in the next run. |
+| **Largest stored event** | 65536 bytes | 1024 to 262144 | Log text in one event. |
+| **Longest single message** | 8192 bytes | 256 to 65536 | A longer message or stack trace is cut; never larger than an event. |
+| **Lines kept in memory** | 2000 | 100 to 10000, at most 16 MB | Lines that can wait between two runs. When it is full, the oldest are dropped and the view says how many. |
+| **Delete old stored lines** | on | on / off | The clean-up below. Keep it on, or stored lines pile up. |
+| **Delete old lines every** | 3600000 ms | 60000 to 86400000 | How often the clean-up runs. |
+
+**Clean-up.** A separate job deletes each tenant's stored lines once they are older than that tenant's retention, so the
+number of `d11r_serviceLog` events does not keep growing. It does not depend on **Store service logs**: if you switch
+storing off, lines that were stored earlier are still removed when their time is up. Every instance of the microservice
+runs it; deleting lines that are already gone does nothing. The lines of a tenant that unsubscribes are left alone,
+because they belong to that tenant.
+
+:::caution
+At level **INFO** the service logs the full payload of every message it processes, and the collected log shows it to
+the tenant's administrators. Choose **WARN** if payloads should not be stored. When an instance stops the service
+stores the lines still waiting in memory; lines are lost only if the instance is killed without a clean stop.
+:::
+
+**For operators.** The microservice's operator can switch the whole feature off for every tenant with the property
+`service.logs.enabled=false` of the service (a restart is required). It is on when the property is absent. The clean-up
+keeps running even then, so lines that were stored earlier are still deleted.
 
 #### Hierarchy mapping
 

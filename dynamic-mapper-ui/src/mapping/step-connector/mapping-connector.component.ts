@@ -32,7 +32,6 @@ import {
   Direction,
   StepperConfiguration
 } from '../../shared';
-import { EditorMode } from '../../shared/mapping/stepper.model';
 
 @Component({
   selector: 'd11r-mapping-connector',
@@ -52,7 +51,7 @@ export class MappingConnectorComponent implements OnInit {
   readOnly: boolean;
 
   ngOnInit(): void {
-    this.readOnly = this.stepperConfiguration.editorMode === EditorMode.READ_ONLY;
+    this.readOnly = !!this.stepperConfiguration.readOnly;
   }
 
   onDeploymentMapEntryChanged(value: DeploymentMapEntry): void {

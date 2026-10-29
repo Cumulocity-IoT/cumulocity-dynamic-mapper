@@ -89,7 +89,7 @@ import java.util.List;
  *   <li>MappingType    : ANY_PAYLOAD</li>
  *   <li>Transformation : SMART_FUNCTION</li>
  *   <li>Topic pattern  : {@code spBv1.0/+/DDATA/+/+}</li>
- *   <li>Code template  : template-SMART-INBOUND-08 (SparkPlugB DDATA/NDATA decoder)</li>
+ *   <li>Code template  : template-SMART-INBOUND-08 (hand-written protobuf decoder, Sparkplug B example)</li>
  * </ul>
  *
  * <p>Expected Cumulocity output for the default payload sent by

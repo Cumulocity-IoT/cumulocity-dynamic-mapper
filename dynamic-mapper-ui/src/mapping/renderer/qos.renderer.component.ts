@@ -26,7 +26,7 @@ import { qosLabel } from '../../shared';
   template: `<span [attr.data-cy]="'dm-mapping-qos-' + context.item.id">{{ qosLabel }}</span>`,
   standalone: true
 })
-export class QOSRendererComponent {
+export class QosRendererComponent {
   constructor(public context: CellRendererContext) {}
 
   /** Labels come from the shared QoS metadata so grid and editor never drift apart. */

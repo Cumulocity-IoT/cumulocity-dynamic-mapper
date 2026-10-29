@@ -24,6 +24,7 @@ import {
 } from '@c8y/client';
 import {
   BASE_AI_URL,
+  PATH_AI_SETTINGS_ENDPOINT,
   PATH_AGENT_ENDPOINT,
   TransformationType,
 } from '../../shared';
@@ -73,18 +74,79 @@ export function toClientAgentDefinition(
   };
 }
 
+export interface AiAgentSettings {
+  killSwitch: boolean;
+  telemetryOptOut?: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
-export class AIAgentService {
+export class AiAgentService {
   private readonly client: FetchClient = inject(FetchClient);
 
+  private settingsCache: { promise: Promise<AiAgentSettings>; timestamp: number } | null = null;
   /** Short-lived cache so the drawer's and the stepper's independent agent-deployment checks
    *  (both happen within seconds of each other during a single mapping-creation flow) don't
    *  each fire their own network round trip. Not cached on a failed fetch, so a transient
    *  error is retried on the very next call rather than being remembered for the full TTL. */
   private agentsCache: { promise: Promise<AgentTextDefinition[]>; timestamp: number } | null = null;
+  /** Why the last agent-list fetch returned no usable list (e.g. "403 Forbidden"); undefined when it
+   *  succeeded. Lets callers tell "request rejected" apart from "no matching agent deployed". */
+  agentListError: string | undefined;
   private static readonly AGENTS_CACHE_TTL_MS = 30_000;
+  private static readonly SETTINGS_CACHE_TTL_MS = 30_000;
+
+  /**
+   * Reads the tenant AI settings. Older AI Agent Manager versions may not expose this endpoint
+   * or the killSwitch field; those versions predate the kill switch and remain enabled.
+   * Other failed or malformed responses are handled as unavailable.
+   */
+  async getAISettings(forceRefresh = false): Promise<AiAgentSettings> {
+    const now = Date.now();
+    if (
+      !forceRefresh &&
+      this.settingsCache &&
+      now - this.settingsCache.timestamp < AiAgentService.SETTINGS_CACHE_TTL_MS
+    ) {
+      return this.settingsCache.promise;
+    }
+
+    const promise = this.fetchAISettings();
+    this.settingsCache = { promise, timestamp: now };
+    promise.catch(() => { this.settingsCache = null; });
+    return promise;
+  }
+
+  private async fetchAISettings(): Promise<AiAgentSettings> {
+    const url = `${BASE_AI_URL}/${PATH_AI_SETTINGS_ENDPOINT}`;
+    const res: IFetchResponse = await this.client.fetch(url, {
+      headers: { 'content-type': 'application/json' },
+      method: 'GET'
+    });
+
+    if (!res.ok) {
+      if (res.status === 404 || res.status === 405) {
+        return { killSwitch: false };
+      }
+      throw new Error(`Failed to fetch AI settings: ${res.status} ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    if (
+      !data ||
+      typeof data !== 'object' ||
+      Array.isArray(data) ||
+      (data.killSwitch !== undefined && typeof data.killSwitch !== 'boolean') ||
+      (data.telemetryOptOut !== undefined && typeof data.telemetryOptOut !== 'boolean')
+    ) {
+      throw new Error(`Unexpected response from ${url}: expected AI settings`);
+    }
+    return {
+      killSwitch: data.killSwitch ?? false,
+      telemetryOptOut: data.telemetryOptOut
+    };
+  }
 
   /**
    * Fetches the deployed AI agents. A non-ok HTTP response is treated as "no agents deployed"
@@ -92,9 +154,19 @@ export class AIAgentService {
    * NOT swallowed here and propagates to the caller, so it can be distinguished from "AI is
    * genuinely not configured" (see `MappingTypeDrawerComponent.checkAIAgentAvailability`).
    */
-  async getAIAgents(): Promise<AgentTextDefinition[]> {
+  async getAIAgents(forceRefresh = false): Promise<AgentTextDefinition[]> {
+    const settings = await this.getAISettings(forceRefresh);
+    if (settings.killSwitch) {
+      this.agentsCache = null;
+      return [];
+    }
+
     const now = Date.now();
-    if (this.agentsCache && now - this.agentsCache.timestamp < AIAgentService.AGENTS_CACHE_TTL_MS) {
+    if (
+      !forceRefresh &&
+      this.agentsCache &&
+      now - this.agentsCache.timestamp < AiAgentService.AGENTS_CACHE_TTL_MS
+    ) {
       return this.agentsCache.promise;
     }
     const promise = this.fetchAIAgents();
@@ -114,7 +186,9 @@ export class AIAgentService {
       }
     );
 
+    this.agentListError = undefined;
     if (!res.ok) {
+      this.agentListError = `${res.status} ${res.statusText}`.trim();
       // Surfaced verbatim (including the body) because this endpoint is undocumented and not part of
       // the SDK's AIService: a 401/403 here means the *browser user* may not list agents even though
       // the microservice can, and the two look identical from the empty agent list alone.
@@ -128,6 +202,7 @@ export class AIAgentService {
 
     const data = await res.json();
     if (!Array.isArray(data)) {
+      this.agentListError = 'unexpected response';
       console.error(
         `Unexpected response from ${BASE_AI_URL}/${PATH_AGENT_ENDPOINT}: expected an array of agents`,
         data
@@ -139,26 +214,8 @@ export class AIAgentService {
 
   async isAIOperable(): Promise<boolean> {
     try {
-      const res: IFetchResponse = await this.client.fetch(
-        `${BASE_AI_URL}/${PATH_AGENT_ENDPOINT}`,
-        {
-          headers: {
-            'content-type': 'application/json'
-          },
-          method: 'GET'
-        }
-      );
-
-      // Check if the response is ok and we have agents
-      if (!res.ok) {
-        console.error(`AI service not available: ${res.status} ${res.statusText}`);
-        return false;
-      }
-
-      const data = await res.json();
-
-      // AI is operable if we have a valid array with at least one agent
-      return Array.isArray(data) && data.length > 0;
+      const agents = await this.getAIAgents();
+      return agents.length > 0;
     } catch (error) {
       console.error('Error checking AI operability:', error);
       return false;

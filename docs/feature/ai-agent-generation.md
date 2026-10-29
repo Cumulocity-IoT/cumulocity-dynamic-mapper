@@ -50,14 +50,34 @@ JSONata paths or JavaScript.
 - **If the AI Agent Manager is unavailable, mapping creation/editing must still work** without
   AI — "Generate with AI" is an optional accelerator, not a hard dependency of the mapping
   editor.
+- **The tenant AI Agent Manager kill switch is authoritative.** The UI checks
+  `GET service/ai/settings` before listing agents or opening the chat. When `killSwitch` is
+  `true`, it makes no request to an AI agent, disables AI generation in the mapper, and tells
+  the user that AI capabilities are disabled in the tenant. Agent definitions may still be
+  provisioned during backend bootstrap; provisioning does not send prompts.
 
 ---
 
 ## Implementation
 
-### Backend: agent bootstrap, not generation — [`AIAgentService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/ai/AIAgentService.java)
+### Manifest agent endpoints
 
-Despite the name, `AIAgentService` does not generate substitutions or code itself; it
+The manifest's `agents` values are HTTP paths relative to the microservice, not classpath
+or filesystem paths. Like the MCP example application, the service must serve each definition
+over HTTP. `AgentDefinitionController` exposes the bundled JSON resources at:
+
+- `/service/dynamic-mapper-service/agents/jsonata_agent.json`
+- `/service/dynamic-mapper-service/agents/smartfunction_agent.json`
+
+The manifest paths remain `agents/jsonata_agent.json` and `agents/smartfunction_agent.json`;
+the platform gateway supplies the `/service/dynamic-mapper-service/` prefix. Packaging the
+files in `src/main/resources/agents/` alone does not make them HTTP-accessible.
+After deployment, authenticated GET requests to these URLs must return HTTP 200 with the
+JSON definitions so the AI Agent Manager can retrieve them for automatic provisioning.
+
+### Backend: agent bootstrap, not generation — [`AiAgentService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/ai/AiAgentService.java)
+
+Despite the name, `AiAgentService` does not generate substitutions or code itself; it
 provisions agent *definitions* on the external AI Agent Manager and exposes one MCP tool. The
 actual chat/generation happens client-side (see below), talking directly to the platform
 service and bypassing `dynamic-mapper-service` entirely. Someone looking for a "generate"
@@ -82,7 +102,7 @@ endpoint in the Java backend won't find one — that's expected.
   JSONata agent actually run a candidate expression against sample JSON mid-conversation and
   see the real result — a self-check before answering, rather than emitting an expression it
   hasn't verified. Registered as an MCP tool callback in `App.java`
-  (`ToolCallbackProvider tools(AIAgentService aiAgentService)`).
+  (`ToolCallbackProvider tools(AiAgentService aiAgentService)`).
 - The system prompts encode the rules the LLM must follow: the `Substitution`
   (`pathSource`/`pathTarget`/`expandArray`/…) and `Mapping` shapes it must conform to,
   GraalVM-specific JavaScript constraints for Smart Functions (e.g. no `.forEach`/`.map` on
@@ -96,7 +116,8 @@ endpoint in the Java backend won't find one — that's expected.
   configured agent name: `JSONATA`/`DEFAULT` → `ServiceConfiguration.jsonataAgent`,
   `SMART_FUNCTION` → `ServiceConfiguration.smartFunctionAgent`.
 - `getAIAgents()` / `fetchAIAgents()` (lines 95-138) call `GET service/ai/agent` **directly
-  against the platform service**, bypassing `dynamic-mapper-service` — the code comments this
+  against the platform service**, but only after `GET service/ai/settings` confirms the tenant
+  kill switch is off. This bypasses `dynamic-mapper-service` — the code comments this
   endpoint as undocumented and not part of the SDK's `AIService`, and note that a 401/403
   there is indistinguishable from "no agents configured" from the UI's point of view. Results
   are cached in memory for 30 seconds.
@@ -110,8 +131,11 @@ endpoint in the Java backend won't find one — that's expected.
   (`checkAIAgentAvailability`) so the "Generate with AI" entry point can be hidden or disabled
   gracefully when the AI Agent Manager isn't reachable, per the "must still work without AI"
   requirement above.
+- The generation drawer independently refreshes the tenant settings before rendering
+  `AgentChatComponent`, so a stale availability check cannot open the chat after the kill switch
+  is enabled. The mapping-creation and editor affordances show a tenant-specific disabled notice.
 
-### Frontend: the generation drawer — [`AIPromptComponent`](../../dynamic-mapper-ui/src/mapping/prompt/ai-prompt.component.ts)
+### Frontend: the generation drawer — [`AiPromptComponent`](../../dynamic-mapper-ui/src/mapping/prompt/ai-prompt.component.ts)
 
 Wraps `@c8y/ngx-components/ai/agent-chat`'s `AgentChatComponent`, configured with the resolved
 `clientAgentDefinition`. Opened from the mapping stepper's transformation step
@@ -125,10 +149,10 @@ Wraps `@c8y/ngx-components/ai/agent-chat`'s `AgentChatComponent`, configured wit
   `[MAPPING_CONTEXT]` fenced block alongside *every* user message, per `AgentChatComponent`'s
   contract, rather than embedding it once in the visible transcript — the full JSON can run to
   dozens of lines and would otherwise make the first visible chat message unreadable.
-- `ngOnInit()` (lines 114-189) branches on `editorMode` and mapping kind:
-  - **UPDATE**: offers "Review / Refine existing …" vs. "Generate new … from scratch" as
+- `ngOnInit()` (lines 114-189) branches on `existingMapping` (set when the stepper configuration's `persistence` is `draft`) and mapping kind:
+  - **Existing mapping**: offers "Review / Refine existing …" vs. "Generate new … from scratch" as
     suggestion chips; nothing is sent automatically.
-  - **CREATE, Smart Function**: offers "Let AI propose a target structure" vs. "I want to
+  - **New mapping, Smart Function**: offers "Let AI propose a target structure" vs. "I want to
     provide a sample target payload" as chips.
   - **CREATE, JSONata**: sends a generate prompt immediately — see requirements above.
   `buildGenerateMessage()` (lines 233-274) is where the outbound-has-no-target-schema and
@@ -165,7 +189,7 @@ path gates its Add/Update buttons on `isSubstitutionValid()`
 but that is a *button guard, not an invariant* — `replaceAllSubstitutions()` and
 `addSubstitution()`, which the AI path calls directly, do not check it.
 
-`AIPromptComponent` therefore runs its own checks on each answer before the result can be
+`AiPromptComponent` therefore runs its own checks on each answer before the result can be
 applied, and reports what it finds in a warning panel in the drawer, with a button that sends
 the problems back to the agent as a follow-up turn. The checks are deliberately **warnings, not
 a hard gate** — Save stays enabled, because an expression can fail against the *sample* template

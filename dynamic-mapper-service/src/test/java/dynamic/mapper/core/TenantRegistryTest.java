@@ -115,4 +115,32 @@ class TenantRegistryTest {
         registry.removeFromExternalIdCacheByInternalId(TENANT, "1001");
         assertNull(registry.getCachedExternalId(otherKey));
     }
+
+    @Test
+    void deviceWithTwoExternalIds_bothEvictedByInternalId() {
+        TenantRegistry registry = new TenantRegistry();
+        String key1 = TENANT + "|c8y_Serial|dev-1";
+        String key2 = TENANT + "|other|dev-1-alt";
+        registry.cacheExternalId(key1, "1001");
+        registry.cacheExternalId(key2, "1001");
+
+        registry.removeFromExternalIdCacheByInternalId(TENANT, "1001");
+
+        assertNull(registry.getCachedExternalId(key1), "first external id must not stay stale");
+        assertNull(registry.getCachedExternalId(key2));
+    }
+
+    @Test
+    void creationLock_isStableForSameKeyAndNeverRemoved() {
+        TenantRegistry registry = new TenantRegistry();
+        String key = TENANT + "|c8y_Serial|dev-1";
+        Object lock = registry.getOrCreateExternalIdLock(key);
+
+        registry.cacheExternalId(key, "1001");
+        registry.removeFromExternalIdCacheByInternalId(TENANT, "1001");
+        registry.clearExternalIdCache(TENANT);
+
+        assertEquals(lock, registry.getOrCreateExternalIdLock(key),
+                "a lock must survive cache eviction so a thread holding it stays exclusive");
+    }
 }

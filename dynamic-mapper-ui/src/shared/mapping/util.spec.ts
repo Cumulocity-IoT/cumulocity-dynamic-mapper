@@ -20,6 +20,7 @@
 
 import { FormControl, FormGroup } from '@angular/forms';
 import {
+  applyCodeTemplateSample,
   deriveSampleTopicFromTopic,
   isFilterOutboundUnique,
   isMappingTopicUnique,
@@ -37,9 +38,12 @@ import {
   isConnectorSelectionEmpty,
   tryGetLiveEditorContent,
   updateTemplatesInEditors,
+  captureMappingContentSnapshot,
+  hasMappingContentChanged,
+  describeMappingContentChanges,
   TemplateEditorRef
 } from './util';
-import { Direction, Mapping, MappingType, RepairStrategy, TransformationType } from '../../shared';
+import { CodeTemplate, Direction, Mapping, MappingType, RepairStrategy, TransformationType } from '../../shared';
 import { MappingValidationError, toBackendError } from './mapping-validation-error';
 
 // ---------------------------------------------------------------------------
@@ -670,6 +674,14 @@ describe('buildTestMapping', () => {
     expect(mapping.sourceTemplate).toBe('{}');
   });
 
+  it('keeps the persisted templates while the editors have not loaded theirs yet', () => {
+    const mapping = makeMapping({ sourceTemplate: '{"a":1}', targetTemplate: '{"b":2}' });
+    const result = buildTestMapping(mapping, undefined, undefined, undefined, false);
+
+    expect(result.sourceTemplate).toBe('{"a":1}');
+    expect(result.targetTemplate).toBe('{"b":2}');
+  });
+
   it('encodes mappingCode as base64 only when includeCode is true and code is present', () => {
     const mapping = makeMapping();
     const withCode = buildTestMapping(mapping, {}, {}, 'export const x = 1;', true);
@@ -743,5 +755,136 @@ describe('updateTemplatesInEditors', () => {
   it('falls back to the current value when neither live content nor a mirror is available', () => {
     const result = updateTemplatesInEditors(undefined, { current: 'source' }, { current: 'target' });
     expect(result).toEqual({ sourceTemplate: { current: 'source' }, targetTemplate: { current: 'target' } });
+  });
+});
+
+describe('unsaved-changes comparison (captureMappingContentSnapshot / hasMappingContentChanged)', () => {
+  const extension = {
+    extensionName: 'dynamic-mapper-extension',
+    eventName: 'CustomMeasurement',
+    fqnClassName: 'x.Y',
+    extensionType: 'EXTENSION_INBOUND',
+    direction: 'INBOUND'
+  } as any;
+
+  const changed = (initial: Mapping, current: Mapping) =>
+    hasMappingContentChanged(current, {}, {}, undefined, captureMappingContentSnapshot(initial, {}, {}, undefined));
+
+  it('is unchanged for an identical mapping', () => {
+    expect(changed(makeMapping(), makeMapping())).toBeFalse();
+  });
+
+  it('detects a real edit', () => {
+    expect(changed(makeMapping(), makeMapping({ name: 'Renamed' }))).toBeTrue();
+  });
+
+  it('ignores the extension status the editor fills in from the tenant when it opens', () => {
+    // A mapping stored without loaded/message (imported sample) gets both added on open.
+    const initial = makeMapping({ extension });
+    const opened = makeMapping({ extension: { ...extension, loaded: true, message: 'Loaded successfully' } });
+
+    expect(changed(initial, opened)).toBeFalse();
+  });
+
+  it('ignores a status change in the other direction too', () => {
+    const initial = makeMapping({ extension: { ...extension, loaded: true, message: 'Loaded successfully' } });
+    const opened = makeMapping({ extension: { ...extension, loaded: false, message: 'not found' } });
+
+    expect(changed(initial, opened)).toBeFalse();
+  });
+
+  it('treats null and a missing property alike (the editor clears extension.parameter from null to undefined)', () => {
+    const initial = makeMapping({ extension: { ...extension, parameter: null } as any });
+    const opened = makeMapping({ extension: { ...extension, parameter: undefined } as any });
+
+    expect(changed(initial, opened)).toBeFalse();
+  });
+
+  it('still detects parameters being set or removed', () => {
+    const withParameter = makeMapping({ extension: { ...extension, parameter: { unit: 'C' } } as any });
+    const without = makeMapping({ extension: { ...extension, parameter: null } as any });
+
+    expect(changed(without, withParameter)).toBeTrue();
+    expect(changed(withParameter, without)).toBeTrue();
+  });
+
+  it('still detects a changed extension event', () => {
+    const initial = makeMapping({ extension });
+    const edited = makeMapping({ extension: { ...extension, eventName: 'CustomAlarm', loaded: true } });
+
+    expect(changed(initial, edited)).toBeTrue();
+  });
+
+  describe('describeMappingContentChanges', () => {
+    const describeChanges = (initial: Mapping, current: Mapping, source: unknown = {}) =>
+      describeMappingContentChanges(current, source, {}, undefined, captureMappingContentSnapshot(initial, {}, {}, undefined));
+
+    it('names a changed mapping property with its old and new value', () => {
+      const changes = describeChanges(makeMapping({ name: 'A' }), makeMapping({ name: 'B' }));
+
+      expect(changes).toEqual(['mapping.name: "A" -> "B"']);
+    });
+
+    it('names a property the editor added', () => {
+      const initial = makeMapping();
+      const current = { ...makeMapping(), externalIdType: 'c8y_Serial' } as Mapping;
+
+      expect(describeChanges(initial, current)).toEqual([jasmine.stringMatching(/^mapping\.externalIdType: .* -> "c8y_Serial"$/)]);
+    });
+
+    it('names a changed template and reports nothing when nothing differs', () => {
+      expect(describeChanges(makeMapping(), makeMapping(), { a: 1 })).toEqual(['source template']);
+      expect(describeChanges(makeMapping(), makeMapping())).toEqual([]);
+    });
+  });
+});
+
+describe('applyCodeTemplateSample', () => {
+  const template = (overrides: Partial<CodeTemplate> = {}): CodeTemplate =>
+    ({
+      id: 't',
+      name: 'T',
+      code: '',
+      samplePayload: '{"sensorData":{"temp_val":23.5}}',
+      sampleTopic: 'testSmartInbound/sensor-berlin-01',
+      ...overrides
+    } as CodeTemplate);
+
+  it('seeds the source template and the mapping topic sample for an INBOUND JSON mapping', () => {
+    const mapping = makeMapping({ sourceTemplate: '{}', mappingTopicSample: '' });
+
+    applyCodeTemplateSample(mapping, template(), MappingType.JSON, Direction.INBOUND);
+
+    expect(mapping.sourceTemplate).toBe('{"sensorData":{"temp_val":23.5}}');
+    expect(mapping.mappingTopicSample).toBe('testSmartInbound/sensor-berlin-01');
+  });
+
+  it('seeds the source template and the PUBLISH topic sample for an OUTBOUND mapping', () => {
+    const mapping = makeMapping({ direction: Direction.OUTBOUND, sourceTemplate: '{}' });
+
+    applyCodeTemplateSample(mapping, template({ sampleTopic: 'measurements/berlin_01' }), MappingType.JSON, Direction.OUTBOUND);
+
+    expect(mapping.sourceTemplate).toBe('{"sensorData":{"temp_val":23.5}}');
+    expect(mapping.publishTopicSample).toBe('measurements/berlin_01');
+    expect(mapping.mappingTopicSample).not.toBe('measurements/berlin_01');
+  });
+
+  it('leaves fields the template does not declare untouched', () => {
+    const mapping = makeMapping({ sourceTemplate: '{}', mappingTopicSample: 'keep/me' });
+
+    applyCodeTemplateSample(mapping, template({ samplePayload: undefined, sampleTopic: undefined }), MappingType.JSON, Direction.INBOUND);
+
+    expect(mapping.sourceTemplate).toBe('{}');
+    expect(mapping.mappingTopicSample).toBe('keep/me');
+  });
+
+  it('does nothing without a template, or for a mapping type that does not take a JSON sample', () => {
+    const mapping = makeMapping({ sourceTemplate: '{}', mappingTopicSample: '' });
+
+    applyCodeTemplateSample(mapping, undefined, MappingType.JSON, Direction.INBOUND);
+    applyCodeTemplateSample(mapping, template(), MappingType.FLAT_FILE, Direction.INBOUND);
+
+    expect(mapping.sourceTemplate).toBe('{}');
+    expect(mapping.mappingTopicSample).toBe('');
   });
 });

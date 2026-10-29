@@ -25,6 +25,7 @@ import com.hivemq.client.mqtt.MqttClientSslConfig;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
@@ -110,10 +111,10 @@ public abstract class AMQTTClient extends AConnectorClient {
         loadConfiguration();
 
         try {
-            Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
-                    .getOrDefault("useSelfSignedCertificate", false);
+            Boolean trustCustomCertificate = (Boolean) connectorConfiguration.getProperties()
+                    .getOrDefault("trustCustomCertificate", false);
 
-            if (useSelfSignedCertificate) {
+            if (trustCustomCertificate) {
                 initializeMqttSslConfiguration();
             }
 
@@ -403,22 +404,18 @@ public abstract class AMQTTClient extends AConnectorClient {
         }
 
         // Use base class certificate validation
-        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
+        Boolean trustCustomCertificate = (Boolean) configuration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
 
-        if (useSelfSignedCertificate) {
+        if (trustCustomCertificate) {
             if (!validateCertificateConfig(configuration)) {
                 return false;
             }
         }
 
         // Check required properties
-        for (Map.Entry<String, ConnectorProperty> entry : connectorSpecification.getProperties().entrySet()) {
-            if (entry.getValue().getRequired() &&
-                    configuration.getProperties().get(entry.getKey()) == null) {
-                log.warn("{} - Missing required property: {}", tenant, entry.getKey());
-                return false;
-            }
+        if (!validateSpecifiedProperties(configuration)) {
+            return false;
         }
 
         return true;
@@ -455,6 +452,9 @@ public abstract class AMQTTClient extends AConnectorClient {
 
         // MQTT Version selection
         configProps.put("version", ConnectorPropertyBuilder.requiredOption()
+                .group(ConnectorPropertyGroup.CONNECTION)
+                .label("MQTT version")
+                .description("MQTT protocol version used for the connection.")
                 .order(0)
                 .defaultValue(defaultVersion)
                 .options(MQTT_VERSION_3_1_1, MQTT_VERSION_5_0)
@@ -462,6 +462,8 @@ public abstract class AMQTTClient extends AConnectorClient {
 
         // Protocol selection (mqtt://, mqtts://, ws://, wss://)
         configProps.put("protocol", ConnectorPropertyBuilder.requiredOption()
+                .group(ConnectorPropertyGroup.CONNECTION)
+                .description("mqtt:// is plain TCP, mqtts:// is TCP with TLS, ws:// is WebSocket, wss:// is WebSocket with TLS.")
                 .order(1)
                 .defaultValue(MQTT_PROTOCOL_MQTT)
                 .options(MQTT_PROTOCOL_MQTT, MQTT_PROTOCOL_MQTTS, MQTT_PROTOCOL_WS, MQTT_PROTOCOL_WSS)
@@ -469,95 +471,139 @@ public abstract class AMQTTClient extends AConnectorClient {
 
         // Basic connection properties
         configProps.put("mqttHost", ConnectorPropertyBuilder.requiredString()
+                .group(ConnectorPropertyGroup.CONNECTION)
+                .label("Host")
+                .description("Host name or IP address of the MQTT broker.")
                 .order(2)
                 .build());
 
         configProps.put("mqttPort", ConnectorPropertyBuilder.requiredNumeric()
+                .group(ConnectorPropertyGroup.CONNECTION)
+                .label("Port")
+                .description("Port of the MQTT broker, for example 1883 for mqtt:// or 8883 for mqtts://.")
                 .order(3)
                 .build());
 
         // Optional authentication
         configProps.put("user", ConnectorPropertyBuilder.optionalString()
+                .group(ConnectorPropertyGroup.AUTHENTICATION)
+                .description("User name for the broker. Leave empty for anonymous access.")
                 .order(4)
                 .build());
 
         configProps.put("password", ConnectorPropertyBuilder.optionalSensitive()
+                .group(ConnectorPropertyGroup.AUTHENTICATION)
+                .description("Password of the broker user.")
                 .order(5)
                 .build());
 
         configProps.put("clientId", ConnectorPropertyBuilder.requiredString()
+                .group(ConnectorPropertyGroup.SESSION)
+                .label("Client ID")
+                .description("Client ID the connector uses at the broker. A broker allows one connection per client ID, so use a unique value.")
                 .order(6)
                 .build());
 
         // TLS/SSL Certificate configuration (only visible for secure protocols)
-        configProps.put("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+        configProps.put("trustCustomCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                .group(ConnectorPropertyGroup.TLS)
+                .label("Trust custom server certificate")
+                .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates.")
                 .order(7)
                 .defaultValue(false)
                 .condition("protocol", MQTT_PROTOCOL_MQTTS, MQTT_PROTOCOL_WSS)
                 .build());
 
-        configProps.put("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.largeText()
+        configProps.put("trustedCertificateFingerprint", ConnectorPropertyBuilder.largeText()
+                .group(ConnectorPropertyGroup.TLS)
+                .label("Trusted certificate fingerprint")
                 .order(8)
-                .description("SHA 1 fingerprint of CA or Self Signed Certificate")
-                .condition("useSelfSignedCertificate", "true")
+                .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
+                .condition("trustCustomCertificate", "true")
                 .build());
 
         configProps.put("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                .group(ConnectorPropertyGroup.TLS)
+                .label("Trusted certificate name")
+                .description("Name of the certificate in the Cumulocity trusted-certificate store.")
                 .order(9)
-                .condition("useSelfSignedCertificate", "true")
+                .condition("trustCustomCertificate", "true")
                 .build());
 
         configProps.put("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
+                .group(ConnectorPropertyGroup.TLS)
+                .label("Certificate chain (PEM)")
                 .order(10)
-                .description("Either enter certificate in PEM format or identify certificate by name and fingerprint (must be uploaded as Trusted Certificate in Device Management)")
-                .condition("useSelfSignedCertificate", "true")
+                .description("Certificate chain in PEM format. Alternatively, identify the certificate by name and fingerprint; it must be uploaded to Device Management > Trusted certificates.")
+                .condition("trustCustomCertificate", "true")
                 .build());
 
         configProps.put("disableHostnameValidation", ConnectorPropertyBuilder.optionalBoolean()
+                .group(ConnectorPropertyGroup.TLS)
+                .label("Disable hostname validation")
+                .description("Skip the check that the broker certificate matches the host name. Insecure, use for development and testing only.")
                 .order(11)
                 .defaultValue(false)
-                .condition("useSelfSignedCertificate", "true")
+                .condition("trustCustomCertificate", "true")
                 .build());
 
         // Wildcard support flags
         configProps.put("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                .group(ConnectorPropertyGroup.ADVANCED)
+                .label("Wildcards in inbound topics")
+                .description("Allow wildcards (+ and #) in the topic of inbound mappings.")
                 .order(12)
                 .defaultValue(true)
                 .build());
 
         configProps.put("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                .group(ConnectorPropertyGroup.ADVANCED)
+                .label("Wildcards in outbound topics")
+                .description("Allow wildcards (+ and #) in the publish topic of outbound mappings.")
                 .order(13)
                 .defaultValue(true)
                 .build());
 
         // WebSocket specific configuration (only visible for WS/WSS protocols)
         configProps.put("serverPath", ConnectorPropertyBuilder.optionalString()
+                .group(ConnectorPropertyGroup.CONNECTION)
+                .label("Server path")
+                .description("Path of the WebSocket endpoint on the broker, for example /mqtt.")
                 .order(14)
                 .condition("protocol", MQTT_PROTOCOL_WS, MQTT_PROTOCOL_WSS)
                 .build());
 
         // MQTT session behavior
         configProps.put("cleanSession", ConnectorPropertyBuilder.optionalBoolean()
+                 .group(ConnectorPropertyGroup.SESSION)
+                 .label("Clean session")
+                 .description("Start each connection without stored session state. Turn this off to keep subscriptions and queued QoS 1 and 2 messages while the connector is offline.")
                  .order(15)
                  .defaultValue(true)
                  .build());
 
         // Error handling and reconnection control
         configProps.put("reconnectOnProcessingError", ConnectorPropertyBuilder.optionalBoolean()
+                .group(ConnectorPropertyGroup.RELIABILITY)
                 .order(16)
                 .defaultValue(false)
                 .condition("cleanSession", "false")
-                .description("Reconnect broker on timeout or internal processing errors (for QoS 1+ messages and broker which don't automatically retransmit unacked messages)")
+                .label("Reconnect on processing error")
+                .description("Reconnect to the broker on timeouts or internal processing errors. Use this for QoS 1 and 2 messages with brokers that do not retransmit unacknowledged messages automatically.")
                 .build());
 
         // Sparkplug Host support
         configProps.put("isSparkplugHost", ConnectorPropertyBuilder.optionalBoolean()
+                .group(ConnectorPropertyGroup.SPARKPLUG)
+                .label("Sparkplug host")
                 .order(17)
                 .defaultValue(false)
                 .description("Enable Sparkplug Host mode to publish Birth/Death certificates on connection/disconnection")
                 .build());
 
         configProps.put("sparkplugHostId", ConnectorPropertyBuilder.optionalString()
+                .group(ConnectorPropertyGroup.SPARKPLUG)
+                .label("Sparkplug host ID")
                 .order(18)
                 .description("Sparkplug Host ID (used for Birth/Death certificates)")
                 .condition("isSparkplugHost", "true")

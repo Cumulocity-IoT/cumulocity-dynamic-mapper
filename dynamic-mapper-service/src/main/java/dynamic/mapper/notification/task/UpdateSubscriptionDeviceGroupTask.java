@@ -24,6 +24,7 @@ package dynamic.mapper.notification.task;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.model.API;
 import dynamic.mapper.notification.GroupCacheManager;
 import dynamic.mapper.notification.GroupCacheManager.CachedGroup;
 import dynamic.mapper.notification.Utils;
@@ -266,7 +267,9 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
 
                 Future<NotificationSubscriptionRepresentation> future = serviceRegistry
                         .getNotificationSubscriber()
-                        .subscribeDeviceAndConnect(tenant, childMO, c8yMessage.getApi(), Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+                        // API.ALL, not c8yMessage.getApi(): that is INVENTORY (the group's own
+                        // notification channel) and would restrict the device to inventory data.
+                        .subscribeDeviceAndConnect(tenant, childMO, API.ALL, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
 
                 // Pre-populate inventory cache for this device to ensure inventory filters work correctly
                 log.debug("{} - Pre-populating inventory cache for child device {} in group {}",
@@ -303,6 +306,12 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
                     continue;
                 }
 
+                if (isStillCovered(tenant, groupId, childMO)) {
+                    log.debug("{} - Keeping child device {}: still covered by another group or type subscription",
+                            tenant, childId);
+                    continue;
+                }
+
                 serviceRegistry.getNotificationSubscriber()
                         .unsubscribeDeviceAndDisconnect(tenant, childMO, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
 
@@ -316,6 +325,28 @@ public class UpdateSubscriptionDeviceGroupTask implements Callable<SubscriptionU
         }
 
         return resultBuilder.build();
+    }
+
+    /**
+     * True if the device is also a member of another subscribed group (per the group cache) or
+     * matches a configured type, in which case its dynamic subscription must stay.
+     */
+    private boolean isStillCovered(String tenant, String leavingGroupId, ManagedObjectRepresentation childMO) {
+        String childId = childMO.getId().getValue();
+        for (String otherGroupId : groupCacheManager.getCache().keySet()) {
+            if (!otherGroupId.equals(leavingGroupId)
+                    && groupCacheManager.getSubscribedDevices(otherGroupId).contains(childId)) {
+                return true;
+            }
+        }
+        try {
+            List<String> types = serviceRegistry.getNotificationSubscriber()
+                    .getSubscriptionsByDeviceType(tenant).getTypes();
+            return types != null && childMO.getType() != null && types.contains(childMO.getType());
+        } catch (Exception e) {
+            log.warn("{} - Could not check type subscription for device {}: {}", tenant, childId, e.getMessage());
+            return false;
+        }
     }
 
 }

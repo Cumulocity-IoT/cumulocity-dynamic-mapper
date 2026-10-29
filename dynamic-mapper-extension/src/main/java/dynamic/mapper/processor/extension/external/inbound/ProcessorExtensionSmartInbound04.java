@@ -34,11 +34,12 @@ import java.util.Map;
 /**
  * Java Extension equivalent of template-SMART-INBOUND-04.js
  *
- * <p>This extension demonstrates conditional creation of different Cumulocity object types:</p>
+ * <p>This extension demonstrates conditional creation of different Cumulocity object types,
+ * with persistent state (per mapping, via {@code getNativeState}/{@code setNativeState}):</p>
  * <ul>
- *   <li>Creates a measurement for "telemetry" payloadType</li>
- *   <li>Creates an event for "error" payloadType</li>
- *   <li>Single extension handling multiple output types based on input data</li>
+ *   <li>Creates a measurement for "telemetry" payloadType and counts telemetry messages</li>
+ *   <li>Creates an event for "error" payloadType and counts error messages</li>
+ *   <li>Suppresses consecutive duplicate error events (same {@code logMessage} as the last one)</li>
  * </ul>
  *
  * <p>Input JSON format for telemetry:</p>
@@ -76,7 +77,6 @@ public class ProcessorExtensionSmartInbound04 implements ProcessorExtensionInbou
             @SuppressWarnings("unchecked")
             Map<String, Object> payload = (Map<String, Object>) Json.parseJson(jsonString);
 
-            log.info("{} - Context state: {}", context.getTenant(), context.getStateAll());
             log.debug("{} - Payload raw: {}", context.getTenant(), jsonString);
             log.info("{} - Processing message, messageId: {}",
                     context.getTenant(), payload.get("messageId"));
@@ -97,8 +97,10 @@ public class ProcessorExtensionSmartInbound04 implements ProcessorExtensionInbou
                 Map<String, Object> sensorData = (Map<String, Object>) payload.get("sensorData");
                 Number tempVal = (Number) sensorData.get("temp_val");
 
-                log.info("{} - Creating temperature measurement: {} C for device: {}",
-                        context.getTenant(), tempVal, clientId);
+                int telemetryCount = counter(context, "telemetryCount") + 1;
+                context.setNativeState("telemetryCount", telemetryCount);
+                log.info("{} - Creating temperature measurement #{}: {} C for device: {}",
+                        context.getTenant(), telemetryCount, tempVal, clientId);
 
                 return new CumulocityObject[] {
                     CumulocityObject.measurement()
@@ -113,6 +115,14 @@ public class ProcessorExtensionSmartInbound04 implements ProcessorExtensionInbou
                 // Create event for error or other payload types
                 String logMessage = (String) payload.get("logMessage");
 
+                // Error deduplication: suppress if same message as last time
+                if (logMessage != null && logMessage.equals(context.getNativeState("lastErrorMsg"))) {
+                    log.debug("{} - Suppressing duplicate error event: '{}'", context.getTenant(), logMessage);
+                    return new CumulocityObject[0];
+                }
+                context.setNativeState("errorCount", counter(context, "errorCount") + 1);
+                context.setNativeState("lastErrorMsg", logMessage);
+
                 log.warn("{} - Creating error event for device: {}, message: {}",
                         context.getTenant(), clientId, logMessage);
 
@@ -120,6 +130,8 @@ public class ProcessorExtensionSmartInbound04 implements ProcessorExtensionInbou
                     CumulocityObject.event()
                         .type("c8y_ErrorEvent")
                         .text(logMessage)
+                        .property("severity", "MAJOR")
+                        .property("status", "ACTIVE")
                         .time(new DateTime().toString())
                         .externalId(clientId, "c8y_Serial")
                         .build()
@@ -132,5 +144,9 @@ public class ProcessorExtensionSmartInbound04 implements ProcessorExtensionInbou
             context.addWarning(errorMsg);
             return new CumulocityObject[0];
         }
+    }
+
+    private static int counter(JavaExtensionContext context, String key) {
+        return context.getNativeState(key) instanceof Number n ? n.intValue() : 0;
     }
 }

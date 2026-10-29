@@ -20,12 +20,23 @@ package dynamic.mapper.mapping.deployment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +48,7 @@ import com.cumulocity.microservice.subscription.service.MicroserviceSubscription
 
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
+import dynamic.mapper.model.MapperServiceRepresentation;
 
 /**
  * Unit tests for {@link DeploymentMapService}, focused on the in-memory deployment map
@@ -142,5 +154,110 @@ class DeploymentMapServiceTest {
         assertTrue(service.isConnectorDeployed(TENANT, "m1", "c1"));
         assertFalse(service.isConnectorDeployed(TENANT, "m1", "c2"));
         assertFalse(service.isConnectorDeployed(TENANT, "unknown", "c1"));
+    }
+
+    // ---- persistence behaviour ----
+
+    /** Makes runForTenant execute its runnable and wires a service representation. */
+    private MapperServiceRepresentation wirePersistence() {
+        MapperServiceRepresentation rep = new MapperServiceRepresentation();
+        rep.setId("42");
+        lenient().when(serviceRegistry.getMapperServiceRepresentation(TENANT)).thenReturn(rep);
+        doAnswer(inv -> {
+            ((Runnable) inv.getArgument(1)).run();
+            return null;
+        }).when(subscriptionsService).runForTenant(eq(TENANT), any(Runnable.class));
+        return rep;
+    }
+
+    @Test
+    void persist_writesBackToServiceRepresentation() {
+        MapperServiceRepresentation rep = wirePersistence();
+
+        service.updateDeployment(TENANT, "m1", List.of("c1"));
+
+        assertEquals(Map.of("m1", List.of("c1")), rep.getDeploymentMap(),
+                "cached representation must follow the persisted state");
+    }
+
+    @Test
+    void persist_failureIsSurfaced() {
+        wirePersistence();
+        doThrow(new RuntimeException("inventory down")).when(inventoryApi).update(any(), anyBoolean());
+
+        assertThrows(IllegalStateException.class,
+                () -> service.updateDeployment(TENANT, "m1", List.of("c1")));
+    }
+
+    @Test
+    void cleanupStaleConnectors_persistFailureDoesNotAbort() {
+        service.updateDeployment(TENANT, "m1", Arrays.asList("c1", "stale"));
+        wirePersistence();
+        doThrow(new RuntimeException("inventory down")).when(inventoryApi).update(any(), anyBoolean());
+
+        assertTrue(service.cleanupStaleConnectors(TENANT, Set.of("c1")));
+        assertEquals(List.of("c1"), service.getDeployedConnectors(TENANT, "m1"));
+    }
+
+    @Test
+    void initialize_afterPersist_doesNotResurrectOldDeployments() {
+        MapperServiceRepresentation rep = wirePersistence();
+        service.updateDeployment(TENANT, "m1", List.of("c1"));
+        service.removeMappingDeployment(TENANT, "m1");
+
+        service.removeTenantDeploymentMap(TENANT);
+        service.initializeTenantDeploymentMap(TENANT, false);
+
+        assertTrue(service.getDeploymentMap(TENANT).isEmpty());
+        assertTrue(rep.getDeploymentMap().isEmpty());
+    }
+
+    @Test
+    void persistedSnapshots_arriveInMutationOrder() throws Exception {
+        MapperServiceRepresentation rep = wirePersistence();
+        ExecutorService pool = Executors.newFixedThreadPool(8);
+        CountDownLatch start = new CountDownLatch(1);
+        for (int i = 0; i < 50; i++) {
+            final String c = "c" + i;
+            pool.submit(() -> {
+                start.await();
+                service.addConnectorToMapping(TENANT, "m1", c);
+                return null;
+            });
+        }
+        start.countDown();
+        pool.shutdown();
+        assertTrue(pool.awaitTermination(10, TimeUnit.SECONDS));
+
+        // The last persist carries the final state: nothing was lost to an older snapshot.
+        assertEquals(50, rep.getDeploymentMap().get("m1").size());
+    }
+
+    // ---- atomicity ----
+
+    @Test
+    void addConnectorToMapping_concurrentSameConnector_noDuplicates() throws Exception {
+        ExecutorService pool = Executors.newFixedThreadPool(8);
+        CountDownLatch start = new CountDownLatch(1);
+        for (int i = 0; i < 100; i++) {
+            pool.submit(() -> {
+                start.await();
+                service.addConnectorToMapping(TENANT, "m1", "c1");
+                return null;
+            });
+        }
+        start.countDown();
+        pool.shutdown();
+        assertTrue(pool.awaitTermination(10, TimeUnit.SECONDS));
+
+        assertEquals(List.of("c1"), service.getDeployedConnectors(TENANT, "m1"));
+    }
+
+    @Test
+    void updateDeployment_nullConnectors_treatedAsEmpty() {
+        service.updateDeployment(TENANT, "m1", null);
+
+        assertTrue(service.getDeploymentMap(TENANT).containsKey("m1"));
+        assertTrue(service.getDeployedConnectors(TENANT, "m1").isEmpty());
     }
 }

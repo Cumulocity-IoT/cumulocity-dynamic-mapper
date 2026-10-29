@@ -40,7 +40,6 @@ import {
   Qos
 } from '../../shared';
 import {
-  EditorMode,
   STEP_GENERAL_SETTINGS,
   STEP_SELECT_TEMPLATES,
   STEP_DEFINE_SUBSTITUTIONS,
@@ -99,7 +98,7 @@ describe('MappingStepperComponent', () => {
   });
 
   const mockStepperConfiguration: StepperConfiguration = {
-    editorMode: EditorMode.CREATE,
+    persistence: 'create',
     direction: Direction.INBOUND,
     showEditorSource: true,
     showEditorTarget: true,
@@ -148,6 +147,7 @@ describe('MappingStepperComponent', () => {
     serviceConfiguration: {} as any,
     aiAgent: null,
     aiAgentDeployed: false,
+    aiCapabilitiesDisabled: false,
     filterFormlyFields: [],
     codeTemplates: {} as any,
     codeTemplatesDecoded: new Map(),
@@ -231,7 +231,7 @@ describe('MappingStepperComponent', () => {
       Promise.resolve({ result: '', resultType: 'empty', valid: true })
     );
     mockStepperService.checkAIAgentDeployment.and.returnValue(
-      Promise.resolve({ aiAgent: null, aiAgentDeployed: false })
+      Promise.resolve({ aiAgent: null, aiAgentDeployed: false, aiCapabilitiesDisabled: false })
     );
     mockStepperService.loadCodeTemplates.and.returnValue(Promise.resolve(new Map()));
     mockStepperService.initializeEditorSession.and.returnValue(Promise.resolve(buildEditorSessionResult()));
@@ -532,7 +532,6 @@ describe('MappingStepperComponent', () => {
       component.sourceTemplate = { a: 1 };
       component.targetTemplate = { b: 2 };
       component.mappingCode = 'code';
-      component['initialContentSnapshot'] = undefined;
 
       component.commit.subscribe((state: CommitEditorState) => {
         expect(state).toEqual({
@@ -540,8 +539,7 @@ describe('MappingStepperComponent', () => {
           stepperConfiguration: component.stepperConfiguration,
           sourceTemplate: { a: 1 },
           targetTemplate: { b: 2 },
-          mappingCode: 'code',
-          initialContentSnapshot: undefined
+          mappingCode: 'code'
         });
         done();
       });

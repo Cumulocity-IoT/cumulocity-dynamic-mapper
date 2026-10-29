@@ -169,7 +169,7 @@ class AMQPClientTest {
         properties.put("exchangeType", "topic");
         properties.put("queuePrefix", "");
         properties.put("autoDeleteQueue", false);
-        properties.put("useSelfSignedCertificate", false);
+        properties.put("trustCustomCertificate", false);
         properties.put("automaticRecovery", true);
         properties.put("supportsWildcardInTopicInbound", true);
         properties.put("supportsWildcardInTopicOutbound", false);
@@ -263,7 +263,7 @@ class AMQPClientTest {
         // Given
         Map<String, Object> properties = createDefaultProperties();
         properties.put("protocol", "amqps://");
-        properties.put("useSelfSignedCertificate", false);
+        properties.put("trustCustomCertificate", false);
 
         when(connectorConfiguration.getProperties()).thenReturn(properties);
 
@@ -289,9 +289,9 @@ class AMQPClientTest {
         // Given
         Map<String, Object> properties = createDefaultProperties();
         properties.put("protocol", "amqps://");
-        properties.put("useSelfSignedCertificate", true);
+        properties.put("trustCustomCertificate", true);
         properties.put("nameCertificate", "test-cert");
-        properties.put("fingerprintSelfSignedCertificate", "AA:BB:CC:DD");
+        properties.put("trustedCertificateFingerprint", "AA:BB:CC:DD");
 
         when(connectorConfiguration.getProperties()).thenReturn(properties);
 
@@ -422,8 +422,8 @@ class AMQPClientTest {
         // Given
         Map<String, Object> properties = createDefaultProperties();
         properties.put("protocol", "amqps://");
-        properties.put("useSelfSignedCertificate", true);
-        // Missing fingerprintSelfSignedCertificate and nameCertificate
+        properties.put("trustCustomCertificate", true);
+        // Missing trustedCertificateFingerprint and nameCertificate
 
         ConnectorConfiguration invalidConfig = mock(ConnectorConfiguration.class);
         when(invalidConfig.getName()).thenReturn(TEST_CONNECTOR_NAME);
@@ -528,7 +528,7 @@ class AMQPClientTest {
         assertTrue(spec.getProperties().containsKey("password"));
         assertTrue(spec.getProperties().containsKey("exchange"));
         assertTrue(spec.getProperties().containsKey("exchangeType"));
-        assertTrue(spec.getProperties().containsKey("useSelfSignedCertificate"));
+        assertTrue(spec.getProperties().containsKey("trustCustomCertificate"));
 
         log.info("✅ Connector specification test passed");
     }

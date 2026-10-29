@@ -79,16 +79,20 @@
         [filterFormly]="filterFormly"
         [filterFormlyFields]="filterFormlyFields"
         (targetTemplateChange)="targetTemplate = $event">
-        @if (stepperViewModel.showExtensionSelectors) {
+        @if (stepperViewModel?.showExtensionSelectors) {
         <ng-container extensionSource>
-          <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
-          </ng-container>
+          <d11r-mapping-extension-selector side="source" dataCyPrefix="dm-mapping-stepper" [form]="templateForm" [mapping]="mapping"
+            [showSelectors]="stepperViewModel?.showExtensionSelectorsSource" [showInternalNote]="stepperViewModel?.showInternalExtensionNote"
+            [isLoading]="isLoadingExtensions" [hasParameter]="hasExtensionParameter" [extensionItems]="extensionItems"
+            [extensionEvents]="extensionEventItems$"></d11r-mapping-extension-selector>
         </ng-container>
         }
-        @if (stepperViewModel.showExtensionSelectors) {
+        @if (stepperViewModel?.showExtensionSelectors) {
         <ng-container extensionTarget>
-          <ng-container *ngTemplateOutlet="extensionTemplateTarget; context: { form: templateForm }">
-          </ng-container>
+          <d11r-mapping-extension-selector side="target" dataCyPrefix="dm-mapping-stepper" [form]="templateForm" [mapping]="mapping"
+            [showSelectors]="stepperViewModel?.showExtensionSelectorsTarget" [showInternalNote]="stepperViewModel?.showInternalExtensionNote"
+            [isLoading]="isLoadingExtensions" [hasParameter]="hasExtensionParameter" [extensionItems]="extensionItems"
+            [extensionEvents]="extensionEventItems$"></d11r-mapping-extension-selector>
         </ng-container>
         }
       </d11r-mapping-template-step>
@@ -102,13 +106,13 @@
     <div class="card-block flex-grow overflow-auto fit-w">
       <d11r-mapping-transformation-step #transformationStepRef [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
         [sourceTemplate]="sourceTemplate" [targetTemplate]="targetTemplate" [sourceSystem]="sourceSystem"
-        [targetSystem]="targetSystem" [feature]="feature" [aiAgentDeployed]="aiAgentDeployed" [aiAgent]="aiAgent"
+        [targetSystem]="targetSystem" [feature]="feature" [aiAgentDeployed]="aiAgentDeployed" [aiCapabilitiesDisabled]="aiCapabilitiesDisabled" [aiAgent]="aiAgent"
         [schemaSource]="schemaSource" [schemaTarget]="schemaTarget" [mappingCode]="mappingCode"
         [codeEditorLabel]="codeEditorLabel" [codeEditorHelp]="codeEditorHelp" [isBeforeSubstitutionStep]="currentStepIndex < STEP_DEFINE_SUBSTITUTIONS"
         (mappingCodeChange)="mappingCode = $event">
 
         <!-- Project code editor content if needed -->
-        @if (stepperViewModel.showCodeEditorSection) {
+        @if (stepperViewModel?.showCodeEditorSection) {
         <ng-container codeEditor>
           <ng-container *ngTemplateOutlet="extensionTemplateSourceGraals; context: { form: templateForm }">
           </ng-container>
@@ -141,62 +145,7 @@
 </c8y-stepper>
 
 
-<ng-template #extensionTemplateSource let-form="form">
-  @if (stepperViewModel.showExtensionSelectorsSource) {
-  <div [formGroup]="form">
-    @if (isLoadingExtensions) {
-    <div class="text-center p-24">
-      <c8y-loading></c8y-loading>
-      <p class="text-muted m-t-8">{{ 'Loading Java extensions...' | translate }}</p>
-    </div>
-    } @else if (extensionItems.length === 0) {
-    <div class="alert alert-info">
-      <i c8yIcon="info"></i>
-      {{ 'No Java extensions available — upload one first' | translate }}
-    </div>
-    } @else {
-    <div class="form-group p-b-8"
-      [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
-      <label translate>Java Extension</label>
-      <c8y-select data-cy="dm-mapping-stepper-extension-source-name-select" [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
-        aria-label="Extension Name">
-      </c8y-select>
-      @if (form.get('extensionName')?.invalid && form.get('extensionName')?.touched) {
-      <span class="help-block"><small translate>Extension name is required.</small></span>
-      }
-    </div>
-    <div class="form-group" [class.has-error]="form.get('eventName')?.invalid && form.get('eventName')?.touched">
-      <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
-      <c8y-select data-cy="dm-mapping-stepper-extension-source-event-select" [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true" aria-label="Event Name">
-      </c8y-select>
-      @if (form.get('eventName')?.invalid && form.get('eventName')?.touched) {
-      <span class="help-block"><small translate>Event name is required.</small></span>
-      }
-      @if (mapping?.extension?.loaded === false) {
-      <div class="alert alert-warning d-flex a-i-center g-8 m-t-8">
-        <i c8yIcon="exclamation-triangle"></i>
-        <span>{{ mapping?.extension?.message || ('This extension event is not loaded.' | translate) }}</span>
-      </div>
-      }
-    </div>
-    }
-    @if (hasExtensionParameter) {
-    <div class="form-group">
-      <label translate>Extension Parameter (YAML)</label>
-      <textarea class="form-control font-smaller font-monospace" data-cy="dm-mapping-stepper-extension-source-parameter-input" formControlName="extensionParameter" rows="6"
-        placeholder="parameter:&#10;  key: value">
-          </textarea>
-      <small class="text-muted" translate>Optional YAML parameter passed to the extension.</small>
-    </div>
-    }
-  </div>
-  }
-  @if (stepperViewModel.showInternalExtensionNote) {
-  <div class="p-t-48">
-    <small class="text-muted">{{ 'No template to edit — the payload structure comes from the Protobuf schema in the selected extension.' | translate }}</small>
-  </div>
-  }
-</ng-template>
+
 
 <ng-template #extensionTemplateSourceGraals let-form="form">
   <div class="form-group p-b-8 fit-h d-col">
@@ -216,16 +165,17 @@
       <div class="flex-grow col-lg-2 p-t-4">
         <button type="button" name="generateSubstitution" data-cy="dm-mapping-stepper-generate-ai" class="btn btn-ai btn-sm"
           (click)="openGenerateSubstitutionDrawer()"
-          title="{{ (stepperConfiguration.editorMode === EditorMode.UPDATE ? 'Review / Refine with AI' : 'Generate with AI') | translate }}" [disabled]="
-                            !stepperViewModel.config.showEditorSource ||
-                              stepperViewModel.config.editorMode ===
-                                EditorMode.READ_ONLY || !aiAgentDeployed
+          title="{{ 'Generate with AI' | translate }}" [disabled]="
+                            !stepperViewModel?.config.showEditorSource ||
+                              stepperViewModel?.config.readOnly || !aiAgentDeployed
                         ">
-          <span id="updateButton">{{ stepperConfiguration.editorMode === EditorMode.UPDATE ? 'Review / Refine with AI' : 'Generate with AI' }}</span>
+          <span id="updateButton">{{ 'Generate with AI' | translate }}</span>
         </button>
         @if (!aiAgentDeployed) {
         <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-          popover="{{'AI Assistant is disabled if AI Agent is not deployed in this tenant or no agent is defined.'| translate}}"
+          [popover]="(aiCapabilitiesDisabled
+            ? 'AI capabilities are disabled in this tenant.'
+            : 'AI Assistant is disabled if AI Agent is not deployed in this tenant or no agent is defined.') | translate"
           placement="right" container="body" triggers="focus" type="button"></button>
         }
       </div>
@@ -249,66 +199,10 @@
       (editorInit)="registerCompletionProvider()">
     </c8y-editor>
   </div>
-  @if (stepperViewModel.showInternalExtensionNote) {
+  @if (stepperViewModel?.showInternalExtensionNote) {
   <div class="p-t-48">
     <small class="text-muted">{{ 'No template to edit — the payload structure comes from the Protobuf schema in the selected extension.' | translate }}</small>
   </div>
   }
 </ng-template>
 
-<ng-template #extensionTemplateTarget let-form="form">
-  @if (stepperViewModel.showExtensionSelectorsTarget) {
-  <div [formGroup]="form">
-    @if (isLoadingExtensions) {
-    <div class="text-center p-24">
-      <c8y-loading></c8y-loading>
-      <p class="text-muted m-t-8">{{ 'Loading Java extensions...' | translate }}</p>
-    </div>
-    } @else if (extensionItems.length === 0) {
-    <div class="alert alert-info">
-      <i c8yIcon="info"></i>
-      {{ 'No Java extensions available — upload one first' | translate }}
-    </div>
-    } @else {
-    <div class="form-group p-b-8"
-      [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
-      <label translate>Java Extension</label>
-      <c8y-select data-cy="dm-mapping-stepper-extension-target-name-select" [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
-        aria-label="Extension Name">
-      </c8y-select>
-      @if (form.get('extensionName')?.invalid && form.get('extensionName')?.touched) {
-      <span class="help-block"><small translate>Extension name is required.</small></span>
-      }
-    </div>
-    <div class="form-group" [class.has-error]="form.get('eventName')?.invalid && form.get('eventName')?.touched">
-      <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
-      <c8y-select data-cy="dm-mapping-stepper-extension-target-event-select" [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true" aria-label="Event Name">
-      </c8y-select>
-      @if (form.get('eventName')?.invalid && form.get('eventName')?.touched) {
-      <span class="help-block"><small translate>Event name is required.</small></span>
-      }
-      @if (mapping?.extension?.loaded === false) {
-      <div class="alert alert-warning d-flex a-i-center g-8 m-t-8">
-        <i c8yIcon="exclamation-triangle"></i>
-        <span>{{ mapping?.extension?.message || ('This extension event is not loaded.' | translate) }}</span>
-      </div>
-      }
-    </div>
-    }
-    @if (hasExtensionParameter) {
-    <div class="form-group">
-      <label translate>Extension Parameter (YAML)</label>
-      <textarea class="form-control font-smaller font-monospace" data-cy="dm-mapping-stepper-extension-target-parameter-input" formControlName="extensionParameter" rows="6"
-        placeholder="parameter:&#10;  key: value">
-          </textarea>
-      <small class="text-muted" translate>Optional YAML parameter passed to the extension.</small>
-    </div>
-    }
-  </div>
-  }
-  @if (stepperViewModel.showInternalExtensionNote) {
-  <div class="p-t-48">
-    <small class="text-muted">{{ 'No template to edit — the payload structure comes from the Protobuf schema in the selected extension.' | translate }}</small>
-  </div>
-  }
-</ng-template>

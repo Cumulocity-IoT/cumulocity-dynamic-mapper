@@ -55,6 +55,7 @@ import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
+import dynamic.mapper.core.ConnectorClientFactory;
 import dynamic.mapper.core.BootstrapService;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.mapping.MappingService;
@@ -94,6 +95,7 @@ class ConfigurationControllerCodeTemplateTest {
 
         controller = new ConfigurationController(
                 mock(ConnectorRegistry.class),
+                mock(ConnectorClientFactory.class),
                 mock(MappingService.class),
                 mock(ConnectorConfigurationService.class),
                 serviceConfigurationService,
@@ -184,6 +186,35 @@ class ConfigurationControllerCodeTemplateTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("b3RoZXI=", codeTemplates.get("custom").code);
+    }
+
+    @Test
+    void updateKeepsTheStoredSampleWhenTheClientDoesNotSendOne() {
+        CodeTemplate stored = template("custom", false, false);
+        stored.samplePayload = "{\"a\":1}";
+        stored.sampleTopic = "t/1";
+        codeTemplates.put("custom", stored);
+        // A client that predates the sample fields sends none
+        CodeTemplate replacement = template("custom", false, false);
+        replacement.code = "b3RoZXI=";
+
+        controller.updateCodeTemplate("custom", replacement);
+
+        assertEquals("{\"a\":1}", codeTemplates.get("custom").samplePayload);
+        assertEquals("t/1", codeTemplates.get("custom").sampleTopic);
+    }
+
+    @Test
+    void updateReplacesTheSampleWhenTheClientSendsOne() {
+        CodeTemplate stored = template("custom", false, false);
+        stored.samplePayload = "{\"a\":1}";
+        codeTemplates.put("custom", stored);
+        CodeTemplate replacement = template("custom", false, false);
+        replacement.samplePayload = "{\"b\":2}";
+
+        controller.updateCodeTemplate("custom", replacement);
+
+        assertEquals("{\"b\":2}", codeTemplates.get("custom").samplePayload);
     }
 
     // ---- create ----

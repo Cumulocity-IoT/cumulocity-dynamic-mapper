@@ -204,15 +204,40 @@ class SubscriptionManagerTest {
     // C8Y subscriptions are keyed by (subscription-name, context); attempting to
     // create a new tenant-scoped subscription while the old one still exists always
     // returns 409, so DELETE must come first.
-    // Trade-off: if the subsequent CREATE fails the old entry is already gone.
+    // If the subsequent CREATE fails the old filter is re-created (best effort rollback).
     // -------------------------------------------------------------------------
 
     @Test
-    void updateSubscriptionByType_createFails_oldSubscriptionAlreadyDeleted() {
+    void updateSubscriptionByType_createFails_restoresPreviousFilter() {
         NotificationSubscriptionRepresentation existing = stubNsr("existing");
         existing.setContext("tenant"); // required so findExistingTypeSubscription() returns this NSR
         NotificationSubscriptionFilterRepresentation filter = new NotificationSubscriptionFilterRepresentation();
-        filter.setTypeFilter("cBy_OldType");
+        filter.setTypeFilter("'cBy_OldType'");
+        existing.setSubscriptionFilter(filter);
+
+        NotificationSubscriptionCollection existingCol = singletonCollection(existing);
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(existingCol);
+        // first create (new filter) fails, second create (restore of old filter) succeeds
+        when(subscriptionAPI.subscribe(any()))
+                .thenThrow(new SDKException(500, "C8Y unavailable"))
+                .thenReturn(stubNsr("restored"));
+
+        assertThrows(RuntimeException.class,
+                () -> subscriptionManager.updateSubscriptionByType("t1", List.of("cBy_NewType")));
+
+        verify(subscriptionAPI, times(1)).delete(existing);
+        var captor = org.mockito.ArgumentCaptor.forClass(NotificationSubscriptionRepresentation.class);
+        verify(subscriptionAPI, times(2)).subscribe(captor.capture());
+        assertEquals("'cBy_NewType'", captor.getAllValues().get(0).getSubscriptionFilter().getTypeFilter());
+        assertEquals("'cBy_OldType'", captor.getAllValues().get(1).getSubscriptionFilter().getTypeFilter());
+    }
+
+    @Test
+    void updateSubscriptionByType_createAndRestoreFail_stillThrowsOriginalFailure() {
+        NotificationSubscriptionRepresentation existing = stubNsr("existing");
+        existing.setContext("tenant");
+        NotificationSubscriptionFilterRepresentation filter = new NotificationSubscriptionFilterRepresentation();
+        filter.setTypeFilter("'cBy_OldType'");
         existing.setSubscriptionFilter(filter);
 
         NotificationSubscriptionCollection existingCol = singletonCollection(existing);
@@ -222,9 +247,7 @@ class SubscriptionManagerTest {
         assertThrows(RuntimeException.class,
                 () -> subscriptionManager.updateSubscriptionByType("t1", List.of("cBy_NewType")));
 
-        // DELETE-first: the old subscription IS deleted before the (failing) create attempt
-        verify(subscriptionAPI, times(1)).delete(existing);
-        verify(subscriptionAPI, times(1)).subscribe(any());
+        verify(subscriptionAPI, times(2)).subscribe(any());
     }
 
     // -------------------------------------------------------------------------
@@ -390,6 +413,190 @@ class SubscriptionManagerTest {
 
         // Only device-2 was actually subscribed; device-1 was skipped via the batch pre-fetch
         verify(subscriptionAPI, times(1)).subscribe(any());
+        // Clients are reconnected once for the whole batch, not once per device
+        verify(connectionManager, times(1)).reconnectStaticDeviceClientsForNewSubscription("t1");
+        verify(connectionManager, times(1)).reconnectDynamicDeviceClientsForNewSubscription("t1");
+    }
+
+    private void stubTypeConfigured(String type) {
+        NotificationSubscriptionRepresentation existingTypeSub = stubNsr("type-sub");
+        existingTypeSub.setContext("tenant");
+        NotificationSubscriptionFilterRepresentation filter = new NotificationSubscriptionFilterRepresentation();
+        filter.setTypeFilter("'" + type + "'");
+        existingTypeSub.setSubscriptionFilter(filter);
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenAnswer(inv -> {
+            NotificationSubscriptionFilter f = inv.getArgument(0);
+            if (Utils.MANAGEMENT_SUBSCRIPTION.equals(f.getSubscription()) && "tenant".equals(f.getContext())) {
+                return singletonCollection(existingTypeSub);
+            }
+            return emptyCollection();
+        });
+    }
+
+    @Test
+    void resyncTypeSubscription_scanFails_reportsIncompleteWithoutSubscribedCount() throws Exception {
+        stubTypeConfigured("myType");
+        when(subscriptionAPI.subscribe(any())).thenReturn(stubNsr("device-1"));
+
+        C8YAgent mockC8yAgent = mock(C8YAgent.class);
+        when(serviceRegistry.getC8yAgent()).thenReturn(mockC8yAgent);
+        doAnswer(inv -> {
+            Consumer<ManagedObjectRepresentation> consumer = inv.getArgument(3);
+            consumer.accept(morWithId("device-1"));
+            throw new IllegalStateException("page 2 failed");
+        }).when(mockC8yAgent).forEachManagedObjectByType(eq("t1"), eq("myType"), any(), any());
+
+        subscriptionManager.resyncTypeSubscription("t1", "myType");
+
+        // No "subscribed" key: the UI must not treat this as a completed sync
+        verify(mockC8yAgent, timeout(5000)).createLoggingEvent(
+                contains("INCOMPLETE"),
+                eq(LoggingEventType.BACKFILL_SUBSCRIPTION_EVENT_TYPE),
+                any(), eq("t1"),
+                argThat((Map<String, String> props) -> !props.containsKey("subscribed")
+                        && "1".equals(props.get("subscribedBeforeFailure"))
+                        && "page 2 failed".equals(props.get("error"))));
+    }
+
+    @Test
+    void resyncTypeSubscription_unexpectedFailure_stillReportsAndReleasesGuard() throws Exception {
+        stubTypeConfigured("myType");
+
+        C8YAgent mockC8yAgent = mock(C8YAgent.class);
+        when(serviceRegistry.getC8yAgent()).thenReturn(mockC8yAgent);
+        // The "started" event itself blows up
+        doThrow(new RuntimeException("event api down")).when(mockC8yAgent).createLoggingEvent(
+                contains("started"), any(), any(), any(), any());
+
+        subscriptionManager.resyncTypeSubscription("t1", "myType");
+
+        verify(mockC8yAgent, timeout(5000)).createLoggingEvent(
+                contains("INCOMPLETE"), any(), any(), eq("t1"), any());
+        // Guard released: a new resync of the same type is accepted again
+        assertDoesNotThrow(() -> subscriptionManager.resyncTypeSubscription("t1", "myType"));
+    }
+
+    @Test
+    void resyncTypeSubscription_prefetchFails_reportsIncompleteAndSubscribesNothing() throws Exception {
+        NotificationSubscriptionRepresentation existingTypeSub = stubNsr("type-sub");
+        existingTypeSub.setContext("tenant");
+        NotificationSubscriptionFilterRepresentation filter = new NotificationSubscriptionFilterRepresentation();
+        filter.setTypeFilter("'myType'");
+        existingTypeSub.setSubscriptionFilter(filter);
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenAnswer(inv -> {
+            NotificationSubscriptionFilter f = inv.getArgument(0);
+            if (Utils.MANAGEMENT_SUBSCRIPTION.equals(f.getSubscription()) && "tenant".equals(f.getContext())) {
+                return singletonCollection(existingTypeSub);
+            }
+            throw new SDKException(500, "lookup failed");
+        });
+
+        C8YAgent mockC8yAgent = mock(C8YAgent.class);
+        when(serviceRegistry.getC8yAgent()).thenReturn(mockC8yAgent);
+
+        subscriptionManager.resyncTypeSubscription("t1", "myType");
+
+        verify(mockC8yAgent, timeout(5000)).createLoggingEvent(
+                contains("INCOMPLETE"), any(), any(), eq("t1"), any());
+        verify(mockC8yAgent, never()).forEachManagedObjectByType(any(), any(), any(), any());
+        verify(subscriptionAPI, never()).subscribe(any());
+    }
+
+    @Test
+    void subscribeDeviceAndConnect_knownInNeitherSet_skipsDedupLookups() throws Exception {
+        when(subscriptionAPI.subscribe(any())).thenReturn(stubNsr("device-2"));
+
+        subscriptionManager.subscribeDeviceAndConnect("t1", morWithId("device-2"), API.ALL,
+                Utils.DYNAMIC_DEVICE_SUBSCRIPTION, java.util.Set.of("x"), java.util.Set.of("y"))
+                .get(5, TimeUnit.SECONDS);
+
+        verify(subscriptionAPI, times(1)).subscribe(any());
+        verify(subscriptionAPI, never()).getSubscriptionsByFilter(any());
+    }
+
+    @Test
+    void subscribeDeviceAndConnect_knownStatic_stillTakesDedupPath() throws Exception {
+        when(subscriptionAPI.subscribe(any())).thenReturn(stubNsr("device-2"));
+        NotificationSubscriptionCollection empty = emptyCollection();
+        lenient().when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(empty);
+
+        subscriptionManager.subscribeDeviceAndConnect("t1", morWithId("device-2"), API.ALL,
+                Utils.DYNAMIC_DEVICE_SUBSCRIPTION, java.util.Set.of("x"), java.util.Set.of("device-2"))
+                .get(5, TimeUnit.SECONDS);
+
+        verify(subscriptionAPI, atLeastOnce()).getSubscriptionsByFilter(any());
+    }
+
+    @Test
+    void resyncTypeSubscription_sameTypeAlreadyRunning_rejected() throws Exception {
+        stubTypeConfigured("myType");
+
+        C8YAgent mockC8yAgent = mock(C8YAgent.class);
+        when(serviceRegistry.getC8yAgent()).thenReturn(mockC8yAgent);
+        java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        doAnswer(inv -> {
+            release.await(5, java.util.concurrent.TimeUnit.SECONDS);
+            return null;
+        }).when(mockC8yAgent).forEachManagedObjectByType(eq("t1"), eq("myType"), any(), any());
+
+        subscriptionManager.resyncTypeSubscription("t1", "myType");
+        assertThrows(IllegalStateException.class,
+                () -> subscriptionManager.resyncTypeSubscription("t1", "myType"));
+
+        release.countDown();
+        verify(mockC8yAgent, timeout(5000)).createLoggingEvent(
+                contains("finished"), any(), any(), eq("t1"), any());
+    }
+
+    /**
+     * A device that the batch pre-fetch missed but subscribeDeviceAndConnect's own dedup skips
+     * (null future) must be reported as skipped, not as a newly subscribed device.
+     */
+    @Test
+    void resyncTypeSubscription_dedupSkippedInsideSubscribe_countedAsSkippedNotSubscribed() throws Exception {
+        NotificationSubscriptionRepresentation existingTypeSub = stubNsr("type-sub");
+        existingTypeSub.setContext("tenant");
+        NotificationSubscriptionFilterRepresentation filter = new NotificationSubscriptionFilterRepresentation();
+        filter.setTypeFilter("'myType'");
+        existingTypeSub.setSubscriptionFilter(filter);
+        NotificationSubscriptionRepresentation dynamicForDevice = stubNsrWithSource("dyn", "device-2");
+
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenAnswer(inv -> {
+            NotificationSubscriptionFilter f = inv.getArgument(0);
+            if (Utils.MANAGEMENT_SUBSCRIPTION.equals(f.getSubscription()) && "tenant".equals(f.getContext())) {
+                return singletonCollection(existingTypeSub);
+            }
+            if (Utils.DYNAMIC_DEVICE_SUBSCRIPTION.equals(f.getSubscription()) && f.getSource() == null) {
+                return emptyCollection(); // pre-fetch knows nothing
+            }
+            if (Utils.STATIC_DEVICE_SUBSCRIPTION.equals(f.getSubscription()) && f.getSource() == null) {
+                // device has a static subscription, so it must go through the per-device dedup lookups
+                return singletonCollection(stubNsrWithSource("st", "device-2"));
+            }
+            if (Utils.DYNAMIC_DEVICE_SUBSCRIPTION.equals(f.getSubscription())) {
+                return singletonCollection(dynamicForDevice); // per-device dedup finds it
+            }
+            return emptyCollection();
+        });
+
+        C8YAgent mockC8yAgent = mock(C8YAgent.class);
+        when(serviceRegistry.getC8yAgent()).thenReturn(mockC8yAgent);
+        doAnswer(inv -> {
+            Consumer<ManagedObjectRepresentation> consumer = inv.getArgument(3);
+            consumer.accept(morWithId("device-2"));
+            return null;
+        }).when(mockC8yAgent).forEachManagedObjectByType(eq("t1"), eq("myType"), any(), any());
+
+        subscriptionManager.resyncTypeSubscription("t1", "myType");
+
+        verify(mockC8yAgent, timeout(5000)).createLoggingEvent(
+                contains("finished"),
+                eq(LoggingEventType.BACKFILL_SUBSCRIPTION_EVENT_TYPE),
+                any(), eq("t1"),
+                argThat((Map<String, String> props) -> "0".equals(props.get("subscribed"))
+                        && "1".equals(props.get("skipped"))
+                        && "0".equals(props.get("failed"))));
+        verify(subscriptionAPI, never()).subscribe(any());
     }
 
     @Test
@@ -428,7 +635,7 @@ class SubscriptionManagerTest {
     }
 
     // -------------------------------------------------------------------------
-    // M2: unsubscribe last device triggers connectionManager.disconnect()
+    // M2: unsubscribe last device closes only device sockets (disconnectDeviceSubscribers)
     // -------------------------------------------------------------------------
 
     @Test
@@ -441,12 +648,126 @@ class SubscriptionManagerTest {
         ManagedObjectRepresentation mor = morWithId("device-1");
         subscriptionManager.unsubscribeDeviceAndDisconnect("t1", mor, Utils.STATIC_DEVICE_SUBSCRIPTION);
 
-        verify(connectionManager, atLeastOnce()).disconnect("t1");
+        verify(connectionManager, atLeastOnce()).disconnectDeviceSubscribers("t1");
+        // the management client (type/group watcher) must survive
+        verify(connectionManager, never()).disconnect("t1");
     }
 
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    // -------------------------------------------------------------------------
+    // Processing key includes the subscription name: a request for a different bucket of
+    // the same device must not be dropped while another bucket's request is in flight.
+    // -------------------------------------------------------------------------
+
+    @Test
+    void subscribeDeviceAndConnect_differentBucketsSameDevice_neitherIsDropped() throws Exception {
+        ManagedObjectRepresentation mor = morWithId("device-1");
+        AtomicInteger subscribeCount = new AtomicInteger();
+        when(subscriptionAPI.subscribe(any())).thenAnswer(inv -> {
+            Thread.sleep(100); // first request is still in flight when the second arrives
+            subscribeCount.incrementAndGet();
+            return stubNsr("device-1");
+        });
+        NotificationSubscriptionCollection empty = emptyCollection();
+        lenient().when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(empty);
+
+        Future<?> dynamic = subscriptionManager
+                .subscribeDeviceAndConnect("t1", mor, API.ALL, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+        Future<?> explorer = subscriptionManager
+                .subscribeDeviceAndConnect("t1", mor, API.ALL, Utils.EXPLORER_DEVICE_SUBSCRIPTION);
+
+        assertNotNull(dynamic.get(5, TimeUnit.SECONDS));
+        assertNotNull(explorer.get(5, TimeUnit.SECONDS), "explorer request was dropped as a duplicate");
+        assertEquals(2, subscribeCount.get());
+    }
+
+    // -------------------------------------------------------------------------
+    // Static subscription replaced by dynamic is restored when the dynamic one is removed
+    // -------------------------------------------------------------------------
+
+    @Test
+    void unsubscribeDynamic_afterDedupReplacedStatic_restoresStatic() throws Exception {
+        ManagedObjectRepresentation mor = morWithId("device-1");
+        NotificationSubscriptionRepresentation staticNsr = stubNsrWithSource("s1", "device-1");
+        NotificationSubscriptionCollection none = emptyCollection();
+        NotificationSubscriptionCollection hasStatic = singletonCollection(staticNsr);
+        // dedup: hasDynamic? no -> hasStatic? yes -> delete-static lookup; later: unsubscribe lookup,
+        // then the restore's own dedup checks (no dynamic, no static)
+        when(subscriptionAPI.getSubscriptionsByFilter(any()))
+                .thenReturn(none, hasStatic, hasStatic, hasStatic, none);
+        when(subscriptionAPI.subscribe(any())).thenReturn(stubNsr("n"));
+
+        subscriptionManager.subscribeDeviceAndConnect("t1", mor, API.ALL, Utils.DYNAMIC_DEVICE_SUBSCRIPTION)
+                .get(5, TimeUnit.SECONDS);
+        subscriptionManager.unsubscribeDeviceAndDisconnect("t1", mor, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+
+        var captor = org.mockito.ArgumentCaptor.forClass(NotificationSubscriptionRepresentation.class);
+        verify(subscriptionAPI, timeout(3000).times(2)).subscribe(captor.capture());
+        assertEquals(Utils.DYNAMIC_DEVICE_SUBSCRIPTION, captor.getAllValues().get(0).getSubscription());
+        assertEquals(Utils.STATIC_DEVICE_SUBSCRIPTION, captor.getAllValues().get(1).getSubscription());
+        // restoring means device sockets must stay up
+        verify(connectionManager, never()).disconnectDeviceSubscribers(anyString());
+    }
+
+    @Test
+    void unsubscribeDynamic_withoutShadowedStatic_doesNotCreateStatic() throws Exception {
+        ManagedObjectRepresentation mor = morWithId("device-1");
+        NotificationSubscriptionCollection none = emptyCollection();
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(none);
+
+        subscriptionManager.unsubscribeDeviceAndDisconnect("t1", mor, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+
+        verify(subscriptionAPI, never()).subscribe(any());
+    }
+
+    // -------------------------------------------------------------------------
+    // Removing a type unsubscribes its devices, except those still covered by a group
+    // -------------------------------------------------------------------------
+
+    @Test
+    void updateSubscriptionByType_removedType_prunesItsDevicesExceptGroupCovered() {
+        NotificationSubscriptionRepresentation existing = stubNsr("existing");
+        existing.setContext("tenant");
+        NotificationSubscriptionFilterRepresentation filter = new NotificationSubscriptionFilterRepresentation();
+        filter.setTypeFilter("'OldType' or 'KeepType'");
+        existing.setSubscriptionFilter(filter);
+        NotificationSubscriptionCollection existingCol = singletonCollection(existing);
+        when(subscriptionAPI.getSubscriptionsByFilter(any())).thenReturn(existingCol);
+        when(subscriptionAPI.subscribe(any())).thenReturn(stubNsr("new"));
+
+        dynamic.mapper.notification.NotificationSubscriber subscriber =
+                mock(dynamic.mapper.notification.NotificationSubscriber.class);
+        C8YAgent agent = mock(C8YAgent.class);
+        when(serviceRegistry.getNotificationSubscriber()).thenReturn(subscriber);
+        when(serviceRegistry.getC8yAgent()).thenReturn(agent);
+
+        dynamic.mapper.model.device.Device group = new dynamic.mapper.model.device.Device();
+        group.setId("g1");
+        dynamic.mapper.model.device.Device covered = new dynamic.mapper.model.device.Device();
+        covered.setId("covered");
+        when(subscriber.getSubscriptionsByDeviceGroup("t1")).thenReturn(
+                dynamic.mapper.notification.NotificationSubscriptionResponse.builder()
+                        .devices(List.of(group)).build());
+        when(agent.getManagedObjectForId("t1", "g1", false)).thenReturn(morWithId("g1"));
+        when(subscriber.findAllRelatedDevicesByMO(eq("t1"), any(), any(), eq(false)))
+                .thenReturn(List.of(covered));
+        doAnswer(inv -> {
+            Consumer<ManagedObjectRepresentation> c = inv.getArgument(3);
+            c.accept(morWithId("pruned"));
+            c.accept(morWithId("covered"));
+            return null;
+        }).when(agent).forEachManagedObjectByType(eq("t1"), eq("OldType"), eq(false), any());
+
+        subscriptionManager.updateSubscriptionByType("t1", List.of("KeepType"));
+
+        verify(mqttPushManager, timeout(3000)).deactivatePushConnectivityForDevice(eq("t1"),
+                org.mockito.ArgumentMatchers.argThat(m -> "pruned".equals(m.getId().getValue())));
+        verify(mqttPushManager, after(300).never()).deactivatePushConnectivityForDevice(eq("t1"),
+                org.mockito.ArgumentMatchers.argThat(m -> "covered".equals(m.getId().getValue())));
+    }
 
     private ManagedObjectRepresentation morWithId(String id) {
         ManagedObjectRepresentation mor = new ManagedObjectRepresentation();

@@ -219,4 +219,91 @@ class MappingSubscriptionManagerTest {
         assertTrue(manager.getEffectiveMappingsInbound().isEmpty());
         assertTrue(callback.subscribedTopics.isEmpty());
     }
+
+    /** Fails subscribe/unsubscribe while {@code failing} is set. */
+    private static class FlakyCallback extends RecordingCallback {
+        volatile boolean failing;
+
+        @Override
+        public void subscribe(String topic, Qos qos) {
+            if (failing) {
+                throw new IllegalStateException("broker down");
+            }
+            super.subscribe(topic, qos);
+        }
+
+        @Override
+        public void unsubscribe(String topic) {
+            if (failing) {
+                throw new IllegalStateException("broker down");
+            }
+            super.unsubscribe(topic);
+        }
+    }
+
+    @Test
+    void add_rollsBackStateWhenSubscribeFails_soRetrySubscribes() throws Exception {
+        FlakyCallback callback = new FlakyCallback();
+        MappingSubscriptionManager manager = new MappingSubscriptionManager("t1", "connector-1", callback);
+        Mapping m1 = inbound("m1", "topic/a");
+
+        callback.failing = true;
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> manager.addSubscriptionInbound(m1, Qos.AT_LEAST_ONCE));
+        assertTrue(manager.getEffectiveMappingsInbound().isEmpty());
+        assertTrue(manager.getSubscriptionCountsView().isEmpty());
+
+        callback.failing = false;
+        manager.addSubscriptionInbound(m1, Qos.AT_LEAST_ONCE);
+        assertEquals(Set.of("topic/a"), callback.subscribedTopics, "retry must actually subscribe");
+    }
+
+    @Test
+    void remove_keepsTrackingTopicWhenUnsubscribeFails() throws Exception {
+        FlakyCallback callback = new FlakyCallback();
+        MappingSubscriptionManager manager = new MappingSubscriptionManager("t1", "connector-1", callback);
+        Mapping m1 = inbound("m1", "topic/a");
+        manager.addSubscriptionInbound(m1, Qos.AT_LEAST_ONCE);
+
+        callback.failing = true;
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> manager.removeSubscriptionInbound(m1));
+        assertTrue(manager.getSubscriptionCountsView().containsKey("topic/a"));
+
+        callback.failing = false;
+        manager.removeSubscriptionInbound(m1);
+        assertTrue(callback.subscribedTopics.isEmpty(), "retry must unsubscribe the ghost subscription");
+    }
+
+    @Test
+    void reconcile_retriesTopicWhoseSubscribeFailed() {
+        FlakyCallback callback = new FlakyCallback();
+        MappingSubscriptionManager manager = new MappingSubscriptionManager("t1", "connector-1", callback);
+        Mapping m1 = inbound("m1", "topic/a");
+
+        callback.failing = true;
+        manager.updateSubscriptionsInbound(new ArrayList<>(List.of(m1)), false, true, m -> true);
+        assertFalse(manager.getSubscriptionCountsView().containsKey("topic/a"));
+        assertTrue(manager.getEffectiveMappingsInbound().isEmpty());
+
+        callback.failing = false;
+        manager.updateSubscriptionsInbound(new ArrayList<>(List.of(m1)), false, true, m -> true);
+        assertEquals(Set.of("topic/a"), callback.subscribedTopics);
+    }
+
+    @Test
+    void reconcile_retriesUnsubscribeThatFailed() {
+        FlakyCallback callback = new FlakyCallback();
+        MappingSubscriptionManager manager = new MappingSubscriptionManager("t1", "connector-1", callback);
+        Mapping m1 = inbound("m1", "topic/a");
+        manager.updateSubscriptionsInbound(new ArrayList<>(List.of(m1)), false, true, m -> true);
+
+        callback.failing = true;
+        manager.updateSubscriptionsInbound(new ArrayList<>(), false, true, m -> true);
+        assertEquals(Set.of("topic/a"), callback.subscribedTopics, "broker still subscribed");
+
+        callback.failing = false;
+        manager.updateSubscriptionsInbound(new ArrayList<>(), false, true, m -> true);
+        assertTrue(callback.subscribedTopics.isEmpty(), "ghost subscription must be cleaned up");
+    }
 }

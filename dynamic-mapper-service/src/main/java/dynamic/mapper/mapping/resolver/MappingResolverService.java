@@ -21,6 +21,8 @@
 
 package dynamic.mapper.mapping.resolver;
 
+import dynamic.mapper.util.MappingLogContext;
+
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.validation.ResolveException;
@@ -85,7 +87,7 @@ public class MappingResolverService {
 
     private Boolean shouldProcessMapping(String tenant, Mapping mapping, C8YMessage message, API api) {
         if (!mapping.getActive()) {
-            logMappingSkipped(tenant, mapping, "mapping is inactive", "active=false");
+            logMappingSkipped(tenant, mapping, REASON_INACTIVE, "active=false");
             return false;
         }
 
@@ -122,7 +124,8 @@ public class MappingResolverService {
             boolean matches = result != null && Utils.isNodeTrue(result);
 
             if (matches) {
-                log.debug("{} - Message filter matched for mapping: {}", tenant, mapping.getIdentifier());
+                MappingLogContext.run(mapping.getIdentifier(), () -> log.debug(
+                        "{} - Message filter matched for mapping: {}", tenant, mapping.getIdentifier()));
             } else {
                 logMappingSkipped(tenant, mapping, "message filter failed", 
                     String.format("filter=%s, result=%s", mapping.getFilterMapping(), result));
@@ -131,8 +134,9 @@ public class MappingResolverService {
             return matches;
 
         } catch (Exception e) {
-            log.debug("{} - Message filter evaluation error for mapping {}: {}", 
-                tenant, mapping.getIdentifier(), e.getMessage());
+            MappingLogContext.run(mapping.getIdentifier(), () -> log.debug(
+                    "{} - Message filter evaluation error for mapping {}: {}",
+                    tenant, mapping.getIdentifier(), e.getMessage()));
             return false;
         }
     }
@@ -148,7 +152,8 @@ public class MappingResolverService {
         boolean matches = inventoryFilterEvaluator.evaluate(tenant, mapping.getFilterInventory(), sourceId, false);
 
         if (matches) {
-            log.debug("{} - Inventory filter matched for mapping: {}", tenant, mapping.getIdentifier());
+            MappingLogContext.run(mapping.getIdentifier(), () -> log.debug(
+                    "{} - Inventory filter matched for mapping: {}", tenant, mapping.getIdentifier()));
         } else {
             logMappingSkipped(tenant, mapping, "inventory filter failed",
                 String.format("filter=%s, sourceId=%s", mapping.getFilterInventory(), sourceId));
@@ -157,10 +162,25 @@ public class MappingResolverService {
         return matches;
     }
 
+    private static final String REASON_INACTIVE = "mapping is inactive";
+
+    /**
+     * Says why a mapping did not take part in this message. The line belongs to that mapping, so it is logged in its
+     * context (the resolver runs outside the per-mapping scope: this is what decides which mappings run).
+     *
+     * <p>An inactive mapping is no decision about this message — with a debug flag left on it would add a line per
+     * notification for every inactive mapping — so that reason is DEBUG only. The others are shown for mappings that have
+     * debugging switched on.
+     */
     private void logMappingSkipped(String tenant, Mapping mapping, String reason, String details) {
-        if (mapping.getDebug()) {
-            log.info("{} - Outbound mapping {}/{} filtered out - {}: {}",
-                tenant, mapping.getName(), mapping.getIdentifier(), reason, details);
-        }
+        MappingLogContext.run(mapping.getIdentifier(), () -> {
+            if (REASON_INACTIVE.equals(reason)) {
+                log.debug("{} - Outbound mapping {}/{} filtered out - {}: {}",
+                        tenant, mapping.getName(), mapping.getIdentifier(), reason, details);
+            } else if (mapping.getDebug()) {
+                log.info("{} - Outbound mapping {}/{} filtered out - {}: {}",
+                        tenant, mapping.getName(), mapping.getIdentifier(), reason, details);
+            }
+        });
     }
 }

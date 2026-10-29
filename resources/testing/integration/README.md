@@ -23,9 +23,14 @@ bash run-tests.sh
 # Pick suite + connector: g = generic MQTT (default), m = Cumulocity MQTT Service
 bash run-tests.sh inbound m       # inbound suite against the MQTT Service
 bash run-tests.sh all g           # everything against the public broker
+
+# Same thing with options; --keep retains all test data from the whole run
+bash run-tests.sh inbound -c m -k
+DM_KEEP=true bash run-tests.sh all
 ```
 
-The runner takes two parameters — `[SUITE] [CONNECTOR]`. See
+The runner takes two parameters — `[SUITE] [CONNECTOR]` — plus the options
+`-c/--connector <g|m>` and `-k/--keep` (equivalent to `DM_KEEP=true`). See
 [Running against the Cumulocity MQTT Service](#running-against-the-cumulocity-mqtt-service).
 
 ### Standard flags
@@ -38,6 +43,33 @@ harness):
 | _(none)_ / `--cleanup` | Run the test and delete created data on exit (default). |
 | `--keep` | Run the test but retain created data for post-mortem debugging. |
 | `--validate-only` | Run environment validation, then exit `0` before creating data. |
+
+### Cleaning up kept test data
+
+Data kept with `--keep` / `DM_KEEP=true` is not removed automatically. Sweep it with:
+
+```bash
+bash run-tests.sh --cleanup-only        # lists, asks for confirmation, deletes
+bash run-tests.sh --cleanup-only -y     # no prompt
+```
+
+It deletes, by name: mappings `test-*`, devices `test-*` / `dmtest-*`, trusted
+certificates `dmtest*`, and the connectors the tests create, matched by identifier
+(`test-*`, `testc8ymqttservice*`, `testrestpolling*`, `testwebhook*`). A connector you
+configured yourself is only touched if its identifier starts with one of those prefixes.
+Device groups are **not** swept — their names are too generic; remove them by hand.
+
+`test-cumulocity-mqtt-service` deletes every existing `CUMULOCITY_MQTT_SERVICE_PULSAR`
+connector (the type is a singleton). If one exists that the test did not create, the test
+is **skipped** unless `DM_ALLOW_DELETE_EXISTING_CONNECTOR=true` is set.
+
+Full keep-then-clean cycle:
+
+```bash
+bash run-tests.sh inbound -c m -k       # run, keep everything
+# ... inspect mappings in the UI ...
+bash run-tests.sh --cleanup-only -y
+```
 
 ## Architecture & Best Practices
 
@@ -397,17 +429,22 @@ array) and drives the interactive menu. The categories below mirror it:
 |------|---------|
 | `test-inbound-json-default` | JSON / DEFAULT → MEASUREMENT |
 | `test-inbound-json-jsonata` | JSON / JSONATA → EVENT |
+| `test-inbound-filter` | `filterMapping` (payload) and `filterInventory` (target device) drop non-matching messages — checked via `messagesFiltered`, device creation and measurements |
 | `test-inbound-json-smartfunction` | JSON / Smart Function → MEASUREMENT |
 | `test-inbound-flatfile` | FLAT_FILE / CSV → MEASUREMENT |
 | `test-inbound-hex` | HEX → EVENT |
 | `test-inbound-http-connector` | HTTP connector → MEASUREMENT |
 | `test-inbound-implicit-device` | Implicit device auto-creation |
 | `test-inbound-implicit-device-recreate-after-delete` | Regression: an implicit device is recreated after the original is deleted from inventory (stale-cache bug) |
+| `test-inbound-multilevel-wildcard` | Regression: a mapping on `a/b/#` also matches the parent topic `a/b` (MQTT spec) as well as deeper topics |
+| `test-inbound-mapping-topic-change` | Regression: changing a mapping's topic (deactivate, PUT, reactivate) moves it in the resolver tree; the old topic stops producing data |
 | `test-inbound-multi-device` | Array payload → multiple devices |
 | `test-inbound-alarm` | JSON / DEFAULT → ALARM |
 | `test-inbound-operation` | JSON / DEFAULT → OPERATION |
 | `test-inbound-alarm-dedup-upsert` | Two messages, same source+type → exactly one alarm; with `DM_EXPECT_ALARM_UPSERT=true` also asserts upsert refresh (#522, not yet implemented) |
 | `test-inbound-deployment-reconcile` | Un-deploy / re-deploy via `PUT /deployment/defined/{id}` takes effect live (no reconnect); unknown connector rejected |
+| `test-inbound-deployment-reset` | `RESET_DEPLOYMENT_MAP` undeploys live (no reconnect), empties the map and the effective view, writes a service event; re-deploy resumes. **Destructive** (empties the whole tenant's deployment map, restored from a snapshot afterwards) — skipped unless `DM_ALLOW_DEPLOYMENT_RESET=true` |
+| `test-inbound-mapping-versioning` | Draft → publish → activate → rollback via the REST API; each version emits a different measurement type so the switch is proven in the pipeline; duplicate / non-canonical / unparseable labels rejected; active version protected; reads do not write version records; deleting the mapping removes its records |
 | `test-inbound-rest-polling` | REST_POLLING connector polls the http-polling-mock → MEASUREMENT; un-deploy stops polling (~2 min, 30s minimum poll interval) |
 | `test-inbound-inventory` | JSON / DEFAULT → INVENTORY — updates **device metadata** (type + custom fragment) on an existing managed object (`updateExistingDevice: true`) |
 
@@ -436,6 +473,7 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-outbound-operation` | C8Y Operation → MQTT broker |
 | `test-outbound-inventory` | C8Y managed-object change (**device metadata**) → MQTT broker |
 | `test-outbound-filter` | `filterMapping` — selective forwarding |
+| `test-outbound-filter-inventory` | `filterInventory` (device type) and `filterMapping` on a partial inventory change |
 | `test-outbound-topic-resolution` | Dynamic publish topic resolution |
 | `test-outbound-json-smartfunction` | Smart Function: Measurement → MQTT JSON |
 | `test-outbound-smartfunction-externalsource` | Smart Function `externalSource` resolves the `_externalId_` topic token — verified by a real broker round-trip (`mosquitto_sub -v`) |
@@ -446,6 +484,8 @@ array) and drives the interactive menu. The categories below mirror it:
 | `test-outbound-type-subscription-resync` | `POST /subscription/type/resync/{type}` backfills pre-existing devices; idempotent; unconfigured type rejected |
 | `test-outbound-group-subscription` | Dynamic group subscription |
 | `test-outbound-group-subscription-removal` | Group subscription removal |
+| `test-outbound-group-subscription-desired-state` | `PUT /subscription/group` as desired state: removing a group unsubscribes only devices without another reason (other group, configured type); `[]` clears; missing list rejected |
+| `test-outbound-type-subscription-removal` | Removing a type from `PUT /subscription/type` unsubscribes its devices in the background; devices still in a subscribed group keep theirs |
 | `test-outbound-subscription-persistence` | Subscription persistence after restart |
 | `test-outbound-extension-alarm-to-sparkplugb` | Extension: Alarm → Sparkplug B DCMD |
 
@@ -537,7 +577,12 @@ The tests **skip** (exit 42) when the mock or credentials are missing.
 2. Customize mapping JSON for your use case
 3. Add validation assertions
 4. Test with `--keep` flag to verify cleanup
-5. Document in test Inventory table above
+5. Register the script in the `TESTS` catalogue of [run-tests.sh](run-tests.sh) and document it in the test inventory table above
+
+**Test numbers are not written in the scripts.** Set `TEST_TITLE` to the title only (for example
+`TEST_TITLE="filterMapping — selective forwarding"`). The banner shows the test's position in the
+`TESTS` catalogue of `run-tests.sh` — the same number the runner's menu uses — so inserting or moving
+an entry renumbers everything automatically.
 
 ## See Also
 

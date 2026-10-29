@@ -1,10 +1,34 @@
 // @ts-check
 /**
- * @name HART Device Metrics to Cumulocity Measurements
- * @description Maps Sparkplug-B/HART DDATA payload metrics to Cumulocity measurements.
- *              Each metric in the metrics array becomes a separate measurement fragment.
- *              Only numeric values are sent; booleans are converted to 0/1.
+ * @name Metrics array to one measurement per metric
+ * @description Maps the metrics array of a Sparkplug B DDATA payload (as delivered by the
+ *              SPARKPLUGB mapping type) to Cumulocity measurements. Each metric becomes a
+ *              separate measurement fragment, named after the metric. Only numeric values are
+ *              sent; booleans are converted to 0/1 and non-numeric metrics are skipped.
+ *              The unit lookup table is an example - adapt it to your metric names.
  * @templateType INBOUND_SMART_FUNCTION
+ * @sampleTopic spBv1.0/factory-01/DDATA/edge-node-01/device-01
+ * @samplePayload
+ *   {
+ *     "groupId": "factory-01",
+ *     "edgeNodeId": "edge-node-01",
+ *     "deviceId": "device-01",
+ *     "timestamp": 1767268800000,
+ *     "metrics": [
+ *       {
+ *         "name": "Temperature",
+ *         "value": 21.5
+ *       },
+ *       {
+ *         "name": "Pressure",
+ *         "value": 1.2
+ *       },
+ *       {
+ *         "name": "Pump Running",
+ *         "value": true
+ *       }
+ *     ]
+ *   }
  */
 /**
  * @param {import('@c8y/dynamic-mapper-smart-function').DynamicMapperDeviceMessage} msg
@@ -26,7 +50,7 @@ function onMessage(msg, context) {
         return [];
     }
 
-    // Unit lookup map based on known HART metric names
+    // Example unit lookup, keyed by metric name (HART process variables here)
     var unitMap = {
         "Primary Variable":    "mA",
         "Secondary Variable":  "mA",
@@ -115,7 +139,7 @@ function onMessage(msg, context) {
 
         var measurementPayload = {
             "time": isoTimestamp,
-            "type": "c8y_HARTMeasurement"
+            "type": "c8y_MetricMeasurement"
         };
 
         // Add the measurement fragment dynamically

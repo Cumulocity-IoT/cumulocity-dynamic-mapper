@@ -21,9 +21,11 @@
 
 package dynamic.mapper.connector.pulsar;
 
+import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.AConnectorClient;
@@ -145,8 +147,23 @@ public class PulsarConnectorClient extends AConnectorClient {
 
             connectionStateManager.updateStatus(ConnectorStatus.CONNECTING, true, true);
 
-            // Build Pulsar client
-            pulsarClient = buildPulsarClient();
+            // Build Pulsar client. The client connects lazily, so verify the broker is reachable and accepts the
+            // credentials; otherwise the connector would report CONNECTED while every subscription silently fails.
+            String unresolvedHost = findUnresolvableHost((String) connectorConfiguration.getProperties().get("serviceUrl"));
+            if (unresolvedHost != null) {
+                throw new PulsarClientException(unresolvableHostResult(unresolvedHost).message());
+            }
+            PulsarClient client = buildPulsarClient();
+            ConnectionTestResult probe = probeBroker(client);
+            if (!probe.success()) {
+                try {
+                    client.close();
+                } catch (PulsarClientException closeError) {
+                    log.debug("{} - Error closing Pulsar client after failed probe: {}", tenant, closeError.getMessage());
+                }
+                throw new PulsarClientException(probe.message());
+            }
+            pulsarClient = client;
 
             // Create callback
             pulsarCallback = new PulsarCallback(
@@ -176,6 +193,177 @@ public class PulsarConnectorClient extends AConnectorClient {
         } finally {
             endConnection();
         }
+    }
+
+    @Override
+    public boolean supportsConnectionTest() {
+        return true;
+    }
+
+    /**
+     * Builds a throwaway client and does a topic lookup, which forces the connection and
+     * authentication without subscribing or producing (no effect on the live consumer's subscription).
+     * An authorization error on the probe topic still proves the credentials were accepted.
+     */
+    @Override
+    public ConnectionTestResult testConnection() {
+        try {
+            // The probe is never initialize()d (that would change connector status), so the trust certificate that
+            // buildPulsarClient() installs for a self-signed broker has to be loaded here.
+            if (Boolean.TRUE.equals(connectorConfiguration.getProperties().get("trustCustomCertificate"))
+                    && cert == null) {
+                cert = loadCertificateFromConfiguration();
+            }
+        } catch (Exception e) {
+            return ConnectionTestResult.failed("The configured certificate could not be loaded: " + e.getMessage(), null);
+        }
+        String unresolvedHost = findUnresolvableHost((String) connectorConfiguration.getProperties().get("serviceUrl"));
+        if (unresolvedHost != null) {
+            return unresolvableHostResult(unresolvedHost);
+        }
+        try (PulsarClient probe = buildPulsarClient()) {
+            return probeBroker(probe);
+        } catch (Exception e) {
+            return ConnectionTestResult.failed("Connection failed: " + e.getMessage(), null);
+        }
+    }
+
+    private ConnectionTestResult unresolvableHostResult(String host) {
+        return ConnectionTestResult.failed("Host '" + host
+                + "' cannot be resolved from the service. It may be a name that only exists in a private network.", null);
+    }
+
+    /**
+     * Forces the (otherwise lazy) connection and authentication with a topic lookup on the given client.
+     */
+    private ConnectionTestResult probeBroker(PulsarClient client) {
+        try {
+            client.getPartitionsForTopic("persistent://public/default/dm-connection-test").get(15, TimeUnit.SECONDS);
+            return ConnectionTestResult.ok("Connected to Pulsar", null);
+        } catch (java.util.concurrent.ExecutionException e) {
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            if (cause instanceof PulsarClientException.AuthenticationException) {
+                return ConnectionTestResult.failed("Authentication failed: " + cause.getMessage(), null);
+            }
+            if (cause instanceof PulsarClientException.AuthorizationException) {
+                return ConnectionTestResult.ok(
+                        "Connected and authenticated (not authorized for the probe topic, which is expected)", null);
+            }
+            return ConnectionTestResult.failed(explainFailure("Connection failed: " + cause.getMessage()), null);
+        } catch (java.util.concurrent.TimeoutException e) {
+            return ConnectionTestResult.failed(explainFailure("Connection timed out"), null);
+        } catch (Exception e) {
+            return ConnectionTestResult.failed("Connection failed: " + e.getMessage(), null);
+        }
+    }
+
+    /**
+     * The Pulsar client swallows connection-level errors (TLS, refused, unreachable) and retries until the operation
+     * times out, so the probe only sees a generic timeout while the actual cause is just in the log. Re-diagnose with
+     * a plain socket/TLS handshake against the first broker and return its message, or the generic one if the
+     * socket-level check finds nothing wrong.
+     */
+    private String explainFailure(String genericMessage) {
+        try {
+            String serviceUrl = (String) connectorConfiguration.getProperties().get("serviceUrl");
+            if (StringUtils.isEmpty(serviceUrl) || !serviceUrl.contains("://")) {
+                return genericMessage;
+            }
+            boolean tls = isSslRequired();
+            String first = serviceUrl.substring(serviceUrl.indexOf("://") + 3).split(",")[0].trim().split("/")[0];
+            String host = first;
+            int port = tls ? 6651 : 6650;
+            int colon = first.lastIndexOf(':');
+            if (colon > 0) {
+                host = first.substring(0, colon);
+                port = Integer.parseInt(first.substring(colon + 1));
+            }
+            java.net.Socket socket = new java.net.Socket();
+            try {
+                socket.connect(new java.net.InetSocketAddress(host, port), 5000);
+                if (tls) {
+                    javax.net.ssl.SSLSocket ssl = (javax.net.ssl.SSLSocket) buildTrustContext().getSocketFactory()
+                            .createSocket(socket, host, port, true);
+                    ssl.setSoTimeout(5000);
+                    ssl.startHandshake();
+                }
+            } finally {
+                socket.close();
+            }
+            return genericMessage;
+        } catch (javax.net.ssl.SSLHandshakeException e) {
+            boolean custom = Boolean.TRUE.equals(connectorConfiguration.getProperties().get("trustCustomCertificate"));
+            if (isCertificateTrustFailure(e)) {
+                return custom
+                        ? "The broker's TLS certificate is not signed by the configured custom certificate. Check that "
+                        + "the certificate (chain) matches the broker's certificate."
+                        : "The broker's TLS certificate is not trusted by the service. Enable 'Trust custom server "
+                        + "certificate' and provide the broker's (CA) certificate.";
+            }
+            return "TLS handshake with the broker failed: " + e.getMessage();
+        } catch (java.net.SocketTimeoutException e) {
+            return "The broker did not answer within 5 seconds. Check host, port and firewall rules.";
+        } catch (java.net.ConnectException e) {
+            return "The broker refused the connection: " + e.getMessage() + ". Check the port and that the broker is running.";
+        } catch (Exception e) {
+            return genericMessage;
+        }
+    }
+
+    private static boolean isCertificateTrustFailure(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause() == t ? null : t.getCause()) {
+            if (t instanceof java.security.cert.CertPathBuilderException
+                    || t instanceof java.security.cert.CertificateException) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** SSL context trusting the configured custom certificate(s), or the JVM defaults when none is configured. */
+    private javax.net.ssl.SSLContext buildTrustContext() throws Exception {
+        javax.net.ssl.TrustManagerFactory tmf = javax.net.ssl.TrustManagerFactory
+                .getInstance(javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm());
+        if (Boolean.TRUE.equals(connectorConfiguration.getProperties().get("trustCustomCertificate")) && cert != null) {
+            java.security.KeyStore store = java.security.KeyStore.getInstance(java.security.KeyStore.getDefaultType());
+            store.load(null, null);
+            int i = 0;
+            for (java.security.cert.Certificate c : java.security.cert.CertificateFactory.getInstance("X.509")
+                    .generateCertificates(new java.io.ByteArrayInputStream(
+                            cert.getCertInPemFormat().getBytes(StandardCharsets.UTF_8)))) {
+                store.setCertificateEntry("custom-" + i++, c);
+            }
+            tmf.init(store);
+        } else {
+            tmf.init((java.security.KeyStore) null);
+        }
+        javax.net.ssl.SSLContext context = javax.net.ssl.SSLContext.getInstance("TLS");
+        context.init(null, tmf.getTrustManagers(), null);
+        return context;
+    }
+
+    /**
+     * Returns the first host of the service URL (a comma separated list is allowed) that DNS cannot resolve, or
+     * null if all resolve. The Pulsar client retries an unresolvable host until the operation times out, which
+     * would otherwise surface only as a generic timeout.
+     */
+    private String findUnresolvableHost(String serviceUrl) {
+        if (StringUtils.isEmpty(serviceUrl)) {
+            return null;
+        }
+        String hosts = serviceUrl.substring(serviceUrl.indexOf("://") + 3);
+        for (String entry : hosts.split(",")) {
+            String host = entry.trim().split("[:/]")[0];
+            if (host.isEmpty()) {
+                continue;
+            }
+            try {
+                java.net.InetAddress.getByName(host);
+            } catch (java.net.UnknownHostException e) {
+                return host;
+            }
+        }
+        return null;
     }
 
     /**
@@ -215,6 +403,20 @@ public class PulsarConnectorClient extends AConnectorClient {
     }
 
     /**
+     * TLS is used when enabled explicitly or when the service URL already uses a TLS scheme. The base class
+     * only inspects a "url" property, which Pulsar does not have (it uses "serviceUrl").
+     */
+    @Override
+    protected boolean isSslRequired() {
+        Map<String, Object> properties = connectorConfiguration.getProperties();
+        if (Boolean.TRUE.equals(properties.get("enableTls"))) {
+            return true;
+        }
+        Object serviceUrl = properties.get("serviceUrl");
+        return serviceUrl instanceof String && isUsingTls((String) serviceUrl);
+    }
+
+    /**
      * Adjust service URL for TLS
      */
     private String adjustServiceUrlForTls(String originalUrl, Boolean enableTls) {
@@ -241,10 +443,10 @@ public class PulsarConnectorClient extends AConnectorClient {
      * Configure TLS settings
      */
     private void configureTls(ClientBuilder clientBuilder) throws PulsarClientException {
-        Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
+        Boolean trustCustomCertificate = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
 
-        if (useSelfSignedCertificate && cert != null) {
+        if (trustCustomCertificate && cert != null) {
             try {
                 Path certFile = writeCertificateToTempFile(cert.getCertInPemFormat());
                 clientBuilder.tlsTrustCertsFilePath(certFile.toString());
@@ -270,6 +472,16 @@ public class PulsarConnectorClient extends AConnectorClient {
      */
     private void configureAuthentication(ClientBuilder clientBuilder, String authMethod, String authParams)
             throws PulsarClientException {
+        if (ClientCredentialsAuthentication.AUTH_NAME.equals(authMethod)) {
+            String clientId = (String) connectorConfiguration.getProperties().get("clientId");
+            String clientSecret = (String) connectorConfiguration.getProperties().get("clientSecret");
+            if (StringUtils.isEmpty(clientId) || StringUtils.isEmpty(clientSecret)) {
+                throw new PulsarClientException("Client ID and client secret are required for client_creds authentication");
+            }
+            clientBuilder.authentication(new ClientCredentialsAuthentication(clientId, clientSecret));
+            log.debug("{} - Using client credentials authentication", tenant);
+            return;
+        }
         if (!"none".equals(authMethod) && !StringUtils.isEmpty(authParams)) {
             try {
                 switch (authMethod) {
@@ -589,21 +801,23 @@ public class PulsarConnectorClient extends AConnectorClient {
             return false;
         }
 
-        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
+        Boolean trustCustomCertificate = (Boolean) configuration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
 
-        if (useSelfSignedCertificate) {
-            if (configuration.getProperties().get("fingerprintSelfSignedCertificate") == null ||
-                    configuration.getProperties().get("nameCertificate") == null) {
+        if (trustCustomCertificate) {
+            // Either an inline PEM chain or a reference (name + fingerprint) to the trusted-certificate store
+            Object pem = configuration.getProperties().get("certificateChainInPemFormat");
+            boolean hasInlinePem = pem instanceof String && !((String) pem).isBlank();
+            boolean hasStoreReference = configuration.getProperties().get("trustedCertificateFingerprint") != null
+                    && configuration.getProperties().get("nameCertificate") != null;
+            if (!hasInlinePem && !hasStoreReference) {
                 return false;
             }
         }
 
         // Check required properties
-        for (Map.Entry<String, ConnectorProperty> entry : connectorSpecification.getProperties().entrySet()) {
-            if (entry.getValue().getRequired() && configuration.getProperties().get(entry.getKey()) == null) {
-                return false;
-            }
+        if (!validateSpecifiedProperties(configuration)) {
+            return false;
         }
 
         return true;
@@ -667,11 +881,17 @@ public class PulsarConnectorClient extends AConnectorClient {
     // ===== Helper Methods =====
 
     /**
-     * Build subscription name
+     * Build subscription name. By default the configured name is a prefix and the sanitized topic is appended, so
+     * every topic gets its own subscription. With "useSubscriptionNameAsIs" the configured name is used unchanged,
+     * for brokers that only authorize a pre-provisioned subscription name. A subscription is scoped per topic in
+     * Pulsar, so the same name can be used for several topics.
      */
-    private String buildSubscriptionName(String topic) {
-        String baseName = (String) connectorConfiguration.getProperties()
-                .getOrDefault("subscriptionName", "dynamic-mapper-subscription");
+    String buildSubscriptionName(String topic) {
+        Map<String, Object> properties = connectorConfiguration.getProperties();
+        String baseName = (String) properties.getOrDefault("subscriptionName", "dynamic-mapper-subscription");
+        if (Boolean.TRUE.equals(properties.get("useSubscriptionNameAsIs")) && StringUtils.isNotBlank(baseName)) {
+            return baseName + (additionalSubscriptionIdTest != null ? additionalSubscriptionIdTest : "");
+        }
         String sanitizedTopic = sanitizeTopicForSubscriptionName(topic);
         String suffix = additionalSubscriptionIdTest != null ? additionalSubscriptionIdTest : "";
         return baseName + "-" + sanitizedTopic + suffix;
@@ -721,13 +941,33 @@ public class PulsarConnectorClient extends AConnectorClient {
         }
 
         validateMqttWildcards(mqttTopic);
-        if (mqttTopic.startsWith("persistent://") || mqttTopic.startsWith("non-persistent://")) {
+        if (startsWithIgnoreCase(mqttTopic, "persistent://") || startsWithIgnoreCase(mqttTopic, "non-persistent://")) {
             // Already a full Pulsar name: only the wildcards need translating
             return escapeRegexCharacters(mqttTopic).replace("+", "[^/]+").replace("#", ".*");
         }
-        String pulsarTenant = (String) connectorConfiguration.getProperties().getOrDefault("pulsarTenant", "public");
-        String namespace = (String) connectorConfiguration.getProperties().getOrDefault("pulsarNamespace", "default");
-        return buildPulsarTopicRegex(mqttTopic, pulsarTenant, namespace);
+        String[] location = resolveTopicLocation();
+        return buildPulsarTopicRegex(mqttTopic, location[1], location[2], location[0]);
+    }
+
+    /**
+     * Resolves {domain, tenant, namespace} used to turn a logical topic into a full Pulsar name. The namespace
+     * property may hold the combined form {@code tenant/namespace}, which then takes precedence over
+     * {@code pulsarTenant}. The domain is "persistent" unless {@code pulsarTopicDomain} is "non-persistent".
+     */
+    String[] resolveTopicLocation() {
+        Map<String, Object> properties = connectorConfiguration.getProperties();
+        String tenantName = (String) properties.getOrDefault("pulsarTenant", "public");
+        String namespace = (String) properties.getOrDefault("pulsarNamespace", "default");
+        if (namespace != null && namespace.contains("/")) {
+            String combined = namespace.trim();
+            int slash = combined.indexOf('/');
+            tenantName = combined.substring(0, slash).trim();
+            namespace = combined.substring(slash + 1).trim();
+        }
+        Object configuredDomain = properties.get("pulsarTopicDomain");
+        String domain = "non-persistent".equalsIgnoreCase(String.valueOf(configuredDomain)) ? "non-persistent"
+                : "persistent";
+        return new String[] { domain, tenantName, namespace };
     }
 
     /**
@@ -737,6 +977,10 @@ public class PulsarConnectorClient extends AConnectorClient {
      * flattening. {@code +} matches exactly one level (no {@code -} or {@code /}), {@code #} the remaining levels.
      */
     static String buildPulsarTopicRegex(String mqttTopic, String pulsarTenant, String namespace) {
+        return buildPulsarTopicRegex(mqttTopic, pulsarTenant, namespace, "persistent");
+    }
+
+    static String buildPulsarTopicRegex(String mqttTopic, String pulsarTenant, String namespace, String domain) {
         String[] levels = mqttTopic.split("/", -1);
         StringBuilder local = new StringBuilder();
         for (int i = 0; i < levels.length; i++) {
@@ -754,7 +998,7 @@ public class PulsarConnectorClient extends AConnectorClient {
                 local.append(level.replace(" ", "_").replaceAll("[^a-zA-Z0-9._-]", "_").replace(".", "\\."));
             }
         }
-        return "persistent://" + pulsarTenant.replace(".", "\\.") + "/" + namespace.replace(".", "\\.")
+        return domain + "://" + pulsarTenant.replace(".", "\\.") + "/" + namespace.replace(".", "\\.")
                 + "/" + local;
     }
 
@@ -801,18 +1045,25 @@ public class PulsarConnectorClient extends AConnectorClient {
     }
 
     /**
+     * Case-insensitive variant of String#startsWith, since Pulsar topic schemes
+     * (persistent://, non-persistent://) may be configured with any letter casing.
+     */
+    private static boolean startsWithIgnoreCase(String value, String prefix) {
+        return value.regionMatches(true, 0, prefix, 0, prefix.length());
+    }
+
+    /**
      * Ensure Pulsar topic format
      */
     private String ensurePulsarTopicFormat(String topicPattern) {
-        if (topicPattern.startsWith("persistent://") || topicPattern.startsWith("non-persistent://")) {
+        if (startsWithIgnoreCase(topicPattern, "persistent://") || startsWithIgnoreCase(topicPattern, "non-persistent://")) {
             return topicPattern;
         }
 
         String pulsarTopicName = convertMqttTopicToPulsarTopicName(topicPattern);
-        String pulsarTenant = (String) connectorConfiguration.getProperties().getOrDefault("pulsarTenant", "public");
-        String namespace = (String) connectorConfiguration.getProperties().getOrDefault("pulsarNamespace", "default");
+        String[] location = resolveTopicLocation();
 
-        return String.format("persistent://%s/%s/%s", pulsarTenant, namespace, pulsarTopicName);
+        return String.format("%s://%s/%s/%s", location[0], location[1], location[2], pulsarTopicName);
     }
 
     /**
@@ -854,82 +1105,167 @@ public class PulsarConnectorClient extends AConnectorClient {
 
                 // Connection settings
                 .property("serviceUrl", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.CONNECTION)
+                        .label("Service URL")
                         .order(0)
                         .description("This can be in the format: pulsar://localhost:6650 for non-TLS or pulsar+ssl://localhost:6651 for TLS")
                         .defaultValue("pulsar://localhost:6650"))
 
                 // TLS configuration
                 .property("enableTls", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.TLS)
+                        .label("Enable TLS")
+                        .description("Use TLS for the connection. The service URL must then start with pulsar+ssl://.")
                         .order(1)
                         .defaultValue(false))
 
-                .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                .property("trustCustomCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.TLS)
+                        .label("Trust custom server certificate")
+                        .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates.")
                         .order(2)
                         .defaultValue(false)
                         .condition("enableTls", "true"))
 
-                .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.optionalString()
+                .property("trustedCertificateFingerprint", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.TLS)
+                        .label("Trusted certificate fingerprint")
+                        .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
                         .order(3)
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
                 .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.TLS)
+                        .label("Trusted certificate name")
+                        .description("Name of the certificate in the Cumulocity trusted-certificate store.")
                         .order(4)
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
+
+                .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
+                        .group(ConnectorPropertyGroup.TLS)
+                        .label("Certificate chain (PEM)")
+                        .order(5)
+                        .description("Certificate chain in PEM format. Alternatively, identify the certificate by name and fingerprint; it must be uploaded to Device Management > Trusted certificates.")
+                        .condition("trustCustomCertificate", "true"))
 
                 // Authentication
                 .property("authenticationMethod", ConnectorPropertyBuilder.optionalOption()
-                        .order(5)
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .label("Authentication method")
+                        .description("Authentication method of the broker. Select None for a broker without authentication.")
+                        .order(6)
                         .defaultValue("none")
                         .optionsWithLabels("none", "None", "token", "Token", "oauth2", "OAuth2",
-                                "tls", "TLS", "basic", "Basic"))
+                                "tls", "TLS", "basic", "Basic",
+                                "client_creds", "Client credentials (custom)"))
 
                 .property("authenticationParams", ConnectorPropertyBuilder.optionalSensitive()
-                        .order(6)
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .label("Authentication parameters")
+                        .order(7)
+                        .description("Parameters for the selected method. Token: the token string. "
+                                + "Basic: JSON with user and password, e.g. {\"userId\":\"myUser\",\"password\":\"myPassword\"}. "
+                                + "TLS and OAuth2: the JSON parameters of the corresponding Pulsar authentication plugin.")
                         .condition("authenticationMethod", "token", "oauth2", "tls", "basic"))
+
+                .property("clientId", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .order(8)
+                        .label("Client ID")
+                        .description("Custom authentication method for brokers that register a 'client_creds' provider (not standard Pulsar). Client ID sent to the broker as base64(clientId:clientSecret).")
+                        .condition("authenticationMethod", "client_creds"))
+
+                .property("clientSecret", ConnectorPropertyBuilder.optionalSensitive()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .order(9)
+                        .label("Client secret")
+                        .description("Client secret for the 'client_creds' authentication method.")
+                        .condition("authenticationMethod", "client_creds"))
 
                 // Timeouts
                 .property("connectionTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
-                        .order(7)
+                        .group(ConnectorPropertyGroup.TIMEOUTS)
+                        .label("Connection timeout (s)")
+                        .description("Maximum time in seconds to wait for the connection to the broker.")
+                        .order(10)
                         .defaultValue(DEFAULT_CONNECTION_TIMEOUT))
 
                 .property("operationTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
-                        .order(8)
+                        .group(ConnectorPropertyGroup.TIMEOUTS)
+                        .label("Operation timeout (s)")
+                        .description("Maximum time in seconds to wait for a broker operation such as subscribe or publish.")
+                        .order(11)
                         .defaultValue(DEFAULT_OPERATION_TIMEOUT))
 
                 .property("keepAliveIntervalSeconds", ConnectorPropertyBuilder.requiredNumeric()
-                        .order(9)
+                        .group(ConnectorPropertyGroup.TIMEOUTS)
+                        .label("Keep-alive interval (s)")
+                        .description("Interval in seconds between keep-alive pings to the broker.")
+                        .order(12)
                         .defaultValue(DEFAULT_KEEP_ALIVE))
 
                 // Subscription settings
                 .property("subscriptionType", ConnectorPropertyBuilder.optionalOption()
-                        .order(10)
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .label("Subscription type")
+                        .description("Pulsar subscription type. Shared distributes messages over all consumers, Exclusive allows one consumer, Failover keeps a standby consumer, and Key Shared routes messages with the same key to the same consumer.")
+                        .order(13)
                         .defaultValue("Shared")
                         .optionsWithLabels("Exclusive", "Exclusive", "Shared", "Shared",
                                 "Failover", "Failover", "Key_Shared", "Key Shared"))
 
                 .property("subscriptionName", ConnectorPropertyBuilder.optionalString()
-                        .order(11)
-                        .description("Controls how Pulsar subscription names are generated"))
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .label("Subscription name")
+                        .order(14)
+                        .description("Prefix of the generated Pulsar subscription names, or the exact subscription name if 'Use subscription name as is' is enabled"))
+
+                .property("useSubscriptionNameAsIs", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .order(15)
+                        .label("Use subscription name as is")
+                        .description("Use the subscription name unchanged instead of appending the topic. Enable this if the broker only allows a pre-provisioned subscription name.")
+                        .defaultValue(false))
 
                 // Wildcard support (read-only)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(12)
+                        .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in inbound topics")
+                        .description("Allow wildcards (+ and #) in the topic of inbound mappings.")
+                        .order(16)
                         .readonly(true)
                         .defaultValue(true))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
-                        .order(13)
+                        .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in outbound topics")
+                        .description("Allow wildcards (+ and #) in the publish topic of outbound mappings.")
+                        .order(17)
                         .readonly(true)
                         .defaultValue(false))
 
                 // Pulsar-specific settings
                 .property("pulsarTenant", ConnectorPropertyBuilder.optionalString()
-                        .order(14)
+                        .group(ConnectorPropertyGroup.TOPICS)
+                        .label("Tenant")
+                        .description("Pulsar tenant of topics that are not given as a full Pulsar name. A tenant/namespace entry in Namespace overrides it.")
+                        .order(18)
                         .defaultValue("public"))
 
                 .property("pulsarNamespace", ConnectorPropertyBuilder.optionalString()
-                        .order(15)
+                        .group(ConnectorPropertyGroup.TOPICS)
+                        .label("Namespace")
+                        .order(19)
+                        .description("Namespace for topics that are not given as a full Pulsar name. May also be entered as 'tenant/namespace', which overrides the tenant above.")
                         .defaultValue("default"))
+
+                .property("pulsarTopicDomain", ConnectorPropertyBuilder.optionalOption()
+                        .group(ConnectorPropertyGroup.TOPICS)
+                        .order(20)
+                        .label("Topic type")
+                        .description("Applies to topics that are not given as a full Pulsar name.")
+                        .defaultValue("persistent")
+                        .optionsWithLabels("persistent", "Persistent", "non-persistent", "Non-persistent"))
 
                 .build();
     }

@@ -188,7 +188,14 @@ public class MappingSubscriptionManager {
             effectiveMappingsInbound.put(mapping.getIdentifier(), mapping);
 
             if (isNewSubscription) {
-                subscriptionCallback.subscribe(topic, qos);
+                try {
+                    subscriptionCallback.subscribe(topic, qos);
+                } catch (ConnectorException | RuntimeException e) {
+                    // Don't leave a count and an effective mapping for a topic the broker never
+                    // subscribed: the idempotency guard above would turn every retry into a no-op.
+                    rollbackAdd(mapping, topic, count);
+                    throw e;
+                }
                 subscribedQos.put(topic, qos);
                 log.info("{} - Subscribed to topic: [{}] for connector: {}, QoS: {}",
                         tenant, topic, connectorName, qos);
@@ -202,13 +209,30 @@ public class MappingSubscriptionManager {
                 // under-serving this mapping's QoS requirement.
                 Qos currentQos = subscribedQos.getOrDefault(topic, Qos.AT_MOST_ONCE);
                 if (Qos.orDefault(qos).getLevel() > currentQos.getLevel()) {
-                    subscriptionCallback.subscribe(topic, qos);
+                    try {
+                        subscriptionCallback.subscribe(topic, qos);
+                    } catch (ConnectorException | RuntimeException e) {
+                        rollbackAdd(mapping, topic, count);
+                        throw e;
+                    }
                     subscribedQos.put(topic, qos);
                     log.info("{} - Upgraded subscription QoS for topic: [{}] from {} to {} for connector: {}",
                             tenant, topic, currentQos, qos, connectorName);
                 }
             }
         }
+    }
+
+    /** Undoes the bookkeeping of a failed {@link #addSubscriptionInbound}. Caller holds the lock. */
+    private void rollbackAdd(Mapping mapping, String topic, MutableInt count) {
+        effectiveMappingsInbound.remove(mapping.getIdentifier());
+        count.decrement();
+        if (count.intValue() <= 0) {
+            subscriptionCounts.remove(topic);
+            subscribedQos.remove(topic);
+        }
+        log.warn("{} - Subscribing mapping {} to topic [{}] failed, state rolled back",
+                tenant, mapping.getIdentifier(), topic);
     }
 
     /**
@@ -243,9 +267,21 @@ public class MappingSubscriptionManager {
             count.decrement();
 
             if (count.intValue() <= 0) {
+                Qos previousQos = subscribedQos.get(topic);
                 subscriptionCounts.remove(topic);
                 subscribedQos.remove(topic);
-                subscriptionCallback.unsubscribe(topic);
+                try {
+                    subscriptionCallback.unsubscribe(topic);
+                } catch (ConnectorException | RuntimeException e) {
+                    // The broker is still subscribed: keep tracking the topic and the mapping so
+                    // a retry can unsubscribe instead of leaving an untracked ghost subscription.
+                    subscriptionCounts.put(topic, new MutableInt(1));
+                    if (previousQos != null) {
+                        subscribedQos.put(topic, previousQos);
+                    }
+                    effectiveMappingsInbound.put(mapping.getIdentifier(), removed);
+                    throw e;
+                }
                 log.info("{} - Unsubscribed from topic: [{}] for connector: {}", tenant, topic, connectorName);
             } else {
                 log.debug("{} - Decremented subscription count for topic: [{}] to {}",
@@ -314,18 +350,27 @@ public class MappingSubscriptionManager {
 
             // Remove subscriptions for topics no longer needed (broker unsubscribe).
             // Must run before subscriptionCounts is replaced so the diff sees the old topics.
-            unsubscribeUnusedTopics(newSubscriptions);
+            Set<String> failedUnsubscribes = unsubscribeUnusedTopics(newSubscriptions);
 
             // Add subscriptions for new topics, and re-subscribe topics that stay subscribed
             // but whose desired QoS increased (e.g. a mapping requiring a higher QoS was added
             // to a topic another mapping already subscribed at a lower one).
-            subscribeToNewTopics(newSubscriptions, topicQosMap);
+            Set<String> failedSubscribes = subscribeToNewTopics(newSubscriptions, topicQosMap);
+            // A topic the broker refused is not subscribed: don't count it (the next reconcile
+            // would treat it as retained and never retry) and don't report its mappings as effective.
+            if (!failedSubscribes.isEmpty()) {
+                failedSubscribes.forEach(newSubscriptions::remove);
+                effectiveMappingsInbound.values().removeIf(m -> failedSubscribes.contains(m.getMappingTopic()));
+            }
             upgradeQosForRetainedTopics(newSubscriptions, topicQosMap);
 
             // Replace the reference counts wholesale with the freshly computed desired state.
             // A putAll would leave stale keys for topics that are no longer subscribed.
             subscriptionCounts.clear();
             subscriptionCounts.putAll(newSubscriptions);
+            // Topics we failed to unsubscribe are still subscribed at the broker: keep them
+            // tracked (count 0) so the next reconcile retries the unsubscribe.
+            failedUnsubscribes.forEach(t -> subscriptionCounts.put(t, new MutableInt(0)));
 
             log.info("{} - Updated subscriptions for connector: {}, active topics: {}",
                     tenant, connectorName, subscriptionCounts.size());
@@ -335,7 +380,8 @@ public class MappingSubscriptionManager {
     /**
      * Unsubscribes from topics that are no longer needed.
      */
-    private void unsubscribeUnusedTopics(Map<String, MutableInt> newSubscriptions) {
+    private Set<String> unsubscribeUnusedTopics(Map<String, MutableInt> newSubscriptions) {
+        Set<String> failed = new HashSet<>();
         subscriptionCounts.keySet().stream()
                 .filter(topic -> !newSubscriptions.containsKey(topic))
                 .forEach(topic -> {
@@ -344,9 +390,11 @@ public class MappingSubscriptionManager {
                         subscribedQos.remove(topic);
                         log.info("{} - Unsubscribed from unused topic: [{}]", tenant, topic);
                     } catch (Exception e) {
+                        failed.add(topic);
                         log.error("{} - Error unsubscribing from topic: [{}]", tenant, topic, e);
                     }
                 });
+        return failed;
     }
 
     /**
@@ -377,8 +425,9 @@ public class MappingSubscriptionManager {
     /**
      * Subscribes to new topics that weren't previously subscribed.
      */
-    private void subscribeToNewTopics(Map<String, MutableInt> newSubscriptions,
+    private Set<String> subscribeToNewTopics(Map<String, MutableInt> newSubscriptions,
             Map<String, Qos> topicQosMap) {
+        Set<String> failed = new HashSet<>();
         newSubscriptions.keySet().stream()
                 .filter(topic -> !subscriptionCounts.containsKey(topic))
                 .forEach(topic -> {
@@ -393,9 +442,11 @@ public class MappingSubscriptionManager {
                         // below, which would otherwise leave effectiveMappingsInbound (already
                         // updated to the new desired set) inconsistent with a stale/partial
                         // subscriptionCounts.
+                        failed.add(topic);
                         log.error("{} - Error subscribing to topic: [{}]", tenant, topic, e);
                     }
                 });
+        return failed;
     }
 
     // ===== Outbound Mapping Management =====

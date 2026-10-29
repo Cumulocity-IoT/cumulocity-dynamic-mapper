@@ -19,7 +19,10 @@
  */
 
 import { Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
+import { NODE2 } from '../../shared';
+import { MAPPING_IDENTIFIER } from '../../monitoring/logs/mapping-log-filter';
 
 /**
  * Version/Status cell of the mapping grid.
@@ -30,9 +33,10 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
  * (which one is active, and whether unpublished changes exist), so they sit together; debug is
  * operational status and comes last.
  *
- * Only the version is interactive. When the column supplies a `callback` (see
- * MappingComponent.getColumnsMappings) it becomes a link that opens the version drawer for that
- * row; the draft and debug labels stay plain text, since they open nothing.
+ * Version and draft are interactive only when the column supplies a `callback` (see
+ * MappingComponent.getColumnsMappings): they then open the version drawer for that row. The debug
+ * label always links to the Service logs page, filtered to this mapping (`?mapping=<identifier>`), where the
+ * mapping's debug output can be read; it needs no callback because it is a plain route.
  *
  * The affordance has to be visible at rest: c8y's `.interact` class only sets `cursor: pointer`,
  * and an <a> without an href gets no default link styling, so the version would otherwise look
@@ -86,10 +90,13 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
           }
         }
 
-        <!-- Slot 3 — operational status, never a link -->
+        <!-- Slot 3 — operational status; links to the Service logs page, where the debug output is read -->
         @if (context.value.debug) {
-          <span class="text-12 label label-success" [attr.data-cy]="'dm-mapping-status-debug-' + context.item.id"
-            title="Debug logging is enabled for this mapping. View the detailed output in the microservice log: Administration → Ecosystem → Microservices → dynamic-mapper-service → Logs">debug</span>
+          <a class="interact text-12 label label-success dm-debug-link"
+            [attr.data-cy]="'dm-mapping-status-debug-' + context.item.id"
+            [routerLink]="serviceLogsRoute"
+            [queryParams]="serviceLogsQueryParams"
+            title="Debug logging is enabled for this mapping. Open the Service logs, filtered to the lines of this mapping, to read the detailed output.">debug</a>
         }
       </div>
     `,
@@ -127,14 +134,33 @@ import { CellRendererContext, CoreModule } from '@c8y/ngx-components';
       cursor: pointer;
     }
 
+    .dm-debug-link {
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
     .dm-draft-link:hover,
-    .dm-draft-link:focus {
+    .dm-draft-link:focus,
+    .dm-debug-link:hover,
+    .dm-debug-link:focus {
       filter: brightness(0.92);
     }
   `],
   standalone: true,
-  imports: [CoreModule]
+  imports: [CoreModule, RouterLink]
 })
 export class StatusRendererComponent {
+  /** The Service logs page (monitoring module's `monitoring/logs` route). */
+  readonly serviceLogsRoute = `/c8y-pkg-dynamic-mapper/${NODE2}/monitoring/logs`;
+
   constructor(public readonly context: CellRendererContext) { }
+
+  /**
+   * The Service logs page opens with this mapping preselected: the label is context aware, it leads to the lines of the
+   * mapping it sits on, not to the whole log. Without a usable identifier the link still opens the page, unfiltered.
+   */
+  get serviceLogsQueryParams(): { mapping?: string } {
+    const identifier = this.context?.item?.mapping?.identifier;
+    return typeof identifier === 'string' && MAPPING_IDENTIFIER.test(identifier) ? { mapping: identifier } : {};
+  }
 }

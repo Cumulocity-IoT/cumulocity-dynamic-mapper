@@ -131,7 +131,8 @@ public class ServiceConfigurationService {
      * already exist, so newly deployed internal templates are picked up automatically
      * without requiring a manual "Reset System Templates" operation.
      *
-     * @return {@code true} if at least one template was added (caller should persist)
+     * @return {@code true} if at least one template was added, or a stored template received its
+     *         sample payload/topic from the packaged version (caller should persist)
      */
     public boolean addMissingInternalTemplates(ServiceConfiguration configuration) {
         Map<String, CodeTemplate> codeTemplates = configuration.getCodeTemplates();
@@ -144,9 +145,11 @@ public class ServiceConfigurationService {
         // The key is @templateType + @name, not @name alone: the inbound and the outbound
         // default both ship as "Default template for Smart Function", and matching on the
         // name alone meant a tenant that had one of them never received the other.
-        Set<String> existingTemplates = codeTemplates.values().stream()
-                .map(t -> templateKey(t.templateType != null ? t.templateType.name() : "", t.name))
-                .collect(Collectors.toSet());
+        Map<String, CodeTemplate> existingByKey = new HashMap<>();
+        for (CodeTemplate t : codeTemplates.values()) {
+            existingByKey.putIfAbsent(templateKey(t.templateType != null ? t.templateType.name() : "", t.name), t);
+        }
+        Set<String> existingTemplates = existingByKey.keySet();
 
         // Track which templateTypes already have a default registered
         Map<TemplateType, Boolean> defaultTemplateRegistered = new EnumMap<>(TemplateType.class);
@@ -180,8 +183,28 @@ public class ServiceConfigurationService {
                 String name = extractAnnotation(header, "@name");
                 String templateType = extractAnnotation(header, "@templateType");
 
-                if (existingTemplates.contains(templateKey(templateType, name))) {
-                    continue; // Already stored — skip
+                CodeTemplate stored = existingByKey.get(templateKey(templateType, name));
+                if (stored != null) {
+                    // Already stored, so the template itself is left alone (the tenant may have
+                    // edited it). Only the sample payload/topic, which stored copies from before
+                    // those fields existed lack, are filled in from the packaged header; a value
+                    // that is already there is never overwritten.
+                    String packaged = packagedHeader(content);
+                    if (stored.samplePayload == null) {
+                        String samplePayload = extractSamplePayload(packaged);
+                        if (samplePayload != null) {
+                            stored.samplePayload = samplePayload;
+                            anyAdded = true;
+                        }
+                    }
+                    if (stored.sampleTopic == null) {
+                        String sampleTopic = extractAnnotation(packaged, "@sampleTopic");
+                        if (!sampleTopic.isEmpty()) {
+                            stored.sampleTopic = sampleTopic;
+                            anyAdded = true;
+                        }
+                    }
+                    continue;
                 }
 
                 int sizeBefore = codeTemplates.size();
@@ -337,7 +360,8 @@ public class ServiceConfigurationService {
 
         CodeTemplate template = new CodeTemplate(
                 templateId, name, description, templateType,
-                encode(content), internal, readonly, defaultTemplate);
+                encode(content), internal, readonly, defaultTemplate,
+                extractSamplePayload(header), extractAnnotation(header, "@sampleTopic"));
 
         // Migrate header to two-section format on load so the divider is always present
         rectifyHeaderInCodeTemplate(template);
@@ -424,6 +448,38 @@ public class ServiceConfigurationService {
         return text.startsWith("---") ? null : text;
     }
 
+    /**
+     * Reads {@code @samplePayload} from a template header. A multi-line value comes back as the
+     * continuation lines joined by single spaces (see {@link #extractAnnotation}), which is
+     * still valid JSON; it is re-rendered pretty-printed. A value that is not valid JSON is
+     * dropped with a warning rather than handed to the UI, so a typo in a template can never
+     * put a broken sample payload into a new mapping.
+     *
+     * @return pretty-printed JSON, or {@code null} when the header declares none (or an invalid one)
+     */
+    String extractSamplePayload(String header) {
+        String raw = extractAnnotation(header, "@samplePayload");
+        if (raw.isEmpty()) {
+            return null;
+        }
+        try {
+            return objectMapper.writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(objectMapper.readTree(raw));
+        } catch (JsonProcessingException e) {
+            log.warn("Ignoring @samplePayload that is not valid JSON: {}", e.getOriginalMessage());
+            return null;
+        }
+    }
+
+    /**
+     * The JSDoc header of a packaged template file, without a leading {@code // @ts-check}.
+     */
+    private String packagedHeader(String content) {
+        String body = content.substring(leadingDirectives(content).length());
+        int headerEnd = findJSDocHeaderEnd(body);
+        return (headerEnd != -1) ? body.substring(0, headerEnd) : body;
+    }
+
     public String validateAndConvert(Resource resource) {
         try {
             return new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
@@ -483,8 +539,7 @@ public class ServiceConfigurationService {
     }
 
     private void applyDefaults(ServiceConfiguration config) {
-        if (config.getEngineRotationThreshold() == null) config.setEngineRotationThreshold(100);
-        if (config.getEngineMaxAgeMinutes() == null)      config.setEngineMaxAgeMinutes(0);
+        if (config.getEngineRotationThreshold() == null) config.setEngineRotationThreshold(1000);
     }
 
     public void deleteServiceConfigurations(String tenant) {
@@ -506,6 +561,41 @@ public class ServiceConfigurationService {
         return SECURE_RANDOM.ints(UUID_LENGTH, 0, 36)
                 .mapToObj(i -> Character.toString(i < 10 ? '0' + i : 'a' + i - 10))
                 .collect(Collectors.joining());
+    }
+
+    /**
+     * Adopts a hand-edit of {@code @name} / {@code @description} in the header of an updated
+     * template. Call before {@link #rectifyHeaderInCodeTemplate}, which would otherwise overwrite
+     * the edit with the POJO fields.
+     *
+     * <p>A header value only counts as an edit when it differs from the stored template's value.
+     * The "Edit metadata" form sends the new POJO fields together with the editor's code, whose
+     * header still carries the old values; treating that header as an edit would undo the rename.
+     * When the POJO field itself changed, it wins. Only the section above the auto-generated
+     * marker is read, so free-form documentation can never be mistaken for the real annotation,
+     * and an empty header value is ignored rather than blanking the field.
+     */
+    public void adoptHeaderMetadataEdits(CodeTemplate incoming, CodeTemplate stored) {
+        if (incoming == null || stored == null || incoming.code == null || incoming.code.isEmpty()) {
+            return;
+        }
+        String decoded = decode(incoming.code);
+        int markerPos = decoded.indexOf(SYSTEM_SECTION_MARKER);
+        if (markerPos == -1) {
+            return;
+        }
+        String systemSection = decoded.substring(0, markerPos);
+
+        String headerName = extractAnnotation(systemSection, "@name");
+        if (!headerName.isEmpty() && !headerName.equals(stored.name)
+                && Objects.equals(incoming.name, stored.name)) {
+            incoming.name = headerName;
+        }
+        String headerDescription = extractAnnotation(systemSection, "@description");
+        if (!headerDescription.isEmpty() && !headerDescription.equals(stored.description)
+                && Objects.equals(incoming.description, stored.description)) {
+            incoming.description = headerDescription;
+        }
     }
 
     /**
@@ -705,7 +795,8 @@ public class ServiceConfigurationService {
     }
 
     private static final Set<String> SYSTEM_ANNOTATIONS =
-            Set.of("@name", "@description", "@templateType", "@direction", "@defaultTemplate", "@internal", "@readonly");
+            Set.of("@name", "@description", "@templateType", "@direction", "@defaultTemplate", "@internal", "@readonly",
+                    "@sampleTopic", "@samplePayload");
     // Note: @direction is no longer parsed or emitted -- it is listed only so that legacy headers
     // still carrying it have the line stripped on the next rectify. See TemplateType#getDirection.
 
@@ -817,11 +908,22 @@ public class ServiceConfigurationService {
         sb.append(renderDescription(codeTemplate.description)).append("\n");
         sb.append(" * @templateType ").append(codeTemplate.templateType.name()).append("\n");
         sb.append(" * @defaultTemplate ").append(codeTemplate.defaultTemplate).append("\n");
+        if (codeTemplate.sampleTopic != null && !codeTemplate.sampleTopic.isBlank()) {
+            sb.append(" * @sampleTopic ").append(codeTemplate.sampleTopic.trim()).append("\n");
+        }
+        if (codeTemplate.samplePayload != null && !codeTemplate.samplePayload.isBlank()) {
+            // Continuation lines are indented past the tag so extractAnnotation reads them back.
+            sb.append(" * @samplePayload\n");
+            for (String line : codeTemplate.samplePayload.strip().split("\\R")) {
+                sb.append(" *   ").append(line.strip().isEmpty() ? "" : line).append("\n");
+            }
+        }
         // @internal and @readonly are deliberately not written: for a shipped template they follow
         // from @templateType (TemplateType.isFrameworkOwnedWhenShipped), and for a tenant's own
         // template they are request data that a comment cannot change. Emitting them invited an
         // author to edit a line that nothing reads back. They stay in SYSTEM_SECTION_ANNOTATIONS so
         // that headers stored before this change are cleaned up on the next save.
+        sb.append(" * (the name and description above can be edited here; the other tags are managed automatically)\n");
         sb.append(SYSTEM_SECTION_MARKER);
         return sb.toString();
     }

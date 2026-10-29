@@ -6,13 +6,14 @@
  *              The targetPath must start with /service/ and point to a microservice
  *              that is subscribed to the same Cumulocity tenant.
  * @templateType OUTBOUND_SMART_FUNCTION
- *
- * Sample Cumulocity operation payload (source):
- * {
+ * @samplePayload
+ *   {
  *     "id": "99001",
  *     "deviceId": "12345",
- *     "c8y_Command": { "text": "reboot" }
- * }
+ *     "c8y_Command": {
+ *       "text": "reboot"
+ *     }
+ *   }
  */
 /**
  * @param {import('@c8y/dynamic-mapper-smart-function').OutboundMessage} msg

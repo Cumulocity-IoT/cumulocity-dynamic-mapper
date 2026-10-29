@@ -92,7 +92,7 @@ flowchart LR
     A2 -- "ACTIVATE_MAPPING operation\nversion=N (rollback)" --> A3["Active version N"]
 ```
 
-All four mutating steps — draft save, publish, discard, activate — take the **same
+All mutating steps — draft save, publish, discard, activate, delete version, delete mapping — take the **same
 per-line `ReentrantLock`**, keyed `tenant:mappingId`
 ([`activationLockFor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java#L551)),
 so a publish cannot interleave with an activation of the same line.
@@ -202,7 +202,7 @@ reason about beyond the lock.
 #### 5. Retention
 
 `MappingVersionService.prune()` ([`MappingVersionService.java:385-407`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingVersionService.java#L385-L407))
-keeps the newest *N* published versions (sorted by `createdAt`) and deletes older ones,
+keeps the newest *N* published versions (highest semver; `createdAt` breaks ties) and deletes older ones,
 **except** the active version, which is never pruned even if it falls outside the
 window. *N* comes from `ServiceConfiguration.getMappingVersionRetention()`, tenant-scoped,
 defaulting to `MappingVersionService.DEFAULT_RETENTION = 10` when unset or `< 1`.
@@ -212,14 +212,13 @@ Pruning runs automatically after every publish, and can be re-run standalone via
 #### 6. Backfill (legacy mappings)
 
 `ensureBackfilled(tenant, mapping)` guarantees a line always has at least one published
-version. It is called from four places in `MappingService`:
+version. It is called from three places in `MappingService`:
 
 - `createMapping` — so a brand-new mapping starts with a version record immediately, and
   its runnable `version` field is synced to it.
 - `publishDraft` — preserve the running config before the new version lands.
 - `setActivationMapping` — preserve the running config before a version switch.
-- `listVersions` — so opening the versions drawer on a pre-versioning mapping shows a
-  history rather than nothing.
+- `listVersions` does **not** call it: it shows an unpersisted preview (`previewBackfill`) instead.
 
 Behavior:
 
@@ -281,10 +280,12 @@ The API client is `MappingService` in
 `activateVersion`). `activateVersion` is a thin wrapper over `changeActivationMapping`,
 i.e. the `ACTIVATE_MAPPING` operation.
 
-The editor is where D-8 actually happens: in `EditorMode.UPDATE`, **Save** calls
-`saveDraft` rather than `PUT /mapping/{id}`
-([`mapping-unified-editor.component.ts:576`](../../dynamic-mapper-ui/src/mapping/unified-editor/mapping-unified-editor.component.ts#L576)),
-and only when the content actually changed. The success alert tells the user the edit is
+The editor is where D-8 actually happens. Whether a mapping is active or not, the edit route
+configures the editor with `persistence: 'draft'`, and **Save** calls `saveDraft` rather than
+`PUT /mapping/{id}` (`MappingStepperService.commitMapping`), and only when the content actually
+changed. (`persistence: 'create'` is the stepper's — new and copied mappings are created, not
+drafted.) The configuration is also `readOnly` for deprecated `SUBSTITUTION_AS_CODE` mappings and
+for users without a manage role (`mappingEditResolver`). The success alert tells the user the edit is
 a draft and must be published + activated to take effect. The editor deliberately does
 **not** stamp `lastUpdate` itself, because that value is the optimistic-concurrency token
 that has to be echoed back unchanged.
@@ -298,21 +299,20 @@ that has to be echoed back unchanged.
 
 ### Known gotchas
 
-- **`GET /mapping/{id}/version` has a write side effect.** Listing versions calls
-  `ensureBackfilled`, which creates a version record for a line that has none. A plain
-  read can therefore mutate the inventory on first access.
 - **`GET /mapping/version-counts` is unauthenticated at the route level.** Every other
   version endpoint carries `@PreAuthorize`; this one does not. It leaks only mapping ids
   and counts, but the asymmetry is unintentional.
-- **Retention prunes by publish time, listing sorts by semver.** `prune()` orders by
-  `createdAt`, so publishing a *lower* semver later (e.g. a `1.0.5` hotfix after `2.0.0`)
-  makes the higher-numbered version the older one and therefore the first pruning
-  candidate.
-- **`suggestNextVersions` uses `0.9.9` as its "no versions" sentinel and compares by
-  value.** A line whose highest published version is literally `0.9.9` takes the
-  "nothing published yet" branch and gets `{1.0.0, 1.0.0, 1.0.0}` instead of
-  `{0.9.10, 0.10.0, 1.0.0}`. See
-  [`MappingVersionService.java:164-181`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingVersionService.java#L164-L181).
+- **Version labels are canonicalised on publish.** `SemVer.isValid` also requires every component
+  to fit an `int`, and `publish` stores/compares the canonical form (`01.0.0` and ` 1.0.0 ` are
+  `1.0.0`), so equivalent spellings cannot create duplicate versions.
+- **`PUT /mapping/{id}` ignores `version`, `versionNote` and `draftDirty` from the body** — they
+  are owned by publish/activate and are copied from the stored mapping.
+- **Discard, delete-version and delete-mapping take the per-line lock** like save, publish and
+  activate, so a discard cannot overwrite a concurrent activation with a stale copy. Delete-mapping
+  removes the line first and its version records afterwards.
+- **`GET …/version` is read-only.** For a pre-versioning mapping it returns an unpersisted
+  `1.0.0` entry (`id` null); the real record is created by the first publish or activation.
+- **Retention keeps the highest semvers** (publish time only breaks ties); the active version is never pruned.
 - **`loadVersions` scans every version managed object in the tenant** on each call and
   filters in memory. Several endpoints call it two or three times per request (e.g.
   publish: backfill check, draft fetch, uniqueness check).

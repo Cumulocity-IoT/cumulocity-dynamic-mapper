@@ -97,11 +97,29 @@ npm test
 Import and export mappings from the **Inbound Mappings** / **Outbound Mappings** table in the UI, individually
 or all at once — there is no longer a standalone import script. Ready-made sets to start from:
 
-- [resources/samples/mappings-INBOUND.json](resources/samples/mappings-INBOUND.json)
-- [resources/samples/mappings-OUTBOUND.json](resources/samples/mappings-OUTBOUND.json)
-- Documented overview: [resources/samples/SampleMappings_21.xlsx](resources/samples/SampleMappings_21.xlsx)
-  (also as PDF, [inbound](resources/samples/SampleMappings_INBOUND_21.pdf) /
-  [outbound](resources/samples/SampleMappings_OUTBOUND_21.pdf))
+- [resources/samples/mappings-INBOUND.json](resources/samples/mappings-INBOUND.json) — 17 mappings, `IN-01` … `IN-17`
+- [resources/samples/mappings-OUTBOUND.json](resources/samples/mappings-OUTBOUND.json) — 16 mappings, `OUT-01` … `OUT-16`
+
+Each mapping name states the aspect it demonstrates. All samples are imported **inactive** — activate only the ones
+you want, since several share topic patterns. The binary-payload mappings can be dry-run from the editor's test tab: **IN-12** (Any Payload) takes the message as a
+base64 string in `payload`, and **IN-13** (native Sparkplug B) takes a JSON object that the test encodes to Sparkplug B
+protobuf. Smart Function samples are taken from the built-in code templates
+(`dynamic-mapper-service/src/main/resources/templates/`); the Java extension samples need the
+`dynamic-mapper-extension` extension deployed to the tenant.
+
+**Mappings that rely on shared code.** Some Smart Functions (for example vendor payload decoders) call helper
+functions that are not defined in the mapping itself. Those helpers live in the tenant's **Shared code** template,
+which is evaluated before every mapping, so such mappings are not part of the sample set. To import one:
+
+1. Open the code templates of the Dynamic Mapper and edit the **Shared code** template of the target tenant.
+   Add the helper functions the mapping uses (for example a hex-to-bytes function, a schema validator, a message builder)
+   and save. Take them from the tenant where the mapping was exported.
+2. Import the mapping from the **Outbound Mappings** table (or **Inbound Mappings**) using the import action.
+3. Open the imported mapping and check `filterMapping`, `filterInventory` and the external id type against your devices.
+4. Use **Test** with a sample payload; a "... is not defined" error means a helper is still missing from the shared code.
+5. Activate the mapping.
+
+Export the shared code together with the mapping when you hand a mapping to someone else — the mapping export does not include it.
 
 ## Security Notes for Code-Based Mappings (JavaScript)
 

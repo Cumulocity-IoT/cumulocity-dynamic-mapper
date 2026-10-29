@@ -174,7 +174,7 @@ class MQTT3ClientTest {
         properties.put("user", "testuser");
         properties.put("password", "testpass");
         properties.put("cleanSession", true);
-        properties.put("useSelfSignedCertificate", false);
+        properties.put("trustCustomCertificate", false);
         properties.put("supportsWildcardInTopicInbound", true);
         properties.put("supportsWildcardInTopicOutbound", false);
         return properties;
@@ -246,9 +246,9 @@ class MQTT3ClientTest {
     void testInitializeWithSelfSignedCertificate() {
         // Given
         Map<String, Object> properties = createDefaultProperties();
-        properties.put("useSelfSignedCertificate", true);
+        properties.put("trustCustomCertificate", true);
         properties.put("nameCertificate", "test-cert");
-        properties.put("fingerprintSelfSignedCertificate", "AA:BB:CC:DD");
+        properties.put("trustedCertificateFingerprint", "AA:BB:CC:DD");
 
         // // Update the mock with new properties BEFORE creating the client
         when(connectorConfiguration.getProperties()).thenReturn(properties);
@@ -312,9 +312,9 @@ class MQTT3ClientTest {
     void testInitializeWithMissingCertificate() {
         // Given
         Map<String, Object> properties = createDefaultProperties();
-        properties.put("useSelfSignedCertificate", true);
+        properties.put("trustCustomCertificate", true);
         properties.put("nameCertificate", "test-cert");
-        properties.put("fingerprintSelfSignedCertificate", "AA:BB:CC:DD");
+        properties.put("trustedCertificateFingerprint", "AA:BB:CC:DD");
 
         // Update the mock with new properties BEFORE creating the client
         when(connectorConfiguration.getProperties()).thenReturn(properties);
@@ -465,8 +465,8 @@ class MQTT3ClientTest {
     void testIsConfigValidWithMissingSelfSignedCertProps() {
         // Given
         Map<String, Object> properties = createDefaultProperties();
-        properties.put("useSelfSignedCertificate", true);
-        // Missing fingerprintSelfSignedCertificate and nameCertificate
+        properties.put("trustCustomCertificate", true);
+        // Missing trustedCertificateFingerprint and nameCertificate
 
         // Create a separate mock for this test to avoid interfering with the main mock
         ConnectorConfiguration invalidConfig = mock(ConnectorConfiguration.class);
@@ -570,7 +570,7 @@ class MQTT3ClientTest {
         // Verify optional properties
         assertTrue(spec.getProperties().containsKey("user"));
         assertTrue(spec.getProperties().containsKey("password"));
-        assertTrue(spec.getProperties().containsKey("useSelfSignedCertificate"));
+        assertTrue(spec.getProperties().containsKey("trustCustomCertificate"));
         assertTrue(spec.getProperties().containsKey("cleanSession"));
 
         log.info("✅ Connector specification test passed");

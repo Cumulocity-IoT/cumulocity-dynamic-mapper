@@ -55,7 +55,7 @@ the most complete QoS support.
 | **Http Connector** | 0 | Process asynchronous, send response directly after receiving message | not relevant |
 | **Http Connector** | 1 | not supported | not relevant |
 | **Http Connector** | 2 | not supported | not relevant |
-| **Kafka** | 0 | not relevant | No acknowledgment (similar to MQTT QoS 0) |
+| **Kafka** | 0 | not relevant | Waits for broker acknowledgment of all in-sync replicas (`acks=all` default, overridable per connector) |
 | **Kafka** | 1 | not relevant | not supported |
 | **Kafka** | 2 | not relevant | not supported |
 | **MQTT** | 0 | ACKs are sent to broker directly after message received | Received as QoS 1 at Notification 2.0 but published as QoS 0 |

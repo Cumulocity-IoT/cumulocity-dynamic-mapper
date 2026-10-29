@@ -4,20 +4,21 @@
  * @description Creates one measurement
  * @templateType OUTBOUND_SMART_FUNCTION
  * @defaultTemplate true
- *
- * Sample Cumulocity measurement payload (source)
- * {
+ * @sampleTopic measurements/berlin_01
+ * @samplePayload
+ *   {
  *     "time": "2025-01-01T12:00:00.000Z",
  *     "type": "c8y_TemperatureMeasurement",
  *     "c8y_TemperatureMeasurement": {
- *         "T": {
- *             "value": 23.5,
- *             "unit": "C"
- *         }
+ *       "T": {
+ *         "value": 23.5,
+ *         "unit": "C"
+ *       }
  *     },
- *     "source": { "id": "12345" }
- * }
- * publishTopic 'measurements/berlin_01'
+ *     "source": {
+ *       "id": "12345"
+ *     }
+ *   }
 */
 
 /**

@@ -50,6 +50,86 @@ class PulsarConnectorClientTest {
         assertFalse(properties.containsKey("sparkplugHostId"));
     }
 
+    @Test
+    void configValidWithInlinePemCertificate() {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "serviceUrl", "pulsar+ssl://localhost:6651",
+                "enableTls", true,
+                "trustCustomCertificate", true,
+                "certificateChainInPemFormat",
+                "-----BEGIN CERTIFICATE-----\nMIIB...\n-----END CERTIFICATE-----",
+                "connectionTimeoutSeconds", 30,
+                "operationTimeoutSeconds", 30,
+                "keepAliveIntervalSeconds", 30));
+
+        assertTrue(new PulsarConnectorClient().isConfigValid(configuration));
+    }
+
+    @Test
+    void configValidWithNamedCertificateReference() {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "serviceUrl", "pulsar+ssl://localhost:6651",
+                "enableTls", true,
+                "trustCustomCertificate", true,
+                "nameCertificate", "my-ca",
+                "trustedCertificateFingerprint", "AA:BB:CC",
+                "connectionTimeoutSeconds", 30,
+                "operationTimeoutSeconds", 30,
+                "keepAliveIntervalSeconds", 30));
+
+        assertTrue(new PulsarConnectorClient().isConfigValid(configuration));
+    }
+
+    @Test
+    void configInvalidWhenSelfSignedCertificateHasNoCertificateSource() {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "serviceUrl", "pulsar+ssl://localhost:6651",
+                "enableTls", true,
+                "trustCustomCertificate", true,
+                "connectionTimeoutSeconds", 30,
+                "operationTimeoutSeconds", 30,
+                "keepAliveIntervalSeconds", 30));
+
+        assertFalse(new PulsarConnectorClient().isConfigValid(configuration));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "pulsar://localhost:6650, false, false",
+            "pulsar+ssl://localhost:6651, false, true",
+            "pulsar://localhost:6650, true, true",
+            "https://localhost:8443, false, true"
+    })
+    void sslRequiredWhenTlsEnabledOrServiceUrlUsesTlsScheme(String serviceUrl, boolean enableTls, boolean expected) {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "serviceUrl", serviceUrl,
+                "enableTls", enableTls));
+
+        TestPulsarConnectorClient client = new TestPulsarConnectorClient(mock(PulsarClient.class), configuration);
+
+        assertEquals(expected, client.isSslRequired());
+    }
+
+    @Test
+    void connectionTestReportsUnresolvableHostInsteadOfTimingOut() {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        // .invalid is reserved (RFC 2606) and never resolves
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "serviceUrl", "pulsar+ssl://broker.example.invalid:6651",
+                "enableTls", true));
+
+        TestPulsarConnectorClient client = new TestPulsarConnectorClient(mock(PulsarClient.class), configuration);
+
+        var result = client.testConnection();
+
+        assertFalse(result.success());
+        assertTrue(result.message().contains("broker.example.invalid"));
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {
             "persistent://public/default/measurements",
@@ -222,6 +302,51 @@ class PulsarConnectorClientTest {
         }
         verify(producer, never()).send(any(byte[].class));
         assertTrue(context.getErrors().isEmpty());
+    }
+
+    @Test
+    void subscriptionNameIsPrefixedWithTopicByDefault() {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of("subscriptionName", "my-sub"));
+
+        String name = new TestPulsarConnectorClient(mock(PulsarClient.class), configuration)
+                .buildSubscriptionName("devices/+/data");
+
+        assertEquals("my-sub-devices-wildcard-data", name);
+    }
+
+    @Test
+    void subscriptionNameIsUsedAsIsWhenEnabled() {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "subscriptionName", "example-subscription",
+                "useSubscriptionNameAsIs", true));
+
+        String name = new TestPulsarConnectorClient(mock(PulsarClient.class), configuration)
+                .buildSubscriptionName("PERSISTENT://example-tenant/example-namespace/COMMON");
+
+        assertEquals("example-subscription", name);
+    }
+
+    @Test
+    void combinedTenantAndNamespaceIsSplit() {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "pulsarTenant", "ignored", "pulsarNamespace", "example-tenant/example-namespace"));
+
+        assertArrayEquals(new String[] { "persistent", "example-tenant", "example-namespace" },
+                new TestPulsarConnectorClient(mock(PulsarClient.class), configuration).resolveTopicLocation());
+    }
+
+    @Test
+    void nonPersistentDomainIsHonored() {
+        ConnectorConfiguration configuration = mock(ConnectorConfiguration.class);
+        when(configuration.getProperties()).thenReturn(Map.of(
+                "pulsarTenant", "t", "pulsarNamespace", "n", "pulsarTopicDomain", "non-persistent"));
+
+        assertArrayEquals(new String[] { "non-persistent", "t", "n" },
+                new TestPulsarConnectorClient(mock(PulsarClient.class), configuration).resolveTopicLocation());
+        assertEquals("non-persistent://t/n/a-b", PulsarConnectorClient.buildPulsarTopicRegex("a/b", "t", "n", "non-persistent"));
     }
 
     private static class TestPulsarConnectorClient extends PulsarConnectorClient {

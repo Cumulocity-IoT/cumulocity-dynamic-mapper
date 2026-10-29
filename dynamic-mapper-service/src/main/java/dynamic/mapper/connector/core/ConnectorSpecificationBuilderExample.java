@@ -62,7 +62,7 @@ public class ConnectorSpecificationBuilderExample {
                 new ConnectorProperty(null, false, 5, ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, false, false,
                         null, null, null));
 
-        configProps.put("useSelfSignedCertificate",
+        configProps.put("trustCustomCertificate",
                 new ConnectorProperty(null, false, 6, ConnectorPropertyType.BOOLEAN_PROPERTY, false, false,
                         false, null, tlsCondition));
 
@@ -99,7 +99,7 @@ public class ConnectorSpecificationBuilderExample {
                 .property("password", ConnectorPropertyBuilder.optionalSensitive()
                         .order(5))
 
-                .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                .property("trustCustomCertificate", ConnectorPropertyBuilder.optionalBoolean()
                         .order(6)
                         .defaultValue(false)
                         .condition("protocol", "mqtts://", "wss://"))

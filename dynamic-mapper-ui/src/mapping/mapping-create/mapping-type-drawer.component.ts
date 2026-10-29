@@ -41,7 +41,7 @@ import { CodeEditorDrawerComponent } from '../../shared/component/code-explorer/
 import { CodeTemplate, ServiceConfiguration } from '../../configuration';
 import { base64ToString, stringToBase64, stripTemplateMetadataTags } from '../../shared/mapping/util';
 import { ExtensionService } from '../../extension';
-import { AIAgentService, resolveRequiredAgentName } from '../core/ai-agent.service';
+import { AiAgentService, resolveRequiredAgentName } from '../core/ai-agent.service';
 
 // Types
 interface SelectOption<T> {
@@ -82,7 +82,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly sharedService = inject(SharedService);
   private readonly extensionService = inject(ExtensionService);
-  private readonly aiAgentService = inject(AIAgentService);
+  private readonly aiAgentService = inject(AiAgentService);
   private readonly fb = inject(FormBuilder);
   private readonly bottomDrawerService = inject(BottomDrawerService);
   private readonly destroy$ = new Subject<void>();
@@ -133,6 +133,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
    *  service genuinely reporting no agents — shown to the user so they don't mistake a
    *  transient failure for "AI is not configured for this transformation type". */
   aiAvailabilityCheckFailed = false;
+  aiCapabilitiesDisabled = false;
   private serviceConfiguration: ServiceConfiguration;
   private deployedAgentNames = new Set<string>();
 
@@ -246,6 +247,34 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     return !!option?.value && this.AI_GENERATION_TYPES.includes(option.value);
   }
 
+  shouldShowAIDisabledInfo(): boolean {
+    if (!this.aiCapabilitiesDisabled) return false;
+    const option = this.formGroup?.get('transformationType')?.value as TransformationTypeOption;
+    return !!option?.value && this.AI_GENERATION_TYPES.includes(option.value);
+  }
+
+  /** AI would be offered for this transformation type, but no usable agent was found. Distinct from
+   *  the kill switch and from a failed availability check, which have their own hints. */
+  shouldShowAINotDeployedInfo(): boolean {
+    if (this.aiCapabilitiesDisabled || this.aiAvailabilityCheckFailed) return false;
+    const option = this.formGroup?.get('transformationType')?.value as TransformationTypeOption;
+    return !!option?.value && this.AI_GENERATION_TYPES.includes(option.value)
+      && !this.isAIAgentDeployedFor(option.value);
+  }
+
+  getAINotDeployedText(): string {
+    const option = this.formGroup?.get('transformationType')?.value as TransformationTypeOption;
+    const agentName = resolveRequiredAgentName(option?.value, this.serviceConfiguration);
+    const typeLabel = option?.value === TransformationType.SMART_FUNCTION ? 'Smart Function' : 'JSONata';
+    if (!agentName) {
+      return `AI generation is unavailable: no ${typeLabel} agent is configured in the service configuration.`;
+    }
+    if (this.aiAgentService.agentListError) {
+      return `AI generation is unavailable: the list of AI agents could not be loaded (${this.aiAgentService.agentListError}).`;
+    }
+    return `AI generation is unavailable: agent "${agentName}" is not deployed in this tenant.`;
+  }
+
   /** Whether the code-template dropdown should be shown — hidden once the user picks "Generate with AI".
    *  Only relevant for Smart Function; JSONata has no code-template concept. */
   shouldShowCodeTemplateDropdown(): boolean {
@@ -292,11 +321,19 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
 
   private async checkAIAgentAvailability(): Promise<void> {
     try {
-      const agents = await this.aiAgentService.getAIAgents();
+      const settings = await this.aiAgentService.getAISettings(true);
+      this.aiCapabilitiesDisabled = settings.killSwitch;
+      if (settings.killSwitch) {
+        this.deployedAgentNames = new Set();
+        this.aiAvailabilityCheckFailed = false;
+        return;
+      }
+      const agents = await this.aiAgentService.getAIAgents(true);
       this.deployedAgentNames = new Set(agents.map(agent => agent.name));
       this.aiAvailabilityCheckFailed = false;
     } catch (error) {
       console.error('Failed to check AI agent availability:', error);
+      this.aiCapabilitiesDisabled = false;
       this.deployedAgentNames = new Set();
       this.aiAvailabilityCheckFailed = true;
     }
@@ -409,7 +446,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       mappingType: [initialMappingType],
       transformationType: [initialTransformationType],
       codeTemplateSource: [defaultCodeTemplateSource],
-      codeTemplate: [defaultCodeTemplateSource === 'ai' ? null : (this.codeTemplateOptions[0] || null)],
+      codeTemplate: [defaultCodeTemplateSource === 'ai' ? null : this.defaultCodeTemplateOption()],
       extensionName: [null],
       eventName: [null],
       extensionParameter: [null]
@@ -440,7 +477,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
         if (source === 'ai') {
           this.formGroup.patchValue({ codeTemplate: null }, { emitEvent: false });
         } else if (!this.formGroup.get('codeTemplate')?.value && this.codeTemplateOptions.length > 0) {
-          this.formGroup.patchValue({ codeTemplate: this.codeTemplateOptions[0] }, { emitEvent: false });
+          this.formGroup.patchValue({ codeTemplate: this.defaultCodeTemplateOption() }, { emitEvent: false });
         }
       });
 
@@ -491,7 +528,7 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
     await this.loadCodeTemplates(option.value);
 
     if (defaultCodeTemplateSource === 'template' && this.codeTemplateOptions.length > 0) {
-      this.formGroup.patchValue({ codeTemplate: this.codeTemplateOptions[0] }, { emitEvent: false });
+      this.formGroup.patchValue({ codeTemplate: this.defaultCodeTemplateOption() }, { emitEvent: false });
     }
 
     if (option.value === TransformationType.EXTENSION_JAVA) {
@@ -704,6 +741,17 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       transformationControl.clearValidators();
     }
     transformationControl.updateValueAndValidity({ emitEvent: false });
+  }
+
+  /**
+   * The template flagged as the default for the type, falling back to the first one. The list is
+   * built from an unordered map on the server, so "the first" alone is arbitrary: it used to
+   * preselect e.g. the stateful example instead of the plain default.
+   */
+  private defaultCodeTemplateOption(): CodeTemplateOption | null {
+    return this.codeTemplateOptions.find(option => option.value?.defaultTemplate)
+      ?? this.codeTemplateOptions[0]
+      ?? null;
   }
 
   private async loadCodeTemplates(transformationType: TransformationType): Promise<void> {

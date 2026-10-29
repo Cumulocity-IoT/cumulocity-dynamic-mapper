@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.googlepubsub;
 
+import dynamic.mapper.util.TenantLogContext;
 import com.google.api.core.ApiFuture;
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.auth.oauth2.GoogleCredentials;
@@ -34,6 +35,7 @@ import com.google.pubsub.v1.PubsubMessage;
 import com.google.pubsub.v1.TopicName;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
@@ -332,72 +334,74 @@ public class GooglePubSubClient extends AConnectorClient {
      */
     void processPubSubMessage(PubsubMessage message, AckReplyConsumer consumer,
             String topic, Qos qos) {
-        byte[] payload = message.getData().toByteArray();
-        String messageId = message.getMessageId();
+        try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
+            byte[] payload = message.getData().toByteArray();
+            String messageId = message.getMessageId();
 
-        ConnectorMessage connectorMessage = ConnectorMessage.builder()
-                .tenant(tenant)
-                .topic(topic)
-                .sendPayload(true)
-                .connectorIdentifier(connectorIdentifier)
-                .payload(payload)
-                .build();
+            ConnectorMessage connectorMessage = ConnectorMessage.builder()
+                    .tenant(tenant)
+                    .topic(topic)
+                    .sendPayload(true)
+                    .connectorIdentifier(connectorIdentifier)
+                    .payload(payload)
+                    .build();
 
-        if (serviceConfiguration.getLogPayload()) {
-            log.info("{} - INITIAL: Pub/Sub message on topic: [{}], messageId: {}, connector: {}",
-                    tenant, topic, messageId, connectorName);
-        }
+            if (serviceConfiguration.getLogPayload()) {
+                log.info("{} - INITIAL: Pub/Sub message on topic: [{}], messageId: {}, connector: {}",
+                        tenant, topic, messageId, connectorName);
+            }
 
-        if (qos == Qos.AT_MOST_ONCE) {
-            // Ack immediately — at-most-once delivery
-            consumer.ack();
-            dispatcher.onMessage(connectorMessage);
-            return;
-        }
+            if (qos == Qos.AT_MOST_ONCE) {
+                // Ack immediately — at-most-once delivery
+                consumer.ack();
+                dispatcher.onMessage(connectorMessage);
+                return;
+            }
 
-        // At-least-once: ack only after successful processing
-        // Held in a holder so the timeout handler below can cancel the very pipeline that
-        // timed out (the local would not be in scope there).
-        java.util.concurrent.atomic.AtomicReference<ProcessingResultWrapper<?>> resultRef =
-                new java.util.concurrent.atomic.AtomicReference<>();
-        try {
-            ProcessingResultWrapper<?> result = dispatcher.onMessage(connectorMessage);
-            resultRef.set(result);
-            int timeout = result.getPipelineTimeoutMS();
+            // At-least-once: ack only after successful processing
+            // Held in a holder so the timeout handler below can cancel the very pipeline that
+            // timed out (the local would not be in scope there).
+            java.util.concurrent.atomic.AtomicReference<ProcessingResultWrapper<?>> resultRef =
+                    new java.util.concurrent.atomic.AtomicReference<>();
+            try {
+                ProcessingResultWrapper<?> result = dispatcher.onMessage(connectorMessage);
+                resultRef.set(result);
+                int timeout = result.getPipelineTimeoutMS();
 
-            // Always bounded: this runs on a Pub/Sub subscriber thread, so an unbounded get()
-            // would park that thread — and with it the subscription's delivery slot — for as
-            // long as the pipeline hangs.
-            long effectiveTimeout = timeout > 0 ? timeout : ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
-            List<? extends ProcessingContext<?>> contexts =
-                    result.getProcessingResult().get(effectiveTimeout, TimeUnit.MILLISECONDS);
+                // Always bounded: this runs on a Pub/Sub subscriber thread, so an unbounded get()
+                // would park that thread — and with it the subscription's delivery slot — for as
+                // long as the pipeline hangs.
+                long effectiveTimeout = timeout > 0 ? timeout : ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
+                List<? extends ProcessingContext<?>> contexts =
+                        result.getProcessingResult().get(effectiveTimeout, TimeUnit.MILLISECONDS);
 
-            boolean hasError = contexts != null && contexts.stream().anyMatch(ProcessingContext::hasError);
-            if (hasError) {
-                log.warn("{} - Processing error for Pub/Sub message: topic=[{}], messageId={} — nacking",
+                boolean hasError = contexts != null && contexts.stream().anyMatch(ProcessingContext::hasError);
+                if (hasError) {
+                    log.warn("{} - Processing error for Pub/Sub message: topic=[{}], messageId={} — nacking",
+                            tenant, topic, messageId);
+                    consumer.nack();
+                } else {
+                    consumer.ack();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("{} - Processing interrupted for Pub/Sub message: topic=[{}], messageId={} — nacking",
                         tenant, topic, messageId);
                 consumer.nack();
-            } else {
-                consumer.ack();
+            } catch (TimeoutException e) {
+                // Must cancel explicitly: falling through to the generic handler below would nack the
+                // message while leaving the pipeline — including any runaway GraalVM context — running.
+                ProcessingResultWrapper<?> timedOut = resultRef.get();
+                boolean drained = timedOut != null
+                        && timedOut.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
+                log.warn("{} - Processing timed out for Pub/Sub message: topic=[{}], messageId={}, "
+                        + "worker drained: {} — nacking", tenant, topic, messageId, drained);
+                consumer.nack();
+            } catch (Exception e) {
+                log.error("{} - Processing failed for Pub/Sub message: topic=[{}], messageId={} — nacking",
+                        tenant, topic, messageId, e);
+                consumer.nack();
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.warn("{} - Processing interrupted for Pub/Sub message: topic=[{}], messageId={} — nacking",
-                    tenant, topic, messageId);
-            consumer.nack();
-        } catch (TimeoutException e) {
-            // Must cancel explicitly: falling through to the generic handler below would nack the
-            // message while leaving the pipeline — including any runaway GraalVM context — running.
-            ProcessingResultWrapper<?> timedOut = resultRef.get();
-            boolean drained = timedOut != null
-                    && timedOut.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
-            log.warn("{} - Processing timed out for Pub/Sub message: topic=[{}], messageId={}, "
-                    + "worker drained: {} — nacking", tenant, topic, messageId, drained);
-            consumer.nack();
-        } catch (Exception e) {
-            log.error("{} - Processing failed for Pub/Sub message: topic=[{}], messageId={} — nacking",
-                    tenant, topic, messageId, e);
-            consumer.nack();
         }
     }
 
@@ -533,14 +537,7 @@ public class GooglePubSubClient extends AConnectorClient {
         if (configuration == null) {
             return false;
         }
-        if (!validateRequiredProperties(configuration, "projectId", "topicId")) {
-            return false;
-        }
-        String authMode = (String) configuration.getProperties().getOrDefault("authMode", "serviceAccountKey");
-        if ("applicationDefaultCredentials".equals(authMode)) {
-            return validateRequiredProperties(configuration, "adcCredentialsJson");
-        }
-        return validateRequiredProperties(configuration, "serviceAccountKey");
+        return validateSpecifiedProperties(configuration);
     }
 
     @Override
@@ -574,16 +571,22 @@ public class GooglePubSubClient extends AConnectorClient {
                 .supportedDirections(supportedDirections())
 
                 .property("projectId", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.CONNECTION)
+                        .label("Project ID")
                         .order(0)
                         .description("Google Cloud project ID that owns the Pub/Sub topic and subscription"))
 
                 .property("topicId", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.TOPICS)
+                        .label("Topic ID")
                         .order(1)
                         .defaultValue("input-messages")
                         .description("Default Pub/Sub topic to publish to (outbound). A mapping's own publish topic, " +
                                 "if set, overrides this per request."))
 
                 .property("subscriptionId", ConnectorPropertyBuilder.create(ConnectorPropertyType.STRING_PROPERTY)
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .label("Subscription ID")
                         .required(false)
                         .order(2)
                         .description("Name of the pre-existing Pub/Sub subscription to consume from (inbound). " +
@@ -592,6 +595,8 @@ public class GooglePubSubClient extends AConnectorClient {
                                 "The service account needs the roles/pubsub.subscriber role."))
 
                 .property("authMode", ConnectorPropertyBuilder.create(ConnectorPropertyType.OPTION_PROPERTY)
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .label("Authentication mode")
                         .required(true)
                         .order(3)
                         .defaultValue("serviceAccountKey")
@@ -601,6 +606,8 @@ public class GooglePubSubClient extends AConnectorClient {
                         .description("Authentication method used to connect to Google Cloud Pub/Sub."))
 
                 .property("serviceAccountKey", ConnectorPropertyBuilder.create(ConnectorPropertyType.SENSITIVE_STRING_LARGE_PROPERTY)
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .label("Service account key")
                         .required(true)
                         .order(4)
                         .condition("authMode", "serviceAccountKey")
@@ -608,13 +615,17 @@ public class GooglePubSubClient extends AConnectorClient {
                                 "against Pub/Sub (requires roles/pubsub.publisher and/or roles/pubsub.subscriber)."))
 
                 .property("adcCredentialsJson", ConnectorPropertyBuilder.create(ConnectorPropertyType.SENSITIVE_STRING_LARGE_PROPERTY)
-                        .required(false)
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .label("ADC credentials JSON")
+                        .required(true)
                         .order(5)
                         .condition("authMode", "applicationDefaultCredentials")
                         .description("Contents of the Application Default Credentials JSON file generated by " +
                                 "'gcloud auth application-default login' (typically ~/.config/gcloud/application_default_credentials.json)."))
 
                 .property("publishTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
+                        .group(ConnectorPropertyGroup.TIMEOUTS)
+                        .label("Publish timeout (s)")
                         .order(6)
                         .defaultValue(DEFAULT_PUBLISH_TIMEOUT_SECONDS)
                         .description("How long to wait for a publish acknowledgement before treating the request as failed."))

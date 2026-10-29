@@ -1,0 +1,30 @@
+# GraalVM context pool memory — real service code, shipped templates (copy of dynamic-mapper-service/target/graalvm-memory-measurement.txt)
+# date: 2026-10-24 17:12  host: Darwin arm64
+# command: mvn test -Dtest=GraalVMContextMemoryMeasurementTest -Dbenchmark=true (dynamic-mapper-service)
+
+
+GraalVM context pool memory — real service code, shipped templates as mappings
+JVM: OpenJDK 64-Bit Server VM 25.0.3, max heap 8192 MB; 17 distinct real templates, varied per mapping
+mappings   ctx/map   contexts  |  idle heap     KB/ctx   meta MB |  exec heap    KB/ctx |  freed MB
+----------------------------------------------------------------------------------------------------
+1          1         1         |        0.8        842       1.2 |        1.1      1146 |      -0.0   (1 onMessage calls threw part-way: stub payload does not fit the template)
+1          20        20        |        2.0        101       0.2 |        2.1       106 |       0.0   (20 onMessage calls threw part-way: stub payload does not fit the template)
+10         1         10        |        1.7        172       1.2 |        1.8       184 |       1.0   (4 onMessage calls threw part-way: stub payload does not fit the template)
+10         4         40        |        3.9         99       0.3 |        3.9       101 |       3.1   (16 onMessage calls threw part-way: stub payload does not fit the template)
+10         20        200       |       16.6         85       0.6 |       16.7        86 |      14.8   (80 onMessage calls threw part-way: stub payload does not fit the template)
+50         1         50        |        5.7        118       0.2 |        6.1       125 |       5.4   (24 onMessage calls threw part-way: stub payload does not fit the template)
+50         4         200       |       17.6         90       0.4 |       17.9        92 |      17.1   (96 onMessage calls threw part-way: stub payload does not fit the template)
+50         20        1000      |       82.9         85       0.1 |       83.0        85 |      80.4   (480 onMessage calls threw part-way: stub payload does not fit the template)
+
+Reading the table:
+  idle heap  = heap retained by the idle pooled contexts (after full GC) minus the heap
+               before any context existed (Engine + warm-up already in place)
+  exec heap  = same, after executing onMessage once in every context
+  freed MB   = heap released again by invalidating the tenant's pool
+
+Extrapolation from the 1000-context row (85 KB per executed context):
+   50 mappings x 20 pooled contexts x  1 tenants =  1,000 contexts -> ~83 MB
+   50 mappings x 20 pooled contexts x  5 tenants =  5,000 contexts -> ~415 MB
+  100 mappings x 20 pooled contexts x 10 tenants = 20,000 contexts -> ~1661 MB
+  (DEFAULT_POOL_SIZE = 20 idle contexts per mapping; the pool only grows to what
+   concurrency actually asked for, so the real figure sits between the 1x and 20x rows.)

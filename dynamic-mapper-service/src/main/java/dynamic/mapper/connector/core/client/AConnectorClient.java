@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.core.client;
 
+import dynamic.mapper.util.TenantScheduledThreadPoolExecutor;
 import static java.util.Map.entry;
 
 import java.security.KeyStore;
@@ -566,6 +567,30 @@ public abstract class AConnectorClient {
     /**
      * Initialize managers
      */
+    /** Set while a throwaway client for a connection test is being constructed on this thread. */
+    private static final ThreadLocal<Boolean> PROBE_CONSTRUCTION = ThreadLocal.withInitial(() -> false);
+
+    /**
+     * Builds a client that is only used for {@link #testConnection()}. Construction of a normal client reconciles the
+     * connector's lifecycle session on the platform (it closes a session left open by a previous instance); a probe of an
+     * existing connector must not do that, or testing it would append DISCONNECTED and close its live session.
+     */
+    public static <T> T constructForProbe(java.util.concurrent.Callable<T> construction) throws Exception {
+        PROBE_CONSTRUCTION.set(true);
+        try {
+            return construction.call();
+        } finally {
+            PROBE_CONSTRUCTION.remove();
+        }
+    }
+
+    /** Releases what construction allocated, for a client that was only used to test a connection. */
+    public void discardProbe() {
+        if (housekeepingExecutor != null) {
+            housekeepingExecutor.shutdownNow();
+        }
+    }
+
     protected void initializeManagers() {
         this.explorerListeners = new ExplorerListenerRegistry(tenant, "inbound");
         this.outboundExplorerListeners = new ExplorerListenerRegistry(tenant, "outbound");
@@ -602,11 +627,11 @@ public abstract class AConnectorClient {
         // (e.g. the process was killed mid-flap), it would otherwise stay "open" on Cumulocity
         // forever. Best-effort: failures are logged and swallowed inside the call itself, must
         // never block/fail connector startup.
-        if (serviceConfiguration.getSendConnectorLifecycle()) {
+        if (serviceConfiguration.getSendConnectorLifecycle() && !PROBE_CONSTRUCTION.get()) {
             c8yAgent.closeOrphanedConnectorSession(tenant, connectorName, connectorIdentifier);
         }
 
-        this.housekeepingExecutor = new ScheduledThreadPoolExecutor(1, r -> {
+        this.housekeepingExecutor = new TenantScheduledThreadPoolExecutor(tenant, 1, r -> {
             Thread t = new Thread(r, "housekeeping-" + connectorIdentifier);
             t.setDaemon(true);
             return t;
@@ -1131,11 +1156,9 @@ public abstract class AConnectorClient {
      * Check if mapping is deployed in this connector
      */
     private Boolean isDeployedInConnector(Mapping mapping) {
-        List<String> deploymentMapEntry = mappingService.getDeploymentMapEntry(tenant, mapping.getIdentifier());
         // Explicit deployment required: if no deployment entry is configured,
         // the mapping is NOT deployed (default is no-deployment, not deploy-everywhere).
-        // Only return true if deployment entry exists AND contains this connector's identifier.
-        return deploymentMapEntry != null && deploymentMapEntry.contains(getConnectorIdentifier());
+        return mappingService.isMappingDeployedToConnector(tenant, mapping.getIdentifier(), getConnectorIdentifier());
     }
 
     /**
@@ -1274,7 +1297,28 @@ public abstract class AConnectorClient {
         if (connectorSpecification != null && connectorSpecification.getSupportedQos() == null) {
             connectorSpecification.setSupportedQos(supportedQos);
         }
+        if (connectorSpecification != null) {
+            connectorSpecification.setSupportsConnectionTest(supportsConnectionTest());
+        }
         return connectorSpecification;
+    }
+
+    /**
+     * Whether {@link #testConnection()} is implemented. The UI only offers the test button for
+     * connectors that return true.
+     */
+    public boolean supportsConnectionTest() {
+        return false;
+    }
+
+    /**
+     * Verifies connectivity and authentication of this instance's configuration without subscribing,
+     * registering or processing anything. Runs on a throwaway instance built from the (unsaved) form
+     * values, so it must not touch shared state such as the registry, connector status or other
+     * clients' sessions. Only called when {@link #supportsConnectionTest()} is true.
+     */
+    public ConnectionTestResult testConnection() {
+        return ConnectionTestResult.failed("Connection test is not supported for this connector type", null);
     }
 
     /**
@@ -1368,6 +1412,23 @@ public abstract class AConnectorClient {
     }
 
     /**
+     * Validates the configuration against the required properties of the connector specification. A property that
+     * does not apply because its condition is not met, e.g. the password while no user is set, is not required, and
+     * a property with a default value counts as present.
+     *
+     * @param configuration the connector configuration to validate
+     * @return true if no required property is missing
+     */
+    protected boolean validateSpecifiedProperties(ConnectorConfiguration configuration) {
+        List<String> missing = connectorSpecification.findMissingRequired(configuration.getProperties());
+        if (!missing.isEmpty()) {
+            log.warn("{} - Missing required configuration properties: {}", tenant, missing);
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * Validate required properties in configuration
      * Subclasses should override to add connector-specific validation
      * @param configuration the connector configuration to validate
@@ -1402,9 +1463,28 @@ public abstract class AConnectorClient {
         connectorConfiguration = connectorConfigurationService
                 .getConnectorConfiguration(getConnectorIdentifier(), tenant);
         connectorConfiguration.copyPredefinedValues(getConnectorSpecification());
+        warnOnMaskedSensitiveProperties();
 
         serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
+    }
+
+    /**
+     * A stored sensitive value equal to the UI mask ("****") means a placeholder was persisted
+     * instead of the real secret (e.g. imported/copied config); it would be sent verbatim and the
+     * target rejects it (typically 401). Log the property name only, never the value.
+     */
+    private void warnOnMaskedSensitiveProperties() {
+        ConnectorSpecification spec = getConnectorSpecification();
+        if (spec == null || connectorConfiguration.getProperties() == null) {
+            return;
+        }
+        connectorConfiguration.getProperties().forEach((key, value) -> {
+            if (spec.isPropertySensitive(key) && "****".equals(value)) {
+                log.warn("{} - Connector {}: sensitive property '{}' is stored as the mask \"****\"; "
+                        + "re-enter it in the connector configuration and save", tenant, connectorName, key);
+            }
+        });
     }
 
     /**

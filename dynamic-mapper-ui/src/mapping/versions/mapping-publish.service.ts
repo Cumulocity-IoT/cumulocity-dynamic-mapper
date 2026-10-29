@@ -96,31 +96,35 @@ export class MappingPublishService {
   }
 
   /**
-   * An already-active mapping picks the new version up on publish, so there is nothing to ask.
-   * An inactive one stays dormant, which is the step users miss — so offer it explicitly.
+   * Publishing never activates: an active mapping keeps running its previous version, an inactive
+   * one stays dormant. Both are steps users miss, so offer the switch explicitly.
    */
   private async offerActivation(mapping: Mapping, publishedVersion: string): Promise<boolean> {
-    if (mapping.active) return false;
-
+    const wasActive = !!mapping.active;
     const confirmed = await this.confirmationService.confirm({
-      title: 'Activate mapping?',
-      message: `Version ${publishedVersion} of "${mapping.name}" has been published, but the mapping is `
-        + `inactive, so it will not process any messages yet. Activate it now?`,
-      labels: { ok: 'Activate now', cancel: 'Leave inactive' }
+      title: wasActive ? 'Switch to new version?' : 'Activate mapping?',
+      message: wasActive
+        ? `Version ${publishedVersion} of "${mapping.name}" has been published, but the mapping is still `
+          + `running version ${mapping.version}. Switch to ${publishedVersion} now?`
+        : `Version ${publishedVersion} of "${mapping.name}" has been published, but the mapping is `
+          + `inactive, so it will not process any messages yet. Activate it now?`,
+      labels: { ok: wasActive ? 'Switch now' : 'Activate now', cancel: wasActive ? 'Keep current' : 'Leave inactive' }
     });
     if (!confirmed) {
-      this.alertService.success(
-        `Published version ${publishedVersion} of ${mapping.name}. It stays inactive until you activate it.`);
+      this.alertService.success(wasActive
+        ? `Published version ${publishedVersion} of ${mapping.name}. It keeps running ${mapping.version} until you activate the new version.`
+        : `Published version ${publishedVersion} of ${mapping.name}. It stays inactive until you activate it.`);
       return false;
     }
 
     try {
       await this.mappingService.activateVersion(mapping.id, publishedVersion);
       mapping.active = true;
+      mapping.version = publishedVersion;
       this.alertService.success(`Published and activated version ${publishedVersion} of ${mapping.name}`);
       return true;
     } catch (e) {
-      this.alertService.danger('Published, but activating the mapping failed', (e as Error).message);
+      this.alertService.danger('Published, but activating the version failed', (e as Error).message);
       return false;
     }
   }

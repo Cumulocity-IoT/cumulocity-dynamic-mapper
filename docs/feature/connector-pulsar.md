@@ -36,9 +36,10 @@ Built via `ConnectorSpecificationBuilder.create("Apache Pulsar", ConnectorType.P
 |---|---|---|---|---|
 | `serviceUrl` | string | yes | `pulsar://localhost:6650` | |
 | `enableTls` | boolean | no | `false` | |
-| `useSelfSignedCertificate` + cert fields | boolean / string | no | `false` | shown when `enableTls=true` |
-| `authenticationMethod` | option | no | `none` | `none`/`token`/`oauth2`/`tls`/`basic` |
-| `authenticationParams` | sensitive | no | — | shown for non-`none` methods |
+| `trustCustomCertificate` + cert fields | boolean / string | no | `false` | shown when `enableTls=true` |
+| `authenticationMethod` | option | no | `none` | `none`/`token`/`oauth2`/`tls`/`basic`/`client_creds` (shown as "Client credentials (custom)") |
+| `authenticationParams` | sensitive | no | — | shown for `token`/`oauth2`/`tls`/`basic`; for `basic` use JSON `{"userId":"…","password":"…"}` |
+| `clientId` / `clientSecret` | string / sensitive | no | — | shown when `authenticationMethod=client_creds`; both required then |
 | `connectionTimeoutSeconds` / `operationTimeoutSeconds` / `keepAliveIntervalSeconds` | numeric | yes | `30` each | |
 | `subscriptionType` | option | no | `Shared` | `Exclusive`/`Shared`/`Failover`/`Key_Shared` |
 | `subscriptionName` | string | no | — | |
@@ -95,7 +96,10 @@ TLS via the `pulsar+ssl://` scheme, auto-adjusted from `pulsar://` when `enableT
 a self-signed cert is written to a temp PEM file and passed as
 `tlsTrustCertsFilePath`. Auth methods: `token` → `AuthenticationFactory.token(...)`;
 `oauth2` → `AuthenticationOAuth2` (constructed reflectively); `tls` → `AuthenticationTls`;
-`basic` → `AuthenticationBasic`.
+`basic` → `AuthenticationBasic`; `client_creds` → `ClientCredentialsAuthentication`
+(custom plugin, auth method name `client_creds`, command data `base64(clientId:clientSecret)`; for
+brokers that register a matching `client_creds` provider — not the same as `oauth2` or `basic`).
+A missing client ID or secret fails the connect with an error rather than connecting unauthenticated.
 
 ### Sparkplug B Host support — not actually implemented in this base class
 

@@ -203,7 +203,7 @@ the UI offers.
 |---|---|
 | QoS metadata (labels, per-level description, `clampQos`) | [`shared/mapping/mapping.model.ts`](../../dynamic-mapper-ui/src/shared/mapping/mapping.model.ts) |
 | QoS column in the mapping grid | [`mapping/renderer/qos.renderer.component.ts`](../../dynamic-mapper-ui/src/mapping/renderer/qos.renderer.component.ts) |
-| QoS picker in the mapping *Properties* step | [`mapping/step-property/mapping-properties.component.ts`](../../dynamic-mapper-ui/src/mapping/step-properties/mapping-properties.component.ts) |
+| QoS picker in the mapping *Properties* step | [`mapping/step-properties/mapping-step-properties.component.ts`](../../dynamic-mapper-ui/src/mapping/step-properties/mapping-step-properties.component.ts) |
 | Connector capability in the specification model | [`shared/connector-configuration/connector.model.ts`](../../dynamic-mapper-ui/src/shared/connector-configuration/connector.model.ts) |
 
 `QOS_OPTIONS` is the frontend counterpart of the backend enum — one entry per level with

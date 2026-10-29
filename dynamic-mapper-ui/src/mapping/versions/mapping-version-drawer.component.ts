@@ -162,7 +162,9 @@ export class MappingVersionDrawerComponent implements OnInit {
             updatedDisplay: v.createdAt ? new Date(v.createdAt).toLocaleString() : '—',
             createdBy: v.createdBy || '—',
             isDraft: false,
-            onNoteChange: this.canManage
+            // A pre-versioning mapping is listed as an unpersisted entry (no id): there is no
+            // record to PATCH until the first publish or activation creates it.
+            onNoteChange: this.canManage && v.id
               ? (note: string) => this.saveVersionNote(rowId, v.version ?? '', note)
               : undefined
           };
@@ -224,6 +226,7 @@ export class MappingVersionDrawerComponent implements OnInit {
       await this.mappingService.activateVersion(this.mapping.id, row.version);
       this.alertService.success(`Activated version ${row.version} of ${this.mapping.name}`);
       this.mapping.version = row.version;
+      this.mapping.active = true; // activating a version also activates an inactive mapping
       this.changed = true;
       // Update the existing rows in place rather than reload() — activating a version changes
       // nothing about the set of versions, their notes, or who created them, just which one is

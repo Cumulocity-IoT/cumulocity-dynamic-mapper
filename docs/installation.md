@@ -66,7 +66,7 @@ The Web App is part of the community store and should be available directly in y
 For the blueprint go to "Administration" -> "Ecosystem" -> "dynamic-mapper" -> "Deploy application"
 
 <p align="center">
-<img src="../resources/image/Dynamic_Mapper_BlueprintDeploy.png" style="width: 50%;" />
+<img src="../resources/image/Dynamic_Mapper_Installation_Blueprint_Deploy.png" style="width: 50%;" />
 </p>
 
 Enter an application key and path and click on "Deploy".
@@ -74,7 +74,7 @@ Enter an application key and path and click on "Deploy".
 After successful deployment you can find the dynamic-mapper App in the Application Switcher
 
 <p align="center">
-<img src="../resources/image/Dynamic_Mapper_BlueprintApp.png" style="width: 40%;" />
+<img src="../resources/image/Dynamic_Mapper_Installation_Blueprint_App.png" style="width: 40%;" />
 </p>
 #### Manual
 
@@ -84,3 +84,17 @@ If you made changes or your want to upload the plugin manually you can do that b
 2. Select `dynamic-mapper-ui.zip` and wait until it is uploaded.
 
 Follow the steps from the point above to assign the plugin to your Administration App.
+
+## Monitoring (OpenTelemetry)
+
+By default the microservice exports traces, metrics, and logs via OTLP/HTTP to an internal
+Grafana Alloy collector at `http://cumulocity-grafana-alloy:4318` (see
+`dynamic-mapper-service/src/main/resources/application-prod.properties`). Building and sending
+these happens on background threads after startup — an unreachable collector does not block or
+fail microservice startup, it only produces repeated export-failure warnings in the log.
+
+In an edge or air-gapped deployment where no OTLP collector is reachable, suppress that log noise
+by setting the `OTEL_SDK_DISABLED=true` environment variable on the microservice (Spring Boot
+environment variables take precedence over the packaged properties, and the OpenTelemetry SDK
+also honors it directly). To point at a different collector instead, set
+`OTEL_EXPORTER_OTLP_ENDPOINT`.

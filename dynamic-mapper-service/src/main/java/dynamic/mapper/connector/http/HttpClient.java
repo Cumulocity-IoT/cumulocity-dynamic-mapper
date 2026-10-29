@@ -23,6 +23,7 @@ package dynamic.mapper.connector.http;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
@@ -331,17 +332,26 @@ public class HttpClient extends AConnectorClient {
 
                 // HTTP path configuration (read-only)
                 .property("path", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.CONNECTION)
+                        .label("Path")
+                        .description("Path under which the microservice receives HTTP messages. Read-only.")
                         .order(0)
                         .readonly(true)
                         .defaultValue(httpPath))
 
                 // Wildcard support (read-only)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in inbound topics")
+                        .description("Allow wildcards (+ and #) in the topic of inbound mappings.")
                         .order(1)
                         .readonly(true)
                         .defaultValue(true))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in outbound topics")
+                        .description("Allow wildcards (+ and #) in the publish topic of outbound mappings.")
                         .order(2)
                         .readonly(true)
                         .hidden(true)
@@ -349,6 +359,9 @@ public class HttpClient extends AConnectorClient {
 
                 // Leading slash configuration
                 .property(PROPERTY_CUTOFF_LEADING_SLASH, ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.CONNECTION)
+                        .label("Cut off leading slash")
+                        .description("Remove the leading / of the sub path before it is used as the mapping topic.")
                         .order(3)
                         .defaultValue(true))
 

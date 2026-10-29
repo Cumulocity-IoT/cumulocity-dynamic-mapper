@@ -73,7 +73,32 @@ public class SubscriptionManager {
 
     // H1+H2: use ConcurrentHashMap.newKeySet() so each add() is atomic (no separate contains)
     // and keys are tenant-scoped to avoid cross-tenant collisions.
+    // Key includes the subscription name: only an identical (device, bucket) request in flight is a
+    // duplicate. Requests for a different bucket (e.g. explorer vs dynamic) are distinct work and
+    // must not be dropped.
     private final Set<String> processingDevices = ConcurrentHashMap.newKeySet();
+
+    // Requests for different buckets of the same device are serialized (striped by tenant:device) so
+    // the static/dynamic priority dedup sees a consistent picture instead of racing.
+    private static final int DEVICE_LOCK_STRIPES = 64;
+    private final java.util.concurrent.locks.ReentrantLock[] deviceLocks = createLocks();
+
+    private static java.util.concurrent.locks.ReentrantLock[] createLocks() {
+        java.util.concurrent.locks.ReentrantLock[] locks = new java.util.concurrent.locks.ReentrantLock[DEVICE_LOCK_STRIPES];
+        for (int i = 0; i < locks.length; i++) {
+            locks[i] = new java.util.concurrent.locks.ReentrantLock();
+        }
+        return locks;
+    }
+
+    private java.util.concurrent.locks.ReentrantLock deviceLock(String tenant, String deviceId) {
+        return deviceLocks[Math.floorMod((tenant + ":" + deviceId).hashCode(), DEVICE_LOCK_STRIPES)];
+    }
+
+    // Devices whose static subscription was removed in favour of a dynamic one (tenant:deviceId).
+    // When the dynamic subscription goes away the static one is restored. In-memory only: lost on
+    // restart, after which a shadowed static subscription is not restored.
+    private final Set<String> shadowedStatic = ConcurrentHashMap.newKeySet();
 
     // Pool size no longer implicitly throttles concurrency now that subscription creation runs
     // on the unbounded virtualThreadPool, so bulk callers (e.g. backfillDevicesForType scanning
@@ -81,6 +106,12 @@ public class SubscriptionManager {
     // at once. Bound it explicitly instead.
     private static final int MAX_CONCURRENT_SUBSCRIPTION_CREATIONS = 20;
     private final Semaphore subscriptionCreationSemaphore = new Semaphore(MAX_CONCURRENT_SUBSCRIPTION_CREATIONS);
+
+    // tenant:type of backfill jobs currently running, so the same type isn't scanned twice concurrently
+    private final Set<String> resyncsInFlight = ConcurrentHashMap.newKeySet();
+
+    // Number of submitted-but-unsettled device subscribes a resync keeps before waiting for them
+    private static final int RESYNC_SETTLE_CHUNK = 500;
 
     // === Public API ===
 
@@ -103,13 +134,28 @@ public class SubscriptionManager {
 
     public Future<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(
             String tenant, ManagedObjectRepresentation mor, API api, String subscription) {
+        return subscribeDevice(tenant, mor, api, subscription, true, false);
+    }
+
+    /**
+     * @param reconnectClients whether to reconnect the open static/dynamic WebSocket clients right
+     *                         after the subscription is created. Bulk callers pass {@code false} and
+     *                         reconnect once at the end ({@link #reconnectDeviceClients}) — reconnecting
+     *                         per device would bounce every open client once per device.
+     * @param skipDedupLookups the caller already knows from a batch pre-fetch that the device has
+     *                         neither a dynamic nor a static subscription, so the per-device dedup
+     *                         lookup GETs are unnecessary
+     */
+    private Future<NotificationSubscriptionRepresentation> subscribeDevice(
+            String tenant, ManagedObjectRepresentation mor, API api, String subscription,
+            boolean reconnectClients, boolean skipDedupLookups) {
 
         if (!isValid(mor) || tenant == null || api == null) {
             return CompletableFuture.failedFuture(new IllegalArgumentException("Invalid parameters"));
         }
 
         String deviceId = mor.getId().getValue();
-        String processingKey = tenant + ":" + deviceId;  // H2: tenant-scoped key
+        String processingKey = tenant + ":" + deviceId + ":" + subscription;  // H2: tenant-scoped key
 
         // H1: single atomic add() — returns false if already present, eliminating the race
         if (!processingDevices.add(processingKey)) {
@@ -118,12 +164,14 @@ public class SubscriptionManager {
         }
 
         return virtualThreadPool.submit(() -> {
+            java.util.concurrent.locks.ReentrantLock deviceLock = deviceLock(tenant, deviceId);
+            deviceLock.lock();
             try {
                 subscriptionCreationSemaphore.acquire();
                 try {
                     return subscriptionsService.callForTenant(tenant, () -> {
                         // Deduplication: enforce priority order group/dynamic (2/3) > static (1)
-                        if (checkAndHandleDeduplication(tenant, deviceId, subscription)) {
+                        if (!skipDedupLookups && checkAndHandleDeduplication(tenant, deviceId, subscription)) {
                             log.info(
                                     "{} - Skipping subscription for device {} due to deduplication (subscription={})",
                                     tenant, deviceId, subscription);
@@ -133,16 +181,31 @@ public class SubscriptionManager {
                         log.info("{} - Creating subscription for device: {}", tenant, deviceId);
 
                         // Create subscription
-                        NotificationSubscriptionRepresentation nsr = createSubscriptionByMO(
-                                tenant, mor, api, subscription);
+                        NotificationSubscriptionRepresentation nsr;
+                        try {
+                            nsr = createSubscriptionByMO(tenant, mor, api, subscription);
+                        } catch (RuntimeException createFailure) {
+                            // Dedup may already have replaced a static subscription: put it back so a
+                            // failed dynamic subscribe doesn't leave the device with none.
+                            if (Utils.DYNAMIC_DEVICE_SUBSCRIPTION.equals(subscription)
+                                    && shadowedStatic.remove(tenant + ":" + deviceId)) {
+                                try {
+                                    createSubscriptionByMO(tenant, mor, API.ALL, Utils.STATIC_DEVICE_SUBSCRIPTION);
+                                } catch (RuntimeException restoreFailure) {
+                                    createFailure.addSuppressed(restoreFailure);
+                                }
+                            }
+                            throw createFailure;
+                        }
 
                         // Reconnect existing static AND dynamic WebSocket clients so they immediately
                         // receive notifications from the newly created device subscription without
                         // waiting for the 60-second reconnect cycle. Both must be triggered: a device
                         // subscription can land in either bucket, and an already-open client in either
                         // one never learns about a device added afterward otherwise.
-                        connectionManager.reconnectStaticDeviceClientsForNewSubscription(tenant);
-                        connectionManager.reconnectDynamicDeviceClientsForNewSubscription(tenant);
+                        if (reconnectClients) {
+                            reconnectDeviceClients(tenant);
+                        }
 
                         // Activate push connectivity
                         mqttPushManager.activatePushConnectivityForDevice(tenant, mor);
@@ -161,8 +224,15 @@ public class SubscriptionManager {
                 throw new RuntimeException("Failed to subscribe device: " + e.getMessage(), e);
             } finally {
                 processingDevices.remove(processingKey);
+                deviceLock.unlock();
             }
         });
+    }
+
+    /** Reconnects the open static and dynamic device WebSocket clients so they pick up new subscriptions. */
+    public void reconnectDeviceClients(String tenant) {
+        connectionManager.reconnectStaticDeviceClientsForNewSubscription(tenant);
+        connectionManager.reconnectDynamicDeviceClientsForNewSubscription(tenant);
     }
 
     /**
@@ -176,19 +246,38 @@ public class SubscriptionManager {
      * like the 4-arg overload (other families, e.g. {@link Utils#EXPLORER_DEVICE_SUBSCRIPTION}, are not
      * deduplicated against dynamic subscriptions — see {@code checkAndHandleDeduplication}). Pass
      * {@code null} to always fall back to the unconditional single-device path.
+     *
+     * <p>Unlike the 4-arg overload this does <em>not</em> reconnect the WebSocket clients after each
+     * created subscription; the caller must call {@link #reconnectDeviceClients} once when its batch
+     * is done.
      */
     public Future<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(
             String tenant, ManagedObjectRepresentation mor, API api, String subscription,
             Set<String> knownDynamicDeviceIds) {
+        return subscribeDeviceAndConnect(tenant, mor, api, subscription, knownDynamicDeviceIds, null);
+    }
 
-        if (knownDynamicDeviceIds != null && isValid(mor)
-                && Utils.DYNAMIC_DEVICE_SUBSCRIPTION.equals(subscription)
-                && knownDynamicDeviceIds.contains(mor.getId().getValue())) {
+    /**
+     * As the 5-arg overload, additionally given the ids that hold a {@link Utils#STATIC_DEVICE_SUBSCRIPTION}.
+     * A device in neither set is known to have no subscription to deduplicate against, so the two
+     * per-device lookup GETs are skipped and the subscription is created directly (a concurrent
+     * creation in between is still handled by the create call's 409 handling). Devices that do have a
+     * static subscription take the normal path, which replaces it with the dynamic one.
+     */
+    public Future<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(
+            String tenant, ManagedObjectRepresentation mor, API api, String subscription,
+            Set<String> knownDynamicDeviceIds, Set<String> knownStaticDeviceIds) {
+
+        boolean dynamic = knownDynamicDeviceIds != null && isValid(mor)
+                && Utils.DYNAMIC_DEVICE_SUBSCRIPTION.equals(subscription);
+        if (dynamic && knownDynamicDeviceIds.contains(mor.getId().getValue())) {
             log.debug("{} - Device {} already dynamically subscribed (batch pre-check), skipping",
                     tenant, mor.getId().getValue());
             return CompletableFuture.completedFuture(null);
         }
-        return subscribeDeviceAndConnect(tenant, mor, api, subscription);
+        boolean noExisting = dynamic && knownStaticDeviceIds != null
+                && !knownStaticDeviceIds.contains(mor.getId().getValue());
+        return subscribeDevice(tenant, mor, api, subscription, false, noExisting);
     }
 
     /**
@@ -196,6 +285,9 @@ public class SubscriptionManager {
      * single paged query. Intended for bulk callers that would otherwise call
      * {@code checkAndHandleDeduplication} once per device (2 filtered GETs each) — call this once up
      * front instead and check membership in-memory.
+     *
+     * @throws IllegalStateException if the lookup fails — a partial result would be indistinguishable
+     *                               from "no device subscribed"
      */
     public Set<String> fetchDeviceIdsForSubscription(String tenant, String subscriptionName) {
         return subscriptionsService.callForTenant(tenant, () -> {
@@ -211,8 +303,11 @@ public class SubscriptionManager {
                     ids.add(it.next().getSource().getId().getValue());
                 }
             } catch (Exception e) {
+                // An empty/partial set would silently make every device look "unsubscribed"
                 log.warn("{} - Error fetching device ids for subscription {}: {}",
                         tenant, subscriptionName, e.getMessage());
+                throw new IllegalStateException("Could not fetch existing " + subscriptionName
+                        + " subscriptions: " + e.getMessage(), e);
             }
             return ids;
         });
@@ -327,9 +422,20 @@ public class SubscriptionManager {
                 int deletedCount = deleteSubscriptionsForDevice(tenant, deviceId, subscription);
                 log.info("{} - Deleted {} subscriptions for device {}", tenant, deletedCount, deviceId);
 
-                // Disconnect if no more subscriptions
-                if (shouldDisconnectAfterUnsubscribe(tenant)) {
-                    connectionManager.disconnect(tenant);
+                // The dynamic subscription had replaced an explicit static one: bring it back.
+                boolean restoringStatic = false;
+                if (Utils.DYNAMIC_DEVICE_SUBSCRIPTION.equals(subscription)
+                        && shadowedStatic.remove(tenant + ":" + deviceId)) {
+                    log.info("{} - Restoring static subscription for device {} (dynamic subscription removed)",
+                            tenant, deviceId);
+                    subscribeDeviceAndConnect(tenant, mor, API.ALL, Utils.STATIC_DEVICE_SUBSCRIPTION);
+                    restoringStatic = true;
+                }
+
+                // Close only the device sockets if no device subscriptions remain; the management
+                // client must survive so type/group subscriptions keep discovering devices.
+                if (!restoringStatic && shouldDisconnectAfterUnsubscribe(tenant)) {
+                    connectionManager.disconnectDeviceSubscribers(tenant);
                 }
 
                 // Deactivate push connectivity
@@ -387,6 +493,7 @@ public class SubscriptionManager {
                     subscriptionAPI.delete(dynamicIt.next());
                     deletedCount++;
                 }
+                shadowedStatic.removeIf(k -> k.startsWith(tenant + ":"));
                 log.info("{} - Successfully unsubscribed {} devices", tenant, deletedCount);
             } catch (Exception e) {
                 log.error("{} - Error unsubscribing all devices: {}", tenant, e.getMessage(), e);
@@ -419,7 +526,24 @@ public class SubscriptionManager {
                         subscriptionAPI.delete(existing);
                         log.info("{} - Deleted old type subscription before re-creating with new filter", tenant);
                     }
-                    NotificationSubscriptionRepresentation nsr = createTypeSubscription(newTypeFilter);
+                    NotificationSubscriptionRepresentation nsr;
+                    try {
+                        nsr = createTypeSubscription(newTypeFilter);
+                    } catch (RuntimeException createFailure) {
+                        // The old subscription is already gone: restore it so a failed update
+                        // doesn't leave the tenant with no type subscription at all.
+                        if (existing != null && existingTypeFilter != null && !existingTypeFilter.isBlank()) {
+                            try {
+                                createTypeSubscription(existingTypeFilter);
+                                log.warn("{} - Restored previous type subscription after failed update", tenant);
+                            } catch (RuntimeException restoreFailure) {
+                                log.error("{} - Could not restore previous type subscription: {}",
+                                        tenant, restoreFailure.getMessage(), restoreFailure);
+                                createFailure.addSuppressed(restoreFailure);
+                            }
+                        }
+                        throw createFailure;
+                    }
                     responseBuilder.types(new ArrayList<>(Utils.parseTypesFromFilter(newTypeFilter)))
                             .subscriptionId(nsr.getId().getValue())
                             .status(NotificationSubscriptionResponse.SubscriptionStatus.ACTIVE);
@@ -432,6 +556,13 @@ public class SubscriptionManager {
                     }
                     responseBuilder.types(new ArrayList<>())
                             .status(NotificationSubscriptionResponse.SubscriptionStatus.INACTIVE);
+                }
+
+                // Types dropped from the filter: their devices were only subscribed because of it
+                Set<String> removedTypes = new HashSet<>(Utils.parseTypesFromFilter(existingTypeFilter));
+                removedTypes.removeAll(types == null ? Set.<String>of() : new HashSet<>(types));
+                if (!removedTypes.isEmpty()) {
+                    pruneDevicesOfRemovedTypes(tenant, removedTypes);
                 }
 
                 return responseBuilder.build();
@@ -455,6 +586,7 @@ public class SubscriptionManager {
      * kicks it off.
      *
      * @throws IllegalArgumentException if {@code type} is not currently configured
+     * @throws IllegalStateException    if a resync of {@code type} is already running for the tenant
      */
     public void resyncTypeSubscription(String tenant, String type) {
         NotificationSubscriptionRepresentation existing = subscriptionsService.callForTenant(tenant,
@@ -469,7 +601,16 @@ public class SubscriptionManager {
                     "Type '" + type + "' is not part of the configured type subscription");
         }
 
-        backfillDevicesForType(tenant, type);
+        String resyncKey = tenant + ":" + type;
+        if (!resyncsInFlight.add(resyncKey)) {
+            throw new IllegalStateException("A resync of type '" + type + "' is already running");
+        }
+        try {
+            backfillDevicesForType(tenant, type);
+        } catch (RuntimeException e) {
+            resyncsInFlight.remove(resyncKey); // job never started, so its finally won't release
+            throw e;
+        }
     }
 
     /**
@@ -482,53 +623,145 @@ public class SubscriptionManager {
     private void backfillDevicesForType(String tenant, String type) {
         virtualThreadPool.submit(() -> {
             C8YAgent c8yAgent = serviceRegistry.getC8yAgent();
-            Map<String, String> startProps = new HashMap<>();
-            startProps.put("type", type);
-            c8yAgent.createLoggingEvent("Resync started for type: " + type,
-                    LoggingEventType.BACKFILL_SUBSCRIPTION_EVENT_TYPE, DateTime.now(), tenant, startProps);
-
-            // Batch dedup pre-fetch: one paged query for the whole tenant instead of the
-            // per-device lookup GETs subscribeDeviceAndConnect's checkAndHandleDeduplication
-            // would otherwise issue for every device of this type.
-            Set<String> alreadyDynamic = fetchDeviceIdsForSubscription(tenant, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
-
             AtomicInteger skipped = new AtomicInteger();
-            List<PendingSubscribe> pending = new ArrayList<>();
-            c8yAgent.forEachManagedObjectByType(tenant, type, false, mor -> {
-                String deviceId = mor.getId().getValue();
-                if (alreadyDynamic.contains(deviceId)) {
-                    skipped.incrementAndGet();
-                    return;
-                }
-                // Submits asynchronously (subscribeDeviceAndConnect dispatches its own work to
-                // the virtual thread pool) so subscribe calls for this type run concurrently;
-                // resolved below once the whole inventory scan has been enumerated.
-                pending.add(new PendingSubscribe(deviceId,
-                        subscribeDeviceAndConnect(tenant, mor, API.ALL, Utils.DYNAMIC_DEVICE_SUBSCRIPTION,
-                                alreadyDynamic)));
-            });
+            AtomicInteger subscribed = new AtomicInteger();
+            AtomicInteger failed = new AtomicInteger();
+            Exception failure = null;
+            try {
+                Map<String, String> startProps = new HashMap<>();
+                startProps.put("type", type);
+                c8yAgent.createLoggingEvent("Resync started for type: " + type,
+                        LoggingEventType.BACKFILL_SUBSCRIPTION_EVENT_TYPE, DateTime.now(), tenant, startProps);
 
-            int subscribed = 0, failed = 0;
-            for (PendingSubscribe p : pending) {
+                // Batch dedup pre-fetch: two paged queries for the whole tenant instead of the
+                // two per-device lookup GETs checkAndHandleDeduplication would otherwise issue for
+                // every device of this type. A failed pre-fetch aborts the resync (see
+                // fetchDeviceIdsForSubscription).
+                Set<String> alreadyDynamic = fetchDeviceIdsForSubscription(tenant,
+                        Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+                Set<String> alreadyStatic = fetchDeviceIdsForSubscription(tenant,
+                        Utils.STATIC_DEVICE_SUBSCRIPTION);
+
+                List<PendingSubscribe> pending = new ArrayList<>();
                 try {
-                    p.future().get();
-                    subscribed++;
-                } catch (Exception e) {
-                    failed++;
-                    log.warn("{} - Resync: failed to subscribe device {} of type {}",
-                            tenant, p.deviceId(), type, e);
+                    c8yAgent.forEachManagedObjectByType(tenant, type, false, mor -> {
+                        String deviceId = mor.getId().getValue();
+                        if (alreadyDynamic.contains(deviceId)) {
+                            skipped.incrementAndGet();
+                            return;
+                        }
+                        // Submits asynchronously (subscribeDeviceAndConnect dispatches its own work to
+                        // the virtual thread pool) so subscribe calls run concurrently; settled in
+                        // chunks so a huge type doesn't hold a future + MO per device until the end.
+                        pending.add(new PendingSubscribe(deviceId,
+                                subscribeDeviceAndConnect(tenant, mor, API.ALL,
+                                        Utils.DYNAMIC_DEVICE_SUBSCRIPTION, alreadyDynamic, alreadyStatic)));
+                        if (pending.size() >= RESYNC_SETTLE_CHUNK) {
+                            settlePending(tenant, type, pending, subscribed, skipped, failed);
+                        }
+                    });
+                } catch (Exception scanFailure) {
+                    // The scan stopped part-way: still settle what was already submitted so the
+                    // counts are accurate, but report the resync as incomplete below.
+                    failure = scanFailure;
                 }
+                settlePending(tenant, type, pending, subscribed, skipped, failed);
+
+                // The bulk subscribe path doesn't reconnect per device; do it once for the batch
+                if (subscribed.get() > 0) {
+                    reconnectDeviceClients(tenant);
+                }
+            } catch (Exception e) {
+                failure = e;
+            } finally {
+                resyncsInFlight.remove(tenant + ":" + type);
             }
 
             Map<String, String> endProps = new HashMap<>();
             endProps.put("type", type);
-            endProps.put("subscribed", String.valueOf(subscribed));
             endProps.put("skipped", String.valueOf(skipped.get()));
-            endProps.put("failed", String.valueOf(failed));
-            c8yAgent.createLoggingEvent(
-                    String.format("Resync finished for type %s: %d subscribed, %d already subscribed, %d failed",
-                            type, subscribed, skipped.get(), failed),
-                    LoggingEventType.BACKFILL_SUBSCRIPTION_EVENT_TYPE, DateTime.now(), tenant, endProps);
+            endProps.put("failed", String.valueOf(failed.get()));
+            String message;
+            if (failure == null) {
+                // Only a fully completed resync carries "subscribed" — the UI uses its presence
+                // to derive the "last sync time" of a type.
+                endProps.put("subscribed", String.valueOf(subscribed.get()));
+                message = String.format("Resync finished for type %s: %d subscribed, %d already subscribed, %d failed",
+                        type, subscribed.get(), skipped.get(), failed.get());
+            } else {
+                log.error("{} - Resync of type {} did not complete: {}", tenant, type, failure.getMessage(), failure);
+                endProps.put("subscribedBeforeFailure", String.valueOf(subscribed.get()));
+                endProps.put("error", String.valueOf(failure.getMessage()));
+                message = String.format("Resync INCOMPLETE for type %s: %s (%d subscribed before failure, %d failed)",
+                        type, failure.getMessage(), subscribed.get(), failed.get());
+            }
+            try {
+                c8yAgent.createLoggingEvent(message, LoggingEventType.BACKFILL_SUBSCRIPTION_EVENT_TYPE,
+                        DateTime.now(), tenant, endProps);
+            } catch (Exception e) {
+                log.warn("{} - Resync: could not report result for type {}: {}", tenant, type, e.getMessage());
+            }
+        });
+    }
+
+    /** Waits for the submitted subscribes, adds them to the counters and empties {@code pending}. */
+    private void settlePending(String tenant, String type, List<PendingSubscribe> pending,
+            AtomicInteger subscribed, AtomicInteger skipped, AtomicInteger failed) {
+        for (PendingSubscribe p : pending) {
+            try {
+                // null = skipped by deduplication inside subscribeDeviceAndConnect (already
+                // covered, or another request for the device was in flight) — not a new subscription
+                if (p.future().get() != null) {
+                    subscribed.incrementAndGet();
+                } else {
+                    skipped.incrementAndGet();
+                }
+            } catch (Exception e) {
+                failed.incrementAndGet();
+                log.warn("{} - Resync: failed to subscribe device {} of type {}",
+                        tenant, p.deviceId(), type, e);
+            }
+        }
+        pending.clear();
+    }
+
+    /**
+     * Unsubscribes existing devices of types that were removed from the type filter, in the
+     * background. Devices still reachable through a subscribed group keep their dynamic
+     * subscription (the group is still a reason to have it).
+     */
+    private void pruneDevicesOfRemovedTypes(String tenant, Set<String> removedTypes) {
+        virtualThreadPool.submit(() -> {
+            try {
+                var subscriber = serviceRegistry.getNotificationSubscriber();
+                Set<String> groupCovered = new HashSet<>();
+                List<dynamic.mapper.model.device.Device> groups = subscriber
+                        .getSubscriptionsByDeviceGroup(tenant).getDevices();
+                for (dynamic.mapper.model.device.Device group : groups == null
+                        ? List.<dynamic.mapper.model.device.Device>of() : groups) {
+                    ManagedObjectRepresentation groupMor = serviceRegistry.getC8yAgent()
+                            .getManagedObjectForId(tenant, group.getId(), false);
+                    if (groupMor != null) {
+                        subscriber.findAllRelatedDevicesByMO(tenant, groupMor, new ArrayList<>(), false)
+                                .forEach(d -> groupCovered.add(d.getId()));
+                    }
+                }
+
+                AtomicInteger pruned = new AtomicInteger();
+                for (String type : removedTypes) {
+                    serviceRegistry.getC8yAgent().forEachManagedObjectByType(tenant, type, false, mor -> {
+                        if (!groupCovered.contains(mor.getId().getValue())) {
+                            unsubscribeDeviceAndDisconnect(tenant, mor, Utils.DYNAMIC_DEVICE_SUBSCRIPTION);
+                            pruned.incrementAndGet();
+                        }
+                    });
+                }
+                log.info("{} - Pruned dynamic subscriptions of {} device(s) for removed type(s) {}",
+                        tenant, pruned.get(), removedTypes);
+            } catch (Exception e) {
+                log.error("{} - Error pruning devices of removed types {}: {}",
+                        tenant, removedTypes, e.getMessage(), e);
+            }
         });
     }
 
@@ -628,9 +861,12 @@ public class SubscriptionManager {
             }
             return deletedCount;
         } catch (Exception e) {
+            // Propagate: returning 0 here made callers log "deleted" / treat the device as
+            // unsubscribed although the subscription still exists.
             log.error("{} - Error deleting subscriptions for device {}: {}",
                     tenant, deviceId, e.getMessage(), e);
-            return 0;
+            throw new RuntimeException("Failed to delete subscriptions for device " + deviceId
+                    + ": " + e.getMessage(), e);
         }
     }
 
@@ -748,6 +984,9 @@ public class SubscriptionManager {
             // Remove lower-priority static subscription before creating dynamic one
             if (hasStatic) {
                 int removed = deleteSubscriptionsForDevice(tenant, deviceId, Utils.STATIC_DEVICE_SUBSCRIPTION);
+                if (removed > 0) {
+                    shadowedStatic.add(tenant + ":" + deviceId);
+                }
                 log.info("{} - Removed {} static subscription(s) for device {} before creating dynamic subscription",
                         tenant, removed, deviceId);
                 logDeduplicationEvent(tenant, deviceId,

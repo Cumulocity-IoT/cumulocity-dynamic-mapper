@@ -4598,15 +4598,8 @@
           "engineRotationThreshold" : {
             "type" : "integer",
             "format" : "int32",
-            "description" : "Number of GraalVM context creations after which the shared Engine is rotated for a tenant to reclaim JVM Metaspace. Lower values free memory more frequently; higher values retain JIT warm-up longer.",
-            "example" : 100,
-            "minimum" : 1
-          },
-          "engineMaxAgeMinutes" : {
-            "type" : "integer",
-            "format" : "int32",
-            "description" : "Maximum wall-clock age in minutes of the GraalVM Engine before it is rotated, regardless of context-creation count. Prevents low-traffic tenants from accumulating unbounded Metaspace over time.",
-            "example" : 1440,
+            "description" : "Number of distinct JavaScript sources compiled into a tenant's GraalVM Engine after which the Engine is rotated (replaced) to release the memory it holds for them: about 6 KB (small sources) to roughly 50 KB (typical templates) of heap per distinct source. Re-running unchanged code does not count. Lower values release memory sooner but re-warm all mappings more often. Default 1000.",
+            "example" : 1000,
             "minimum" : 1
           },
           "codeTemplates" : {
@@ -4617,7 +4610,7 @@
             "description" : "Map of code templates used for custom processing logic in mappings"
           }
         },
-        "required" : [ "cacheAliasMaps", "deviceIsolationMQTTServiceEnabled", "engineMaxAgeMinutes", "engineRotationThreshold", "externalExtensionEnabled", "externalIdBinding", "flowStateRetention", "inboundExternalIdCacheRetention", "inboundExternalIdCacheSize", "inventoryCacheRetention", "inventoryCacheSize", "inventoryFragmentsToCache", "logConnectorErrorInBackend", "logPayload", "logSubstitution", "mappingVersionRetention", "maxCPUTimeMS", "outboundMappingEnabled", "pipelineTimeoutMS", "sendConnectorLifecycle", "sendMappingStatus", "sendNotificationLifecycle", "sendSubscriptionEvents", "supportESM", "suppressDeprecationWarning" ]
+        "required" : [ "cacheAliasMaps", "deviceIsolationMQTTServiceEnabled", "engineRotationThreshold", "externalExtensionEnabled", "externalIdBinding", "flowStateRetention", "inboundExternalIdCacheRetention", "inboundExternalIdCacheSize", "inventoryCacheRetention", "inventoryCacheSize", "inventoryFragmentsToCache", "logConnectorErrorInBackend", "logPayload", "logSubstitution", "mappingVersionRetention", "maxCPUTimeMS", "outboundMappingEnabled", "pipelineTimeoutMS", "sendConnectorLifecycle", "sendMappingStatus", "sendNotificationLifecycle", "sendSubscriptionEvents", "supportESM", "suppressDeprecationWarning" ]
       },
       "Feature" : {
         "type" : "object",

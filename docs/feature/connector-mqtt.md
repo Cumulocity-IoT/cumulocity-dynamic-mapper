@@ -66,8 +66,8 @@ shared by both version-specific clients:
 | `mqttPort` | numeric | yes | — | |
 | `user` / `password` | string / sensitive | no | — | |
 | `clientId` | string | yes | — | |
-| `useSelfSignedCertificate` | boolean | no | `false` | shown only for `mqtts`/`wss` |
-| `nameCertificate`, `fingerprintSelfSignedCertificate`, `certificateChainInPemFormat` | string / large text | no | — | shown only when `useSelfSignedCertificate=true` |
+| `trustCustomCertificate` | boolean | no | `false` | shown only for `mqtts`/`wss`; formerly `useSelfSignedCertificate` (deprecated) |
+| `nameCertificate`, `trustedCertificateFingerprint`, `certificateChainInPemFormat` | string / large text | no | — | shown only when `trustCustomCertificate=true` |
 | `disableHostnameValidation` | boolean | no | `false` | same condition |
 | `supportsWildcardInTopicInbound` | boolean | no | `true` | |
 | `supportsWildcardInTopicOutbound` | boolean | no | `true` | changed from a `false` default in an earlier version (commit `523277c6c`) |
@@ -122,7 +122,7 @@ tenant are allowed.
 
 `AMQTTClient.initializeMqttSslConfiguration()` builds a HiveMQ `MqttClientSslConfig`
 (trust manager factory, hostname verifier, 30s handshake timeout) when
-`useSelfSignedCertificate=true`. Without a custom cert, `mqtts`/`wss` connections fall
+`trustCustomCertificate=true`. Without a custom cert, `mqtts`/`wss` connections fall
 back to the system default trust store (`builder.sslWithDefaultConfig()`).
 
 ### Sparkplug B Host support

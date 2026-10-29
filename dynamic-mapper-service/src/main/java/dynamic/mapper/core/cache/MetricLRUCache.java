@@ -26,6 +26,7 @@ import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Tags;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -34,8 +35,12 @@ import java.util.function.Consumer;
  * Thread-safe, per-tenant LRU cache with a Micrometer size gauge.
  *
  * <p>Backed by a {@link Collections#synchronizedMap(Map) synchronized}
- * {@link LinkedHashMap} that evicts the eldest entry once {@code cacheSize} is
- * exceeded. A {@code <metricName>} gauge tagged with the tenant is registered on
+ * {@link LinkedHashMap} in access order that evicts the least recently used entry
+ * once {@code cacheSize} is exceeded. Entries also expire {@code ttlMillis} after
+ * they were written when a positive TTL is given (the default, 0, disables this),
+ * which caps how long a stale entry can be served if invalidation notifications are missed. Expiry is checked on read via
+ * {@link #getEntry}; an expired entry is reported to the eviction listener like an
+ * LRU eviction. A {@code <metricName>} gauge tagged with the tenant is registered on
  * the global registry on construction.
  *
  * <p>The gauge is bound to this instance's backing map. Because Micrometer
@@ -51,6 +56,17 @@ public abstract class MetricLRUCache<K, V> implements AutoCloseable {
 
     private final Gauge cacheSizeGauge;
 
+    /**
+     * Default: no expiry. A single service instance is kept coherent by inventory notifications;
+     * pass a TTL to the 4-argument constructor if staleness across instances ever matters.
+     */
+    public static final long DEFAULT_TTL_MILLIS = 0L;
+
+    private final long ttlMillis;
+
+    // Write time per key; only touched while holding the monitor of {@link #cache}.
+    private final Map<K, Long> writeTimes = new HashMap<>();
+
     // Set after construction and read from putEntry on the writing thread,
     // hence volatile for visibility.
     private volatile Consumer<K> evictionListener;
@@ -64,12 +80,20 @@ public abstract class MetricLRUCache<K, V> implements AutoCloseable {
     private final ThreadLocal<K> pendingEviction = new ThreadLocal<>();
 
     protected MetricLRUCache(int cacheSize, String tenant, String metricName) {
-        // Making it thread-safe
-        this.cache = Collections.synchronizedMap(new LinkedHashMap<K, V>() {
+        this(cacheSize, tenant, metricName, DEFAULT_TTL_MILLIS);
+    }
+
+    protected MetricLRUCache(int cacheSize, String tenant, String metricName, long ttlMillis) {
+        this.ttlMillis = ttlMillis;
+        // Making it thread-safe; accessOrder=true makes eviction least-recently-used
+        this.cache = Collections.synchronizedMap(new LinkedHashMap<K, V>(16, 0.75f, true) {
             // Removing oldest entries once the capacity is exceeded
             @Override
             protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
                 boolean shouldRemove = size() > cacheSize;
+                if (shouldRemove) {
+                    writeTimes.remove(eldest.getKey());
+                }
                 if (shouldRemove && evictionListener != null) {
                     // Defer notification until the cache lock is released (see
                     // putEntry); the listener may block on I/O and must not stall
@@ -95,7 +119,11 @@ public abstract class MetricLRUCache<K, V> implements AutoCloseable {
     protected V putEntry(K key, V value) {
         // cache.put acquires and releases the synchronized-map monitor within this
         // call; removeEldestEntry may stash an evicted key into pendingEviction.
-        V previous = cache.put(key, value);
+        V previous;
+        synchronized (cache) {
+            previous = cache.put(key, value);
+            writeTimes.put(key, System.currentTimeMillis());
+        }
         K evicted = pendingEviction.get();
         if (evicted != null) {
             // Clear before invoking the listener so a re-entrant put on this thread
@@ -107,6 +135,51 @@ public abstract class MetricLRUCache<K, V> implements AutoCloseable {
             }
         }
         return previous;
+    }
+
+    /**
+     * Reads an entry, treating it as absent (and evicting it) once its TTL has passed.
+     * Subclasses MUST read through this method rather than {@code cache.get}.
+     */
+    protected V getEntry(K key) {
+        V value;
+        boolean expired = false;
+        synchronized (cache) {
+            value = cache.get(key);
+            if (value == null) {
+                return null;
+            }
+            Long written = writeTimes.get(key);
+            if (ttlMillis > 0 && written != null && System.currentTimeMillis() - written > ttlMillis) {
+                cache.remove(key);
+                writeTimes.remove(key);
+                expired = true;
+            }
+        }
+        if (expired) {
+            // Outside the lock, like LRU eviction: the listener may do I/O.
+            Consumer<K> listener = evictionListener;
+            if (listener != null) {
+                listener.accept(key);
+            }
+            return null;
+        }
+        return value;
+    }
+
+    /** Removes an entry; subclasses MUST use this instead of {@code cache.remove}. */
+    protected V removeEntry(K key) {
+        synchronized (cache) {
+            writeTimes.remove(key);
+            return cache.remove(key);
+        }
+    }
+
+    /** Drops write times of entries removed via bulk operations on {@link #cache}. */
+    protected void pruneWriteTimes() {
+        synchronized (cache) {
+            writeTimes.keySet().retainAll(cache.keySet());
+        }
     }
 
     /**
@@ -123,7 +196,10 @@ public abstract class MetricLRUCache<K, V> implements AutoCloseable {
     }
 
     public void clearCache() {
-        cache.clear();
+        synchronized (cache) {
+            cache.clear();
+            writeTimes.clear();
+        }
     }
 
     public int getCacheSize() {

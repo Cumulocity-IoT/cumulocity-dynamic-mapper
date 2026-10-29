@@ -29,10 +29,10 @@ import { BsModalRef, BsModalService } from 'ngx-bootstrap/modal';
 import { saveAs } from 'file-saver';
 import { BehaviorSubject, from, map, Subject, takeUntil } from 'rxjs';
 import packageJson from '../../package.json';
-import { AIAgentService } from '../mapping/core/ai-agent.service';
+import { AiAgentService } from '../mapping/core/ai-agent.service';
 import { Feature, Operation, SharedService } from '../shared';
-import { ServiceConfiguration } from '../shared/configuration/configuration.model';
-import { ImportServiceConfigurationComponent } from './import/import-service-configuration-modal.component';
+import { DEFAULT_SERVICE_LOGS, ServiceConfiguration } from '../shared/configuration/configuration.model';
+import { ImportServiceConfigurationComponent } from './import/import-service-configuration.component';
 
 @Component({
   selector: 'd11r-mapping-service-configuration',
@@ -47,7 +47,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
   private sharedService = inject(SharedService);
   private fb = inject(FormBuilder);
   private route = inject(ActivatedRoute);
-  private aiAgentService = inject(AIAgentService);
+  private aiAgentService = inject(AiAgentService);
   private readonly router = inject(Router);
   private readonly bsModalService = inject(BsModalService);
 
@@ -77,8 +77,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     inventoryFragmentsToCache: ['type'],  // always add type
     maxCPUTimeMS: 5000,  // 5 seconds
     pipelineTimeoutMS: 8000,  // 8 seconds
-    engineRotationThreshold: 100,
-    engineMaxAgeMinutes: 0,
+    engineRotationThreshold: 1000,
     contextPoolSize: 20,
     explorerSessionTTLMinutes: 10,
     jsonataAgent: undefined,
@@ -91,6 +90,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
   agents$: BehaviorSubject<string[]> = new BehaviorSubject([]);
   destroy$: Subject<void> = new Subject<void>();
   aiAgentDeployed: boolean = false;
+  aiCapabilitiesDisabled = false;
   inventoryFragmentsList: string[] = [''];
 
   trackByFragmentFn(index: any, _item: any) {
@@ -146,7 +146,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
    * *everything* hidden would be misleading on a tab that hides nothing.
    */
   private static readonly EXPERT_SETTINGS: Readonly<Record<string, string[]>> = {
-    processing: ['supportESM', 'engineRotationThreshold', 'engineMaxAgeMinutes', 'contextPoolSize'],
+    processing: ['supportESM', 'engineRotationThreshold', 'contextPoolSize'],
     caching: ['cacheAliasMaps'],
     monitoring: ['logSubstitution', 'logConnectorErrorInBackend']
   };
@@ -218,7 +218,6 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       maxCPUTimeMS: [''],
       pipelineTimeoutMS: [''],
       engineRotationThreshold: [''],
-      engineMaxAgeMinutes: [''],
       contextPoolSize: [''],
       explorerSessionTTLMinutes: [''],
       supportESM: [''],
@@ -228,11 +227,26 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       suppressDeprecationWarning: [''],
       cacheAliasMaps: [''],
       externalIdBinding: [''],
+      serviceLogs: this.fb.group({
+        enabled: [DEFAULT_SERVICE_LOGS.enabled],
+        minLevel: [DEFAULT_SERVICE_LOGS.minLevel],
+        intervalMs: [DEFAULT_SERVICE_LOGS.intervalMs],
+        maxLinesPerRun: [DEFAULT_SERVICE_LOGS.maxLinesPerRun],
+        maxChunkBytes: [DEFAULT_SERVICE_LOGS.maxChunkBytes],
+        maxRecordBytes: [DEFAULT_SERVICE_LOGS.maxRecordBytes],
+        maxBufferedRecords: [DEFAULT_SERVICE_LOGS.maxBufferedRecords],
+        retentionHours: [DEFAULT_SERVICE_LOGS.retentionHours],
+        retentionEnabled: [DEFAULT_SERVICE_LOGS.retentionEnabled],
+        retentionIntervalMs: [DEFAULT_SERVICE_LOGS.retentionIntervalMs]
+      }),
     }, { validators: ServiceConfigurationComponent.pipelineTimeoutExceedsCpuBudget });
   }
 
   private subscribeToAIAgents(): void {
-    from(this.aiAgentService.getAIAgents())
+    from(this.aiAgentService.getAISettings().then(async settings => {
+      this.aiCapabilitiesDisabled = settings.killSwitch;
+      return settings.killSwitch ? [] : this.aiAgentService.getAIAgents();
+    }))
       .pipe(
         map(agents => agents.map(agent => agent.name)),
         takeUntil(this.destroy$)
@@ -244,6 +258,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
         },
         error: error => {
           console.error('Failed to check AI agent availability:', error);
+          this.aiCapabilitiesDisabled = false;
           this.agents$.next([]);
           this.aiAgentDeployed = false;
         }
@@ -262,6 +277,22 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     this.serviceForm.patchValue({
       ...this.serviceConfiguration,
     });
+    this.savedSnapshot = this.currentSnapshot();
+  }
+
+  /** Form values plus the cached-fragments list (which lives outside the form) as last loaded/saved. */
+  private savedSnapshot = '';
+
+  private currentSnapshot(): string {
+    return JSON.stringify([
+      this.serviceForm.getRawValue(),
+      this.inventoryFragmentsList.map(f => f.trim()).filter(f => f.length > 0)
+    ]);
+  }
+
+  /** Save is only enabled when something differs from the loaded/saved configuration. */
+  get isDirty(): boolean {
+    return this.currentSnapshot() !== this.savedSnapshot;
   }
 
   async clickedClearInboundExternalIdCache() {
@@ -369,6 +400,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
 
     if (response.status >= 200 && response.status < 300) {
       this.alertService.success(gettext('Update successful'));
+      this.savedSnapshot = this.currentSnapshot();
     } else {
       this.alertService.danger(gettext('Failed to update service configuration'));
     }

@@ -21,9 +21,11 @@
 
 package dynamic.mapper.connector.amqp;
 
+import dynamic.mapper.util.TenantLogContext;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.client.AConnectorClient;
@@ -500,13 +502,13 @@ public class AMQP10Client extends AConnectorClient {
                 // lifecycleLock/connectDisconnectExecutionLock, so this background reconnect
                 // can't race a concurrent submitConnect()/submitDisconnect() triggered by a
                 // user operation or another health check.
-                virtualThreadPool.submit(() -> {
+                virtualThreadPool.submit(TenantLogContext.runnable(tenant, () -> {
                     try {
                         submitConnect();
                     } catch (Exception e) {
                         log.error("{} - Error during AMQP 1.0 reconnection", tenant, e);
                     }
-                });
+                }));
             }
         }
     }
@@ -528,22 +530,18 @@ public class AMQP10Client extends AConnectorClient {
 
         String protocol = (String) configuration.getProperties()
                 .getOrDefault("protocol", "amqp://");
-        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
+        Boolean trustCustomCertificate = (Boolean) configuration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
 
-        if ("amqps://".equals(protocol) && useSelfSignedCertificate) {
-            if (configuration.getProperties().get("fingerprintSelfSignedCertificate") == null ||
+        if ("amqps://".equals(protocol) && trustCustomCertificate) {
+            if (configuration.getProperties().get("trustedCertificateFingerprint") == null ||
                     configuration.getProperties().get("nameCertificate") == null) {
                 return false;
             }
         }
 
-        for (Map.Entry<String, ConnectorProperty> entry : connectorSpecification.getProperties().entrySet()) {
-            if (entry.getValue().getRequired() &&
-                    configuration.getProperties().get(entry.getKey()) == null) {
-                log.warn("{} - Missing required property: {}", tenant, entry.getKey());
-                return false;
-            }
+        if (!validateSpecifiedProperties(configuration)) {
+            return false;
         }
 
         return true;
@@ -584,15 +582,15 @@ public class AMQP10Client extends AConnectorClient {
         Integer port = (Integer) connectorConfiguration.getProperties().get("port");
         Boolean automaticRecovery = (Boolean) connectorConfiguration.getProperties()
                 .getOrDefault("automaticRecovery", true);
-        Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
+        Boolean trustCustomCertificate = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
 
         StringBuilder baseUri = new StringBuilder();
         baseUri.append(protocol).append(host).append(":").append(port);
 
         // Append SSL transport options for amqps://
         if ("amqps://".equals(protocol)) {
-            if (useSelfSignedCertificate) {
+            if (trustCustomCertificate) {
                 baseUri.append("?transport.trustAll=true&transport.verifyHost=false");
             }
             // For standard amqps:// the JVM default truststore is used automatically
@@ -661,72 +659,110 @@ public class AMQP10Client extends AConnectorClient {
 
                 // Protocol selection
                 .property("protocol", ConnectorPropertyBuilder.requiredOption()
+                        .group(ConnectorPropertyGroup.CONNECTION)
+                        .description("amqp:// is an unencrypted connection, amqps:// uses TLS.")
                         .order(0)
                         .defaultValue("amqp://")
                         .options("amqp://", "amqps://"))
 
                 // Connection
                 .property("host", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.CONNECTION)
+                        .description("Host name or IP address of the AMQP broker.")
                         .order(1)
                         .defaultValue("localhost"))
 
                 .property("port", ConnectorPropertyBuilder.requiredNumeric()
+                        .group(ConnectorPropertyGroup.CONNECTION)
+                        .description("Port of the AMQP broker, usually 5672 for amqp:// and 5671 for amqps://.")
                         .order(2)
                         .defaultValue(5672))
 
                 // Authentication
                 .property("username", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("User name for the broker.")
                         .order(3))
 
                 .property("password", ConnectorPropertyBuilder.optionalSensitive()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("Password of the broker user.")
                         .order(4))
 
                 // AMQP container ID / JMS client ID (e.g. device ID for Azure IoT Hub)
                 .property("clientId", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.SESSION)
+                        .label("Client ID")
+                        .description("Client ID the connector uses at the broker. Leave empty to let the client library generate one.")
                         .order(5))
 
                 // AMQP 1.0 destination type — no exchange/routing-key concept
                 .property("destinationType", ConnectorPropertyBuilder.requiredOption()
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .label("Destination type")
+                        .description("Use queue for point-to-point delivery or topic for publish and subscribe.")
                         .order(6)
                         .defaultValue("queue")
                         .optionsWithLabels("queue", "Queue", "topic", "Topic"))
 
                 // Content type set on outbound AMQP messages (e.g. application/json;charset=utf-8)
                 .property("contentType", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .label("Content type")
+                        .description("AMQP content type set on outbound messages, for example application/json. Leave empty to not set it.")
                         .order(7))
 
                 // TLS/SSL certificate configuration (only for amqps://)
-                .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                .property("trustCustomCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.TLS)
+                        .label("Trust custom server certificate")
+                        .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates.")
                         .order(8)
                         .defaultValue(false)
                         .condition("protocol", "amqps://"))
 
-                .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.largeText()
+                .property("trustedCertificateFingerprint", ConnectorPropertyBuilder.largeText()
+                        .group(ConnectorPropertyGroup.TLS)
+                        .label("Trusted certificate fingerprint")
                         .order(9)
-                        .description("SHA-1 fingerprint of CA or Self-Signed Certificate")
-                        .condition("useSelfSignedCertificate", "true"))
+                        .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
+                        .condition("trustCustomCertificate", "true"))
 
                 .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.TLS)
+                        .label("Trusted certificate name")
+                        .description("Name of the certificate in the Cumulocity trusted-certificate store.")
                         .order(10)
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
                 .property("certificateChainInPemFormat", ConnectorPropertyBuilder.largeText()
+                        .group(ConnectorPropertyGroup.TLS)
+                        .label("Certificate chain (PEM)")
                         .order(11)
                         .description("Certificate in PEM format, or identify by name/fingerprint " +
                                 "(must be uploaded as Trusted Certificate in Device Management)")
-                        .condition("useSelfSignedCertificate", "true"))
+                        .condition("trustCustomCertificate", "true"))
 
                 // Connection behaviour
                 .property("automaticRecovery", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.RELIABILITY)
+                        .label("Automatic recovery")
+                        .description("Reconnect automatically after a connection loss.")
                         .order(12)
                         .defaultValue(true))
 
                 // Wildcard support (broker-dependent for AMQP 1.0)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in inbound topics")
+                        .description("Allow wildcards (+ and #) in the topic of inbound mappings.")
                         .order(13)
                         .defaultValue(false))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in outbound topics")
+                        .description("Allow wildcards (+ and #) in the publish topic of outbound mappings.")
                         .order(14)
                         .defaultValue(false))
 

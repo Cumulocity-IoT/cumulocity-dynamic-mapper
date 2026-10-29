@@ -76,7 +76,6 @@ import java.util.Map;
  * <p>This replaces the legacy pattern where extensions directly called
  * {@code context.addRequest()} with side effects.</p>
  *
- * @see ProcessorExtensionAlarmToCustomJson for the legacy implementation
  */
 @Slf4j
 public class ProcessorExtensionAlarmToCustomJson implements ProcessorExtensionOutbound<Object> {

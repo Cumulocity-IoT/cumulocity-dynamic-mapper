@@ -713,9 +713,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                         log.error("{} - Could not map payload: {} {}", tenant, targetAPI, payload);
                         error.append("Could not map payload: " + targetAPI + "/" + payload);
                     } catch (SDKException s) {
-                        log.error("{} - Could not send payload to c8y: {} {}: HTTP {} - {}", tenant, targetAPI, payload,
-                                s.getHttpStatus(), s.getMessage(), s);
-                        error.append("Could not sent payload to c8y: " + targetAPI + "/" + payload + "/" + s);
+                        logSendFailure(tenant, targetAPI + " " + payload, s);
+                        error.append(sendFailureText(targetAPI, payload, s));
                     }
                     return rt;
                 });
@@ -951,9 +950,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                     pe.set(new ProcessingException("Could not map payload: " + targetAPI + "/" + payload, e));
                     // error.append("Could not map payload: " + targetAPI + "/" + payload);
                 } catch (SDKException s) {
-                    log.error("{} - Could not send payload to c8y: {} {}: HTTP {} - {}", tenant, targetAPI, payload,
-                            s.getHttpStatus(), s.getMessage(), s);
-                    pe.set(new ProcessingException("Could not sent payload to c8y: " + targetAPI + "/" + payload, s));
+                    logSendFailure(tenant, targetAPI + " " + payload, s);
+                    pe.set(new ProcessingException(sendFailureText(targetAPI, payload, s), s));
 
                     // Remove device from Cache
                     if (s.getHttpStatus() == 422) {
@@ -1278,10 +1276,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                 s));
                         return mor;
                     }
-                    log.error("{} - Could not send payload to c8y: {}: HTTP {} - {}", tenant, currentRequest.getRequest(),
-                            s.getHttpStatus(), s.getMessage(), s);
+                    logSendFailure(tenant, currentRequest.getRequest(), s);
                     pe.set(new ProcessingException(
-                            "Could not sent payload to c8y: " + targetAPI + "/" + currentRequest.getRequest(), s));
+                            sendFailureText(targetAPI, currentRequest.getRequest(), s), s));
                     // error.append("Could not sent payload to c8y: " + currentRequest.getRequest()
                     // + " " + s);
                 }
@@ -1541,4 +1538,29 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
     }
 
+
+    /**
+     * Logs a failed send to Cumulocity. A 422 is a data-level rejection that the caller handles —
+     * most commonly a cached device id whose device was deleted, which the inbound dispatcher
+     * recovers from by evicting the cache entry and resending — so it is logged as a one-line
+     * WARN. The failure still reaches the processing result and the mapping's error statistics.
+     * Anything else keeps the ERROR with its stack trace.
+     */
+    private void logSendFailure(String tenant, Object request, SDKException s) {
+        if (s.getHttpStatus() == 422) {
+            log.warn("{} - Cumulocity rejected payload (HTTP 422): {} - {}", tenant, s.getMessage(), request);
+        } else {
+            log.error("{} - Could not send payload to c8y: {}: HTTP {} - {}", tenant, request,
+                    s.getHttpStatus(), s.getMessage(), s);
+        }
+    }
+
+    /**
+     * The text of a failed send as the statistics page and the processing result show it. The reason comes first: the
+     * payload that follows can be long and is cut where the text is displayed, which used to hide why the send failed.
+     */
+    static String sendFailureText(Object targetAPI, Object payload, SDKException failure) {
+        return "Could not send payload to c8y (HTTP " + failure.getHttpStatus() + " - " + failure.getMessage() + "): "
+                + targetAPI + "/" + payload;
+    }
 }

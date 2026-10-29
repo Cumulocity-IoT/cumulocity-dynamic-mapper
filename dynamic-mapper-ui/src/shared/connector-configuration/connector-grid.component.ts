@@ -36,7 +36,7 @@ import { ActionVisibilityRule } from './types';
 import { SharedService } from '..';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { ConnectorConfigurationDrawerComponent } from './edit/connector-configuration-drawer.component';
-import { ImportConnectorsComponent } from './import/import-connectors-modal.component';
+import { ImportConnectorsComponent } from './import/import-connectors.component';
 import { gettext } from '@c8y/ngx-components/gettext';
 
 import { provideGridPersistence } from '../misc/grid-persistence';

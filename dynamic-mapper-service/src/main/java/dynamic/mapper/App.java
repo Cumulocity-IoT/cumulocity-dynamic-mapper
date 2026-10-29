@@ -21,6 +21,8 @@
 
 package dynamic.mapper;
 
+import dynamic.mapper.util.MdcPropagatingExecutorService;
+import dynamic.mapper.util.TenantLogging;
 import com.cumulocity.microservice.autoconfigure.MicroserviceApplication;
 import com.cumulocity.microservice.context.annotation.EnableContextSupport;
 import com.cumulocity.model.DateTimeConverter;
@@ -46,6 +48,7 @@ import dynamic.mapper.model.MappingTreeNodeSerializer;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.SneakyThrows;
 import org.joda.time.DateTime;
+import dynamic.mapper.ai.MappingResultTools;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -82,7 +85,7 @@ public class App {
     @Bean("virtualThreadPool")
     public ExecutorService virtualThreadPool() {
         final ThreadFactory factory = Thread.ofVirtual().name("virtThread-", 0).factory();
-        return Executors.newThreadPerTaskExecutor(factory);
+        return new MdcPropagatingExecutorService(Executors.newThreadPerTaskExecutor(factory));
     }
 
     @Bean
@@ -104,9 +107,9 @@ public class App {
     }
 
     @Bean
-    public ToolCallbackProvider tools(AIAgentService aiAgentService) {
+    public ToolCallbackProvider tools(AIAgentService aiAgentService, MappingResultTools mappingResultTools) {
         return MethodToolCallbackProvider.builder()
-                .toolObjects(aiAgentService)
+                .toolObjects(aiAgentService, mappingResultTools)
                 .build();
     }
 
@@ -197,6 +200,8 @@ public class App {
     }
 
     public static void main(String[] args) {
+        // Before logging initialises: the tenant field and message converters (see TenantLogging).
+        TenantLogging.register();
         SpringApplication.run(App.class, args);
     }
 

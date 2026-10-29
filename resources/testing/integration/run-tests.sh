@@ -2,7 +2,10 @@
 #
 # run-tests.sh — Dynamic Mapper integration test runner
 #
-# Usage:  ./run-tests.sh [SUITE ...] [CONNECTOR]
+# Usage:  ./run-tests.sh [SUITE ...] [CONNECTOR] [--connector g|m] [--keep]
+#   --connector, -c <g|m>  Same as the positional CONNECTOR token.
+#   --keep, -k             Keep all created test data (same as DM_KEEP=true).
+#   --cleanup-only [-y]    Sweep data kept by --keep (mappings, devices, certs, test connectors) and exit.
 #   SUITE      a/all i/inbound o/outbound e/extension s/smartfunc r/reliability,
 #             a <script-name>, menu number(s), or omit for the interactive menu.
 #   CONNECTOR  g = generic MQTT (public broker, default)
@@ -12,6 +15,7 @@
 #     ./run-tests.sh inbound m       # inbound suite against the MQTT Service
 #     ./run-tests.sh 1 3 5 g         # menu items 1/3/5 against the public broker
 #     ./run-tests.sh all             # every test, generic MQTT
+#     ./run-tests.sh inbound -c m -k # same as "inbound m", retaining test data
 #
 # Environment:
 #   DM_SERVICE          Base path to dynamic mapper (default /service/dynamic-mapper-service)
@@ -64,13 +68,18 @@ declare -a TESTS=(
     "inbound|test-inbound-http-connector|HTTP connector → MEASUREMENT"
     "inbound|test-inbound-implicit-device|Implicit device auto-creation"
     "inbound|test-inbound-implicit-device-recreate-after-delete|Implicit device recreation after delete (inconsistent-cache regression)"
+    "inbound|test-inbound-multilevel-wildcard|Multi-level wildcard # matches parent and deeper topics"
+    "inbound|test-inbound-mapping-topic-change|Mapping topic change moves to the new topic"
     "inbound|test-inbound-multi-device|Array payload → multiple devices"
     "inbound|test-inbound-alarm|JSON / DEFAULT → ALARM"
     "inbound|test-inbound-operation|JSON / DEFAULT → OPERATION"
     "inbound|test-inbound-inventory|JSON / DEFAULT → INVENTORY (device metadata update)"
     "inbound|test-inbound-alarm-dedup-upsert|Repeated ALARM (same source+type) → one alarm; upsert semantics via DM_EXPECT_ALARM_UPSERT=true"
     "inbound|test-inbound-deployment-reconcile|Deployment change applies live (un-deploy / re-deploy, no reconnect)"
+    "inbound|test-inbound-deployment-reset|RESET_DEPLOYMENT_MAP applies live (destructive: needs DM_ALLOW_DEPLOYMENT_RESET=true)"
+    "inbound|test-inbound-mapping-versioning|Mapping versioning (draft, publish, activate, rollback)"
     "inbound|test-inbound-rest-polling|REST_POLLING connector → MEASUREMENT (needs http-polling-mock)"
+    "inbound|test-inbound-filter|filterMapping / filterInventory — inbound"
     # ── Inbound (Smart Function patterns) ──────────────────────────────────────
     "smartfunction|test-inbound-smartfunction-02|Inbound: Pattern 02: Topic-based external ID + sensor filter"
     "smartfunction|test-inbound-smartfunction-03|Inbound: Pattern 03: getManagedObjectByExternalId — MO enrichment"
@@ -89,6 +98,7 @@ declare -a TESTS=(
     "outbound|test-outbound-operation|C8Y Operation → MQTT broker"
     "outbound|test-outbound-inventory|C8Y managed-object change → MQTT broker (metadata)"
     "outbound|test-outbound-filter|filterMapping — selective forwarding"
+    "outbound|test-outbound-filter-inventory|filterInventory / filterMapping — outbound inventory"
     "outbound|test-outbound-topic-resolution|Dynamic publish topic resolution"
     "outbound|test-outbound-json-smartfunction|Smart Function: Measurement → MQTT JSON"
     "outbound|test-outbound-smartfunction-externalsource|Smart Function externalSource → _externalId_ topic (broker round-trip)"
@@ -100,6 +110,8 @@ declare -a TESTS=(
     "outbound|test-outbound-type-subscription-resync|Type subscription resync (backfill of pre-existing devices)"
     "outbound|test-outbound-group-subscription|Dynamic group subscription"
     "outbound|test-outbound-group-subscription-removal|Group subscription removal"
+    "outbound|test-outbound-group-subscription-desired-state|Group subscription desired-state update (removal keeps still-covered devices)"
+    "outbound|test-outbound-type-subscription-removal|Type subscription removal unsubscribes devices"
     "outbound|test-outbound-subscription-persistence|Subscription persistence after restart"
     # ── Reliability ───────────────────────────────────────────────────────────
     "reliability|test-multi-tenant|Mapping CRUD / tenant isolation"
@@ -190,7 +202,16 @@ _print_help() {
 Dynamic Mapper integration test runner
 
 Usage:
-    ./run-tests.sh [SUITE ...] [CONNECTOR]
+    ./run-tests.sh [SUITE ...] [CONNECTOR] [--connector g|m] [--keep]
+
+  OPTIONS:
+    -c, --connector <g|m>            Choose the connector (same as the g/m token)
+    -k, --keep                       Keep all created test data (= DM_KEEP=true)
+    --cleanup-only [-y]              Delete kept test data (mappings test-*, devices
+                                     test-*/dmtest-*, certs dmtest*, test connectors
+                                     test-*/testc8ymqttservice*/testrestpolling*/
+                                     testwebhook*) and exit; -y skips the confirmation.
+                                     Device groups: remove by hand.
 
   SUITE — which tests to run:
     a | all                          Run every test
@@ -220,6 +241,11 @@ Category shortcuts (single letters a/i/o/e/s/r) match the interactive menu;
 the connector token (g/m) may appear in any position.
 
 Environment variables:
+    DM_KEEP
+        true → pass --keep to every test and keep the suite MQTT certificate,
+        retaining all created mappings/devices/subscriptions for inspection.
+        Default: false (tests clean up after themselves)
+
     DM_SERVICE
         Base Dynamic Mapper API path.
         Default: /service/dynamic-mapper-service
@@ -401,6 +427,10 @@ _suite_provision_mqtt_service_cert() {
 
 _suite_cleanup_mqtt_service_cert() {
     [ "${_SUITE_CERT_PROVISIONED:-0}" -eq 0 ] && return 0
+    if [ "${DM_KEEP:-false}" = "true" ]; then
+        printf "DM_KEEP=true: keeping suite MQTT trusted certificate: %s\n" "${DM_MQTT_SVC_CERT_NAME:-}"
+        return 0
+    fi
     if [ -n "${DM_MQTT_SVC_CERT_NAME:-}" ]; then
         c8y devicemanagement certificates delete --id "$DM_MQTT_SVC_CERT_NAME" \
             --force </dev/null >/dev/null 2>&1 || true
@@ -444,6 +474,7 @@ _run_one() {   # <entry-from-TESTS>
 
     printf "\n${C_BOLD}══ Running: %s ══${C_RESET}\n" "$name"
     _cleanup_flag="--cleanup"
+    [ "${DM_KEEP:-false}" = "true" ] && _cleanup_flag="--keep"
     if [ "$name" = "test-outbound-group-subscription" ]; then
         # Stateful handoff: test-outbound-group-subscription-removal consumes
         # the state emitted by this test. Tests now clean up by default, so we
@@ -611,6 +642,72 @@ _interactive() {
     esac
 }
 
+# ── Sweep of kept test data (--cleanup-only) ───────────────────────────────────
+# Removes what tests leave behind under --keep / DM_KEEP=true, matched by name:
+#   mappings  test-*            devices  test-* | dmtest-*
+#   trusted certificates dmtest*
+#   connectors (by identifier) test-*, testc8ymqttservice*, testrestpolling*, testwebhook*
+#     — exactly the identifiers the tests create; a connector you configured yourself
+#       is never matched unless its identifier starts with one of these.
+# Device groups are NOT swept (names too generic) — remove by hand.
+_cleanup_only() {   # [assume_yes]
+    local _yes="${1:-false}" _svc="${DM_SERVICE:-/service/dynamic-mapper-service}"
+    local _maps _devs _certs _conns _reply id name
+
+    _check_c8y_session || exit 1
+
+    _maps=$(c8y api --method GET --url "${_svc}/mapping" --output json </dev/null 2>/dev/null \
+        | jq -r '(if type == "array" then .[] else . end) | objects | select((.name // "")|startswith("test-")) | "\(.id)\t\(.name)"')
+    _devs=$({ c8y devices list --name "test-*" --includeAll --output json </dev/null 2>/dev/null
+              c8y devices list --name "dmtest-*" --includeAll --output json </dev/null 2>/dev/null; } \
+        | jq -r 'select(.id) | "\(.id)\t\(.name)"' | sort -u)
+    _certs=$(c8y devicemanagement certificates list --includeAll --output json </dev/null 2>/dev/null \
+        | jq -r 'select((.name // "")|startswith("dmtest")) | .name')
+
+    _conns=$(c8y api --method GET --url "${_svc}/configuration/connector/instance" --output json </dev/null 2>/dev/null \
+        | jq -rs '[ .[] | if type == "array" then .[] else . end ] | map(select(type == "object")) | .[]
+                  | (.identifier // "") as $i
+                  | select($i | test("^(test-|testc8ymqttservice|testrestpolling|testwebhook)"))
+                  | "\($i)\t\(.name // "")"' 2>/dev/null)
+
+    printf "${C_BOLD}Mappings (test-*):${C_RESET}\n%s\n" "${_maps:-  (none)}"
+    printf "${C_BOLD}Devices (test-*, dmtest-*):${C_RESET}\n%s\n" "${_devs:-  (none)}"
+    printf "${C_BOLD}Trusted certificates (dmtest*):${C_RESET}\n%s\n" "${_certs:-  (none)}"
+    printf "${C_BOLD}Connectors (test-*, testc8ymqttservice*, testrestpolling*, testwebhook*):${C_RESET}\n%s\n" "${_conns:-  (none)}"
+    if [ -z "$_maps$_devs$_certs$_conns" ]; then echo "Nothing to clean up."; return 0; fi
+
+    if [ "$_yes" != "true" ]; then
+        printf "\nDelete all of the above? [y/N] "
+        read -r _reply
+        case "$_reply" in y|Y|yes) ;; *) echo "Aborted."; return 1 ;; esac
+    fi
+
+    while IFS=$'\t' read -r id name; do
+        [ -z "$id" ] && continue
+        c8y api --method POST --url "${_svc}/operation" \
+            --data "{\"operation\":\"ACTIVATE_MAPPING\",\"parameter\":{\"id\":\"$id\",\"active\":\"false\"}}" \
+            --force </dev/null >/dev/null 2>&1 || true
+        c8y api --method DELETE --url "${_svc}/mapping/$id" --force </dev/null >/dev/null 2>&1 || true
+        printf "Deleted mapping: %s (%s)\n" "$id" "$name"
+    done <<< "$_maps"
+    # Connectors after the mappings: mappings deployed to them are already gone.
+    while IFS=$'\t' read -r id name; do
+        [ -z "$id" ] && continue
+        c8y api --method DELETE --url "${_svc}/configuration/connector/instance/$id" --force </dev/null >/dev/null 2>&1 || true
+        printf "Deleted connector: %s (%s)\n" "$id" "$name"
+    done <<< "$_conns"
+    while IFS=$'\t' read -r id name; do
+        [ -z "$id" ] && continue
+        c8y devices delete --id "$id" --force </dev/null >/dev/null 2>&1 || true
+        printf "Deleted device: %s (%s)\n" "$id" "$name"
+    done <<< "$_devs"
+    while IFS= read -r name; do
+        [ -z "$name" ] && continue
+        c8y devicemanagement certificates delete --id "$name" --force </dev/null >/dev/null 2>&1 || true
+        printf "Deleted certificate: %s\n" "$name"
+    done <<< "$_certs"
+}
+
 # ── Entry point ────────────────────────────────────────────────────────────────
 # Two parameters:
 #   1. the test SUITE  — a category (a/i/o/e/s/r), one or more menu indices, or a
@@ -628,7 +725,23 @@ done
 _CONN_PRESET=false
 _conn_token="g"
 _suite_args=()
-for arg in "$@"; do
+_CLEANUP_ONLY=false
+_ASSUME_YES=false
+_args=("$@")
+_i=0
+while [ "$_i" -lt "${#_args[@]}" ]; do
+    arg="${_args[$_i]}"; _i=$((_i + 1))
+    case "$arg" in
+        -k|--keep) DM_KEEP=true; continue ;;
+        --cleanup-only) _CLEANUP_ONLY=true; continue ;;
+        -y|--yes) _ASSUME_YES=true; continue ;;
+        -c|--connector)
+            if [ "$_i" -ge "${#_args[@]}" ]; then
+                printf "${C_RED}%s requires a value (g|m)${C_RESET}\n" "$arg"; exit 1
+            fi
+            _conn_token="${_args[$_i]}"; _i=$((_i + 1)); _CONN_PRESET=true; continue ;;
+        --connector=*) _conn_token="${arg#--connector=}"; _CONN_PRESET=true; continue ;;
+    esac
     case "$arg" in
         g|m|generic|mqtt-service|c8y-mqtt-service|public)
             _conn_token="$arg"; _CONN_PRESET=true ;;
@@ -636,6 +749,11 @@ for arg in "$@"; do
             _suite_args+=("$arg") ;;
     esac
 done
+
+if [ "$_CLEANUP_ONLY" = "true" ]; then
+    _cleanup_only "$_ASSUME_YES"
+    exit $?
+fi
 
 # Apply the connector now (interactive mode skips its own prompt when preset).
 [ "$_CONN_PRESET" = "true" ] && _apply_connector_selection "$_conn_token"

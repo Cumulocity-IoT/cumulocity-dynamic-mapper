@@ -1,0 +1,15 @@
+# atob/btoa: host function (now) vs Java.type polyfill (before) vs pure JS (rejected)
+# date: 2026-10-25 09:35  host: Darwin arm64
+# command: mvn test -Dtest=Base64PolyfillBenchmarkTest -Dbenchmark=true (dynamic-mapper-service)
+
+Base64 benchmark (median of 7 runs, ms; ratio = vs host function)
+payload  | op    |    host fn |  Java.type |  ratio |    pure JS |   ratio
+--------------------------------------------------------------------------
+1 KB     | btoa  |       0.11 |       0.67 |   6.3x |       2.36 |   22.0x
+1 KB     | atob  |       0.12 |       0.43 |   3.4x |       4.20 |   33.7x
+64 KB    | btoa  |       0.38 |       1.10 |   2.9x |      49.16 |  129.3x
+64 KB    | atob  |       0.88 |       0.62 |   0.7x |      74.19 |   84.0x
+1 MB     | btoa  |       1.45 |       6.04 |   4.2x |     781.56 |  540.3x
+1 MB     | atob  |       5.44 |       7.86 |   1.4x |    1209.60 |  222.3x
+8 MB     | btoa  |      11.49 |      53.64 |   4.7x |        n/a |        
+8 MB     | atob  |      35.94 |      55.74 |   1.6x |        n/a |        

@@ -21,8 +21,11 @@
 
 package dynamic.mapper.connector.httppolling;
 
+import dynamic.mapper.connector.core.client.ConnectionTestResult;
+import dynamic.mapper.util.TenantLogContext;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
+import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
@@ -54,6 +57,7 @@ import com.dashjoin.jsonata.json.Json;
 
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
+import dynamic.mapper.util.OutboundUrlValidator;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -329,7 +333,7 @@ public class HttpPollingConnector extends AConnectorClient {
 
     @Override
     public boolean isConfigValid(ConnectorConfiguration configuration) {
-        if (configuration == null) {
+        if (configuration == null || !validateSpecifiedProperties(configuration)) {
             return false;
         }
         return HttpPollingRequestHelper.isConfigValid(configuration.getProperties(),
@@ -447,7 +451,7 @@ public class HttpPollingConnector extends AConnectorClient {
         // the bounded wait in awaitProcessingSuccess, together up to ~2 minutes worst case)
         // directly on this small timing-only pool — see pollScheduler's field Javadoc.
         ScheduledFuture<?> future = scheduler.schedule(
-                () -> virtualThreadPool.execute(() -> executePoll(topic)), delayMs, TimeUnit.MILLISECONDS);
+                () -> virtualThreadPool.execute(TenantLogContext.runnable(tenant, () -> executePoll(topic))), delayMs, TimeUnit.MILLISECONDS);
         pollTasks.put(topic, future);
     }
 
@@ -747,7 +751,52 @@ public class HttpPollingConnector extends AConnectorClient {
     // than changing WebHook's visibility or extracting a shared base class.)
     // -------------------------------------------------------------------------
 
+    @Override
+    public boolean supportsConnectionTest() {
+        return true;
+    }
+
+    /**
+     * One GET against the configured base URL with the configured authentication. The base URL
+     * itself is usually not a data endpoint (mapping topics are appended as paths), so a 404 still
+     * proves the host is reachable and the credentials were accepted; only 401/403 are auth
+     * failures. Works from the constructor-supplied config, not the stored one, so unsaved form
+     * values are tested.
+     */
+    @Override
+    public ConnectionTestResult testConnection() {
+        baseUrl = (String) connectorConfiguration.getProperties().getOrDefault("url", null);
+        if (StringUtils.isEmpty(baseUrl)) {
+            return ConnectionTestResult.failed("url is required", null);
+        }
+        try {
+            WebClient client = buildWebClient();
+            ResponseEntity<String> response = client.get().retrieve()
+                    .onStatus(status -> true, r -> reactor.core.publisher.Mono.empty())
+                    .toEntity(String.class)
+                    .timeout(REQUEST_TIMEOUT)
+                    .block();
+            int code = response == null ? -1 : response.getStatusCode().value();
+            if (code == 401 || code == 403) {
+                return ConnectionTestResult.failed("Authentication failed (HTTP " + code
+                        + "): the server rejected the configured credentials", code);
+            }
+            if (code >= 200 && code < 300) {
+                return ConnectionTestResult.ok("Connected, HTTP " + code, code);
+            }
+            if (code >= 400 && code < 500) {
+                return ConnectionTestResult.ok("Connection OK: host reachable and credentials accepted. The base URL "
+                        + "itself returned HTTP " + code + ", which is normal here because mapping topics are "
+                        + "appended as paths (e.g. /events).", code);
+            }
+            return ConnectionTestResult.failed("Server returned HTTP " + code, code);
+        } catch (Exception e) {
+            return ConnectionTestResult.failed("Connection failed: " + e.getMessage(), null);
+        }
+    }
+
     private WebClient buildWebClient() {
+        OutboundUrlValidator.requireSafe(baseUrl);
         String authentication = (String) connectorConfiguration.getProperties().get("authentication");
         String user = (String) connectorConfiguration.getProperties().get("user");
         String password = (String) connectorConfiguration.getProperties().get("password");
@@ -954,6 +1003,8 @@ public class HttpPollingConnector extends AConnectorClient {
                 .supportedDirections(supportedDirections())
 
                 .property("url", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.CONNECTION)
+                        .label("URL")
                         .order(0)
                         .description("Base REST endpoint. Each mapping's topic is appended as the request " +
                                 "path — e.g. url=https://api.example.com/v1, mapping topic=devices/measurements " +
@@ -961,39 +1012,55 @@ public class HttpPollingConnector extends AConnectorClient {
                                 "instance (one host, one set of credentials) serve many mappings/endpoints."))
 
                 .property("pollIntervalSeconds", ConnectorPropertyBuilder.create(ConnectorPropertyType.NUMERIC_PROPERTY)
+                        .group(ConnectorPropertyGroup.POLLING)
+                        .label("Poll interval (s)")
                         .order(1)
                         .required(false)
                         .defaultValue(DEFAULT_POLL_INTERVAL_SECONDS)
                         .description("Poll interval in seconds. Hard minimum: " + MIN_POLL_INTERVAL_SECONDS + "s."))
 
                 .property("authentication", ConnectorPropertyBuilder.optionalOption()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("Authentication sent with each poll request.")
                         .order(2)
-                        .options("None", "Basic", "Bearer"))
+                        .options("None", "Basic", "Bearer")
+                        .defaultValue("None"))
 
-                .property("user", ConnectorPropertyBuilder.optionalString()
+                .property("user", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("User name for Basic authentication.")
                         .order(3)
                         .condition("authentication", "Basic"))
 
-                .property("password", ConnectorPropertyBuilder.optionalSensitive()
+                .property("password", ConnectorPropertyBuilder.requiredSensitive()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("Password for Basic authentication.")
                         .order(4)
                         .condition("authentication", "Basic"))
 
-                .property("token", ConnectorPropertyBuilder.optionalSensitive()
+                .property("token", ConnectorPropertyBuilder.requiredSensitive()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
+                        .description("Bearer token sent in the Authorization header.")
                         .order(5)
                         .condition("authentication", "Bearer"))
 
                 .property("headers", ConnectorPropertyBuilder.create(ConnectorPropertyType.MAP_PROPERTY)
+                        .group(ConnectorPropertyGroup.REQUEST)
                         .order(6)
                         .description("Additional headers sent with every poll request.")
                         .required(false))
 
                 .property("cursorParam", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.POLLING)
+                        .label("Cursor parameter")
                         .order(7)
                         .description("Query parameter name used to send the incremental-fetch cursor with " +
                                 "each poll (e.g. \"since\"). Leave empty to disable incremental fetch — every " +
                                 "poll then fetches the full response, as in v1."))
 
                 .property("cursorExtractionExpression", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.POLLING)
+                        .label("Cursor expression")
                         .order(8)
                         .description("JSONata expression evaluated against each response to compute the next " +
                                 "cursor value (e.g. \"items[-1].timestamp\"). Only takes effect together with " +
@@ -1001,8 +1068,14 @@ public class HttpPollingConnector extends AConnectorClient {
                                 "unchanged rather than failing the poll."))
 
                 .property("paginationMode", ConnectorPropertyBuilder.optionalOption()
+                        .group(ConnectorPropertyGroup.PAGINATION)
+                        .label("Pagination mode")
                         .order(9)
-                        .options("None", "NextLinkHeader", "NextFieldInBody", "PageNumber")
+                        .optionsWithLabels("None", "None (one request per poll)",
+                                "NextLinkHeader", "Next link header",
+                                "NextFieldInBody", "Next field in body",
+                                "PageNumber", "Page number")
+                        .defaultValue("None")
                         .description("How to drain multiple pages within one poll cycle. None (default): a " +
                                 "single GET per poll. NextLinkHeader: follow an RFC 5988 Link response header " +
                                 "with rel=\"next\" until absent. NextFieldInBody: follow nextPageExpression " +
@@ -1010,6 +1083,8 @@ public class HttpPollingConnector extends AConnectorClient {
                                 "until a response is an empty [] or {}."))
 
                 .property("maxPagesPerPoll", ConnectorPropertyBuilder.create(ConnectorPropertyType.NUMERIC_PROPERTY)
+                        .group(ConnectorPropertyGroup.PAGINATION)
+                        .label("Maximum pages per poll")
                         .order(10)
                         .required(false)
                         .defaultValue(HttpPollingRequestHelper.DEFAULT_MAX_PAGES_PER_POLL)
@@ -1019,6 +1094,8 @@ public class HttpPollingConnector extends AConnectorClient {
                                 "from one runaway or misconfigured paginated endpoint."))
 
                 .property("pageParam", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.PAGINATION)
+                        .label("Page parameter")
                         .order(11)
                         .condition("paginationMode", "NextFieldInBody", "PageNumber")
                         .description("Query parameter name the next page's token/number is sent under " +
@@ -1026,6 +1103,8 @@ public class HttpPollingConnector extends AConnectorClient {
                                 "server provides the full next-page URL)."))
 
                 .property("nextPageExpression", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.PAGINATION)
+                        .label("Next page expression")
                         .order(12)
                         .condition("paginationMode", "NextFieldInBody")
                         .description("JSONata expression evaluated against each response to extract the next " +
@@ -1033,6 +1112,8 @@ public class HttpPollingConnector extends AConnectorClient {
                                 "for this poll cycle."))
 
                 .property("pageStartValue", ConnectorPropertyBuilder.create(ConnectorPropertyType.NUMERIC_PROPERTY)
+                        .group(ConnectorPropertyGroup.PAGINATION)
+                        .label("First page number")
                         .order(13)
                         .required(false)
                         .defaultValue(HttpPollingRequestHelper.DEFAULT_PAGE_START_VALUE)
@@ -1040,11 +1121,17 @@ public class HttpPollingConnector extends AConnectorClient {
                         .description("First page number sent under pageParam (e.g. 0 for a zero-indexed API)."))
 
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in inbound topics")
+                        .description("Allow wildcards (+ and #) in the topic of inbound mappings.")
                         .order(14)
                         .readonly(true)
                         .defaultValue(false))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in outbound topics")
+                        .description("Allow wildcards (+ and #) in the publish topic of outbound mappings.")
                         .order(15)
                         .readonly(true)
                         .hidden(true)

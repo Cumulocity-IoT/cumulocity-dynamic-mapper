@@ -20,6 +20,7 @@
  */
 package dynamic.mapper.processor.util;
 
+import dynamic.mapper.util.MappingLogContext;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.model.Mapping;
@@ -142,8 +143,10 @@ public abstract class MessageRoutingSupport {
 
             // Check if mapping is deployed (you'll need to get connector info)
             if (connectorIdentifier != null && !isMappingDeployed(tenant, mapping, connectorIdentifier)) {
-                log.info("Mapping {} [{}] not deployed for connector {}, skipping",
-                        mapping.getName(), mapping.getId(), connectorIdentifier);
+                // Outside the per-mapping processing scope (this decides whether the mapping runs at all), so tag it here.
+                MappingLogContext.run(mapping.getIdentifier(), () -> log.info(
+                        "Mapping {} [{}] not deployed for connector {}, skipping",
+                        mapping.getName(), mapping.getId(), connectorIdentifier));
                 return false;
             }
 

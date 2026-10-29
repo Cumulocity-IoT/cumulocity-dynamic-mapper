@@ -40,6 +40,8 @@ import java.util.Map;
  */
 public class ConnectorPropertyBuilder {
     private String description;
+    private String label;
+    private String group;
     private Boolean required = false;
     private Integer order = 0;
     private ConnectorPropertyType type;
@@ -133,6 +135,22 @@ public class ConnectorPropertyBuilder {
      */
     public static ConnectorPropertyBuilder largeText() {
         return create(ConnectorPropertyType.STRING_LARGE_PROPERTY).required(false);
+    }
+
+    /**
+     * Sets the display label shown in the UI (defaults to a label derived from the property key)
+     */
+    public ConnectorPropertyBuilder label(String label) {
+        this.label = label;
+        return this;
+    }
+
+    /**
+     * Sets the display group, use one of the constants in {@link ConnectorPropertyGroup}.
+     */
+    public ConnectorPropertyBuilder group(String group) {
+        this.group = group;
+        return this;
     }
 
     public ConnectorPropertyBuilder description(String description) {
@@ -231,7 +249,9 @@ public class ConnectorPropertyBuilder {
             hidden,
             defaultValue,
             options,
-            condition
+            condition,
+            label,
+            group
         );
     }
 }

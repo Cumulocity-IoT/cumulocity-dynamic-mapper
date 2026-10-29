@@ -69,8 +69,21 @@ public final class SemVer implements Comparable<SemVer> {
         return new SemVer(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)), Integer.parseInt(m.group(3)));
     }
 
+    /**
+     * True if {@code version} parses: the pattern matches AND every component fits an int.
+     * Pattern-only validation accepted e.g. {@code 99999999999.0.0}, which then threw
+     * {@link NumberFormatException} from {@link #parse} on every later list/suggest call.
+     */
     public static boolean isValid(String version) {
-        return version != null && PATTERN.matcher(version.trim()).matches();
+        if (version == null || !PATTERN.matcher(version.trim()).matches()) {
+            return false;
+        }
+        try {
+            parse(version);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     public SemVer bumpPatch() {

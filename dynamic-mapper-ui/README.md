@@ -41,7 +41,7 @@ Extension** is also available for enterprise-grade, compiled, type-safe transfor
 ![Add mapping](image/Dynamic_Mapper_Mapping_Table_Add_Modal.png)
 <br>
 <br>
-![Define mappings](image/Dynamic_Mapper_Mapping_Stepper_SmartFunction.png)
+![Define mappings](image/Dynamic_Mapper_Mapping_Stepper_Smart_Function.png)
 <br>
 <br>
 The Dynamic Mapper is **AI-empowered**: assign an AI agent (via the Cumulocity AI Agent Manager) to

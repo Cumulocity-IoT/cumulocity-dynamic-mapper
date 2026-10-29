@@ -19,13 +19,15 @@
  */
 
 import { Direction, MappingType, StepperConfiguration, TransformationType } from './mapping.model';
-import { EditorMode } from './stepper.model';
+import { MappingPersistence } from './stepper.model';
 
 export interface StepperConfigurationContext {
   mappingType: MappingType;
   transformationType: TransformationType;
   direction: Direction;
-  editorMode: EditorMode;
+  persistence: MappingPersistence;
+  readOnly?: boolean;
+  isCopy?: boolean;
   substitutionsAsCode: boolean;
   hasDeployedConnector?: boolean;
 }
@@ -126,17 +128,13 @@ const CONFIGURATION_OVERRIDES: StepperConfigurationOverride[] = [
     }
   },
   {
-    // ANY_PAYLOAD + SMART_FUNCTION: binary payload cannot be test-sent as JSON,
-    // and the source editor is meaningless. Re-disable what the SMART_FUNCTION
-    // override above re-enabled.
-    // ANY_PAYLOAD + EXTENSION_JAVA is intentionally excluded — the EXTENSION_JAVA
-    // overrides above already set allowTestSending/allowTestTransformation correctly.
+    // ANY_PAYLOAD + SMART_FUNCTION: the broker message is binary, so the source editor is
+    // meaningless. Testing stays enabled (the SMART_FUNCTION override above): the test tab takes
+    // the message as a base64 string in `payload`, which is what the Smart Function receives live.
     condition: (ctx) =>
       ctx.mappingType === MappingType.ANY_PAYLOAD &&
       ctx.transformationType === TransformationType.SMART_FUNCTION,
     properties: {
-      allowTestSending: false,
-      allowTestTransformation: false,
       showEditorSource: false
     }
   }
@@ -163,7 +161,9 @@ export class StepperConfigurationResolver {
     let config: StepperConfiguration = {
       ...baseConfig,
       direction: context.direction,
-      editorMode: context.editorMode
+      persistence: context.persistence,
+      readOnly: context.readOnly ?? false,
+      isCopy: context.isCopy ?? false
     };
 
     // Apply each override that matches its condition

@@ -21,11 +21,12 @@
 
 package dynamic.mapper.controller;
 
-import java.util.HashMap;
+import dynamic.mapper.util.MappingLogContext;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
@@ -138,7 +139,7 @@ public class DeploymentController {
 	@GetMapping(value = "/effective", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, DeploymentMapEntry>> getMappingsDeployed() {
 		String tenant = contextService.getContext().getTenant();
-		Map<String, DeploymentMapEntry> mappingsDeployed = new HashMap<>();
+		Map<String, DeploymentMapEntry> mappingsDeployed = new ConcurrentHashMap<>();
 		try {
 			Map<String, AConnectorClient> connectorMap = connectorRegistry
 					.getClientsForTenant(tenant);
@@ -215,28 +216,31 @@ public class DeploymentController {
 			@PathVariable String mappingIdentifier,
 			@Valid @RequestBody List<String> deployment) {
 		String tenant = contextService.getContext().getTenant();
-		log.info("{} - Update deployment for mapping, mappingIdentifier: {}, deployment: {}", tenant, mappingIdentifier, deployment);
+		// Every line of this administrative action carries the mapping's identifier (service log filter).
+		try (MappingLogContext ignoredMapping = MappingLogContext.open(mappingIdentifier)) {
+			log.info("{} - Update deployment for mapping, mappingIdentifier: {}, deployment: {}", tenant, mappingIdentifier, deployment);
 
-		// Reject unknown connector identifiers up front (400) rather than silently storing
-		// dangling references that only get cleaned up at the next startup.
-		validateConnectorsExist(tenant, deployment);
+			// Reject unknown connector identifiers up front (400) rather than silently storing
+			// dangling references that only get cleaned up at the next startup.
+			validateConnectorsExist(tenant, deployment);
 
-		try {
-			// Capture the previous assignment so we only reconcile connectors that actually
-			// gained or lost this mapping.
-			Set<String> affected = new HashSet<>(mappingService.getDeploymentMapEntry(tenant, mappingIdentifier));
-			affected.addAll(deployment);
+			try {
+				// Capture the previous assignment so we only reconcile connectors that actually
+				// gained or lost this mapping.
+				Set<String> affected = new HashSet<>(mappingService.getDeploymentMapEntry(tenant, mappingIdentifier));
+				affected.addAll(deployment);
 
-			mappingService.updateDeploymentMapEntry(tenant, mappingIdentifier, deployment);
+				mappingService.updateDeploymentMapEntry(tenant, mappingIdentifier, deployment);
 
-			// Apply the new deployment immediately: reconcile the affected connectors so the
-			// mapping is (un)subscribed live. Without this the change is only persisted and would
-			// not take effect until a connector reconnect or an explicit RELOAD_MAPPINGS.
-			reconcileConnectors(tenant, affected);
-			return ResponseEntity.status(HttpStatus.CREATED).build();
-		} catch (Exception ex) {
-			log.error("{} - Error updating deployment for mapping: {}", tenant, mappingIdentifier, ex);
-			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+				// Apply the new deployment immediately: reconcile the affected connectors so the
+				// mapping is (un)subscribed live. Without this the change is only persisted and would
+				// not take effect until a connector reconnect or an explicit RELOAD_MAPPINGS.
+				reconcileConnectors(tenant, affected);
+				return ResponseEntity.status(HttpStatus.CREATED).build();
+			} catch (Exception ex) {
+				log.error("{} - Error updating deployment for mapping: {}", tenant, mappingIdentifier, ex);
+				throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+			}
 		}
 	}
 

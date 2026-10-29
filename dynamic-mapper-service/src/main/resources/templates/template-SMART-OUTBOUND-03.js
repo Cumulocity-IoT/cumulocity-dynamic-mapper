@@ -1,22 +1,25 @@
 // @ts-check
 /**
  * @name Creates one measurement and key for messages to Kafka connectors
- * @description Creates one measurement as array, set key for messages to Kafka connectors
+ * @description Creates one measurement as array, set key for messages to Kafka connectors.
+ *              The payload of an element may itself be an array, e.g. payload: [{ ... }], for
+ *              devices that expect batch payloads.
  * @templateType OUTBOUND_SMART_FUNCTION
- *
- * Sample Cumulocity measurement payload (source)
- * {
+ * @sampleTopic measurements/berlin_01
+ * @samplePayload
+ *   {
  *     "time": "2025-01-01T12:00:00.000Z",
  *     "type": "c8y_TemperatureMeasurement",
  *     "c8y_TemperatureMeasurement": {
- *         "T": {
- *             "value": 23.5,
- *             "unit": "C"
- *         }
+ *       "T": {
+ *         "value": 23.5,
+ *         "unit": "C"
+ *       }
  *     },
- *     "source": { "id": "12345" }
- * }
- * publishTopic 'measurements/berlin_01'
+ *     "source": {
+ *       "id": "12345"
+ *     }
+ *   }
 */
 
 /**

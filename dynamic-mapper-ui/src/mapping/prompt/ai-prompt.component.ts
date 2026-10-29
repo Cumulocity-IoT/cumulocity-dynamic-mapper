@@ -29,15 +29,28 @@ import {
 import { Mapping, Substitution, MappingType, RepairStrategy, SAMPLE_TEMPLATES_C8Y, SharedService, isSubstitutionsAsCode, TransformationType, getGenericDeviceIdentifier, Direction } from '../../shared';
 import { AlertService, BottomDrawerRef, CoreModule } from '@c8y/ngx-components';
 import { AgentChatComponent } from '@c8y/ngx-components/ai/agent-chat';
-import { AIMessage, ClientAgentDefinition, Suggestion } from '@c8y/ngx-components/ai';
-import { toClientAgentDefinition } from '../core/ai-agent.service';
+import { AgentChatConfig, AIMessage, ToolCallPart, AssistantMessageDisplayConfig, ChatHistory, ClientAgentDefinition, Suggestion } from '@c8y/ngx-components/ai';
+import { EditorComponent } from '@c8y/ngx-components/editor';
+import { gettext } from '@c8y/ngx-components/gettext';
+import { TranslateService } from '@ngx-translate/core';
+import { AiAgentService, toClientAgentDefinition } from '../core/ai-agent.service';
+import {
+  AiChatHistoryService,
+  codeTargetKey,
+  generationInputsKey,
+  isStoredResultReusable,
+  substitutionsTargetKey
+} from '../core/ai-chat-history.service';
 import { MappingService } from '../core/mapping.service';
 import { MappingTokens } from '../../shared/mapping/processor/processor.model';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { ServiceConfiguration } from '../../configuration';
 import { base64ToBytes } from '../../shared/mapping/util';
-import { EditorMode } from '../../shared/mapping/stepper.model';
 
+
+/** MCP tools (dynamic-mapper-service, MappingResultTools) through which the agents hand over their final result. */
+const SUBMIT_SMART_FUNCTION_TOOL = 'submit-smart-function';
+const SUBMIT_SUBSTITUTIONS_TOOL = 'submit-substitutions';
 
 @Component({
   selector: 'd11r-mapping-ai-prompt',
@@ -45,22 +58,26 @@ import { EditorMode } from '../../shared/mapping/stepper.model';
   styleUrls: ['./ai-prompt.component.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports:[CoreModule, AgentChatComponent],
+  imports:[CoreModule, AgentChatComponent, EditorComponent],
   host: { class: 'd-contents' }
 })
-export class AIPromptComponent implements OnInit {
+export class AiPromptComponent implements OnInit {
 
   private readonly alertService = inject(AlertService);
   private readonly sharedService = inject(SharedService);
   private readonly bottomDrawerRef = inject(BottomDrawerRef);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly mappingService = inject(MappingService);
+  private readonly aiAgentService = inject(AiAgentService);
+  private readonly translateService = inject(TranslateService);
+  private readonly chatHistoryService = inject(AiChatHistoryService);
 
   @ViewChild(AgentChatComponent) agentChat?: AgentChatComponent;
 
   @Input() mapping: Mapping;
   @Input() aiAgent: AgentObjectDefinition | AgentTextDefinition | null;
-  @Input() editorMode: EditorMode = EditorMode.CREATE;
+  /** True when the mapping already exists, so its code/substitutions can be reviewed rather than generated from scratch. */
+  @Input() existingMapping = false;
 
   private _save: (value: Substitution[] | string) => void;
   private _cancel: (reason?: any) => void;
@@ -73,6 +90,10 @@ export class AIPromptComponent implements OnInit {
 
   substitutions: Substitution[] = [];
   generatedCode: string = '';
+  /** Collapses the "Review before saving" preview so the chat can use the full drawer height. */
+  previewCollapsed = false;
+  /** Height in px of the code preview; changed by dragging the splitter above it. */
+  previewHeight = 240;
 
   /**
    * Problems found in the AI's most recent answer. Shown in the drawer so the user sees them
@@ -92,21 +113,90 @@ export class AIPromptComponent implements OnInit {
   agentType: MappingType;
   variables: Record<string, unknown> = {};
   clientAgentDefinition?: ClientAgentDefinition;
-  assistantMessageDisplayConfig = {
-    showDefaultToolDetails: 'all' as const,
-    experimental_nonFinalStepTextDisplay: 'collapsible-thinking-block' as const
+  aiChatEnabled = false;
+  /** Bound to the chat's `telemetry` input; off when the tenant's AI settings opt out of analytics. */
+  telemetryEnabled = true;
+  aiCapabilitiesDisabled = false;
+  aiAvailabilityCheckFailed = false;
+  /** Snapshot of the previous conversation about this mapping, if one is being resumed. */
+  initialChatHistory?: ChatHistory;
+  /** True once the chat holds at least one message; an untouched drawer is never persisted, or the
+   *  next open would resume an empty transcript and skip the suggestion chips / auto-generation. */
+  private hasMessages = false;
+  /** True once the agent submitted its result through a submit-* tool during the current turn. The
+   *  reply text is then not scanned for code blocks: it may legitimately contain examples, and the
+   *  tool call already carries the authoritative result. Cleared when the next user message is sent. */
+  private resultSubmittedViaTool = false;
+  /** See generationInputsKey(): what the current conversation is about. */
+  private inputsKey?: string;
+  /** Key of the code/substitutions the mapping held when this drawer opened; see isStoredResultReusable(). */
+  private targetKeyAtOpen = '';
+
+  assistantMessageDisplayConfig: AssistantMessageDisplayConfig = {
+    showDefaultToolDetails: 'all',
+    experimental_nonFinalStepTextDisplay: 'collapsible-thinking-block',
+    // Tool names come from the agent definitions in dynamic-mapper-service/.../resources/agents.
+    toolCallConfig: {
+      [SUBMIT_SMART_FUNCTION_TOOL]: {
+        executingLabel: this.translateService.instant(gettext('Submitting the Smart Function')),
+        completedLabel: this.translateService.instant(gettext('Submitted the Smart Function')),
+        isShownWithMainAnswer: true
+      },
+      [SUBMIT_SUBSTITUTIONS_TOOL]: {
+        executingLabel: this.translateService.instant(gettext('Submitting the substitutions')),
+        completedLabel: this.translateService.instant(gettext('Submitted the substitutions')),
+        isShownWithMainAnswer: true
+      },
+      'evaluate-jsonata-expression': {
+        executingLabel: this.translateService.instant(gettext('Testing a JSONata expression')),
+        completedLabel: this.translateService.instant(gettext('Tested a JSONata expression'))
+      }
+    }
   };
 
-  chatConfig = {
-    headline: 'AI Assistant',
+  chatConfig: Partial<AgentChatConfig> = {
+    headline: this.translateService.instant(gettext('AI Assistant')),
     welcomeText: '',
-    title: 'AI Mapping Assistant',
-    placeholder: 'Type your message...',
-    sendButtonText: 'Send',
-    cancelButtonText: 'Cancel',
-    disclaimerText: 'AI-generated responses can contain errors. Verify the details before use.',
+    title: this.translateService.instant(gettext('AI Mapping Assistant')),
+    placeholder: this.translateService.instant(gettext('Type your message...')),
+    sendButtonText: this.translateService.instant(gettext('Send')),
+    cancelButtonText: this.translateService.instant(gettext('Cancel')),
+    disclaimerText: this.translateService.instant(
+      gettext('AI-generated responses can contain errors. Verify the details before use.')
+    ),
     showCumulativeUsage: true
   };
+
+  /** Read-only preview of `generatedCode`, so the user can check it before pressing Save. */
+  readonly codePreviewEditorOptions: EditorComponent['editorOptions'] = {
+    language: 'javascript',
+    readOnly: true,
+    minimap: { enabled: false },
+    automaticLayout: true
+  };
+
+  clampPreviewHeight(h: number): number {
+    return Math.max(100, Math.min(h, Math.round(window.innerHeight * 0.7)));
+  }
+
+  startPreviewResize(event: PointerEvent): void {
+    const target = event.currentTarget as HTMLElement;
+    const startY = event.clientY;
+    const startHeight = this.previewHeight;
+    target.setPointerCapture(event.pointerId);
+    const onMove = (e: PointerEvent) => {
+      this.previewHeight = this.clampPreviewHeight(startHeight + (startY - e.clientY));
+    };
+    const onUp = () => {
+      target.removeEventListener('pointermove', onMove);
+      target.removeEventListener('pointerup', onUp);
+      target.removeEventListener('pointercancel', onUp);
+    };
+    target.addEventListener('pointermove', onMove);
+    target.addEventListener('pointerup', onUp);
+    target.addEventListener('pointercancel', onUp);
+    event.preventDefault();
+  }
 
   /** Exposed for the template header */
   drawerTitle = 'AI Mapping Assistant';
@@ -126,6 +216,22 @@ export class AIPromptComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    try {
+      const settings = await this.aiAgentService.getAISettings(true);
+      if (settings.killSwitch) {
+        this.aiCapabilitiesDisabled = true;
+        this.cdr.detectChanges();
+        return;
+      }
+      this.telemetryEnabled = !settings.telemetryOptOut;
+    } catch (error) {
+      console.error('Failed to check AI settings before opening the AI assistant:', error);
+      this.aiAvailabilityCheckFailed = true;
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.aiChatEnabled = true;
     this.agentType = this.mapping.mappingType;
     this.serviceConfiguration =
       await this.sharedService.getServiceConfiguration();
@@ -144,9 +250,37 @@ export class AIPromptComponent implements OnInit {
     // whatever state existed at that pause point, so relying on either to pick up state
     // set here doesn't work. #agentChat's host `@if` depends on clientAgentDefinition,
     // only just assigned above, so force a render now before touching it further.
+    // Resume a previous conversation about this same, unchanged mapping instead of starting over.
+    this.inputsKey = generationInputsKey(this.mappingForAI);
+    this.targetKeyAtOpen = this.currentTargetKey();
+    const stored = this.chatHistoryService.get(this.mapping?.identifier);
+    if (stored) {
+      this.initialChatHistory = stored.history;
+      this.hasMessages = true;
+      // The extracted result is offered for Save again unless the user changed the code or
+      // substitutions by hand since (Save would silently discard that) or the conversation's inputs
+      // changed. Otherwise Save in the drawer stays off until the agent produces a new result — the
+      // transcript is kept either way, and the agent gets fresh mapping context per message.
+      if (isStoredResultReusable(stored, this.inputsKey, this.targetKeyAtOpen)) {
+        this.generatedCode = stored.generatedCode;
+        this.substitutions = stored.substitutions;
+        this.validationIssues = stored.validationIssues;
+        this.valid = stored.valid;
+      }
+    }
+
     this.cdr.detectChanges();
 
-    if (this.editorMode === EditorMode.UPDATE) {
+    if (stored) {
+      // The restored transcript already holds the earlier turns, so no suggestion chips and no
+      // automatic first message — either would start the conversation again on top of it.
+      if (!this.existingMapping) {
+        this.drawerTitle = this.isCodeMapping ? 'Generate Smart Function' : 'Generate Substitutions';
+      }
+      return;
+    }
+
+    if (this.existingMapping) {
       // Existing code/substitutions to review — offer both as suggestion chips inside
       // the chat itself and let the user pick, instead of auto-sending anything.
       const label = this.isCodeMapping ? 'Smart Function' : 'substitutions';
@@ -288,6 +422,9 @@ export class AIPromptComponent implements OnInit {
   }
 
   save() {
+    // Persist (also done on destroy) rather than discard: reopening the drawer after Save should
+    // still show the conversation that produced the saved result.
+    this.persistSession();
     if (this.isCodeMapping) {
       this._save(this.generatedCode);
     } else {
@@ -297,6 +434,7 @@ export class AIPromptComponent implements OnInit {
   }
 
   cancel() {
+    this.persistSession();
     this._cancel("User canceled");
     this.bottomDrawerRef.close();
   }
@@ -325,11 +463,38 @@ export class AIPromptComponent implements OnInit {
       return;
     }
     if (!this.agentChat) {
-      console.error('AIPromptComponent.sendMessage: #agentChat is not available yet');
+      console.error('AiPromptComponent.sendMessage: #agentChat is not available yet');
       return;
     }
     await this.agentChat.sendMessage({ role: 'user', content: this.newMessage });
     this.newMessage = '';
+  }
+
+  /**
+   * Called via (onToolResult). Reads the agent's final result straight from the input of its
+   * submit-* tool call — structured data, so no parsing of reply text and no guessing which of
+   * several code blocks was the final one. Other tools (e.g. evaluate-jsonata-expression) are
+   * the agent's own business and ignored here.
+   */
+  async onToolResult(part: ToolCallPart): Promise<void> {
+    if (part.type !== 'tool-result' || part.error) {
+      return; // still running, or the server rejected the input — the agent will retry
+    }
+    if (part.toolName === SUBMIT_SMART_FUNCTION_TOOL && this.isCodeMapping) {
+      const code = part.input?.['code'];
+      if (typeof code === 'string' && code.includes('function onMessage')) {
+        this.resultSubmittedViaTool = true;
+        this.acceptSmartFunction(code.trim());
+      }
+    } else if (part.toolName === SUBMIT_SUBSTITUTIONS_TOOL && !this.isCodeMapping) {
+      if (await this.acceptSubstitutions(part.input?.['substitutions'])) {
+        this.resultSubmittedViaTool = true;
+      }
+    } else {
+      return;
+    }
+    this.persistSession();
+    this.cdr.detectChanges();
   }
 
   /** Called via (onMessageFinish) once the agent's response has fully streamed in. */
@@ -337,6 +502,7 @@ export class AIPromptComponent implements OnInit {
     if (message.role !== 'assistant') {
       return;
     }
+    this.hasMessages = true;
 
     const content = message.content
       .map(part => {
@@ -347,12 +513,70 @@ export class AIPromptComponent implements OnInit {
       .filter(text => text.length > 0)
       .join('\n\n');
 
-    if (this.isCodeMapping) {
+    // Preferred channel: the agent called a submit-* tool, handled in onToolResult(). Scraping the
+    // text stays as the fallback for agent definitions deployed before those tools existed.
+    if (this.resultSubmittedViaTool) {
+      this.resultSubmittedViaTool = false;
+    } else if (this.isCodeMapping) {
       this.checkIfResponseContainsJavaScript(content);
     } else {
       await this.checkIfResponseContainsSubstitutions(content);
     }
+    this.persistSession();
     this.cdr.detectChanges();
+  }
+
+  /**
+   * Stores the conversation and the result extracted from it so reopening the drawer for the same
+   * mapping resumes here. Called after every finished reply, whenever the message list changes and
+   * from save()/cancel() — never from ngOnDestroy: the chat component is torn down before this one,
+   * so by then its messages may already be cleared and an empty snapshot would replace the real one.
+   */
+  persistSession(): void {
+    if (!this.hasMessages || !this.agentChat || !this.inputsKey || !this.mapping?.identifier) return;
+    try {
+      this.chatHistoryService.set(this.mapping.identifier, {
+        inputsKey: this.inputsKey,
+        targetKeyAtOpen: this.targetKeyAtOpen,
+        extractedKey: this.extractedKey(),
+        history: this.agentChat.saveChatHistory(),
+        generatedCode: this.generatedCode,
+        substitutions: [...this.substitutions],
+        validationIssues: [...this.validationIssues],
+        valid: this.valid
+      });
+    } catch (error) {
+      // Persisting is a convenience; never let it break the conversation.
+      console.warn('Could not save the AI chat history:', error);
+    }
+  }
+
+  /** Key of what the mapping currently holds in the place the generated result would go. */
+  private currentTargetKey(): string {
+    return this.isCodeMapping
+      ? codeTargetKey(this.mappingForAI?.code)
+      : substitutionsTargetKey(this.mapping.substitutions);
+  }
+
+  /** Key of the result extracted from the conversation so far. */
+  private extractedKey(): string {
+    return this.isCodeMapping ? codeTargetKey(this.generatedCode) : substitutionsTargetKey(this.substitutions);
+  }
+
+  /**
+   * Called via (onMessagesChange). An empty list is deliberately ignored: the chat component also
+   * emits one while it initialises — before it has restored a stored snapshot — so treating it as
+   * "the conversation was reset" would delete the very session about to be resumed.
+   */
+  onMessagesChange(messages: AIMessage[]): void {
+    if (messages.length === 0) {
+      return;
+    }
+    this.hasMessages = true;
+    if (messages[messages.length - 1]?.role === 'user') {
+      this.resultSubmittedViaTool = false;
+    }
+    this.persistSession();
   }
 
   /**
@@ -380,9 +604,7 @@ export class AIPromptComponent implements OnInit {
       for (const candidate of candidates) {
         const jsContent = candidate?.trim();
         if (jsContent?.includes('function') && jsContent.includes('function onMessage')) {
-          this.generatedCode = this.applyESMExport(jsContent);
-          this.validationIssues = this.validateSmartFunctionCode(jsContent);
-          this.valid = true;
+          this.acceptSmartFunction(jsContent);
           return;
         }
       }
@@ -392,6 +614,13 @@ export class AIPromptComponent implements OnInit {
       console.error('Error parsing JavaScript from response:', error);
       this.alertService.danger('Failed to parse JavaScript code from AI response');
     }
+  }
+
+  /** Takes the Smart Function source as the current result and marks it valid for saving. */
+  private acceptSmartFunction(code: string): void {
+    this.generatedCode = this.applyESMExport(code);
+    this.validationIssues = this.validateSmartFunctionCode(code);
+    this.valid = true;
   }
 
   private applyESMExport(code: string): string {
@@ -436,41 +665,53 @@ export class AIPromptComponent implements OnInit {
       if (!trimmedCandidate) continue;
 
       try {
-        const parsedSubstitutions = JSON.parse(trimmedCandidate);
-        if (!Array.isArray(parsedSubstitutions)) continue;
-
-        const isValidSubstitutions = parsedSubstitutions.every(sub =>
-          sub !== null &&
-          typeof sub === 'object' &&
-          typeof sub.pathSource === 'string' &&
-          typeof sub.pathTarget === 'string' &&
-          sub.pathSource.trim() !== '' &&
-          sub.pathTarget.trim() !== '' &&
-          sub.hasOwnProperty('expandArray')
-        );
-        if (!isValidSubstitutions) continue;
-
-        // The LLM's JSON block may omit repairStrategy (or emit it as null) — default it here so
-        // every downstream consumer (edit modal, persisted mapping) always sees a real value
-        // instead of undefined/null. A *hallucinated* strategy name is also coerced back to
-        // DEFAULT: nothing between here and the backend checks it, and Jackson rejects an unknown
-        // enum constant with an opaque HTTP 400 at save time rather than a mapping-validation
-        // error, which is very hard to trace back to the AI-generated substitution that caused it.
-        this.substitutions = parsedSubstitutions.map(sub => ({
-          ...sub,
-          expandArray: !!sub.expandArray,
-          repairStrategy: this.coerceRepairStrategy(sub.repairStrategy)
-        }));
-        this.validationIssues = await this.validateSubstitutions(this.substitutions);
-        this.valid = true;
-        return;
+        if (await this.acceptSubstitutions(JSON.parse(trimmedCandidate), true)) return;
       } catch {
-        // Not a valid substitutions array — try the next candidate rather than failing outright.
+        // Not valid JSON — try the next candidate rather than failing outright.
         continue;
       }
     }
     // No candidate parsed into a valid substitutions array — keep the previous substitutions/valid
     // state untouched (common mid-conversation, e.g. a clarifying question with no final answer yet).
+  }
+
+  /**
+   * Takes `candidate` as the current substitutions and marks them valid for saving, if it is a
+   * well-formed array; returns whether it was accepted. Shared by the submit-substitutions tool
+   * input and the text-scraping fallback.
+   *
+   * `requireExpandArray` is for the fallback only: a prose reply can contain unrelated JSON arrays,
+   * and `expandArray` being present is what identifies one as substitutions. A tool call has a
+   * schema, so it can't be anything else and may omit the (optional) flag.
+   */
+  private async acceptSubstitutions(candidate: unknown, requireExpandArray = false): Promise<boolean> {
+    if (!Array.isArray(candidate) || candidate.length === 0) return false;
+
+    const isValidSubstitutions = candidate.every(sub =>
+      sub !== null &&
+      typeof sub === 'object' &&
+      typeof sub.pathSource === 'string' &&
+      typeof sub.pathTarget === 'string' &&
+      sub.pathSource.trim() !== '' &&
+      sub.pathTarget.trim() !== '' &&
+      (!requireExpandArray || Object.prototype.hasOwnProperty.call(sub, 'expandArray'))
+    );
+    if (!isValidSubstitutions) return false;
+
+    // The LLM's JSON may omit repairStrategy (or emit it as null) — default it here so
+    // every downstream consumer (edit modal, persisted mapping) always sees a real value
+    // instead of undefined/null. A *hallucinated* strategy name is also coerced back to
+    // DEFAULT: nothing between here and the backend checks it, and Jackson rejects an unknown
+    // enum constant with an opaque HTTP 400 at save time rather than a mapping-validation
+    // error, which is very hard to trace back to the AI-generated substitution that caused it.
+    this.substitutions = candidate.map(sub => ({
+      ...sub,
+      expandArray: !!sub.expandArray,
+      repairStrategy: this.coerceRepairStrategy(sub.repairStrategy)
+    }));
+    this.validationIssues = await this.validateSubstitutions(this.substitutions);
+    this.valid = true;
+    return true;
   }
 
   /** Maps an LLM-supplied repairStrategy onto the enum, falling back to DEFAULT when it is

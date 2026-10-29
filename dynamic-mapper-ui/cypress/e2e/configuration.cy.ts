@@ -1,5 +1,4 @@
 import type { IUser } from '@c8y/client';
-import { slowCypressDown } from 'cypress-slow-down';
 import {
   navigateToConnectorConfiguration,
   addConnectorViaUi,
@@ -12,7 +11,6 @@ import {
   type MqttConnectionInput,
 } from './connector/connector.helpers';
 
-slowCypressDown();
 
 describe('Specs for connector configuration', () => {
   const createdConnectorIds: string[] = [];

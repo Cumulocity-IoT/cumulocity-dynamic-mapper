@@ -8,6 +8,7 @@
 | `jmeter/` | JMeter test plan |
 | `mappings/` | Mapping definition files for C8Y import |
 | `profiler/` | Local JVM profiling — service launcher, HTTP load tests, setup |
+| `graalvm-memory/` | Consolidated GraalVM / Smart Function memory results (live set, context pool, Engine retention, `atob`/`btoa`) with the scripts that produce them — see [graalvm-memory/RESULTS.md](graalvm-memory/RESULTS.md) and [graalvm-memory/README-live-set-measurement.md](graalvm-memory/README-live-set-measurement.md) |
 
 ## Quick start
 

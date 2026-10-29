@@ -4,17 +4,16 @@
  * @description Default template for Smart Function, creates one measurement
  * @templateType INBOUND_SMART_FUNCTION
  * @defaultTemplate true
- *
- * Sample payload
- * {
+ * @sampleTopic testSmartInbound/sensor-berlin-01
+ * @samplePayload
+ *   {
  *     "messageId": "msg-001",
  *     "clientId": "sensor-berlin-01",
  *     "deviceId": "12345",
  *     "sensorData": {
- *         "temp_val": 23.5
+ *       "temp_val": 23.5
  *     }
- * }
- * topic 'testSmartInbound/sensor-berlin-01'
+ *   }
 */
 
 /**
@@ -24,8 +23,8 @@
 function onMessage(msg, context) {
     var payload = msg.payload;
 
-    console.log("Context: " + context.getConfig());
-    console.log("Payload Raw: " + payload);
+    console.log("Context: " + JSON.stringify(context.getConfig()));
+    console.log("Payload Raw: " + JSON.stringify(payload));
     console.log("Payload messageId: " +  payload["messageId"]);
 
     // Prefer context clientId (MQTT client id), fall back to payload field

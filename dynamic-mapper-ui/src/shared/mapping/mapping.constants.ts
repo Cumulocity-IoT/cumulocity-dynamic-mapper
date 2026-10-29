@@ -356,6 +356,7 @@ export const MAPPING_TEST_DEVICE_TYPE = 'd11r_testDevice';
 export const MAPPING_TEST_DEVICE_FRAGMENT = 'd11r_testDevice';
 export const MAPPING_FRAGMENT = 'd11r_mapping';
 export const CONNECTOR_FRAGMENT = 'd11r_connector';
+export const DEPLOYMENT_MAP_FRAGMENT = 'd11r_deploymentMap';
 export const MAPPING_GENERATED_TEST_DEVICE = 'd11r_device_generatedType';
 
 export const ALERT_INFO_TIMEOUT = 10000;
@@ -389,6 +390,7 @@ export const PATH_CONFIGURATION_CONNECTION_ENDPOINT = 'configuration/connector';
 export const PATH_CONFIGURATION_SERVICE_ENDPOINT = 'configuration/service';
 export const PATH_CONFIGURATION_CODE_TEMPLATE_ENDPOINT = 'configuration/code';
 export const PATH_MAPPING_TREE_ENDPOINT = 'monitoring/tree';
+export const PATH_SERVICE_LOGS_ENDPOINT = 'monitoring/service-logs';
 export const PATH_MAPPING_ACTIVE_SUBSCRIPTIONS_ENDPOINT = 'monitoring/tree';
 export const PATH_STATUS_CONNECTORS_ENDPOINT = 'monitoring/status/connectors';
 export const PATH_FEATURE_ENDPOINT = 'configuration/feature';
@@ -400,6 +402,7 @@ export const PATH_RELATION_ENDPOINT = 'relation';
 export const PATH_TESTING_ENDPOINT = 'test';
 export const PATH_MAPPING_ENDPOINT = 'mapping';
 export const PATH_AGENT_ENDPOINT = 'agent';
+export const PATH_AI_SETTINGS_ENDPOINT = 'settings';
 export const PATH_EXPLORER_ENDPOINT = 'explorer';
 
 // ─── Functions ────────────────────────────────────────────────────────────────

@@ -36,7 +36,6 @@ import {
   SharedModule,
   Substitution
 } from '../../shared';
-import { EditorMode } from '../../shared/mapping/stepper.model';
 import { CoreModule } from '@c8y/ngx-components';
 import { PopoverModule } from 'ngx-bootstrap/popover';
 import { Subject, takeUntil } from 'rxjs';
@@ -51,7 +50,7 @@ interface RepairStrategyOption {
 export interface SubstitutionGridSettings {
   color: string;
   selectedSubstitutionIndex: number;
-  editorMode: EditorMode;
+  readOnly: boolean;
 }
 
 @Component({
@@ -62,7 +61,7 @@ export interface SubstitutionGridSettings {
   standalone: true,
   imports: [CoreModule, PopoverModule, SharedModule, FormsModule]
 })
-export class SubstitutionRendererComponent implements OnDestroy {
+export class SubstitutionGridComponent implements OnDestroy {
   @Input()
   mapping!: Mapping;
   @Input()
@@ -80,7 +79,6 @@ export class SubstitutionRendererComponent implements OnDestroy {
 
   readonly id = Math.floor(Math.random() * 1000000);
   readonly definesDeviceIdentifier = definesDeviceIdentifier;
-  readonly EditorMode = EditorMode;
   readonly substitutionTemplateHelp = 'Substitutions defining the device identifier are marked with an "*". Before adding a substitution target and source property in templates have to be selected.';
   readonly targetHelp = 'The JSON path in the target template where the value extracted from the source is written to.';
   readonly expandArrayHelp = 'When the source expression extracts an array, create one substitution per array element instead of a single combined value. Not available for outbound mappings.';
@@ -139,33 +137,33 @@ export class SubstitutionRendererComponent implements OnDestroy {
   /** OUTBOUND mappings always produce exactly one target message — there is no fan-out to
    *  expand into, so "Expand as array" has no effect and stays locked for that direction. */
   isExpandArrayDisabled(): boolean {
-    return this.settings.editorMode === EditorMode.READ_ONLY || this.mapping.direction === Direction.OUTBOUND;
+    return this.settings.readOnly || this.mapping.direction === Direction.OUTBOUND;
   }
 
   isRepairStrategyDisabled(): boolean {
-    return this.settings.editorMode === EditorMode.READ_ONLY;
+    return this.settings.readOnly;
   }
 
   repairStrategyOptionsFor(sub: Substitution): RepairStrategyOption[] {
     return Object.keys(RepairStrategy).map(key => ({
       label: key,
       value: key,
-      description: SubstitutionRendererComponent.REPAIR_STRATEGY_DESCRIPTIONS[key] ?? '',
+      description: SubstitutionGridComponent.REPAIR_STRATEGY_DESCRIPTIONS[key] ?? '',
       // USE_FIRST/LAST_VALUE_OF_ARRAY collapse an extracted array to a single element - meaningless
       // once "Expand as array" already splits the array into N substitutions.
       disabled: this.isRepairStrategyDisabled() ||
-        (SubstitutionRendererComponent.ARRAY_ONLY_STRATEGIES.includes(key) && sub.expandArray)
+        (SubstitutionGridComponent.ARRAY_ONLY_STRATEGIES.includes(key) && sub.expandArray)
     }));
   }
 
   /** Tooltip on the select itself: what the currently chosen strategy does. */
   repairStrategyDescriptionFor(sub: Substitution): string {
-    return SubstitutionRendererComponent.REPAIR_STRATEGY_DESCRIPTIONS[sub.repairStrategy] ?? '';
+    return SubstitutionGridComponent.REPAIR_STRATEGY_DESCRIPTIONS[sub.repairStrategy] ?? '';
   }
 
   onExpandArrayChange(sub: Substitution, expandArray: boolean): void {
     sub.expandArray = expandArray;
-    if (expandArray && SubstitutionRendererComponent.ARRAY_ONLY_STRATEGIES.includes(sub.repairStrategy)) {
+    if (expandArray && SubstitutionGridComponent.ARRAY_ONLY_STRATEGIES.includes(sub.repairStrategy)) {
       sub.repairStrategy = RepairStrategy.DEFAULT;
     }
     this.substitutionChange.emit();

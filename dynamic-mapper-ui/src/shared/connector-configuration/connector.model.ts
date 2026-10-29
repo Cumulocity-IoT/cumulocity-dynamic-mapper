@@ -30,7 +30,6 @@ import { Direction, Qos } from "../mapping/mapping.model";
 import { ALERT_INFO_TIMEOUT } from "../mapping/mapping.constants";
 
 export enum ConnectorPropertyType {
-  ID_STRING_PROPERTY = 'ID_STRING_PROPERTY',
   STRING_PROPERTY = 'STRING_PROPERTY',
   SENSITIVE_STRING_PROPERTY = 'SENSITIVE_STRING_PROPERTY',
   NUMERIC_PROPERTY = 'NUMERIC_PROPERTY',
@@ -61,8 +60,35 @@ export interface ConnectorPropertyCondition {
   key: string;
   anyOf: string[];
 }
+/** Group of the fixed name and description fields. No connector property uses it. */
+export const CONNECTOR_PROPERTY_GROUP_GENERAL = 'General';
+
+/**
+ * Display order of the property groups in the connector form. Keep in sync with the constants in the backend class
+ * ConnectorPropertyGroup. Groups that are not listed here are shown after these, alphabetically.
+ */
+export const CONNECTOR_PROPERTY_GROUP_ORDER: string[] = [
+  CONNECTOR_PROPERTY_GROUP_GENERAL,
+  'Connection',
+  'TLS',
+  'Authentication',
+  'Topics',
+  'Subscription',
+  'Session',
+  'Request',
+  'Polling',
+  'Pagination',
+  'Timeouts',
+  'Reliability',
+  'Sparkplug',
+  'Advanced'
+];
+
 export interface ConnectorProperty {
   description: string;
+  label?: string;
+  /** Display group, shown as a legend above the properties of that group. */
+  group?: string;
   required: boolean;
   order: number;
   readonly: boolean;
@@ -71,6 +97,47 @@ export interface ConnectorProperty {
   type: ConnectorPropertyType;
   options?: { [key: string]: string };
   condition?: ConnectorPropertyCondition;
+}
+
+/**
+ * Whether a property applies to a configuration. A property without a condition always applies. A property with a
+ * condition applies when the property it depends on applies as well (a field behind a hidden field is hidden too) and
+ * that property's effective value, i.e. the configured value or else its default, is one of `anyOf`. `"*"` in
+ * `anyOf` stands for "any non-empty value". Booleans compare as the strings "true" and "false". This is the same
+ * rule as `ConnectorSpecification.isPropertyActive` in the backend.
+ */
+export function isPropertyActive(
+  properties: { [name: string]: ConnectorProperty },
+  key: string,
+  configured: { [name: string]: unknown } | undefined | null,
+  visiting: Set<string> = new Set()
+): boolean {
+  const condition = properties?.[key]?.condition;
+  if (!condition?.anyOf) {
+    return true;
+  }
+  if (visiting.has(key)) {
+    return false; // a condition cycle can never be satisfied
+  }
+  visiting.add(key);
+  try {
+    if (!isPropertyActive(properties, condition.key, configured, visiting)) {
+      return false;
+    }
+    let value = configured?.[condition.key];
+    if (value === '' || (typeof value === 'string' && value.trim() === '')) {
+      value = undefined;
+    }
+    if (value === undefined || value === null) {
+      value = properties[condition.key]?.defaultValue;
+    }
+    if (value === undefined || value === null) {
+      return false;
+    }
+    return condition.anyOf.some(candidate => candidate === '*' || candidate.toLowerCase() === String(value).toLowerCase());
+  } finally {
+    visiting.delete(key);
+  }
 }
 
 export interface ConnectorConfiguration {
@@ -95,6 +162,8 @@ export interface ConnectorSpecification {
    * is clamped to the strongest level in this list when it runs on this connector.
    */
   supportedQos?: Qos[];
+  /** True if the backend can verify connectivity/authentication of an unsaved configuration. */
+  supportsConnectionTest?: boolean;
   properties: { [name: string]: ConnectorProperty };
 }
 
@@ -103,6 +172,12 @@ export const connectorResolver: ResolveFn<ConnectorConfiguration> = (route) => {
   const identifier = route.paramMap.get('identifier');
   return connectorConfigurationService.getConfiguration(identifier);
 };
+
+export interface ConnectionTestResult {
+  success: boolean;
+  message: string;
+  statusCode?: number;
+}
 
 export interface PollingInterval {
   label: string;

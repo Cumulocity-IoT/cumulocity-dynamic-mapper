@@ -40,6 +40,8 @@ import java.util.concurrent.ExecutionException;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.eclipse.tahu.protobuf.SparkplugBProto;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 import org.mockito.Mock;
@@ -67,6 +69,7 @@ import dynamic.mapper.model.TestContext;
 import dynamic.mapper.model.TestResult;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.model.MappingType;
+import dynamic.mapper.processor.outbound.serializer.SparkPlugBSerializer;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.model.TransformationType;
@@ -101,7 +104,7 @@ class TestControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new TestController(connectorRegistry, c8YAgent, contextService);
+        controller = new TestController(connectorRegistry, c8YAgent, contextService, new SparkPlugBSerializer());
 
         UserCredentials creds = mock(UserCredentials.class);
         when(creds.getTenant()).thenReturn(TENANT);
@@ -162,6 +165,102 @@ class TestControllerTest {
         assertEquals(1, body.getRequests().size());
         assertEquals("record-key-1", body.getKey());
         assertTrue(body.getErrors().isEmpty());
+    }
+
+    @Test
+    void testMapping_encodesJsonPayloadAsProtobufForSparkplugMapping() throws Exception {
+        Mapping mapping = makeInboundMapping();
+        mapping.setMappingType(MappingType.SPARKPLUGB);
+        mapping.setMappingTopicSample("spBv1.0/factory-01/DDATA/edge-node-01/device-01");
+        stubDispatcherResult(ProcessingContext.builder().mapping(mapping).build());
+
+        TestContext ctx = new TestContext();
+        ctx.setMapping(mapping);
+        ctx.setPayload("{\"timestamp\":1735732800000,\"metrics\":[{\"name\":\"Temperature\",\"dataType\":\"Float\",\"value\":23.5}]}");
+        ctx.setSend(false);
+
+        controller.testMapping(ctx);
+
+        ArgumentCaptor<ConnectorMessage> sent = ArgumentCaptor.forClass(ConnectorMessage.class);
+        verify(dispatcher).onTestMessage(sent.capture(), any(Mapping.class));
+        SparkplugBProto.Payload decoded = SparkplugBProto.Payload.parseFrom(sent.getValue().getPayload());
+        assertEquals(1735732800000L, decoded.getTimestamp());
+        assertEquals("Temperature", decoded.getMetrics(0).getName());
+        assertEquals(23.5f, decoded.getMetrics(0).getFloatValue(), 0.0001f);
+    }
+
+    @Test
+    void testMapping_leavesPayloadOfOtherMappingTypesAsText() throws Exception {
+        Mapping mapping = makeInboundMapping();
+        stubDispatcherResult(ProcessingContext.builder().mapping(mapping).build());
+
+        TestContext ctx = new TestContext();
+        ctx.setMapping(mapping);
+        ctx.setPayload("{\"temp\":42}");
+        ctx.setSend(false);
+
+        controller.testMapping(ctx);
+
+        ArgumentCaptor<ConnectorMessage> sent = ArgumentCaptor.forClass(ConnectorMessage.class);
+        verify(dispatcher).onTestMessage(sent.capture(), any(Mapping.class));
+        assertEquals("{\"temp\":42}", new String(sent.getValue().getPayload()));
+    }
+
+    @Test
+    void testMapping_decodesBase64PayloadForAnyPayloadMapping() throws Exception {
+        Mapping mapping = makeInboundMapping();
+        mapping.setMappingType(MappingType.ANY_PAYLOAD);
+        mapping.setTransformationType(TransformationType.SMART_FUNCTION);
+        stubDispatcherResult(ProcessingContext.builder().mapping(mapping).build());
+
+        TestContext ctx = new TestContext();
+        ctx.setMapping(mapping);
+        ctx.setPayload("CAEQAg==");
+        ctx.setSend(false);
+
+        controller.testMapping(ctx);
+
+        ArgumentCaptor<ConnectorMessage> sent = ArgumentCaptor.forClass(ConnectorMessage.class);
+        verify(dispatcher).onTestMessage(sent.capture(), any(Mapping.class));
+        assertEquals(java.util.Arrays.toString(new byte[] { 8, 1, 16, 2 }),
+                java.util.Arrays.toString(sent.getValue().getPayload()));
+    }
+
+    @Test
+    void testMapping_sendsNonBase64PayloadOfAnyPayloadMappingUnchanged() throws Exception {
+        Mapping mapping = makeInboundMapping();
+        mapping.setMappingType(MappingType.ANY_PAYLOAD);
+        mapping.setTransformationType(TransformationType.SMART_FUNCTION);
+        stubDispatcherResult(ProcessingContext.builder().mapping(mapping).build());
+
+        TestContext ctx = new TestContext();
+        ctx.setMapping(mapping);
+        ctx.setPayload("{\"temp\":42}");
+        ctx.setSend(false);
+
+        controller.testMapping(ctx);
+
+        ArgumentCaptor<ConnectorMessage> sent = ArgumentCaptor.forClass(ConnectorMessage.class);
+        verify(dispatcher).onTestMessage(sent.capture(), any(Mapping.class));
+        assertEquals("{\"temp\":42}", new String(sent.getValue().getPayload()));
+    }
+
+    @Test
+    void testMapping_sendsNonJsonSparkplugPayloadUnchanged() throws Exception {
+        Mapping mapping = makeInboundMapping();
+        mapping.setMappingType(MappingType.SPARKPLUGB);
+        stubDispatcherResult(ProcessingContext.builder().mapping(mapping).build());
+
+        TestContext ctx = new TestContext();
+        ctx.setMapping(mapping);
+        ctx.setPayload("not json");
+        ctx.setSend(false);
+
+        controller.testMapping(ctx);
+
+        ArgumentCaptor<ConnectorMessage> sent = ArgumentCaptor.forClass(ConnectorMessage.class);
+        verify(dispatcher).onTestMessage(sent.capture(), any(Mapping.class));
+        assertEquals("not json", new String(sent.getValue().getPayload()));
     }
 
     @Test
@@ -543,6 +642,29 @@ class TestControllerTest {
 
         assertTrue(!result.getSuccess(), "a failure in a later context must not make the test look green");
         assertTrue(result.getErrors().stream().anyMatch(e -> e.contains("second device failed")));
+    }
+
+    @Test
+    void testMapping_requestsAndWarningsOfEveryContextAreReturned() throws Exception {
+        ProcessingContext<Object> first = contextWithExternalId();
+        ProcessingContext<Object> second = contextWithExternalId();
+        first.addRequest(DynamicMapperRequest.builder().api(API.ALARM).build());
+        second.addRequest(DynamicMapperRequest.builder().api(API.EVENT).build());
+        first.getWarnings().add("same");
+        second.getWarnings().add("same");
+        second.getWarnings().add("other");
+        when(connectorRegistry.getClientForTenant(TENANT, TestClient.TEST_CONNECTOR_IDENTIFIER)).thenReturn(connectorClient);
+        when(connectorClient.getDispatcher()).thenReturn(dispatcher);
+        when(connectorClient.getConnectorIdentifier()).thenReturn(TestClient.TEST_CONNECTOR_IDENTIFIER);
+        ProcessingResultWrapper wrapper = ProcessingResultWrapper.builder()
+                .processingResult(CompletableFuture.completedFuture(List.of((ProcessingContext) first, (ProcessingContext) second)))
+                .build();
+        org.mockito.Mockito.doReturn(wrapper).when(dispatcher).onTestMessage(any(ConnectorMessage.class), any(Mapping.class));
+
+        TestResult result = controller.testMapping(dryRunContext()).getBody();
+
+        assertEquals(2, result.getRequests().size());
+        assertEquals(List.of("same", "other"), result.getWarnings());
     }
 
     @Test

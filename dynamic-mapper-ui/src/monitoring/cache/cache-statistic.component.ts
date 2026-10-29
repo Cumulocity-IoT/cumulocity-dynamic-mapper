@@ -34,7 +34,7 @@ import {
 import { KpiDetails, MonitoringService } from '../shared/monitoring.service';
 import { ActivatedRoute } from '@angular/router';
 import { gettext } from '@c8y/ngx-components/gettext';
-import { KpListComponent } from './kpi/kpi-list.component';
+import { KpiListComponent } from './kpi/kpi-list.component';
 import { HttpStatusCode } from '@angular/common/http';
 const CACHE_IDS_BY_DOMAIN: Record<string, string> = {
   inboundIdCache: 'INBOUND_ID_CACHE',
@@ -48,7 +48,7 @@ const CACHE_IDS_BY_DOMAIN: Record<string, string> = {
   styleUrls: ['../../shared/mapping/mapping.style.css'],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
-  imports: [CoreModule, CommonModule, KpListComponent]
+  imports: [CoreModule, CommonModule, KpiListComponent]
 })
 export class CacheStatisticComponent implements OnInit, OnDestroy {
   // Modern Angular dependency injection

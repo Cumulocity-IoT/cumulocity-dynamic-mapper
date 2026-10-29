@@ -21,6 +21,7 @@
 
 package dynamic.mapper.controller;
 
+import dynamic.mapper.util.MappingLogContext;
 import java.util.List;
 import java.util.Map;
 
@@ -284,8 +285,9 @@ public class MappingController {
             // Handle post-creation operations
             handleMappingCreation(tenant, createdMapping);
             
-            log.info("{} - Successfully created mapping: {} [{}]", 
-                tenant, createdMapping.getName(), createdMapping.getId());
+            MappingLogContext.run(createdMapping.getIdentifier(), () -> log.info(
+                "{} - Successfully created mapping: {} [{}]",
+                tenant, createdMapping.getName(), createdMapping.getId()));
             
             return ResponseEntity.status(HttpStatus.CREATED).body(createdMapping);
             
@@ -363,6 +365,17 @@ public class MappingController {
             
             // Ensure the ID matches
             mapping.setId(id);
+
+            // Version bookkeeping is owned by the publish/activate flow, never by this endpoint:
+            // a client-supplied version would desynchronise the line from its published versions
+            // (active-version protection then guards the wrong label), and a stale draftDirty
+            // would hide or invent unpublished edits.
+            Mapping stored = mappingService.getMapping(tenant, id);
+            if (stored != null) {
+                mapping.setVersion(stored.getVersion());
+                mapping.setVersionNote(stored.getVersionNote());
+                mapping.setDraftDirty(stored.isDraftDirty());
+            }
             
             // Update the mapping
             Mapping updatedMapping = mappingService.updateMapping(tenant, mapping, false, false);
@@ -370,8 +383,9 @@ public class MappingController {
             // Handle post-update operations
             handleMappingUpdate(tenant, updatedMapping);
             
-            log.info("{} - Successfully updated mapping: {} [{}]", 
-                tenant, updatedMapping.getName(), updatedMapping.getId());
+            MappingLogContext.run(updatedMapping.getIdentifier(), () -> log.info(
+                "{} - Successfully updated mapping: {} [{}]",
+                tenant, updatedMapping.getName(), updatedMapping.getId()));
             
             return ResponseEntity.ok(updatedMapping);
             
@@ -740,8 +754,9 @@ public class MappingController {
             // Handle post-deletion operations (cleanup subscriptions)
             handleMappingDeletion(tenant, deletedMapping);
             
-            log.info("{} - Successfully deleted mapping: {} [{}]", 
-                tenant, deletedMapping.getName(), deletedMapping.getId());
+            MappingLogContext.run(deletedMapping.getIdentifier(), () -> log.info(
+                "{} - Successfully deleted mapping: {} [{}]",
+                tenant, deletedMapping.getName(), deletedMapping.getId()));
             
             return ResponseEntity.ok(id);
             

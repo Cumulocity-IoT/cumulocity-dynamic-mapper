@@ -245,15 +245,19 @@ public class MappingStatusService {
      * threshold and be deactivated. The threshold is meant to catch a <em>persistently</em>
      * broken mapping.
      *
-     * <p>Deliberately cheap on the hot path: mappings that did not opt into the check
-     * ({@code maxFailureCount == 0}, the default) and mappings with no failures pending cost a
-     * map lookup and a volatile read, and never take the status monitor.
+     * <p>This also applies to mappings that did not opt into the check
+     * ({@code maxFailureCount == 0}, the default): the streak is still counted, and the statistics page shows it as
+     * the mapping's health ("Failing (n in a row)"), so it has to end with the next clean message or a single old
+     * error would show as failing forever.
+     *
+     * <p>Cheap on the hot path: a mapping with no failures pending costs a map lookup and a volatile read, and never
+     * takes the status monitor.
      *
      * @param tenant the tenant identifier
      * @param mapping the mapping that just processed a message successfully
      */
     public void resetFailureCountOnSuccess(String tenant, Mapping mapping) {
-        if (tenant == null || mapping == null || mapping.getMaxFailureCount() <= 0) {
+        if (tenant == null || mapping == null) {
             return;
         }
         MappingStatus status = getStatusMap(tenant).get(mapping.getIdentifier());

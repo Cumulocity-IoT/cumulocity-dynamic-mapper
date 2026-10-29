@@ -24,7 +24,7 @@ import { BottomDrawerRef, BottomDrawerService } from '@c8y/ngx-components';
 import { MappingTypeDrawerComponent } from './mapping-type-drawer.component';
 import { SharedService, Direction, MappingType, TransformationType } from '../../shared';
 import { ExtensionService } from '../../extension';
-import { AIAgentService } from '../core/ai-agent.service';
+import { AiAgentService } from '../core/ai-agent.service';
 import { ServiceConfiguration } from '../../configuration';
 
 // ---------------------------------------------------------------------------
@@ -55,7 +55,7 @@ async function createComponent(direction: Direction): Promise<MappingTypeDrawerC
 describe('MappingTypeDrawerComponent', () => {
   let mockSharedService: jasmine.SpyObj<SharedService>;
   let mockExtensionService: jasmine.SpyObj<ExtensionService>;
-  let mockAIAgentService: jasmine.SpyObj<AIAgentService>;
+  let mockAIAgentService: jasmine.SpyObj<AiAgentService>;
   let mockDrawerRef: jasmine.SpyObj<BottomDrawerRef<any>>;
 
   beforeEach(() => {
@@ -69,8 +69,9 @@ describe('MappingTypeDrawerComponent', () => {
     mockExtensionService = jasmine.createSpyObj<ExtensionService>('ExtensionService', ['getProcessorExtensions']);
     mockExtensionService.getProcessorExtensions.and.resolveTo(new Map());
 
-    mockAIAgentService = jasmine.createSpyObj<AIAgentService>('AIAgentService', ['getAIAgents']);
+    mockAIAgentService = jasmine.createSpyObj<AiAgentService>('AiAgentService', ['getAIAgents', 'getAISettings']);
     mockAIAgentService.getAIAgents.and.resolveTo([]);
+    mockAIAgentService.getAISettings.and.resolveTo({ killSwitch: false, telemetryOptOut: false });
 
     mockDrawerRef = jasmine.createSpyObj<BottomDrawerRef<any>>('BottomDrawerRef', ['close']);
     mockDrawerRef.close.and.resolveTo();
@@ -80,7 +81,7 @@ describe('MappingTypeDrawerComponent', () => {
       providers: [
         { provide: SharedService, useValue: mockSharedService },
         { provide: ExtensionService, useValue: mockExtensionService },
-        { provide: AIAgentService, useValue: mockAIAgentService },
+        { provide: AiAgentService, useValue: mockAIAgentService },
         { provide: BottomDrawerRef, useValue: mockDrawerRef },
         { provide: BottomDrawerService, useValue: jasmine.createSpyObj('BottomDrawerService', ['openDrawer']) }
       ]
@@ -184,6 +185,40 @@ describe('MappingTypeDrawerComponent', () => {
       component.onContinue();
 
       expect(mockDrawerRef.close).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('code template preselection', () => {
+    const codeTemplate = (id: string, defaultTemplate: boolean) =>
+      ({ id, name: id, code: 'Y29kZQ==', defaultTemplate, samplePayload: `{"from":"${id}"}` }) as any;
+
+    it('preselects the template flagged as default, not just the first one in the list', async () => {
+      mockAIAgentService.getAIAgents.and.resolveTo([]);
+      mockSharedService.getCodeTemplatesByType.and.resolveTo([
+        codeTemplate('stateful-example', false),
+        codeTemplate('the-default', true)
+      ]);
+
+      const component = await createComponent(Direction.INBOUND);
+      component.onContinue();
+      const result = await component.result;
+
+      expect(component.formGroup.get('codeTemplate')?.value?.id).toBe('the-default');
+      expect((result as any).codeTemplate.id).toBe('the-default');
+      // the chosen template travels with its sample, so the new mapping can be seeded from it
+      expect((result as any).codeTemplate.samplePayload).toBe('{"from":"the-default"}');
+    });
+
+    it('falls back to the first template when none is flagged as default', async () => {
+      mockAIAgentService.getAIAgents.and.resolveTo([]);
+      mockSharedService.getCodeTemplatesByType.and.resolveTo([
+        codeTemplate('first', false),
+        codeTemplate('second', false)
+      ]);
+
+      const component = await createComponent(Direction.INBOUND);
+
+      expect(component.formGroup.get('codeTemplate')?.value?.id).toBe('first');
     });
   });
 

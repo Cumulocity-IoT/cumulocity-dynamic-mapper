@@ -80,7 +80,7 @@ Follows the existing `connector/` and `notification/` precedent.
 | New package | Contents |
 |-------------|----------|
 | [`explorer/`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/explorer/) | `ExplorerController`, `ExplorerService`, `ExplorerMessage`, `ExplorerSession`, `StartSessionRequest` (extracted from the controller) |
-| [`ai/`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/ai/) | `AIAgentService`, `AIAgent`, `AIAgentRef`, `MCPServer`, `MCPServers`, `MCPUsage` |
+| [`ai/`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/ai/) | `AiAgentService`, `AIAgent`, `AIAgentRef`, `MCPServer`, `MCPServers`, `MCPUsage` |
 
 `model/` is down from 49 to 45 files.
 
@@ -310,7 +310,7 @@ Most of the 161 changed paths are mechanical import rewrites. The parts that nee
 | **High** | `AbstractFlowResultProcessor`, `AbstractExtensibleResultProcessor` + their 4 subclasses | Real logic change: `ProcessingState` parameter removed, state mutation redirected to `context` |
 | **High** | `AbstractExtensibleResultProcessor.syncOutputToContext()` | Behavior change — now merges errors and logs |
 | Medium | `docs/backend/conventions.md`, `docs/feature/mapping-processing-inbound.md` | Guidance was previously wrong (§5) |
-| Medium | `ai/AIAgentRef.java` + `AIAgentService:160` | The only rename |
+| Medium | `ai/AIAgentRef.java` + `AiAgentService:160` | The only rename |
 | Low | Everything else | `git mv` + import rewrite; the compiler covers it |
 
 `git diff -M` renders the moves as renames, which makes the diff far smaller.

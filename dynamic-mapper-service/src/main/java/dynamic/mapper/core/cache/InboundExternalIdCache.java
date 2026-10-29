@@ -21,59 +21,40 @@
 
 package dynamic.mapper.core.cache;
 
-import java.time.Duration;
-
 import com.cumulocity.model.ID;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 
 /**
  * Per-tenant LRU cache resolving an external {@link ID} to its
  * {@link ExternalIDRepresentation} (and thereby the Cumulocity source id).
- *
- * <p>Entries also expire {@code ttl} after being written: Notification 2.0 cannot report
- * external-ID changes (e.g. a replaced device, or an external ID removed on its own), so the
- * TTL bounds how long such a stale entry can survive.
  */
-public class InboundExternalIdCache extends MetricLRUCache<ID, ExpiringEntry<ExternalIDRepresentation>> {
+public class InboundExternalIdCache extends MetricLRUCache<ID, ExternalIDRepresentation> {
 
     private static final String METRIC_NAME = "dynmapper_inbound_identity_cache_size";
 
-    private final Duration ttl;
-
+    // Constructor with default cache size
     public InboundExternalIdCache(String tenant) {
         this(1000, tenant); // Default size of 1000
     }
 
+    // Constructor with custom cache size
     public InboundExternalIdCache(int cacheSize, String tenant) {
-        this(cacheSize, tenant, ExpiringEntry.DEFAULT_TTL);
-    }
-
-    public InboundExternalIdCache(int cacheSize, String tenant, Duration ttl) {
         super(cacheSize, tenant, METRIC_NAME);
-        this.ttl = ttl;
     }
 
-    // Method to get ID by external ID; expired entries are dropped and reported as a miss
+    // Method to get ID by external ID
     public ExternalIDRepresentation getIdByExternalId(ID key) {
-        ExpiringEntry<ExternalIDRepresentation> entry = cache.get(key);
-        if (entry == null) {
-            return null;
-        }
-        if (entry.isExpired()) {
-            cache.remove(key, entry);
-            return null;
-        }
-        return entry.value();
+        return getEntry(key);
     }
 
     // Method to put a new entry in the cache
     public void putIdForExternalId(ID key, ExternalIDRepresentation id) {
-        putEntry(key, ExpiringEntry.of(id, ttl));
+        putEntry(key, id);
     }
 
     // Method to remove an entry from the cache
     public void removeIdForExternalId(ID key) {
-        cache.remove(key);
+        removeEntry(key);
     }
 
     /**
@@ -85,12 +66,10 @@ public class InboundExternalIdCache extends MetricLRUCache<ID, ExpiringEntry<Ext
             return;
         }
         synchronized (cache) {
-            cache.values().removeIf(entry -> {
-                ExternalIDRepresentation rep = entry.value();
-                return rep != null && rep.getManagedObject() != null
-                        && rep.getManagedObject().getId() != null
-                        && sourceId.equals(rep.getManagedObject().getId().getValue());
-            });
+            cache.values().removeIf(rep -> rep != null && rep.getManagedObject() != null
+                    && rep.getManagedObject().getId() != null
+                    && sourceId.equals(rep.getManagedObject().getId().getValue()));
+            pruneWriteTimes();
         }
     }
 }

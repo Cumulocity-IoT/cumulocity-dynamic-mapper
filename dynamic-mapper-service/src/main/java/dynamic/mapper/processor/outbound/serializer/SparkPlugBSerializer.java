@@ -20,11 +20,16 @@
  */
 package dynamic.mapper.processor.outbound.serializer;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.eclipse.tahu.protobuf.SparkplugBProto;
 import org.springframework.stereotype.Component;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -106,6 +111,44 @@ public class SparkPlugBSerializer {
         }
 
         return payloadBuilder.build().toByteArray();
+    }
+
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
+
+    /**
+     * Serialize a SparkPlug B payload written as JSON text — the form a person types into the mapping
+     * test tab, where a binary protobuf message cannot be entered. The JSON has the shape documented
+     * on this class; a metric's type may be given as {@code type} or {@code dataType}, the name the
+     * decoded payload uses.
+     *
+     * @param json JSON text of an object with optional {@code timestamp}, {@code seq} and {@code metrics}
+     * @return SparkPlug B protobuf binary representation
+     * @throws IllegalArgumentException if the text is not a JSON object
+     */
+    public byte[] serializeJson(String json) {
+        Map<String, Object> payloadMap;
+        try {
+            payloadMap = JSON_MAPPER.readValue(json, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            throw new IllegalArgumentException("SparkPlugB test payload is not a JSON object: " + e.getMessage(), e);
+        }
+        if (payloadMap == null) {
+            throw new IllegalArgumentException("SparkPlugB test payload is not a JSON object");
+        }
+        if (payloadMap.get("metrics") instanceof List<?> metrics) {
+            List<Object> normalized = new ArrayList<>();
+            for (Object metric : metrics) {
+                if (metric instanceof Map<?, ?> m && !m.containsKey("type") && m.get("dataType") != null) {
+                    Map<Object, Object> copy = new HashMap<>(m);
+                    copy.put("type", m.get("dataType"));
+                    normalized.add(copy);
+                } else {
+                    normalized.add(metric);
+                }
+            }
+            payloadMap.put("metrics", normalized);
+        }
+        return serialize(payloadMap);
     }
 
     // ── Private helpers ────────────────────────────────────────────────────────

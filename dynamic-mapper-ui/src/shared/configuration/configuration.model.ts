@@ -52,9 +52,39 @@ export interface ServiceConfiguration {
   externalIdBinding?: boolean;
   explorerSessionTTLMinutes?: number;
   engineRotationThreshold?: number;
-  engineMaxAgeMinutes?: number;
   contextPoolSize?: number;
+  serviceLogs?: ServiceLogsConfiguration;
 }
+
+/**
+ * Settings of the service log (Monitoring > Service logs) for this tenant. Every value has a default in the service; a value
+ * left out keeps it, and a value out of range is clamped by the service. The defaults here only fill the form.
+ */
+export interface ServiceLogsConfiguration {
+  enabled?: boolean;
+  minLevel?: string;
+  intervalMs?: number;
+  maxLinesPerRun?: number;
+  maxChunkBytes?: number;
+  maxRecordBytes?: number;
+  maxBufferedRecords?: number;
+  retentionHours?: number;
+  retentionEnabled?: boolean;
+  retentionIntervalMs?: number;
+}
+
+export const DEFAULT_SERVICE_LOGS: Required<ServiceLogsConfiguration> = {
+  enabled: true,
+  minLevel: 'INFO',
+  intervalMs: 30000,
+  maxLinesPerRun: 500,
+  maxChunkBytes: 65536,
+  maxRecordBytes: 8192,
+  maxBufferedRecords: 2000,
+  retentionHours: 24,
+  retentionEnabled: true,
+  retentionIntervalMs: 3600000
+};
 
 export enum TemplateType {
   INBOUND_SMART_FUNCTION = "INBOUND_SMART_FUNCTION",
@@ -77,6 +107,13 @@ export interface CodeTemplate {
   internal: boolean;
   readonly: boolean;
   defaultTemplate: boolean;
+  /**
+   * A message the template is written for (JSON text), declared in the template header as
+   * `@samplePayload`. Seeds the sample payload of a new mapping created from this template.
+   */
+  samplePayload?: string;
+  /** A topic matching {@link samplePayload} (`@sampleTopic`). */
+  sampleTopic?: string;
 }
 
 export interface CodeTemplateMap {

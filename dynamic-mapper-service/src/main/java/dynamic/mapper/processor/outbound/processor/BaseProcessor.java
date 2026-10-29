@@ -27,6 +27,7 @@ import dynamic.mapper.model.Mapping;
 import dynamic.mapper.processor.CommonProcessor;
 import dynamic.mapper.processor.model.C8YMessage;
 import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.util.PayloadCopy;
 import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 
@@ -53,7 +54,8 @@ public abstract class BaseProcessor extends CommonProcessor {
     protected ProcessingContext<Object> createProcessingContextAsObject(String tenant, Mapping mapping,
             C8YMessage message, ServiceConfiguration serviceConfiguration, Boolean testing) {
         return ProcessingContext.<Object>builder()
-                .payload(message.getParsedPayload())
+                // Its own copy: the mappings of one notification run in parallel and enrichment writes into the payload.
+                .payload(PayloadCopy.deepCopy(message.getParsedPayload()))
                 .topic(mapping.getPublishTopic())
                 .rawPayload(message.getPayload())
                 .mappingType(mapping.getMappingType())

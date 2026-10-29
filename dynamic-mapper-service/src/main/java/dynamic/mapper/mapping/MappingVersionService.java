@@ -108,6 +108,9 @@ public class MappingVersionService {
             throw new IllegalArgumentException(
                     String.format("Tenant %s - Invalid semver '%s': expected MAJOR.MINOR.PATCH", tenant, version));
         }
+        // Canonical form: " 1.0.0" and "01.0.0" are the same version as "1.0.0"; without this the
+        // string-based uniqueness check would let semantically duplicate labels through.
+        final String label = SemVer.parse(version).toString();
 
         // Validate the snapshot - publish is the commitment point (a draft may be incomplete).
         List<ValidationIssue> issues = mappingValidator.validate(tenant, mapping, mapping.getId());
@@ -121,21 +124,21 @@ public class MappingVersionService {
             // Uniqueness check: each version label is immutable once published (semver contract).
             boolean alreadyExists = existing.stream()
                     .filter(v -> !v.isDraft())
-                    .anyMatch(v -> version.equals(v.getVersion()));
+                    .anyMatch(v -> label.equals(v.getVersion()));
             if (alreadyExists) {
                 throw new IllegalArgumentException(
                         String.format("Tenant %s - Version %s already exists for mapping line %s",
-                                tenant, version, identifier));
+                                tenant, label, identifier));
             }
 
             Mapping snapshot = copyOf(mapping);
-            snapshot.setVersion(version);
+            snapshot.setVersion(label);
             snapshot.setVersionNote(note);
             snapshot.setDraftDirty(false);
 
             MappingVersion mv = MappingVersion.builder()
                     .identifier(identifier)
-                    .version(version)
+                    .version(label)
                     .snapshot(snapshot)
                     .isDraft(false)
                     .createdAt(System.currentTimeMillis())
@@ -144,7 +147,7 @@ public class MappingVersionService {
                     .build();
 
             MappingVersion persisted = persistNewVersion(tenant, mv);
-            log.info("{} - Published version {} of mapping line {} [{}]", tenant, version,
+            log.info("{} - Published version {} of mapping line {} [{}]", tenant, label,
                     identifier, persisted.getId());
 
             // Prune using the list we already loaded plus the just-persisted version,
@@ -165,15 +168,16 @@ public class MappingVersionService {
      */
     public String[] suggestNextVersions(String tenant, String identifier) {
         return subscriptionsService.callForTenant(tenant, () -> {
-            SemVer highest = loadVersions(tenant, identifier).stream()
+            Optional<SemVer> highestPublished = loadVersions(tenant, identifier).stream()
                     .filter(v -> !v.isDraft() && SemVer.isValid(v.getVersion()))
                     .map(v -> SemVer.parse(v.getVersion()))
-                    .max(Comparator.naturalOrder())
-                    .orElse(new SemVer(0, 9, 9)); // so patch → 1.0.0, minor → 0.10.0 → normalised
-            // When no versions exist at all, suggest starting at 1.0.0
-            if (highest.equals(new SemVer(0, 9, 9))) {
+                    .max(Comparator.naturalOrder());
+            // When no versions exist at all, suggest starting at 1.0.0. (Absence is tested directly:
+            // an in-band sentinel made a genuine 0.9.9 indistinguishable from "nothing published".)
+            if (highestPublished.isEmpty()) {
                 return new String[] { "1.0.0", "1.0.0", "1.0.0" };
             }
+            SemVer highest = highestPublished.get();
             return new String[] {
                 highest.bumpPatch().toString(),
                 highest.bumpMinor().toString(),
@@ -372,7 +376,7 @@ public class MappingVersionService {
 
     /**
      * Prunes a mapping line down to the configured retention limit, deleting the
-     * oldest published versions first (by publish date). The active version is
+     * lowest published versions first (by semver). The active version is
      * never pruned, even if it falls outside the retention window (FR-19).
      */
     public void pruneVersions(String tenant, String identifier, String activeVersion) {
@@ -388,7 +392,10 @@ public class MappingVersionService {
         int retention = retention(tenant);
         List<MappingVersion> published = loaded.stream()
                 .filter(v -> !v.isDraft())
-                .sorted(Comparator.comparingLong(MappingVersion::getCreatedAt))
+                // Newest = highest semver (what the listing shows), publish time only breaks ties.
+                // Ordering by createdAt alone made a late 1.0.5 hotfix push out 2.0.0.
+                .sorted(Comparator.comparing(MappingVersion::getVersion, SemVer.STRING_COMPARATOR)
+                        .thenComparingLong(MappingVersion::getCreatedAt))
                 .collect(Collectors.toList());
 
         if (published.size() <= retention) {
@@ -461,10 +468,36 @@ public class MappingVersionService {
         });
     }
 
+    /**
+     * Read-only counterpart of {@link #ensureBackfilled}: the record a legacy line <em>would</em>
+     * get, built from its running configuration but never persisted (its {@code id} is null).
+     * Lets listing show a history for a pre-versioning mapping without a read mutating the
+     * inventory; the real record is created by the first publish or activation.
+     *
+     * @return the virtual version, or {@code null} if the mapping has no identifier
+     */
+    public MappingVersion previewBackfill(Mapping runnable) {
+        if (runnable.getIdentifier() == null) {
+            return null;
+        }
+        String ver = resolveBackfillVersion(runnable.getVersion());
+        Mapping snapshot = copyOf(runnable);
+        snapshot.setVersion(ver);
+        return MappingVersion.builder()
+                .identifier(runnable.getIdentifier())
+                .version(ver)
+                .snapshot(snapshot)
+                .isDraft(false)
+                .createdAt(runnable.getLastUpdate())
+                .createdBy("system")
+                .note(runnable.getVersionNote())
+                .build();
+    }
+
     /** Derives a valid semver string from a raw version stored on an older mapping. */
     private static String resolveBackfillVersion(String raw) {
         if (SemVer.isValid(raw)) {
-            return raw;
+            return SemVer.parse(raw).toString();
         }
         if (raw != null) {
             try {

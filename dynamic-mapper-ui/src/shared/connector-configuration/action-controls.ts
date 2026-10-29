@@ -23,8 +23,8 @@ import { ActionControlConfig, ActionVisibilityRule } from './types'
 import { LabelTaggedRendererComponent } from '../component/renderer/label-tagged.renderer.component';
 import { LabelRendererComponent } from '../component/renderer/label.renderer.component';
 import { ConnectorStatusRendererComponent } from './renderer/connector-status.renderer.component';
-import { ConnectorStatusEnabledRendererComponent } from './renderer/status-enabled-renderer.component';
-import { ConnectorDetailCellRendererComponent } from './renderer/connector-link.renderer.component';
+import { ConnectorStatusEnabledRendererComponent } from './renderer/connector-status-enabled.renderer.component';
+import { ConnectorDetailCellRendererComponent } from './renderer/connector-detail-cell.renderer.component';
 
 export const ACTION_CONTROLS: ActionControlConfig[] = [
   // Edit action for admin users on disabled connectors

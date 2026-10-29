@@ -50,7 +50,7 @@
     [isActive]="activeTabIndex === TAB_TEST_MAPPING" (onSelect)="onTabSelected(TAB_TEST_MAPPING)" data-cy="dm-unified-editor-tab-testing"></c8y-tab>
   }
 
-  <!-- Tab content – [hidden] keeps all components alive so editors/forms retain state -->
+  <!-- Tab content – only the active tab is rendered (@if); tab components are destroyed on switch, so state lives on this component and is synced in onTabSelected() -->
   <div class="card-block flex-grow overflow-auto">
 
     <!-- Deprecation notice for legacy SUBSTITUTION_AS_CODE mappings -->
@@ -98,14 +98,18 @@
       (targetTemplateChange)="targetTemplate = $event">
       @if (stepperViewModel?.showExtensionSelectors) {
       <ng-container extensionSource>
-        <ng-container *ngTemplateOutlet="extensionTemplateSource; context: { form: templateForm }">
-        </ng-container>
+        <d11r-mapping-extension-selector side="source" dataCyPrefix="dm-unified-editor" [form]="templateForm" [mapping]="mapping"
+            [showSelectors]="stepperViewModel.showExtensionSelectorsSource" [showInternalNote]="stepperViewModel.showInternalExtensionNote"
+            [isLoading]="isLoadingExtensions" [hasParameter]="hasExtensionParameter" [extensionItems]="extensionItems"
+            [extensionEvents]="extensionEventItems$"></d11r-mapping-extension-selector>
       </ng-container>
       }
       @if (stepperViewModel?.showExtensionSelectors) {
       <ng-container extensionTarget>
-        <ng-container *ngTemplateOutlet="extensionTemplateTarget; context: { form: templateForm }">
-        </ng-container>
+        <d11r-mapping-extension-selector side="target" dataCyPrefix="dm-unified-editor" [form]="templateForm" [mapping]="mapping"
+            [showSelectors]="stepperViewModel.showExtensionSelectorsTarget" [showInternalNote]="stepperViewModel.showInternalExtensionNote"
+            [isLoading]="isLoadingExtensions" [hasParameter]="hasExtensionParameter" [extensionItems]="extensionItems"
+            [extensionEvents]="extensionEventItems$"></d11r-mapping-extension-selector>
       </ng-container>
       }
     </d11r-mapping-template-step>
@@ -115,7 +119,7 @@
     @if (activeTabIndex === TAB_DEFINE_TRANSFORMATION && isTabVisible(TAB_DEFINE_TRANSFORMATION)) {
     <d11r-mapping-transformation-step #transformationStep [mapping]="mapping" [stepperConfiguration]="stepperConfiguration"
       [sourceTemplate]="sourceTemplate" [targetTemplate]="targetTemplate" [sourceSystem]="sourceSystem"
-      [targetSystem]="targetSystem" [feature]="feature" [aiAgentDeployed]="aiAgentDeployed" [aiAgent]="aiAgent"
+      [targetSystem]="targetSystem" [feature]="feature" [aiAgentDeployed]="aiAgentDeployed" [aiCapabilitiesDisabled]="aiCapabilitiesDisabled" [aiAgent]="aiAgent"
       [schemaSource]="schemaSource" [schemaTarget]="schemaTarget" [mappingCode]="mappingCode"
       [codeEditorLabel]="codeEditorLabel" [codeEditorHelp]="codeEditorHelp" [isBeforeSubstitutionStep]="currentStepIndex < TAB_DEFINE_TRANSFORMATION"
       (mappingCodeChange)="mappingCode = $event">
@@ -161,9 +165,12 @@
       <button type="button" class="btn btn-default" (click)="onCancel()" translate data-cy="dm-unified-editor-cancel">
         Close
       </button>
+      <!-- Only blockers the user cannot fix from inside the editor disable Save. A missing connector or
+           topic does not: onCommitButton() reports it and jumps to the right tab, which is far easier to
+           discover than a silently greyed-out button. -->
       <button type="button" class="btn btn-primary" (click)="onCommitButton()"
-        [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.editorMode === EditorMode.READ_ONLY || mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE || (isButtonDisabled$ | async) || (stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim())"
-        [title]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) ? ('Requires the Mapping Admin or Mapping Create role.' | translate) : mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : ((isButtonDisabled$ | async) ? ('Select at least one connector before saving.' | translate) : ((stepperConfiguration.direction === Direction.INBOUND && !mapping.mappingTopic?.trim()) ? ('Mapping Topic is required.' | translate) : ''))"
+        [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.readOnly || mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE"
+        [title]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) ? ('Requires the Mapping Admin or Mapping Create role.' | translate) : mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : ''"
         translate data-cy="dm-unified-editor-save">
         Save
       </button>
@@ -177,81 +184,9 @@
 
 <!-- Extension selector ng-templates (same as stepper) -->
 
-<ng-template #extensionTemplateSource let-form="form">
-  @if (stepperViewModel?.showExtensionSelectorsSource) {
-  <div [formGroup]="form">
-    <div class="form-group p-b-8"
-      [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
-      <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
-      <c8y-select [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
-        aria-label="Extension Name"></c8y-select>
-      @if (form.get('extensionName')?.invalid && form.get('extensionName')?.touched) {
-      <span class="help-block"><small translate>Extension name is required.</small></span>
-      }
-    </div>
-    <div class="form-group" [class.has-error]="form.get('eventName')?.invalid && form.get('eventName')?.touched">
-      <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
-      <c8y-select [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true" aria-label="Event Name">
-      </c8y-select>
-      @if (form.get('eventName')?.invalid && form.get('eventName')?.touched) {
-      <span class="help-block"><small translate>Event name is required.</small></span>
-      }
-    </div>
-    @if (hasExtensionParameter) {
-    <div class="form-group">
-      <label translate for="extensionParameterSource">Extension Parameter (YAML)</label>
-      <textarea id="extensionParameterSource" class="form-control font-smaller font-monospace" formControlName="extensionParameter" rows="6"
-        placeholder="parameter:&#10;  key: value">
-        </textarea>
-      <small class="text-muted" translate>Optional YAML parameter passed to the extension.</small>
-    </div>
-    }
-  </div>
-  }
-  @if (stepperViewModel?.showInternalExtensionNote) {
-  <div class="p-t-48">
-    <small class="text-muted">{{ 'No template to edit — the payload structure comes from the Protobuf schema in the selected extension.' | translate }}</small>
-  </div>
-  }
-</ng-template>
 
-<ng-template #extensionTemplateTarget let-form="form">
-  @if (stepperViewModel?.showExtensionSelectorsTarget) {
-  <div [formGroup]="form">
-    <div class="form-group p-b-8"
-      [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
-      <label translate>Extensions for {{ MappingTypeLabels[mapping.mappingType] }}</label>
-      <c8y-select [items]="extensionItems" formControlName="extensionName" [filterItems]="true"
-        aria-label="Extension Name"></c8y-select>
-      @if (form.get('extensionName')?.invalid && form.get('extensionName')?.touched) {
-      <span class="help-block"><small translate>Extension name is required.</small></span>
-      }
-    </div>
-    <div class="form-group" [class.has-error]="form.get('eventName')?.invalid && form.get('eventName')?.touched">
-      <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
-      <c8y-select [items]="extensionEventItems$ | async" formControlName="eventName" [filterItems]="true" aria-label="Event Name">
-      </c8y-select>
-      @if (form.get('eventName')?.invalid && form.get('eventName')?.touched) {
-      <span class="help-block"><small translate>Event name is required.</small></span>
-      }
-    </div>
-    @if (hasExtensionParameter) {
-    <div class="form-group">
-      <label translate for="extensionParameterTarget">Extension Parameter (YAML)</label>
-      <textarea id="extensionParameterTarget" class="form-control font-smaller font-monospace" formControlName="extensionParameter" rows="6"
-        placeholder="parameter:&#10;  key: value">
-        </textarea>
-      <small class="text-muted" translate>Optional YAML parameter passed to the extension.</small>
-    </div>
-    }
-  </div>
-  }
-  @if (stepperViewModel?.showInternalExtensionNote) {
-  <div class="p-t-48">
-    <small class="text-muted">{{ 'No template to edit — the payload structure comes from the Protobuf schema in the selected extension.' | translate }}</small>
-  </div>
-  }
-</ng-template>
+
+
 
 <ng-template #extensionTemplateSourceGraals let-form="form">
   <div class="form-group p-b-8 fit-h d-col">
@@ -272,13 +207,15 @@
         <button type="button" name="generateSubstitution" class="btn btn-ai btn-sm"
           data-cy="dm-unified-editor-generate-with-ai"
           (click)="openGenerateSubstitutionDrawer()"
-          title="{{ (stepperConfiguration.editorMode === EditorMode.UPDATE ? 'Review / Refine with AI' : 'Generate with AI') | translate }}"
-          [disabled]="!stepperViewModel?.config.showEditorSource || stepperViewModel?.config.editorMode === EditorMode.READ_ONLY || !aiAgentDeployed">
-          <span>{{ stepperConfiguration.editorMode === EditorMode.UPDATE ? 'Review / Refine with AI' : 'Generate with AI' }}</span>
+          title="{{ (stepperConfiguration.persistence === 'draft' ? 'Review / Refine with AI' : 'Generate with AI') | translate }}"
+          [disabled]="!stepperViewModel?.config.showEditorSource || stepperViewModel?.config.readOnly || !aiAgentDeployed">
+          <span>{{ stepperConfiguration.persistence === 'draft' ? 'Review / Refine with AI' : 'Generate with AI' }}</span>
         </button>
         @if (!aiAgentDeployed) {
         <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
-          popover="{{'AI Assistant is disabled if AI Agent is not deployed in this tenant or no agent is defined.' | translate}}"
+          [popover]="(aiCapabilitiesDisabled
+            ? 'AI capabilities are disabled in this tenant.'
+            : 'AI Assistant is disabled if AI Agent is not deployed in this tenant or no agent is defined.') | translate"
           placement="right" container="body" triggers="focus" type="button"></button>
         }
       </div>

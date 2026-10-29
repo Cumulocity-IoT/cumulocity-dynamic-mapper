@@ -111,8 +111,8 @@ class TenantRegistryIsolationTest {
     }
 
     @Test
-    @DisplayName("clearing a tenant also reclaims its per-ID locks")
-    void clearReclaimsLocks() {
+    @DisplayName("per-ID locks are striped, so clearing a tenant never swaps a lock a thread may hold")
+    void clearKeepsLocksStable() {
         String keyA = cacheKey(TENANT_A, "c8y_Serial", "a1");
         String keyB = cacheKey(TENANT_B, "c8y_Serial", "b1");
         Object lockA = registry.getOrCreateExternalIdLock(keyA);
@@ -120,12 +120,9 @@ class TenantRegistryIsolationTest {
 
         registry.clearExternalIdCache(TENANT_A);
 
-        // A fresh monitor for A proves the old one was dropped rather than accumulating forever;
-        // B's must be the identical instance, otherwise an in-flight double-check lock would break.
-        assertNotSame(lockA, registry.getOrCreateExternalIdLock(keyA),
-                "the tenant's lock must be reclaimed, not leaked");
-        assertSame(lockB, registry.getOrCreateExternalIdLock(keyB),
-                "another tenant's lock must survive");
+        assertSame(lockA, registry.getOrCreateExternalIdLock(keyA),
+                "a lock must never be replaced while a creator may still hold it");
+        assertSame(lockB, registry.getOrCreateExternalIdLock(keyB));
     }
 
     @Test

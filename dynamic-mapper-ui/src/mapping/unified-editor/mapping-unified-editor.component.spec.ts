@@ -50,7 +50,6 @@ import {
   Feature,
   Qos
 } from '../../shared';
-import { EditorMode } from '../../shared/mapping/stepper.model';
 import { captureMappingContentSnapshot, configurationToYaml, yamlToConfiguration } from '../../shared/mapping/util';
 
 // Tab indices (mirrors the private constants in the component under test)
@@ -115,7 +114,7 @@ describe('MappingUnifiedEditorComponent', () => {
   });
 
   const buildConfig = (overrides: Partial<StepperConfiguration> = {}): StepperConfiguration => ({
-    editorMode: EditorMode.UPDATE,
+    persistence: 'draft',
     direction: Direction.INBOUND,
     showEditorSource: true,
     showEditorTarget: true,
@@ -161,6 +160,7 @@ describe('MappingUnifiedEditorComponent', () => {
     serviceConfiguration: {} as any,
     aiAgent: null,
     aiAgentDeployed: false,
+    aiCapabilitiesDisabled: false,
     filterFormlyFields: [],
     codeTemplates: {} as any,
     codeTemplatesDecoded: new Map(),
@@ -259,7 +259,7 @@ describe('MappingUnifiedEditorComponent', () => {
     mockStepperService.loadExtensions.and.returnValue(Promise.resolve(new Map<string, Extension>()));
     mockStepperService.expandExistingTemplates.and.returnValue({ sourceTemplate: {}, targetTemplate: {} });
     mockStepperService.checkAIAgentDeployment.and.returnValue(
-      Promise.resolve({ aiAgent: null, aiAgentDeployed: false })
+      Promise.resolve({ aiAgent: null, aiAgentDeployed: false, aiCapabilitiesDisabled: false })
     );
     mockStepperService.loadCodeTemplates.and.returnValue(Promise.resolve(new Map()));
     mockStepperService.initializeEditorSession.and.returnValue(Promise.resolve(buildEditorSessionResult()));
@@ -558,9 +558,7 @@ describe('MappingUnifiedEditorComponent', () => {
       expect(mockStepperService.commitMapping.calls.mostRecent().args[0].forms?.validateExtensionSelection).toBe(true);
     });
 
-    // Saving deliberately keeps the editor open so the user can carry on to the Testing tab.
-    // Leaving is Cancel's job.
-    it('alerts and stays in the editor on a successful save', async () => {
+    it('alerts and closes the editor on a successful save', async () => {
       await component.onCommitButton();
 
       // add() rather than success(): the toast needs an explicit timeout, because Cumulocity
@@ -569,17 +567,17 @@ describe('MappingUnifiedEditorComponent', () => {
       const alert = mockAlertService.add.calls.mostRecent().args[0];
       expect(alert.type).toBe('success');
       expect(alert.timeout).toBeGreaterThan(3000);
-      expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+      expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/mappings/inbound');
     });
 
-    it('stays in the editor without an alert when an update changed nothing', async () => {
+    it('closes the editor without an alert when an update changed nothing', async () => {
       commitResolvesTo(saved(false, false));
 
       await component.onCommitButton();
 
       expect(mockAlertService.success).not.toHaveBeenCalled();
       expect(mockAlertService.add).not.toHaveBeenCalled();
-      expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+      expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/mappings/inbound');
     });
 
     it('adopts the lastUpdate the server issued, so the next save is not a conflict', async () => {
@@ -694,7 +692,7 @@ describe('MappingUnifiedEditorComponent', () => {
     });
 
     it('leaves immediately in read-only mode', async () => {
-      component.stepperConfiguration = buildConfig({ editorMode: EditorMode.READ_ONLY });
+      component.stepperConfiguration = buildConfig({ persistence: 'draft', readOnly: true });
       component.mapping.name = 'edited somehow';
 
       await expectAsync(component.confirmLeaveWithUnsavedChanges()).toBeResolvedTo(true);

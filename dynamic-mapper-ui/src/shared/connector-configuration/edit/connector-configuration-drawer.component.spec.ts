@@ -30,6 +30,7 @@ import {
   ConnectorType,
   Direction,
   Feature,
+  isPropertyActive,
   SharedService
 } from '../..';
 import { FormatStringPipe } from '../../misc/format-string.pipe';
@@ -285,6 +286,89 @@ describe('ConnectorConfigurationDrawerComponent', () => {
       expect(hasHiddenField).toBe(false);
     });
 
+    describe('property groups', () => {
+      const props = () => mockSpecifications[0].properties;
+      let original: { [key: string]: string | undefined };
+
+      beforeEach(() => {
+        original = Object.fromEntries(Object.entries(props()).map(([k, p]) => [k, p.group]));
+      });
+
+      afterEach(() => {
+        Object.entries(props()).forEach(([k, p]) => (p.group = original[k]));
+      });
+
+      // The fixed "General" legend above name/description has no hideExpression; property-group legends always do.
+      const groupLegendFields = () =>
+        component.dynamicFormFields.filter(f => f.type === 'template' && f.hideExpression);
+
+      const legends = () =>
+        groupLegendFields()
+          .map(f => /legend form-block">(.*)<\/div>/.exec(f.template as string)?.[1]);
+
+      it('should show groups in the fixed group order, not in property order', async () => {
+        props()['mqttHost'].group = 'Subscription';
+        props()['mqttPort'].group = 'Connection';
+        props()['enableSSL'].group = 'Authentication';
+
+        await component['createDynamicForm'](ConnectorType.MQTT);
+
+        expect(legends()).toEqual(['Connection', 'Authentication', 'Subscription']);
+      });
+
+      it('should create one legend per group and keep a group together', async () => {
+        props()['mqttHost'].group = 'Connection';
+        props()['mqttPort'].group = 'Connection';
+        props()['enableSSL'].group = 'TLS';
+
+        await component['createDynamicForm'](ConnectorType.MQTT);
+
+        expect(legends()).toEqual(['Connection', 'TLS']);
+      });
+
+      it('should show a General legend above name and description', async () => {
+        await component['createDynamicForm'](ConnectorType.MQTT);
+
+        const [first, second] = component.dynamicFormFields;
+        expect(first.type).toBe('template');
+        expect(first.template).toContain('General');
+        expect(second.fieldGroup.map(f => f.key)).toEqual(['name', 'description']);
+      });
+
+      it('should add no legend for properties without a group', async () => {
+        await component['createDynamicForm'](ConnectorType.MQTT);
+
+        expect(legends()).toEqual([]);
+      });
+
+      it('should escape the group name', async () => {
+        props()['mqttHost'].group = '<b>x</b>';
+
+        await component['createDynamicForm'](ConnectorType.MQTT);
+
+        expect(legends()).toEqual(['&lt;b&gt;x&lt;/b&gt;']);
+      });
+
+      it('should hide a legend only when all properties of its group are hidden', async () => {
+        props()['mqttHost'].group = 'TLS';
+        props()['mqttHost'].condition = { key: 'enableSSL', anyOf: ['true'] };
+        props()['mqttPort'].group = 'TLS';
+        props()['mqttPort'].condition = { key: 'enableSSL', anyOf: ['true'] };
+
+        try {
+          await component['createDynamicForm'](ConnectorType.MQTT);
+          const legend = groupLegendFields()[0];
+          const hide = legend.hideExpression as (model: any) => boolean;
+
+          expect(hide({ properties: { enableSSL: false } })).toBe(true);
+          expect(hide({ properties: { enableSSL: true } })).toBe(false);
+        } finally {
+          delete props()['mqttHost'].condition;
+          delete props()['mqttPort'].condition;
+        }
+      });
+    });
+
     it('should trigger change detection after creating form', async () => {
       // ChangeDetectorRef is a framework-provided token resolved through the component's own
       // NodeInjector, which a TestBed-module-level `{ provide: ChangeDetectorRef, useValue: ... }`
@@ -329,6 +413,13 @@ describe('ConnectorConfigurationDrawerComponent', () => {
       // Label goes through the (here mocked) FormatStringPipe rather than showing the raw
       // camelCase property key verbatim — see mockFormatStringPipe above.
       expect(field.fieldGroup?.[0]?.props?.label).toBe('Formatted String');
+    });
+
+    it('should prefer the backend-provided label over the formatted key', () => {
+      mockEntry.property.label = 'Trust custom server certificate';
+      const field = component['createStringField'](mockEntry);
+
+      expect(field.fieldGroup?.[0]?.props?.label).toBe('Trust custom server certificate');
     });
 
     it('should create sensitive string field with password type', () => {
@@ -389,33 +480,62 @@ describe('ConnectorConfigurationDrawerComponent', () => {
   });
 
   describe('Conditional Field Display', () => {
-    it('should create hide expression for conditional properties', () => {
-      const mockEntry = {
-        key: 'conditionalField',
-        property: {
-          type: ConnectorPropertyType.STRING_PROPERTY,
-          description: 'Conditional',
-          required: false,
-          order: 1,
-          hidden: false,
-          readonly: false,
-          condition: {
-            key: 'enableSSL',
-            anyOf: ['true']
-          }
-        }
-      };
-
-      const hideExpression = component['createHideExpression'](mockEntry.property);
-      const model = { properties: { enableSSL: false } };
-
-      expect(hideExpression(model)).toBe(true);
+    const prop = (overrides: Partial<ConnectorProperty> = {}): ConnectorProperty => ({
+      type: ConnectorPropertyType.STRING_PROPERTY,
+      description: 'd',
+      required: false,
+      order: 1,
+      hidden: false,
+      readonly: false,
+      ...overrides
     });
 
-    it('should convert boolean strings in conditions', () => {
-      const result = component['convertBooleanStrings'](['true', 'false', 'other']);
+    /** protocol (default mqtt://) -> trust (only for mqtts://) -> fingerprint (only while trust is on); user -> password */
+    const properties: { [name: string]: ConnectorProperty } = {
+      protocol: prop({ type: ConnectorPropertyType.OPTION_PROPERTY, options: { 'mqtt://': 'mqtt://', 'mqtts://': 'mqtts://' }, defaultValue: 'mqtt://' }),
+      trust: prop({ type: ConnectorPropertyType.BOOLEAN_PROPERTY, defaultValue: false, condition: { key: 'protocol', anyOf: ['mqtts://'] } }),
+      fingerprint: prop({ condition: { key: 'trust', anyOf: ['true'] } }),
+      user: prop(),
+      password: prop({ type: ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, condition: { key: 'user', anyOf: ['*'] } })
+    };
 
-      expect(result).toEqual([true, false, 'other']);
+    it('should create hide expression for conditional properties', () => {
+      component['specificationProperties'] = properties;
+      const hideExpression = component['createHideExpression']({ key: 'trust', property: properties['trust'] });
+
+      expect(hideExpression({ properties: { protocol: 'mqtt://' } })).toBe(true);
+      expect(hideExpression({ properties: { protocol: 'mqtts://' } })).toBe(false);
+    });
+
+    it('should hide a property whose condition holds but whose parent is hidden', () => {
+      // trust is still true from before, protocol went back to mqtt://
+      expect(isPropertyActive(properties, 'fingerprint', { protocol: 'mqtt://', trust: true })).toBe(false);
+      expect(isPropertyActive(properties, 'fingerprint', { protocol: 'mqtts://', trust: true })).toBe(true);
+    });
+
+    it('should use the default of the parent when the configuration has no value', () => {
+      expect(isPropertyActive(properties, 'trust', {})).toBe(false);
+      expect(isPropertyActive(properties, 'trust', undefined)).toBe(false);
+    });
+
+    it('should match booleans by their string form', () => {
+      expect(isPropertyActive(properties, 'fingerprint', { protocol: 'mqtts://', trust: 'TRUE' })).toBe(true);
+      expect(isPropertyActive(properties, 'fingerprint', { protocol: 'mqtts://', trust: false })).toBe(false);
+    });
+
+    it('should treat * as any non-empty value', () => {
+      expect(isPropertyActive(properties, 'password', {})).toBe(false);
+      expect(isPropertyActive(properties, 'password', { user: '  ' })).toBe(false);
+      expect(isPropertyActive(properties, 'password', { user: 'admin' })).toBe(true);
+    });
+
+    it('should not follow a condition cycle forever', () => {
+      const cyclic = {
+        a: prop({ condition: { key: 'b', anyOf: ['x'] } }),
+        b: prop({ condition: { key: 'a', anyOf: ['x'] } })
+      };
+
+      expect(isPropertyActive(cyclic, 'a', { a: 'x', b: 'x' })).toBe(false);
     });
   });
 

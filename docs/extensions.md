@@ -181,7 +181,7 @@ The base class `isConnected()` method (final) combines:
 
 #### 5. Configuration Validation
 
-Use validation helpers to check required properties:
+Use the validation helpers to check the required properties of your specification (see [Connector property definitions](backend/conventions.md#connector-property-definitions)):
 
 ```java
 @Override
@@ -190,9 +190,9 @@ public boolean isConfigValid(ConnectorConfiguration configuration) {
         return false;
     }
 
-    // Validate required properties
-    if (!validateRequiredProperties(configuration,
-            "brokerUrl", "clientId")) {
+    // Validate the required properties of the connector specification. A property whose
+    // condition is not met is skipped and a property with a default counts as present.
+    if (!validateSpecifiedProperties(configuration)) {
         return false;
     }
 
@@ -407,7 +407,7 @@ Check out these implementations for complete examples:
 3. **Use `retryOperation()`** for operations that may fail transiently
 4. **Use `initializeSslIfNeeded()`** in `initialize()` for automatic SSL setup
 5. **Override `isPhysicallyConnected()`** to provide accurate connectivity status
-6. **Use `validateRequiredProperties()`** and `validateCertificateConfig()`** in `isConfigValid()`
+6. **Use `validateSpecifiedProperties()`** and `validateCertificateConfig()` in `isConfigValid()`
 7. **Call `endConnection()`/`endDisconnection()` in finally blocks** to ensure locks are released
 8. **Only override `monitorSubscriptions()`** if you need subscription-level monitoring
 
@@ -568,10 +568,10 @@ public boolean initialize() {
     loadConfiguration();
 
     try {
-        Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration
-            .getProperties().getOrDefault("useSelfSignedCertificate", false);
+        Boolean trustCustomCertificate = (Boolean) connectorConfiguration
+            .getProperties().getOrDefault("trustCustomCertificate", false);
 
-        if (useSelfSignedCertificate) {
+        if (trustCustomCertificate) {
             // 30+ lines of SSL setup code
             cert = loadCertificateFromConfiguration();
             // ... create truststore
@@ -717,7 +717,7 @@ Use this checklist to ensure your custom connector is fully migrated:
 - [ ] Implemented `isPhysicallyConnected()` override
 - [ ] Removed empty `monitorSubscriptions()` implementation (if not needed)
 - [ ] Removed unused imports related to SSL (KeyStore, TrustManagerFactory, X509Certificate)
-- [ ] Updated `isConfigValid()` to use `validateRequiredProperties()` and `validateCertificateConfig()`
+- [ ] Updated `isConfigValid()` to use `validateSpecifiedProperties()` and `validateCertificateConfig()`
 - [ ] Tested connection, disconnection, SSL configuration, and reconnection scenarios
 - [ ] Verified build compiles without errors
 

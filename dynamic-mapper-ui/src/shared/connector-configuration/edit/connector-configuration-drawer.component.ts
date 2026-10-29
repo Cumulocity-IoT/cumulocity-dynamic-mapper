@@ -17,11 +17,15 @@
  *
  * @authors Christof Strack
  */
-import { ChangeDetectorRef, Component, inject, Input, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, Injector, Input, OnInit } from '@angular/core';
 import { BottomDrawerRef, CoreModule, ModalLabels } from '@c8y/ngx-components';
 import { FormlyFieldConfig, FormlyModule } from '@ngx-formly/core';
 import { FormGroup, FormsModule } from '@angular/forms';
 import {
+  CONNECTOR_PROPERTY_GROUP_GENERAL,
+  CONNECTOR_PROPERTY_GROUP_ORDER,
+  isPropertyActive,
+  ConnectionTestResult,
   ConnectorConfiguration,
   ConnectorProperty,
   ConnectorPropertyType,
@@ -36,6 +40,7 @@ import { FormatStringPipe } from '../../misc/format-string.pipe';
 
 import { SharedModule } from '../../shared.module';
 import { Action } from '../types';
+import { ConnectorConfigurationService } from '../../service/connector-configuration.service';
 
 interface PropertyEntry {
   key: string;
@@ -86,7 +91,6 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     ConnectorPropertyType,
     (entry: PropertyEntry) => FormlyFieldConfig
   >([
-    [ConnectorPropertyType.ID_STRING_PROPERTY, this.createIdStringField.bind(this)],
     [ConnectorPropertyType.NUMERIC_PROPERTY, this.createNumericField.bind(this)],
     [ConnectorPropertyType.STRING_PROPERTY, this.createStringField.bind(this)],
     [ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, this.createSensitiveStringField.bind(this)],
@@ -101,6 +105,27 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   private readonly sharedService = inject(SharedService);
   private readonly formatStringPipe = inject(FormatStringPipe);
   private readonly cdr = inject(ChangeDetectorRef);
+  // resolved lazily (only when Test is clicked) so the drawer itself needs no extra providers
+  private readonly injector = inject(Injector);
+
+  testing = false;
+  testResult?: ConnectionTestResult;
+
+  get supportsTest(): boolean {
+    return !!this.specifications?.find(sp => sp.connectorType === this.configuration?.connectorType)
+      ?.supportsConnectionTest;
+  }
+
+  async onTest(): Promise<void> {
+    this.testing = true;
+    this.testResult = undefined;
+    try {
+      this.testResult = await this.injector.get(ConnectorConfigurationService).testConfiguration(this.configuration);
+    } finally {
+      this.testing = false;
+      this.cdr.markForCheck();
+    }
+  }
 
   async ngOnInit() {
     this.feature = await this.sharedService.getFeatures();
@@ -153,20 +178,15 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     }
   }
 
-  private createHideExpression(property: ConnectorProperty) {
-    return (model) => {
-      if (property?.condition?.anyOf) {
-        const convertedAnyOf = this.convertBooleanStrings(property.condition.anyOf);
-        const currentValue = model.properties[property.condition.key];
-        // "*" is a wildcard meaning "any non-empty value" (e.g. Kafka's password field,
-        // shown once a username is entered, whatever it is) - not a literal value to match.
-        if (convertedAnyOf.includes('*')) {
-          return currentValue === null || currentValue === undefined || currentValue === '';
-        }
-        return !convertedAnyOf.includes(currentValue);
-      }
-      return false;
-    };
+  /** Properties of the specification the form is currently built for; the conditions refer to each other. */
+  private specificationProperties: { [name: string]: ConnectorProperty } = {};
+
+  private createHideExpression(entry: PropertyEntry) {
+    return (model) => !isPropertyActive(this.specificationProperties, entry.key, model?.properties);
+  }
+
+  private labelFor(entry: PropertyEntry): string {
+    return entry.property.label || this.formatStringPipe.transform(entry.key);
   }
 
   private createBaseFormField(entry: PropertyEntry, type: string, additionalProps = {}): FormlyFieldConfig {
@@ -178,30 +198,15 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
         type,
         wrappers: ['c8y-form-field'],
         props: {
-          label: this.formatStringPipe.transform(entry.key),
+          label: this.labelFor(entry),
           required: entry.property.required,
           disabled: entry.property.readonly || this.readOnly,
           description: entry.property.description || undefined,
           ...additionalProps
         },
-        hideExpression: this.createHideExpression(entry.property)
+        hideExpression: this.createHideExpression(entry)
       }]
     };
-  }
-
-  private convertBooleanStrings<T>(array: T[]): (T | boolean)[] {
-    return array.map(item => {
-      if (typeof item === 'string') {
-        const lowerCase = item.toLowerCase();
-        if (lowerCase === 'true') return true;
-        if (lowerCase === 'false') return false;
-      }
-      return item;
-    });
-  }
-
-  private createIdStringField(entry: PropertyEntry): FormlyFieldConfig {
-    return this.createBaseFormField(entry, 'input', { disabled: true });
   }
 
   private createNumericField(entry: PropertyEntry): FormlyFieldConfig {
@@ -217,7 +222,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   }
 
   private createBooleanField(entry: PropertyEntry): FormlyFieldConfig {
-    return this.createBaseFormField(entry, 'switch');
+    return this.createBaseFormField(entry, 'switch', { hideLabel: true });
   }
 
   private createOptionField(entry: PropertyEntry): FormlyFieldConfig {
@@ -254,12 +259,12 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
         type: 'd11r-input-list',
         wrappers: ['c8y-form-field'],
         props: {
-          label: this.formatStringPipe.transform(entry.key),
+          label: this.labelFor(entry),
           required: entry.property.required,
           disabled: entry.property.readonly || this.readOnly,
           description: entry.property.description || undefined,
         },
-        hideExpression: this.createHideExpression(entry.property),
+        hideExpression: this.createHideExpression(entry),
         // Initialize with empty object if no default value
         defaultValue: entry.property.defaultValue || {}
       }]
@@ -284,6 +289,9 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
 
   private initializeBasicFormFields(): void {
     this.dynamicFormFields = [{
+      type: 'template',
+      template: `<div class="legend form-block">${this.escapeHtml(CONNECTOR_PROPERTY_GROUP_GENERAL)}</div>`
+    }, {
       fieldGroup: [
         {
           className: 'col-lg-12',
@@ -325,18 +333,53 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   }
 
   private createDynamicFormFields(dynamicFields: ConnectorSpecification): void {
+    this.specificationProperties = dynamicFields.properties;
     const sortedFields = this.getSortedFields(dynamicFields);
 
+    let currentGroup: string | undefined;
     sortedFields.forEach(entry => {
       if (!entry) return;
 
       const formConfigFn = this.propertyTypeToFormConfig.get(entry.property.type);
       if (formConfigFn) {
+        const group = entry.property.group;
+        if (group && group !== currentGroup) {
+          this.dynamicFormFields.push(
+            this.createGroupLegend(group, sortedFields.filter(e => e?.property.group === group))
+          );
+        }
+        currentGroup = group;
         this.dynamicFormFields.push(formConfigFn(entry));
       } else {
         console.warn(`Unsupported property type: ${entry.property.type} for field: ${entry.key}`);
       }
     });
+  }
+
+  /**
+   * Legend above the properties of a group, same look as the section legends in the mapping's General Settings.
+   * It is hidden together with its properties, so a group whose fields are all conditional (e.g. TLS) leaves no
+   * orphaned heading.
+   */
+  private createGroupLegend(group: string, members: PropertyEntry[]): FormlyFieldConfig {
+    const memberHidden = members.map(member => this.createHideExpression(member));
+    return {
+      type: 'template',
+      template: `<div class="legend form-block">${this.escapeHtml(group)}</div>`,
+      hideExpression: (model) => memberHidden.every(isHidden => isHidden(model))
+    };
+  }
+
+  private escapeHtml(value: string): string {
+    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  private groupRank(group: string | undefined): number {
+    if (!group) {
+      return Number.MAX_SAFE_INTEGER;
+    }
+    const index = CONNECTOR_PROPERTY_GROUP_ORDER.indexOf(group);
+    return index === -1 ? CONNECTOR_PROPERTY_GROUP_ORDER.length : index;
   }
 
   private getSortedFields(dynamicFields: ConnectorSpecification): PropertyEntry[] {
@@ -346,7 +389,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
       // Set default values for a genuinely blank create — but not when duplicating an existing
       // connector (see ConnectorGridComponent.onConfigurationCopy), whose cloned `properties`
       // already carry the real values that must be preserved, not overwritten with defaults.
-      if ('defaultValue' in property && this.action === 'create' && this.configuration.properties[key] === undefined) {
+      if (property.defaultValue != null && this.action === 'create' && this.configuration.properties[key] === undefined) {
         this.configuration.properties[key] = property.defaultValue;
       }
 
@@ -356,8 +399,17 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
       }
     });
 
-    // Sort by order, handling missing or invalid order values
+    // Sort by group (fixed group order), then by order inside the group; missing or invalid values go last.
+    // Groups outside the known list follow alphabetically.
     return entries.sort((a, b) => {
+      const groupDiff = this.groupRank(a.property.group) - this.groupRank(b.property.group);
+      if (groupDiff !== 0) {
+        return groupDiff;
+      }
+      if (a.property.group !== b.property.group) {
+        // Two groups outside the known list: keep each group together
+        return (a.property.group ?? '').localeCompare(b.property.group ?? '');
+      }
       const orderA = a.property.order ?? Number.MAX_SAFE_INTEGER;
       const orderB = b.property.order ?? Number.MAX_SAFE_INTEGER;
       return orderA - orderB;

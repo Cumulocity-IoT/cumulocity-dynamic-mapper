@@ -309,6 +309,38 @@ Independent of the 502 path. Two layers:
    instead of looping forever reusing the stale one — check the logs for `"Stored ... token failed
    to connect, retrying with a fresh token"`.
 
+### Path D — Service log while the backend is unavailable
+
+The service log (`dynamic.mapper.logs`) stores a tenant's log lines as events. When the platform fails, nothing
+may be lost silently, memory must stay bounded and no objects may be left behind in the tenant.
+
+Unit tests: `ServiceLogCollectorTest` (a failed store puts back exactly the records that were not stored, in order,
+and does not hold up other tenants) and `ServiceLogSourceLocatorTest` (below).
+
+| Failure | Expected behaviour |
+|---|---|
+| Event create fails (5xx, unreachable) | The failed chunk and all later chunks of that tenant go back into the buffer; the other tenants are stored; retry at the tenant's next interval |
+| Outage longer than the buffer | Oldest lines are dropped (bounded in records and bytes); the next stored chunk reports them as `omitted` |
+| Source object creation fails | The write fails and is retried; nothing is created |
+| Source created, external id registration fails, platform still failing | The new object is deleted (best effort); the original error is reported; the failed lookup is attached as a suppressed cause |
+| Registration answer lost, but the platform stored it | The lookup returns our own object: it is kept, not deleted |
+| Another instance registered first (409) | Use its object, delete ours |
+
+Residual case, not fixable on the client: if the *create* call itself fails after the platform created the object
+(the proxy faults responses after the request was handled), the client never learns the id and cannot clean up. It
+leaves one unregistered `d11r_serviceLogSource` object per such attempt.
+
+End to end, with the proxy from Path B: `fault.logs.on` fails `/event/events` and `/identity/externalIds`;
+add `fault.on` to also fail the inventory call that creates the source. Then:
+
+1. Create log lines (a mapping with debug on, WARN or above) and switch `fault.logs.on`.
+2. In the Service logs page, nothing new appears; the service's own log shows one failure message, then a reminder
+   every 20 runs (`Service log collection still failing`).
+3. Switch `fault.logs.off`. The next runs store the backlog (several runs when it is larger than the per-run line
+   cap). If lines were dropped in between, the first stored chunk shows an `omitted` count.
+4. Check the inventory for `type=d11r_serviceLogSource`: exactly one object per tenant, and with `fault.on` during
+   the first-ever collection, no extra unregistered ones beyond the residual case above.
+
 ## Suggested Order of Work
 
 1. ~~Write Path A unit test first~~ — **done**, see `AConnectorClientSubscriptionInitRetryTest`

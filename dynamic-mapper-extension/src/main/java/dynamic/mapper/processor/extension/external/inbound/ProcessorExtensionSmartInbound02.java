@@ -35,6 +35,11 @@ import java.util.Map;
 /**
  * Java Extension equivalent of template-SMART-INBOUND-02.js
  *
+ * <p>Differences to the JavaScript template: the device id is taken from the MQTT client id
+ * (falling back to the payload {@code clientId}) instead of topic level 1, and when the device
+ * carries no {@code c8y_Sensor.type} the {@code defaultSensorType} parameter is used instead of
+ * dropping the message.</p>
+ *
  * <p>This extension demonstrates using device data for enrichment:</p>
  * <ul>
  *   <li>Dynamic measurement type selection based on device configuration</li>

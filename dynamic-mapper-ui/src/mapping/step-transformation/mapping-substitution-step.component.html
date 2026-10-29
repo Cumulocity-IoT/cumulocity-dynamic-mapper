@@ -1,0 +1,145 @@
+<!-- mapping-substitution-step.component.html -->
+<div [class]="stepperConfiguration.showCodeEditor ? 'fit-h d-col' : 'inner-scroll'">
+  @if (!(stepperConfiguration.showCodeEditor)) {
+  <div class="card-block p-b-0">
+    <!-- Template Editors Section -->
+    <div [formGroup]="templateForm">
+      <div class="d-grid grid__col--6-6 gap-4">
+        <!-- Source Template Editor -->
+        <div class="column-right-border d-col p-r-2">
+          <div class="form-group m-b-0">
+            <div class="d-flex a-i-center">
+              <label translate>Source Template - {{ sourceSystem }}</label>
+              <button type="button" placement="right"
+                popover="Click a node in the source template to select it as the source of a substitution."
+                triggers="focus" container="body" class="btn-help" aria-label="Help content">
+              </button>
+            </div>
+            @if (stepperConfiguration.showEditorSource) {
+            <d11r-mapping-json-editor [schema]="schemaSource" [options]="editorOptionsSourceSubstitution"
+              [class]="'jse-main-small'" (pathChanged)="onSelectedPathSourceChanged($event)" [data]="sourceTemplate"
+              #editorSourceStepSubstitution>
+            </d11r-mapping-json-editor>
+            }
+          </div>
+          @if (stepperConfiguration.showEditorSource) {
+          <span class="text-info text-12 p-l-8 p-t-4">
+            {{substitutionModel.pathSource === '' ?
+            'Select source node to define substitution!' :
+            (substitutionModel.pathSourceIsExpression ?
+            'Selected substitution is an expression' :
+            'Selected source node: ' + substitutionModel.pathSource)
+            }}
+          </span>
+          }
+        </div>
+        <!-- Target Template Editor -->
+        <div class="column-left-border d-col p-l-2">
+          <div class="form-group m-b-0">
+            <div class="d-flex a-i-center">
+              <label>Target Template - {{ targetSystem }}</label>
+              <ng-template #popupTargetTemplateHelp>
+                <div [innerHtml]="targetTemplateHelp"></div>
+              </ng-template>
+              <button type="button" placement="right" [popover]="popupTargetTemplateHelp" triggers="click"
+                container="body" class="btn-help" aria-label="Help content">
+              </button>
+            </div>
+            <d11r-mapping-json-editor [schema]="schemaTarget" [options]="editorOptionsTargetSubstitution"
+              [class]="'jse-main-small'" (pathChanged)="onSelectedPathTargetChanged($event)" [data]="targetTemplate"
+              #editorTargetStepSubstitution>
+            </d11r-mapping-json-editor>
+          </div>
+          <span class="text-info text-12 p-l-8 p-t-4">
+            {{substitutionModel.pathTarget === '' && stepperConfiguration.showEditorSource ?
+            'Select target node to define substitution!' :
+            'Selected target node: ' + substitutionModel.pathTarget
+            }}
+          </span>
+        </div>
+      </div>
+    </div>
+    <!-- Substitution Form -->
+    <div [formGroup]="substitutionFormly">
+      <!-- @if (selectedSubstitution !== -1) {
+      <div class="d-flex j-c-center p-t-8" data-cy="dm-mapping-transform-editing-indicator">
+        <span class="label label-info">Editing substitution #{{ selectedSubstitution + 1 }}</span>
+      </div>
+      } -->
+      <!-- Action Buttons -->
+      <div class="d-flex j-c-center p-t-8">
+        <button type="button" class="btn btn-default btn-sm" data-cy="dm-mapping-transform-add-substitution" (click)="onAddSubstitution()"
+          [disabled]="addSubstitutionDisabled()">
+          <i c8yIcon="plus-circle-o"></i>&nbsp;Add substitution
+        </button>
+        <button type="button" class="btn btn-default btn-sm m-l-4" data-cy="dm-mapping-transform-update-substitution" (click)="onUpdateSubstitution()"
+          [disabled]="updateSubstitutionDisabled()">
+          <i c8yIcon="pencil"></i>&nbsp;Update substitution
+        </button>
+        <button type="button" class="btn btn-ai btn-sm m-l-4" data-cy="dm-mapping-transform-generate-ai" (click)="openGenerateSubstitutionDrawer()" [disabled]="!stepperConfiguration.showEditorSource ||
+              stepperConfiguration.readOnly || 
+              !aiAgentDeployed">
+          <span>{{ stepperConfiguration.persistence === 'draft' ? 'Review / Refine with AI' : 'Generate substitutions' }}</span>
+        </button>
+        @if (!aiAgentDeployed) {
+        <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+          [popover]="(aiCapabilitiesDisabled
+            ? 'AI capabilities are disabled in this tenant.'
+            : 'AI Assistant is disabled if AI Agent is not deployed in this tenant or no agent is defined.') | translate"
+          placement="right" container="body" triggers="focus" type="button"></button>
+        }
+      </div>
+      @if (aiCapabilitiesDisabled) {
+      <div class="alert alert-info m-t-8" data-cy="dm-ai-disabled-info">
+        <i c8yIcon="info"></i>
+        {{ 'AI capabilities are disabled in this tenant.' | translate }}
+      </div>
+      }
+      <!-- Expert Mode collapsible header -->
+      <div class="d-flex a-i-center p-t-4 p-b-4" data-cy="dm-mapping-transform-expert-toggle" (click)="toggleExpertMode()" style="cursor:pointer">
+        <i [c8yIcon]="expertMode ? 'chevron-down' : 'chevron-right'" class="m-r-8"></i>
+        <span translate>Expert Mode</span>
+        <button class="btn-help btn-help--sm p-l-4" [attr.aria-label]="'Help' | translate"
+          popover="{{'Allow to define expressions using JSONata'}}" triggers="focus" type="button"
+          container="body" (click)="$event.stopPropagation()"></button>
+      </div>
+      <!-- Expert Mode Fields -->
+      <div class="collapse" [isAnimated]="true" [collapse]="!expertMode">
+        <div class="d-grid grid__col--6-6 p-t-4 gap-4">
+          <div>
+            <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsSource" [model]="substitutionModel">
+            </formly-form>
+          </div>
+          <div>
+            <formly-form [form]="substitutionFormly" [fields]="substitutionFormlyFieldsTarget" [model]="substitutionModel">
+            </formly-form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Substitution Grid -->
+    <div [formGroup]="templateForm">
+      <div style="min-height: 32px">
+        <d11r-mapping-substitution-grid [mapping]="mapping" [settings]="{
+              color: COLOR_HIGHLIGHTED,
+              selectedSubstitutionIndex: selectedSubstitution,
+              readOnly: !!stepperConfiguration.readOnly
+            }" (selectSub)="onSelectSubstitution($event)" (deleteSub)="onDeleteSubstitution($event)"
+          (substitutionChange)="onGridSubstitutionChange()" (cancelEdit)="cancelEditSubstitution()">
+        </d11r-mapping-substitution-grid>
+      </div>
+      @if (!(isSubstitutionValid$ | async)) {
+      <span class="text-warning text-12 p-l-8" [innerHTML]="identitySubstitutionHint"></span>
+      }
+    </div>
+  </div>
+  }
+
+  <!-- Code Editor Section (for Code-based mappings) -->
+  @if (stepperConfiguration.showCodeEditor) {
+  <div class="card-block fit-h">
+    <!-- Include code editor template here if needed -->
+    <ng-content select="[codeEditor]"></ng-content>
+  </div>
+  }
+</div>

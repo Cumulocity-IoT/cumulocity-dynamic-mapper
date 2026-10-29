@@ -73,6 +73,35 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
     @JsonProperty("properties")
     private Map<String, Object> properties = new HashMap<>();
 
+    /**
+     * Legacy property names (key) and the names that replace them (value). Stored configurations and
+     * imports may still carry the old names, so they are renamed whenever the properties are set.
+     */
+    private static final Map<String, String> LEGACY_PROPERTY_NAMES = Map.of(
+            "useSelfSignedCertificate", "trustCustomCertificate",
+            "fingerprintSelfSignedCertificate", "trustedCertificateFingerprint");
+
+    public void setProperties(Map<String, Object> properties) {
+        this.properties = properties;
+        migrateLegacyProperties();
+    }
+
+    /**
+     * Renames deprecated property names to their current names. A value under the new name wins over
+     * one under the old name.
+     */
+    private void migrateLegacyProperties() {
+        if (properties == null) {
+            return;
+        }
+        LEGACY_PROPERTY_NAMES.forEach((legacy, current) -> {
+            if (properties.containsKey(legacy)) {
+                Object value = properties.remove(legacy);
+                properties.putIfAbsent(current, value);
+            }
+        });
+    }
+
     @Override
     public ConnectorConfiguration clone() {
         ConnectorConfiguration cloned = new ConnectorConfiguration();
@@ -95,16 +124,52 @@ public class ConnectorConfiguration implements Cloneable, Serializable {
         spec.getProperties().entrySet().forEach(prop -> {
             ConnectorProperty p = prop.getValue();
             if (p.readonly) {
-                properties.put(prop.getKey(), p.defaultValue);
+                if (p.defaultValue == null) {
+                    properties.remove(prop.getKey());
+                } else {
+                    properties.put(prop.getKey(), p.defaultValue);
+                }
             }
         });
+    }
+
+    /** Value that stands for a stored secret in responses; sending it back leaves the stored secret unchanged. */
+    public static final String SENSITIVE_PLACEHOLDER = "****";
+
+    private static boolean hasValue(Object value) {
+        return value != null && !(value instanceof String string && string.isEmpty());
+    }
+
+    /**
+     * Replaces every sensitive property that still carries {@link #SENSITIVE_PLACEHOLDER} by the value stored in the
+     * original configuration, since the placeholder means "unchanged".
+     *
+     * @param original the stored configuration, may be {@code null} for a configuration that was never saved
+     */
+    public void restoreMaskedSecrets(ConnectorSpecification spec, ConnectorConfiguration original) {
+        if (spec == null || properties == null) {
+            return;
+        }
+        for (String property : new java.util.ArrayList<>(properties.keySet())) {
+            if (spec.isPropertySensitive(property) && SENSITIVE_PLACEHOLDER.equals(properties.get(property))) {
+                Object stored = original == null || original.getProperties() == null ? null
+                        : original.getProperties().get(property);
+                if (stored == null) {
+                    properties.remove(property);
+                } else {
+                    properties.put(property, stored);
+                }
+            }
+        }
     }
 
     public ConnectorConfiguration getCleanedConfig(ConnectorSpecification connectorSpecification) {
         ConnectorConfiguration clonedConfig = this.clone();
         for (String property : clonedConfig.getProperties().keySet()) {
-            if (connectorSpecification != null && connectorSpecification.isPropertySensitive(property)) {
-                clonedConfig.getProperties().replace(property, "****");
+            // An unset secret stays unset, so a masked value always means "a value is stored".
+            if (connectorSpecification != null && connectorSpecification.isPropertySensitive(property)
+                    && hasValue(clonedConfig.getProperties().get(property))) {
+                clonedConfig.getProperties().replace(property, SENSITIVE_PLACEHOLDER);
             }
         }
         return clonedConfig;

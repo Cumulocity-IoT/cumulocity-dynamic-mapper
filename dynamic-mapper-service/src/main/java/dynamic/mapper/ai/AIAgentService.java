@@ -70,9 +70,8 @@ public class AIAgentService {
 
     private static final String DEFAULT_JSONATA_AGENT_NAME = "dynamic-mapper-jsonata-agent";
     private static final String DEFAULT_SMART_FUNCTION_AGENT_NAME = "dynamic-mapper-smart-function-agent";
-    private static final String JSONATA_TOOL_NAME = "evaluateJsonataExpression";
+    private static final String JSONATA_TOOL_NAME = "evaluate-jsonata-expression";
     private static final String MCP_SERVER_NAME = "dynamic-mapper-mcp-server";
-    private static final String AI_AGENT_MCP_SERVER_PATH = "/service/ai/mcp/servers";
     private static final String AI_AGENT_PATH = "/service/ai/agent";
     private static final String AI_AGENT_HEALTH_ENDPOINT = "/service/ai/health";
 
@@ -84,7 +83,7 @@ public class AIAgentService {
                 if (agents.isEmpty()) {
                     log.info("{} - No AIAgents found, creating default agents",
                             contextService.getContext().getTenant());
-                    createDefaultAIAgents();
+                    //createDefaultAIAgents();
                     addingAIAgentsToServiceConfiguration();
                 } else {
                     if (agents.stream().anyMatch(agent -> agent.getName().equals(DEFAULT_JSONATA_AGENT_NAME)
@@ -95,7 +94,7 @@ public class AIAgentService {
                     } else {
                         log.info("{} - AIAgents not found, creating AI agents...",
                                 contextService.getContext().getTenant());
-                        createDefaultAIAgents();
+                        //createDefaultAIAgents();
                         addingAIAgentsToServiceConfiguration();
                     }
                 }
@@ -163,12 +162,14 @@ public class AIAgentService {
             agent.setSystem(prompts.get(file));
             aiAgent.setAgent(agent);
             aiAgent.setType("text");
+            MCPUsage tools = new MCPUsage();
+            tools.setServerName(MCP_SERVER_NAME);
             if (aiAgent.getName().equals(DEFAULT_JSONATA_AGENT_NAME)) {
-                MCPUsage tools = new MCPUsage();
-                tools.setServerName(MCP_SERVER_NAME);
-                tools.setTools(new String[] { JSONATA_TOOL_NAME });
-                aiAgent.setMcp(List.of(tools));
+                tools.setTools(new String[] { JSONATA_TOOL_NAME, MappingResultTools.SUBMIT_SUBSTITUTIONS_TOOL_NAME });
+            } else {
+                tools.setTools(new String[] { MappingResultTools.SUBMIT_SMART_FUNCTION_TOOL_NAME });
             }
+            aiAgent.setMcp(List.of(tools));
             ResponseEntity<String> response = createAIAgent(aiAgent);
             if (!response.getStatusCode().is2xxSuccessful())
                 log.error("{} - Failed to create AIAgent: {}", contextService.getContext().getTenant(),
@@ -245,7 +246,7 @@ public class AIAgentService {
      * @throws IllegalArgumentException if the expression or source JSON is null or
      *                                  empty
      */
-    @Tool(name = "evaluateJsonataExpression", description = "Evaluate a JSONata expression against a JSON object")
+    @Tool(name = "evaluate-jsonata-expression", description = "Evaluate a JSONata expression against a JSON object")
     //@McpTool(name = "evaluateJsonataExpression", description = "Evaluate a JSONata expression against a JSON object")
     public String evaluateJsonataExpression(@ToolParam(description = "JSONata expression to evaluate", required = true) String expression,
                                             @ToolParam(description = "JSON document to apply the expression on", required = true) String sourceJSON) {

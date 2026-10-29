@@ -57,3 +57,33 @@ d11r-mapping-ai-prompt c8y-agent-chat pre code {
   font-size: 12px !important;
   line-height: 1.25 !important;
 }
+
+/* Splitter between chat and review block: drag up to enlarge the preview. */
+.ai-preview-splitter {
+  flex-shrink: 0;
+  height: 10px;
+  cursor: row-resize;
+  touch-action: none;
+  position: relative;
+  border-top: 1px solid var(--c8y-root-component-border-color, #ddd);
+}
+.ai-preview-splitter::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 3px;
+  width: 40px;
+  height: 4px;
+  margin-left: -20px;
+  border-radius: 2px;
+  background: var(--c8y-root-component-border-color, #bbb);
+}
+.ai-preview-splitter:hover::after,
+.ai-preview-splitter:focus-visible::after {
+  background: var(--brand-primary, var(--c8y-brand-primary, #1776bf));
+}
+
+.ai-preview-resizable {
+  min-height: 100px;
+  overflow: hidden;
+}

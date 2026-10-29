@@ -57,6 +57,7 @@ decided against rather than forgotten.
 |---|---|
 | [message-explorer.md](message-explorer.md) | Live inspection of broker traffic, seeding a mapping from a captured message |
 | [ai-agent-generation.md](ai-agent-generation.md) | Generating substitutions and Smart Functions via the AI Agent Manager |
+| [service-logs.md](service-logs.md) | Microservice logs for sub-tenants of a multi-tenant deployment: collection, per-tenant events, the Service logs page |
 
 ---
 

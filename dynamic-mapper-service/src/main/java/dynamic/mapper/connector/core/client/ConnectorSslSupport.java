@@ -69,16 +69,16 @@ public class ConnectorSslSupport {
     /**
      * Build the SSL context for a connection known to require SSL/TLS, either from system default
      * CAs or from a custom certificate configured on the connector (inline PEM or C8Y certificate
-     * store), depending on {@code useSelfSignedCertificate}.
+     * store), depending on {@code trustCustomCertificate}.
      * @throws Exception if certificate loading or SSL context initialization fails
      */
     public SslInitResult initializeSsl(ConnectorConfiguration connectorConfiguration) throws Exception {
         log.info("{} - Initializing SSL configuration", tenant);
 
-        Boolean useSelfSignedCertificate = (Boolean) connectorConfiguration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
+        Boolean trustCustomCertificate = (Boolean) connectorConfiguration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
 
-        if (!useSelfSignedCertificate) {
+        if (!trustCustomCertificate) {
             log.info("{} - Using system default SSL certificates", tenant);
             KeyStore trustStore = createTrustStore(true, null, null);
             TrustManagerFactory tmf = createTrustManagerFactory(trustStore);
@@ -112,10 +112,10 @@ public class ConnectorSslSupport {
      * @return true if certificate configuration is valid or not required
      */
     public boolean validateCertificateConfig(ConnectorConfiguration configuration) {
-        Boolean useSelfSignedCertificate = (Boolean) configuration.getProperties()
-                .getOrDefault("useSelfSignedCertificate", false);
+        Boolean trustCustomCertificate = (Boolean) configuration.getProperties()
+                .getOrDefault("trustCustomCertificate", false);
 
-        if (!useSelfSignedCertificate) {
+        if (!trustCustomCertificate) {
             return true; // System certificates will be used
         }
 
@@ -128,14 +128,14 @@ public class ConnectorSslSupport {
 
         // Check for C8Y certificate store reference
         String nameCertificate = (String) configuration.getProperties().get("nameCertificate");
-        String fingerprint = (String) configuration.getProperties().get("fingerprintSelfSignedCertificate");
+        String fingerprint = (String) configuration.getProperties().get("trustedCertificateFingerprint");
 
         if (nameCertificate != null && !nameCertificate.trim().isEmpty() &&
             fingerprint != null && !fingerprint.trim().isEmpty()) {
             return true;
         }
 
-        log.warn("{} - SSL certificate configuration incomplete. Either provide 'certificateChainInPemFormat' or both 'nameCertificate' and 'fingerprintSelfSignedCertificate'", tenant);
+        log.warn("{} - SSL certificate configuration incomplete. Either provide 'certificateChainInPemFormat' or both 'nameCertificate' and 'trustedCertificateFingerprint'", tenant);
         return false;
     }
 
@@ -146,7 +146,7 @@ public class ConnectorSslSupport {
     public Certificate loadCertificateFromConfiguration(ConnectorConfiguration connectorConfiguration) throws ConnectorException {
         String nameCertificate = (String) connectorConfiguration.getProperties().get("nameCertificate");
         String fingerprint = (String) connectorConfiguration.getProperties()
-                .get("fingerprintSelfSignedCertificate");
+                .get("trustedCertificateFingerprint");
         String certificateChainInPemFormat = (String) connectorConfiguration.getProperties()
                 .get("certificateChainInPemFormat");
 

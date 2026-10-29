@@ -10,14 +10,15 @@ to a specific user group.
 | Role | Grants |
 |---|---|
 | `ROLE_DYNAMIC_MAPPER_CREATE` | Everything to do with mappings: create, edit, delete, activate, debug, test, versions and drafts, outbound subscriptions, the Message Explorer and client relations. |
-| `ROLE_DYNAMIC_MAPPER_ADMIN` | Everything the create role grants, **plus** connectors, service configuration, code templates, processor extensions and the maintenance operations. |
+| `ROLE_DYNAMIC_MAPPER_ADMIN` | Everything the create role grants, **plus** connectors, service configuration, code templates, processor extensions, the service logs of your tenant and the maintenance operations. |
 | `ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE` | Permission to POST payloads into the Default HTTP Connector endpoint. Independent of the other two — see below. |
 
 `ROLE_DYNAMIC_MAPPER_ADMIN` implies `ROLE_DYNAMIC_MAPPER_CREATE`; you do not need to assign both.
 
 A user with **none** of these roles can still open the application and read: mappings, connectors, the service
-configuration, monitoring and the deployment map are all visible. What they cannot do is change anything, and a
-few read operations are restricted as noted in the table.
+configuration, monitoring and the deployment map are all visible, except the service logs, which need
+`ROLE_DYNAMIC_MAPPER_ADMIN`. What they cannot do is change anything, and a few read operations are restricted as
+noted in the table.
 
 :::caution
 Assign the minimum role that does the job. Most users need only `ROLE_DYNAMIC_MAPPER_CREATE`. Reserve
@@ -56,6 +57,8 @@ shared code templates.
 | Create / edit / delete code templates, reset system templates | – | – | ✓ |
 | Read processor extensions | ✓ | ✓ | ✓ |
 | Delete a processor extension, reload extensions | – | – | ✓ |
+| **Monitoring** | | | |
+| Read the [service logs](/c8y-pkg-dynamic-mapper/introduction/monitoring#service-logs) of your tenant | – | – | ✓ |
 | **Maintenance** | | | |
 | Reset statistics, clear caches, reset the deployment map | – | – | ✓ |
 | Refresh notification subscriptions, rotate the GraalVM engine | – | – | ✓ |

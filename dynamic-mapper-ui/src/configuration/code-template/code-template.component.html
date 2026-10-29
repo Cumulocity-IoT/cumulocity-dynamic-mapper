@@ -38,35 +38,41 @@
 </c8y-action-bar-item>
 
 <c8y-action-bar-item [placement]="'right'">
-  <button class="btn btn-link"
-    title="{{ 'Delete this custom template permanently. System templates cannot be deleted — use Init internal code templates to restore them.' | translate }}"
-    (click)="onDeleteCodeTemplate()" [disabled]="codeTemplateDecoded?.internal || !feature?.userHasMappingAdminRole">
-    <i c8yIcon="minus-circle"></i>
-    {{ 'Delete' | translate }}
+  @if (templateType === TemplateType.SHARED) {
+  <button class="btn btn-ai btn-sm" data-cy="dm-code-template-ai" (click)="onGenerateWithAI()" [disabled]="!canUseAI"
+    title="{{ (aiCapabilitiesDisabled ? 'AI capabilities are disabled in this tenant.' : !aiAgent ? 'No Smart Function AI agent is deployed.' : 'Create, modify or review the shared code with AI') | translate }}">
+    <span>{{ 'AI Assistant' | translate }}</span>
   </button>
-  <button class="btn btn-link" title="{{ 'Edit metadata' | translate }}" (click)="onRenameCodeTemplate()"
+  }
+  <button class="btn btn-link" title="{{ 'Rename the template and edit its description' | translate }}" (click)="onRenameCodeTemplate()"
     [disabled]="codeTemplateDecoded?.internal || !feature?.userHasMappingAdminRole">
     <i c8yIcon="edit"></i>
-    {{ 'Edit' | translate }}
+    {{ 'Rename' | translate }}
   </button>
   <button class="btn btn-link" title="{{ 'Duplicate' | translate }}" (click)="onDuplicateCodeTemplate()"
     [disabled]="codeTemplateDecoded?.templateType === TemplateType.SHARED || codeTemplateDecoded?.templateType === TemplateType.SYSTEM || !feature?.userHasMappingAdminRole">
     <i c8yIcon="duplicate"></i>
     {{ 'Duplicate' | translate }}
   </button>
-  <button class="btn btn-link"
-    title="{{ 'Restore all system (read-only) templates to their factory defaults. Your custom templates are not affected.' | translate }}"
-    (click)="onInitSystemCodeTemplate()" [disabled]="!feature?.userHasMappingAdminRole">
-    <i c8yIcon="reset"></i>
-    {{ 'Init internal code templates' | translate }}
-  </button>
-  <button class="btn-help btn-help--sm" [attr.aria-label]="'Help' | translate" popover="{{
-      'Restores all read-only system templates (SHARED, SYSTEM, and built-in transformation types) to their factory defaults. Custom templates you created are not affected.'
-        | translate
-    }}" placement="bottom left" triggers="focus" type="button"></button>
   <button class="btn btn-link" title="{{ 'Refresh' | translate }}" (click)="refresh()">
     <i c8yIcon="refresh"></i>
     {{ 'Refresh' | translate }}
+  </button>
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'more'" [priority]="-100">
+  <button
+    title="{{ 'Delete this custom template permanently. System templates cannot be deleted — use Init internal code templates to restore them.' | translate }}"
+    (click)="onDeleteCodeTemplate()" [disabled]="codeTemplateDecoded?.internal || !feature?.userHasMappingAdminRole">
+    <i c8yIcon="minus-circle"></i>
+    {{ 'Delete' | translate }}
+  </button>
+</c8y-action-bar-item>
+<c8y-action-bar-item [placement]="'more'" [priority]="-200">
+  <button
+    title="{{ 'Restores all read-only system templates (SHARED, SYSTEM, and built-in transformation types) to their factory defaults. Custom templates you created are not affected.' | translate }}"
+    (click)="onInitSystemCodeTemplate()" [disabled]="!feature?.userHasMappingAdminRole">
+    <i c8yIcon="reset"></i>
+    {{ 'Init internal code templates' | translate }}
   </button>
 </c8y-action-bar-item>
 <c8y-action-bar-item [placement]="'right'">
@@ -87,7 +93,7 @@
 
   <div class="card-footer separator p-24 text-center flex-no-shrink">
     <button type="button" name="save" class="btn btn-primary" (click)="onSaveCodeTemplate()"
-      [disabled]="codeTemplateDecoded?.readonly || !feature?.userHasMappingAdminRole" translate>
+      [disabled]="codeTemplateDecoded?.readonly || !feature?.userHasMappingAdminRole || !isDirty" translate>
       Save
     </button>
   </div>

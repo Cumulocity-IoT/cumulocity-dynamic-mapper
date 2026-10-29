@@ -1,5 +1,4 @@
 import type { IUser } from '@c8y/client';
-import { slowCypressDown } from 'cypress-slow-down';
 import {
   navigateToConnectorConfiguration,
   addConnectorViaUi,
@@ -11,8 +10,8 @@ import {
   cleanupTestUser,
   type MqttConnectionInput,
 } from './connector.helpers';
+import { formField } from '../../support/dm-ui';
 
-slowCypressDown();
 
 describe('Connector — Edit connector', () => {
   const createdConnectorIds: string[] = [];
@@ -69,8 +68,8 @@ describe('Connector — Edit connector', () => {
 
       openConnectorRowAction(identifier, 'Edit');
 
-      cy.get('#name').clear();
-      cy.get('#name').type(updatedName);
+      formField('name').clear();
+      formField('name').type(updatedName);
       cy.getByData('dm-connector-save').should('be.enabled').click();
       cy.wait('@putConnector');
 
@@ -91,8 +90,8 @@ describe('Connector — Edit connector', () => {
 
       openConnectorRowAction(identifier, 'Edit');
 
-      cy.get('#mqttPort').clear();
-      cy.get('#mqttPort').type(newPort);
+      formField('properties-mqttPort').clear();
+      formField('properties-mqttPort').type(newPort);
       cy.getByData('dm-connector-save').should('be.enabled').click();
       cy.wait('@putConnector');
 

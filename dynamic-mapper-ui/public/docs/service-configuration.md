@@ -27,3 +27,6 @@ The **General** tab covers:
 Two of these settings — **Outbound mappings** and **Device Isolation Cumulocity MQTT Service** — do not take
 effect until the microservice is unsubscribed and subscribed again for the tenant. The rest apply on **Save**.
 
+The **Monitoring** tab also holds the **Service logs** settings: whether the log lines of your tenant are stored for the
+**Service logs** view, at which level, how long they are kept, and, under **Expert settings**, how much is stored per run.
+They apply on **Save** like the rest. See [Service logs](/c8y-pkg-dynamic-mapper/introduction/monitoring#service-logs-settings).

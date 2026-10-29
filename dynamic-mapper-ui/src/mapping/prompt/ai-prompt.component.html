@@ -19,6 +19,20 @@
 ~
 -->
 
+@if (aiCapabilitiesDisabled) {
+<div class="alert alert-info m-16" data-cy="dm-ai-disabled-info">
+  <i c8yIcon="info"></i>
+  {{ 'AI capabilities are disabled in this tenant.' | translate }}
+</div>
+}
+@if (aiAvailabilityCheckFailed) {
+<div class="alert alert-warning m-16" data-cy="dm-ai-settings-unavailable">
+  <i c8yIcon="exclamation-triangle"></i>
+  {{ 'AI settings could not be verified. The AI assistant is unavailable.' | translate }}
+</div>
+}
+
+@if (aiChatEnabled && aiAgent) {
 <div class="card-header separator" style="justify-content: center">
   <h4 class="card-title d-flex">
     <i class="btn btn-ai btn-sm btn-ai-hint ai-icon m-r-8" style="margin-top:4px;"><span></span></i>
@@ -26,21 +40,74 @@
     <span class="label label-success m-l-8 m-t-8 m-b-8 text-16">{{aiAgent.name}}</span>
   </h4>
 </div>
+}
 
 <div class="card-inner-scroll fit-h">
-  @if (aiAgent && clientAgentDefinition) {
+  @if (aiChatEnabled && aiAgent && clientAgentDefinition) {
   <c8y-agent-chat
     [agent]="clientAgentDefinition"
     [variables]="variables"
     [suggestions]="suggestions"
     [groundingContextProvider]="groundingContextProvider"
     [skipHealthCheck]="true"
+    [telemetry]="telemetryEnabled"
+    [initialChatHistory]="initialChatHistory"
     [chatConfig]="chatConfig"
     [assistantMessageDisplayConfig]="assistantMessageDisplayConfig"
-    (onMessageFinish)="onMessageFinish($event)">
+    (onMessageFinish)="onMessageFinish($event)"
+    (onToolResult)="onToolResult($event)"
+    (onMessagesChange)="onMessagesChange($event)">
   </c8y-agent-chat>
   }
 </div>
+
+@if (valid) {
+<div class="ai-preview-splitter" role="separator" aria-orientation="horizontal" tabindex="0"
+  [attr.aria-valuenow]="previewHeight" title="Drag to resize (double-click to reset)"
+  (pointerdown)="startPreviewResize($event)" (dblclick)="previewHeight = 240"
+  (keydown.arrowUp)="previewHeight = clampPreviewHeight(previewHeight + 40)"
+  (keydown.arrowDown)="previewHeight = clampPreviewHeight(previewHeight - 40)"
+  data-cy="dm-ai-prompt-preview-splitter"></div>
+<div class="m-l-16 m-r-16 m-b-8 flex-no-shrink" data-cy="dm-ai-prompt-preview">
+  <button type="button" class="btn-clean d-flex a-i-center" (click)="previewCollapsed = !previewCollapsed"
+    [attr.aria-expanded]="!previewCollapsed" data-cy="dm-ai-prompt-preview-toggle">
+    <i [c8yIcon]="previewCollapsed ? 'angle-right' : 'angle-down'" class="m-r-4"></i>
+    <strong translate>Review before saving</strong>
+  </button>
+  @if (previewCollapsed) {
+  <!-- collapsed: keep the preview out of the layout so the chat gets the space -->
+  } @else if (isCodeMapping) {
+  <div class="ai-preview-resizable" [style.height.px]="previewHeight" data-cy="dm-ai-prompt-preview-resizable">
+    <c8y-editor [editorOptions]="codePreviewEditorOptions" [ngModel]="generatedCode" class="form-control"
+      style="height: 100%" data-cy="dm-ai-prompt-preview-code">
+    </c8y-editor>
+  </div>
+  } @else {
+  <div style="max-height: 30vh; overflow-y: auto">
+    <table class="table table-condensed m-b-0" data-cy="dm-ai-prompt-preview-substitutions">
+      <thead>
+        <tr>
+          <th translate>Source</th>
+          <th translate>Target</th>
+          <th translate>Expand array</th>
+          <th translate>Repair strategy</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (sub of substitutions; track $index) {
+        <tr>
+          <td class="text-13">{{ sub.pathSource }}</td>
+          <td class="text-13">{{ sub.pathTarget }}</td>
+          <td class="text-13">{{ sub.expandArray ? 'Yes' : 'No' }}</td>
+          <td class="text-13">{{ sub.repairStrategy }}</td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  }
+</div>
+}
 
 @if (validationIssues.length) {
 <div class="alert alert-warning m-b-0 m-l-16 m-r-16 flex-no-shrink" data-cy="dm-ai-prompt-issues">

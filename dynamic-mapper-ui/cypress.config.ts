@@ -17,11 +17,11 @@
  *
  * @authors Christof Strack
  */
-import dotenv from 'dotenv';
+import { config as loadEnv } from 'dotenv';
 import { defineConfig } from 'cypress';
 import { configureC8yPlugin } from 'cumulocity-cypress/plugin';
 
-dotenv.config({ path: '.env' });
+loadEnv({ path: '.env' });
 
 export default defineConfig({
   viewportWidth: 1920,
@@ -42,8 +42,6 @@ export default defineConfig({
       return config;
     },
     env: {
-      // https://github.com/bahmutov/cypress-slow-down
-      commandDelay: 1000,
       // Cumulocity credentials — support CYPRESS_* prefix overrides
       C8Y_TENANT: process.env['CYPRESS_C8Y_TENANT'] || process.env['C8Y_TENANT'],
       // cumulocity-cypress' c8yclient runs from the browser at baseUrl, so its API

@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.pulsar;
 
+import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
@@ -36,6 +37,7 @@ import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 import dynamic.mapper.connector.mqtt.SparkplugCertificateManager;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.util.TenantLogContext;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.lang3.StringUtils;
@@ -75,6 +77,8 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
     // Cumulocity-specific consumer and producer
     private Consumer<byte[]> platformConsumer;
+    /** Set when housekeeping saw the platform consumer disconnected; cleared (and logged) when it is connected again. */
+    private volatile boolean platformConsumerLost;
     private Producer<byte[]> deviceProducer;
     // Guards all check-then-recreate sequences on platformConsumer/deviceProducer: without it,
     // concurrent callers (e.g. two publishMEAO() calls racing to recreate a disconnected
@@ -171,6 +175,69 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         log.info("{} - Configured MQTT Service Pulsar connector for Cumulocity internal use", tenant);
     }
 
+    private ClientBuilder newClientBuilder() throws PulsarClientException {
+        String serviceUrl = (String) connectorConfiguration.getProperties().get("serviceUrl");
+        Boolean enableTls = (Boolean) connectorConfiguration.getProperties().getOrDefault("enableTls", false);
+        String authMethod = (String) connectorConfiguration.getProperties()
+                .getOrDefault("authenticationMethod", "basic");
+        String authParams = (String) connectorConfiguration.getProperties().get("authenticationParams");
+        Integer connectionTimeout = (Integer) connectorConfiguration.getProperties()
+                .getOrDefault("connectionTimeoutSeconds", DEFAULT_CONNECTION_TIMEOUT);
+        Integer operationTimeout = (Integer) connectorConfiguration.getProperties()
+                .getOrDefault("operationTimeoutSeconds", DEFAULT_OPERATION_TIMEOUT);
+        Integer keepAlive = (Integer) connectorConfiguration.getProperties()
+                .getOrDefault("keepAliveIntervalSeconds", DEFAULT_KEEP_ALIVE);
+
+        String finalServiceUrl = adjustServiceUrlForTls(serviceUrl, enableTls);
+
+        ClientBuilder clientBuilder = PulsarClient.builder()
+                .serviceUrl(finalServiceUrl)
+                .connectionTimeout(connectionTimeout, TimeUnit.SECONDS)
+                .operationTimeout(operationTimeout, TimeUnit.SECONDS)
+                .keepAliveInterval(keepAlive, TimeUnit.SECONDS)
+                .enableBusyWait(false)
+                .maxNumberOfRejectedRequestPerConnection(0);
+
+        configureAuthentication(clientBuilder, authMethod, authParams);
+        return clientBuilder;
+    }
+
+    @Override
+    public boolean supportsConnectionTest() {
+        return true;
+    }
+
+    /**
+     * Builds a throwaway client and does a topic lookup, which forces the connection and
+     * authentication without subscribing or producing (no effect on the live consumer's subscription).
+     * An authorization error on the probe topic still proves the credentials were accepted.
+     */
+    @Override
+    public ConnectionTestResult testConnection() {
+        // This client's own specification holds the real URL and the tenant's credentials; the configuration it was
+        // given may still carry the registry's generic defaults. Apply them as loadConfiguration() does.
+        connectorConfiguration.copyPredefinedValues(getConnectorSpecification());
+        try (PulsarClient probe = newClientBuilder().build()) {
+            probe.getPartitionsForTopic(String.format("persistent://%s/%s/%s", tenant,
+                    connectorConfiguration.getProperties().getOrDefault("pulsarNamespace", PULSAR_NAMESPACE), PULSAR_TOWARDS_PLATFORM_TOPIC)).get(15, TimeUnit.SECONDS);
+            return ConnectionTestResult.ok("Connected to Pulsar", null);
+        } catch (java.util.concurrent.ExecutionException e) {
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            if (cause instanceof PulsarClientException.AuthenticationException) {
+                return ConnectionTestResult.failed("Authentication failed: " + cause.getMessage(), null);
+            }
+            if (cause instanceof PulsarClientException.AuthorizationException) {
+                return ConnectionTestResult.ok(
+                        "Connected and authenticated (not authorized for the probe topic, which is expected)", null);
+            }
+            return ConnectionTestResult.failed("Connection failed: " + cause.getMessage(), null);
+        } catch (java.util.concurrent.TimeoutException e) {
+            return ConnectionTestResult.failed("Connection timed out", null);
+        } catch (Exception e) {
+            return ConnectionTestResult.failed("Connection failed: " + e.getMessage(), null);
+        }
+    }
+
     @Override
     public boolean initialize() {
         loadConfiguration();
@@ -178,29 +245,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
         try {
             // Build Pulsar client
-            String serviceUrl = (String) connectorConfiguration.getProperties().get("serviceUrl");
-            Boolean enableTls = (Boolean) connectorConfiguration.getProperties().getOrDefault("enableTls", false);
-            String authMethod = (String) connectorConfiguration.getProperties()
-                    .getOrDefault("authenticationMethod", "basic");
-            String authParams = (String) connectorConfiguration.getProperties().get("authenticationParams");
-            Integer connectionTimeout = (Integer) connectorConfiguration.getProperties()
-                    .getOrDefault("connectionTimeoutSeconds", DEFAULT_CONNECTION_TIMEOUT);
-            Integer operationTimeout = (Integer) connectorConfiguration.getProperties()
-                    .getOrDefault("operationTimeoutSeconds", DEFAULT_OPERATION_TIMEOUT);
-            Integer keepAlive = (Integer) connectorConfiguration.getProperties()
-                    .getOrDefault("keepAliveIntervalSeconds", DEFAULT_KEEP_ALIVE);
-
-            String finalServiceUrl = adjustServiceUrlForTls(serviceUrl, enableTls);
-
-            ClientBuilder clientBuilder = PulsarClient.builder()
-                    .serviceUrl(finalServiceUrl)
-                    .connectionTimeout(connectionTimeout, TimeUnit.SECONDS)
-                    .operationTimeout(operationTimeout, TimeUnit.SECONDS)
-                    .keepAliveInterval(keepAlive, TimeUnit.SECONDS)
-                    .enableBusyWait(false)
-                    .maxNumberOfRejectedRequestPerConnection(0);
-
-            configureAuthentication(clientBuilder, authMethod, authParams);
+            ClientBuilder clientBuilder = newClientBuilder();
 
             try {
                 pulsarClient = clientBuilder.build();
@@ -378,6 +423,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                                 .multiplier(2)
                                 .build())
                         .messageListener(mqttServiceCallback)
+                        .consumerEventListener(platformConsumerEvents())
                         .subscribe();
 
                 log.info("{} - Subscribed to platform topic: [{}], subscription: [{}]",
@@ -395,6 +441,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                         .subscriptionName(subscriptionName)
                         .autoUpdatePartitions(false)
                         .messageListener(mqttServiceCallback)
+                        .consumerEventListener(platformConsumerEvents())
                         .subscriptionType(SubscriptionType.Failover)
                         .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
                                 .minDelayMs(negativeAckRedeliveryDelay)
@@ -418,6 +465,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                         .topic(towardsPlatformTopic)
                         .subscriptionName(subscriptionName)
                         .messageListener(mqttServiceCallback)
+                        .consumerEventListener(platformConsumerEvents())
                         .subscriptionType(SubscriptionType.Failover)
                         .negativeAckRedeliveryBackoff(MultiplierRedeliveryBackoff.builder()
                                 .minDelayMs(negativeAckRedeliveryDelay)
@@ -438,6 +486,29 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         } finally {
             pulsarChannelLock.unlock();
         }
+    }
+
+    /**
+     * Reports which instance of the failover subscription is the active consumer. Pulsar calls it on its own threads,
+     * which carry no tenant, so the lines are logged inside the tenant's log context: that is what puts them into the
+     * tenant's service log (the client library's own lines on those threads are unattributed and never reach a tenant).
+     */
+    private ConsumerEventListener platformConsumerEvents() {
+        return new ConsumerEventListener() {
+            @Override
+            public void becameActive(Consumer<?> consumer, int partitionId) {
+                TenantLogContext.run(tenant, () -> log.info(
+                        "{} - MQTT Service consumer is now the active consumer of [{}] (partition {}), connector: {}",
+                        tenant, towardsPlatformTopic, partitionId, connectorName));
+            }
+
+            @Override
+            public void becameInactive(Consumer<?> consumer, int partitionId) {
+                TenantLogContext.run(tenant, () -> log.info(
+                        "{} - MQTT Service consumer is no longer the active consumer of [{}] (partition {}): another instance took over, connector: {}",
+                        tenant, towardsPlatformTopic, partitionId, connectorName));
+            }
+        };
     }
 
     /**
@@ -731,11 +802,19 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         // lazy-recreate path — without this, a dropped subscription (e.g. broker-side fencing)
         // would otherwise silently stop all inbound device->platform traffic forever, since
         // nothing else ever calls subscribeToTowardsPlatformTopic() again outside of connect().
+        // Pulsar reconnects a dropped connection by itself and reports it only in its own (unattributed) log lines, so
+        // the tenant is told here, on the transition.
+        if (platformConsumer != null && platformConsumer.isConnected() && platformConsumerLost) {
+            platformConsumerLost = false;
+            log.info("{} - Platform consumer connection restored, connector: {}", tenant, connectorName);
+        }
         if (platformConsumer != null && !platformConsumer.isConnected()
                 && pulsarClient != null && !pulsarClient.isClosed() && shouldConnect()) {
+            platformConsumerLost = true;
             log.warn("{} - Platform consumer disconnected, attempting to resubscribe", tenant);
             try {
                 subscribeToTowardsPlatformTopic();
+                platformConsumerLost = false;
                 log.info("{} - Platform consumer resubscribed successfully", tenant);
             } catch (Exception e) {
                 log.error("{} - Failed to resubscribe platform consumer, will retry next housekeeping cycle: {}",
@@ -860,6 +939,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
         try {
             platformConsumer = null;
             deviceProducer = null;
+            platformConsumerLost = false;
         } finally {
             pulsarChannelLock.unlock();
         }
@@ -880,6 +960,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
                 // Connection settings (pre-configured, read-only)
                 .property("serviceUrl", ConnectorPropertyBuilder.requiredString()
+                        .group(ConnectorPropertyGroup.CONNECTION)
                         .order(0)
                         .description("Pulsar service URL for Cumulocity MQTT Service")
                         .readonly(true)
@@ -888,30 +969,41 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
                 // TLS configuration (read-only)
                 .property("enableTls", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.TLS)
                         .order(1)
                         .readonly(true)
                         .hidden(true)
                         .defaultValue(false))
 
-                .property("useSelfSignedCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                .property("trustCustomCertificate", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.TLS)
+                        .label("Trust custom server certificate")
+                        .description("Trust a broker certificate that is self-signed or issued by a private CA. The certificate must be uploaded to Device Management > Trusted certificates.")
                         .order(2)
                         .readonly(true)
                         .hidden(true)
                         .defaultValue(false)
                         .condition("enableTls", "true"))
 
-                .property("fingerprintSelfSignedCertificate", ConnectorPropertyBuilder.optionalString()
+                .property("trustedCertificateFingerprint", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.TLS)
+                        .label("Trusted certificate fingerprint")
+                        .description("SHA-1 fingerprint of the certificate in the Cumulocity trusted-certificate store.")
                         .order(3)
                         .readonly(true)
                         .hidden(true))
 
                 .property("nameCertificate", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.TLS)
+                        .label("Trusted certificate name")
+                        .description("Name of the certificate in the Cumulocity trusted-certificate store.")
                         .order(4)
                         .readonly(true)
                         .hidden(true))
 
                 // Authentication (pre-configured, read-only)
                 .property("authenticationMethod", ConnectorPropertyBuilder.optionalOption()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(5)
                         .readonly(true)
                         .hidden(true)
@@ -920,6 +1012,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                                 "tls", "TLS", "basic", "Basic"))
 
                 .property("authenticationParams", ConnectorPropertyBuilder.optionalSensitive()
+                        .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(6)
                         .readonly(true)
                         .hidden(true)
@@ -927,18 +1020,21 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
                 // Timeouts (read-only)
                 .property("connectionTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
+                        .group(ConnectorPropertyGroup.TIMEOUTS)
                         .order(7)
                         .readonly(true)
                         .hidden(true)
                         .defaultValue(DEFAULT_CONNECTION_TIMEOUT))
 
                 .property("operationTimeoutSeconds", ConnectorPropertyBuilder.requiredNumeric()
+                        .group(ConnectorPropertyGroup.TIMEOUTS)
                         .order(8)
                         .readonly(true)
                         .hidden(true)
                         .defaultValue(DEFAULT_OPERATION_TIMEOUT))
 
                 .property("keepAliveIntervalSeconds", ConnectorPropertyBuilder.requiredNumeric()
+                        .group(ConnectorPropertyGroup.TIMEOUTS)
                         .order(9)
                         .readonly(true)
                         .hidden(true)
@@ -946,6 +1042,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
                 // Subscription settings (read-only)
                 .property("subscriptionType", ConnectorPropertyBuilder.optionalOption()
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
                         .order(10)
                         .readonly(true)
                         .hidden(true)
@@ -954,6 +1051,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
                                 "Failover", "Failover", "Key_Shared", "Key Shared"))
 
                 .property("subscriptionName", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
                         .order(11)
                         .description("Pulsar subscription name")
                         .readonly(true)
@@ -961,40 +1059,54 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
 
                 // Wildcard support (read-only)
                 .property("supportsWildcardInTopicInbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in inbound topics")
+                        .description("Allow wildcards (+ and #) in the topic of inbound mappings.")
                         .order(12)
                         .readonly(true)
                         .defaultValue(true))
 
                 .property("supportsWildcardInTopicOutbound", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.ADVANCED)
+                        .label("Wildcards in outbound topics")
+                        .description("Allow wildcards (+ and #) in the publish topic of outbound mappings.")
                         .order(13)
                         .readonly(true)
                         .defaultValue(true))
 
                 // Pulsar-specific settings (read-only, hidden)
                 .property("pulsarTenant", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.TOPICS)
                         .order(14)
                         .readonly(true)
                         .hidden(true)
                         .defaultValue("public"))
 
                 .property("pulsarNamespace", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.TOPICS)
                         .order(15)
                         .readonly(true)
                         .hidden(true)
                         .defaultValue(PULSAR_NAMESPACE))
 
                 .property("negativeAckRedeliveryDelay", ConnectorPropertyBuilder.requiredNumeric()
+                        .group(ConnectorPropertyGroup.SUBSCRIPTION)
+                        .label("Redelivery delay (s)")
                         .order(16)
-                        .description("Delay for redelivery of negatively acknowledged messages in s (Default: 60")
+                        .description("Delay in seconds before negatively acknowledged messages are redelivered. The default is 60.")
                         .defaultValue(60))
 
                 // Sparkplug Host support
                 .property("isSparkplugHost", ConnectorPropertyBuilder.optionalBoolean()
+                        .group(ConnectorPropertyGroup.SPARKPLUG)
+                        .label("Sparkplug host")
                         .order(17)
                         .defaultValue(false)
                         .description("Enable Sparkplug Host mode to publish Birth/Death certificates on connection/disconnection"))
 
                 .property("sparkplugHostId", ConnectorPropertyBuilder.optionalString()
+                        .group(ConnectorPropertyGroup.SPARKPLUG)
+                        .label("Sparkplug host ID")
                         .order(18)
                         .description("Sparkplug Host ID (used for Birth/Death certificates)")
                         .defaultValue(tenant)

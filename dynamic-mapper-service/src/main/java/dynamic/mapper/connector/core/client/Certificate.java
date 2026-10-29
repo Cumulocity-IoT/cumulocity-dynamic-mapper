@@ -411,6 +411,39 @@ public class Certificate {
     // ========== UTILITY METHODS ==========
 
     /**
+     * True if the text holds a BEGIN/END block whose body is whitespace-separated base64. A linear scan on purpose:
+     * the equivalent regex has overlapping quantifiers and backtracks polynomially on crafted input. After a header
+     * the scan only moves over base64 and whitespace; the first other character must start the END marker. If it does
+     * not, the search for the next header resumes there, so no part of the text is read more than once, however many
+     * headers a malformed input repeats.
+     */
+    static boolean containsWellFormedCertificate(String pem) {
+        final String begin = "-----BEGIN CERTIFICATE-----";
+        final String end = "-----END CERTIFICATE-----";
+        int from = 0;
+        while (true) {
+            int start = pem.indexOf(begin, from);
+            if (start < 0) {
+                return false;
+            }
+            int bodyStart = start + begin.length();
+            int bodyEnd = bodyStart;
+            while (bodyEnd < pem.length() && isBase64OrWhitespace(pem.charAt(bodyEnd))) {
+                bodyEnd++;
+            }
+            if (bodyEnd > bodyStart && Character.isWhitespace(pem.charAt(bodyStart)) && pem.startsWith(end, bodyEnd)) {
+                return true;
+            }
+            from = bodyEnd;
+        }
+    }
+
+    private static boolean isBase64OrWhitespace(char c) {
+        return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
+                || c == '+' || c == '/' || c == '=' || Character.isWhitespace(c);
+    }
+
+    /**
      * Normalize PEM format - ensures proper line breaks
      */
     private static String normalizePemFormat(String pem) {
@@ -419,8 +452,7 @@ public class Certificate {
         }
 
         // If already properly formatted, return as-is
-        if (pem.contains("\n") && pem
-                .matches("(?s).*-----BEGIN CERTIFICATE-----\\s+[A-Za-z0-9+/=\\s]+-----END CERTIFICATE-----.*")) {
+        if (pem.contains("\n") && containsWellFormedCertificate(pem)) {
             return pem.trim();
         }
 
