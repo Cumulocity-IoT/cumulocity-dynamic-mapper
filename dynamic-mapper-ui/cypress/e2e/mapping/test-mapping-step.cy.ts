@@ -46,13 +46,20 @@ describe('Mapping — dry run in the stepper test step', () => {
 
     driveSmartFunctionStepperToTestStep(`cypress-dryrun-${stamp}`, `cydry/${stamp}`);
 
-    // Dry run: the backend executes the transformation and the UI shows its console output.
-    // NOTE: with the default code template (template-SMART-INBOUND-04, expects
-    // payload.sensorData.temp_val) and the default sample payload the transformation logs a
-    // TypeError and yields no request, so this deliberately asserts on the mechanics (backend
-    // call + console panel) and not on a produced result. See the plan's findings.
+    // Dry run 1: the default code template and its own sample payload now transform. The
+    // referenced device does not exist and the mapping does not create devices, so the backend
+    // answers with the "device not found" marker and the UI asks whether to assume it exists.
     cy.getByData('dm-mapping-test-transform').should('be.enabled').click();
     cy.wait('@testMapping').its('response.statusCode').should('be.within', 200, 299);
+    cy.get('[data-cy="c8y-confirm-modal--ok"]').should('be.visible').click();
+
+    // Dry run 2 (this one run only): assumes the device exists and produces the requests. The
+    // device is resolved against a mock, so nothing is created in the tenant.
+    cy.wait('@testMapping').then(({ request, response }) => {
+      expect(request.body.mapping.createNonExistingDevice, 'assume device exists').to.eq(true);
+      expect(response?.statusCode, 'status').to.be.within(200, 299);
+      expect(response?.body.requests, 'produced requests').to.have.length.greaterThan(0);
+    });
     cy.getByData('dm-mapping-test-console-toggle').should('be.visible');
 
     // Leave without saving: back on the grid, and no mapping was created.

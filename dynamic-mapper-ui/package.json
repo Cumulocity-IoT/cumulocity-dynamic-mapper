@@ -20,7 +20,8 @@
     "format": "prettier --write 'src/**/*.ts'",
     "lint": "eslint \"src/**/*.ts\" \"cypress/**/*.ts\"",
     "e2e:open": "env -u ELECTRON_RUN_AS_NODE cypress open",
-    "e2e:run": "env -u ELECTRON_RUN_AS_NODE cypress run"
+    "e2e:run": "env -u ELECTRON_RUN_AS_NODE cypress run",
+    "e2e:cleanup": "node scripts/e2e-cleanup.js"
   },
   "license": "Apache-2.0",
   "prettier": {

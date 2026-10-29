@@ -58,7 +58,7 @@ Principles:
 | 1 | Audit the existing 9 specs, run them green locally | 1–2 d | done (2026-10-26) |
 | 2 | Fill the `data-cy` gaps in the main components | 1–2 d | done for form fields (2026-10-26); other hooks only when a journey needs them |
 | 3 | Page objects and API helpers for setup/teardown | 2 d | done as helper modules (2026-10-26); full page objects deferred until a spec needs them |
-| 4 | New journey specs (outbound, Smart Function editor, deployment, subscriptions, test/debug) | 4–6 d | 5 journeys done (activate, stepper dry-run, outbound listing, connector duplicate, navigation smoke); open: subscriptions, Smart Function editor, outbound creation via stepper, deployment |
+| 4 | New journey specs (outbound, Smart Function editor, deployment, subscriptions, test/debug) | 4–6 d | 9 journeys done (activate, stepper dry-run, outbound listing, connector duplicate, navigation smoke, subscription by type, Smart Function editor, outbound creation via stepper, deployment); cleanup job done (`npm run e2e:cleanup`) |
 | 5 | CI job: dedicated tenant, secrets, MQTT broker container, artifacts on failure | 2–3 d | open |
 | 6 | Stabilisation and flake hunting | 2–3 d | open |
 
@@ -174,6 +174,25 @@ Each new hook gets used by a spec in the same change, or it is not added.
   non-hook selectors are c8y-owned (`c8y-data-grid`, its search input, `.dropdown-menu`).
   Hooks for the version modals, confirmation modal, code-editor drawer etc. are deliberately NOT
   added until a journey needs them.
+- 2026-10-29: cleanup job. `scripts/e2e-cleanup.js` (`npm run e2e:cleanup [-- --dry-run]`) removes
+  `cypress*` mappings (deactivated first), `Cypress*` connectors, `Cypress*` entries in the outbound
+  type subscription and `cypress-*` users over REST, no browser needed (CI: run with `if: always()`).
+  The global `after()` in `support/e2e.ts` does the same sweep after every spec. Mapping fixtures are
+  now named `cypress-*` so the sweep finds them.
+- 2026-10-29: item 4, four more journeys, each green on its own against ck4:
+  `mapping/subscription-by-type.cy.ts` (add and remove a `Cypress*` type through the drawer; the
+  tenant-wide list is recorded first and restored in teardown),
+  `mapping/smart-function-editor.cy.ts` (edit code, dry run shows the edit, save goes to the draft),
+  `mapping/create-outbound-mapping-ui.cy.ts` (`driveSmartFunctionStepperToTestStep` takes a direction),
+  `mapping/deploy-mapping.cy.ts` (connector assignment from the editor).
+  Lessons: the unified editor's `dm-unified-editor-tab-*` hooks sit on hidden registration elements,
+  use `openEditorTab(label)`; the active tab has `pointer-events: none`; Monaco ignores keystrokes and
+  paste (EditContext) and is not on `window`, so the spec reads the instance with Angular's dev-mode
+  `ng.getComponent()` (works because the suite runs on `ng serve`); editing an existing mapping saves
+  to `PUT /mapping/<id>/draft`, the live mapping changes only on publish; the grid's "For connectors"
+  column shows the effective deployment, so it stays empty for a draft; `GET /deployment/defined/<id>`
+  answers 415 without a JSON content-type.
+
 
 ## Findings (product, not test issues)
 
@@ -185,9 +204,19 @@ Each new hook gets used by a spec in the same change, or it is not added.
   Function templates; `-08` and `-13` are raw-byte templates and declare only a topic), the backend
   stores them on `CodeTemplate` and refreshes stored tenant copies on startup, and
   `applyCodeTemplateSample()` seeds JSON mappings from them. **The dry-run spec
-  (`test-mapping-step.cy.ts`) still asserts only the mechanics because the tenant's deployed
-  microservice predates the fix; tighten it to expect a produced result once the new backend is deployed.**
+  (`test-mapping-step.cy.ts`) was tightened on 2026-10-29, once ck4 ran the fixed backend: it accepts the
+  "Device does not exist" dialog and asserts that the second dry run produces requests.**
 - The Add-connector button is usable before the connector specifications have loaded (drawer then
   shows "No items").
 - The dry run console also warns that the template uses ES `export` syntax, which is stripped
   because "Support ESM modules" is disabled.
+- **Saving from the editor throws until the templates are initialised.** Open an existing JSON mapping
+  in the unified editor, select a connector on the Connector tab, click Save: nothing happens (no
+  request, no toast). The console shows `TypeError: Cannot convert undefined or null to object` from
+  `reduceSourceTemplate` called by `encodeMappingForCommit`, because the editor's `sourceTemplate` and
+  `targetTemplate` are still undefined until a tab has initialised them. `deploy-mapping.cy.ts` works
+  around it by opening the Templates tab first; fix the editor and remove the workaround.
+- **The Test tab can run stale code.** Its `ngOnInit` awaits two cache-clear operations before it
+  subscribes to the replayed mapping, while the Dry Run button is already enabled. A run started in that
+  window executes the saved code, not the unsaved edit. `smart-function-editor.cy.ts` waits until the
+  tab holds the edit.

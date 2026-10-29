@@ -41,5 +41,14 @@ plus `git checkout cumulocity.config.ts`.
 
 - Select elements with `cy.getByData('dm-...')` (`data-cy` hooks, naming `dm-<area>-<element>[-<id>]`).
 - Set up and clean up test data through the REST API; use the UI only for the flow under test.
-- Specs create resources named `Cypress*`; `support/e2e.ts` sweeps leftover connectors after each spec.
+- Specs create resources named `Cypress*` (connectors, types) or `cypress*` (mappings, users);
+  `support/e2e.ts` sweeps leftovers after each spec.
 - Wait on `cy.intercept` aliases, not fixed delays.
+
+## Cleanup job
+
+`npm run e2e:cleanup` removes everything a crashed or cancelled run left on the tenant: `cypress*`
+mappings (deactivated first), `Cypress*` connectors, `Cypress*` device types in the outbound type
+subscription (other types stay) and `cypress-*` users. It uses REST with the credentials from `.env`,
+needs no browser or dev server, and exits 1 if a deletion fails. Add `-- --dry-run` to only list what
+it would delete. In CI, run it as a final step with `if: always()`.

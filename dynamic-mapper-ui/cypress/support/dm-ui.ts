@@ -80,10 +80,15 @@ export const leaveApp = (): void => {
  * step; the caller decides whether to dry-run, confirm or cancel.
  *
  * A SMART_FUNCTION is used on purpose: it needs no device-identifier substitution, so the
- * validity gate passes without clicking template-tree nodes. Hooks: dm-mapping-*, plus the Formly
+ * validity gate passes without clicking template-tree nodes. For OUTBOUND the topic is the publish
+ * topic (the mapping topic fields are hidden in that direction). Hooks: dm-mapping-*, plus the Formly
  * ids #mappingName / #mappingTopic / #mappingTopicSample (stable, defined in the form).
  */
-export const driveSmartFunctionStepperToTestStep = (name: string, topic: string): void => {
+export const driveSmartFunctionStepperToTestStep = (
+  name: string,
+  topic: string,
+  direction: 'INBOUND' | 'OUTBOUND' = 'INBOUND'
+): void => {
   // 1. Open the Add-mapping type drawer.
   cy.getByData('dm-mapping-add').filter(':visible').first().click();
 
@@ -110,10 +115,11 @@ export const driveSmartFunctionStepperToTestStep = (name: string, topic: string)
   //    as the mapping topic; ours has no wildcards, so the sample is identical.
   formField('name').clear();
   formField('name').type(name);
-  formField('mappingTopic').clear();
-  formField('mappingTopic').type(topic);
-  formField('mappingTopicSample').clear();
-  formField('mappingTopicSample').type(topic);
+  const topicKey = direction === 'OUTBOUND' ? 'publishTopic' : 'mappingTopic';
+  formField(topicKey).clear();
+  formField(topicKey).type(topic);
+  formField(`${topicKey}Sample`).clear();
+  formField(`${topicKey}Sample`).type(topic);
   cy.getByData('dm-mapping-stepper-buttons-general')
     .find('button')
     .contains('Next')
@@ -126,4 +132,21 @@ export const driveSmartFunctionStepperToTestStep = (name: string, topic: string)
 
   // 7. The test step is now showing.
   cy.getByData('dm-mapping-stepper-buttons-test').should('be.visible');
+};
+
+/**
+ * Open a tab of the mapping editor (edit route) by its label. The dm-unified-editor-tab-* hooks
+ * sit on c8y's hidden tab registration elements (zero height); the clickable headers are rendered
+ * by the tabs outlet, so click those by label (the locale is forced to "en"). The active tab has
+ * pointer-events: none, and which tab the editor opens on depends on the mapping type, so a tab
+ * that is already open is left alone.
+ */
+export const openEditorTab = (label: 'Connector' | 'General Settings' | 'Templates' | 'Transformation' | 'Testing'): void => {
+  cy.get('c8y-tabs-outlet')
+    .contains('a', label)
+    .then(($tab) => {
+      if (getComputedStyle($tab[0]).pointerEvents !== 'none') {
+        cy.wrap($tab).click();
+      }
+    });
 };
