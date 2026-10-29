@@ -74,7 +74,9 @@ _CONNECTOR_CREATED=false
 #   - Deleting while enabled takes the clean path: unsubscribe → disable →
 #     shutdown → delete config.
 _DELETED_COUNT=0
-delete_existing_c8y_mqtt_service_connectors() {
+# Deletes exactly the given connector identifiers (one per line), i.e. the ones the guard below has checked.
+# Never looks the connectors up again, so a failed second lookup cannot widen what gets deleted.
+delete_existing_c8y_mqtt_service_connectors() {   # <identifiers, one per line>
     local _id
     _DELETED_COUNT=0
     while IFS= read -r _id; do
@@ -82,12 +84,29 @@ delete_existing_c8y_mqtt_service_connectors() {
         _DELETED_COUNT=$((_DELETED_COUNT + 1))
         dm_info "Found existing $CONNECTOR_TYPE connector: $_id — deleting (while enabled)"
         dm_delete_connector "$_id"
-    done <<< "$(dm_list_connector_ids_by_type "$CONNECTOR_TYPE")"
+    done <<< "$1"
 }
 
-# Count how many connectors of CONNECTOR_TYPE currently exist.
+# Prints the identifiers (one per line) of the connectors of CONNECTOR_TYPE from ONE listing request.
+# Unlike dm_list_connector_ids_by_type this fails (non-zero, nothing printed) when the request fails or the answer
+# is not JSON, instead of reading a failure as "no connectors". The deletion guard depends on that.
+list_connector_ids_strict() {
+    local _out
+    _out=$(c8y api --method GET ${DM_SERVICE_HOST:+--host $DM_SERVICE_HOST} \
+        --url "${DM_SERVICE}/configuration/connector/instance" --force --output json </dev/null 2>/dev/null) || return 1
+    printf '%s' "$_out" | jq -rs --arg t "$CONNECTOR_TYPE" '
+        [ .[] | if type == "array" then .[] else . end ]
+        | map(select(type == "object"))
+        | .[]
+        | select((.connectorType // "") == $t)
+        | (.identifier // empty)'
+}
+
+# Count how many connectors of CONNECTOR_TYPE currently exist; fails if they cannot be listed.
 count_c8y_mqtt_service_connectors() {
-    dm_list_connector_ids_by_type "$CONNECTOR_TYPE" | grep -c . || true
+    local _ids
+    _ids=$(list_connector_ids_strict) || return 1
+    printf '%s' "$_ids" | grep -c . || true
 }
 
 # ── Cleanup (always runs unless --keep is set) ───────────────────────────────────
@@ -112,7 +131,11 @@ dm_validate_only_exit
 
 # The type is a singleton, so the test must delete every existing connector of it. Refuse to
 # silently delete one that is not this test's own (e.g. configured by hand for real use).
-FOREIGN_CONNECTORS=$(dm_list_connector_ids_by_type "$CONNECTOR_TYPE" | grep -vx "$CONNECTOR_ID" || true)
+# One validated snapshot: a failed lookup aborts, it must not look like "no connectors". The deletion below
+# uses this same list, so only connectors that passed this check are deleted.
+EXISTING_CONNECTORS=$(list_connector_ids_strict) \
+    || dm_error "Could not list the existing $CONNECTOR_TYPE connectors. Nothing was deleted."
+FOREIGN_CONNECTORS=$(printf '%s\n' "$EXISTING_CONNECTORS" | grep -vx "$CONNECTOR_ID" | grep -v '^$' || true)
 if [ -n "$FOREIGN_CONNECTORS" ] && [ "${DM_ALLOW_DELETE_EXISTING_CONNECTOR:-false}" != "true" ]; then
     dm_skip_exit \
         "Existing $CONNECTOR_TYPE connector(s) not created by this test: $(printf '%s' "$FOREIGN_CONNECTORS" | tr '\n' ' ')" \
@@ -120,7 +143,7 @@ if [ -n "$FOREIGN_CONNECTORS" ] && [ "${DM_ALLOW_DELETE_EXISTING_CONNECTOR:-fals
 fi
 
 dm_step "Deleting any existing Cumulocity MQTT Service connector(s) ..."
-delete_existing_c8y_mqtt_service_connectors
+delete_existing_c8y_mqtt_service_connectors "$EXISTING_CONNECTORS"
 if [ "${_DELETED_COUNT:-0}" -eq 0 ]; then
     dm_info "No existing Cumulocity MQTT Service connector found — nothing to delete."
 fi
@@ -129,12 +152,14 @@ fi
 # of this type before we create a fresh one, otherwise we would end up with
 # duplicates. Deletion (especially of a Pulsar connector) can take a few seconds,
 # so poll until the type is gone. Fail loudly if any remain after the timeout.
-REMAINING=$(count_c8y_mqtt_service_connectors)
+REMAINING=$(count_c8y_mqtt_service_connectors) \
+    || dm_error "Could not list the $CONNECTOR_TYPE connectors to check the deletion."
 _elapsed=0
 while [ "${REMAINING:-0}" -ne 0 ] && [ "$_elapsed" -lt 45 ]; do
     dm_wait 3 "for deletion to complete (${REMAINING} remaining)"
     _elapsed=$((_elapsed + 3))
-    REMAINING=$(count_c8y_mqtt_service_connectors)
+    REMAINING=$(count_c8y_mqtt_service_connectors) \
+        || dm_error "Could not list the $CONNECTOR_TYPE connectors to check the deletion."
 done
 if [ "${REMAINING:-0}" -ne 0 ]; then
     # Diagnostics: show the surviving connector's config + live status so we can

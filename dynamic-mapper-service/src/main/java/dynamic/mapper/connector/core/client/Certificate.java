@@ -412,9 +412,12 @@ public class Certificate {
 
     /**
      * True if the text holds a BEGIN/END block whose body is whitespace-separated base64. A linear scan on purpose:
-     * the equivalent regex has overlapping quantifiers and backtracks polynomially on crafted input.
+     * the equivalent regex has overlapping quantifiers and backtracks polynomially on crafted input. After a header
+     * the scan only moves over base64 and whitespace; the first other character must start the END marker. If it does
+     * not, the search for the next header resumes there, so no part of the text is read more than once, however many
+     * headers a malformed input repeats.
      */
-    private static boolean containsWellFormedCertificate(String pem) {
+    static boolean containsWellFormedCertificate(String pem) {
         final String begin = "-----BEGIN CERTIFICATE-----";
         final String end = "-----END CERTIFICATE-----";
         int from = 0;
@@ -424,28 +427,20 @@ public class Certificate {
                 return false;
             }
             int bodyStart = start + begin.length();
-            int stop = pem.indexOf(end, bodyStart);
-            if (stop < 0) {
-                return false;
+            int bodyEnd = bodyStart;
+            while (bodyEnd < pem.length() && isBase64OrWhitespace(pem.charAt(bodyEnd))) {
+                bodyEnd++;
             }
-            if (bodyStart < stop && Character.isWhitespace(pem.charAt(bodyStart))
-                    && isBase64Body(pem, bodyStart, stop)) {
+            if (bodyEnd > bodyStart && Character.isWhitespace(pem.charAt(bodyStart)) && pem.startsWith(end, bodyEnd)) {
                 return true;
             }
-            from = bodyStart;
+            from = bodyEnd;
         }
     }
 
-    private static boolean isBase64Body(String pem, int from, int to) {
-        for (int i = from; i < to; i++) {
-            char c = pem.charAt(i);
-            boolean valid = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
-                    || c == '+' || c == '/' || c == '=' || Character.isWhitespace(c);
-            if (!valid) {
-                return false;
-            }
-        }
-        return true;
+    private static boolean isBase64OrWhitespace(char c) {
+        return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
+                || c == '+' || c == '/' || c == '=' || Character.isWhitespace(c);
     }
 
     /**
