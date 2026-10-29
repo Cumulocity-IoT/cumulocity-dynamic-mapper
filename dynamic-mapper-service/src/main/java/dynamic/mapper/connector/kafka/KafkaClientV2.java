@@ -869,7 +869,8 @@ public class KafkaClientV2 extends AConnectorClient {
     /**
      * Handle processing error
      */
-    private void handleProcessingError(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper,
+    // package-private for KafkaClientV2RestartTest
+    void handleProcessingError(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper,
             int httpStatusCode) {
         log.error("{} - Processing error for topic: [{}], partition: {}, offset: {}, HTTP status: {}",
                 tenant, record.topic(), record.partition(), record.offset(), httpStatusCode);
@@ -1141,7 +1142,7 @@ public class KafkaClientV2 extends AConnectorClient {
      * close, use {@code consumer.wakeup()} — the one KafkaConsumer method documented as safe to
      * call from another thread) for the owning thread to act on.
      */
-    private static class KafkaConsumerWrapper {
+    static class KafkaConsumerWrapper {
         @Getter
         private final KafkaConsumer<String, String> consumer;
         @Getter
