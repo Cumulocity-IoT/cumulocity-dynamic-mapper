@@ -821,13 +821,13 @@ public class KafkaClientV2 extends AConnectorClient {
             if (!hasErrors || httpStatusCode < 500) {
                 handleSuccessfulProcessing(record, wrapper);
             } else {
-                handleProcessingError(record, httpStatusCode);
+                handleProcessingError(record, wrapper, httpStatusCode);
             }
 
         } catch (InterruptedException | ExecutionException e) {
             log.warn("{} - Processing interrupted for topic: [{}], offset: {}",
                     tenant, topic, record.offset(), e);
-            handleProcessingError(record, 0);
+            handleProcessingError(record, wrapper, 0);
         } catch (TimeoutException e) {
             // cancelAndDrain, not Future.cancel(true): the bare cancel only interrupts the worker
             // thread, which CPU-bound GraalVM JavaScript ignores — the registered cancel actions
@@ -835,7 +835,7 @@ public class KafkaClientV2 extends AConnectorClient {
             boolean drained = processedResults.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
             log.warn("{} - Processing timed out for topic: [{}], offset: {}, worker drained: {}",
                     tenant, topic, record.offset(), drained);
-            handleProcessingTimeout(record);
+            handleProcessingTimeout(record, wrapper);
         }
 
         return null;
@@ -869,7 +869,8 @@ public class KafkaClientV2 extends AConnectorClient {
     /**
      * Handle processing error
      */
-    private void handleProcessingError(ConsumerRecord<String, String> record, int httpStatusCode) {
+    private void handleProcessingError(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper,
+            int httpStatusCode) {
         log.error("{} - Processing error for topic: [{}], partition: {}, offset: {}, HTTP status: {}",
                 tenant, record.topic(), record.partition(), record.offset(), httpStatusCode);
 
@@ -881,9 +882,12 @@ public class KafkaClientV2 extends AConnectorClient {
             log.error("{} - Too many processing errors for topic: [{}], considering consumer restart",
                     tenant, record.topic());
 
+            // Restart by the subscription key (may be a wildcard pattern), not record.topic():
+            // topicConsumers is keyed by the subscription.
+            String subscription = wrapper != null ? wrapper.getTopic() : record.topic();
             virtualThreadPool.submit(() -> {
                 try {
-                    restartConsumerForTopic(record.topic());
+                    restartConsumerForTopic(subscription);
                     processingErrorCounts.remove(errorKey);
                 } catch (ConnectorException e) {
                     log.error("{} - Failed to restart consumer for topic: [{}]", tenant, record.topic(), e);
@@ -895,10 +899,10 @@ public class KafkaClientV2 extends AConnectorClient {
     /**
      * Handle processing timeout
      */
-    private void handleProcessingTimeout(ConsumerRecord<String, String> record) {
+    private void handleProcessingTimeout(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper) {
         log.warn("{} - Processing timeout for topic: [{}], partition: {}, offset: {}",
                 tenant, record.topic(), record.partition(), record.offset());
-        handleProcessingError(record, 0);
+        handleProcessingError(record, wrapper, 0);
     }
 
     /**
