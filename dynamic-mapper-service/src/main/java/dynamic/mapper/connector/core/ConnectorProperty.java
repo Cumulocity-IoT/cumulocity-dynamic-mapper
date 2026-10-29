@@ -89,7 +89,7 @@ public class ConnectorProperty implements Cloneable {
             ConnectorProperty cloned = (ConnectorProperty) super.clone();
             // Deep clone mutable collections
             if (this.options != null) {
-                cloned.options = new java.util.HashMap<>(this.options);
+                cloned.options = new java.util.LinkedHashMap<>(this.options);
             }
             if (this.condition != null) {
                 cloned.condition = this.condition.clone();

@@ -216,6 +216,7 @@ public class ConfigurationController {
         ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
         log.info("{} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
+            dropInactiveProperties(tenant, connectorSpecification, configuration);
             connectorConfigurationService.saveConnectorConfiguration(configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } catch (Exception ex) {
@@ -426,12 +427,7 @@ public class ConfigurationController {
         try {
             ConnectorConfiguration original = configuration.getIdentifier() == null ? null
                     : connectorConfigurationService.getConnectorConfiguration(configuration.getIdentifier(), tenant);
-            for (String property : configuration.getProperties().keySet()) {
-                if (spec.isPropertySensitive(property) && "****".equals(configuration.getProperties().get(property))
-                        && original != null && original.getProperties() != null) {
-                    configuration.getProperties().put(property, original.getProperties().get(property));
-                }
-            }
+            configuration.restoreMaskedSecrets(spec, original);
             configuration.copyPredefinedValues(spec);
             AConnectorClient client = AConnectorClient
                     .constructForProbe(() -> connectorClientFactory.createConnectorClient(configuration, "", tenant));
@@ -506,17 +502,8 @@ public class ConfigurationController {
             ConnectorConfiguration originalConfiguration = connectorConfigurationService
                     .getConnectorConfiguration(configuration.getIdentifier(), tenant);
 
-            for (String property : configuration.getProperties().keySet()) {
-                if (connectorSpecification.isPropertySensitive(property)
-                        && configuration.getProperties().get(property).equals("****")) {
-                    // retrieve the existing value
-                    log.info(
-                            "{} - Copy property {} from existing configuration, since it was not touched and is sensitive.",
-                            tenant, property);
-                    configuration.getProperties().put(property,
-                            originalConfiguration.getProperties().get(property));
-                }
-            }
+            configuration.restoreMaskedSecrets(connectorSpecification, originalConfiguration);
+            dropInactiveProperties(tenant, connectorSpecification, configuration);
             connectorConfigurationService.saveConnectorConfiguration(configuration);
         } catch (Exception ex) {
             log.error("{} - Error updating connector instance: {}", tenant, identifier, ex);
@@ -916,6 +903,21 @@ public class ConfigurationController {
         } catch (Exception ex) {
             log.error("{} - [TEST] Error setting acceptedDeprecationNotice", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+        }
+    }
+
+    /**
+     * Removes the values of properties that do not apply to the configuration (their condition is not met), so
+     * that a stale value the UI no longer shows cannot stay active in the connector.
+     */
+    private void dropInactiveProperties(String tenant, ConnectorSpecification spec, ConnectorConfiguration configuration) {
+        if (spec == null || configuration.getProperties() == null) {
+            return;
+        }
+        List<String> removed = spec.removeInactiveProperties(configuration.getProperties());
+        if (!removed.isEmpty()) {
+            log.info("{} - Dropped properties that do not apply to connector {}: {}", tenant,
+                    configuration.getIdentifier(), removed);
         }
     }
 }

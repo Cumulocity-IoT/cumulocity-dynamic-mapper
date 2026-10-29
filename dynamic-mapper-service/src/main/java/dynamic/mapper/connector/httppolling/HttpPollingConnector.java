@@ -333,7 +333,7 @@ public class HttpPollingConnector extends AConnectorClient {
 
     @Override
     public boolean isConfigValid(ConnectorConfiguration configuration) {
-        if (configuration == null) {
+        if (configuration == null || !validateSpecifiedProperties(configuration)) {
             return false;
         }
         return HttpPollingRequestHelper.isConfigValid(configuration.getProperties(),
@@ -1023,21 +1023,22 @@ public class HttpPollingConnector extends AConnectorClient {
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .description("Authentication sent with each poll request.")
                         .order(2)
-                        .options("None", "Basic", "Bearer"))
+                        .options("None", "Basic", "Bearer")
+                        .defaultValue("None"))
 
-                .property("user", ConnectorPropertyBuilder.optionalString()
+                .property("user", ConnectorPropertyBuilder.requiredString()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .description("User name for Basic authentication.")
                         .order(3)
                         .condition("authentication", "Basic"))
 
-                .property("password", ConnectorPropertyBuilder.optionalSensitive()
+                .property("password", ConnectorPropertyBuilder.requiredSensitive()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .description("Password for Basic authentication.")
                         .order(4)
                         .condition("authentication", "Basic"))
 
-                .property("token", ConnectorPropertyBuilder.optionalSensitive()
+                .property("token", ConnectorPropertyBuilder.requiredSensitive()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .description("Bearer token sent in the Authorization header.")
                         .order(5)
@@ -1070,7 +1071,11 @@ public class HttpPollingConnector extends AConnectorClient {
                         .group(ConnectorPropertyGroup.PAGINATION)
                         .label("Pagination mode")
                         .order(9)
-                        .options("None", "NextLinkHeader", "NextFieldInBody", "PageNumber")
+                        .optionsWithLabels("None", "None (one request per poll)",
+                                "NextLinkHeader", "Next link header",
+                                "NextFieldInBody", "Next field in body",
+                                "PageNumber", "Page number")
+                        .defaultValue("None")
                         .description("How to drain multiple pages within one poll cycle. None (default): a " +
                                 "single GET per poll. NextLinkHeader: follow an RFC 5988 Link response header " +
                                 "with rel=\"next\" until absent. NextFieldInBody: follow nextPageExpression " +

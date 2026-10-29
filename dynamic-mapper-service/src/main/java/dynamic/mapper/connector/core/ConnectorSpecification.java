@@ -21,8 +21,11 @@
 
 package dynamic.mapper.connector.core;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
@@ -113,6 +116,100 @@ public class ConnectorSpecification implements Cloneable {
 
 		return ConnectorPropertyType.SENSITIVE_STRING_PROPERTY == propertyType.type
 				|| ConnectorPropertyType.SENSITIVE_STRING_LARGE_PROPERTY == propertyType.type;
+	}
+
+	/**
+	 * The value a property effectively has: the configured value, or the property's default when the configuration
+	 * has none. A blank string counts as "no value".
+	 */
+	private Object effectiveValue(String key, Map<String, Object> configured) {
+		Object value = configured == null ? null : configured.get(key);
+		if (value instanceof String string && string.isBlank()) {
+			value = null;
+		}
+		if (value == null) {
+			ConnectorProperty property = properties == null ? null : properties.get(key);
+			value = property == null ? null : property.getDefaultValue();
+		}
+		return value;
+	}
+
+	/**
+	 * Whether a property applies to the given configuration. A property without a condition always applies. A
+	 * property with a condition applies when the property it depends on applies as well (so a field behind a hidden
+	 * field is hidden too) and that property's effective value is one of {@code anyOf}. The value {@code "*"} in
+	 * {@code anyOf} stands for "any non-empty value". Booleans compare as the strings {@code "true"} and
+	 * {@code "false"}. The UI evaluates the same rule (see {@code isPropertyActive} in connector.model.ts).
+	 */
+	public boolean isPropertyActive(String key, Map<String, Object> configured) {
+		return isPropertyActive(key, configured, new HashSet<>());
+	}
+
+	private boolean isPropertyActive(String key, Map<String, Object> configured, Set<String> visiting) {
+		ConnectorProperty property = properties == null ? null : properties.get(key);
+		if (property == null || property.getCondition() == null || property.getCondition().getAnyOf() == null) {
+			return true;
+		}
+		ConnectorPropertyCondition condition = property.getCondition();
+		if (!visiting.add(key)) {
+			// A condition cycle can never be satisfied; the consistency test rejects such specifications.
+			return false;
+		}
+		try {
+			if (!isPropertyActive(condition.getKey(), configured, visiting)) {
+				return false;
+			}
+			Object value = effectiveValue(condition.getKey(), configured);
+			for (String candidate : condition.getAnyOf()) {
+				if ("*".equals(candidate) ? value != null : value != null && candidate.equalsIgnoreCase(String.valueOf(value))) {
+					return true;
+				}
+			}
+			return false;
+		} finally {
+			visiting.remove(key);
+		}
+	}
+
+	/**
+	 * Names of the required properties that have neither a configured value nor a default. Properties that do not
+	 * apply (see {@link #isPropertyActive}) are not required.
+	 */
+	public List<String> findMissingRequired(Map<String, Object> configured) {
+		List<String> missing = new ArrayList<>();
+		if (properties == null) {
+			return missing;
+		}
+		properties.forEach((key, property) -> {
+			if (Boolean.TRUE.equals(property.getRequired()) && isPropertyActive(key, configured)
+					&& effectiveValue(key, configured) == null) {
+				missing.add(key);
+			}
+		});
+		return missing;
+	}
+
+	/**
+	 * Removes the values of properties that do not apply to the configuration, e.g. a certificate trust flag that
+	 * is still set after the protocol changed to one without TLS. The UI hides such a property, so the user cannot
+	 * see or clear a stale value that would otherwise stay active in the connector.
+	 *
+	 * @return the keys that were removed
+	 */
+	public List<String> removeInactiveProperties(Map<String, Object> configured) {
+		List<String> removed = new ArrayList<>();
+		if (properties == null || configured == null) {
+			return removed;
+		}
+		// decide on a snapshot, so removing one value does not change the outcome for the others
+		Map<String, Object> snapshot = new java.util.HashMap<>(configured);
+		for (String key : new ArrayList<>(configured.keySet())) {
+			if (!isPropertyActive(key, snapshot)) {
+				configured.remove(key);
+				removed.add(key);
+			}
+		}
+		return removed;
 	}
 
 	@Override

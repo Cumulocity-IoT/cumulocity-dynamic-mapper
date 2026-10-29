@@ -298,11 +298,15 @@ public class TestClient extends AConnectorClient {
                 .property("enabled", ConnectorPropertyBuilder.optionalBoolean()
                         .group(ConnectorPropertyGroup.ADVANCED)
                         .order(0)
+                        .readonly(true)
+                        .hidden(true)
                         .defaultValue(true))
 
                 .property("description", ConnectorPropertyBuilder.optionalString()
                         .group(ConnectorPropertyGroup.ADVANCED)
                         .order(1)
+                        .readonly(true)
+                        .hidden(true)
                         .defaultValue("Test Connector for mapping validation"))
 
                 .build();

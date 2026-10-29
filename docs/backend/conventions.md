@@ -59,6 +59,31 @@ context.getRequests().addAll(output.getRequests());
 
 See [extensions.md](../extensions.md) for the full guide and `AConnectorClient` helper methods.
 
+## Connector property definitions
+
+A `ConnectorSpecification` describes every setting of a connector. The UI builds the connector form from it and the backend
+validates against it, so both read a property the same way. `ConnectorSpecificationConsistencyTest` checks these rules for
+every connector.
+
+- **Group, label, description:** every visible property has a `group` from `ConnectorPropertyGroup` (the UI keeps the same
+  list in `CONNECTOR_PROPERTY_GROUP_ORDER`) and a description. Add a `label` when the key has several words, otherwise the UI
+  derives a Title Case label from the key. `order` is unique inside a group.
+- **Defaults:** a default must fit the type (`Boolean`, `Number`, `Map`, a `String` that is one of the options). Every option
+  property has a default, so the select never starts empty; add an explicit `None` option when "no value" is valid. Secrets
+  have no default.
+- **Conditions:** `condition(key, anyOf...)` shows a property only while another property has one of the values. The other
+  property must exist and a boolean compares as `"true"`/`"false"`. `"*"` stands for any non-empty value. A condition counts
+  the property it depends on as well: a field behind a hidden field is hidden too. A missing value uses the default of the
+  property it depends on. `ConnectorSpecification.isPropertyActive` (backend) and `isPropertyActive` in `connector.model.ts`
+  (UI) implement the same rule, so change both together.
+- **Required:** `required` means "required while the property applies". Mark credentials behind a condition as required, for
+  example the password behind a user. Validate in `isConfigValid()` with `validateSpecifiedProperties(configuration)`, which
+  skips properties that do not apply and counts defaults as present. Keep only cross-field rules in the connector itself.
+- **Hidden and read-only:** a hidden property is read-only and is filled from its default by `copyPredefinedValues`. A
+  required property the user cannot edit has a default.
+- **Saving:** create and update drop the values of properties that do not apply, so a stale value the UI no longer shows
+  cannot stay active. A secret sent back as `****` keeps its stored value; a secret that is not set stays unset.
+
 ## Adding a Java Extension
 
 Implement `ProcessorExtensionInbound<O>` or `ProcessorExtensionOutbound<O>` from `dynamic-mapper-interface`. These receive `DataPrepContext` (**not** `ProcessingContext`) as the method parameter. See `dynamic-mapper-extension/` for reference implementations and [extensions.md](../extensions.md) for the full guide.

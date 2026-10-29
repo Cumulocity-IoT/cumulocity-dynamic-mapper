@@ -566,12 +566,8 @@ public class AMQPClient extends AConnectorClient {
         }
 
         // Check required properties
-        for (Map.Entry<String, ConnectorProperty> entry : connectorSpecification.getProperties().entrySet()) {
-            if (entry.getValue().getRequired() &&
-                    configuration.getProperties().get(entry.getKey()) == null) {
-                log.warn("{} - Missing required property: {}", tenant, entry.getKey());
-                return false;
-            }
+        if (!validateSpecifiedProperties(configuration)) {
+            return false;
         }
 
         return true;

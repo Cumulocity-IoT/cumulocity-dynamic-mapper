@@ -1055,18 +1055,8 @@ public class KafkaClientV2 extends AConnectorClient {
             return false;
         }
 
-        String bootstrapServers = (String) configuration.getProperties().get("bootstrapServers");
-        if (bootstrapServers == null || bootstrapServers.trim().isEmpty()) {
+        if (!validateSpecifiedProperties(configuration)) {
             return false;
-        }
-
-        String username = (String) configuration.getProperties().get("username");
-        String password = (String) configuration.getProperties().get("password");
-
-        if (username != null && !username.trim().isEmpty()) {
-            if (password == null || password.trim().isEmpty()) {
-                return false;
-            }
         }
 
         Boolean trustCustomCertificate = (Boolean) configuration.getProperties()
@@ -1258,7 +1248,7 @@ public class KafkaClientV2 extends AConnectorClient {
                         .order(6)
                         .description("API Key, e.g. for Confluent Cloud. Reveals Password below."))
 
-                .property("password", ConnectorPropertyBuilder.optionalSensitive()
+                .property("password", ConnectorPropertyBuilder.requiredSensitive()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .order(7)
                         .description("API Secret, e.g. for Confluent Cloud/Aiven.")

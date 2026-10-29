@@ -1412,6 +1412,23 @@ public abstract class AConnectorClient {
     }
 
     /**
+     * Validates the configuration against the required properties of the connector specification. A property that
+     * does not apply because its condition is not met, e.g. the password while no user is set, is not required, and
+     * a property with a default value counts as present.
+     *
+     * @param configuration the connector configuration to validate
+     * @return true if no required property is missing
+     */
+    protected boolean validateSpecifiedProperties(ConnectorConfiguration configuration) {
+        List<String> missing = connectorSpecification.findMissingRequired(configuration.getProperties());
+        if (!missing.isEmpty()) {
+            log.warn("{} - Missing required configuration properties: {}", tenant, missing);
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * Validate required properties in configuration
      * Subclasses should override to add connector-specific validation
      * @param configuration the connector configuration to validate

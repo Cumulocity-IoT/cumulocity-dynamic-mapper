@@ -24,6 +24,7 @@ import { FormGroup, FormsModule } from '@angular/forms';
 import {
   CONNECTOR_PROPERTY_GROUP_GENERAL,
   CONNECTOR_PROPERTY_GROUP_ORDER,
+  isPropertyActive,
   ConnectionTestResult,
   ConnectorConfiguration,
   ConnectorProperty,
@@ -90,7 +91,6 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     ConnectorPropertyType,
     (entry: PropertyEntry) => FormlyFieldConfig
   >([
-    [ConnectorPropertyType.ID_STRING_PROPERTY, this.createIdStringField.bind(this)],
     [ConnectorPropertyType.NUMERIC_PROPERTY, this.createNumericField.bind(this)],
     [ConnectorPropertyType.STRING_PROPERTY, this.createStringField.bind(this)],
     [ConnectorPropertyType.SENSITIVE_STRING_PROPERTY, this.createSensitiveStringField.bind(this)],
@@ -178,20 +178,11 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
     }
   }
 
-  private createHideExpression(property: ConnectorProperty) {
-    return (model) => {
-      if (property?.condition?.anyOf) {
-        const convertedAnyOf = this.convertBooleanStrings(property.condition.anyOf);
-        const currentValue = model.properties[property.condition.key];
-        // "*" is a wildcard meaning "any non-empty value" (e.g. Kafka's password field,
-        // shown once a username is entered, whatever it is) - not a literal value to match.
-        if (convertedAnyOf.includes('*')) {
-          return currentValue === null || currentValue === undefined || currentValue === '';
-        }
-        return !convertedAnyOf.includes(currentValue);
-      }
-      return false;
-    };
+  /** Properties of the specification the form is currently built for; the conditions refer to each other. */
+  private specificationProperties: { [name: string]: ConnectorProperty } = {};
+
+  private createHideExpression(entry: PropertyEntry) {
+    return (model) => !isPropertyActive(this.specificationProperties, entry.key, model?.properties);
   }
 
   private labelFor(entry: PropertyEntry): string {
@@ -213,24 +204,9 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
           description: entry.property.description || undefined,
           ...additionalProps
         },
-        hideExpression: this.createHideExpression(entry.property)
+        hideExpression: this.createHideExpression(entry)
       }]
     };
-  }
-
-  private convertBooleanStrings<T>(array: T[]): (T | boolean)[] {
-    return array.map(item => {
-      if (typeof item === 'string') {
-        const lowerCase = item.toLowerCase();
-        if (lowerCase === 'true') return true;
-        if (lowerCase === 'false') return false;
-      }
-      return item;
-    });
-  }
-
-  private createIdStringField(entry: PropertyEntry): FormlyFieldConfig {
-    return this.createBaseFormField(entry, 'input', { disabled: true });
   }
 
   private createNumericField(entry: PropertyEntry): FormlyFieldConfig {
@@ -288,7 +264,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
           disabled: entry.property.readonly || this.readOnly,
           description: entry.property.description || undefined,
         },
-        hideExpression: this.createHideExpression(entry.property),
+        hideExpression: this.createHideExpression(entry),
         // Initialize with empty object if no default value
         defaultValue: entry.property.defaultValue || {}
       }]
@@ -357,6 +333,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
   }
 
   private createDynamicFormFields(dynamicFields: ConnectorSpecification): void {
+    this.specificationProperties = dynamicFields.properties;
     const sortedFields = this.getSortedFields(dynamicFields);
 
     let currentGroup: string | undefined;
@@ -385,7 +362,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
    * orphaned heading.
    */
   private createGroupLegend(group: string, members: PropertyEntry[]): FormlyFieldConfig {
-    const memberHidden = members.map(member => this.createHideExpression(member.property));
+    const memberHidden = members.map(member => this.createHideExpression(member));
     return {
       type: 'template',
       template: `<div class="legend form-block">${this.escapeHtml(group)}</div>`,
@@ -412,7 +389,7 @@ export class ConnectorConfigurationDrawerComponent implements OnInit {
       // Set default values for a genuinely blank create — but not when duplicating an existing
       // connector (see ConnectorGridComponent.onConfigurationCopy), whose cloned `properties`
       // already carry the real values that must be preserved, not overwritten with defaults.
-      if ('defaultValue' in property && this.action === 'create' && this.configuration.properties[key] === undefined) {
+      if (property.defaultValue != null && this.action === 'create' && this.configuration.properties[key] === undefined) {
         this.configuration.properties[key] = property.defaultValue;
       }
 

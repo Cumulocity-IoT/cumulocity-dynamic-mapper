@@ -883,10 +883,8 @@ public class WebHook extends AConnectorClient {
         }
 
         // Check required properties
-        for (Map.Entry<String, ConnectorProperty> entry : connectorSpecification.getProperties().entrySet()) {
-            if (entry.getValue().getRequired() && configuration.getProperties().get(entry.getKey()) == null) {
-                return false;
-            }
+        if (!validateSpecifiedProperties(configuration)) {
+            return false;
         }
 
         return true;
@@ -966,22 +964,23 @@ public class WebHook extends AConnectorClient {
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .description("Authentication sent with each request.")
                         .order(1)
-                        .options("Basic", "Bearer")
+                        .options("None", "Basic", "Bearer")
+                        .defaultValue("None")
                         .condition("cumulocityInternal", "false"))
 
-                .property("user", ConnectorPropertyBuilder.optionalString()
+                .property("user", ConnectorPropertyBuilder.requiredString()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .description("User name for Basic authentication.")
                         .order(2)
                         .condition("authentication", "Basic"))
 
-                .property("password", ConnectorPropertyBuilder.optionalSensitive()
+                .property("password", ConnectorPropertyBuilder.requiredSensitive()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .description("Password for Basic authentication.")
                         .order(3)
                         .condition("authentication", "Basic"))
 
-                .property("token", ConnectorPropertyBuilder.optionalSensitive()
+                .property("token", ConnectorPropertyBuilder.requiredSensitive()
                         .group(ConnectorPropertyGroup.AUTHENTICATION)
                         .description("Bearer token sent in the Authorization header.")
                         .order(4)
