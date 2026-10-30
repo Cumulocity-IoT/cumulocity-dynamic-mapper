@@ -6,6 +6,11 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    ignore:
+      # Must match the SDK version resolved by opentelemetry-instrumentation-bom (currently 1.62.0).
+      # A newer incubator drops ExtendedAttributes and breaks the SDK at runtime. Bump it by hand
+      # together with the instrumentation BOM.
+      - dependency-name: "io.opentelemetry:opentelemetry-api-incubator"
 
   - package-ecosystem: "npm"
     directory: "/dynamic-mapper-ui"
