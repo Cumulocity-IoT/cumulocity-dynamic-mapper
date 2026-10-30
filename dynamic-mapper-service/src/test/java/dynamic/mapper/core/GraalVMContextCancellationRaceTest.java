@@ -123,6 +123,9 @@ class GraalVMContextCancellationRaceTest {
 
     private ServiceConfiguration buildServiceConfig() {
         ServiceConfiguration config = new ServiceConfiguration();
+        // The busy-loop mappings are flat scripts without exports, so run them in non-ESM mode
+        // regardless of the default.
+        config.setSupportESM(false);
         Map<String, CodeTemplate> templates = new HashMap<>();
 
         CodeTemplate shared = new CodeTemplate();
