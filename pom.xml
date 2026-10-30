@@ -52,7 +52,6 @@
 		<!-- <spring-ai.version>1.0.1</spring-ai.version> -->
 		<authToken>${env.AUTH_TOKEN}</authToken>
 	</properties>
-
 	<repositories>
 		<repository>
 			<id>cumulocity</id>
@@ -91,25 +90,15 @@
 		<dependency>
 			<groupId>io.opentelemetry.instrumentation</groupId>
 			<artifactId>opentelemetry-instrumentation-bom</artifactId>
-			<version>2.28.1</version>
-			<type>pom</type>
-			<scope>import</scope>
-		</dependency>
-		<dependency>
-			<groupId>io.opentelemetry</groupId>
-			<artifactId>opentelemetry-bom</artifactId>
-			<version>1.66.0</version>
+			<version>2.33.1</version>
 			<type>pom</type>
 			<scope>import</scope>
 		</dependency>
 		<dependency>
 			<groupId>io.opentelemetry</groupId>
 			<artifactId>opentelemetry-api-incubator</artifactId>
-			<!-- must match the SDK version the instrumentation BOM resolves (opentelemetry-sdk-*): 1.66 dropped
-			     ExtendedAttributes, which SDK 1.62 loads at runtime (NoClassDefFoundError in BatchLogRecordProcessor) -->
-			<version>1.62.0-alpha</version>
+			<version>1.67.0-alpha</version>
 		</dependency>
-
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-bom</artifactId>
@@ -117,7 +106,6 @@
 			<type>pom</type>
 			<scope>import</scope>
 		</dependency>
-
 			<dependency>
 				<groupId>org.apache.pulsar</groupId>
 				<artifactId>pulsar-bom</artifactId>
