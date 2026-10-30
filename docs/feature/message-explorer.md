@@ -119,9 +119,8 @@ against ghost listeners from a browser reload that skipped the `DELETE` call.
 
 `expireIdleSessions()` (`@Scheduled(fixedDelay = 30_000)`, lines 408-429) runs every 30
 seconds and removes any session whose `lastPolledAt` is older than its TTL. Default TTL is
-10 minutes (`SESSION_TTL_MS`), overridable per-request (`sessionTTLMinutes`) or per-tenant
-(`ServiceConfiguration.getExplorerSessionTTLMinutes()`, `resolveSessionTtlMs()` lines
-435-439). `getMessages()` refreshes `lastPolledAt` on every poll, so a UI that keeps
+10 minutes (`SESSION_TTL_MS`), overridable per-request (`sessionTTLMinutes`); there is no tenant-wide
+setting. `getMessages()` refreshes `lastPolledAt` on every poll, so a UI that keeps
 auto-refreshing never expires; only an abandoned session does.
 
 Stopping/expiring a session calls `unregisterListener()` (lines 460-500), which:

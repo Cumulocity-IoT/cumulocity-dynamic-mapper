@@ -22,7 +22,6 @@ The **General** tab covers:
 | **Device Isolation Cumulocity MQTT Service** | When enabled, only registered MQTT clients receive outbound MQTT messages. Also requires a re-subscribe to take effect. |
 | **External ID binding during MO creation** | Binds external IDs atomically while the managed object is created, in a single request. Requires a Cumulocity platform of May 2026 or later — disable it on older instances such as Cumulocity Edge. |
 | **Number of mapping versions to retain** | How many versions are kept per mapping. Publishing a new version deletes the oldest ones beyond this limit; the active version is never deleted. See [Versioning mappings](/c8y-pkg-dynamic-mapper/introduction/versioning). |
-| **Message Explorer session TTL (minutes)** | Default lifetime of a Message Explorer session — it stops automatically once the UI has not polled it for this long. Can be overridden per session when starting one. See [Message Explorer](/c8y-pkg-dynamic-mapper/introduction/message-explorer). |
 
 Two of these settings — **Outbound mappings** and **Device Isolation Cumulocity MQTT Service** — do not take
 effect until the microservice is unsubscribed and subscribed again for the tenant. The rest apply on **Save**.

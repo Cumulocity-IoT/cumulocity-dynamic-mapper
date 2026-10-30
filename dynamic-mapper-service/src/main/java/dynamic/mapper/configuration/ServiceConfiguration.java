@@ -30,6 +30,7 @@ import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonMerge;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 
@@ -40,6 +41,7 @@ import lombok.ToString;
 
 @Data
 @ToString()
+@JsonIgnoreProperties(ignoreUnknown = true)
 @AllArgsConstructor
 @Schema(description = "Service configuration for the dynamic mapping service controlling logging, caching, extensions, and performance settings")
 public class ServiceConfiguration implements Cloneable {
@@ -69,12 +71,11 @@ public class ServiceConfiguration implements Cloneable {
         this.javaScriptAgent = null;
         this.smartFunctionAgent = null;
         this.flowStateRetention = 1440;
-        this.supportESM = false;
+        this.supportESM = true;
         this.cacheAliasMaps = false;
         this.externalIdBinding = true;
         this.mappingVersionRetention = 5;
         this.engineRotationThreshold = 1000;
-        this.explorerSessionTTLMinutes = 10;
         this.contextPoolSize = 20;
         this.serviceLogs = new ServiceLogsConfiguration();
     }
@@ -296,11 +297,6 @@ public class ServiceConfiguration implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     private Integer contextPoolSize;
-
-    @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Default TTL in minutes for Message Explorer sessions: a session is automatically stopped if the UI has not polled it within this window. Can be overridden per session when starting it.", example = "10", minimum = "1")
-    @NotNull
-    @JsonSetter(nulls = Nulls.SKIP)
-    private Integer explorerSessionTTLMinutes;
 
     @Schema(description = "Settings of the service log (Monitoring > Service logs): what is stored for this tenant, how much, and for how long. Every value has a default; unset values keep it.")
     @JsonSetter(nulls = Nulls.SKIP)

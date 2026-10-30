@@ -79,7 +79,6 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     pipelineTimeoutMS: 8000,  // 8 seconds
     engineRotationThreshold: 1000,
     contextPoolSize: 20,
-    explorerSessionTTLMinutes: 10,
     jsonataAgent: undefined,
     javaScriptAgent: undefined,
     smartFunctionAgent: undefined,
@@ -146,9 +145,23 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
    * *everything* hidden would be misleading on a tab that hides nothing.
    */
   private static readonly EXPERT_SETTINGS: Readonly<Record<string, string[]>> = {
+    general: ['outboundMappingEnabled', 'deviceIsolationMQTTServiceEnabled'],
     processing: ['supportESM', 'engineRotationThreshold', 'contextPoolSize'],
-    caching: ['cacheAliasMaps'],
-    monitoring: ['logSubstitution', 'logConnectorErrorInBackend']
+    caching: ['cacheAliasMaps', 'flowStateRetention'],
+    monitoring: [
+      'logSubstitution',
+      'logConnectorErrorInBackend',
+      'serviceLogs.enabled',
+      'serviceLogs.minLevel',
+      'serviceLogs.retentionHours',
+      'serviceLogs.intervalMs',
+      'serviceLogs.maxLinesPerRun',
+      'serviceLogs.maxEventBytes',
+      'serviceLogs.maxMessageBytes',
+      'serviceLogs.bufferLines',
+      'serviceLogs.retentionEnabled',
+      'serviceLogs.retentionIntervalMs'
+    ]
   };
 
   private static readonly EXPERT_MODE_STORAGE_KEY = 'dynamic-mapper.serviceConfiguration.expertMode';
@@ -219,7 +232,6 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
       pipelineTimeoutMS: [''],
       engineRotationThreshold: [''],
       contextPoolSize: [''],
-      explorerSessionTTLMinutes: [''],
       supportESM: [''],
       jsonataAgent: [''],
       javaScriptAgent: [''],
@@ -240,6 +252,13 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
         retentionIntervalMs: [DEFAULT_SERVICE_LOGS.retentionIntervalMs]
       }),
     }, { validators: ServiceConfigurationComponent.pipelineTimeoutExceedsCpuBudget });
+  }
+
+  /** Listed agents, plus the saved name when it is not (or no longer) listed, so the select never blanks it. */
+  agentOptions(control: 'jsonataAgent' | 'smartFunctionAgent'): string[] {
+    const listed = this.agents$.value;
+    const current = this.serviceForm?.get(control)?.value;
+    return current && !listed.includes(current) ? [current, ...listed] : listed;
   }
 
   private subscribeToAIAgents(): void {

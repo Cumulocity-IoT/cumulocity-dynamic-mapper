@@ -50,6 +50,6 @@ public class StartSessionRequest {
     @Schema(description = "C8Y device type filter (OUTBOUND only; optional). When set, only messages from devices whose type matches this value are captured.", example = "c8y_MQTTDevice")
     private String deviceType;
 
-    @Schema(description = "Session TTL in minutes. Overrides the tenant-wide default. Sessions expire when not polled for longer than this value.", example = "10")
+    @Schema(description = "Session TTL in minutes. Defaults to 10 minutes. Sessions expire when not polled for longer than this value.", example = "10")
     private Integer sessionTTLMinutes;
 }

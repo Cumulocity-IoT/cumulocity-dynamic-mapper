@@ -4182,7 +4182,7 @@
           "sessionTTLMinutes" : {
             "type" : "integer",
             "format" : "int32",
-            "description" : "Session TTL in minutes. Overrides the tenant-wide default. Sessions expire when not polled for longer than this value.",
+            "description" : "Session TTL in minutes. Defaults to 10 minutes. Sessions expire when not polled for longer than this value.",
             "example" : 10
           }
         },

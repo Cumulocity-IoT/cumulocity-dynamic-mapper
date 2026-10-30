@@ -147,7 +147,7 @@ public class ExplorerService {
         String dir = (direction != null && direction.equalsIgnoreCase("OUTBOUND")) ? "OUTBOUND" : "INBOUND";
         long sessionTTLMs = (sessionTTLMinutes != null && sessionTTLMinutes > 0)
                 ? sessionTTLMinutes * 60_000L
-                : resolveSessionTtlMs(tenant);
+                : SESSION_TTL_MS;
 
         String sessionId = UUID.randomUUID().toString();
 
@@ -408,12 +408,11 @@ public class ExplorerService {
         long now = System.currentTimeMillis();
         for (Map.Entry<String, ConcurrentHashMap<String, ExplorerSession>> tenantEntry : sessions.entrySet()) {
             String tenant = tenantEntry.getKey();
-            long tenantDefaultTTLMs = resolveSessionTtlMs(tenant);
             Iterator<Map.Entry<String, ExplorerSession>> it = tenantEntry.getValue().entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry<String, ExplorerSession> entry = it.next();
                 ExplorerSession session = entry.getValue();
-                long sessionTTLMs = session.getSessionTTLMs() > 0 ? session.getSessionTTLMs() : tenantDefaultTTLMs;
+                long sessionTTLMs = session.getSessionTTLMs() > 0 ? session.getSessionTTLMs() : SESSION_TTL_MS;
                 if (now - session.getLastPolledAt() > sessionTTLMs) {
                     it.remove();
                     unregisterListener(tenant, session.getSessionId(), session);
@@ -434,12 +433,6 @@ public class ExplorerService {
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
-
-    private long resolveSessionTtlMs(String tenant) {
-        ServiceConfiguration config = serviceRegistry.getServiceConfiguration(tenant);
-        Integer minutes = config != null ? config.getExplorerSessionTTLMinutes() : null;
-        return (minutes != null && minutes > 0) ? minutes * 60_000L : SESSION_TTL_MS;
-    }
 
     private ExplorerSession findSession(String tenant, String sessionId) {
         Map<String, ExplorerSession> tenantSessions = sessions.get(tenant);

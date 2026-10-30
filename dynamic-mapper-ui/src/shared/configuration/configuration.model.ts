@@ -50,7 +50,6 @@ export interface ServiceConfiguration {
   supportESM?: boolean;
   cacheAliasMaps?: boolean;
   externalIdBinding?: boolean;
-  explorerSessionTTLMinutes?: number;
   engineRotationThreshold?: number;
   contextPoolSize?: number;
   serviceLogs?: ServiceLogsConfiguration;
