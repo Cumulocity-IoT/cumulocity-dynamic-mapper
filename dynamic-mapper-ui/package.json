@@ -83,7 +83,7 @@
     "cumulocity-cypress": "^1.4.1",
     "cypress": "14.5.4",
     "dotenv": "^18.0.4",
-    "eslint-plugin-cypress": "^6.4.1",
+    "eslint-plugin-cypress": "^7.0.2",
     "jasmine-core": "~6.3.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
