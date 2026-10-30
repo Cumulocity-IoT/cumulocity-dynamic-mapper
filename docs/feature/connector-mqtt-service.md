@@ -120,6 +120,37 @@ MQTT Service documentation:
   is disconnected are **not** delivered on reconnect. Even QoS 1 towards a device is therefore
   not a durable-delivery guarantee across a disconnect.
 
+### Device isolation
+
+Service setting `deviceIsolationMQTTServiceEnabled` (UI: **Device Isolation Cumulocity MQTT Service**,
+default off). It exists so that, with several MQTT clients on one tenant, an outbound message reaches
+only the client that owns the target device.
+
+- **Learning relations.** On inbound processing, when the setting is on, the client ID of the
+  message (`context.getClientId()`) is bound to the resolved device ID through
+  `ServiceRegistry.addOrUpdateClientRelation()`. Dry runs and test mode never write relations.
+  Relations can also be edited manually in the UI (**Device to client map**) or through
+  `ClientRelationController`.
+- **Where the map lives.** In memory in `TenantRegistry` (device ID → client ID), persisted in one
+  inventory managed object (fragment `d11r_deviceToClientMap`, external ID `d11r_deviceToClientMap_id`).
+  The mapper never reads the map on the outbound path: it is Cumulocity MQTT Service that evaluates the
+  persisted fragment, so the **inventory copy is what enforces isolation**.
+- **Persistence.** `BootstrapService.sendDeviceToClientMap()` runs hourly (minute 30).
+  `DeviceToClientMapService.sendToInventory()` reads the stored map first, writes nothing if it is
+  equal, and sends removed devices as `null`, because the inventory merges nested fragments and would
+  otherwise keep entries that were deleted in memory. A relation learned or removed since the last run
+  is not enforced, and is lost on a crash, until the next run.
+- **Cleanup.** The relation of a device is dropped when its managed object is deleted
+  (`C8YAgent.evictDeletedManagedObjectFromCaches()`); "Clear cache" and tenant unsubscribe empty the
+  in-memory map.
+- **Enabling at runtime.** The map managed object is loaded at tenant start. If the setting is switched
+  on later, the hourly job creates or loads it on first run; re-subscribing the microservice applies it
+  immediately.
+
+Known limits: the in-memory map is per instance. With several service instances, each hourly sync
+overwrites the stored map with that instance's view, including removal of entries it does not know.
+The one-hour sync interval is not configurable.
+
 ### Connection lifecycle specifics
 
 - `connect()` is fully overridden and retries via `connectWithRetry()`, trying three

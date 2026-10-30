@@ -31,8 +31,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages device-to-client mapping persistence
@@ -47,29 +47,54 @@ public class DeviceToClientMapService {
     private final MicroserviceSubscriptionsService subscriptionsService;
 
     /**
-     * Sends the device-to-client map to inventory
+     * Persists the in-memory device-to-client map to the inventory managed object that the Cumulocity
+     * MQTT Service reads to decide which client receives outbound messages.
+     * <p>
+     * The inventory merges nested fragments on update, so entries that were removed in memory
+     * (device deleted, relation removed, cache cleared) would survive and come back after a restart.
+     * Removed keys are therefore sent explicitly as {@code null}. Nothing is written when the stored
+     * map already equals the in-memory one.
      */
     public void sendToInventory(String tenant) {
-        Map<String, String> clientToDeviceMap = serviceRegistry.getAllClientRelations(tenant);
-        
-        if (clientToDeviceMap == null) {
-            log.debug("{} - No device-to-client map to send", tenant);
+        String deviceToClientMapId = serviceRegistry.getDeviceToClientMapId(tenant);
+        if (deviceToClientMapId == null) {
+            log.warn("{} - Device-to-client map managed object is not initialized, skipping sync", tenant);
             return;
         }
+        Map<String, String> deviceToClientMap = serviceRegistry.getAllClientRelations(tenant);
 
         subscriptionsService.runForTenant(tenant, () -> {
-            String deviceToClientMapId = serviceRegistry.getDeviceToClientMapId(tenant);
+            Map<String, Object> persisted = readPersistedMap(inventoryApi.get(GId.asGId(deviceToClientMapId), false));
+            if (persisted.equals(deviceToClientMap)) {
+                log.debug("{} - Device-to-client map unchanged ({} entries), not sending", tenant,
+                        deviceToClientMap.size());
+                return;
+            }
 
-            log.debug("{} - Sending device-to-client map with {} entries", tenant, clientToDeviceMap.size());
+            Map<String, Object> merged = new HashMap<>(deviceToClientMap);
+            persisted.keySet().stream()
+                    .filter(deviceId -> !deviceToClientMap.containsKey(deviceId))
+                    .forEach(deviceId -> merged.put(deviceId, null));
 
-            Map<String, Object> fragment = new ConcurrentHashMap<>();
-            fragment.put(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT, clientToDeviceMap);
+            log.debug("{} - Sending device-to-client map with {} entries, {} removed", tenant,
+                    deviceToClientMap.size(), merged.size() - deviceToClientMap.size());
 
             ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
             updateMor.setId(GId.asGId(deviceToClientMapId));
-            updateMor.setAttrs(fragment);
+            updateMor.setAttrs(Map.of(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT, merged));
 
             inventoryApi.update(updateMor, false);
         });
+    }
+
+    private Map<String, Object> readPersistedMap(ManagedObjectRepresentation stored) {
+        Object fragment = stored == null || stored.getAttrs() == null ? null
+                : stored.getAttrs().get(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT);
+        if (fragment instanceof Map<?, ?> map) {
+            Map<String, Object> result = new HashMap<>();
+            map.forEach((k, v) -> result.put(String.valueOf(k), v));
+            return result;
+        }
+        return new HashMap<>();
     }
 }

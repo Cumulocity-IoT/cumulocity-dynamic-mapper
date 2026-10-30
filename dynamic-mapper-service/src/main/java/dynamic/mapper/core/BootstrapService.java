@@ -216,7 +216,7 @@ public class BootstrapService {
         try {
             // DO NOT REMOVE DeviceIsolationMQTTService feature
             ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-            if (serviceConfiguration.getDeviceIsolationMQTTServiceEnabled()) {
+            if (Boolean.TRUE.equals(serviceConfiguration.getDeviceIsolationMQTTServiceEnabled())) {
                 serviceRegistry.clearCacheDeviceToClient(tenant);
             }
 
@@ -679,7 +679,12 @@ public class BootstrapService {
                     log.warn("{} - Service configuration is null, skipping sendDeviceToClientMap", tenant);
                     return;
                 }
-                if (serviceConfiguration.getDeviceIsolationMQTTServiceEnabled()) {
+                if (Boolean.TRUE.equals(serviceConfiguration.getDeviceIsolationMQTTServiceEnabled())) {
+                    // The flag can be switched on after startup, when the map MO was never loaded
+                    if (serviceRegistry.getDeviceToClientMapId(tenant) == null) {
+                        serviceRegistry.storeDeviceToClientMapRepresentation(tenant,
+                                c8YAgent.initializeDeviceToClientMapRepresentation(tenant));
+                    }
                     mappingService.sendDeviceToClientMap(tenant);
                 }
             } catch (Exception e) {

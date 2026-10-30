@@ -291,7 +291,8 @@ public class SendInboundProcessor extends BaseProcessor {
                     request.setSourceId(sourceId.getManagedObject().getId().getValue());
 
                     // Cache the mapping of device to client ID
-                    if (context.getClientId() != null) {
+                    if (!context.isTesting() && context.getClientId() != null
+                            && Boolean.TRUE.equals(context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled())) {
                         serviceRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                                 request.getSourceId());
                     }
@@ -345,7 +346,8 @@ public class SendInboundProcessor extends BaseProcessor {
                     }
 
                     // Cache the mapping of device to client ID
-                    if (!context.isTesting() && context.getClientId() != null) {
+                    if (!context.isTesting() && context.getClientId() != null
+                            && Boolean.TRUE.equals(context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled())) {
                         serviceRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                                 request.getSourceId());
                     }

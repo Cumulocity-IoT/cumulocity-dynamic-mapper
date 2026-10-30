@@ -1502,6 +1502,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             inventoryCache.removeMO(sourceId);
         }
         tenantRegistry.removeFromExternalIdCacheByInternalId(tenant, sourceId);
+        // Device isolation: a deleted device must not stay registered to a client
+        tenantRegistry.removeClientRelation(tenant, sourceId);
         cacheManager.removeSourceIdFromExternalIdCaches(tenant, sourceId);
     }
 

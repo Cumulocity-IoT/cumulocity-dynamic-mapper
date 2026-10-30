@@ -128,7 +128,7 @@ public class ConfigurationController {
             - `userHasMappingCreateRole`: Whether user can create/modify mappings
             - `userHasMappingAdminRole`: Whether user has administrative privileges
             - `pulsarAvailable`: Whether pulsar is available
-            - `deviceIsolationMQTTServiceEnabled`: Whether device siolation for Cumulocity MQTT Service is enabled
+            - `deviceIsolationMQTTServiceEnabled`: Whether device isolation for Cumulocity MQTT Service is enabled
             """)
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Feature flags retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Feature.class))),
