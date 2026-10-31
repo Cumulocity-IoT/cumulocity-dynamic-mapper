@@ -86,13 +86,22 @@ describe('CollectedServiceLogsService', () => {
     expect(error.message).toContain('ROLE_DYNAMIC_MAPPER_ADMIN');
   });
 
-  it('reports any other failure as unavailable too', async () => {
-    const { service } = serviceAnswering(500);
+  it('reports a missing endpoint as unavailable', async () => {
+    const { service } = serviceAnswering(404);
 
     const error = await service.load({}).catch((e) => e);
 
     expect(error instanceof LogsUnavailableError).toBe(true);
-    expect(error.status).toBe(500);
+    expect(error.status).toBe(404);
+  });
+
+  it('reports a temporary server failure as a plain error, not as unavailable', async () => {
+    const { service } = serviceAnswering(503);
+
+    const error = await service.load({}).catch((e) => e);
+
+    expect(error instanceof LogsUnavailableError).toBe(false);
+    expect(error.message).toContain('503');
   });
 
   it('passes the mapping on and keeps it together with the bounds', async () => {
