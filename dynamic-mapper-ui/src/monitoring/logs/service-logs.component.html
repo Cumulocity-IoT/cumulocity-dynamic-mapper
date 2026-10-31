@@ -94,7 +94,7 @@
 <div class="card content-fullpage--sm content-fullpage--xs">
   @if (source && !error && window?.omitted > 0) {
   <div class="card-block p-b-0 flex-no-shrink">
-    <div class="alert alert-warning m-b-0">
+    <div class="alert alert-warning m-b-0" style="display: block; width: 100%; max-width: none">
       {{ window.omitted }} {{ 'line(s) were left out because of the collection limit.' | translate }}
     </div>
   </div>
@@ -131,6 +131,7 @@
             <!-- c8y-select: type to filter the mappings; the clear button goes back to all lines -->
             <c8y-select
               class="flex-grow"
+              style="min-width: 0"
               data-cy="service-logs-mapping-select"
               [items]="mappingItems"
               [selected]="selectedMapping"
@@ -160,7 +161,7 @@
 
     @if (noLinesForMapping) {
     <div class="card-block p-t-0 p-b-0 flex-no-shrink">
-      <div class="alert alert-info m-b-8">
+      <div class="alert alert-info m-b-8" style="display: block; width: 100%; max-width: none">
         @if (isCollected) {
         {{ 'No lines for this mapping in this range.' | translate }}
         @if (window?.more) {
