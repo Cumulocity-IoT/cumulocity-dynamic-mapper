@@ -13,6 +13,10 @@ payload. This gives you the freedom to see the payload exactly as it is sent to 
 - Multiple outputs from a single input message
 - State management across messages using context
 
+A Smart Function returns nothing, `null`, or an empty array when a message needs no output. The mapper then ignores
+the message and records a warning, not an error. Returning anything else that is not a message object or an array of
+message objects, for example a string, fails the message.
+
 :::caution
 The JavaScript editor for Smart Function is only available if you select **Smart Function** as a **Transformation
 Type** when creating the mapping.
@@ -70,24 +74,25 @@ sequence) and `?` (single character), e.g. `sparkPlugB_DBIRTH_*` to cache all fr
 
 ![JavaScript substitution](../../../resources/image/Dynamic_Mapper_Mapping_Stepper_Smart_Function.png "Screenshot showing step 4 for defining complete transformation using JavaScript.")
 
-#### ECMAScript Module (ESM) Support
+#### ECMAScript module (ESM) support
 
 By default, Smart Function code is evaluated in **flat-script mode**: any `export` and `import` statements are
 stripped and the code is wrapped in an IIFE so that `onMessage` is registered on `globalThis`. When you enable
 **Support ESM modules** in
 [**Configuration → Service Configuration → General**](/c8y-pkg-dynamic-mapper/node3/serviceConfiguration/general),
-the execution model changes to true ES module semantics.
+the execution model changes to true ES module semantics. The setting is stored per tenant. New installations have it
+enabled, and a tenant that stored a value earlier keeps that value.
 
-##### ESM mode — what changes
+##### ESM mode: what changes
 
-- **Mapping code runs unmodified** — no `export`/`import` stripping, no IIFE wrapping. (Shared code is always
+- **Mapping code runs unmodified**, no `export`/`import` stripping, no IIFE wrapping. (Shared code is always
   converted to a plain script regardless of this setting.)
-- **Strict mode enforced** — undeclared variables, duplicate parameters, and silent type coercions throw errors
+- **Strict mode enforced**, undeclared variables, duplicate parameters, and silent type coercions throw errors
   instead of failing silently.
-- **Real module scope** — top-level `const` / `let` / `class` declarations are isolated to the module and do not
+- **Real module scope**, top-level `const` / `let` / `class` declarations are isolated to the module and do not
   pollute `globalThis`.
-- **Top-level `await` supported** — useful for lazy one-time initialization before the first message arrives.
-- **`onMessage` must be exported** — use `export { onMessage }` or `export function onMessage(…)` so the runtime
+- **Top-level `await` supported**, useful for lazy one-time initialization before the first message arrives.
+- **`onMessage` must be exported**, use `export { onMessage }` or `export function onMessage(…)` so the runtime
   can locate the entry point.
 
 Example Smart Function written for ESM mode:
@@ -113,34 +118,34 @@ export { onMessage };   // required in ESM mode
 
 :::caution Constraints
 Static `import` statements (e.g. `import { helper } from './utils.mjs'`) are **not supported** even in ESM mode.
-All mapping and shared code is stored in the database and loaded as in-memory literals — GraalJS cannot resolve
+All mapping and shared code is stored in the database and loaded as in-memory literals, GraalJS cannot resolve
 module paths to real files on disk. Helpers and libraries provided in the **Shared Code** template are available
 as globals and can be used directly without an `import`. Static imports would require a custom module resolver
 (future work).
 :::
 
-##### Flat-script mode (default, `supportESM = false`)
+##### Flat-script mode (`supportESM = false`)
 
-When ESM support is disabled the runtime automatically:
+When ESM support is disabled, the runtime automatically:
 1. Strips any `export` and `import` lines from the mapping code.
 2. Wraps the code in an IIFE and registers `onMessage` on `globalThis`.
 
-This means flat-script code does **not** need — and should not have — an `export` statement. Existing mappings
+This means flat-script code does **not** need, and should not have, an `export` statement. Existing mappings
 continue to work unchanged when the setting is off.
 
-#### Shared Code Templates
+#### Shared code templates
 
-The Dynamic Mapper supports **Shared Code** templates — reusable JavaScript libraries that are automatically
+The Dynamic Mapper supports **Shared Code** templates, reusable JavaScript libraries that are automatically
 injected into the GraalVM context before every Smart Function is executed. Functions and variables defined in a
 Shared Code template are available as globals in all Smart Functions without any import statement.
 
-##### How Shared Code is loaded
+##### How shared code is loaded
 
 1. Navigate to [**Configuration → Code Templates**](/c8y-pkg-dynamic-mapper/node3/codeTemplate/INBOUND_SMART_FUNCTION).
-2. Select a template of type **Shared** from the dropdown (or create one via **Duplicate** from an existing
-   template and rename it).
+2. Select the template of type **Shared** from the dropdown. The Shared template always exists. You cannot delete or
+   duplicate it, only edit or empty it. Only administrators can save it.
 3. Write your helper functions in the editor and save. All functions declared at the top level are available
-   globally in every Smart Function.
+   globally in every Smart Function. A change applies to the next message without a restart.
 
 Shared code is always evaluated in flat-script mode (even when ESM support is enabled), so do **not** use `export`
 statements in shared templates.
@@ -178,7 +183,7 @@ function onMessage(msg, context) {
 }
 ```
 
-#### Binary Helpers: `atob`, `btoa`, and `TextEncoder` {#binary-helpers}
+#### Binary helpers: `atob`, `btoa`, and `TextEncoder` {#binary-helpers}
 
 Smart Functions running in GraalVM have access to browser-compatible Base64 and text encoding helpers, provided
 automatically via the System code template. These are particularly useful when working with **Hexadecimal**,
@@ -225,7 +230,7 @@ function onMessage(msg, context) {
 }
 ```
 
-#### Using Metadata in Smart Functions {#metadata}
+#### Using metadata in Smart Functions {#metadata}
 
 When using **Smart Functions** as the **Transformation Type**, metadata is handled differently than in
 substitution-based mappings. Instead of using metadata nodes like `_IDENTITY_` or `_CONTEXT_DATA_` in templates,
@@ -236,7 +241,7 @@ return JavaScript objects with specific properties that control how the mapper p
 JSONata equivalent (transformation type **Substitution as JSONata Expression**), see
 [Metadata (JSONata)](/c8y-pkg-dynamic-mapper/introduction/metadata).
 
-#### Metadata Properties for Inbound Smart Functions
+#### Metadata properties for inbound Smart Functions
 
 For **inbound** mappings, your Smart Function should return an array of objects with the following properties:
 
@@ -246,23 +251,39 @@ For **inbound** mappings, your Smart Function should return an array of objects 
 | `action` | Yes | The action to perform: `"create"`, `"update"`, `"patch"`, or `"delete"`. **Note:** Measurements are immutable time-series data and don't support `"update"` or `"patch"` operations. If you specify these actions for measurements, the mapper automatically converts them to `"create"` to create a new measurement instead. For other Cumulocity objects (events, alarms, inventory), all actions are supported. |
 | `payload` | Yes | The actual data object to send to Cumulocity (e.g., measurement, event, alarm) |
 | `externalSource` | Yes* | Array defining the external device identifier: `[{type: "c8y_Serial", externalId: "deviceId"}]`. Required unless the device already exists in Cumulocity. |
-| `contextData` | No | Object with additional properties: `deviceName` (name for implicitly created devices), `deviceType` (type for implicitly created devices), `processingMode` (`"PERSISTENT"` (default) or `"TRANSIENT"`), `deviceFragments` (map of additional managed object fragments to merge into the implicitly created device, e.g. `c8y_Hardware`, `c8y_SupportedOperations` — the value of each key must be an object or array, nested structures are preserved), `deviceGroups` (list of device group names the implicitly created device is assigned to as a child asset, e.g. `["line 1", "line 2"]` — groups that do not exist yet are created automatically; group lookup is by name, if multiple groups share the same name the device is assigned to the first match returned by the platform and a warning is logged). |
+| `contextData` | No | Object with additional properties: `deviceName` (name for implicitly created devices), `deviceType` (type for implicitly created devices), `processingMode` (`"PERSISTENT"` (default) or `"TRANSIENT"`), `deviceFragments` (map of additional managed object fragments to merge into the implicitly created device, e.g. `c8y_Hardware`, `c8y_SupportedOperations`, the value of each key must be an object or array, nested structures are preserved), `deviceGroups` (list of device group names the implicitly created device is assigned to as a child asset, e.g. `["line 1", "line 2"]`, groups that do not exist yet are created automatically; group lookup is by name, if multiple groups share the same name the device is assigned to the first match returned by the platform and a warning is logged). |
 
 **Context Methods for Accessing Incoming Metadata**
 
 | Method | Description |
 |---|---|
-| `context.getClientId()` | Returns the publisher's client ID from MQTT 5 user properties. Returns `null` if not available. **MQTT 5 only** — the publisher must include `clientId` as a user property. Example: `var clientId = context.getClientId();` |
+| `context.getClientId()` | Returns the publisher's client ID from MQTT 5 user properties. Returns `null` if not available. **MQTT 5 only**, the publisher must include `clientId` as a user property. Example: `var clientId = context.getClientId();` |
 | `context.getManagedObject()` | Lookup device properties by Cumulocity internal source ID. Returns device object or `null`. Example: `var device = context.getManagedObject("12345");` |
 | `context.getManagedObjectByExternalId()` | Lookup device properties by external ID. Requires object with `externalId` and `type`. Example: `var device = context.getManagedObjectByExternalId({externalId: "sensor-01", type: "c8y_Serial"});` |
 
-**Reading the broker message key — `msg.transportFields`**
+**The `msg` object**
 
 | Property | Description |
 |---|---|
-| `msg.transportFields` | Transport-specific fields of the received broker message. For **Kafka**, `key` holds the record key (the key, *not* a header); absent when the record has no key. For **Pulsar**, `key` holds the message key (absent when the message has none; Pulsar message properties are not exposed). For **MQTT 5**, user properties. Empty object when the transport carries none. |
+| `msg.payload` (or `msg.getPayload()`) | The parsed payload. For **Any Payload** mappings, the raw bytes arrive as a Base64 string. |
+| `msg.topic` | The topic of the message. Split it to read topic levels, for example `msg.topic.split("/")[1]`. |
+| `msg.clientId` | Inbound: the MQTT 5 publisher client ID, or `null`. Outbound: `null`. |
+| `msg.sourceId` | Outbound: the Cumulocity ID of the source device. Inbound: `null`. |
+| `msg.cumulocityType` | Outbound: the API of the triggering object, for example `"measurement"`. Inbound: `null`. |
+| `msg.time` | ISO-8601 timestamp of when the mapper received the message. |
+| `msg.transportId` | Inbound: the connector identifier. Outbound: `null`. |
+| `msg.transportFields` | Transport-specific fields, see below. |
 
-The key is delivered **out-of-band — it is not part of `msg.payload`**, so it does not appear in the mapping's source template. A Kafka record key or Pulsar message key is frequently the device identifier, which makes it a good source for the external ID:
+Smart Functions do not receive the `_TOPIC_LEVEL_`, `_IDENTITY_`, or `_CONTEXT_DATA_` nodes that JSONata mappings add
+to the payload. Read the same information from `msg` and `context`.
+
+**Reading the broker message key, `msg.transportFields`**
+
+| Property | Description |
+|---|---|
+| `msg.transportFields` | Transport-specific fields of the received broker message. For **Kafka**, `key` holds the record key (the key, *not* a header); absent when the record has no key. For **Pulsar**, `key` holds the message key (absent when the message has none; Pulsar message properties are not exposed). Only the `key` field is set today. MQTT 5 user properties are not exposed here. Empty object when the transport carries no key. |
+
+The key is delivered **out-of-band, it is not part of `msg.payload`**, so it does not appear in the mapping's source template. A Kafka record key or Pulsar message key is frequently the device identifier, which makes it a good source for the external ID:
 
 ```javascript
 function onMessage(msg, context) {
@@ -274,19 +295,19 @@ function onMessage(msg, context) {
 
 The same value is available to **Java Extensions** as `message.getTransportFields().get("key")`, and to **JSONata** mappings as `_CONTEXT_DATA_.key` (which, unlike the above, *is* injected into the payload).
 
-**Context Config Properties — available via `context.getConfig()`**
+**Context Config Properties, available via `context.getConfig()`**
 
 | Property | Scope | Description |
 |---|:---:|---|
 | `tenant` | All | The Cumulocity tenant identifier. |
-| `topic` | All | The MQTT topic or URL path of the inbound message. |
-| `clientId` | Connector-dependent | The publisher or producer client identifier. Its value depends on the connector type: **MQTT 5** — the publisher's client ID read from the MQTT 5 user property named `clientId` (`null` if not included; same value as `context.getClientId()`); **MQTT 3** — always `null`, MQTT 3.1.1 does not carry a per-message publisher identity; **Kafka** — always `null`, Kafka identifies messages by topic/partition/offset; read the record key via `msg.transportFields["key"]` instead (it is delivered out-of-band, not inside the payload); **HTTP / Webhook / AMQP 0-9-1 / AMQP 1.0** — always `null`; **Pulsar / MQTT-over-Pulsar** — the value of the Pulsar message property `clientID` (may be `null`). Example: `var id = context.getConfig().clientId \|\| context.getConfig().topic;` |
+| `topic` | All | The actual topic or URL path of the received message, for example `testDevice/sensor-01/data`. It is not the subscription pattern of the mapping. |
+| `clientId` | Connector-dependent | The publisher or producer client identifier. Its value depends on the connector type: **MQTT 5**, the publisher's client ID read from the MQTT 5 user property named `clientId` (`null` if not included; same value as `context.getClientId()`); **MQTT 3**, always `null`, MQTT 3.1.1 does not carry a per-message publisher identity; **Kafka**, always `null`, Kafka identifies messages by topic/partition/offset; read the record key via `msg.transportFields["key"]` instead (it is delivered out-of-band, not inside the payload); **HTTP / Webhook / AMQP 0-9-1 / AMQP 1.0**, always `null`; **Pulsar / MQTT-over-Pulsar**, the value of the Pulsar message property `clientID` (may be `null`). Example: `var id = context.getConfig().clientId \|\| context.getConfig().topic;` |
 | `mappingName` | All | The name of the mapping. |
 | `mappingId` | All | The internal ID of the mapping. |
 | `targetAPI` | All | The Cumulocity target API (e.g. `"MEASUREMENT"`, `"EVENT"`). |
 | `aliasMap` / `isActive` | Outbound only | SparkPlug B-specific context properties (`aliasMap` and `isActive`) are available for **outbound** SparkPlug B mappings only. See the *Metadata Properties for Outbound Smart Functions* table for details. |
 
-##### Context Methods for Accessing Metadata
+##### Context methods for accessing metadata
 
 **Available Context Methods:**
 
@@ -299,26 +320,29 @@ object:
 - `context.getManagedObjectByExternalId({externalId, type})` - Lookup device properties by external ID
 - `context.getTesting()` - Returns `true` if running in test mode
 - `context.setState(key, value)` / `context.getState(key)` - Store/retrieve a single value across message
-  processing
+  processing. `getState(key, defaultValue)` returns the default when the key is absent. State is kept in memory per
+  mapping and is lost on a service restart, see [Flow state](/c8y-pkg-dynamic-mapper/introduction/flow-state).
 - `context.getStateAll()` - Returns a read-only view of all state entries for this mapping as a Map-like object.
   Useful for inspecting or iterating all stored keys.
 - `context.getConfig()` - Returns the mapping configuration as a JavaScript object. For inbound mappings this
-  includes the `topic` field (the configured subscription topic pattern, e.g. `"testDevice/+/data"`), which can be
-  split to derive positional segment meanings. For outbound mappings it additionally provides the resolved
-  `externalId` of the source device.
+  includes the `topic` field, which holds the actual topic of the received message (e.g.
+  `"testDevice/sensor-01/data"`) and can be split to read topic levels. For outbound mappings it additionally
+  provides the resolved `externalId` of the source device.
 - `context.getExternalId()` - Returns the resolved external ID of the source device. This is the recommended way
-  to identify the device in an **outbound** function — an operation carries the device under `deviceId`, not
+  to identify the device in an **outbound** function, an operation carries the device under `deviceId`, not
   `source`, so reading `payload["source"]["id"]` is unreliable and throws when absent. Requires **Use external
   id** and an **External Id type** on the mapping.
 - `context.getStateKeySet()` - Returns just the keys currently held in state, without their values.
 - `context.clearState()` - Removes every state entry held for this mapping.
-- `context.getDTMAsset(assetId)` - Looks up a Digital Twin Manager asset by ID.
+- `context.getDTMAsset(assetId)` - Not implemented yet. It returns a placeholder object with `found: false`. Do not
+  rely on it.
 - `context.addWarning(message)` - Records a non-fatal warning against this message. Warnings surface in the test
   result and in the [microservice log](/c8y-pkg-dynamic-mapper/introduction/troubleshooting#microservice-log),
   without failing the mapping.
 - `context.addLogMessage(message)` / `context.logMessage(message)` - Appends a message to the processing log for
-  this execution. For ordinary debugging prefer `console.log()`, which is shown in the **Console output** panel of
-  the mapping editor — see
+  this execution. For ordinary debugging prefer `console.log()`, `console.warn()`, `console.error()`, or
+  `console.debug()`. Their output is also written to the microservice log and shown in the **Console output** panel of
+  the mapping editor, see
   [Testing a Smart Function](/c8y-pkg-dynamic-mapper/introduction/define-mapping#testing-smart-function).
 
 **Example:** `var publisherClientId = context.getClientId();`
@@ -428,7 +452,7 @@ function onMessage(msg, context) {
   var payload = msg.getPayload();
   // Partially update a managed object (inventory) without replacing the entire object
   return [{
-    cumulocityType: "inventory",
+    cumulocityType: "managedObject",
     action: "patch",  // Partial update - only specified fields are changed
     payload: {
       "c8y_Notes": "Last updated: " + new Date().toISOString(),
@@ -443,31 +467,21 @@ function onMessage(msg, context) {
 object without affecting other existing properties. This is more efficient than fetching the entire object,
 modifying it, and sending it back with `action: "update"`.
 
-**Example: Extracting the device identity from the MQTT topic using `context.getConfig()`**
+**Example: Extracting the device identity from the topic**
 
-The live topic of an inbound message (e.g. `testDevice/sensor-berlin-01/data`) is accessible via
-`payload["_TOPIC_LEVEL_"]` as an array. When you need to know the *position* of the device-identity segment
-relative to the *configured* subscription topic pattern, use `context.getConfig()["topic"]` which returns the
-pattern string (e.g. `"testDevice/+/data"`). Splitting it lets you derive the correct index without hardcoding it.
-
-Alternatively, split the configured topic directly to find the identity segment:
+The topic of the received message (e.g. `testDevice/sensor-berlin-01/data`) is available as `msg.topic`. Splitting it
+gives you the topic levels. `context.getConfig()["topic"]` holds the same actual topic.
 
 ```javascript
 function onMessage(msg, context) {
   var payload = msg.getPayload();
 
-  // context.getConfig()["topic"] returns the mapping's subscription topic pattern,
-  // e.g. "testDevice/+/data". Split it to derive the device-identity segment index.
-  var config = context.getConfig();
-  var topicSegments = config["topic"] ? config["topic"].split("/") : [];
-  // Find the first wildcard segment — that position carries the device identity at runtime.
-  var identityIndex = topicSegments.indexOf("+");
-
-  // payload["_TOPIC_LEVEL_"] contains the live topic segments of the received message.
-  var externalId = identityIndex >= 0 ? payload["_TOPIC_LEVEL_"][identityIndex] : null;
+  // msg.topic is the topic of the received message, e.g. "testDevice/sensor-berlin-01/data"
+  var topicLevels = msg.topic ? msg.topic.split("/") : [];
+  var externalId = topicLevels[1];
 
   if (!externalId) {
-    console.error("Cannot determine externalId: no wildcard segment in topic pattern. Config: " + JSON.stringify(config));
+    console.error("Cannot determine externalId from topic: " + msg.topic);
     return [];
   }
 
@@ -484,10 +498,10 @@ function onMessage(msg, context) {
 }
 ```
 
-**Note:** `context.getConfig()["topic"]` is the *configured pattern* (with wildcards like `+`), not the live topic
-of the received message. Use `payload["_TOPIC_LEVEL_"]` to access the actual runtime topic segments.
+**Note:** `msg.topic` and `context.getConfig()["topic"]` are the actual topic of the received message, not the
+subscription pattern of the mapping. The topic levels are not injected into the payload in Smart Functions.
 
-#### Metadata Properties for Outbound Smart Functions
+#### Metadata properties for outbound Smart Functions
 
 For **outbound** mappings, your Smart Function should return an object (or array of objects) with the following
 properties:
@@ -497,13 +511,13 @@ properties:
 | `topic` | Yes* | The MQTT topic or URL path to publish to. Can include dynamic values like device IDs. For Webhook connectors, this is appended to the base URL as the context path. **For Webhook connectors with Cumulocity Internal enabled:** If `cumulocityType` is not specified, the `topic` is used to derive the Cumulocity API endpoint. Topics should start with the API name (e.g., `"measurement"`, `"event"`, `"alarm"`, `"inventory"`) to automatically route to the correct Cumulocity REST API endpoint. However, using `cumulocityType` is recommended for more reliable API routing. |
 | `payload` | Yes | The data object or array to send to the external broker/system |
 | `action` | No | The action to perform: `"create"` (POST), `"update"` (PUT), `"patch"` (PATCH), or `"delete"` (DELETE). The action is automatically mapped to the corresponding HTTP method. **For Webhook connectors with Cumulocity Internal enabled:** The `action` property is essential for determining how to interact with the Cumulocity REST API. Combined with the `topic`, it controls whether to create, update, patch, or delete Cumulocity objects (measurements, events, alarms, inventory). **Special case:** Measurements are immutable time-series data and don't support update or patch operations. If you specify `action: "update"` or `action: "patch"` for measurements, the mapper automatically converts it to `"create"` (POST) to create a new measurement instead. |
-| `cumulocityType` | No | Explicitly specifies which Cumulocity API type to use: `"measurement"`, `"event"`, `"alarm"`, `"operation"`, `"managedObject"`, or `"custom"`. **When specified:** The mapper uses this explicit value to determine the target Cumulocity API endpoint, making the API selection more robust and less ambiguous. **When not specified:** The mapper falls back to deriving the API type from the `topic` string (e.g., a topic starting with `"measurements/"` automatically routes to the Measurement API). **Custom routing (`"custom"`):** Forwards the payload to a tenant-local microservice at the path given by `targetPath`. Device identity resolution and broker publishing are both skipped. The `action` value is mapped to the corresponding HTTP method (`"create"` → POST, `"update"` → PUT, etc.). **Recommended for Webhook connectors with Cumulocity Internal:** Using `cumulocityType` provides explicit control over API routing and is more reliable than topic-based derivation. |
+| `cumulocityType` | No | Explicitly specifies which Cumulocity API type to use: `"measurement"`, `"event"`, `"alarm"`, `"operation"`, `"managedObject"`, or `"custom"`. **When specified:** The mapper uses this explicit value to determine the target Cumulocity API endpoint, making the API selection less ambiguous. **When not specified:** The mapper falls back to deriving the API type from the `topic` string (e.g., a topic starting with `"measurements/"` automatically routes to the Measurement API). **Custom routing (`"custom"`):** Forwards the payload to a tenant-local microservice at the path given by `targetPath`. Device identity resolution and broker publishing are both skipped. The `action` value is mapped to the corresponding HTTP method (`"create"` → POST, `"update"` → PUT, etc.). **Recommended for Webhook connectors with Cumulocity Internal:** Using `cumulocityType` provides explicit control over API routing and is more reliable than topic-based derivation. |
 | `externalSource` | No | Array specifying the external ID type: `[{type: "c8y_Serial"}]`. Defines which external ID type should be used to resolve the device identity for `_externalId_` token replacement in the broker topic. Ignored when `sourceId` is set explicitly. |
-| `sourceId` | No | Explicitly sets the Cumulocity internal managed object ID for this message, overriding the device that triggered the mapping. **Default behavior (omitted):** The mapper uses the internal ID of the device that triggered the outbound mapping. For external broker connectors, it additionally resolves the external ID (e.g. LoRa EUI, serial) via `externalSource` for `_externalId_` token replacement in the broker topic. **When set:** The provided ID is used as the internal C8Y managed object ID for the Cumulocity REST API call (`source.id`) and also for broker topic routing. The `externalSource` lookup is skipped. **Use case:** Cross-device routing — when data from one device should be associated with a different device in Cumulocity. For example, a gateway device triggers the mapping but the resulting measurement should be stored under a child device: `sourceId: childDeviceInternalId`. **Note:** This must be a Cumulocity *internal* numeric managed object ID, not an external identifier like a serial number or LoRa EUI. |
+| `sourceId` | No | Explicitly sets the Cumulocity internal managed object ID for this message, overriding the device that triggered the mapping. **Default behavior (omitted):** The mapper uses the internal ID of the device that triggered the outbound mapping. For external broker connectors, it additionally resolves the external ID (e.g. LoRa EUI, serial) via `externalSource` for `_externalId_` token replacement in the broker topic. **When set:** The provided ID is used as the internal C8Y managed object ID for the Cumulocity REST API call (`source.id`) and also for broker topic routing. The `externalSource` lookup is skipped. **Use case:** Cross-device routing, when data from one device should be associated with a different device in Cumulocity. For example, a gateway device triggers the mapping but the resulting measurement should be stored under a child device: `sourceId: childDeviceInternalId`. **Note:** This must be a Cumulocity *internal* numeric managed object ID, not an external identifier like a serial number or LoRa EUI. |
 | `targetPath` | No* | Required when `cumulocityType: "custom"` is set. Relative REST path of the tenant-local microservice to call, e.g. `/service/my-processor/ingest`. Must start with `/service/`. The mapper validates this at runtime and rejects requests that do not match. Ignored for all other `cumulocityType` values. |
-| `transportFields` | No | Object with transport-specific fields: `key` (the Kafka record key — the key, not a header — or the Pulsar message key; for Kafka and Pulsar connectors), `method` (HTTP method like `"POST"`, `"PUT"`, for Webhook connectors), `retain` (boolean to set MQTT retained message flag, for MQTT connectors). The same field is also populated **inbound** on `msg.transportFields` — see *Metadata Properties for Inbound Smart Functions*. |
+| `transportFields` | No | Object with transport-specific fields: `key` (the Kafka record key, the key, not a header, or the Pulsar message key; for Kafka and Pulsar connectors), `method` (HTTP method like `"POST"`, `"PUT"`, for Webhook connectors), `retain` (boolean to set MQTT retained message flag, for MQTT connectors). The same field is also populated **inbound** on `msg.transportFields`, see *Metadata Properties for Inbound Smart Functions*. |
 
-**Context Properties — available via `context.getConfig()`**
+**Context Properties, available via `context.getConfig()`**
 
 | Property | Scope | Description |
 |---|:---:|---|
@@ -514,7 +528,7 @@ properties:
 | `targetAPI` | All | The Cumulocity target API (e.g. `"MEASUREMENT"`, `"EVENT"`). |
 | `externalId` | All | The resolved external ID of the source device (present when `useExternalId` is enabled on the mapping). |
 | `aliasMap` | SparkPlug B only | A `{ metricName → alias }` map loaded from the `sparkPlugB_NBIRTH` (or `sparkPlugB_DBIRTH`) fragment stored on the device managed object during inbound BIRTH processing. Use it to include numeric aliases in outbound NCMD / DCMD metrics so that the edge node can match them without a full name lookup: <br>`const aliasMap = context.getConfig().aliasMap \|\| {};`<br>`function metric(name, type, value) {`<br>`  const m = { name, type, value };`<br>`  if (aliasMap[name] !== undefined)`<br>`    m.alias = parseInt(aliasMap[name], 10);`<br>`  return m;`<br>`}` |
-| `isActive` | SparkPlug B only | Boolean flag reflecting the current online/offline state of the target Edge Node or Device. Set to `true` when a NBIRTH / DBIRTH / NDATA / DDATA message was last received, and `false` after a NDEATH / DDEATH message. Defaults to `true` when no status fragment is present yet. Use it to suppress outbound commands to devices that have gone offline: <br>`if (!context.getConfig().isActive) {`<br>`  return null; // device offline — suppress command`<br>`}` |
+| `isActive` | SparkPlug B only | Boolean flag reflecting the current online/offline state of the target Edge Node or Device. Set to `true` when a NBIRTH / DBIRTH / NDATA / DDATA message was last received, and `false` after a NDEATH / DDEATH message. Defaults to `true` when no status fragment is present yet. Use it to suppress outbound commands to devices that have gone offline: <br>`if (!context.getConfig().isActive) {`<br>`  return null; // device offline, suppress command`<br>`}` |
 
 :::important Important: Webhook with Cumulocity Internal
 **Using Webhook connectors with Cumulocity Internal enabled:**
@@ -657,22 +671,23 @@ path construction and proper request formatting. When using `action: "patch"`, t
 PUT operation to partially update the object while preserving existing fields.
 
 **Return Type Flexibility:** For outbound Smart Functions, you can return either a single object or an array of
-objects. If you need to send a message to multiple topics or transform one Cumulocity event into multiple external
+objects. Returning `null`, `undefined`, an empty object, or an empty array skips the message and records a warning. If you need to send a message to multiple topics or transform one Cumulocity event into multiple external
 messages, return an array.
 
-##### Accessing Metadata from Incoming Messages
+##### Accessing metadata from incoming messages
 
 When your Smart Function receives a message, you can access metadata information through the payload:
 
-- **MQTT Topic Levels** (inbound only): Access topic parts using `payload["_TOPIC_LEVEL_"][index]`. For example,
-  if the topic is `device/12345/telemetry`, then `payload["_TOPIC_LEVEL_"][1]` returns `"12345"`.
+- **Topic levels**: Split `msg.topic`. For example, if the topic is `device/12345/telemetry`, then
+  `msg.topic.split("/")[1]` returns `"12345"`. Smart Functions do not receive a `_TOPIC_LEVEL_` payload node.
 - **Publisher Client ID** (inbound, MQTT 5 only): Access the MQTT client ID of the message publisher using
   `context.getClientId()`. This returns the `clientId` from MQTT 5 user properties, or `null` if not available.
   **Note:** The publisher must include the `clientId` as a user property when publishing. Not available for MQTT
   3.1.1 connections.
-- **External ID** (outbound only): Access the device's external ID using `payload["_IDENTITY_"]["externalId"]`.
-- **Cumulocity Source ID** (outbound only): Access the device's internal Cumulocity ID using
-  `payload["_IDENTITY_"]["c8ySourceId"]`.
+- **External ID** (outbound only): Access the device's external ID using `context.getExternalId()` or
+  `context.getConfig().externalId`. This requires **Use external id** and an **External Id type** on the mapping.
+  Smart Functions do not receive an `_IDENTITY_` payload node.
+- **Cumulocity Source ID** (outbound only): Access the device's internal Cumulocity ID using `msg.sourceId`.
 
 **Example: Extracting device ID from MQTT topic (inbound)**
 
@@ -680,7 +695,7 @@ When your Smart Function receives a message, you can access metadata information
 function onMessage(msg, context) {
   var payload = msg.getPayload();
   // Extract device ID from second level of topic: device/12345/telemetry
-  var deviceId = payload["_TOPIC_LEVEL_"] && payload["_TOPIC_LEVEL_"][1];
+  var deviceId = msg.topic ? msg.topic.split("/")[1] : null;
   console.log("Device ID from topic: " + deviceId);
   return [{
     cumulocityType: "measurement",
@@ -719,25 +734,25 @@ function onMessage(msg, context) {
 ```
 
 :::caution
-**Best Practice:** Always validate metadata values before using them. Check if `_TOPIC_LEVEL_` exists and has the
-expected index before accessing it. Similarly, verify external IDs and source IDs are present in outbound
+**Best Practice:** Always validate metadata values before using them. Check that `msg.topic` has the
+expected number of levels before accessing one. Similarly, verify external IDs and source IDs are present in outbound
 mappings. For `context.getClientId()`, always check if the value is not `null` before using it, as it's only
 available for MQTT 5 connections when the publisher includes it as a user property.
 :::
 
-#### Routing to a Cumulocity Tenant Microservice
+#### Routing to a Cumulocity tenant microservice
 
 Smart Functions can forward payloads directly to a tenant-local microservice instead of (or in addition to) the
 built-in Cumulocity APIs. Set `cumulocityType: "custom"` and supply a `targetPath` starting with `/service/`. The
 mapper calls the microservice using the tenant's own credentials, so no additional authentication setup is
 required. Device identity resolution and broker publishing are both skipped for custom-routed objects.
 
-:::important Important — Security restriction
+:::important Important, Security restriction
 The `targetPath` must start with `/service/`. The mapper enforces this at runtime and throws a processing error
 for any other path. This ensures that only microservices subscribed to the same Cumulocity tenant can be called.
 :::
 
-**Example: Inbound — create a measurement and forward to a custom microservice**
+**Example: Inbound, create a measurement and forward to a custom microservice**
 
 ```javascript
 function onMessage(msg, context) {
@@ -770,7 +785,7 @@ function onMessage(msg, context) {
 }
 ```
 
-**Example: Outbound — forward a Cumulocity operation to a custom microservice**
+**Example: Outbound, forward a Cumulocity operation to a custom microservice**
 
 ```javascript
 function onMessage(msg, context) {
@@ -795,7 +810,18 @@ For more examples and complete code templates, navigate to
 [Code Templates](/c8y-pkg-dynamic-mapper/node3/codeTemplate/INBOUND_SMART_FUNCTION) to see comprehensive
 JavaScript Smart Function samples.
 
-#### GraalVM Engine and Memory Management {#graalvm-metaspace}
+#### Limits and runtime behavior {#sf-limits}
+
+| Topic | Behavior |
+|---|---|
+| **CPU budget** | JavaScript may run for at most `maxCPUTimeMS` (default 5000 ms). When the budget is exceeded, the mapper stops the function and fails the message. An infinite loop cannot block the service. |
+| **Pipeline timeout** | The whole processing of one message, including JavaScript and Cumulocity API calls, must finish within `pipelineTimeoutMS` (default 8000 ms). It must be larger than the CPU budget. Both settings are in **Service Configuration**. |
+| **Interpreter only** | Smart Functions run in the GraalVM interpreter without a JIT compiler. Keep functions short and avoid heavy loops or large payload copies. |
+| **Java classes** | `Java.type(...)` can load only these classes: `java.lang.String`, `java.util.ArrayList`, `java.util.Arrays`, `java.util.HashMap`, `java.util.HashSet`, `java.util.Base64`, `java.nio.charset.StandardCharsets`, and the substitution helper classes provided by the System template. Any other class, including file, network, and process classes, is not reachable. |
+| **State** | `context.setState()` values live in memory for each mapping. A tenant-wide expiry and a service restart clear them, see [Flow state](/c8y-pkg-dynamic-mapper/introduction/flow-state). |
+| **Logging** | `console.log`, `console.warn`, `console.error`, and `console.debug` write to the **Console output** panel during tests and to the microservice log at runtime. |
+
+#### GraalVM engine and memory management {#graalvm-metaspace}
 
 Every Smart Function is executed inside a **GraalVM Polyglot Engine**, one per tenant. The Engine keeps what it has
 parsed and prepared for each distinct JavaScript source until the Engine is closed: roughly 6 KB of heap per small
@@ -803,45 +829,45 @@ source, up to about 50 KB for a mapping of typical template size. Running unchan
 nothing. The standard deployment runs the Engine without a JIT compiler (interpreter-only), so no compiled machine
 code is produced. The Dynamic Mapper bounds the accumulation with an automatic **Engine rotation**.
 
-##### Engine Rotation
+##### Engine rotation
 
 Each tenant has its own GraalVM Engine. The Engine is replaced (rotated) when the compilation count reaches the
 threshold:
 
 | Trigger | Details |
 |---|---|
-| **Compilation-based** | The Engine is rotated after **1000 unique JS source compilations** (configurable via `engineRotationThreshold`, default: 1000; tenants that stored an earlier value keep it until changed). A compilation is counted only when a new (sourceName, contentHash) pair is evaluated — repeated execution of the same code is a GraalVM source-cache hit and does not count. Warmup compilations at Engine creation are registered but do not count toward the threshold, so only code changes after startup drive rotation. |
+| **Compilation-based** | The Engine is rotated after **1000 unique JS source compilations** (configurable via `engineRotationThreshold`, default: 1000; tenants that stored an earlier value keep it until changed). A compilation is counted only when a new (sourceName, contentHash) pair is evaluated, repeated execution of the same code is a GraalVM source-cache hit and does not count. Warmup compilations at Engine creation are registered but do not count toward the threshold, so only code changes after startup drive rotation. |
 
 There is no time-based rotation: an Engine only grows when new distinct sources are compiled into it, so an idle
 Engine holds the same after a day as after a minute. To rotate a tenant's Engine on demand, run the
 `ROTATE_GRAALVM_ENGINE` operation.
 
-When rotation fires, the old Engine is *retired* — no new contexts are created against it, but any in-flight
+When rotation fires, the old Engine is *retired*, no new contexts are created against it, but any in-flight
 messages continue to completion. The old Engine is closed, and the memory it held released, once the last in-flight
 context closes. A replacement Engine is created immediately and pre-warmed with all active SmartFunction mapping
 codes before the first real message arrives. Each rotation therefore has a cost (re-warming every active mapping),
 which is why the default threshold is not low.
 
-##### What Grows the Engine
+##### What grows the engine
 
 Not all usage patterns add to what the Engine holds:
 
 | Scenario | Growth pattern | Primary rotation trigger |
 |---|---|---|
-| **High message volume — same mapping, same code** | None. The source cache is hit on every call (same content hash). | *No rotation triggered.* Repeated execution of the same code does not increment the compilation counter. |
-| **Mapping iteration — delete & recreate with new JS code** | Grows with every distinct code string: each is a new GraalVM `Source` (different content hash) that stays in the Engine until it is closed, even if the mapping was deleted or superseded. A single character edit creates a new source. | Compilation-based (`engineRotationThreshold`) — each unique code version increments the counter. |
-| **Editing an existing mapping's JS code** | Grows with every save of modified code. A mapping edited 20 times before going to production has left 20 sources in the Engine, 19 of them unreachable. | Compilation-based (`engineRotationThreshold`) — every code edit increments the counter, making development sessions the primary driver of rotation. |
-| **Activate / deactivate a mapping** | Nothing if the code is unchanged (same content hash, cache hit). If the code was edited in between, one new source is added — equivalent to a single code edit. | Activate/deactivate alone does not increment the compilation counter. |
+| **High message volume, same mapping, same code** | None. The source cache is hit on every call (same content hash). | *No rotation triggered.* Repeated execution of the same code does not increment the compilation counter. |
+| **Mapping iteration, delete & recreate with new JS code** | Grows with every distinct code string: each is a new GraalVM `Source` (different content hash) that stays in the Engine until it is closed, even if the mapping was deleted or superseded. A single character edit creates a new source. | Compilation-based (`engineRotationThreshold`), each unique code version increments the counter. |
+| **Editing an existing mapping's JS code** | Grows with every save of modified code. A mapping edited 20 times before going to production has left 20 sources in the Engine, 19 of them unreachable. | Compilation-based (`engineRotationThreshold`), every code edit increments the counter, making development sessions the primary driver of rotation. |
+| **Activate / deactivate a mapping** | Nothing if the code is unchanged (same content hash, cache hit). If the code was edited in between, one new source is added, equivalent to a single code edit. | Activate/deactivate alone does not increment the compilation counter. |
 
 ##### Code churn is what accumulates
 
-Active development on SmartFunction code — edits to existing mappings, delete-and-recreate cycles, or
-deactivate-edit-reactivate workflows — is the only usage that adds to the Engine over time. As a guide, 1000
+Active development on SmartFunction code, edits to existing mappings, delete-and-recreate cycles, or
+deactivate-edit-reactivate workflows, is the only usage that adds to the Engine over time. As a guide, 1000
 distinct sources hold on the order of 6 to 50 MB of heap in the Engine, which is what the default threshold allows
 per tenant before the Engine is replaced. Tune `engineRotationThreshold` to control how many code changes accumulate
 before a rotation is triggered.
 
-##### Reading the Logs
+##### Reading the logs
 
 The service logs a **baseline** reading every time an Engine is created and the current usage at the moment of every
 rotation, in the form `Metaspace <used> MB / <max> MB (<percent>%)`:
@@ -857,13 +883,13 @@ levels off after start-up rather than growing with each source, and closing an E
 that rotation releases is Java heap. The `retired engine(s) pending drain` count shows old Engines that still have
 in-flight messages; if it stays above zero, a long-running SmartFunction execution is holding a retired Engine open.
 
-:::caution Caution — "no max set"
+:::caution Caution, "no max set"
 When the log shows `(no max set)`, the JVM Metaspace has no limit configured. The standard microservice image sets
 `-XX:MaxMetaspaceSize=500m`. If you run the service with your own JVM flags, set an explicit limit so a problem
 shows up as a Java `OutOfMemoryError: Metaspace` with a stack trace instead of an OS-level kill.
 :::
 
-##### Tuning Recommendations
+##### Tuning recommendations
 
 | Symptom / Situation | Recommended Action |
 |---|---|
@@ -873,11 +899,11 @@ shows up as a Java `OutOfMemoryError: Metaspace` with a stack trace instead of a
 | Pod OOM-killed without a Java exception | Check the microservice's memory request first; the service's heap and Metaspace limits are derived from it. If you use custom JVM flags, set `-XX:MaxMetaspaceSize` explicitly. |
 | Low message volume, long uptime, Engine suspected to be in a bad state | Rotation only advances on code changes, which is intended. Rotate the tenant's Engine on demand with the `ROTATE_GRAALVM_ENGINE` operation. |
 
-##### Pre-compilation Warnings
+##### Pre-compilation warnings
 
 At startup (and after each Engine rotation), the service pre-compiles all active SmartFunction mapping codes into
 the new Engine's source cache. If a mapping code cannot be pre-compiled, a `WARN` log entry is emitted. The
-mapping still executes correctly at runtime — the warning only means the first message after rotation pays the
+mapping still executes correctly at runtime, the warning only means the first message after rotation pays the
 one-time cold-start cost (class initialisation, parsing, specialisation) instead of hitting the pre-warmed cache.
 
 ```
@@ -896,7 +922,7 @@ in the mapping grid. Use it to locate the affected mapping.
 
 | Warning message | Cause and fix |
 |---|---|
-| `Variable "globalConfig" has already been declared` (or any other name from the Shared Code template) | The mapping code bundles a library (e.g. Zod) that also declares `const globalConfig` — the same name that the Shared Code template already defines. At *runtime* the IIFE wrapper isolates the mapping's declarations, so execution is unaffected. To also fix the pre-compilation warning, remove the bundled library from the mapping code and rely on the Shared Code template to provide it globally instead. |
+| `Variable "globalConfig" has already been declared` (or any other name from the Shared Code template) | The mapping code bundles a library (e.g. Zod) that also declares `const globalConfig`, the same name that the Shared Code template already defines. At *runtime* the IIFE wrapper isolates the mapping's declarations, so execution is unaffected. To also fix the pre-compilation warning, remove the bundled library from the mapping code and rely on the Shared Code template to provide it globally instead. |
 | `Expected an operand but found export` | The mapping code contains an ES module `export` statement at the top level (e.g. `export default onMessage`) and the **Support ESM modules** setting is *disabled*. In flat-script mode the pre-compiler does not strip `export` keywords. Either enable ESM mode in **Configuration → Service Configuration → General**, or remove the `export` lines from the mapping code (the runtime strips them automatically, but the pre-compiler does not). |
 | `Variable "onMessage" has already been declared` (or `"MeasurementSchema"` or similar) | During pre-compilation all mapping codes are evaluated sequentially in a single GraalVM context. A `var` declaration in one mapping's code leaks into the global scope and collides with the same name in a later mapping. At *runtime* each message gets a fresh context so there is no collision. To fix the warning: change top-level `var` declarations in your mapping code to `const` or `let`, or wrap them in a self-executing function so they are not exposed globally. |
 

@@ -2,16 +2,15 @@
 title: Defining the payload transformation using Java Extensions
 ---
 
-Java Extensions provide enterprise-grade transformation capabilities by allowing you to write custom transformation
-logic in Java. This approach offers type safety, superior performance, and full access to the Java ecosystem
-including third-party libraries and the Cumulocity Java SDK.
+Java Extensions let you write custom transformation logic in Java. This approach offers compile-time type checking
+and access to third-party Java libraries and the Cumulocity Java SDK.
 
 **When to use Java Extensions:** Choose Java Extensions when you need:
-- Enterprise-grade type safety with compile-time checking
-- Optimal performance for complex transformations
+- Compile-time type checking
+- Compiled execution for complex transformations
 - Binary format support for Protobuf, Avro, MessagePack, and other non-JSON protocols
-- Integration with existing Java-based enterprise systems
-- Access to the full Java ecosystem and Cumulocity Java SDK
+- Reuse of existing Java code
+- Access to third-party Java libraries and the Cumulocity Java SDK
 - Advanced debugging capabilities with standard Java tools
 
 :::caution
@@ -55,13 +54,13 @@ Each step in detail:
    `version` and an optional default parameter map.
 3. **Package** the yaml together with the compiled classes into a single jar.
 4. **Upload** it under **Configuration → Processor extension → Add extension**. The microservice loads the jar
-   dynamically, per tenant — no redeployment.
+   dynamically, per tenant, no redeployment.
 5. **Create a mapping** with transformation type **Extension Java**, select the extension and its `eventName`, and
    optionally override the parameter map for that mapping.
 6. At runtime `onMessage(...)` receives every matching message. `context.getConfigAsMap()` exposes the tenant,
    topic and parameter map, and the `CumulocityObject` results your method returns are sent to Cumulocity.
 
-##### Selecting Java Extensions in the Mapping Stepper
+##### Selecting Java Extensions in the mapping stepper
 
 When creating a mapping, you can select from installed Java Extensions that define the transformation logic. The
 mapping stepper displays all available extensions along with their associated templates:
@@ -70,8 +69,8 @@ mapping stepper displays all available extensions along with their associated te
 
 ##### Uploading a Java Extension
 
-A Java Extension is packaged as a single `*.jar` and uploaded through the UI — no redeployment of the
-microservice is required. Build the jar first — the **End-to-end overview** above shows where this step sits — then:
+A Java Extension is packaged as a single `*.jar` and uploaded through the UI, no redeployment of the
+microservice is required. Build the jar first, the **End-to-end overview** above shows where this step sits, then:
 
 1. Go to **Configuration → Processor extension**. The page lists every extension currently known to the service,
    each card showing whether it is **External** (uploaded by you) or **Internal** (shipped with the service), and
@@ -86,16 +85,16 @@ microservice is required. Build the jar first — the **End-to-end overview** ab
 
 3. The service loads the jar and registers every `ProcessorExtensionInbound` / `ProcessorExtensionOutbound`
    implementation declared in its `extension-external.yaml`. Use **Reload** if the card does not yet show your
-   extension — loading happens asynchronously, and the banner reports progress while it runs.
+   extension, loading happens asynchronously, and the banner reports progress while it runs.
 
 The jar must contain an `extension-external.yaml` naming each processor and its implementation class. An
-extension whose descriptor is missing or malformed uploads successfully but contributes **0 Loaded** processors —
-if you see that, check the descriptor before looking anywhere else.
+extension whose descriptor is missing or malformed uploads successfully but contributes **0 Loaded** processors.
+If you see that, check the descriptor before looking anywhere else.
 
 Once loaded, the extension's processors become selectable in the mapping wizard as described above, and the jar
-survives microservice restarts — it is stored in the tenant, not on the container's filesystem.
+survives microservice restarts, it is stored in the tenant, not on the container's filesystem.
 
-##### Managing Installed Java Extensions
+##### Managing installed Java Extensions
 
 To manage and view installed Java Extensions, navigate to the Processor Extension configuration page. This page
 displays all deployed extensions with their properties, implementation details, and supported message types:
@@ -109,11 +108,20 @@ A Java Extension implements one of two interfaces, depending on the direction it
 | **Inbound** (broker → Cumulocity) | `ProcessorExtensionInbound<byte[]>` | the raw broker payload as bytes | `CumulocityObject[]` |
 | **Outbound** (Cumulocity → broker) | `ProcessorExtensionOutbound<O>` | the Cumulocity object, **already parsed** | `DeviceMessage[]` |
 
-Both are implemented the same way — a single `onMessage(message, context)` that returns an array — and both are
+Both are implemented the same way: a single `onMessage(message, context)` that returns an array. Both are
 packaged, registered and uploaded identically. The direction is derived from the interface you implement; you do
 not declare it anywhere.
 
-###### Inbound — broker to Cumulocity
+An empty or `null` result means "nothing to do". The mapper ignores the message, logs it at info level, and does not
+count it as an error. Throw an exception (or, for outbound, a `ProcessingException`) when a message is invalid and
+should count as a failure.
+
+The mapper creates one instance of your class and reuses it for every message, so do not keep per-message data in
+instance fields unless access is thread-safe. The class needs a public no-argument constructor. By default, external
+extension classes must be in the package `dynamic.mapper.processor.extension.external` (or a sub-package), and external
+extensions can be disabled for the whole service by an administrator.
+
+###### Inbound: broker to Cumulocity
 
 ```java
 public class ProcessorExtensionSmartInbound01 implements ProcessorExtensionInbound<byte[]> {
@@ -180,7 +188,7 @@ extensions:
 Package the configuration file **extension-external.yaml** and the compiled extension class into a `*.jar`, then
 upload it as described in **Uploading a Java Extension** above.
 
-###### Outbound — Cumulocity to broker
+###### Outbound: Cumulocity to broker
 
 An outbound extension implements `ProcessorExtensionOutbound<O>` and returns `DeviceMessage[]`, one entry per
 message to publish. Return an empty array to publish nothing.
@@ -194,7 +202,7 @@ public class ProcessorExtensionSmartOutbound01 implements ProcessorExtensionOutb
     public DeviceMessage[] onMessage(Message<Object> message, JavaExtensionContext context)
             throws ProcessingException {
         try {
-            // Outbound payloads arrive already parsed — cast, do not deserialize.
+            // Outbound payloads arrive already parsed, cast, do not deserialize.
             @SuppressWarnings("unchecked")
             Map<String, Object> payload = (Map<String, Object>) message.getPayload();
 
@@ -234,7 +242,7 @@ public class ProcessorExtensionSmartOutbound01 implements ProcessorExtensionOutb
 }
 ```
 
-Register it exactly as an inbound extension — the `className` is what tells the mapper it is outbound:
+Register it exactly as an inbound extension, the `className` is what tells the mapper it is outbound:
 
 ```yaml
 extensions:
@@ -249,12 +257,12 @@ extensions:
 
 :::important
 The outbound payload is **already parsed**. `message.getPayload()` returns the Cumulocity object as a
-`Map<String, Object>`, not bytes — casting is correct, and calling `new String(...)` or a JSON parser on it fails.
+`Map<String, Object>`, not bytes, casting is correct, and calling `new String(...)` or a JSON parser on it fails.
 Inbound is the opposite: there you do get raw `byte[]` and parse it yourself.
 :::
 
 The **publish topic** is yours to choose per message. Either take the one configured on the mapping with
-`context.getMapping().getPublishTopic()`, or build it from the payload as above — `"measurements/" + sourceId`
+`context.getMapping().getPublishTopic()`, or build it from the payload as above, `"measurements/" + sourceId`
 sends each device's data to its own topic from a single mapping.
 
 Beyond `payload(...)`, the `DeviceMessage` builder offers:
@@ -263,18 +271,18 @@ Beyond `payload(...)`, the `DeviceMessage` builder offers:
 |---|---|
 | `topic(...)` / `DeviceMessage.forTopic(...)` | The topic to publish to. |
 | `retain(true\|false)` | MQTT retain flag. |
-| `transportField(key, value)` | One transport-specific field, e.g. `transportField("qos", "1")`, or the Kafka record key / Pulsar message key — see [Accessing the broker message key](#broker-message-key). |
+| `transportField(key, value)` | One transport-specific field, e.g. `transportField("qos", "1")`, or the Kafka record key / Pulsar message key, see [Accessing the broker message key](#broker-message-key). |
 | `transportFields(map)` | Several at once. |
 | `clientId(...)` / `transportId(...)` | Override the publishing client or transport. |
 | `time(...)` | Message timestamp. |
 
-Returning several `DeviceMessage` entries publishes several messages from one Cumulocity object — useful for
+Returning several `DeviceMessage` entries publishes several messages from one Cumulocity object, useful for
 fan-out, or for protocols that need a header message before the payload.
 
-##### Extension Parameters
+##### Extension parameters
 
 Java Extensions can receive runtime configuration through a **parameter map**. This allows the same extension class
-to behave differently depending on the mapping it is used in — without recompiling or redeploying the extension.
+to behave differently depending on the mapping it is used in, without recompiling or redeploying the extension.
 
 Parameters are accessible inside the extension via `context.getConfigAsMap()`, which returns a map containing both
 runtime context (tenant, clientId, topic, mapping metadata) and the user-supplied `parameter` map nested under the
@@ -343,18 +351,23 @@ public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContex
 }
 ```
 
-##### GetConfigAsMap() — full content
+##### getConfigAsMap(): full content
 
 In addition to `parameter`, the map returned by `getConfigAsMap()` also contains:
-- **tenant** — current tenant identifier
-- **clientId** — MQTT/connector client ID
-- **topic** — incoming message topic
-- **mappingId**, **mappingName**, **targetAPI**, **debug** — mapping metadata
+- **tenant**: current tenant identifier
+- **clientId**: MQTT/connector client ID
+- **topic**: topic of the message
+- **externalId**: the resolved external ID of the source device (outbound, when the mapping uses an external ID)
+- **mappingId**, **mappingName**, **targetAPI**, **debug**: mapping metadata
+
+`context.getTenant()`, `context.getMapping()`, and `context.getExternalId()` return the same values directly.
+`context.addWarning(text)` records a warning that appears in the test result and the microservice log. Extension state
+(`setNativeState`) is not reliably kept between messages, see [Flow state](/c8y-pkg-dynamic-mapper/introduction/flow-state).
 
 ##### Accessing the broker message key {#broker-message-key}
 
 `message.getTransportFields()` returns the transport-specific fields of the received broker message. For Kafka,
-`key` holds the record key — the key, not a header. For Pulsar, `key` holds the message key (absent when the message has none):
+`key` holds the record key, the key, not a header. For Pulsar, `key` holds the message key (absent when the message has none):
 
 ```java
 @Override
@@ -365,7 +378,7 @@ public CumulocityObject[] onMessage(Message<byte[]> message, JavaExtensionContex
 }
 ```
 
-The key is delivered **out-of-band — it is not part of the payload**, so it never appears in the mapping's source
+The key is delivered **out-of-band, it is not part of the payload**, so it never appears in the mapping's source
 template. A Kafka record key or Pulsar message key is frequently the device identifier, which makes it a useful source for the external
 ID. The map is never `null`; it is empty when the transport carries no such fields.
 
@@ -382,21 +395,19 @@ return new DeviceMessage[] {
 };
 ```
 
-##### Key Benefits of Java Extensions
+##### Key benefits of Java Extensions
 
-- **Type Safety:** Compile-time type checking prevents runtime errors and improves code reliability. Your IDE will
-  catch errors before deployment, reducing debugging time and production issues.
-- **Performance:** Native Java execution provides optimal performance for complex transformations. Unlike
-  interpreted JavaScript, Java extensions benefit from JVM optimizations and efficient memory management.
-- **Binary Format Support:** Parse and process binary data formats such as Protocol Buffers (Protobuf), Avro,
-  MessagePack, and other non-JSON formats. Java Extensions can handle binary payloads that cannot be processed by
-  JSONata or JavaScript transformations, making them ideal for IoT devices using efficient binary protocols.
-- **Java Ecosystem:** Full access to Java libraries, frameworks, and the Cumulocity Java SDK. Leverage existing
-  libraries for JSON processing, data validation, cryptography, and more.
+- **Type safety:** Compile-time type checking catches many errors in your IDE before deployment.
+- **Performance:** Java code runs compiled on the JVM. Smart Functions run in an interpreter with a CPU
+  budget (`maxCPUTimeMS`).
+- **Binary format support:** Parse and process binary data formats such as Protocol Buffers (Protobuf), Avro,
+  MessagePack, and other non-JSON formats. Java Extensions receive the raw bytes. JSONata mappings cannot read
+  these formats, and Smart Functions must decode them in JavaScript.
+- **Java ecosystem:** Use Java libraries, frameworks, and the Cumulocity Java SDK, for example for JSON
+  processing, data validation, and cryptography.
 - **Reusability:** Package and deploy transformation logic as reusable plugins across multiple mappings. Once
   developed, a Java extension can be used by multiple tenants and mapping configurations.
-- **Advanced Debugging:** Use standard Java debugging tools and IDEs for development. Set breakpoints, inspect
-  variables, and step through code using IntelliJ IDEA, Eclipse, or any Java debugger.
+- **Debugging:** Use standard Java tools and IDEs during development, such as breakpoints in IntelliJ IDEA or Eclipse.
 
 :::important
 **Development Requirements:** To develop Java Extensions, you need:

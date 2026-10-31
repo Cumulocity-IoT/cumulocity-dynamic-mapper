@@ -4,9 +4,11 @@ title: Monitoring
 
 ### Monitoring {#monitoring}
 
-The **Monitoring** section in the left navigation contains views for **Statistic processed**, **Chart
-processed**, **Cache statistic**, **Service events**, **Service logs**, and **Hierarchy mapping**. Each gives a different
-operational perspective on what the mapper is doing at runtime.
+The **Monitoring** section in the left navigation contains the views **Statistic processed** (with the tabs
+**Inbound**, **Outbound**, and **Chart**), **Cache statistic**, **Service events**, **Versions**, **Service logs**,
+and **Hierarchy mapping**. Each gives a different operational perspective on what the mapper is doing at runtime.
+Everyone can open these views, except **Service logs**, which needs the `ROLE_DYNAMIC_MAPPER_ADMIN` role, and
+**Versions**, which needs at least `ROLE_DYNAMIC_MAPPER_CREATE`.
 
 #### Statistic processed (Inbound / Outbound)
 
@@ -21,8 +23,8 @@ This view shows one row per mapping in a data grid, plus a catch-all row **Unmap
 | **Status** | The health of the mapping *right now*: **OK**, **Failing (N in a row)** when the last N messages in a row failed, or **Idle** when the mapping has not received anything yet. It is based on the consecutive-failure streak, so it returns to **OK** after the first message that succeeds. |
 | **Received** | Messages that reached this mapping. Counted per mapping: one message matching three mappings counts three times. |
 | **Processed** | Messages that completed without an error and were not dropped. |
-| **Filtered** | Messages that matched the topic but were dropped on purpose — the mapping filter or the inventory filter did not match, or a Smart Function / extension chose to ignore the message. Not an error. |
-| **Errors** | Messages that failed during transformation or submission. A non-zero value means at least one message was lost — see **Last error** and **Service events**. |
+| **Filtered** | Messages that matched the topic but were dropped on purpose. The mapping filter or the inventory filter did not match, or a Smart Function or extension chose to ignore the message. This is not an error. |
+| **Errors** | Messages that failed during transformation or submission. A non-zero value means at least one message was lost. See **Last error** and the [Service logs](#service-logs). |
 | **Last message** | When the mapping last finished processing a message (any outcome). Empty if none yet. |
 | **Last error** | Time and text of the most recent error, so you can triage without opening the service events. Empty if there was none. |
 
@@ -31,7 +33,7 @@ These columns are hidden by default. Turn them on in the column menu of the grid
 | Column | Meaning |
 |---|---|
 | **Error rate** | **Errors** divided by **Received**, capped at 100 %. |
-| **Requests (failed)** | Requests the mapping produced — Cumulocity API calls (inbound) or broker publishes (outbound) — and, in brackets, how many of them failed. Counted per request, so one message can add several. |
+| **Requests (failed)** | Requests the mapping produced (Cumulocity API calls inbound, broker publishes outbound) and, in brackets, how many of them failed. Counted per request, so one message can add several. |
 | **Time avg / max** | Average and slowest processing time of a message in milliseconds, measured from when the message enters processing to when the mapping is done. Time spent in the connector or the broker is not included. |
 
 As a rule, **Received** = **Processed** + **Filtered** + **Errors**. The sum can differ slightly while messages
@@ -41,18 +43,24 @@ If your data does not arrive, check **Filtered** first: a mapping with many filt
 receiving data that its filter rejects.
 
 Counters accumulate since the last reset (or since microservice startup). Use the **Reset statistics** button in
-the action bar to zero all counters — useful for measuring throughput during a specific time window. Test runs
-from the mapping editor are not counted.
+the action bar (`ROLE_DYNAMIC_MAPPER_ADMIN` only) to zero all counters, for example to measure throughput during a
+specific time window. Test runs from the mapping editor are not counted. The counters are published to the
+**Statistic processed** view only while **Send mapping statistics** is on under **Configuration → Service
+configuration → Monitoring** (on by default).
+
+A mapping with **Status** **Failing (N in a row)** that suddenly shows nothing may have been deactivated because
+**Max failure count** was reached. Check **Service events** for a `d11r_mappingFailureEvent` and the mapping's
+active state. See [Reliability settings](/c8y-pkg-dynamic-mapper/introduction/reliability-settings).
 
 ![Statistic processed](../../../resources/image/Dynamic_Mapper_Monitoring_Statistic.png "The Statistic processed (Inbound) view listing received/error counts per mapping.")
 
 #### Chart processed
 
-The Chart view shows two charts, both built from the same live counters as the statistic tables:
+The **Chart** tab (page title **Chart processed**) shows two charts, both built from the same live counters as the statistic tables:
 
-- **Messages by outcome** — one stacked bar each for **Inbound**, **Outbound** and **No mapping matched / failed
+- **Messages by outcome**: one stacked bar each for **Inbound**, **Outbound** and **No mapping matched / failed
   early**, split into **Processed** (green), **Filtered** (grey) and **Errors** (red).
-- **Processing time per mapping** — the ten slowest mappings by average processing time, with each mapping's
+- **Processing time per mapping**: the ten slowest mappings by average processing time, with each mapping's
   slowest single message next to it. It stays empty until a mapping has processed a message.
 
 Both show totals since the last reset, not a trend over time. They update live as messages arrive.
@@ -66,58 +74,72 @@ The Cache statistic view shows three cache panels side by side, each displaying 
 | Cache panel | KPI card | Meaning |
 |---|:---:|---|
 | **Inventory Cache** | **# Entries** | Number of managed object fragments currently held in memory. Below the card the configured size limit is shown (default: 100 000). When the limit is reached, the least-recently-used entry is evicted to make room. |
-| **Inventory Cache** | **% Percent** | Fill rate — `Entries / Limit × 100`. A value approaching 100 % means the cache is nearly full and evictions are occurring frequently, which may slow down message processing. |
+| **Inventory Cache** | **% Percent** | Fill rate, `Entries / Limit × 100`. A value approaching 100 % means the cache is nearly full and evictions are occurring frequently, which may slow down message processing. |
 | **Inbound ID Cache** | **# Entries** | Number of external-ID → internal managed object ID mappings currently cached. Each mapping is resolved once and then stored here, so subsequent inbound messages skip the identity resolution REST call entirely. |
 | **Inbound ID Cache** | **% Percent** | Fill rate for the inbound ID cache, same calculation as above. A high fill rate with many devices indicates you may want to increase the cache limit in the service configuration. |
-| **Outbound ID Cache** | **# Entries** | Number of internal managed object ID (+ external ID type) → external-ID resolutions currently cached. Used by outbound mappings with **useExternalId** enabled — e.g. a Smart Function or Flow function reading `context.getConfig().externalId` — to avoid resolving the device's external ID from Cumulocity on every outbound message. |
+| **Outbound ID Cache** | **# Entries** | Number of internal managed object ID (+ external ID type) → external-ID resolutions currently cached. Used by outbound mappings with **useExternalId** enabled, for example a Smart Function or Flow function reading `context.getConfig().externalId`, to avoid resolving the device's external ID from Cumulocity on every outbound message. |
 | **Outbound ID Cache** | **% Percent** | Fill rate for the outbound ID cache, same calculation as above. |
 
-The action bar at the top of the page provides four buttons:
+The **Reload** button in the action bar refreshes the KPI cards without clearing the caches. Use it to get an
+up-to-date snapshot of the current fill levels. Each cache panel has a **Clear cache** button, which needs the
+`ROLE_DYNAMIC_MAPPER_ADMIN` role. The same actions exist as **Clear inbound external ID cache**, **Clear outbound
+external ID cache**, and **Clear inventory cache** under **Configuration → Service configuration → Caching**.
 
-- **Clear inbound external ID cache** — removes all cached external-ID-to-internal-ID resolutions (used by
-  inbound mappings resolving a device from its external ID). Use this after deleting or re-registering a device
-  to prevent stale identity lookups. The cache is rebuilt automatically as new messages arrive.
-- **Clear outbound external ID cache** — removes all cached internal-ID-to-external-ID resolutions (used by
-  outbound mappings with **useExternalId** enabled). Use this after re-enrolling a device under a different
-  external ID, or reassigning an external ID to a different device, to avoid outbound messages being routed
-  using a stale external ID. The cache is rebuilt automatically as new outbound messages arrive.
-- **Clear inventory cache** — removes all cached managed object fragments. Use this after updating a device's
+- **Inbound ID Cache**: clearing removes all cached external-ID-to-internal-ID resolutions (used by inbound
+  mappings resolving a device from its external ID). Use this after deleting or re-registering a device to prevent
+  stale identity lookups. The cache is rebuilt automatically as new messages arrive.
+- **Outbound ID Cache**: clearing removes all cached internal-ID-to-external-ID resolutions (used by outbound
+  mappings with **useExternalId** enabled). Use this after re-enrolling a device under a different external ID, or
+  reassigning an external ID to a different device, to avoid outbound messages being routed using a stale external
+  ID. The cache is rebuilt automatically as new outbound messages arrive.
+- **Inventory Cache**: clearing removes all cached managed object fragments. Use this after updating a device's
   managed object directly in Cumulocity (outside the mapper) so the mapper picks up the latest values. The
-  fragments you configured under **Service Configuration → Function → Fragments from inventory to cache** are
-  re-fetched on demand. Entries can be exact fragment names or glob patterns (e.g. `sparkPlugB_DBIRTH_*`).
-- **Reload** — refreshes the KPI cards without clearing the caches, useful to get an up-to-date snapshot of the
-  current fill levels.
+  fragments you configured under **Configuration → Service configuration → Caching → Fragments from inventory to
+  cache** are re-fetched on demand. Entries can be exact fragment names or glob patterns (for example
+  `sparkPlugB_DBIRTH_*`).
 
 :::caution
 All three caches are held in memory and are lost on microservice restart. After a restart they are rebuilt
-automatically as messages arrive — no manual action is needed.
+automatically as messages arrive. No manual action is needed.
 :::
 
-Both ID caches are also cleared automatically on a configurable schedule — see **Days lifetime inbound Id
+Both ID caches are also cleared automatically on a configurable schedule. See **Days lifetime inbound Id
 cache** and **Days lifetime outbound Id cache** under
 [**Service Configuration → Caching**](/c8y-pkg-dynamic-mapper/node3/serviceConfiguration/caching). This is a
 full-cache wipe on a timer (not per-entry expiry), so set the retention short enough for your device
-re-enrollment/reassignment cadence if you rely on it instead of manually clearing the cache.
+re-enrollment and reassignment cadence if you rely on it instead of manually clearing the cache.
 
 #### Service events
 
-The Service events view is the primary place to diagnose individual message failures without needing access to
-the microservice container logs. It displays a filterable list of events emitted by the mapper backend. Each
-entry shows:
+The Service events view is the primary place to diagnose problems with connectors, subscriptions, and mappings
+without access to the microservice container logs. It lists the events that the mapper backend wrote to Cumulocity.
+Each entry shows:
 
-- **Type** — event severity/category (e.g. `STATUS_MAPPING_CHANGED`, `STATUS_CONNECTOR_EVENT`,
-  `MAPPING_FAILURE`)
-- **Timestamp** — when the event occurred
-- **Message** — the full error or status description, including the mapping name, tenant, and root cause
+- **Type**: the event type and component, for example `d11r_mappingFailureEvent` (a mapping failed or was
+  deactivated after reaching **Max failure count**), `d11r_connectorStatusEvent`, or `d11r_mappingActivationEvent`.
+- **Timestamp**: when the event occurred.
+- **Message**: the full error or status description, including the mapping name and root cause.
 
-Use the **Type** dropdown and **Date from / Date to** pickers to narrow the event list to a specific time window
-or event category. This is particularly useful when correlating errors with known message arrival times.
+Use the event type and severity (**Error**, **Warning**, **Info**) lists, the search field, and under **Filters** the
+subject, **Date from**, **Date to**, and **Only open sessions** to narrow the list. New events appear live.
+
+Connector, subscription, and notification events are written only when the matching setting is on under
+**Configuration → Service configuration → Monitoring** (**Send connector lifecycle**, **Send events on topic
+subscriptions**, **Send notification lifecycle**). All three are off by default.
 
 :::caution
-Service events are stored in an in-memory ring buffer and are lost on microservice restart. For long-term audit
-trails, configure the Cumulocity platform's built-in audit log or forward events to an external monitoring
-system.
+Service events are ordinary Cumulocity events. They count against your tenant storage and follow the event
+retention rules of the platform. The page shows only a limited number of the newest events, so narrow the filters
+when you look for older entries. Per-message transformation errors are not events. Look for them in the
+[Service logs](#service-logs) or the **Errors** and **Last error** columns of **Statistic processed**.
 :::
+
+#### Versions
+
+The **Versions** view lists every mapping of the selected direction (**Inbound** or **Outbound** tab) with its
+**Active version**, the number of published **Versions**, and whether a draft exists (**Status**). Open the version
+history of a mapping from the mapping list. See
+[Versioning mappings](/c8y-pkg-dynamic-mapper/introduction/versioning).
 
 #### Service logs {#service-logs}
 
@@ -170,7 +192,7 @@ for you:
 ##### Following one mapping {#service-logs-mapping}
 
 Choose a mapping in the **Mapping** list to see only what the mapper logged **while it processed a payload for that
-mapping** — inbound or outbound: the transformation, the substitutions, the requests it sent and the errors it ran
+mapping**, inbound or outbound: the transformation, the substitutions, the requests it sent and the errors it ran
 into. The connector's own lines (connect, subscribe, reconnect) are not part of it, because they belong to no mapping.
 
 Each such line carries the mapping's **identifier** in square brackets right in front of the logger, for example
@@ -190,7 +212,7 @@ What to keep in mind:
 - **Collected log:** the whole stored log is searched, so the result can reach back further than one page; use
   **Previous** and **Next** as usual. A window can be empty while more lines exist further back: the page then says so,
   and **Previous** keeps looking.
-- **Platform log:** the filter only applies to the lines that are loaded right now — the platform cannot filter its
+- **Platform log:** the filter only applies to the lines that are loaded right now, because the platform cannot filter its
   log. Use **Previous** and **Next** to look at other parts of the log.
 - **Both sources available** (you own the microservice and the collected log holds lines): a **Collected log** switch
   appears in the action bar. Selecting a mapping switches to the collected log automatically, because only it can
@@ -225,7 +247,8 @@ allowed one, so a setting can never overload the microservice that all tenants s
 | **Lowest level stored** | `INFO` | `ERROR`, `WARN`, `INFO` | Lines below it are not stored. |
 | **Keep stored lines for** | 24 | 1 to 720 hours | Older stored lines are deleted. |
 
-**Expert settings** show these as well:
+All **Service logs** settings appear only when **Expert settings** is on. The following settings are also
+Expert settings:
 
 | Setting | Default | Allowed | Meaning |
 |---|---|---|---|
@@ -258,7 +281,7 @@ keeps running even then, so lines that were stored earlier are still deleted.
 This view exposes the topic-matching tree described under [Mapping Topic](/c8y-pkg-dynamic-mapper/introduction/define-mapping) as a JSON document: an
 array of nodes, each keyed by a topic segment, nested the same way the tree is walked at runtime, down to the
 mapping registered at each leaf (its full definition, including its substitutions). It is the most direct way to
-trace why a message did — or did not — match a particular mapping, especially once several mappings share
+trace why a message did or did not match a particular mapping, especially once several mappings share
 overlapping topic prefixes.
 
 ![Hierarchy mapping](../../../resources/image/Dynamic_Mapper_Monitoring_Tree.png "The Hierarchy mapping view showing the topic-matching tree as JSON, down to one mapping's substitutions.")
