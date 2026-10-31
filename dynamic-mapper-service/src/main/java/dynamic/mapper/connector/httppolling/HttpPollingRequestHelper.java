@@ -56,9 +56,13 @@ final class HttpPollingRequestHelper {
     /** Default {@code pageStartValue} for {@code PageNumber} pagination mode. */
     static final long DEFAULT_PAGE_START_VALUE = 1L;
 
-    /** Matches the {@code rel="next"} entry of an RFC 5988 {@code Link} header, e.g.
-     * {@code <https://api.example.com/x?page=2>; rel="next"}. */
-    private static final Pattern NEXT_LINK_PATTERN = Pattern.compile("<([^>]+)>\\s*;\\s*rel=\"?next\"?");
+    /** One RFC 8288 link-value: {@code <target>} followed by its parameters, up to the next
+     * {@code <}. Splitting on commas instead would break targets that contain one. */
+    private static final Pattern LINK_VALUE_PATTERN = Pattern.compile("<([^>]*)>([^<]*)");
+
+    /** The {@code rel} parameter, quoted or bare, wherever it sits among the parameters. */
+    private static final Pattern REL_PARAM_PATTERN = Pattern.compile(
+            ";\\s*rel\\s*=\\s*(?:\"([^\"]*)\"|([^;,\\s]+))", Pattern.CASE_INSENSITIVE);
 
     private HttpPollingRequestHelper() {
         // static helpers only
@@ -208,19 +212,56 @@ final class HttpPollingRequestHelper {
             return null;
         }
         for (String headerValue : linkHeaders) {
-            for (String part : headerValue.split(",")) {
-                Matcher m = NEXT_LINK_PATTERN.matcher(part.trim());
-                if (m.find()) {
-                    try {
-                        return URI.create(m.group(1));
-                    } catch (IllegalArgumentException e) {
-                        log.warn("{} - Ignoring unparsable next-page Link header value: {}", tenant, m.group(1));
-                        return null;
-                    }
+            Matcher links = LINK_VALUE_PATTERN.matcher(headerValue);
+            while (links.find()) {
+                Matcher rel = REL_PARAM_PATTERN.matcher(links.group(2));
+                if (!rel.find()) {
+                    continue;
+                }
+                String relTypes = rel.group(1) != null ? rel.group(1) : rel.group(2);
+                // rel may hold several space-separated types, e.g. rel="next last"
+                if (!java.util.Arrays.asList(relTypes.toLowerCase().split("\\s+")).contains("next")) {
+                    continue;
+                }
+                try {
+                    return URI.create(links.group(1).trim());
+                } catch (IllegalArgumentException e) {
+                    log.warn("{} - Ignoring unparsable next-page Link header value: {}", tenant, links.group(1));
+                    return null;
                 }
             }
         }
         return null;
+    }
+
+    /**
+     * Resolves a server-provided next-page URI against the connector's base URL and accepts it only
+     * if it has the same scheme, host, and port. The poll client sends the configured credentials
+     * with every request, so following a Link header to another host would leak them (and bypass
+     * the base URL's outbound validation). Relative references are resolved against the base URL.
+     *
+     * @return the absolute URI, or {@code null} if {@code next} is null or points elsewhere
+     */
+    static URI resolveSameOrigin(URI next, String baseUrl, String tenant, Logger log) {
+        if (next == null) {
+            return null;
+        }
+        URI base = URI.create(baseUrl.endsWith("/") ? baseUrl : baseUrl + "/");
+        URI resolved = base.resolve(next);
+        if (!java.util.Objects.equals(base.getScheme(), resolved.getScheme())
+                || !java.util.Objects.equals(base.getHost(), resolved.getHost())
+                || effectivePort(base) != effectivePort(resolved)) {
+            log.warn("{} - Ignoring next-page Link to a different origin: {}", tenant, resolved);
+            return null;
+        }
+        return resolved;
+    }
+
+    private static int effectivePort(URI uri) {
+        if (uri.getPort() != -1) {
+            return uri.getPort();
+        }
+        return "https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80;
     }
 
     /** Evaluates {@code nextPageExpression} (JSONata) against the response body. */
