@@ -32,12 +32,13 @@ mapping resolution as if it had arrived from a broker.
   hold the `ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE` role (otherwise HTTP 403). The connector
   deliberately adds no second scheme.
 - **POST and PUT are accepted.** Any body type is accepted; the body is passed on as raw bytes.
-- **The caller learns only about request-level failures.** The endpoint answers 200 once the
-  message has been handed to the mapping pipeline. It does not wait for the pipeline result, so a
-  mapping error after that point is not reported to the caller. Errors raised while handing the
-  message over (for example no HTTP connector configured) return HTTP 400. The connector
-  declares only at-least-once; a mapping asking for another level is clamped to it, but no
-  redelivery happens, since the caller would have to retry — see [reliability.md](reliability.md).
+- **The caller learns the pipeline outcome.** The endpoint answers 200 only after the mapping
+  pipeline succeeded. A pipeline failure, a server-side (5xx) error, or a timeout returns HTTP
+  500, so the caller can retry; a client-side (4xx) error counts as handled and returns 200.
+  Errors raised while handing the message over (for example no HTTP connector configured)
+  return HTTP 400. The request blocks until the pipeline finishes, bounded by the Smart Function
+  budget or the hard processing ceiling. The connector declares only at-least-once; redelivery
+  is the caller's retry — see [reliability.md](reliability.md).
 
 ---
 

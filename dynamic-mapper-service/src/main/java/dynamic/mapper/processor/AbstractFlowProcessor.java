@@ -89,6 +89,18 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
         this.graalVMContextService = graalVMContextService;
     }
 
+    /**
+     * Books a leg that was cancelled before its Smart Function ran as a failure. Returning without
+     * an error would let {@code ConsolidationProcessor} count the leg as processed and reset the
+     * mapping's failure streak, although the broker callback already treats it as failed.
+     */
+    private void recordCancelled(ProcessingContext<?> context, String tenant, Mapping mapping) {
+        String message = String.format(
+                "Processing of mapping %s was cancelled (pipeline timeout) before the Smart Function ran",
+                mapping.getName());
+        handleProcessingError(new ProcessingException(message), message, context, tenant, mapping);
+    }
+
     public void process(ProcessingContext<?> context) throws Exception {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
@@ -104,6 +116,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
         if (wrapper != null && wrapper.getCancellationRequested().get()) {
             log.info("{} - Cancellation already requested before process() started, skipping JS execution for mapping: {}",
                     tenant, mapping.getName());
+            recordCancelled(context, tenant, mapping);
             return;
         }
 
@@ -361,6 +374,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
                  if (wrapperCheck != null && wrapperCheck.getCancellationRequested().get()) {
                      log.warn("{} - Cancellation requested just before JS execute(), skipping for mapping: {}",
                              tenant, mapping.getName());
+                     recordCancelled(context, tenant, mapping);
                      return;
                  }
 

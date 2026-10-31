@@ -165,6 +165,7 @@ public class MappingController {
         ),
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @GetMapping(value = "/version-counts", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<MappingVersionCount>> getVersionCounts(
             @RequestParam(required = false) Direction direction) {

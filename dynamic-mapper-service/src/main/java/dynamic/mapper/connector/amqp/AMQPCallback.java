@@ -28,6 +28,7 @@ import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -46,16 +47,23 @@ public class AMQPCallback extends DefaultConsumer {
     private final String connectorName;
     private final ServiceConfiguration serviceConfiguration;
     private final ExecutorService virtualThreadPool;
+    private final boolean autoAck;
 
     /**
      * Constructor
+     *
+     * @param channel the channel the queue is consumed on, used to ack and nack
+     * @param autoAck whether the consumer was registered with autoAck (broker acknowledges on delivery)
      */
-    public AMQPCallback(String tenant,
+    public AMQPCallback(Channel channel,
+            boolean autoAck,
+            String tenant,
             ServiceRegistry serviceRegistry,
             GenericMessageCallback callback,
             String connectorIdentifier,
             String connectorName) {
-        super(null); // Channel will be set when basicConsume is called
+        super(channel);
+        this.autoAck = autoAck;
         this.genericMessageCallback = callback;
         this.tenant = tenant;
         this.connectorIdentifier = connectorIdentifier;
@@ -100,10 +108,14 @@ public class AMQPCallback extends DefaultConsumer {
                             tenant, routingKey, connectorIdentifier);
                 }
 
-                // Acknowledge message if not auto-ack
-                // Note: If autoAck is true in basicConsume, this won't be needed
-                if (this.getChannel() != null && !envelope.isRedeliver()) {
-                    this.getChannel().basicAck(deliveryTag, false);
+                // Acknowledge only after the pipeline succeeded; nack with requeue otherwise.
+                // With autoAck=true the broker already considers the message delivered, so nothing to do.
+                if (this.getChannel() != null && !autoAck) {
+                    if (ProcessingResultHelper.awaitAckable(processedResults, tenant, topic, log)) {
+                        this.getChannel().basicAck(deliveryTag, false);
+                    } else {
+                        this.getChannel().basicNack(deliveryTag, false, true);
+                    }
                 }
 
                 if (serviceConfiguration.getLogPayload()) {
@@ -117,7 +129,7 @@ public class AMQPCallback extends DefaultConsumer {
 
                 // Reject message and requeue
                 try {
-                    if (this.getChannel() != null) {
+                    if (this.getChannel() != null && !autoAck) {
                         this.getChannel().basicNack(deliveryTag, false, true);
                     }
                 } catch (IOException ex) {

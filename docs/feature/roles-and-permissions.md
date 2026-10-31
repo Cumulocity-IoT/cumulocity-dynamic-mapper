@@ -45,7 +45,7 @@ connectors, configuration, or the running service.
 | Message Explorer | Create | Create |
 | Connectors | any | Admin |
 | Service configuration, code templates | any | Admin |
-| Extensions | any | Admin |
+| Extensions | Admin or Create (list, read) | Admin |
 | Service logs | Admin | Admin (flush) |
 | Default HTTP Connector ingest | not applicable | HTTP connector role |
 

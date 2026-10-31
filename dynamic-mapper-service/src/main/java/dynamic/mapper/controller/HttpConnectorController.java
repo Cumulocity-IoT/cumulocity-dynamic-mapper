@@ -43,6 +43,7 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.cumulocity.microservice.security.service.SecurityUserDetails;
 
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.http.HttpClient;
 import io.swagger.v3.oas.annotations.Operation;
@@ -220,9 +221,16 @@ public class HttpConnectorController {
                     .payload(payload)
                     .build();
 
-            connectorClient.onMessage(connectorMessage);
+            var processedResults = connectorClient.onMessage(connectorMessage);
 
+            // Acknowledge only once the pipeline succeeded, so the sender can retry on 5xx.
+            if (!ProcessingResultHelper.awaitAckable(processedResults, tenant, subPath, log)) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Processing failed or timed out; the message was not accepted, retry later");
+            }
             return ResponseEntity.ok().build();
+        } catch (ResponseStatusException ex) {
+            throw ex;
         } catch (Exception ex) {
             log.error("{} - Error transforming payload: {}", tenant, ex);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());

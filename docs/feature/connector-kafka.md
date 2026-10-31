@@ -151,12 +151,15 @@ Both `INBOUND` and `OUTBOUND`. Kafka has no native QoS concept. `supportedQos` i
 `[AT_MOST_ONCE, AT_LEAST_ONCE]`; `EXACTLY_ONCE` is clamped to `AT_LEAST_ONCE`. Offsets are
 committed after a successful result only when `enable.auto.commit=false` (the shipped default).
 For a record whose consolidated mapping QoS is 0, the offset is queued for commit without waiting
-for the pipeline. For QoS above 0, the commit waits for the pipeline result; an HTTP 4xx result
-counts as success, a 5xx result or a timeout does not queue a commit.
+for the pipeline. For QoS above 0, the poll-loop thread waits for the pipeline result before it
+moves to the next record of that partition; an HTTP 4xx result counts as success. A 5xx result,
+a timeout, or an error makes the loop seek the partition back to the failed record and skip the
+rest of that partition's batch, so a later success can never commit past it. The next poll
+redelivers the record after a pause of `CONSUMER_RESTART_DELAY_MS` (5 s). Other partitions of
+the same batch continue.
 
-The poll loop does not wait for that result, so a later record that succeeds commits an offset
-beyond an earlier failed record on the same partition. Redelivery of the failed record is
-therefore not guaranteed unless the consumer restarts (see below).
+The wait runs on the poll thread, so one slow batch delays the next `poll()`. The total must stay
+below `max.poll.interval.ms`, or the broker rebalances the group.
 
 ### Connection test
 

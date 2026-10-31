@@ -83,7 +83,7 @@ The import button is disabled unless the user has the Create or Admin role (`can
 | Import dialog | [`ImportConnectorsComponent`](../../dynamic-mapper-ui/src/shared/connector-configuration/import/import-connectors.component.ts) |
 | Per connector | Drops HTTP connectors, sets a new identifier, sets `enabled = false`, and posts with `createConfiguration(config, true)`. It checks `response.ok` itself because the fetch client resolves on 4xx and 5xx. |
 | Masked secrets | Detected by comparing property values with `****`. A warning tells the user to re-enter them. |
-| Service side | `ConfigurationController.createConnectorConfiguration` (Admin) rejects `HTTP`, drops properties that do not apply, and saves. It does not restore masked secrets on create. |
+| Service side | `ConfigurationController.createConnectorConfiguration` (Admin) rejects `HTTP`, drops properties that do not apply, and saves. It drops a masked (`****`) sensitive property on create, because a new configuration has no stored secret to restore. |
 
 The import button is disabled unless the user has the Admin role.
 
@@ -114,8 +114,9 @@ The import button is disabled unless the user has the Admin role.
   rules (no change to read-only templates, cache refresh for `SHARED` and `SYSTEM`) are not applied. The imported
   `SYSTEM` template is overwritten again at the next start, but the imported `SHARED` code is not loaded into the
   running engine until something rebuilds it.
-- **Imported masked secrets are stored literally.** The create endpoint saves `****` as the value.
-  `restoreMaskedSecrets` runs only on update.
+- **Imported masked secrets are dropped, not stored.** The create endpoint calls `restoreMaskedSecrets`
+  with no original, which removes every sensitive property still set to `****`. The connector then has
+  no value for it until the user enters one.
 - **Mapping import is not atomic and has no duplicate check.** A failure halfway leaves the first part
   created.
 - **Mapping files do not carry shared code.** A Smart Function that calls helpers defined in the `SHARED` template

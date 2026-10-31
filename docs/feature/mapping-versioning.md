@@ -254,7 +254,7 @@ All under `/mapping`, defined in
 | `GET /mapping/{id}/version/{version}` | Get one published version's full configuration. | ADMIN or CREATE |
 | `PATCH /mapping/{id}/version/{version}?note=<text>` | Edit a version's change note (the only mutable field). | ADMIN or CREATE |
 | `DELETE /mapping/{id}/version/{version}` | Delete an inactive published version (406 if it is the active one). | ADMIN or CREATE |
-| `GET /mapping/version-counts?direction=<INBOUND\|OUTBOUND>` | Published-version counts for every mapping in one inventory scan, avoiding N+1 queries — see `MappingVersionService.countVersionsForIdentifiers`. Returns `MappingVersionCount` records (`id`, `versionCount`). | **none** — no `@PreAuthorize` on this route |
+| `GET /mapping/version-counts?direction=<INBOUND\|OUTBOUND>` | Published-version counts for every mapping in one inventory scan, avoiding N+1 queries — see `MappingVersionService.countVersionsForIdentifiers`. Returns `MappingVersionCount` records (`id`, `versionCount`). | Admin or Create |
 
 The `{version}` path variable is mapped as `{version:.+}` so a dotted semver is not
 truncated by Spring's default extension handling.
@@ -302,9 +302,8 @@ that has to be echoed back unchanged.
 
 ### Known gotchas
 
-- **`GET /mapping/version-counts` has no role check.** Every other version endpoint carries
-  `@PreAuthorize` (ADMIN or CREATE); this one only requires an authenticated tenant user. It leaks only mapping ids
-  and counts, but the asymmetry is unintentional.
+- **`GET /mapping/version-counts` needs the Admin or Create role**, like every other version endpoint. A
+  user with neither role gets 403 and the *Versions* page cannot load its counts.
 - **Version labels are canonicalised on publish.** `SemVer.isValid` also requires every component
   to fit an `int`, and `publish` stores/compares the canonical form (`01.0.0` and ` 1.0.0 ` are
   `1.0.0`), so equivalent spellings cannot create duplicate versions.

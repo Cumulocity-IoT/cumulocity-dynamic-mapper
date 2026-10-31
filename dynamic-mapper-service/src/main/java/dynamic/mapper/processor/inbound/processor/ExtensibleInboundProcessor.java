@@ -153,11 +153,11 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor<byte
             context.setExtensionResult(results);
         } else {
             String errorMsg = String.format(
-                "%s - Extension '%s' (class: %s) onMessage() returned null or empty array - no data to process",
+                "%s - Extension '%s' (class: %s) onMessage() returned null or empty array - nothing to process, ignoring",
                 tenant, extensionEntry.getEventName(), extensionEntry.getFqnClassName());
-            log.warn(errorMsg);
+            log.info(errorMsg);
+            // An empty result means "nothing to do" (e.g. deduplication), as for Smart Functions; not a failure.
             context.setIgnoreFurtherProcessing(true);
-            throw new ProcessingException(errorMsg);
         }
     }
 

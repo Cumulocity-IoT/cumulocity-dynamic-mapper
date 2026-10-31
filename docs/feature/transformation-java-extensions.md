@@ -91,7 +91,7 @@ The UI (`dynamic-mapper-ui/src/extension/`) uploads the JAR to the Cumulocity bi
 object carrying the `d11r_processorExtension` fragment (`name`, `external`, ...); the service is not involved in the
 upload. The size cap (50 MB) is enforced in `AddExtensionComponent` only. The extension grid then triggers the
 admin-only `RELOAD_EXTENSIONS` operation (`ExtensionManager.reloadExtensions`) so the service loads it. The service
-exposes `GET /extension` and `GET /extension/{extensionName}` (no role check beyond authentication) and
+exposes `GET /extension` and `GET /extension/{extensionName}` (`ROLE_DYNAMIC_MAPPER_ADMIN` or `ROLE_DYNAMIC_MAPPER_CREATE`) and
 `DELETE /extension/{extensionName}` (`ROLE_DYNAMIC_MAPPER_ADMIN`). Per-tenant isolation comes from reading the
 extension managed objects as the calling tenant; the class loaders and the registry are keyed by tenant.
 
@@ -151,7 +151,7 @@ flowchart LR
     ctx --> call["extension.onMessage(message, context)"]
     call --> results{"CumulocityObject[] /\nDeviceMessage[] returned?"}
     results -- non-empty --> store["context.setExtensionResult(results)"]
-    results -- null/empty --> err["ProcessingException:\n'returned null or empty array'"]
+    results -- null/empty --> err["ignore the message:\nsetIgnoreFurtherProcessing(true)"]
 ```
 
 `ExtensibleInboundProcessor.processWithExtensionInbound()`
@@ -159,8 +159,9 @@ flowchart LR
 inbound flow: it validates the extension's declared direction matches the processing
 direction, builds a `JavaExtensionContextImpl` (with the mapping's loaded state, see above), invokes `onMessage`, and either stores the
 returned `CumulocityObject[]` on the `ProcessingContext` for the next processor, or — if
-the extension returns `null`/empty — raises a `ProcessingException` and sets
-`ignoreFurtherProcessing`. A distinct `AbstractMethodError` catch block detects the
+the extension returns `null`/empty — logs at info level and sets
+`ignoreFurtherProcessing`, without an error. An empty result means "nothing to do" (for example
+deduplication), as for Smart Functions, so it does not count toward the failure streak. A distinct `AbstractMethodError` catch block detects the
 specific case of an extension JAR compiled against an older `ProcessorExtensionInbound`
 interface signature and reports it as an incompatibility rather than a cryptic linkage
 error.

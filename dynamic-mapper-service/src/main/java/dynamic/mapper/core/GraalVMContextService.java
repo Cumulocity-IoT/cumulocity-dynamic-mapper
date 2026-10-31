@@ -52,6 +52,7 @@ import org.graalvm.polyglot.Value;
 import org.graalvm.polyglot.proxy.ProxyExecutable;
 import org.springframework.stereotype.Component;
 
+import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.model.Mapping;
@@ -331,8 +332,9 @@ public class GraalVMContextService {
         // every top-level declaration lands on globalThis and is visible to all mapping
         // modules running in the same GraalVM context. Only per-mapping code is loaded
         // as an ES module (.mjs) when supportESM is true.
-        String sharedCode = serviceConfiguration.getCodeTemplates()
-                .get(TemplateType.SHARED.name()).getCode();
+        // A tenant may lack SHARED (deleted before the endpoint refused it): run without shared code.
+        CodeTemplate sharedTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SHARED.name());
+        String sharedCode = sharedTemplate == null || sharedTemplate.getCode() == null ? "" : sharedTemplate.getCode();
         Source sharedSource = Source.newBuilder("js",
                 JavaScriptModuleStripper.toPlainScript(
                         new String(Base64.getDecoder().decode(sharedCode))),

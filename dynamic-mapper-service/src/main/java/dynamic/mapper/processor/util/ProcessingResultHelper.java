@@ -25,7 +25,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
@@ -39,6 +42,7 @@ import com.cumulocity.model.ID;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
@@ -368,6 +372,48 @@ public class ProcessingResultHelper {
                 return RequestMethod.DELETE;
             default:
                 return RequestMethod.POST;
+        }
+    }
+
+    /**
+     * Waits for the pipeline of a message and decides whether the connector may acknowledge it.
+     *
+     * <p>For connectors whose callback thread can block on the result (AMQP, HTTP, Kafka). The wait
+     * is always bounded; on timeout the pipeline is cancelled and drained. Returns {@code false}, so
+     * the caller must not acknowledge (or must negative-acknowledge), when the pipeline timed out,
+     * was interrupted or cancelled, threw, or reported a server-side (5xx) error. Client errors
+     * (4xx) and messages the dispatcher skipped without a pipeline are acknowledged, as in the
+     * MQTT, Pulsar, and Pub/Sub callbacks.
+     *
+     * @return {@code true} if the message is safe to acknowledge
+     */
+    public static boolean awaitAckable(ProcessingResultWrapper<?> processedResults,
+                                       String tenant, String topic, Logger log) {
+        if (processedResults == null || processedResults.getProcessingResult() == null) {
+            return true;
+        }
+        int timeout = processedResults.getPipelineTimeoutMS();
+        long effectiveTimeout = timeout > 0 ? timeout : ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
+        try {
+            List<? extends ProcessingContext<?>> results = processedResults.getProcessingResult()
+                    .get(effectiveTimeout, TimeUnit.MILLISECONDS);
+            if (processedResults.getCancellationRequested().get()) {
+                log.warn("{} - Processing cancelled (CPU timeout), not acknowledging, topic: [{}]", tenant, topic);
+                return false;
+            }
+            return extractMaxHttpStatus(results, tenant, topic, log) < 500;
+        } catch (TimeoutException e) {
+            boolean drained = processedResults.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
+            log.warn("{} - Processing timed out after {}ms, not acknowledging, topic: [{}], drained: {}",
+                    tenant, effectiveTimeout, topic, drained);
+            return false;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("{} - Interrupted while waiting for processing, not acknowledging, topic: [{}]", tenant, topic);
+            return false;
+        } catch (ExecutionException e) {
+            log.warn("{} - Processing failed, not acknowledging, topic: [{}]", tenant, topic, e);
+            return false;
         }
     }
 

@@ -318,16 +318,17 @@ public class AMQPClient extends AConnectorClient {
                         tenant, queueName, exchangeName, routingKey);
             }
 
-            // Create callback
+            // Start consuming
+            boolean autoAck = qos == Qos.AT_MOST_ONCE;
             AMQPCallback callback = new AMQPCallback(
+                    channel,
+                    autoAck,
                     tenant,
                     serviceRegistry,
                     dispatcher,
                     connectorIdentifier,
                     connectorName);
 
-            // Start consuming
-            boolean autoAck = qos == Qos.AT_MOST_ONCE;
             String consumerTag = channel.basicConsume(queueName, autoAck, callback);
             consumerTags.put(topic, consumerTag);
 

@@ -22,17 +22,17 @@ The individual findings share five root causes. Fixing the cause is cheaper than
 
 1. **Failed device lookup can create duplicate devices.** `C8YAgent.resolveExternalId2GlobalId` maps every `SDKException` to null. With `createNonExistingDevice` on, a timeout or 5xx during lookup leads to a create attempt. Treat only 404 as not found; retry or fail the message otherwise.
 2. **Re-saving an unchanged type list deletes the type subscription.** `Utils.createChangedTypeFilter` returns `null` for unchanged types and `SubscriptionManager.updateSubscriptionByType` treats `null` as empty. Return early when nothing changed.
-3. **Deleting the `SHARED` code template breaks engine creation.** The delete is allowed (`internal=false`) and `GraalVMContextService` dereferences `.get("SHARED")` without a null check. Refuse the delete, or fall back to an empty source.
-4. **Connector import stores `****` as the real secret.** Create does not call `restoreMaskedSecrets`. Reject or clear masked values on import.
+3. **Fixed 2026-10-31.** **Deleting the `SHARED` code template breaks engine creation.** The delete is allowed (`internal=false`) and `GraalVMContextService` dereferences `.get("SHARED")` without a null check. Refuse the delete, or fall back to an empty source.
+4. **Fixed 2026-10-31.** **Connector import stores `****` as the real secret.** Create does not call `restoreMaskedSecrets`. Reject or clear masked values on import.
 5. **Service-configuration import replaces `codeTemplates` unchecked** and does not reload `SHARED`. Reuse the checks of `PUT /code`.
 6. **Java extension state never persists.** `setNativeState` is saved only in `clearState()`, which nothing calls, and outbound extensions get no `FlowStateStore`. Save after `onMessage`, or document it as unsupported and fix the sample that relies on it.
 7. **Bulk measurement merge keeps only the first request's `sourceId` and `externalId`.** Group by source before merging.
 
 ### Reliability (P1/P2)
 
-8. **Early acknowledgement** in AMQP (both variants), HTTP, and Kafka commit ordering (see theme above). AMQP 0-9-1 also acks `autoAck=true` consumers and skips ack on redelivery. Fix both.
-9. **Cancelled leg booked as success** in `AbstractFlowProcessor`, which resets the failure streak.
-10. **Empty extension result counts as failure** and can auto-deactivate a mapping whose extension intentionally deduplicates.
+8. **Fixed 2026-10-31 for AMQP, HTTP, and Kafka.** **Early acknowledgement** in AMQP (both variants), HTTP, and Kafka commit ordering (see theme above). AMQP 0-9-1 also acks `autoAck=true` consumers and skips ack on redelivery. Fix both.
+9. **Fixed 2026-10-31.** **Cancelled leg booked as success** in `AbstractFlowProcessor`, which resets the failure streak.
+10. **Fixed 2026-10-31.** **Empty extension result counts as failure** and can auto-deactivate a mapping whose extension intentionally deduplicates.
 11. **Operation auto-ack is optimistic.** `SendOutboundProcessor` reports SUCCESSFUL when the connector is disconnected or the leg was filtered. Report the real outcome.
 12. **Pulsar `monitorSubscriptions()`** closes a briefly disconnected consumer and nothing resubscribes it. Let the client reconnect, or resubscribe.
 13. **Pub/Sub:** several inbound topics share one subscription, so a message can arrive under the wrong topic. A failed publisher is never evicted and no `RetrySettings` are set.
@@ -42,7 +42,7 @@ The individual findings share five root causes. Fixing the cause is cheaper than
 ### Security (P2)
 
 16. **External Java extensions run unsandboxed** in the shared JVM and `extension.onMessage` cannot be cancelled by the pipeline timeout. The requirement "must not destabilize the service" is not enforceable. Options: run extensions with a watchdog thread and a hard budget, or restrict upload to the Admin role plus an explicit warning in the UI.
-17. **Missing authorization:** `GET /mapping/version-counts` and `GET /extension` have no role check. `OperationController` has no `MappingValidationException` handler, so activation validation failures probably do not return the documented 422.
+17. **Partly fixed 2026-10-31 (the two GET endpoints; the `OperationController` 422 handler is open).** **Missing authorization:** `GET /mapping/version-counts` and `GET /extension` have no role check. `OperationController` has no `MappingValidationException` handler, so activation validation failures probably do not return the documented 422.
 18. **Reset deployment cache** wipes all deployments, is enabled in the UI for Create users, and returns 403 for them because `REQUIRED_ROLES` says Admin. Align the role, rename the action, and add a confirmation.
 19. **Insecure TLS:** AMQP 1.0 with `trustCustomCertificate` sets `trustAll=true` and `verifyHost=false`. Build an `SSLContext` from the supplied certificate.
 20. **`OutboundUrlValidator`** allows private ranges and resolves DNS once (rebinding). Pin the resolved address for the request and decide explicitly whether private ranges are allowed per deployment.

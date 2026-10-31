@@ -174,9 +174,9 @@ name, so an operator can see why a mapping is not running at its configured leve
 | MQTT 3.1.1 / MQTT 5 | 0, 1, 2 | Native MQTT QoS, both on `subscribe` and on `publish`. |
 | Pulsar | 0, 1, 2 | 0 → async send, no ack; 1/2 → ack after processing, `acknowledgmentGroupTime` enabled; 2 additionally uses an `Exclusive` subscription. |
 | Cumulocity MQTT Service (Pulsar) | 0, 1 | Matches the service, which implements [QoS 0 and 1 only](https://cumulocity.com/docs/device-integration/mqtt-service/); `EXACTLY_ONCE` → `AT_LEAST_ONCE`. Outbound, the level selects the *Pulsar* producer send mode (0 → `sendAsync`, 1 → awaited `send`), not the MQTT QoS towards the device. Inbound ignores it — always at-least-once. See [`connector-mqtt-service.md`](connector-mqtt-service.md#qos). |
-| AMQP 0.9.1 | 0, 1 | `deliveryMode` 1 (non-persistent) for level 0, 2 (persistent) for anything above; consumer `autoAck` only for level 0. |
-| AMQP 1.0 | 0, 1 | JMS `NON_PERSISTENT` / `PERSISTENT` by the same rule. |
-| Kafka | 0, 1 | Level 0 commits the offset immediately; level 1 defers the commit until the pipeline reported success. Exactly-once would need transactional consume-process-produce and is not implemented. |
+| AMQP 0.9.1 | 0, 1 | `deliveryMode` 1 (non-persistent) for level 0, 2 (persistent) for anything above; consumer `autoAck` only for level 0. Above 0 the ack waits for the pipeline result, a failure nacks with requeue. |
+| AMQP 1.0 | 0, 1 | JMS `NON_PERSISTENT` / `PERSISTENT` by the same rule. Above 0 the message is acknowledged only after the pipeline succeeded. |
+| Kafka | 0, 1 | Level 0 commits the offset immediately; level 1 defers the commit until the pipeline reported success and seeks back to the record on failure. Exactly-once would need transactional consume-process-produce and is not implemented. |
 | Google Pub/Sub | 0, 1 | Level 0 acks before processing; level 1 acks after success and `nack`s on error so Pub/Sub redelivers. |
 | HTTP | 1 only | The HTTP response is sent after the pipeline ran, i.e. inherently at-least-once. A mapping asking for level 0 is *upgraded*. |
 | WebHook | 1 only | Outbound only; an HTTP call either succeeds or is retried. |
@@ -570,6 +570,14 @@ loaded; the next housekeeping cycle restores them.
 - **Processing time is not end-to-end latency.** It starts when the message context is created
   and ends when the leg finishes, so it covers enrichment, transformation and sending, but not
   time spent in the connector or broker.
+- **A cancelled leg is a failure.** When the pipeline timeout cancels a Smart Function leg before the
+  function ran, `AbstractFlowProcessor` records an error and extends the failure streak, the same as a
+  killed function. It is not booked as processed and does not reset the streak. An empty result from a
+  Java extension is the opposite case: it means "ignore" and is booked as filtered.
+- **Connectors without their own result handling wait through one helper.** AMQP (both variants), the
+  HTTP connector, and Kafka (QoS above 0) call `ProcessingResultHelper.awaitAckable`: acknowledge on
+  success or 4xx, refuse on 5xx, timeout, cancellation, or exception. Kafka also seeks the partition
+  back to the failed record.
 - **`errors` and `currentFailureCount` move together on a failure**, but only the streak
   moves back on success. If `currentFailureCount` is 0 while `errors` is large, the mapping
   is working now but has a history worth investigating.

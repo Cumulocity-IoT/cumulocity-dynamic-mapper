@@ -121,15 +121,16 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 // Keep Base64 strings for backward compatibility if needed
                 CodeTemplate sharedTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SHARED.name());
                 CodeTemplate systemTemplate = serviceConfiguration.getCodeTemplates().get(TemplateType.SYSTEM.name());
-                if (sharedTemplate == null || systemTemplate == null) {
+                if (systemTemplate == null) {
                     log.error(
-                            "{} - SHARED or SYSTEM code template missing for mapping [{}] — re-initialize code templates",
+                            "{} - SYSTEM code template missing for mapping [{}] — re-initialize code templates",
                             tenant, mapping.getIdentifier());
                     handleGraalVMError(tenant, mapping,
-                            new IllegalStateException("SHARED or SYSTEM code template not found"), context);
+                            new IllegalStateException("SYSTEM code template not found"), context);
                     return;
                 }
-                context.setSharedCode(sharedTemplate.getCode());
+                // SHARED is optional: engine creation treats a missing one as empty code.
+                context.setSharedCode(sharedTemplate == null ? "" : sharedTemplate.getCode());
                 context.setSystemCode(systemTemplate.getCode());
 
                 // Build the pool key: tenant:mappingId:codeHash (use a stable hash to avoid collisions)

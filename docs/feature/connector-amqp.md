@@ -72,11 +72,12 @@ queue (with the generated name above) and consumes from it.
 
 #### QoS / ack
 
-`supportedQos = [AT_MOST_ONCE, AT_LEAST_ONCE]`. Auto-ack if `AT_MOST_ONCE`; otherwise
-manual `basicAck` right after `onMessage()` returns, and `basicNack(deliveryTag, false, true)`
-(always requeues) on a synchronous exception. `onMessage()` only hands the message to the
-async pipeline, so the ack does **not** wait for the mapping result and a later pipeline
-failure does not cause redelivery.
+`supportedQos = [AT_MOST_ONCE, AT_LEAST_ONCE]`. Auto-ack if `AT_MOST_ONCE`; otherwise the
+callback waits for the pipeline result (`ProcessingResultHelper.awaitAckable`) and calls
+`basicAck` on success or `basicNack(deliveryTag, false, true)` (always requeues) on a
+failure, a timeout, a server-side (5xx) error, or an exception. Client errors (4xx) count as
+success, as in the MQTT and Pulsar callbacks. The consumer thread blocks while it waits, so
+messages on one channel are settled in order.
 
 #### TLS / auth
 
@@ -96,13 +97,11 @@ runs in parallel.
 
 - **Nack always requeues** (`basicNack(..., requeue=true)`) with no backoff or attempt
   limit — a permanently-failing message can loop forever, unlike Pulsar's poison-pill
-  cutoff. It only fires on a synchronous exception in the callback.
-- **Ack is skipped on redelivery**: the callback only calls `basicAck` when
-  `envelope.isRedeliver()` is `false` — meaning a redelivered message is never acknowledged,
-  which causes it to be redelivered again on the next consumer or channel restart. The same
-  `basicAck` also runs for `AT_MOST_ONCE` consumers that were opened with `autoAck=true`, where
-  RabbitMQ treats an ack as an unknown delivery tag. Worth flagging to anyone debugging
-  repeated AMQP 0-9-1 redelivery or channel errors.
+  cutoff.
+- **The callback needs the channel.** `AMQPCallback` receives the channel and the `autoAck` flag
+  in its constructor. Earlier it was built with a `null` channel, so it never sent an ack for
+  `AT_LEAST_ONCE` subscriptions, and it skipped the ack for redelivered messages. Both are fixed;
+  no ack or nack is sent for `autoAck=true` consumers.
 
 ### AMQP 1.0 (`AMQP10Client`, `ConnectorType.AMQP_10`)
 
@@ -135,7 +134,7 @@ Only `password` is sensitive.
 
 A single JMS `Session` per connection, `Session.CLIENT_ACKNOWLEDGE` mode. `subscribe()`
 creates a `MessageConsumer` with an `AMQP10Callback` listener (`AT_MOST_ONCE` acknowledges
-before dispatch, higher levels acknowledge after `onMessage()` returns; unsupported message
+before dispatch, higher levels acknowledge once the pipeline result reports success; unsupported message
 types are acknowledged and dropped); `publishMEAO()` looks up or
 creates a cached `MessageProducer` per resolved destination, builds a `TextMessage`
 (optionally setting `JMS_AMQP_ContentType` from the `contentType` property), sets
@@ -160,10 +159,10 @@ and server verification is disabled entirely.
 
 #### Gotchas
 
-- **Acknowledgement happens before the pipeline finishes**: `AMQP10Callback` calls
-  `message.acknowledge()` once `onMessage()` has returned, which only submits the message to
-  the async pipeline. A mapping failure therefore does not cause redelivery, and the callback
-  logs and swallows exceptions without calling `session.recover()`.
+- **Acknowledgement waits for the pipeline**: `AMQP10Callback` calls `message.acknowledge()`
+  only after `awaitAckable` reports success. A failed or timed-out mapping leaves the message
+  unacknowledged, but the callback never calls `session.recover()`, so redelivery happens only
+  on the next session or consumer restart.
 - `sanitizeUri()` is a no-op stub (comment claims the password never appears in the
   URI) — leftover/defensive code with a misleading name; it does not actually redact
   anything.

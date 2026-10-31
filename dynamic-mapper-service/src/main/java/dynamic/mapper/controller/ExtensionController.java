@@ -65,6 +65,7 @@ public class ExtensionController {
             @ApiResponse(responseCode = "200", description = "Extensions retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(type = "object", description = "Map of extension names to their configurations"))),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Extension>> getProcessorExtensions() {
         String tenant = contextService.getContext().getTenant();
@@ -80,6 +81,7 @@ public class ExtensionController {
             @ApiResponse(responseCode = "404", description = "Extension not found", content = @Content(mediaType = "application/json", schema = @Schema(type = "object", description = "Error details indicating the extension was not found"))),
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
+    @PreAuthorize("hasAnyRole('ROLE_DYNAMIC_MAPPER_ADMIN', 'ROLE_DYNAMIC_MAPPER_CREATE')")
     @GetMapping(value = "/{extensionName}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Extension> getProcessorExtension(
             @PathVariable @NotBlank String extensionName) {

@@ -145,6 +145,18 @@ class ConfigurationControllerCodeTemplateTest {
     }
 
     @Test
+    void deleteReturns406ForTheSharedTemplateAndKeepsIt() {
+        // SHARED is customer-editable (not internal) but every GraalVM engine loads it.
+        codeTemplates.put(TemplateType.SHARED.name(), template(TemplateType.SHARED.name(), false, false));
+
+        ResponseStatusException thrown = assertThrows(ResponseStatusException.class,
+                () -> controller.deleteCodeTemplate(TemplateType.SHARED.name()));
+
+        assertEquals(HttpStatus.NOT_ACCEPTABLE, thrown.getStatusCode());
+        assertNotNull(codeTemplates.get(TemplateType.SHARED.name()), "the template must not be removed");
+    }
+
+    @Test
     void deleteRemovesACustomTemplateAndReturnsIt() throws Exception {
         codeTemplates.put("custom", template("custom", false, false));
 

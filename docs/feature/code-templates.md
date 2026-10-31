@@ -16,7 +16,7 @@ Smart Functions of a tenant can call, and a stable runtime layer that the produc
   It cannot be edited or deleted by users. It is replaced by the shipped version at every service start,
   so a fix shipped with a release reaches every tenant without a manual step.
 - **The shared template belongs to the tenant.** It is the one place for tenant-wide helper code. The
-  product never overwrites it. Saving it makes the new code available to Smart Functions without a
+  product never overwrites it, and it cannot be deleted, only emptied. Saving it makes the new code available to Smart Functions without a
   restart.
 - **Per-type templates are starting points.** A new Smart Function mapping starts from a template
   chosen for its direction. Changing a template later does not change mappings created from it.
@@ -114,9 +114,9 @@ hand edit of `@name` or `@description` in the header is adopted first (`adoptHea
 
 ### Traps
 
-- **Deleting `SHARED` breaks engine creation.** `SHARED` is `internal = false`, so `DELETE` accepts
-  it, and engine creation calls `.get("SHARED").getCode()` without a null check. See the gaps reported
-  with this page.
+- **`SHARED` cannot be deleted.** It is `internal = false`, so the generic rule would allow it, but
+  `DELETE /configuration/code/SHARED` answers 406: clear its code instead. A tenant that deleted it before
+  this rule still works: engine creation and enrichment treat a missing `SHARED` as empty code.
 - **The Java class names in `SYSTEM` are strings.** Moving a class breaks Smart Functions at run time,
   not at compile time. That is the reason `SYSTEM` is refreshed at start. Tenants keep stale stored copies of
   other shipped templates until a reset.

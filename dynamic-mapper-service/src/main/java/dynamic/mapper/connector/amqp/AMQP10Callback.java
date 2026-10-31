@@ -27,6 +27,7 @@ import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.Qos;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import jakarta.jms.BytesMessage;
 import jakarta.jms.Destination;
 import jakarta.jms.JMSException;
@@ -119,11 +120,12 @@ public class AMQP10Callback implements MessageListener {
                             tenant, address, connectorName, connectorIdentifier);
                 }
 
-                genericMessageCallback.onMessage(connectorMessage);
+                var processedResults = genericMessageCallback.onMessage(connectorMessage);
 
-                // AT_LEAST_ONCE: only ack once processing has completed successfully, so a failure
+                // AT_LEAST_ONCE: only ack once the pipeline has succeeded, so a failure
                 // leaves the message unacknowledged and it gets redelivered.
-                if (qos != Qos.AT_MOST_ONCE) {
+                if (qos != Qos.AT_MOST_ONCE
+                        && ProcessingResultHelper.awaitAckable(processedResults, tenant, address, log)) {
                     acknowledgeQuietly(message, address);
                 }
 

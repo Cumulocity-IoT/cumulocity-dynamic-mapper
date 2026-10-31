@@ -216,6 +216,8 @@ public class ConfigurationController {
         ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
         log.info("{} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
+            // A new configuration has no stored secret, so a masked value (e.g. from an import) is dropped, not saved.
+            configuration.restoreMaskedSecrets(connectorSpecification, null);
             dropInactiveProperties(tenant, connectorSpecification, configuration);
             connectorConfigurationService.saveConnectorConfiguration(configuration);
             return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -682,6 +684,12 @@ public class ConfigurationController {
         if (result.internal) {
             throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE,
                     "Deletion of internal templates not allowed");
+        }
+        // SHARED is customer-editable and so not internal, but every GraalVM engine loads it;
+        // removing it would make engine creation fail for the tenant. Clearing its code is the supported way.
+        if (TemplateType.SHARED.name().equals(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE,
+                    "The SHARED template cannot be deleted; clear its code instead");
         }
 
         try {
