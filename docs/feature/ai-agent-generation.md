@@ -9,8 +9,8 @@ The key architectural fact, easy to miss from the class name alone: **this repos
 not call an LLM itself.** It delegates to a separate Cumulocity platform microservice, the AI
 Agent Manager, which is configured (by a platform admin, outside this project) with whichever
 LLM provider it uses. This project's job is threefold: bootstrap two named agent definitions
-on that platform service, expose a JSONata self-check tool to one of them via MCP, and drive a
-chat UI in the browser against that platform's own agent-chat SDK component.
+on that platform service (declared in the microservice manifest), expose MCP tools to them (a
+JSONata self-check and two "submit result" tools), and drive a chat UI in the browser against that platform's own agent-chat SDK component.
 
 ---
 
@@ -20,7 +20,7 @@ chat UI in the browser against that platform's own agent-chat SDK component.
 payload) into working substitutions or Smart Function code without the user hand-writing
 JSONata paths or JavaScript.
 
-- **Two agents are provisioned per tenant**, one for JSONata substitutions and one for Smart
+- **Two agents are available per tenant**, declared in the microservice manifest and provisioned by the platform, one for JSONata substitutions and one for Smart
   Functions — a mapping's `transformationType` determines which one a "Generate with AI"
   request uses.
 - **Generation must never write into the tenant's data or run against a real device** — it
@@ -32,6 +32,15 @@ JSONata paths or JavaScript.
 - **A response the AI produces is never applied automatically.** The user reviews the
   extracted substitutions/code and explicitly saves; a partial or unparseable response must
   not silently overwrite a previously valid result mid-conversation.
+- **The agent hands over its final result through a structured channel** (the `submit-substitutions` and
+  `submit-smart-function` tools), not by the UI guessing which text block in the reply is the answer. A submission that
+  is empty or malformed is rejected with an error the agent can correct. Replies from agent definitions that predate
+  these tools are still scanned for code blocks.
+- **A conversation survives closing the drawer.** Reopening the drawer for the same, unchanged mapping resumes the
+  transcript (kept for the browser tab, lost on reload) and offers the earlier result again, unless the user edited the
+  code or substitutions by hand in the meantime.
+- **AI answers are checked, but the check only warns.** Problems found in a generated result are shown to the user,
+  who can send them back to the agent; Save stays enabled.
 - **JSONata generation for a brand-new (CREATE-mode) mapping starts automatically** — there is
   nothing yet to review, so the assistant is prompted immediately rather than waiting for the
   user to type a first message.
@@ -53,8 +62,9 @@ JSONata paths or JavaScript.
 - **The tenant AI Agent Manager kill switch is authoritative.** The UI checks
   `GET service/ai/settings` before listing agents or opening the chat. When `killSwitch` is
   `true`, it makes no request to an AI agent, disables AI generation in the mapper, and tells
-  the user that AI capabilities are disabled in the tenant. Agent definitions may still be
-  provisioned during backend bootstrap; provisioning does not send prompts.
+  the user that AI capabilities are disabled in the tenant. Agent definitions are still declared in the manifest;
+  declaring them does not send prompts. When the tenant opts out of telemetry (`telemetryOptOut`), the chat turns its
+  analytics off.
 
 ---
 
@@ -75,55 +85,60 @@ files in `src/main/resources/agents/` alone does not make them HTTP-accessible.
 After deployment, authenticated GET requests to these URLs must return HTTP 200 with the
 JSON definitions so the AI Agent Manager can retrieve them for automatic provisioning.
 
-### Backend: agent bootstrap, not generation — [`AiAgentService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/ai/AiAgentService.java)
+### Backend: agent registration, not generation: [`AIAgentService`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/ai/AIAgentService.java)
 
-Despite the name, `AiAgentService` does not generate substitutions or code itself; it
-provisions agent *definitions* on the external AI Agent Manager and exposes one MCP tool. The
+Despite the name, `AIAgentService` does not generate substitutions or code itself. The
 actual chat/generation happens client-side (see below), talking directly to the platform
 service and bypassing `dynamic-mapper-service` entirely. Someone looking for a "generate"
 endpoint in the Java backend won't find one — that's expected.
 
-- `initializeAIAgents()` (line 78) runs from `BootstrapService` on tenant subscription. It
-  checks `checkAIAgentAvailable()` — `GET {baseURL}/service/ai/health` (lines 125-148) — and,
-  if the two well-known agents don't already exist, calls `createDefaultAIAgents()` and
-  records their names into `ServiceConfiguration.jsonataAgent` /
-  `ServiceConfiguration.smartFunctionAgent` (`addingAIAgentsToServiceConfiguration()`, line
-  109). An admin can later repoint either setting at a different platform-side agent from
-  Service Configuration → AI.
-- `createDefaultAIAgents()` (lines ~170-205) loads a system prompt per agent from
-  `classpath:prompts/*.txt` —
-  [`jsonata_prompt.txt`](../../dynamic-mapper-service/src/main/resources/prompts/jsonata_prompt.txt)
-  and
-  [`smartfunction_prompt.txt`](../../dynamic-mapper-service/src/main/resources/prompts/smartfunction_prompt.txt)
-  — and `POST`s an `AIAgent` definition (name, system prompt, type, MCP tool wiring) to
-  `{baseURL}/service/ai/agent/text`. Only the JSONata agent is wired to an MCP tool
-  (`MCPUsage` naming the `evaluateJsonataExpression` tool).
-- `evaluateJsonataExpression()` (lines ~285-302, `@Tool`-annotated, Spring AI) lets the
-  JSONata agent actually run a candidate expression against sample JSON mid-conversation and
-  see the real result — a self-check before answering, rather than emitting an expression it
-  hasn't verified. Registered as an MCP tool callback in `App.java`
-  (`ToolCallbackProvider tools(AiAgentService aiAgentService)`).
-- The system prompts encode the rules the LLM must follow: the `Substitution`
-  (`pathSource`/`pathTarget`/`expandArray`/…) and `Mapping` shapes it must conform to,
-  GraalVM-specific JavaScript constraints for Smart Functions (e.g. no `.forEach`/`.map` on
-  Java-backed array payloads — classic indexed loops only), transport-field access
-  (`msg.transportFields`), and conditioning the `export { onMessage }` statement on whether
-  ESM support is enabled.
+- **Agents come from the manifest.** The two definitions are the JSON files
+  `agents/jsonata_agent.json` and `agents/smartfunction_agent.json` (agent names
+  `dynamic-mapper-jsonata-agent` and `dynamic-mapper-smart-function-agent`, `availability: SHARED`), each carrying
+  its system prompt and the MCP tools it may call. The platform retrieves them over HTTP from
+  `AgentDefinitionController` (`/agents/...`).
+- `initializeAIAgents()` runs from `BootstrapService` on tenant subscription. It checks
+  `checkAIAgentAvailable()` (`GET {baseURL}/service/ai/health`), lists the agents, and in every branch calls
+  `addingAIAgentsToServiceConfiguration()`, which fills `ServiceConfiguration.jsonataAgent` /
+  `smartFunctionAgent` with the default names when they are still `null`. The call to `createDefaultAIAgents()`
+  is commented out: the method (which would `POST` an `AIAgent` built from `classpath:prompts/*.txt` to
+  `{baseURL}/service/ai/agent/text`) is dead code, and the bundled agent JSON files are the source of truth. An
+  admin can later repoint either setting at a different platform-side agent from Service Configuration → AI.
+- **MCP tools.** `App.tools()` registers `AIAgentService` and
+  [`MappingResultTools`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/ai/MappingResultTools.java) as the
+  tool callback provider of the MCP server `dynamic-mapper-mcp-server`:
+  - `evaluate-jsonata-expression` (`AIAgentService.evaluateJsonataExpression()`): runs a candidate expression
+    against sample JSON so the JSONata agent can self-check. JSONata agent only.
+  - `submit-substitutions` (JSONata agent) and `submit-smart-function` (Smart Function agent): store nothing. They
+    sanity-check the input (non-empty; every substitution has `pathSource` and `pathTarget` and a known
+    `repairStrategy`; the code defines `function onMessage`) and throw otherwise, which reaches the agent as a tool
+    error so it can resubmit. The UI reads the result from the tool call's input.
+- The system prompts (in the agent JSON files, mirrored in
+  [`jsonata_prompt.txt`](../../dynamic-mapper-service/src/main/resources/prompts/jsonata_prompt.txt) and
+  [`smartfunction_prompt.txt`](../../dynamic-mapper-service/src/main/resources/prompts/smartfunction_prompt.txt))
+  encode the rules the LLM must follow: the `Substitution` (`pathSource`/`pathTarget`/`expandArray`/…) and `Mapping`
+  shapes, GraalVM-specific JavaScript constraints for Smart Functions (e.g. no `.forEach`/`.map` on Java-backed
+  array payloads — classic indexed loops only), transport-field access (`msg.transportFields`), and conditioning the
+  `export { onMessage }` statement on whether ESM support is enabled. The agent is told to deliver the final result
+  only through the submit tool.
 
 ### Frontend: agent resolution and availability — [`ai-agent.service.ts`](../../dynamic-mapper-ui/src/mapping/core/ai-agent.service.ts)
 
-- `resolveRequiredAgentName()` (lines 40-54) maps a mapping's `TransformationType` to the
+- `resolveRequiredAgentName()` maps a mapping's `TransformationType` to the
   configured agent name: `JSONATA`/`DEFAULT` → `ServiceConfiguration.jsonataAgent`,
-  `SMART_FUNCTION` → `ServiceConfiguration.smartFunctionAgent`.
-- `getAIAgents()` / `fetchAIAgents()` (lines 95-138) call `GET service/ai/agent` **directly
+  `SMART_FUNCTION` → `ServiceConfiguration.smartFunctionAgent`; anything else falls back to the deprecated
+  `javaScriptAgent`.
+- `getAISettings()` reads `GET service/ai/settings` (`killSwitch`, `telemetryOptOut`; a 404/405 means an older
+  AI Agent Manager and counts as enabled; other failures count as unavailable). Cached for 30 seconds unless forced.
+- `getAIAgents()` / `fetchAIAgents()` call `GET service/ai/agent` **directly
   against the platform service**, but only after `GET service/ai/settings` confirms the tenant
   kill switch is off. This bypasses `dynamic-mapper-service` — the code comments this
   endpoint as undocumented and not part of the SDK's `AIService`, and note that a 401/403
   there is indistinguishable from "no agents configured" from the UI's point of view. Results
   are cached in memory for 30 seconds.
-- `toClientAgentDefinition()` (lines 61-74) adapts this project's
+- `toClientAgentDefinition()` adapts this project's
   `AgentTextDefinition`/`AgentObjectDefinition`
-  ([`mapping/shared/ai-prompt.model.ts`](../../dynamic-mapper-ui/src/mapping/shared/ai-prompt.model.ts))
+  ([`shared/mapping/ai-prompt.model.ts`](../../dynamic-mapper-ui/src/shared/mapping/ai-prompt.model.ts))
   to the SDK's `ClientAgentDefinition` (`@c8y/ngx-components/ai`), which the chat component
   consumes directly.
 - Availability is checked at mapping-creation time in
@@ -141,35 +156,40 @@ Wraps `@c8y/ngx-components/ai/agent-chat`'s `AgentChatComponent`, configured wit
 `clientAgentDefinition`. Opened from the mapping stepper's transformation step
 (`mapping-stepper.service.ts`) or from the mapping-type drawer.
 
-- `buildMappingForAI()` (lines 290-298) strips `substitutions` out of the mapping and parses
+- `buildMappingForAI()` strips `substitutions` out of the mapping and parses
   `sourceTemplate`/`targetTemplate` from their stored JSON-string form, plus attaches
   `supportESM` from `ServiceConfiguration` — this stripped object, not the live mapping, is
   what the agent sees.
-- `groundingContextProvider` (lines 216-231) re-sends this mapping context as a
+- `groundingContextProvider` re-sends this mapping context as a
   `[MAPPING_CONTEXT]` fenced block alongside *every* user message, per `AgentChatComponent`'s
   contract, rather than embedding it once in the visible transcript — the full JSON can run to
   dozens of lines and would otherwise make the first visible chat message unreadable.
-- `ngOnInit()` (lines 114-189) branches on `existingMapping` (set when the stepper configuration's `persistence` is `draft`) and mapping kind:
+- `ngOnInit()` branches on `existingMapping` (set when the stepper configuration's `persistence` is `draft`) and mapping kind:
   - **Existing mapping**: offers "Review / Refine existing …" vs. "Generate new … from scratch" as
     suggestion chips; nothing is sent automatically.
   - **New mapping, Smart Function**: offers "Let AI propose a target structure" vs. "I want to
     provide a sample target payload" as chips.
   - **CREATE, JSONata**: sends a generate prompt immediately — see requirements above.
-  `buildGenerateMessage()` (lines 233-274) is where the outbound-has-no-target-schema and
+  `buildGenerateMessage()` is where the outbound-has-no-target-schema and
   inbound-has-a-typical-sample-payload hints (`SAMPLE_TEMPLATES_C8Y[targetAPI]`) live, so the
   agent generates code directly instead of pausing to ask for a format that structurally
   doesn't exist for that direction.
-- `onMessageFinish()` (lines 322-341) fires once a streamed response completes, and dispatches
-  to one of two extractors depending on `isCodeMapping` (i.e. whether `transformationType` is
-  `SMART_FUNCTION`):
-  - `checkIfResponseContainsSubstitutions()` (lines 397-447): a response may contain several
+- `onToolResult()` is the primary channel: when the agent's `submit-smart-function` or `submit-substitutions` tool
+  call completes without error, the component reads the result from the tool call's input and runs it through
+  `acceptSmartFunction()` / `acceptSubstitutions()` (the same shape checks and validation as below). A submission
+  for the wrong kind of mapping is ignored.
+- `onMessageFinish()` fires once a streamed response completes. If a submit tool already delivered the result
+  during this turn it does nothing more (the reply text may legitimately contain examples); otherwise it is the
+  **fallback** for agent definitions deployed before the submit tools existed, and dispatches
+  to one of two extractors depending on `isCodeMapping` (i.e. whether the mapping is a Smart Function mapping):
+  - `checkIfResponseContainsSubstitutions()`: a response may contain several
     fenced code blocks (the agent illustrating an alternative before its final answer), so
     candidates are tried **most-recent-first** — last ```` ```json ```` block, then last
     generic ```` ``` ```` block, then the raw body if it looks like JSON — and validated by
     duck-typing (`pathSource`/`pathTarget`/`expandArray` present on every element). A missing
     `repairStrategy` is defaulted to `RepairStrategy.DEFAULT` here so downstream consumers
     never see `undefined`/`null`.
-  - `checkIfResponseContainsJavaScript()` (lines 349-382): mirrors the same most-recent-first
+  - `checkIfResponseContainsJavaScript()`: mirrors the same most-recent-first
     strategy over ```` ```javascript ```` / generic fenced blocks, requiring a
     `function onMessage` to accept a candidate, then `applyESMExport()` appends
     `export { onMessage };` when ESM support is enabled and the export isn't already present.
@@ -178,6 +198,12 @@ Wraps `@c8y/ngx-components/ai/agent-chat`'s `AgentChatComponent`, configured wit
     `substitutions`/`generatedCode` and `valid` flag untouched rather than clearing them —
     normal in a multi-turn conversation, and this is what lets "Save" stay enabled across a
     back-and-forth.
+- **Conversation memory:** [`AiChatHistoryService`](../../dynamic-mapper-ui/src/mapping/core/ai-chat-history.service.ts)
+  keeps the transcript and the extracted result per mapping `identifier`, in memory only (per browser tab, lost on
+  reload). `persistSession()` runs after each reply, on message changes, and from `save()`/`cancel()`, never from
+  `ngOnDestroy`. `isStoredResultReusable()` offers the stored result again only if the conversation inputs are
+  unchanged and the code/substitutions in the mapping are still what they were at open or the stored result itself.
+  A resumed conversation shows no suggestion chips and sends no automatic first message.
 - `save()` resolves the drawer's promise with either `generatedCode` (Smart Function) or
   `substitutions` (JSONata) back to the caller.
 
@@ -185,7 +211,7 @@ Wraps `@c8y/ngx-components/ai/agent-chat`'s `AgentChatComponent`, configured wit
 
 The AI path applies substitutions through a different route than the manual editor: the manual
 path gates its Add/Update buttons on `isSubstitutionValid()`
-([`substitution-management.service.ts:30-36`](../../dynamic-mapper-ui/src/mapping/service/substitution-management.service.ts#L30-L36)),
+([`substitution-management.service.ts`](../../dynamic-mapper-ui/src/mapping/service/substitution-management.service.ts), `isSubstitutionValid()`),
 but that is a *button guard, not an invariant* — `replaceAllSubstitutions()` and
 `addSubstitution()`, which the AI path calls directly, do not check it.
 
@@ -222,7 +248,8 @@ difference is purely that nobody necessarily reviewed it.
 
 ### Known gotchas
 
-- **Extraction is regex plus duck-typing, not schema validation.** The most-recent-first,
+- **The text-scraping extractors are now only a fallback.** With the submit tools the result arrives as structured
+  data, but the tool input is still duck-typed, not schema-validated, in the UI. The most-recent-first,
   multi-fallback matching strategy in both extractors exists because a naive "first code block"
   match was observed to grab an earlier example instead of the model's actual final answer.
 - **The full mapping is sent to an external LLM on every message.** `groundingContextProvider`

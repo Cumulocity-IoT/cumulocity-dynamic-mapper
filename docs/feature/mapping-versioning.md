@@ -37,11 +37,11 @@ back to it if the change is wrong.
 | Term | Meaning |
 |---|---|
 | Mapping line | The single `d11r_mapping` managed object identified by its Cumulocity managed-object `id`. This is the "runnable" record the processing pipeline reads. |
-| `identifier` | A separate, stable functional identifier for the mapping line (e.g. `l19zjk`), used to correlate a line with its version records. See [`Mapping.java:129`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/Mapping.java#L129). |
+| `identifier` | A separate, stable functional identifier for the mapping line (e.g. `l19zjk`), used to correlate a line with its version records. See [`Mapping.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/Mapping.java). |
 | Draft | The single mutable working copy of a mapping line's configuration. At most one draft exists per line at a time. Stored as a `MappingVersion` with `isDraft = true` and `version = null`. |
 | Version | An immutable snapshot of a mapping line's full configuration, published under a semver label (`MAJOR.MINOR.PATCH`), unique within the line. Stored as a `MappingVersion` with `isDraft = false`. |
-| Active version | The version whose `version` label matches the running mapping line's own `version` field ([`Mapping.java:287`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/Mapping.java#L287), defaulting to `"1.0.0"`). Exactly one version is active per line at a time (a mapping line is a single managed object). |
-| `draftDirty` | Boolean flag on the mapping line ([`Mapping.java:292`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/Mapping.java#L292)) set whenever a draft is saved and cleared on publish or discard. Used by the UI grid to flag lines with unpublished edits. It is *not* recomputed by diffing the draft against the active version. |
+| Active version | The version whose `version` label matches the running mapping line's own `version` field ([`Mapping.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/Mapping.java), defaulting to `"1.0.0"`). Exactly one version is active per line at a time (a mapping line is a single managed object). |
+| `draftDirty` | Boolean flag on the mapping line ([`Mapping.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/Mapping.java)) set whenever a draft is saved and cleared on publish or discard. Used by the UI grid to flag lines with unpublished edits. It is *not* recomputed by diffing the draft against the active version. |
 
 Both the draft and every published version are stored as the **same** record type,
 [`MappingVersion`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/version/MappingVersion.java) —
@@ -67,13 +67,13 @@ return versionRepository.findAll(tenant, moc).stream()
         .collect(Collectors.toList());
 ```
 
-See [`MappingVersionService.java:483-489`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingVersionService.java#L483-L489).
+See [`MappingVersionService.loadVersions`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingVersionService.java).
 The class Javadoc explains why: an earlier design stored versions as **child additions**
 of the runnable mapping managed object, but that read path proved unreliable against the
 platform, so the plain type+filter query became authoritative. A child-addition link is
 still created on publish as a best-effort convenience (so the parent → versions
 relationship is navigable in the inventory UI), but nothing in the read path depends on
-it — see [`persistNewVersion`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingVersionService.java#L503-L527), which logs a warning and continues if the
+it — see [`persistNewVersion`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingVersionService.java), which logs a warning and continues if the
 child-addition call fails.
 
 Note the cost model this implies: `loadVersions` scans **every** `d11r_mapping_version`
@@ -94,7 +94,7 @@ flowchart LR
 
 All mutating steps — draft save, publish, discard, activate, delete version, delete mapping — take the **same
 per-line `ReentrantLock`**, keyed `tenant:mappingId`
-([`activationLockFor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java#L551)),
+([`activationLockFor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java)),
 so a publish cannot interleave with an activation of the same line.
 
 #### 1. Draft editing
@@ -103,30 +103,30 @@ so a publish cannot interleave with an activation of the same line.
 creating it if absent, without touching the runnable record's `sourceTemplate`,
 `targetTemplate`, `substitutions`, etc. It does set `draftDirty = true` on the runnable
 record so the grid can flag the line. See
-[`MappingService.java:651-684`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java#L651-L684).
+[`MappingService.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java).
 
 Optimistic concurrency: if a draft already exists and the incoming edit's `lastUpdate` is
 non-zero and does not match the stored draft's `lastUpdate`, the save is rejected with
 `IllegalStateException` → HTTP 409 ("modified concurrently; reload before saving") — see
-[`MappingVersionService.saveDraft`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingVersionService.java#L208-L247).
+[`MappingVersionService.saveDraft`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingVersionService.java).
 On success the server stamps a fresh `lastUpdate` that the next edit must echo back, so
 the client must save the response, not its own pre-save copy.
 
 #### 2. Publish
 
 `POST /mapping/{id}/publish?version=<semver>&note=<text>` (see
-[`MappingController.java:525-556`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/MappingController.java#L525-L556))
+[`MappingController.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/MappingController.java))
 freezes the current draft into a new immutable `MappingVersion` and clears the draft and
 `draftDirty`. Publishing does **not** activate the new version — activation is a separate
 step.
 
-[`MappingService.publishDraft`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java#L686)
+[`MappingService.publishDraft`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java)
 first calls `ensureBackfilled()` so the currently-running configuration is preserved in
 history before the new version lands (see [Backfill](#6-backfill-legacy-mappings)), then
 fails with 409 if there is no draft to publish. If `note` is omitted it falls back to the
 draft snapshot's own `versionNote`.
 
-[`MappingVersionService.publish()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingVersionService.java#L99-L155)
+[`MappingVersionService.publish()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingVersionService.java)
 then:
 1. Validates the identifier is present and the version string is well-formed semver
    (`IllegalArgumentException` → HTTP 404 unless the message says "already exists").
@@ -143,7 +143,7 @@ then:
 
 There is no dedicated "rollback" endpoint. Both activation and rollback go through the
 same **`ACTIVATE_MAPPING` operation** (`OperationController.handleActivateMapping`,
-[`OperationController.java:398-425`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/OperationController.java#L398-L425)),
+[`OperationController.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/OperationController.java)),
 which requires the mapping-create role, with parameters `id`, `active`, and optionally
 `version` (the operation also accepts the older parameter name `versionNumber` as a
 backward-compatible alias):
@@ -155,14 +155,14 @@ Mapping updatedMapping = mappingService.setActivationMapping(tenant, id, activat
 ```
 
 `MappingService.setActivationMapping()` (
-[`MappingService.java:435-528`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java#L435-L528)):
+[`MappingService.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java)):
 - Runs under the per-mapping-line `ReentrantLock` so concurrent activations cannot
   interleave.
 - Calls `ensureBackfilled()` first, so activating a legacy mapping does not silently lose
   the configuration it was running.
 - If `active=true` and `version` names a version other than the one currently running,
   copies that version's stored snapshot into the runnable mapping (`applyVersion()`,
-  [`MappingService.java:530-548`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java#L530-L548)) — this is the mechanism for **both** roll-forward
+  [`MappingService.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java)) — this is the mechanism for **both** roll-forward
   and rollback; there is no directional distinction in code. `applyVersion` deep-copies
   the snapshot and re-stamps the line's own `id`, `identifier` and `draftDirty` onto it,
   so a rollback never aliases the stored version record and never discards a pending
@@ -201,11 +201,13 @@ reason about beyond the lock.
 
 #### 5. Retention
 
-`MappingVersionService.prune()` ([`MappingVersionService.java:385-407`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingVersionService.java#L385-L407))
+`MappingVersionService.prune()` ([`MappingVersionService.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingVersionService.java))
 keeps the newest *N* published versions (highest semver; `createdAt` breaks ties) and deletes older ones,
 **except** the active version, which is never pruned even if it falls outside the
 window. *N* comes from `ServiceConfiguration.getMappingVersionRetention()`, tenant-scoped,
-defaulting to `MappingVersionService.DEFAULT_RETENTION = 10` when unset or `< 1`.
+falling back to `MappingVersionService.DEFAULT_RETENTION = 10` when unset or `< 1`. Three defaults
+exist: the `ServiceConfiguration` constructor sets `5`, the configuration UI form starts at `10`, and the
+service fallback is `10`.
 Pruning runs automatically after every publish, and can be re-run standalone via
 `pruneVersions()`.
 
@@ -234,7 +236,7 @@ Behavior:
 **imported** mapping before backfilling, so importing a mapping that was exported at
 `2.3.0` recreates it at `2.3.0` instead of collapsing to `1.0.0`.
 
-See [`MappingVersionService.java:421-474`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingVersionService.java#L421-L474).
+See [`MappingVersionService.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingVersionService.java).
 
 ### REST endpoints
 
@@ -272,6 +274,7 @@ The version UI lives in
 | `PublishVersionModalComponent` | Publish dialog: shows the current active version, three bump buttons pre-filled from `GET /version/suggest`, an editable version field validated against `^\d+\.\d+\.\d+$`, and an optional note. |
 | `MappingVersionsCountComponent` | The grid's version-count column, fed by the batched `GET /mapping/version-counts`. |
 | `VersionStateCellRendererComponent` | Renders the active/published/draft badge. |
+| `MappingPublishService` | The publish flow shared by the drawer and the grid's "Publish draft" row action: asks for the version, publishes, and offers to activate straight away when the mapping is inactive. |
 
 The API client is `MappingService` in
 [`mapping/core/mapping.service.ts`](../../dynamic-mapper-ui/src/mapping/core/mapping.service.ts)
@@ -299,8 +302,8 @@ that has to be echoed back unchanged.
 
 ### Known gotchas
 
-- **`GET /mapping/version-counts` is unauthenticated at the route level.** Every other
-  version endpoint carries `@PreAuthorize`; this one does not. It leaks only mapping ids
+- **`GET /mapping/version-counts` has no role check.** Every other version endpoint carries
+  `@PreAuthorize` (ADMIN or CREATE); this one only requires an authenticated tenant user. It leaks only mapping ids
   and counts, but the asymmetry is unintentional.
 - **Version labels are canonicalised on publish.** `SemVer.isValid` also requires every component
   to fit an `int`, and `publish` stores/compares the canonical form (`01.0.0` and ` 1.0.0 ` are
@@ -345,9 +348,12 @@ feature at the design stage. Comparing them against the shipped code:
   the implemented `POST /mapping/{id}/publish?version=<semver>&note=<text>`.
 - **`versionNumber` survives only as a backward-compatible alias** in the
   `ACTIVATE_MAPPING` operation parameters
-  ([`OperationController.java:407-409`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/OperationController.java#L407-L409)),
+  ([`OperationController.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/controller/OperationController.java)),
   not as the primary parameter name used elsewhere; the primary name throughout the
   version REST API is `version`.
+- **Version labels are semver strings, not integers.** The requirements describe `versionNumber` as an integer
+  defaulting to 1 and retention pruning "oldest first"; the code uses `MAJOR.MINOR.PATCH` labels, and pruning keeps the
+  highest semvers.
 - **No separate "rollback" endpoint or method exists.** FR-11/FR-12 describe rollback as
   its own capability; in the implementation it is the exact same code path as
   roll-forward activation (`setActivationMapping` with a `version` argument) — the

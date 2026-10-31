@@ -46,11 +46,11 @@ the mappings the tenant configured.
 | Entry point | [`InboundMessageDispatcher`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/InboundMessageDispatcher.java) | Implements `GenericMessageCallback`; every connector calls `onMessage()` (live) or `onTestMessage()` (Dry Run / Live Test) with a `ConnectorMessage`. |
 | Router | [`InboundMessageRouter`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/InboundMessageRouter.java) | Keeps only the valid mappings (active and deployed on the originating connector), then calls the processor beans below, in order, for each of them — inline for one mapping, one virtual thread per mapping for several. |
 | Deserialize | [`DeserializationInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/DeserializationInboundProcessor.java) | Picks a `PayloadDeserializer` by `MappingType` and builds the `ProcessingContext` (carrying an error instead of throwing when deserialization fails). |
-| Enrich | [`EnrichmentInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/EnrichmentInboundProcessor.java) (extends [`AbstractEnrichmentProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractEnrichmentProcessor.java)) | Injects `_TOPIC_LEVEL_`/`_CONTEXT_DATA_` into the payload (non-code mappings) or builds the GraalVM Smart Function config (code mappings); borrows a pooled GraalVM context when the mapping has `code`. |
+| Enrich | [`EnrichmentInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/EnrichmentInboundProcessor.java) (extends [`AbstractEnrichmentProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractEnrichmentProcessor.java)) | Counts the message on the mapping status (`messagesReceived`). For JSONata and internal-protobuf mappings with a JSON object payload it injects `_TOPIC_LEVEL_` (and `_CONTEXT_DATA_`, only when the broker message has a key or the mapping creates attachments). For `SMART_FUNCTION` mappings with `code` it borrows a pooled GraalVM context, loads the persisted Smart Function state (a throw-away copy for test runs) and builds the read-only config. `EXTENSION_JAVA` mappings get neither payload injection nor a GraalVM context. |
 | Filter | [`FilterInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/FilterInboundProcessor.java) | Evaluates `mapping.getFilterMapping()` (a JSONata boolean expression) against the deserialized payload; inbound-only, no equivalent on the outbound route. |
 | Transform (dispatch) | `InboundMessageRouter.processSingleInboundMapping()` if/else chain (predicates in [`MessageRoutingSupport`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/util/MessageRoutingSupport.java)) | Calls one of `processInternalProtobuf` / `processExtension` / `processJSONataExtraction` / `processFlowFunction` based on `mapping.getMappingType()`/`getTransformationType()`; unmatched types log a warning and fall back to JSONata. |
-| Substitute | [`SubstitutionResultInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/SubstitutionResultInboundProcessor.java) | Applies cached `SubstituteValue`s to `targetTemplate`, resolves `_IDENTITY_.*`, builds one `DynamicMapperRequest` per device (cardinality), evaluates `filterInventory`. |
-| Send | [`SendInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/SendInboundProcessor.java) | Resolves external IDs to C8Y source IDs, upserts devices, calls `C8YAgent.createMEAO`, merges multiple MEASUREMENT requests into one bulk request, creates processing alarms, handles SparkPlug B birth/active-state bookkeeping. |
+| Substitute | [`SubstitutionResultInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/SubstitutionResultInboundProcessor.java) | Applies cached `SubstituteValue`s to `targetTemplate`, resolves `_IDENTITY_.*` (except for the INVENTORY API, where `SendInboundProcessor` resolves it), builds one `DynamicMapperRequest` per device (cardinality), evaluates `filterInventory`. Used by the JSONata and internal-protobuf branches; Smart Function and extension results are turned into requests by `FlowResultInboundProcessor` and `ExtensibleResultInboundProcessor`. |
+| Send | [`SendInboundProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/SendInboundProcessor.java) | Resolves external IDs to C8Y source IDs, upserts devices, calls `C8YAgent.createMEAO` (only when the context has `sendPayload` set, so a Dry Run builds requests without sending them), merges multiple MEASUREMENT requests into one bulk request, creates processing alarms (skipped for test runs), handles SparkPlug B birth/active-state bookkeeping. |
 | Cleanup | [`ConsolidationProcessor`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/util/ConsolidationProcessor.java) | Called before every terminal return of a single mapping's pipeline: clears the mapping's consecutive-failure streak on a clean run, books the outcome (processed / filtered / failed) on the mapping status, and closes the context's GraalVM resources (idempotent — the one point every mapping passes through, including early exits). Status updates are skipped for test runs (`affectsMappingStatus()`). The name is historical. |
 
 ### End-to-end flow
@@ -236,14 +236,16 @@ used by the inbound and outbound routers). Its method chain is:
   3. `processJSONataExtraction` (JSONata, default, or no transformation type)
   4. `processFlowFunction` (`TransformationType.SMART_FUNCTION`)
   5. anything else logs a warning and falls back to `processJSONataExtraction`.
-- The four branch methods each end with `ConsolidationProcessor`, and check
-  `shouldIgnoreFurtherProcessing` between steps (consolidating and returning early when set):
+- The four branch methods each end with `ConsolidationProcessor`. They check
+  `shouldIgnoreFurtherProcessing` only at the points listed below (consolidating and returning
+  early when set); the processor after `FlowResultInboundProcessor`, and the substitution
+  processor after the JSONata or protobuf extraction, always run:
   - `processInternalProtobuf`: `InternalProtobufProcessor` → `SubstitutionResultInboundProcessor` →
-    `SendInboundProcessor`
-  - `processExtension`: `ExtensibleInboundProcessor` → `ExtensibleResultInboundProcessor` →
-    `SendInboundProcessor`
+    (ignore check) → `SendInboundProcessor`
+  - `processExtension`: `ExtensibleInboundProcessor` → (ignore check) →
+    `ExtensibleResultInboundProcessor` → (ignore check) → `SendInboundProcessor`
   - `processJSONataExtraction`: `JSONataInboundProcessor` → `SubstitutionResultInboundProcessor` →
-    `SendInboundProcessor`
+    (ignore check) → `SendInboundProcessor`
   - `processFlowFunction`: `FlowInboundProcessor` → (ignore check) → `FlowResultInboundProcessor` →
     `SendInboundProcessor`
 - Error handling: any exception in `processSingleInboundMapping()` is logged by
@@ -252,12 +254,21 @@ used by the inbound and outbound routers). Its method chain is:
   mapping's result and does not affect the other mappings. Failures inside
   `SendInboundProcessor` are isolated per request and recorded on the request.
 - The `ProcessingContext` is passed as a plain object from processor to processor.
+- **Trap: no error check after deserialization or enrichment.** `DeserializationInboundProcessor`
+  and `AbstractEnrichmentProcessor` record a failure on the context (and book it on the mapping
+  status) instead of throwing, and the router then still calls the filter and the transformation
+  branch. Later processors must tolerate a null payload or a missing GraalVM context
+  (`AbstractFlowProcessor` does, explicitly). A new processor must not assume that reaching it
+  means the earlier stages succeeded.
+- **Trap: a null context.** If deserialization throws (rather than returning an error context),
+  `runSingleInboundMapping` returns `null`. With several mappings that null ends up in the result
+  list, which the dispatcher skips; with exactly one mapping `List.of(...)` rejects it.
 
 > **History:** the router's Javadoc notes that it mirrors the former Apache Camel
 > `direct:processInboundMessage` → `direct:processSingleInboundMapping` routes, which were
 > removed together with the Camel dependency.
 
-### `ProcessingContext` and its focused sub-contexts
+### `ProcessingContext` and its read-only projections
 
 `ProcessingContext<O>` ([`ProcessingContext.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/runtime/ProcessingContext.java))
 is the per-message (per-mapping) state object passed as an argument from processor to
@@ -378,5 +389,7 @@ detecting a processing timeout) can call `cancelProcessing()` on that wrapper, w
 cancel-actions to abort CPU-bound JS execution. When the router fans out to several mappings,
 each per-mapping worker future is registered on the wrapper too, so cancelling interrupts them
 all, including workers blocked in Cumulocity HTTP calls. `cancelAndDrain()` additionally waits
-briefly for the worker to leave and logs an error if it did not. `SendInboundProcessor` checks this flag
-before doing any work so a cancelled pipeline doesn't still publish to Cumulocity.
+briefly for the worker to leave and logs an error if it did not. The flag is checked before work starts in
+`AbstractFlowProcessor` (skips JavaScript execution), in `SendInboundProcessor`, and before each
+HTTP call inside `C8YAgent.createMEAO()`, so a cancelled pipeline does not still publish to
+Cumulocity.

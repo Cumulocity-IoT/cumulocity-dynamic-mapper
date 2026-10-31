@@ -52,9 +52,9 @@ context.getRequests().addAll(output.getRequests());
 
 ## Adding a New Connector
 
-1. Extend `AConnectorClient` and implement the broker lifecycle methods (`initialize()`, `connect()`, `subscribe()`, `disconnect()`, `publishMEAO()`).
-2. Provide a `ConnectorSpecification` declaring the configuration schema.
-3. Register via `ConnectorRegistry`.
+1. Extend `AConnectorClient` and implement its abstract methods (`initialize()`, `connect()`, `disconnect()`, `isConfigValid()`, `publishMEAO()`, `supportsWildcardInTopic()`, `supportedDirections()`, `subscribe()`, `unsubscribe()`, `connectorSpecificHousekeeping()`).
+2. Provide a `ConnectorSpecification` declaring the configuration schema (and set `supportedQos` if the broker cannot honor all three levels).
+3. Add a `ConnectorType` value, a case in `ConnectorClientFactory.createConnectorClient()`, and the specification in `ConnectorRegistry.registerConnectors()`.
 4. Implement a callback that forwards broker messages to `GenericMessageCallback`.
 
 See [extensions.md](../extensions.md) for the full guide and `AConnectorClient` helper methods.

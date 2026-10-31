@@ -35,8 +35,8 @@ layer is Kafka rather than a device broker.
 Apache Kafka's official Java client (`org.apache.kafka.clients.*`), not Spring Kafka.
 Key/value are always `String` (`KafkaProducer<String,String>`,
 `KafkaConsumer<String,String>`) — there is no support for `byte[]`/Avro/Schema
-Registry; payloads are always treated as UTF-8 strings. An `AdminClient` is also used,
-purely for connectivity testing (`listTopics()`).
+Registry; payloads are always treated as UTF-8 strings. An `AdminClient` is also used
+for connectivity checks: `listTopics()` in `initialize()` and `describeCluster()` in `testConnection()`.
 
 ### Configuration (`ConnectorSpecification`)
 
@@ -50,9 +50,9 @@ Built in `createConnectorSpecification()`
 | `nameCertificate`, `trustedCertificateFingerprint`, `certificateChainInPemFormat` | string / large text | no | — | shown when `trustCustomCertificate=true` |
 | `disableHostnameValidation` | boolean | no | `false` | insecure, dev/test only |
 | `username` | string | no | — | e.g. a Confluent Cloud API key |
-| `password` | sensitive | no | — | shown when `username` set |
+| `password` | sensitive | required when shown | — | shown when `username` is set; credentials apply only when both username and password are non-blank |
 | `saslMechanism` | option | no | `SCRAM-SHA-256` | `SCRAM-SHA-256`/`SCRAM-SHA-512`/`PLAIN`, shown when `username` set |
-| `groupId` | string | yes | auto-generated if absent | see below |
+| `groupId` | string | declared required | auto-generated if blank | see below |
 | `defaultPropertiesProducer` / `defaultPropertiesConsumer` | map | no | `{}` | free-form producer/consumer property overrides |
 | `propertiesProducer` / `propertiesConsumer` | large text, readonly | — | contents of `kafka-producer.properties`/`kafka-consumer.properties` | display-only |
 
@@ -147,15 +147,29 @@ The `AdminClient` is created from the producer properties.
 
 ### Supported directions and QoS
 
-Both `INBOUND` and `OUTBOUND`. Kafka has no native QoS concept — `supportedQOS` is
-hardcoded to `AT_MOST_ONCE` — though the manual offset-commit logic above still applies
-when `enable.auto.commit=false`.
+Both `INBOUND` and `OUTBOUND`. Kafka has no native QoS concept. `supportedQos` is
+`[AT_MOST_ONCE, AT_LEAST_ONCE]`; `EXACTLY_ONCE` is clamped to `AT_LEAST_ONCE`. Offsets are
+committed after a successful result only when `enable.auto.commit=false` (the shipped default).
+For a record whose consolidated mapping QoS is 0, the offset is queued for commit without waiting
+for the pipeline. For QoS above 0, the commit waits for the pipeline result; an HTTP 4xx result
+counts as success, a 5xx result or a timeout does not queue a commit.
+
+The poll loop does not wait for that result, so a later record that succeeds commits an offset
+beyond an earlier failed record on the same partition. Redelivery of the failed record is
+therefore not guaranteed unless the consumer restarts (see below).
+
+### Connection test
+
+`supportsConnectionTest()` is `true`. `testConnection()` builds the Kafka properties and runs
+`describeCluster()` on a throwaway `AdminClient` (10 s limit). It never joins the consumer group.
 
 ### Housekeeping
 
 `connectorSpecificHousekeeping()` prunes completed/cancelled tasks from the consumer
 task map. A separate `monitorSubscriptions()` retries topics whose poll-failure count
-is between 1 and `MAX_RETRY_ATTEMPTS` (3) by unsubscribing and resubscribing.
+is between 1 and `MAX_RETRY_ATTEMPTS` (3) by unsubscribing and resubscribing. A poll loop
+stops itself after more than `MAX_CONSECUTIVE_FAILURES` (5) failures and hands over to this
+retry. After more than 10 processing errors on one topic partition, the consumer is restarted.
 
 ### Gotchas
 

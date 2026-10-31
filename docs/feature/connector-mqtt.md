@@ -26,7 +26,8 @@ product are MQTT's.
 - **TLS with a self-signed or private CA certificate must be possible**, since brokers are
   frequently not publicly trusted.
 - **A processing failure must not silently drop the message** at QoS > 0: the connector withholds
-  the acknowledgement so the broker redelivers, bounded by the poison-pill guard.
+  the acknowledgement so the broker redelivers. The poison-pill guard that bounds redelivery applies only when
+  "reconnect on processing error" is enabled.
 - **Sparkplug B is supported** as a payload convention on top of MQTT, including the host
   application's birth/death certificate lifecycle.
 
@@ -37,7 +38,7 @@ product are MQTT's.
 ### Class hierarchy and library
 
 [`AMQTTClient`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/AMQTTClient.java)
-(abstract, ~700 lines) extends `AConnectorClient` and implements everything
+(abstract, ~680 lines) extends `AConnectorClient` and implements everything
 version-agnostic: connection lifecycle orchestration, QoS adjustment, config
 validation, wildcard/direction support, TLS setup, and Sparkplug B Host support. It
 delegates protocol-version-specific mechanics to abstract hooks (`buildMqttClient()`,
@@ -55,27 +56,29 @@ declared in `dynamic-mapper-service/pom.xml`), not Eclipse Paho.
 ### Configuration (`ConnectorSpecification`)
 
 Built in
-[`AMQTTClient.buildCommonMqttProperties()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/AMQTTClient.java#L517-L633),
+[`AMQTTClient.buildCommonMqttProperties()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/AMQTTClient.java),
 shared by both version-specific clients:
 
 | Property | Type | Required | Default | Notes |
 |---|---|---|---|---|
-| `version` | option | yes | `3.1.1` / `5.0` | fixed per client class |
+| `version` | option | yes | `3.1.1` / `5.0` | options `3.1.1` and `5.0`; the default is set by the client class that built the specification, and `ConnectorClientFactory` picks `MQTT3Client` or `MQTT5Client` from the stored value (default `3.1.1`) |
 | `protocol` | option | yes | `mqtt://` | `mqtt://`, `mqtts://`, `ws://`, `wss://` |
 | `mqttHost` | string | yes | — | |
 | `mqttPort` | numeric | yes | — | |
 | `user` / `password` | string / sensitive | no | — | |
 | `clientId` | string | yes | — | |
-| `trustCustomCertificate` | boolean | no | `false` | shown only for `mqtts`/`wss`; formerly `useSelfSignedCertificate` (deprecated) |
-| `nameCertificate`, `trustedCertificateFingerprint`, `certificateChainInPemFormat` | string / large text | no | — | shown only when `trustCustomCertificate=true` |
+| `trustCustomCertificate` | boolean | no | `false` | shown only for `mqtts`/`wss` |
+| `nameCertificate`, `trustedCertificateFingerprint`, `certificateChainInPemFormat` | string / large text | no | — | shown only when `trustCustomCertificate=true`; the certificate comes from the PEM chain or from the tenant trusted-certificate store (by fingerprint) |
 | `disableHostnameValidation` | boolean | no | `false` | same condition |
 | `supportsWildcardInTopicInbound` | boolean | no | `true` | |
-| `supportsWildcardInTopicOutbound` | boolean | no | `true` | changed from a `false` default in an earlier version (commit `523277c6c`) |
+| `supportsWildcardInTopicOutbound` | boolean | no | `true` | |
 | `serverPath` | string | no | — | shown only for `ws`/`wss` |
 | `cleanSession` | boolean | no | `true` | MQTT3 `.cleanSession()`, MQTT5 `.cleanStart()` |
 | `reconnectOnProcessingError` | boolean | no | `false` | shown only when `cleanSession=false`; controls QoS 1+ retransmission behavior on error |
 | `isSparkplugHost` | boolean | no | `false` | enables Sparkplug B Host mode |
-| `sparkplugHostId` | string | no | — | shown only when `isSparkplugHost=true` |
+| `sparkplugHostId` | string | no | — | shown only when `isSparkplugHost=true`; falls back to the tenant ID when empty |
+
+The only sensitive property is `password`. Properties are grouped in the UI (`CONNECTION`, `AUTHENTICATION`, `SESSION`, `TLS`, `ADVANCED`, `RELIABILITY`, `SPARKPLUG`).
 
 Spec name/type: `MQTT3Client` registers as `ConnectorSpecificationBuilder.create("MQTT", ConnectorType.MQTT)`;
 `MQTT5Client` as `create("MQTT 5.0", ConnectorType.MQTT)` — both share the same
@@ -84,13 +87,13 @@ tenant are allowed.
 
 ### Connection lifecycle
 
-- `connect()`/`disconnect()` are orchestrated in `AMQTTClient` (lines 225-300, 353-412)
+- `connect()`/`disconnect()` are orchestrated in `AMQTTClient`
   and delegate the actual HiveMQ client build/connect/disconnect calls to the
   version-specific subclass.
 - Reconnect scheduling lives entirely in `connectorSpecificHousekeeping()`
-  (`MQTT3Client.java:461-473`, `MQTT5Client.java:486-498`, identical logic): if the
-  client is disconnected and should be connected, it computes an exponential backoff
-  (`RECONNECT_DELAY_STEP_MS=10000`, capped at `RECONNECT_DELAY_MAX_MS=300000` — 5
+  (in `MQTT3Client` and `MQTT5Client`, identical logic): if the
+  client is disconnected and should be connected, it computes a **linear** backoff
+  (`attempt * RECONNECT_DELAY_STEP_MS`, step 10 s, capped at `RECONNECT_DELAY_MAX_MS`, 5
   minutes) and resubmits `connect()` on the virtual-thread pool. Disconnect listeners
   only record the drop and set the next retry time; they do not themselves trigger
   reconnection — housekeeping owns all reconnect scheduling (explicit code comment).
@@ -103,13 +106,18 @@ tenant are allowed.
 
 - `Qos` enum (`AT_MOST_ONCE`, `AT_LEAST_ONCE`, `EXACTLY_ONCE`) maps directly to MQTT QoS
   0/1/2 via `MqttQos.fromCode(qos.ordinal())`.
-- `AMQTTClient` supports all three QoS levels; `adjustQos()` downgrades a requested QoS
-  to the highest one the connector actually supports.
+- `AMQTTClient` keeps the default `supportedQos` of `AConnectorClient` (all three levels), so
+  `adjustQos()` never downgrades; publish uses `effectivePublishQos(context)`.
 - Effective QoS for inbound delivery is `min(publish QoS, mapping QoS)`
-  (`AbstractMqttCallback.java:185`).
+  (`AbstractMqttCallback`).
 - QoS 0 messages ack immediately with no reliability guarantee; QoS 1/2 messages are
   acked manually after successful processing, with increasing retransmission timeouts
-  per retry and poison-pill detection after `MAX_CONSECUTIVE_RECONNECTS=5`.
+  per retry (up to 3x the base pipeline timeout, `MAX_TIMEOUT_ESCALATION_FACTOR`). A message
+  is not acknowledged on a timeout, on a JS CPU timeout, or on an HTTP 5xx result; a 4xx
+  result is acknowledged. Poison-pill detection (ack and discard after
+  `MAX_CONSECUTIVE_RECONNECTS=5`) only runs when `reconnectOnProcessingError=true`. With the
+  default `false`, the connector only withholds the ack and waits for the broker to
+  retransmit, with no failure cap.
 - Retained-message publish is honored via `retain(context.isRetain())`.
 
 ### Wildcard support

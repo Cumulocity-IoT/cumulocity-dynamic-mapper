@@ -19,8 +19,9 @@ generic/user-configured Pulsar connector only.
 - **Both directions.**
 - **MQTT-style wildcards are translated to a Pulsar topic-pattern subscription.**
 - **All three QoS levels are honoured**: at-most-once sends asynchronously and acknowledges
-  immediately; higher levels acknowledge only after successful processing, and exactly-once
-  additionally uses an exclusive subscription. See [reliability.md](reliability.md).
+  immediately; higher levels acknowledge only after successful processing. Exactly-once uses an
+  exclusive subscription only when no subscription type is configured (the UI default is
+  `Shared`, so in practice the configured type applies). See [reliability.md](reliability.md).
 - **A failed message must be redeliverable**, bounded by the poison-pill guard so one
   undigestible payload cannot block a subscription.
 
@@ -30,7 +31,9 @@ generic/user-configured Pulsar connector only.
 
 ### Configuration (`ConnectorSpecification`)
 
-Built via `ConnectorSpecificationBuilder.create("Apache Pulsar", ConnectorType.PULSAR)`:
+Built via `ConnectorSpecificationBuilder.create("Apache Pulsar", ConnectorType.PULSAR)`
+(`supportsMessageContext=true`, `singleton=false`). Sensitive properties are `authenticationParams`
+and `clientSecret`. `supportsConnectionTest()` is `true` (see below):
 
 | Property | Type | Required | Default | Notes |
 |---|---|---|---|---|
@@ -44,8 +47,10 @@ Built via `ConnectorSpecificationBuilder.create("Apache Pulsar", ConnectorType.P
 | `subscriptionType` | option | no | `Shared` | `Exclusive`/`Shared`/`Failover`/`Key_Shared` |
 | `subscriptionName` | string | no | — | |
 | `supportsWildcardInTopicInbound` | boolean, readonly | no | `true` | |
+| `useSubscriptionNameAsIs` | boolean | no | `false` | use `subscriptionName` unchanged (no topic suffix) for brokers with a pre-provisioned subscription |
 | `supportsWildcardInTopicOutbound` | boolean, readonly | no | `false` | |
-| `pulsarTenant` / `pulsarNamespace` | string | no | `public` / `default` | |
+| `pulsarTenant` / `pulsarNamespace` | string | no | `public` / `default` | `pulsarNamespace` also accepts `tenant/namespace`, which overrides `pulsarTenant` |
+| `pulsarTopicDomain` | option | no | `persistent` | `persistent` / `non-persistent`, applies to topics not given as a full Pulsar name |
 | `isSparkplugHost` / `sparkplugHostId` | boolean / string | no | `false` | see Sparkplug note below |
 
 ### Topic model
@@ -53,10 +58,12 @@ Built via `ConnectorSpecificationBuilder.create("Apache Pulsar", ConnectorType.P
 A mapping topic maps to `persistent://<tenant>/<namespace>/<topicName>` unless already
 prefixed with `persistent://`/`non-persistent://`. MQTT-style topic segments are
 sanitized (`/`→`-`, non-alphanumeric→`_`). Subscription name is
-`<subscriptionName>-<sanitizedTopic>` (plus a test-mode suffix when applicable).
-Subscription type per topic is taken from the `subscriptionType` config unless the
-mapping's QoS is `EXACTLY_ONCE`, in which case it's forced to `Exclusive`; otherwise
-`Shared`.
+`<subscriptionName>-<sanitizedTopic>` (plus a test-mode suffix when applicable; default
+base name `dynamic-mapper-subscription`), or the bare `subscriptionName` when
+`useSubscriptionNameAsIs=true`. Subscription type per topic is taken from the
+`subscriptionType` config whenever it is set (the spec default is `Shared`, so this is the
+normal case). Only when it is empty does the QoS decide: `EXACTLY_ONCE` gives `Exclusive`,
+anything else `Shared`.
 
 ### Subscribe / unsubscribe
 
@@ -67,18 +74,25 @@ a Pulsar regex and uses `.topicsPattern(...)`; otherwise a plain `.topic(...)`.
 
 ### Publish (`publishMEAO`)
 
-Gets or creates a cached `Producer<byte[]>` per topic, with up to 3 creation retries;
+Gets or creates a cached `Producer<byte[]>` per topic, with up to 3 creation retries (`MAX_PRODUCER_CREATE_RETRIES`, exponential backoff via `retryOperation`);
 handles a Pulsar PIP-344 `FeatureNotSupportedException` by falling back to
 `createAsync()`. `AT_MOST_ONCE` uses `producer.sendAsync()` fire-and-forget (swallowing
 failures); other QoS levels use blocking `producer.send()`.
 
 ### Ack / QoS
 
-`supportedQOS = [AT_MOST_ONCE, AT_LEAST_ONCE, EXACTLY_ONCE]`. `QoSAwarePulsarCallback`
+`supportedQos = [AT_MOST_ONCE, AT_LEAST_ONCE, EXACTLY_ONCE]`. `QoSAwarePulsarCallback`
 immediately acks `AT_MOST_ONCE` messages regardless of processing outcome. For
 `AT_LEAST_ONCE`/`EXACTLY_ONCE`, ack/nack is deferred to the processing result: ack on an
-HTTP-style result code below 500, `negativeAcknowledge()` at or above 500, with a
-poison-pill discard after `MAX_CONSECUTIVE_FAILURES=5` consecutive failures.
+HTTP-style result code below 500, `negativeAcknowledge()` at or above 500 or on a timeout,
+with a poison-pill discard (positive ack) after `MAX_CONSECUTIVE_FAILURES=5` failures of the
+same message (`AbstractPulsarCallback.handleFailureOrPoisonPill`). `EXACTLY_ONCE` is only
+as strong as `AT_LEAST_ONCE` plus the exclusive subscription; there is no deduplication.
+
+### Connection test
+
+`testConnection()` builds a throwaway client, checks that the service URL host resolves, and
+probes the broker with a topic lookup (`probeBroker`). It does not subscribe.
 
 ### Housekeeping
 

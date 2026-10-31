@@ -39,7 +39,8 @@ a proprietary binary protocol, a Protobuf schema, anything needing a Java librar
 An extension implements one of two marker interfaces from `dynamic-mapper-interface`
 (source lives under `dynamic-mapper-service/src/main/java/dynamic/mapper/processor/extension/`
 and is re-exported into the `dynamic-mapper-interface` module via a `build-helper-maven-plugin`
-`add-source` binding — see `dynamic-mapper-interface/pom.xml:242,266-274`):
+`add-source` binding in `dynamic-mapper-interface/pom.xml`); the module `dynamic-mapper-extension` holds sample
+extensions (`processor/extension/external/inbound` and `outbound`) built against it:
 
 - [`ProcessorExtensionInbound<O>`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/extension/ProcessorExtensionInbound.java) — `CumulocityObject[] onMessage(Message<O> message, JavaExtensionContext context)`. Broker message → array of Cumulocity objects (measurement, event, alarm, operation, managed object).
 - [`ProcessorExtensionOutbound<O>`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/extension/ProcessorExtensionOutbound.java) — `DeviceMessage[] onMessage(Message<O> message, JavaExtensionContext context) throws ProcessingException`. Cumulocity payload → array of broker messages.
@@ -61,23 +62,38 @@ depend on `org.graalvm.polyglot`:
 | `DataPrepContext` (shared) | `JavaExtensionContext` addition (Java-native) |
 |---|---|
 | `getState(key)` / `setState(key, Value)` → `Value` | `getNativeState(key)` / `setNativeState(key, Object)` / `getNativeStateAll()` → plain `Object`/`Map` |
-| `getConfig()` → `Value` | `getConfigAsMap()` → `Map<String, Object>` |
+| `getConfig()` → `Value` (default method) | `getConfigAsMap()` → `Map<String, Object>` (read-only `mappingId`, `mappingName`, `tenant`, `topic`, `targetAPI`, `debug`, `clientId`; not persisted) |
 | `getManagedObjectByExternalId(ExternalId)` → `Value` | `getManagedObjectAsMap(ExternalId)` → `Map<String, Object>` (cache-first lookup) |
 | — | `getMapping()` → the full `Mapping` configuration |
+| `getClientId()` | `getExternalId()` → the resolved external ID, outbound mappings with `useExternalId` only |
 | — | `getTenant()` |
 | `addWarning(String)` / `addLogMessage(String)` | `addWarning(String)` / `addLog(String)` |
 
-State persists across invocations for the same mapping (`context.setNativeState`), the
-same mechanism `docs/smart-functions.md` describes for Smart Function `context.setState`
-— both are backed by `FlowStateStore`, loaded once per message
-(`ExtensibleInboundProcessor.processWithExtensionInbound()`,
-[`ExtensibleInboundProcessor.java:117`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/ExtensibleInboundProcessor.java#L117)) and written back through the same store.
+State is intended to persist across invocations for the same mapping (`context.setNativeState`), like Smart Function
+`context.setState` (see [`flow-state.md`](../../dynamic-mapper-ui/public/docs/flow-state.md)), backed by `FlowStateStore`.
+**Known defect: native state is loaded but never saved.** `ExtensibleInboundProcessor.processWithExtensionInbound()` loads
+the mapping's state from `FlowStateStore` into the new `JavaExtensionContextImpl` (an empty state for a test run), but
+the only code that writes it back is `JavaExtensionContextImpl.clearState()`, and nothing calls that method:
+`ProcessingContext.close()` calls `clearState()` on the *flow context*, which is a `SmartFunctionContext` that exists
+only for `SMART_FUNCTION` mappings (`AbstractEnrichmentProcessor` builds it for no other type). So `setNativeState` values
+last for one message. Outbound extensions are built without a `FlowStateStore` at all, so they have no state even in
+principle.
 
 The concrete implementation wired into `JavaExtensionContext` is
 [`JavaExtensionContextImpl`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/flow/JavaExtensionContextImpl.java), which wraps a `ProcessingContext` and delegates the
 `DataPrepContext` half of the interface to a `DataPrepContext` instance when one is
 available, logging a warning and returning a safe default when it is not (e.g.
 `getClientId()`/`setState()` on outbound extensions where no flow context exists).
+
+### Upload, listing and removal
+
+The UI (`dynamic-mapper-ui/src/extension/`) uploads the JAR to the Cumulocity binary repository and creates a managed
+object carrying the `d11r_processorExtension` fragment (`name`, `external`, ...); the service is not involved in the
+upload. The size cap (50 MB) is enforced in `AddExtensionComponent` only. The extension grid then triggers the
+admin-only `RELOAD_EXTENSIONS` operation (`ExtensionManager.reloadExtensions`) so the service loads it. The service
+exposes `GET /extension` and `GET /extension/{extensionName}` (no role check beyond authentication) and
+`DELETE /extension/{extensionName}` (`ROLE_DYNAMIC_MAPPER_ADMIN`). Per-tenant isolation comes from reading the
+extension managed objects as the calling tenant; the class loaders and the registry are keyed by tenant.
 
 ### Loading and lookup
 
@@ -93,8 +109,11 @@ available, logging a warning and returning a safe default when it is not (e.g.
   subsequent message; its direction (`INBOUND`/`OUTBOUND`) is auto-detected from which
   marker interface it implements.
 - External extension classes must live under a configured allowed package
-  (`ExtensionConfiguration.getExternalExtensionsAllowedPackage()`); loading external JARs
-  at all is gated by `app.externalExtensionsEnabled` (`ExtensionConfiguration.isExternalExtensionsEnabled()`).
+  (`ExtensionConfiguration.getExternalExtensionsAllowedPackage()`, property
+  `APP.externalExtensionsAllowedPackage`, default `dynamic.mapper.processor.extension.external`); loading external JARs
+  at all is gated by `APP.externalExtensionsEnabled` (`ExtensionConfiguration.isExternalExtensionsEnabled()`, default
+  `true`). The package check only constrains where the class lives; the loaded code runs in the service's own JVM
+  with no further sandbox.
 - Registered extensions are tracked in
   [`ExtensionInboundRegistry`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/ExtensionInboundRegistry.java) as `Extension` → `Map<eventName, ExtensionEntry>`,
   where `ExtensionEntry` (
@@ -104,7 +123,7 @@ available, logging a warning and returning a safe default when it is not (e.g.
 
 At processing time, `AbstractExtensibleProcessor.getProcessorExtensionInbound()` /
 `getProcessorExtensionOutbound()`
-([`AbstractExtensibleProcessor.java:98-143`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractExtensibleProcessor.java#L98-L143)) resolve a mapping's configured
+([`AbstractExtensibleProcessor.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractExtensibleProcessor.java)) resolve a mapping's configured
 `extension` field (`{extensionName, eventName}` — required by validation, see rule 3 in
 [mapping-validation.md](mapping-validation.md)) against the registry:
 
@@ -136,9 +155,9 @@ flowchart LR
 ```
 
 `ExtensibleInboundProcessor.processWithExtensionInbound()`
-([`ExtensibleInboundProcessor.java:104-158`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/ExtensibleInboundProcessor.java#L104-L158)) is the concrete
+([`ExtensibleInboundProcessor.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/inbound/processor/ExtensibleInboundProcessor.java)) is the concrete
 inbound flow: it validates the extension's declared direction matches the processing
-direction, builds a `JavaExtensionContextImpl`, invokes `onMessage`, and either stores the
+direction, builds a `JavaExtensionContextImpl` (with the mapping's loaded state, see above), invokes `onMessage`, and either stores the
 returned `CumulocityObject[]` on the `ProcessingContext` for the next processor, or — if
 the extension returns `null`/empty — raises a `ProcessingException` and sets
 `ignoreFurtherProcessing`. A distinct `AbstractMethodError` catch block detects the

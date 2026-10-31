@@ -38,7 +38,7 @@ the service over Pulsar.
 still declares both values, but only one is live:
 
 - **`CUMULOCITY_MQTT_SERVICE`** — dead/removed. In
-  [`ConnectorClientFactory.createConnectorClient()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/ConnectorClientFactory.java#L95-L98),
+  [`ConnectorClientFactory.createConnectorClient()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/ConnectorClientFactory.java),
   this case logs a warning ("Connector type CUMULOCITY_MQTT_SERVICE ... is no longer
   supported ... Use CUMULOCITY_MQTT_SERVICE_PULSAR instead") and instantiates no client.
   Kept only so old persisted connector configurations still deserialize. Git history
@@ -50,7 +50,8 @@ still declares both values, but only one is live:
   (see [connector-pulsar.md](connector-pulsar.md) for the base class). Registered in
   `ConnectorRegistry.registerConnectors()`. `singleton = true` — only one instance of
   this connector type is allowed per tenant, since it represents "the" Cumulocity MQTT
-  Service, not a user-defined broker.
+  Service, not a user-defined broker. The factory creates no client at all (it only logs a
+  warning) when the `C8Y_BASEURL_PULSAR` environment property is empty.
 
 If you're reading `connector/mqtt/*.java` looking for this connector's implementation,
 you're in the wrong package — it lives in `connector/pulsar/`.
@@ -74,8 +75,9 @@ message properties, not real Pulsar subscriptions:
 - A single `deviceProducer` publishes all outbound messages to `to-device`, with the
   target MQTT topic set as both a message property and the partition key
   (`sendMessageToDevice()`).
-- `supportsWildcardInTopic()` unconditionally returns `true` for both directions, since
-  filtering isn't done via Pulsar topic-pattern subscriptions at all.
+- `supportsWildcardInTopic()` reads the read-only `supportsWildcardInTopicInbound`/`Outbound`
+  properties (default `true`), since filtering isn't done via Pulsar topic-pattern
+  subscriptions at all.
 
 ### Configuration — mostly pre-wired
 
@@ -84,11 +86,15 @@ everything is `.readonly(true).hidden(true)` — the create/config body needs on
 type/id/name; connection parameters are auto-filled at connect time:
 
 - `configureCumulocityMqttService()` fetches `MicroserviceCredentials` for the tenant
-  (`configurationRegistry.getMicroserviceCredential(tenant)`) and builds
+  (`serviceRegistry.getMicroserviceCredential(tenant)`) and builds
   `authenticationParams` as `{"userId":"<tenant>/<username>","password":"<password>"}`
   with `authenticationMethod=basic`.
-- `serviceUrl` is set from `configurationRegistry.getMqttServicePulsarUrl()` (default
-  `pulsar://cumulocity:6650`), also read-only/hidden.
+- `serviceUrl` is set from `serviceRegistry.getMqttServicePulsarUrl()` (the `C8Y_BASEURL_PULSAR`
+  property; `pulsar://cumulocity:6650` is only the specification's declared default), also
+  read-only/hidden. `pulsarTenant` is set to the tenant and `pulsarNamespace` to `mqtt`.
+- The only user-editable properties are `negativeAckRedeliveryDelay` (seconds, required,
+  default 60), `isSparkplugHost` and `sparkplugHostId` (defaults to the tenant). The wildcard
+  flags are visible but read-only. `authenticationParams` is sensitive and masked.
 
 So authentication uses the microservice's own bootstrap/service-user credentials, not
 user-supplied broker credentials.
@@ -153,7 +159,11 @@ The one-hour sync interval is not configurable.
 
 ### Connection lifecycle specifics
 
-- `connect()` is fully overridden and retries via `connectWithRetry()`, trying three
+- `supportsConnectionTest()` is `true`: `testConnection()` builds a throwaway Pulsar client and
+  does a partition lookup on `from-device` (15 s limit). An authorization error on the probe
+  still counts as success because the credentials were accepted.
+- `connect()` is fully overridden and retries via `connectWithRetry()` (at most 10 attempts,
+  a delay that grows linearly by 10 s per attempt, no cap), trying three
   subscription "strategies" (standard, async, basic) as fallbacks for brokers that don't
   support the Pulsar PIP-344 protocol feature — a defensive compatibility hack for
   Cumulocity-Pulsar-broker version differences.
@@ -162,6 +172,8 @@ The one-hour sync interval is not configurable.
   Birth-certificate re-publishing via a dedicated `ScheduledExecutorService` — needed
   because this transport doesn't support MQTT-style retained messages the way a real
   MQTT broker would.
+- The platform consumer redelivers negatively acknowledged messages after `negativeAckRedeliveryDelay`
+  (default 60 s) using a multiplier backoff.
 - Producer/consumer recreation is guarded by a `ReentrantLock` (not `synchronized`,
   since it's held across blocking Pulsar client calls) — explicitly to stop two racing
   callers (e.g. concurrent `publishMEAO()` calls) from each independently recreating a

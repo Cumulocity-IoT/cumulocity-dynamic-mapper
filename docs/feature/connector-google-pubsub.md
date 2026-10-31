@@ -18,8 +18,9 @@ implementation to still be settling relative to the more established connectors.
 a subscription into mappings, and publishing mapping output to a topic.
 
 - **Both directions.** Inbound requires a subscription ID; outbound requires a topic.
-- **Authentication is a service-account key**, supplied as connector configuration. No other
-  scheme is offered.
+- **Authentication is a Google credentials JSON**, supplied as connector configuration: either a
+  service-account key or the contents of an Application Default Credentials file. The connector
+  never reads credentials from the host environment.
 - **No wildcards.** Pub/Sub has no topic-pattern subscription, so a mapping topic must name its
   subscription exactly — patterns that work on MQTT do not translate.
 - **Delivery is at-most-once or at-least-once**, chosen per mapping: at-most-once acknowledges
@@ -41,7 +42,7 @@ Built via `ConnectorSpecificationBuilder.create("Google Cloud Pub/Sub", Connecto
 | `topicId` | string | yes | `input-messages` | a mapping's own publish topic overrides this per request |
 | `subscriptionId` | string | no | — | pre-existing Pub/Sub subscription to consume from; required for inbound mappings |
 | `authMode` | option | yes | `serviceAccountKey` | `serviceAccountKey` or `applicationDefaultCredentials` (ADC) |
-| `serviceAccountKey` | sensitive large text | yes | — | full JSON key of the service account, shown when `authMode=serviceAccountKey` |
+| `serviceAccountKey` | sensitive large text | required when shown | — | full JSON key of the service account, shown when `authMode=serviceAccountKey` |
 | `adcCredentialsJson` | sensitive large text | no | — | contents of the ADC JSON file (e.g. `~/.config/gcloud/application_default_credentials.json`), shown when `authMode=applicationDefaultCredentials` |
 | `publishTimeoutSeconds` | numeric | yes | `30` | how long to wait for a publish ack before treating it as failed |
 
@@ -83,7 +84,8 @@ the connector's configured default `topicId`. Message body is raw bytes (binary
 payload if present, else the request body as UTF-8). Every message gets attributes
 `sourceSystem=cumulocity` and, when derivable, `messageType=<API type>` — this is Pub/Sub
 message-attribute metadata, not an ordering key; no ordering-key support (`setOrderingKey()`)
-is implemented. Publish is blocked on with the configured `publishTimeoutSeconds` — so
+is implemented. A publisher is never evicted from the cache after a failed publish (despite a
+code comment saying it is recreated), so a broken publisher is reused until disconnect. Publish is blocked on with the configured `publishTimeoutSeconds` — so
 unlike the WebHook connector, there is a configurable publish timeout — but there's
 still no retry of the publish call itself if it fails (only publisher *creation*
 retries, see above). The publish loop honors cooperative cancellation (checks
@@ -105,14 +107,19 @@ simply recreated on demand on the next publish attempt. Disconnect budgets publi
 and subscriber teardown to 3s each, kept under the connector framework's overall 5s
 disconnect ceiling.
 
+Sensitive properties are `serviceAccountKey` and `adcCredentialsJson`; `supportedQos` is
+`[AT_MOST_ONCE, AT_LEAST_ONCE]`.
+
 ### Gotchas
 
-- A `PUBLISHER_RETRY_OVERHEAD_SECONDS` constant is documented in a comment as capping
-  the library's internal 600s default retry timeout to `publishTimeoutSeconds + 5s`, so
-  `awaitTermination()` during disconnect returns promptly — but its actual application
-  point (a `RetrySettings` builder call) wasn't visible in the reviewed code path. Treat
-  this as possibly aspirational/partially wired rather than confirmed-active behavior,
-  and verify directly in `GooglePubSubClient.java` before relying on it.
+- The `PUBLISHER_RETRY_OVERHEAD_SECONDS` constant is documented as capping the library's
+  internal 600 s retry timeout, but it is **not referenced anywhere**: no `RetrySettings` are
+  set on the `Publisher`, so the library default applies.
+- Every inbound mapping topic starts its own `Subscriber` on the **same** configured
+  `subscriptionId`. Pub/Sub delivers each message to only one of them, so with several inbound
+  mapping topics a message can be dispatched under a topic that did not match it.
+- There is no connection test (`supportsConnectionTest()` is the default `false`), and no
+  reconnect logic: nothing re-creates a subscriber that stopped with an error.
 - Being a newer connector, recent git history is dominated by test fixes and
   code-review-driven corrections (e.g. "Fixing Google Pub/Sub Tests", "Adding ADS for
   Google Pubsub, fixing related issues") rather than settled, long-stable behavior —

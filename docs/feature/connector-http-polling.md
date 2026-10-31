@@ -82,7 +82,11 @@ custom microservice that polls and forwards into Cumulocity or the mapper.
 - **Failure escalates through the same connector health mechanism as every other
   connector**, not a bespoke one: repeated poll failures move the connector through
   `RETRYING` (with backoff) to `FAILED`, visible in the same status UI/API as an MQTT
-  disconnect.
+  disconnect. `FAILED` is a status signal only: the failing topic keeps polling at the capped
+  backoff delay and recovers on its own.
+- **The target URL is checked.** `url` must be `http`/`https`, carry no credentials, and not
+  resolve to a loopback, link-local, any-local, or multicast address.
+- **A connection test is available** for an unsaved configuration (see "HTTP client").
 
 ---
 
@@ -263,7 +267,7 @@ flowchart TD
         Q --> W["handlePollFailure(topic, e)\nconsecutiveFailuresByTopic\n[topic].incrementAndGet()"]
         W --> X{"attempt <= 5?"}
         X -- yes --> Y1["updateStatusRetrying(...)\nscheduleNextPoll(topic, backoffMs)"]
-        X -- no --> Y2["updateStatusWithError(...)\nFAILED — terminal,\nno reschedule"]
+        X -- no --> Y2["updateStatusWithError(...)\nFAILED, capped delay\nscheduleNextPoll(topic, backoffMs)"]
 
         V --> Y3["scheduleNextPoll(topic, pollIntervalMs)"]
         Y1 --> F
@@ -284,20 +288,21 @@ Key properties this diagram makes explicit:
   `handlePollFailure` without touching `MappingStatus.cursor`, so the next poll resumes from the
   last page that actually completed, never from data that was fetched but not confirmed processed.
 - **Failure accounting and the resulting backoff/`FAILED` transition are per-topic** — one topic
-  reaching `FAILED` (terminal, no further `scheduleNextPoll`) does not affect any other topic's
+  reaching `FAILED` (a status only; its polling continues at the capped delay) does not affect any other topic's
   own counter or schedule.
 
 ### Configuration (`ConnectorSpecification`)
 
-Built via `ConnectorSpecificationBuilder.create("REST Polling", ConnectorType.REST_POLLING)`:
+Built via `ConnectorSpecificationBuilder.create("REST Polling", ConnectorType.REST_POLLING)`
+(`singleton=false`, `supportedQos=[AT_LEAST_ONCE]`, sensitive properties `password` and `token`):
 
 | Property | Type | Required | Default | Notes |
 |---|---|---|---|---|
 | `url` | string | yes | — | Base URL; each mapping's topic is appended as the request path — see below |
 | `pollIntervalSeconds` | numeric | no | `60` | Hard minimum `30`, enforced in `isConfigValid()` and defensively re-clamped at runtime in `getEffectivePollIntervalSeconds()` |
-| `authentication` | option | no | — | `None` / `Basic` / `Bearer` |
-| `user` / `password` | string / sensitive | no | — | shown when `authentication=Basic` |
-| `token` | sensitive | no | — | shown when `authentication=Bearer` |
+| `authentication` | option | no | `None` | `None` / `Basic` / `Bearer` |
+| `user` / `password` | string / sensitive | required when shown | — | shown when `authentication=Basic` |
+| `token` | sensitive | required when shown | — | shown when `authentication=Bearer` |
 | `headers` | map | no | `{}` | Additional static headers sent with every poll request |
 | `cursorParam` | string | no | — | Query parameter name for the incremental-fetch cursor (v2, see below); empty disables it |
 | `cursorExtractionExpression` | string | no | — | JSONata evaluated against each response to compute the next cursor (v2); only takes effect with `cursorParam` set |
@@ -307,7 +312,7 @@ Built via `ConnectorSpecificationBuilder.create("REST Polling", ConnectorType.RE
 | `nextPageExpression` | string | no | — | JSONata extracting the next page token from the response; `NextFieldInBody` only |
 | `pageStartValue` | numeric | no | `1` | First page number; `PageNumber` only |
 | `supportsWildcardInTopicInbound` | boolean, readonly | no | `false` | Each "topic" is a concrete poll-job key, not a broker wildcard pattern |
-| `supportsWildcardInTopicOutbound` | boolean, readonly, **hidden** | no | `false` | Hidden rather than shown disabled — this inbound-only connector has no outbound direction for it to describe (fixed 2026-09-21; see `docs/feature/connector-webhook.md`'s note on `WebHookInternal` for the same `.hidden(true)` pattern) |
+| `supportsWildcardInTopicOutbound` | boolean, readonly, **hidden** | no | `false` | Hidden rather than shown disabled — this inbound-only connector has no outbound direction for it to describe (see `docs/feature/connector-webhook.md`'s `supportsWildcardInTopicInbound` row for the same `.hidden(true)` pattern) |
 
 ### Incremental fetch (v2) — IMPLEMENTED 2026-09-21
 
@@ -434,7 +439,11 @@ payload resolved from a `ProcessingContext`). Duplicating ~30 lines of GET-only 
 less invasive than changing `WebHook`'s visibility or extracting a shared base class for a
 single caller. `executeGet()` maps both 4xx and 5xx responses to a `ConnectorException`,
 bounded by a fixed 30s `REQUEST_TIMEOUT` independent of any TCP-level connect/socket
-timeout.
+timeout. `buildWebClient()` also runs `OutboundUrlValidator.requireSafe(url)`.
+
+`supportsConnectionTest()` is `true`: `testConnection()` issues one GET against the base URL
+with the configured authentication. 401/403 fail the test; 2xx and other 4xx pass (the base URL
+is usually not a data endpoint).
 
 **Connection keep-alive disabled — FIXED 2026-09-22.** `buildWebClient()` configures its
 `WebClient` with `HttpClient.create().keepAlive(false)`, deliberately forcing a fresh
@@ -466,7 +475,7 @@ drives it (previously a single connector-wide counter — see "Per-topic failure
 
 - **Success** → reset that topic's counter, `updateStatus(CONNECTED, ...)`.
 - **Failure, attempt ≤ 5** → `updateStatusRetrying(exception, delaySeconds)` (`RETRYING`).
-- **Failure, attempt > 5** → `updateStatusWithError(exception)` (`FAILED`).
+- **Failure, attempt > 5** → `updateStatusWithError(exception)` (`FAILED`); polling continues at the capped delay.
 
 Backoff is linear-capped, mirroring MQTT's reconnect shape but sized to the poll interval
 rather than MQTT's fixed constants: `delay = min(attempt * pollIntervalMs, 300_000ms)`.
@@ -478,11 +487,13 @@ unrelated topic's failures being counted against it (see below).
 #### Per-topic failure isolation — FIXED 2026-09-22
 
 Before this fix, a single `AtomicInteger consecutiveFailures` was shared by every topic on the
-connector. `FAILED` (attempt > `MAX_CONSECUTIVE_FAILURES`, i.e. 5) is **terminal** for a topic's
-polling lifecycle — `handlePollFailure()` deliberately does not call `scheduleNextPoll()` once
-reached, so that topic's poll chain stops dead until a reconnect. With one shared counter, five
+connector. At the time, `FAILED` (attempt > `MAX_CONSECUTIVE_FAILURES`, i.e. 5) was **terminal** for a
+topic's polling lifecycle. That has since changed: `handlePollFailure()` now always calls
+`scheduleNextPoll()` with the capped delay, so `FAILED` is only a status signal. The per-topic
+counter still matters because it decides which topic reports `FAILED`, and the success path
+only clears `FAILED` when no other topic is above the threshold. With one shared counter, five
 consecutive failures from a single persistently-broken topic (bad credentials, deleted upstream
-endpoint, etc.) would silently stop polling for every *other*, perfectly healthy topic on the
+endpoint, etc.) used to stop polling for every *other*, perfectly healthy topic on the
 same connector too — each of their next failures (or even their next *success*, since the
 counter was reset to 0 on any topic's success and incremented by any topic's failure,
 interleaved unpredictably across topics) could tip the shared counter over the threshold.

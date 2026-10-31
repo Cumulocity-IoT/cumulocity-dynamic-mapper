@@ -7,8 +7,8 @@ I/O — connecting, subscribing, publishing; everything else (mapping resolution
 transformation, emitting to Cumulocity) is broker-agnostic and lives in the processor
 pipeline described in [`docs/backend/architecture.md`](../backend/architecture.md).
 
-This is the "hub" document for the framework itself. Per-connector deep-dive pages
-(mqtt.md, kafka.md, etc.) are a later addition — see the placeholder table at the bottom.
+This is the "hub" document for the framework itself. Per-connector deep-dive pages are
+listed in the table at the bottom.
 
 ---
 
@@ -27,7 +27,7 @@ that true; the per-connector pages describe only where a broker genuinely differ
 - **Declare its configuration** as a specification the UI renders — which properties exist, which
   are required, which are secret. Secret values are never returned in readable form.
 - **Report its connection state** continuously, so a tenant can see CONNECTED / DISCONNECTED /
-  FAILED with the reason, rather than inferring it from missing data.
+  FAILED (or RETRYING while a transient platform error delays subscription setup) with the reason, rather than inferring it from missing data.
 - **Reconnect on its own** after a transient failure, with back-off, and recover its
   subscriptions afterwards without user action.
 - **Subscribe only to what is needed.** A topic is subscribed while at least one active mapping
@@ -50,7 +50,7 @@ that true; the per-connector pages describe only where a broker genuinely differ
 ### Core abstraction: `AConnectorClient`
 
 [`AConnectorClient`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/client/AConnectorClient.java)
-(1400+ lines) is the abstract base every connector extends. It owns the broker-agnostic
+(1600+ lines) is the abstract base every connector extends. It owns the broker-agnostic
 concerns — connection state, subscription bookkeeping, SSL/certificate handling,
 housekeeping, metrics — and delegates only the broker-specific parts to subclasses via
 abstract methods:
@@ -64,8 +64,8 @@ abstract methods:
 | `publishMEAO(ProcessingContext<?>)` | Publish a Measurement/Event/Alarm/Operation-derived outbound message to the broker. |
 | `supportsWildcardInTopic(Direction)` | Whether this broker's topic scheme supports wildcards for the given direction. |
 | `supportedDirections()` | Which of `INBOUND`/`OUTBOUND` this connector type supports. |
-| `subscribe(String topic, Qos qos)` (protected) | Subscribe to one topic. The `qos` handed in is already clamped to the connector's `supportedQos` — see [`reliability.md`](reliability.md). |
-| `unsubscribe(String topic)` (protected) | Unsubscribe from one topic. |
+| `subscribe(String topic, Qos qos)` (protected, throws `ConnectorException`) | Subscribe to one topic. The `qos` handed in is already clamped to the connector's `supportedQos` — see [`reliability.md`](reliability.md). |
+| `unsubscribe(String topic)` (protected, throws `ConnectorException`) | Unsubscribe from one topic. |
 | `connectorSpecificHousekeeping(String tenant)` (protected) | Periodic broker-specific maintenance (reconnect checks, etc.), invoked every `HOUSEKEEPING_INTERVAL_SECONDS` (30s). |
 
 `AConnectorClient` composes several extracted managers rather than doing everything
@@ -89,10 +89,17 @@ render a configuration form without any connector-specific frontend code:
 | `properties: Map<String, ConnectorProperty>` | The configuration schema — each entry describes one property's type, whether it's required, display order, and read-only/sensitive flags (`ConnectorPropertyType`, e.g. `SENSITIVE_STRING_PROPERTY` for secrets that get masked). |
 | `supportsMessageContext` | Whether the connector can carry additional message metadata alongside the payload. |
 | `supportedDirections` | Which of `INBOUND`/`OUTBOUND` this connector type supports. |
+| `supportedQos` | QoS levels the connector can honour. Defaults to all three; `AConnectorClient.getConnectorSpecification()` stamps the client's `supportedQos` when the specification does not set it. |
+| `supportsConnectionTest` | `true` when the client overrides `supportsConnectionTest()`/`testConnection()`; the UI then offers a test button backed by `ConfigurationController`'s test endpoint. Default is `false`. |
+
+Property visibility can depend on other properties (`ConnectorPropertyCondition`,
+`ConnectorSpecification.isPropertyActive`), and properties can be grouped (`ConnectorPropertyGroup`).
+`SENSITIVE_STRING_LARGE_PROPERTY` is masked like `SENSITIVE_STRING_PROPERTY`
+(`isPropertySensitive`).
 
 Each concrete client exposes a static/builder method that returns its
-`ConnectorSpecification` (e.g. `MQTT3Client`'s builder at
-[`MQTT3Client.java:478`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/MQTT3Client.java#L478) creates one via `.create("MQTT", ConnectorType.MQTT)`).
+`ConnectorSpecification` (e.g. `MQTT3Client`'s builder in
+[`MQTT3Client.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/MQTT3Client.java) creates one via `.create("MQTT", ConnectorType.MQTT)`).
 
 ### Registration and routing
 
@@ -103,9 +110,10 @@ their outbound dispatchers:
   connector instance for a tenant.
 - `getClientsForTenant(tenant)` / `getClientForTenant(tenant, identifier)` — look up
   connector instances, used by the mapping activation and deployment-map code paths.
+- `unregisterAllClientsForTenant(tenant)` — drop every client of a tenant on tenant removal.
 - `getConnectorSpecification(ConnectorType)` / `getConnectorSpecifications()` — the
   schema registry the configuration UI queries.
-- `addSubscriber` / `getDispatcher(tenant, identifier)` — associates each connector
+- `addSubscriber` / `removeSubscriber` / `getDispatcher(tenant, identifier)` / `getDispatchers(tenant)` — associates each connector
   instance with its `OutboundMessageDispatcher`, so outbound Cumulocity notifications know
   which connector(s) to publish through.
 
@@ -158,7 +166,8 @@ and, for each connector registered against a mapping, calls that connector's
    the connector's configuration schema.
 3. Register the client with `ConnectorRegistry` (`registerConnectors()` in the registry
    wires up specifications at startup; instances are registered per tenant as
-   configurations are created).
+   configurations are created). Add a `case` for the new `ConnectorType` to
+   [`ConnectorClientFactory.createConnectorClient`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/ConnectorClientFactory.java) and an enum value to `ConnectorType`.
 4. Route broker messages into `GenericMessageCallback.onMessage(...)` so
    `InboundMessageDispatcher` picks them up.
 
@@ -177,18 +186,19 @@ of this checklist.
 | `AMQP_091` | [`AMQPClient`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/amqp/AMQPClient.java) | AMQP 0-9-1 connector (e.g. RabbitMQ). |
 | `AMQP_10` | [`AMQP10Client`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/amqp/AMQP10Client.java) | AMQP 1.0 connector. |
 | `PULSAR` | [`PulsarConnectorClient`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/pulsar/PulsarConnectorClient.java) | Apache Pulsar connector. |
-| `CUMULOCITY_MQTT_SERVICE_PULSAR` | [`MQTTServicePulsarClient`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/pulsar/MQTTServicePulsarClient.java) | Extends `PulsarConnectorClient` to talk to Cumulocity's managed MQTT Service over its Pulsar-backed transport. |
+| `CUMULOCITY_MQTT_SERVICE_PULSAR` | [`MQTTServicePulsarClient`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/pulsar/MQTTServicePulsarClient.java) | Extends `PulsarConnectorClient` to talk to Cumulocity's managed MQTT Service over its Pulsar-backed transport. Only created when `C8Y_BASEURL_PULSAR` is set. |
 | `GOOGLE_PUBSUB` | [`GooglePubSubClient`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/googlepubsub/GooglePubSubClient.java) | Google Cloud Pub/Sub connector. |
 | `WEB_HOOK` | [`WebHook`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/webhook/WebHook.java) | Generic outbound webhook connector (publishes via plain HTTP calls to a configured URL). |
 | `WEB_HOOK_INTERNAL` | [`WebHookInternal`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/webhook/WebHookInternal.java) | Extends `WebHook`; internal variant used for Cumulocity's own API as a webhook target. |
-| `TEST` | — (`connector/test/`) | Synthetic connector used by the mapping test/preview feature, not a real broker. |
+| `REST_POLLING` | [`HttpPollingConnector`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/httppolling/HttpPollingConnector.java) | Inbound-only connector that polls a REST endpoint on a schedule. See [connector-http-polling.md](connector-http-polling.md). |
+| `TEST` | [`TestClient`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/test/TestClient.java) | Synthetic connector used by the mapping test/preview feature, not a real broker. |
 
 `ConnectorType` also still declares `CUMULOCITY_MQTT_SERVICE` (see
 [`ConnectorType.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/client/ConnectorType.java)),
 but this is a **removed/dead** enum value kept only for backward compatibility (e.g.
 deserializing old persisted connector configurations). `ConnectorClientFactory` no
 longer instantiates a client for it —
-[`ConnectorClientFactory.java:95-98`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/ConnectorClientFactory.java#L95-L98)
+`ConnectorClientFactory`
 logs a warning ("no longer supported ... Use CUMULOCITY_MQTT_SERVICE_PULSAR instead")
 and returns without creating anything. The real, live Cumulocity-managed MQTT Service
 connector is `CUMULOCITY_MQTT_SERVICE_PULSAR` / `MQTTServicePulsarClient` (see the table
@@ -204,6 +214,7 @@ protocol against Cumulocity's internal Pulsar-backed MQTT Service broker. See
 | [connector-mqtt-service.md](connector-mqtt-service.md) | `MQTTServicePulsarClient` (Cumulocity-managed MQTT Service) |
 | [connector-kafka.md](connector-kafka.md) | `KafkaClientV2` |
 | [connector-http.md](connector-http.md) | `HttpClient` |
+| [connector-http-polling.md](connector-http-polling.md) | `HttpPollingConnector` |
 | [connector-amqp.md](connector-amqp.md) | `AMQPClient`, `AMQP10Client` |
 | [connector-pulsar.md](connector-pulsar.md) | `PulsarConnectorClient` |
 | [connector-webhook.md](connector-webhook.md) | `WebHook`, `WebHookInternal` |

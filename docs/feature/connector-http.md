@@ -28,11 +28,16 @@ mapping resolution as if it had arrived from a broker.
 - **The URL sub-path is the topic.** Everything after the connector's base path is used to resolve
   mappings, so the same topic patterns and wildcards apply as for a broker.
 - **Authentication is Cumulocity's, not the connector's.** There are no credentials to configure:
-  the caller authenticates against the platform like any other API client, and platform
-  authorisation decides who may post. The connector deliberately adds no second scheme.
-- **Delivery is at-least-once.** The response is sent after the mapping pipeline ran, so the
-  caller learns the outcome; a mapping asking for at-most-once is served at-least-once anyway —
-  see [reliability.md](reliability.md).
+  the caller authenticates against the platform like any other API client, and the caller must
+  hold the `ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE` role (otherwise HTTP 403). The connector
+  deliberately adds no second scheme.
+- **POST and PUT are accepted.** Any body type is accepted; the body is passed on as raw bytes.
+- **The caller learns only about request-level failures.** The endpoint answers 200 once the
+  message has been handed to the mapping pipeline. It does not wait for the pipeline result, so a
+  mapping error after that point is not reported to the caller. Errors raised while handing the
+  message over (for example no HTTP connector configured) return HTTP 400. The connector
+  declares only at-least-once; a mapping asking for another level is clamped to it, but no
+  redelivery happens, since the caller would have to retry — see [reliability.md](reliability.md).
 
 ---
 
@@ -57,7 +62,7 @@ Built via `ConnectorSpecificationBuilder.create("HTTP Endpoint", ConnectorType.H
 
 | Property | Type | Required | Default | Notes |
 |---|---|---|---|---|
-| `path` | string, readonly | no | `/service/dynamic-mapper-service/httpConnector` | the fixed receiving endpoint |
+| `path` | string, readonly | no | `/service/dynamic-mapper-service/httpConnector` | the fixed receiving endpoint (informational; the controller maps `/httpConnector/**`) |
 | `supportsWildcardInTopicInbound` | boolean, readonly | no | `true` | |
 | `supportsWildcardInTopicOutbound` | boolean, readonly, **hidden** | no | `false` | Hidden rather than shown disabled — this connector is inbound-only, so there's no outbound direction for it to describe (fixed 2026-09-21) |
 | `cutOffLeadingSlash` | boolean | no | `true` | user-configurable |
@@ -65,13 +70,17 @@ Built via `ConnectorSpecificationBuilder.create("HTTP Endpoint", ConnectorType.H
 `singleton = true` — only one HTTP connector instance is allowed per tenant. There are
 **no authentication-related properties at all** (no basic auth, bearer token, API key,
 custom headers) — `isConfigValid()` simply returns `configuration != null`, since every
-property has a default. Inbound auth is presumably handled at the Cumulocity
-tenant/microservice level, not by this connector.
+property has a default. Inbound auth is handled by the platform plus
+`@PreAuthorize("hasRole('ROLE_DYNAMIC_MAPPER_HTTP_CONNECTOR_CREATE')")` on
+`HttpConnectorController`. The connector has no sensitive properties and
+`supportedQos = [AT_LEAST_ONCE]`.
 
 ### Path → topic mapping
 
 A POST to `.../httpConnector/temp/berlin_01` maps to mapping topic `temp/berlin_01`
-(`pathToTopic()`/`cutOffLeadingSlash` control the exact string transform). "Subscribing"
+(`cutOffLeadingSlash` removes one leading slash). The controller computes the sub-path itself
+(`processGenericMessage`); `HttpClient.pathToTopic()` implements the same rule but is not called
+by it. "Subscribing"
 to a topic for HTTP just means registering that a URL sub-path has an active inbound
 mapping, for routing purposes — it is not a poll target, and there's no server socket
 managed by this class (the embedded servlet container handles that).
@@ -92,7 +101,9 @@ subscriptions are always active, they just define routing rules."
 intentional so `HttpConnectorController` can map them to an HTTP 400 response.
 Previously swallowing exceptions here caused malformed payloads to always get a 200 OK
 with no retry signal to the caller — a documented past bug, now fixed by letting the
-exception propagate to the controller layer.
+exception propagate to the controller layer. Note that `dispatcher.onMessage()` returns once the
+message is submitted to the async pipeline and the returned `ProcessingResultWrapper` is
+discarded, so only synchronous failures reach the controller.
 
 ### Gotchas
 

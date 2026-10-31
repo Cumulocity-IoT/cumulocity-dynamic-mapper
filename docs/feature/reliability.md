@@ -112,7 +112,8 @@ strictest mapping wins, and no mapping ever gets a weaker guarantee than it aske
 The result lands in
 [`ProcessingResultWrapper.consolidatedQos`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/runtime/ProcessingResultWrapper.java),
 whose getter is null-safe: early-exit paths (no mapping resolved, unparseable payload)
-never set it, and every caller would otherwise have to guard before reading the level.
+never set it, and every caller would otherwise have to guard before reading the level. A message that
+resolves to no mapping consolidates to `AT_MOST_ONCE`, so it is acknowledged at once.
 
 ##### The two-sided bound (inbound)
 
@@ -179,6 +180,7 @@ name, so an operator can see why a mapping is not running at its configured leve
 | Google Pub/Sub | 0, 1 | Level 0 acks before processing; level 1 acks after success and `nack`s on error so Pub/Sub redelivers. |
 | HTTP | 1 only | The HTTP response is sent after the pipeline ran, i.e. inherently at-least-once. A mapping asking for level 0 is *upgraded*. |
 | WebHook | 1 only | Outbound only; an HTTP call either succeeds or is retried. |
+| HTTP Polling | 1 only | Inbound only; the poll response is acknowledged after the pipeline ran. |
 | Test connector | 0, 1, 2 | Simulated — never clamps, so mappings can be exercised at their configured level. |
 
 The capability is also published to the frontend: `AConnectorClient.getConnectorSpecification()`
@@ -300,7 +302,10 @@ Two details matter and are easy to get wrong:
 - **`Future.cancel(true)` alone is not enough.** CPU-bound JavaScript ignores Java thread
   interruption; only `Context.close(cancelIfExecuting=true)` — registered as a *cancel
   action* — stops it. A callback that calls `Future.cancel(true)` directly leaves the
-  GraalVM context running. Every callback must use `cancelAndDrain`.
+  GraalVM context running. Every callback must use `cancelAndDrain`. All broker callbacks do,
+  except `CustomWebSocketClient` (outbound): it calls `cancelProcessing()` (which does run the
+  cancel actions) and then polls `Future.isDone()` for up to 2 s, so it cannot detect a worker
+  that is still running (see the next point).
 - **`Future.isDone()` cannot tell you the worker has left.** It flips to `true` the instant
   `cancel(true)` is called, while the thread may still be spinning in JS or blocked in an
   uninterruptible HTTP call. The drain therefore waits on a latch the pipeline itself counts
@@ -363,12 +368,14 @@ failures counts.
 
 The reset is deliberately cheap on the hot path — a mapping that did not opt in
 (`maxFailureCount == 0`) or that has no failures pending costs a map lookup and a volatile
-read, and never takes the status monitor. Test runs (`context.isTesting()`) never touch the
-counter.
+read, and never takes the status monitor. Test runs (`!context.affectsMappingStatus()`: Dry Run, Live Test) never touch the
+counter. A mapping with `maxFailureCount == 0` still counts and resets the streak, because the
+statistics page shows it as the mapping's health.
 
 #### What happens at the threshold
 
-The failure that makes `currentFailureCount >= maxFailureCount` triggers, via
+The failure that makes `currentFailureCount` **equal** `maxFailureCount` (the exact crossing, not
+`>=`, so the event fires once per streak) triggers, via
 [`MappingService.increaseAndHandleFailureCount()`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingService.java):
 
 1. A `MAPPING_FAILURE_EVENT` logging event carrying `mappingId` and `failureCount`.
@@ -401,7 +408,10 @@ starts with a clean slate.
 Any processor calling `mappingService.increaseAndHandleFailureCount(...)` — deserialization
 errors, enrichment/identity-resolution errors, JSONata and Smart Function evaluation errors,
 extension errors, and failures sending to Cumulocity. A message **filtered out** by
-`filterMapping`/`filterInventory` is not a failure; nor is a test run.
+`filterMapping`/`filterInventory` is not a failure; nor is a test run. The count goes up at each
+failing **processor**, not once per message, so a message that fails in two stages (for example
+a deserialization error followed by a transformation error on the same leg) adds 2 to both
+`errors` and `currentFailureCount`.
 
 #### The poison-pill guard
 
@@ -410,10 +420,15 @@ caps how often it will do so for the *same message*: `MAX_CONSECUTIVE_FAILURES` 
 `MAX_CONSECUTIVE_RECONNECTS`, **fixed at 5** in
 [`AbstractMqttCallback`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/AbstractMqttCallback.java),
 [`AbstractPulsarCallback`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/pulsar/AbstractPulsarCallback.java),
-[`KafkaClientV2`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/kafka/KafkaClientV2.java) and
+[`KafkaClientV2`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/kafka/KafkaClientV2.java),
+[`HttpPollingConnector`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/httppolling/HttpPollingConnector.java) and
 [`CustomWebSocketClient`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/notification/websocket/CustomWebSocketClient.java).
-After 5 attempts the message is acknowledged and dropped, so one undigestible payload
-cannot block a subscription forever. This is not configurable per mapping.
+Once the limit is reached the message is acknowledged and dropped, so one undigestible payload
+cannot block a subscription forever. This is not configurable per mapping. The exact cut-off
+differs: `CustomWebSocketClient` drops on the 5th failure (4 redeliveries), while
+`AbstractMqttCallback` checks the count before incrementing it and drops on the 6th (5
+reconnects). Google Pub/Sub has no such guard: a `nack`ed message is redelivered by Pub/Sub
+until it succeeds or the subscription's own dead-letter policy applies.
 
 For MQTT the redelivery is achieved by *reconnecting* (with exponential back-off), so the
 broker retransmits whatever it has not seen acknowledged — which is why it is gated by the
@@ -429,7 +444,14 @@ Note the two counters are per different things: the poison-pill counter is **per
   incremented by the *processor* that failed, for every failure. Whether the *message* is
   then redelivered is a separate decision made by the connector callback from the HTTP
   status class: `< 500` (client error, e.g. a malformed payload) is acknowledged —
-  redelivering would not help — while `>= 500` triggers a redelivery. So a mapping can be
+  redelivering would not help — while `>= 500` triggers a redelivery. The status is taken from
+  an `SDKException` wrapped in a `ProcessingException`
+  (`ProcessingResultHelper.extractMaxHttpStatus`); a failure without one (JSONata or Smart
+  Function error, template error, a network error that is not an `SDKException`) counts as
+  status 0 and is acknowledged, even at QoS > 0. `CustomWebSocketClient` reads the status only
+  from per-request errors, so a leg that failed before it produced requests is acknowledged as
+  well. In `AbstractMqttCallback` an `ExecutionException` from the pipeline future neither
+  acknowledges nor reconnects; the message stays unacknowledged. So a mapping can be
   deactivated by failures that were never retried.
 - **`maxFailureCount` is not a rate.** 10 means "10 in a row", however long that takes. A
   mapping that alternates success/failure forever never trips it. That is intentional —
@@ -448,8 +470,8 @@ exposes, so what each one counts — and when it resets — matters.
 
 | Counter | Counts | Reset by |
 |---|---|---|
-| `messagesReceived` | Messages that reached this mapping's processing. Counted **per mapping**: one broker message matching three mappings increments three counters, so the sum across mappings is not the number of messages the broker delivered. | `reset()` only |
-| `errors` | Failed messages, for the lifetime of the mapping. Deliberately **not** reset by a successful message, so it stays usable as an error-rate indicator. | `reset()` only |
+| `messagesReceived` | Messages that reached this mapping's processing (counted in the enrichment step, so a message that fails earlier, in deserialization, is counted in `errors` only). Counted **per mapping**: one broker message matching three mappings increments three counters, so the sum across mappings is not the number of messages the broker delivered. | `reset()` only |
+| `errors` | Failures, for the lifetime of the mapping. Counted at each failing processor, so one message can add more than one. Deliberately **not** reset by a successful message, so it stays usable as an error-rate indicator. | `reset()` only |
 | `messagesProcessed` | Messages whose processing leg ended without an error and without being dropped. | `reset()` only |
 | `messagesFiltered` | Messages deliberately dropped — a non-matching `filterMapping` / `filterInventory`, or a Smart Function / extension that set "ignore further processing". Not an error; neither `errors` nor `currentFailureCount` change. | `reset()` only |
 | `requestsCreated` / `requestsFailed` | Requests the mapping produced (Cumulocity calls inbound, broker publishes outbound) and how many of them failed. Per request, so one message can add several. | `reset()` only |
@@ -473,7 +495,8 @@ that monitor, sees current, non-torn values).
 
 One extra status per tenant counts what belongs to **no** mapping:
 
-- a message arriving on a topic that no mapping covers (`messagesReceived`), and
+- an **inbound** message arriving on a topic that no mapping covers (`messagesReceived`); the outbound
+  dispatcher does not count a notification that no outbound mapping selects, and
 - errors raised before any mapping could be resolved — an unparseable payload, a failed
   mapping resolution (`errors`).
 

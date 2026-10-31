@@ -23,7 +23,11 @@ than a broker — an alerting service, a partner API, another Cumulocity tenant.
 - **The mapping decides the payload, the connector decides the destination.** The target URL,
   method, headers and authentication belong to the connector configuration; what is sent is
   whatever the mapping produced.
-- **Delivery is at-least-once.** A call either succeeds or is retried.
+- **Delivery is attempted once per request.** The connector declares at-least-once, but a failed
+  call is recorded as an error on the request and is not retried by the connector. A mapping
+  asking for at-most-once or exactly-once is clamped to at-least-once.
+- **The target URL is checked.** Only `http`/`https`, no credentials in the URL, and no host
+  that resolves to a loopback, link-local, any-local, or multicast address.
 - **Posting back into Cumulocity is a supported destination.** A WebHook may target the platform's
   own API, in which case it authenticates with the microservice's credentials rather than
   configured ones — this is how mappings feed data back into Cumulocity.
@@ -50,15 +54,15 @@ Built via `ConnectorSpecificationBuilder.create("Webhook", ConnectorType.WEB_HOO
 
 | Property | Type | Required | Default | Notes |
 |---|---|---|---|---|
-| `cumulocityInternal` | boolean | no | `false` | toggles the "internal" mode (see [connector-mqtt-service.md](connector-mqtt-service.md)-style auto-wiring, below) |
-| `baseUrl` | string | no | — | shown when `cumulocityInternal=false` |
-| `authentication` | option | no | — | `Basic`/`Bearer`, shown when `cumulocityInternal=false` |
-| `user` / `password` | string / sensitive | no | — | shown when `authentication=Basic` |
-| `token` | string | no | — | shown when `authentication=Bearer` |
+| `cumulocityInternal` | boolean | no | `false` | toggles the "internal" mode (auto-wiring, below) |
+| `baseUrl` | string | yes | — | shown when `cumulocityInternal=false`; must pass the URL check above |
+| `authentication` | option | no | `None` | `None`/`Basic`/`Bearer`, shown when `cumulocityInternal=false` |
+| `user` / `password` | string / sensitive | required when shown | — | shown when `authentication=Basic` |
+| `token` | sensitive | required when shown | — | shown when `authentication=Bearer` |
 | `headerAccept` | string | no | `application/json` | shown when `cumulocityInternal=false` |
-| `baseUrlHealthEndpoint` | string | no | — | health-check GET target, shown when `cumulocityInternal=false` |
+| `baseUrlHealthEndpoint` | string | no | — | health-check GET target, shown when `cumulocityInternal=false`; must be a relative path such as `/health` (a full URL is rejected) |
 | `headers` | map | no | `{}` | arbitrary custom headers |
-| `supportsWildcardInTopicInbound` | boolean, readonly, **hidden** | no | `false` | Hidden rather than shown disabled — WebHook is outbound-only, so there's no inbound direction for it to describe (fixed 2026-09-21) |
+| `supportsWildcardInTopicInbound` | boolean, readonly, **hidden** | no | `false` | Hidden rather than shown disabled — WebHook is outbound-only, so there's no inbound direction for it to describe |
 | `supportsWildcardInTopicOutbound` | boolean, readonly | no | `true` | |
 
 Supports POST/PUT/PATCH/DELETE; the mapping's publish topic is appended to `baseUrl`
@@ -85,18 +89,31 @@ For each request in the batch:
   childAdditions, deviceParents, assetParents, additionParents`) before the PUT.
 - **No retry/backoff**: a failed HTTP call is caught once, logged, and recorded on the
   request/context — there is no automatic retry loop for outbound publish, unlike some
-  other connectors.
+  other connectors. Every call is bounded by a 30 s `REQUEST_TIMEOUT` before `.block()`.
+- **Connection and health**: `connect()` builds the `WebClient` (running
+  `OutboundUrlValidator.requireSafe(baseUrl)`) and, when a health endpoint is set, GETs it once.
+  `connectorSpecificHousekeeping()` repeats that GET every 30 s but only logs a failure; it does
+  not change the connector status. Without a health endpoint the connector is assumed connected.
+- **Connection test**: `supportsConnectionTest()` is `true` for `WebHook` (GET only; with no
+  health endpoint a 4xx other than 401/403 on the base URL counts as reachable) and `false`
+  for `WebHookInternal`.
+- **Missing credentials**: `Basic` without user/password or `Bearer` without token is rejected
+  by `isConfigValid()`; if it reaches `buildWebClient()` anyway, requests go out with a warning
+  and no `Authorization` header.
 
 ### `cumulocityInternal` mode
 
 When `cumulocityInternal=true`, `configureCumulocityInternal()` auto-wires the
 connector to point at Cumulocity's own internal API rather than an external URL:
 authenticates as `<tenant>/<microservice-username>` using the microservice's own
-bootstrap OAuth credentials (`configurationRegistry.getMicroserviceCredential(tenant)`),
+credentials (`serviceRegistry.getMicroserviceCredential(tenant)`),
 hardcodes `authentication=Basic` and `baseUrl=http://cumulocity:8111` (the internal
 service-to-service hostname, not publicly reachable), and derives the request's API
-path from the publish topic via `APITopicUtil.deriveAPIFromTopic()` instead of a
-literal URL append.
+path from the publish topic via `APITopicUtil.deriveAPIFromTopic()` (falling back to the
+request's pre-set API) instead of a literal URL append.
+`configureCumulocityInternal()` also presets `baseUrlHealthEndpoint` to the full URL
+`http://cumulocity:8111/notification2`, which `healthUri()` rejects as non-relative. Unverified
+at runtime: if that value reaches the stored configuration, `connect()` fails its health check.
 
 ### `WebHookInternal` — a thin, more-locked-down subclass
 

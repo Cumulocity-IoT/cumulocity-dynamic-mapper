@@ -41,9 +41,9 @@ specific reason, rather than failing later on every message.
 
 | Layer | Class / function | When | Notes |
 |---|---|---|---|
-| Backend (authoritative) | [`MappingValidator`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingValidator.java) | `POST /mapping`, `PUT /mapping/{id}` (via `MappingService.createMapping`/`updateMapping`), and `publishDraft` (via `MappingVersionService`) | Returns a `List<ValidationError>`; a non-empty list is thrown as `MappingValidationException` → HTTP **422 Unprocessable Entity**. `PUT /mapping/{id}/draft` (saving a draft) skips this — drafts may be incomplete. |
-| Backend (structural) | Bean Validation (`@NotNull`) on [`Mapping.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/Mapping.java) | Same create/update endpoints, via `@Valid` | Only checks required fields are non-null (`id`, `identifier`, `name`, `targetAPI`, `direction`, `sourceTemplate`, `targetTemplate`, `transformationType`, `substitutions`, `active`, `debug`, `useExternalId`, `maxFailureCount`, `qos`, `lastUpdate`). Failures → HTTP 400. No format/business rules here. |
-| Frontend (live UX) | `checkTopicsInboundAreValid` / `checkTopicsOutboundAreValid` in [`dynamic-mapper-ui/src/mapping/shared/util.ts`](../../dynamic-mapper-ui/src/mapping/shared/util.ts) | Reactive form group validators on the mapping stepper's topic step | Mirrors the backend's topic/wildcard/consistency rules only (not substitutions, JSON templates, extensions, or the uniqueness checks) so the user gets inline feedback before submitting. The backend re-checks everything regardless — the frontend check is UX only, not a security boundary. |
+| Backend (authoritative) | [`MappingValidator`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/mapping/MappingValidator.java) | `POST /mapping`, `PUT /mapping/{id}` (via `MappingService.createMapping`/`updateMapping`), `POST /mapping/{id}/publish` (via `MappingVersionService.publish`), and **activation** (`ACTIVATE_MAPPING` operation, via `MappingService.setActivationMapping`, which skips validation when it deactivates or switches to an already published version) | Returns a `List<ValidationIssue>`; a non-empty list is thrown as `MappingValidationException`. `MappingController` maps it to HTTP **422 Unprocessable Entity** through its own `@ExceptionHandler`; `OperationController` has none, so a validation failure on activation does not get the 422 body. `PUT /mapping/{id}/draft` (saving a draft) skips validation — drafts may be incomplete. |
+| Backend (structural) | Bean Validation (`@NotNull`) on [`Mapping.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/Mapping.java) | Same create/update endpoints, via `@Valid` | Only checks required fields are non-null (`id`, `identifier`, `name`, `targetAPI`, `direction`, `sourceTemplate`, `targetTemplate`, `transformationType`, `substitutions`, `active`, `debug`, `useExternalId`, `qos`, `lastUpdate`). Failures → HTTP 400. No format/business rules here. |
+| Frontend (live UX) | `checkTopicsInboundAreValid` / `checkTopicsOutboundAreValid` in [`dynamic-mapper-ui/src/shared/mapping/util.ts`](../../dynamic-mapper-ui/src/shared/mapping/util.ts) | Reactive form group validators on the mapping stepper's topic step | Mirrors the backend's topic/wildcard/consistency rules only (not substitutions, JSON templates, extensions, or the uniqueness checks) so the user gets inline feedback before submitting. The backend re-checks everything regardless — the frontend check is UX only, not a security boundary. |
 
 If you bypass the UI (e.g. call the REST API directly), only the two backend layers apply.
 
@@ -94,7 +94,10 @@ single joined toast that closed the editor and discarded the work.
 
 #### 1. Source/target templates must be valid JSON
 
-- `sourceTemplate` must always parse as valid JSON.
+- `sourceTemplate` must always parse as valid JSON. "Valid" is the lenient `org.json`
+  `JSONTokener.nextValue()` check, not a strict parser: it accepts unquoted keys, trailing text
+  after the first value (`{"a":1} garbage`) and a bare word or number (`not json at all`, `42`).
+  Unclosed objects and arrays, and empty or `null` templates, are rejected.
 - `targetTemplate` must parse as valid JSON **unless** the mapping is
   `TransformationType.EXTENSION_JAVA`, or `MappingType` is `PROTOBUF_INTERNAL`,
   `ANY_PAYLOAD`, or `SPARKPLUGB` (these produce/consume non-JSON or externally-defined
@@ -102,8 +105,8 @@ single joined toast that closed the editor and discarded the work.
 
 | Error code | Example (fails) | Example (passes) |
 |---|---|---|
-| `Source_Template_Must_Be_Valid_JSON` | `sourceTemplate: "{temperature: 25.5"` (missing closing brace, unquoted key) | `sourceTemplate: "{\"temperature\": 25.5}"` |
-| `Target_Template_Must_Be_Valid_JSON` | `targetTemplate: "not json at all"` | `targetTemplate: "{\"c8y_Temperature\": {}}"` |
+| `Source_Template_Must_Be_Valid_JSON` | `sourceTemplate: "{\"temperature\": 25.5"` (missing closing brace) | `sourceTemplate: "{\"temperature\": 25.5}"` |
+| `Target_Template_Must_Be_Valid_JSON` | `targetTemplate: "{\"c8y_Temperature\": {"` (unclosed object) | `targetTemplate: "{\"c8y_Temperature\": {}}"` |
 
 #### 2. Array-rooted templates require `SMART_FUNCTION`
 
@@ -140,7 +143,9 @@ field is resolved at runtime.
 #### 5. One valid device-identifier substitution (direction-dependent cardinality)
 
 A substitution "defines the device identifier" if its path (for INBOUND: `pathTarget`,
-for OUTBOUND: `pathSource`) references `_IDENTITY_.externalId` or `_IDENTITY_.c8ySourceId`.
+for OUTBOUND: `pathSource`) contains the token `_IDENTITY_.externalId` or
+`_IDENTITY_.c8ySourceId` as a whole word (`Mapping.definesDeviceIdentifier`; a longer name that
+merely starts with the token does not count).
 
 This check is **skipped entirely** when `mappingType` is `PROTOBUF_INTERNAL`,
 `ANY_PAYLOAD`, or `SPARKPLUGB`, or when `transformationType` is `EXTENSION_JAVA` or
@@ -175,7 +180,7 @@ paths the engine accepts. (The mapping editor and the AI drawer do evaluate `pat
 JSONata, but only to preview the target node; that is a UI aid, not this rule.)
 
 Every offending substitution is reported separately, each carrying its index, the offending
-expression and the parser's message — see [Error detail](#error-detail) below.
+expression and the parser's message — see [Error detail](#error-detail) above.
 
 | Error code | Fails | Passes |
 |---|---|---|
@@ -210,7 +215,7 @@ MQTT-style wildcards in `mappingTopic`:
 #### 7. `mappingTopic` vs. `mappingTopicSample` consistency
 
 `mappingTopicSample` is a concrete example topic used for testing/preview; it must have
-the same *structure* as `mappingTopic`:
+the same *structure* as `mappingTopic`. The check is skipped when the sample is null or empty.
 
 - **Level count**: without a trailing `#`, the sample must have exactly the same number
   of `/`-separated levels as the topic. With a trailing `#`, the sample only needs **at
@@ -300,7 +305,8 @@ mappings — genuine, wildcard-driven fan-out, supported by design.
 
 #### 8. `publishTopic` vs. `publishTopicSample` consistency
 
-Same idea as rule 7, but for outbound publishing and **without** the `#`-matches-any-suffix
+Same idea as rule 7, but for outbound publishing (skipped unless both `publishTopic` and
+`publishTopicSample` are set; there is no wildcard-placement rule for `publishTopic`) and **without** the `#`-matches-any-suffix
 relaxation — `publishTopic`/`publishTopicSample` must always have exactly the same
 number of levels, and every non-wildcard segment must match.
 
