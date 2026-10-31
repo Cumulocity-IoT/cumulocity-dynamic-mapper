@@ -69,15 +69,18 @@ depend on `org.graalvm.polyglot`:
 | — | `getTenant()` |
 | `addWarning(String)` / `addLogMessage(String)` | `addWarning(String)` / `addLog(String)` |
 
-State is intended to persist across invocations for the same mapping (`context.setNativeState`), like Smart Function
+State persists across invocations for the same mapping (`context.setNativeState`), like Smart Function
 `context.setState` (see [`flow-state.md`](../../dynamic-mapper-ui/public/docs/flow-state.md)), backed by `FlowStateStore`.
-**Known defect: native state is loaded but never saved.** `ExtensibleInboundProcessor.processWithExtensionInbound()` loads
-the mapping's state from `FlowStateStore` into the new `JavaExtensionContextImpl` (an empty state for a test run), but
-the only code that writes it back is `JavaExtensionContextImpl.clearState()`, and nothing calls that method:
-`ProcessingContext.close()` calls `clearState()` on the *flow context*, which is a `SmartFunctionContext` that exists
-only for `SMART_FUNCTION` mappings (`AbstractEnrichmentProcessor` builds it for no other type). So `setNativeState` values
-last for one message. Outbound extensions are built without a `FlowStateStore` at all, so they have no state even in
-principle.
+Both extensible processors build the `JavaExtensionContextImpl` with the mapping's state loaded from the store (an empty
+state and no store for a test run), call `extension.onMessage`, and then call `persistNativeState()`. That writes back only
+the keys the invocation changed, through `FlowStateStore.commitChanges`, so a message that only reads cannot revert what
+concurrent messages wrote; `setNativeState(key, null)` removes the key and `clearState()` wipes the mapping's stored state.
+Two points are deliberate. State is written also when the extension returns an empty result, because deduplication
+extensions record what they saw and return nothing. It is **not** written when `onMessage` throws: the message fails and is
+redelivered, and state from the failed attempt would make the retry look like a duplicate. (Smart Functions still write on
+failure; see [flow-state-review.md](../improvements/flow-state-review.md).) Nested lists, maps, and sets are deep-copied on
+load, because the stored objects are shared by messages running in parallel. Two messages writing the same key still race.
+Earlier versions loaded the state but never saved it, and outbound extensions had no store at all.
 
 The concrete implementation wired into `JavaExtensionContext` is
 [`JavaExtensionContextImpl`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/flow/JavaExtensionContextImpl.java), which wraps a `ProcessingContext` and delegates the

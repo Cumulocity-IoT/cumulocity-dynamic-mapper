@@ -30,6 +30,7 @@ import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.AbstractExtensibleProcessor;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
+import dynamic.mapper.processor.flow.FlowStateStore;
 import dynamic.mapper.processor.flow.JavaExtensionContextImpl;
 import dynamic.mapper.processor.model.JavaExtensionContext;
 import dynamic.mapper.processor.model.DeviceMessage;
@@ -54,10 +55,14 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor<Object> {
 
+    private final FlowStateStore flowStateStore;
+
     public ExtensibleOutboundProcessor(
             MappingService mappingService,
-            ExtensionInboundRegistry extensionInboundRegistry) {
+            ExtensionInboundRegistry extensionInboundRegistry,
+            FlowStateStore flowStateStore) {
         super(mappingService, extensionInboundRegistry);
+        this.flowStateStore = flowStateStore;
     }
 
     @Override
@@ -108,17 +113,26 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor<Obj
 
             // 2. Create JavaExtensionContext
             // Note: For outbound, C8YAgent is typically not needed, but we provide it for consistency
-            JavaExtensionContext prepContext = new JavaExtensionContextImpl(
+            // A test run neither reads nor overwrites the state production traffic keeps for this mapping.
+            boolean isolateState = !context.affectsMappingStatus();
+            java.util.Map<String, Object> initialState = isolateState
+                    ? new java.util.HashMap<String, Object>()
+                    : flowStateStore.loadState(tenant, context.getMapping().getIdentifier());
+            JavaExtensionContextImpl prepContext = new JavaExtensionContextImpl(
                 context.getFlowContext(),
                 null, // c8yAgent not typically needed for outbound
                 tenant,
                 context.isTesting(),
                 context.getMapping(),
-                context
+                context,
+                isolateState ? null : flowStateStore,
+                initialState
             );
 
             // 3. Call new pattern method
             DeviceMessage[] results = extension.onMessage(message, prepContext);
+            // Also for an empty result: deduplication extensions record what they saw and return nothing.
+            prepContext.persistNativeState();
 
             // 4. Store results in context for processing by ExtensibleResultOutboundProcessor
             if (results != null && results.length > 0) {

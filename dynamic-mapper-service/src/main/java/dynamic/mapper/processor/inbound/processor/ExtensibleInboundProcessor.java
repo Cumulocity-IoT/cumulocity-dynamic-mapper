@@ -119,7 +119,7 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor<byte
         java.util.Map<String, Object> initialState = isolateState
                 ? new java.util.HashMap<String, Object>()
                 : flowStateStore.loadState(tenant, mapping.getIdentifier());
-        JavaExtensionContext prepContext = new JavaExtensionContextImpl(
+        JavaExtensionContextImpl prepContext = new JavaExtensionContextImpl(
             context.getFlowContext(),
             c8yAgent,
             tenant,
@@ -134,6 +134,8 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor<byte
         CumulocityObject[] results;
         try {
             results = extension.onMessage(message, prepContext);
+            // Also for an empty result: deduplication extensions record what they saw and return nothing.
+            prepContext.persistNativeState();
         } catch (AbstractMethodError e) {
             String errorMsg = String.format(
                 "%s - Extension '%s' (class: %s) is incompatible with the current interface. " +

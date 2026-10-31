@@ -362,7 +362,7 @@ In addition to `parameter`, the map returned by `getConfigAsMap()` also contains
 
 `context.getTenant()`, `context.getMapping()`, and `context.getExternalId()` return the same values directly.
 `context.addWarning(text)` records a warning that appears in the test result and the microservice log. Extension state
-(`setNativeState`) is not reliably kept between messages, see [Flow state](/c8y-pkg-dynamic-mapper/introduction/flow-state).
+(`setNativeState`) is kept between messages of the same mapping, see [Flow state](/c8y-pkg-dynamic-mapper/introduction/flow-state).
 
 ##### Accessing the broker message key {#broker-message-key}
 

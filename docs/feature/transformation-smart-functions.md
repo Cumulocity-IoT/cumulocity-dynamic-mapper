@@ -172,9 +172,12 @@ constructed fresh per message in `AbstractEnrichmentProcessor.process()`
 ([`AbstractEnrichmentProcessor.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractEnrichmentProcessor.java)), seeded with the
 mapping's flow state loaded from `FlowStateStore` — this is the backing store
 for the `context.getState()`/`setState()` persistence documented in
-`docs/smart-functions.md`. `FlowStateStore` is an in-memory map keyed `tenant → mapping identifier → key`: it is
-lost on restart, a mapping's state is cleared when the mapping is deleted, and the cleanup job clears **all** of a
-tenant's state once no mapping of that tenant has saved state for `flowStateRetention` minutes (default 1440; `0`
+`docs/smart-functions.md`. `FlowStateStore` is an in-memory map keyed `tenant → mapping identifier → key`. A message loads a copy when it starts and
+`SmartFunctionContext.persistState()` (called from `ProcessingContext.close()`) writes back **only the keys that message
+changed** through `FlowStateStore.commitChanges`; `clearState()` from the function wipes the mapping's stored state, and a
+`null` value removes the key. Two messages writing the same key still race, and the last one wins. The store is
+lost on restart, a mapping's state is cleared when the mapping is deleted, and the cleanup job clears **each mapping's** state
+once that mapping has not written it for `flowStateRetention` minutes (default 1440; a read does not count; `0`
 disables expiry). When the run is a test (`!affectsMappingStatus()`), the context gets an empty state and no store, so
 nothing is read or written.
 

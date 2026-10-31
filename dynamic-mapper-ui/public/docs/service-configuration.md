@@ -52,7 +52,7 @@ interact.
 | **Size inbound Id cache**, **Size outbound Id cache**, **Size inventory cache** | Maximum entries per cache. Clear the cache after you change a size. |
 | **Days lifetime inbound Id cache**, **Days lifetime outbound Id cache**, **Days lifetime inventory cache** | Number of days after which the whole cache is cleared. |
 | **Fragments from inventory to cache** | Fragments of the managed object that Smart Functions and `filterInventory` can read. Each entry is an exact name or a glob pattern such as `sparkPlugB_DBIRTH_*`. |
-| **Minutes lifetime flow state** (Expert settings) | Minutes after which the whole flow state of Smart Functions and Java Extensions is cleared. 0 disables the limit. |
+| **Minutes lifetime flow state** (Expert settings) | Minutes after which the flow state of a Smart Function or Java Extension mapping is cleared when that mapping has not written it. Each mapping expires on its own. 0 disables the limit. |
 | **Cache alias maps for SparkPlug B mappings** (Expert settings) | Adds the SparkPlug B birth fragments to the inventory cache automatically. |
 
 The buttons **Clear inbound external ID cache**, **Clear outbound external ID cache**, **Clear inventory cache**,

@@ -454,7 +454,11 @@ public class ProcessingContext<O> implements AutoCloseable {
             // Close flow context first (if it holds GraalVM references)
             if (flowContext != null) {
                 try {
-                    flowContext.clearState();
+                    if (flowContext instanceof SmartFunctionContext smartFunctionContext) {
+                        smartFunctionContext.persistState();
+                    } else {
+                        flowContext.clearState();
+                    }
                 } catch (Exception e) {
                     log.warn("{} - Error clearing flow context state: {}", getTenant(), e.getMessage());
                 }

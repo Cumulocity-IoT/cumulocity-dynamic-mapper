@@ -19,13 +19,14 @@ State is held **in memory** and does not survive a microservice restart. Smart F
 a message finishes processing.
 
 The **Minutes lifetime flow state** setting (in Service Configuration → Caching) controls automatic expiry. The
-timer measures the time since the *last write* to that tenant's state store. If no state has been written for
-longer than the configured duration, the **entire state** for that tenant is cleared on the next scheduled
-cleanup cycle (which runs every minute).
+timer is kept **per mapping** and measures the time since that mapping's *last write* to its state. Reading state does
+not restart it. If a mapping has not written state for longer than the configured duration, the state of that mapping
+is cleared on the next scheduled cleanup cycle. Other mappings are not affected: a busy mapping does not keep an idle
+one alive, and a mapping that wrote recently keeps its state when another expires.
 
-For example, with a value of `1440` (the default, equal to 24 hours): if no mapping has written any state for 24
-hours, all stored state for that tenant is discarded. This prevents unbounded memory growth when mappings are
-inactive.
+For example, with a value of `1440` (the default, equal to 24 hours): a mapping that has written no state for 24 hours
+loses its stored state, while a mapping that wrote an hour ago keeps it. This prevents unbounded memory growth when
+mappings are inactive.
 
 Set to `0` to disable automatic expiry entirely. Flow state can also be cleared immediately via the **Clear flow
 state** button on the Caching configuration page.
@@ -65,10 +66,15 @@ function onMessage(message, context) {
 ```
 
 :::caution
-State is read when a message starts and written back when it finishes. Messages of the same mapping that are
-processed at the same time do not see each other's changes, and the last message to finish overwrites the others.
-Counters and other read-modify-write patterns can therefore lose updates under concurrent load. Use state for values
-where an occasional lost update is acceptable, or for per-device keys that one device writes in sequence.
+State is read when a message starts, and the keys the message changed with `setState` are written back when it
+finishes. Messages of the same mapping that are processed at the same time do not see each other's changes while they
+run. A message that only reads state, or writes other keys, does not affect them. If two messages write the **same**
+key, the last one to finish wins, so counters and other read-modify-write patterns can lose updates under concurrent
+load. Use state for values where an occasional lost update is acceptable, or for per-device keys that one device
+writes in sequence.
+
+`context.getState(key)` returns a copy. Changing the returned object does not change the state: call `setState`
+with the new value.
 :::
 
 #### State in Java Extensions {#state-in-java-extensions}
@@ -77,10 +83,16 @@ Java Extensions use `context.getNativeState(key)` and `context.setNativeState(ke
 Java objects (no GraalVM dependency). Setting a key to `null` removes it.
 
 :::caution
-Do not rely on Java Extension state to survive between messages. The mapper loads the stored state at the start of a
-message, but values set with `setNativeState` are currently not saved back, so they last for one message only.
-Outbound extensions have no state store at all. Keep long-lived values in a field only if your code is thread-safe, in
-Cumulocity (for example a managed object fragment), or in an external store.
+The state works as for Smart Functions. The mapper loads a copy when the message starts and writes back the keys you
+changed with `setNativeState` after `onMessage` returns normally, for inbound and outbound extensions. It also writes
+them when you return an empty result, so an extension can record what it saw and return nothing. If `onMessage` throws,
+the message fails and nothing is written, so the retry does not look like a duplicate. A test run starts from an empty
+state and writes nothing.
+
+Messages of the same mapping run in parallel. A message that only reads state does not affect the others, but if two
+messages write the **same** key, the last one to finish wins. Nested lists and maps you read are copies, so changing them
+does not affect other messages until you call `setNativeState` again. The state is held in service memory and is lost on
+restart.
 :::
 
 **Global counter (shared across all devices):**
