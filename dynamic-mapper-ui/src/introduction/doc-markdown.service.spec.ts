@@ -30,3 +30,23 @@ describe('DocMarkdownService tables', () => {
     expect(html.match(/<table /g)?.length).toBe(2);
   });
 });
+
+describe('DocMarkdownService diagrams', () => {
+  it('renders the diagram of the reliability page without a syntax error', async () => {
+    const service = new DocMarkdownService();
+    const { html } = await service.loadAndRender('reliability-settings');
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    document.body.appendChild(container);
+    try {
+      expect(container.querySelectorAll('pre.mermaid').length).toBeGreaterThan(0);
+
+      await service.renderMermaidDiagrams(container);
+
+      expect(container.querySelectorAll('pre.mermaid svg').length).toBeGreaterThan(0);
+      expect(container.textContent).not.toContain('Syntax error');
+    } finally {
+      container.remove();
+    }
+  });
+});

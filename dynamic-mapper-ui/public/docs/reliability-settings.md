@@ -9,6 +9,49 @@ level states when the connector may acknowledge a message to its broker: before 
 after the mapping pipeline succeeded (QoS 1 and 2). A connector that does not support the selected level handles
 the mapping at the nearest lower level it supports, and the QoS field shows which connectors do so. The service logs
 each such clamp once as a warning. When several mappings match one message, the strongest requested level wins.
+
+The diagram shows what a connector does with a message, once it knows the QoS that applies.
+
+```mermaid
+flowchart TD
+    msg(["Message arrives from the broker"])
+    qos{"QoS that applies<br/>to this message"}
+    early["Acknowledge at once<br/>before the mapping runs"]
+    run["Mapping runs<br/>the connector waits for the result"]
+    result{"How did it end?"}
+    settled["Acknowledge<br/>success, client error (4xx),<br/>or mapping error without HTTP status"]
+    unsettled["Do not acknowledge<br/>server error (5xx), timeout,<br/>CPU limit hit, or exception"]
+    limit{"Failed as often as<br/>Maximum processing attempts?"}
+    again["Broker delivers it again<br/>negative ack, requeue, or reconnect"]
+    drop["Acknowledge and drop<br/>the error stays in the mapping status"]
+
+    msg --> qos
+    qos -- "QoS 0" --> early
+    qos -- "QoS 1 or 2" --> run
+    run --> result
+    result -- "settled" --> settled
+    result -- "not settled" --> unsettled
+    unsettled --> limit
+    limit -- "no" --> again
+    again --> msg
+    limit -- "yes" --> drop
+```
+
+A message that is not acknowledged comes back, so the same message can run through the mapping again. A mapping
+must therefore tolerate duplicates. With QoS 0 the message is acknowledged before the mapping runs, so a failure
+loses it. A client error such as a malformed payload counts as settled, because a redelivery would fail the same
+way. The error is still counted in the mapping status.
+
+Three connectors deviate from the diagram:
+
+- **HTTP Endpoint** answers the sender instead of acknowledging to a broker: `200` when the message is settled, `500`
+  when it is not, so the sender can retry. The sender owns the retry, and the limit does not apply.
+- **REST Polling** has no broker to deliver again. A page that is not settled is fetched again by the next poll.
+  After the limit, the connector skips the page and records the skip as the **Last error** of the mapping. A server
+  error (5xx) is retried but never counted, so an outage does not skip data.
+- **AMQP 1.0** leaves a failed message unacknowledged. The broker delivers it again only when the session restarts,
+  and the limit does not apply.
+
 The effect of QoS depends on the connector (message source):
 
 - **AMQP 0-9-1**: Supports QoS 0 and 1. QoS 0 uses automatic acknowledgment and non-persistent delivery. QoS 1
