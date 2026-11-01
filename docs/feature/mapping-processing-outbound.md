@@ -164,16 +164,19 @@ Waiting, acknowledging and cancelling are done by the caller of `onNotification(
 `CustomWebSocketClient`:
 
 - QoS 0: the notification is acknowledged immediately, without waiting for the pipeline.
-- QoS > 0: it waits for the future with the pipeline timeout, multiplied by the retransmission
-  attempt (`attempt + 1`, capped at 3x). With timeout `0` it waits up to
-  `ServiceConfiguration.PROCESSING_HARD_CEILING_MS`.
+- QoS > 0: it applies the shared rule, `ProcessingResultHelper.awaitOutcome`, with the pipeline
+  timeout multiplied by the retransmission attempt (`attempt + 1`, capped at 3x). With timeout
+  `0` it waits up to `ServiceConfiguration.PROCESSING_HARD_CEILING_MS`. Unlike inbound, it also
+  reads the HTTP status from the errors recorded on the individual requests, because outbound
+  publishing records its failures there (a webhook answering 503 is retried, a 400 is not).
 - Success, or errors whose HTTP status is below 500: the notification is acknowledged. Server
   errors (500 and above), timeouts, or a cancellation requested by the JS CPU limit: no ack; a
   failure counter per message decides between WebSocket reconnect/retransmission and giving up.
-- On timeout `CustomWebSocketClient` calls `ProcessingResultWrapper.cancelProcessing()`, which
-  interrupts the pipeline futures and closes active GraalVM contexts, then polls `Future.isDone()`
-  for up to 2 s. Unlike the broker callbacks it does not use `cancelAndDrain()`, so it cannot
-  tell whether the worker really left (see [reliability.md](reliability.md)).
+  After `maxProcessingAttempts` failures (default 3) the notification is acknowledged and dropped.
+- On timeout the shared rule calls `cancelAndDrain()`, which interrupts the pipeline futures,
+  closes active GraalVM contexts, and waits for the worker to actually leave (see
+  [reliability.md](reliability.md)). Until 2026-11-01 `CustomWebSocketClient` called
+  `cancelProcessing()` and polled `Future.isDone()` instead, which cannot tell whether the worker left.
   `SendOutboundProcessor` checks the cancellation flag first and skips sending if it is set.
 - A notification that no outbound mapping selects is dropped without any counter moving; the
   catch-all "Unmapped messages" status counts it only on the inbound side. Only a resolution

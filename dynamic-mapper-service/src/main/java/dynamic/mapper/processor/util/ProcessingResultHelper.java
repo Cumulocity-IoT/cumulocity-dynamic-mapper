@@ -413,6 +413,19 @@ public class ProcessingResultHelper {
      */
     public static AckOutcome awaitOutcome(ProcessingResultWrapper<?> processedResults,
                                           String tenant, String topic, Logger log, Long timeoutOverrideMs) {
+        return awaitOutcome(processedResults, tenant, topic, log, timeoutOverrideMs, false);
+    }
+
+    /**
+     * Same rule as {@link #awaitOutcome(ProcessingResultWrapper, String, String, Logger, Long)}.
+     *
+     * @param includeRequestErrors also read the HTTP status from errors recorded on the individual requests,
+     *                             not only on the context. Outbound publishing records its failures there (a
+     *                             webhook answering 503 is a server error worth a retry, a 400 is not).
+     */
+    public static AckOutcome awaitOutcome(ProcessingResultWrapper<?> processedResults,
+                                          String tenant, String topic, Logger log, Long timeoutOverrideMs,
+                                          boolean includeRequestErrors) {
         if (processedResults == null || processedResults.getProcessingResult() == null) {
             return AckOutcome.ACK;
         }
@@ -426,7 +439,8 @@ public class ProcessingResultHelper {
                 log.warn("{} - Processing cancelled (CPU timeout), not acknowledging, topic: [{}]", tenant, topic);
                 return AckOutcome.RETRY;
             }
-            return extractMaxHttpStatus(results, tenant, topic, log) < 500 ? AckOutcome.ACK : AckOutcome.RETRY;
+            return extractMaxHttpStatus(results, tenant, topic, log, includeRequestErrors) < 500
+                    ? AckOutcome.ACK : AckOutcome.RETRY;
         } catch (TimeoutException e) {
             boolean drained = processedResults.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
             log.warn("{} - Processing timed out after {}ms, not acknowledging, topic: [{}], drained: {}",
@@ -459,11 +473,25 @@ public class ProcessingResultHelper {
      */
     public static int extractMaxHttpStatus(List<? extends ProcessingContext<?>> results,
                                            String tenant, String topic, Logger log) {
+        return extractMaxHttpStatus(results, tenant, topic, log, false);
+    }
+
+    /**
+     * As {@link #extractMaxHttpStatus(List, String, String, Logger)}, optionally also counting errors recorded
+     * on the individual requests of each context. For a request error the status is taken from the
+     * {@link ProcessingException} found along its cause chain, or from an {@link SDKException} there.
+     *
+     * @return -1 if no error, otherwise the highest HTTP status code found (0 if none carries a status)
+     */
+    public static int extractMaxHttpStatus(List<? extends ProcessingContext<?>> results,
+                                           String tenant, String topic, Logger log,
+                                           boolean includeRequestErrors) {
         if (results == null) return -1;
         boolean anyError = false;
         int maxStatus = 0;
         for (ProcessingContext<?> context : results) {
-            if (context.hasError()) {
+            boolean contextError = context.hasError();
+            if (contextError) {
                 anyError = true;
                 log.error("{} - Error in processing context for topic: [{}]", tenant, topic);
                 for (Exception error : context.getErrors()) {
@@ -473,10 +501,36 @@ public class ProcessingResultHelper {
                     }
                 }
             }
+            if (includeRequestErrors) {
+                for (DynamicMapperRequest request : context.getRequests()) {
+                    if (!request.hasError()) {
+                        continue;
+                    }
+                    anyError = true;
+                    maxStatus = Math.max(maxStatus, httpStatusOf(request.getError()));
+                }
+            }
         }
         return anyError ? maxStatus : -1;
     }
 
+    /** The HTTP status carried by an error or one of its causes, 0 if none carries one. */
+    private static int httpStatusOf(Throwable error) {
+        int status = 0;
+        Throwable current = error;
+        for (int depth = 0; current != null && depth < 10; depth++) {
+            if (current instanceof ProcessingException pe) {
+                status = Math.max(status, pe.getHttpStatusCode());
+            } else if (current instanceof SDKException sdk) {
+                status = Math.max(status, sdk.getHttpStatus());
+            }
+            if (current.getCause() == current) {
+                break;
+            }
+            current = current.getCause();
+        }
+        return status;
+    }
 
     /**
      * Creates a DynamicMapperRequest using focused contexts without adding to collector.

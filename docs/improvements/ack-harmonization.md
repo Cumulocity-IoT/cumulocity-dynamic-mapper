@@ -100,8 +100,8 @@ Pub/Sub keeps its current error rule and gains only the cancelled check.
 | Step | State |
 |---|---|
 | 1. Kafka on the helper, Pub/Sub cancelled check, tests | Done |
-| 2. One policy method | Done for MQTT, Pulsar, Cumulocity MQTT Service, Pub/Sub, Kafka, AMQP, and the HTTP connector (`ProcessingResultHelper.awaitOutcome`). Not migrated: REST polling (by decision) and `CustomWebSocketClient` (outbound notifications, own limit of 5) |
-| 3. One poison-message rule | Done: `MessageFailureTracker` and the setting `maxProcessingAttempts` (default 3) in the service configuration, the UI (Processing tab), and the docs. Not covered: AMQP 1.0 (see below), REST polling, `CustomWebSocketClient` |
+| 2. One policy method | Done for MQTT, Pulsar, Cumulocity MQTT Service, Pub/Sub, Kafka, AMQP, and the HTTP connector (`ProcessingResultHelper.awaitOutcome`). `CustomWebSocketClient` (outbound notifications) since 2026-11-01. Not migrated: REST polling (by decision) |
+| 3. One poison-message rule | Done: `MessageFailureTracker` and the setting `maxProcessingAttempts` (default 3) in the service configuration, the UI (Processing tab), and the docs. `CustomWebSocketClient` uses it too. Not covered: AMQP 1.0 (see below) and REST polling |
 | 4. Contract test | Partly: per-connector tests for AMQP, Kafka, Pub/Sub, and the HTTP controller; unit tests for the helper and the tracker. No single parameterized test over all connectors yet |
 | 5. Pub/Sub error rule | Done (decision above) |
 
@@ -121,12 +121,27 @@ Pub/Sub keeps its current error rule and gains only the cancelled check.
 - **Bug found on the way and fixed:** `HttpConnectorController` did not compile after the previous change, because
   `HttpClient.onMessage` returned `void`. See [the note below](#note-on-the-earlier-build).
 
+### `CustomWebSocketClient` (2026-11-01)
+
+The outbound Notification 2.0 client had the last full copy of the rule. It now calls `awaitOutcome`, uses the shared
+`MessageFailureTracker` (limit `maxProcessingAttempts`, keyed by the notification's ack header), and waits through
+`cancelAndDrain` on a timeout instead of `cancelProcessing()` plus polling `Future.isDone()`.
+
+It differs from inbound in one way that the migration had to keep: outbound publishing records its failures on the
+individual requests, and only a webhook sets an HTTP status there. `awaitOutcome` and `extractMaxHttpStatus` got an
+opt-in `includeRequestErrors` (used only by this client), so a webhook answering 503 is still retried and a 400 is not.
+Inbound callers and REST polling are unchanged. Tests: `CustomWebSocketClientAcknowledgementTest` (acknowledge, failed,
+cancelled, server and client error on a request, drop after the limit, a success forgets earlier failures) and request-error
+cases in `ProcessingResultHelperAwaitAckableTest`.
+
 ### Still open
 
 - **AMQP 1.0:** an unacknowledged message is redelivered only when the session restarts, so the limit cannot count.
   The JMS specification also says `acknowledge()` acknowledges every message the session has consumed, which would let a
   later success acknowledge an earlier failed message. Needs a test against the Qpid client before changing.
-- **REST polling and `CustomWebSocketClient`** keep their own copies and limits.
+- **REST polling** keeps its own decision, because it decides whether the cursor advances, not whether to acknowledge.
+  A message that always fails blocks that topic forever and nothing drops it. Whether to skip such a message with a
+  recorded error or keep blocking and alert is a product decision that is still open.
 - **One parameterized contract test** that every connector must pass.
 
 ### Note on the earlier build

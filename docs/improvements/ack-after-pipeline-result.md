@@ -151,8 +151,9 @@ Further points:
    [concept-review.md](../concept-review.md), concept-level gaps.
 3. **Pub/Sub:** several inbound topics share one subscription, a failed publisher is never evicted, and no
    retry settings are set. It already waits for the result, so it was out of scope here.
-4. **Remaining callback gaps:** `AbstractMqttCallback` neither acknowledges nor reconnects on
-   `ExecutionException`, and `CustomWebSocketClient` (outbound) does not use `cancelAndDrain`.
+4. **Remaining callback gaps:** none. `AbstractMqttCallback` and `CustomWebSocketClient` now go through the shared
+   rule (see [ack-harmonization.md](ack-harmonization.md)): an `ExecutionException` is a counted failure, and a
+   timeout uses `cancelAndDrain`.
 5. **Kafka under load:** measure poll-loop wait times against `max.poll.interval.ms` with a slow pipeline,
    and consider pausing partitions while waiting.
 

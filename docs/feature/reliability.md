@@ -302,10 +302,8 @@ Two details matter and are easy to get wrong:
 - **`Future.cancel(true)` alone is not enough.** CPU-bound JavaScript ignores Java thread
   interruption; only `Context.close(cancelIfExecuting=true)` — registered as a *cancel
   action* — stops it. A callback that calls `Future.cancel(true)` directly leaves the
-  GraalVM context running. Every callback must use `cancelAndDrain`. All broker callbacks do,
-  except `CustomWebSocketClient` (outbound): it calls `cancelProcessing()` (which does run the
-  cancel actions) and then polls `Future.isDone()` for up to 2 s, so it cannot detect a worker
-  that is still running (see the next point).
+  GraalVM context running. Every callback must use `cancelAndDrain`; the shared
+  `ProcessingResultHelper.awaitOutcome` does, and every connector goes through it (REST polling aside).
 - **`Future.isDone()` cannot tell you the worker has left.** It flips to `true` the instant
   `cancel(true)` is called, while the thread may still be spinning in JS or blocked in an
   uninterruptible HTTP call. The drain therefore waits on a latch the pipeline itself counts
@@ -431,8 +429,8 @@ failure that reaches the limit the message is acknowledged and dropped, so one u
 payload cannot block a subscription forever. The error stays in the mapping status. The count is
 per message, keyed by something that survives redelivery (a message id, an offset, or a hash of
 topic and payload, never a delivery tag), cleared as soon as the message succeeds, and bounded in
-memory (the oldest 10,000 are forgotten). `HttpPollingConnector` and `CustomWebSocketClient` still
-use their own limit of 5; AMQP 1.0 has no limit because an unacknowledged message is not redelivered
+memory (the oldest 10,000 are forgotten). `CustomWebSocketClient` (outbound notifications) uses the same tracker; `HttpPollingConnector` still
+uses its own limit of 5, for the connector status, not for dropping a message; AMQP 1.0 has no limit because an unacknowledged message is not redelivered
 until the session restarts. Errors that a retry would only repeat (client errors, mapping errors
 without an HTTP status) are acknowledged at once and never counted.
 
@@ -454,11 +452,11 @@ Note the two counters are per different things: the poison-pill counter is **per
   an `SDKException` wrapped in a `ProcessingException`
   (`ProcessingResultHelper.extractMaxHttpStatus`); a failure without one (JSONata or Smart
   Function error, template error, a network error that is not an `SDKException`) counts as
-  status 0 and is acknowledged, even at QoS > 0. `CustomWebSocketClient` reads the status only
-  from per-request errors, so a leg that failed before it produced requests is acknowledged as
-  well. In `AbstractMqttCallback` an `ExecutionException` from the pipeline future neither
-  acknowledges nor reconnects; the message stays unacknowledged. So a mapping can be
-  deactivated by failures that were never retried.
+  status 0 and is acknowledged, even at QoS > 0. `CustomWebSocketClient` reads the status from the
+  context errors and from per-request errors, so a failed webhook call with a 5xx answer is retried while a leg
+  that failed without any status is acknowledged. An `ExecutionException` from the pipeline future is a failure like any
+  other (counted, and retried until the limit). So a mapping can still be deactivated by failures that were never
+  retried, because mapping errors without an HTTP status are acknowledged.
 - **`maxFailureCount` is not a rate.** 10 means "10 in a row", however long that takes. A
   mapping that alternates success/failure forever never trips it. That is intentional —
   use the `errors` counter and the *Monitoring* tab to spot those.

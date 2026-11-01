@@ -18,6 +18,9 @@ a server error (5xx), a timeout, a cancelled pipeline, or an exception, so the b
   failures of the same message, MQTT, Pulsar, the Cumulocity MQTT Service, Kafka, AMQP 0-9-1, and Pub/Sub acknowledge
   and drop it, and the error stays in the mapping status. MQTT and Pulsar dropped after 5 before; MQTT now also drops
   when `reconnectOnProcessingError` is off. AMQP 1.0 has no limit. Existing configurations get the default.
+- **Outbound notifications (`CustomWebSocketClient`)** use the same rule and the same `maxProcessingAttempts`. A webhook
+  answering 5xx is still retried and a 4xx is not. A timeout now waits for the worker to leave, as on every other
+  connector.
 - A Smart Function leg cancelled by the pipeline timeout counts as a failure. An empty result from a Java extension is
   ignored, not a failure.
 
