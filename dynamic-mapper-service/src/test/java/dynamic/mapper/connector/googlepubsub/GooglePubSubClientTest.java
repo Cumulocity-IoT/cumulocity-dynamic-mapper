@@ -272,25 +272,81 @@ public class GooglePubSubClientTest {
         verify(consumer, never()).nack();
     }
 
-    @Test
-    public void testProcessPubSubMessage_atLeastOnce_nacksOnProcessingError() throws Exception {
+    @SuppressWarnings("unchecked")
+    private ProcessingResultWrapper<Object> serverErrorWrapper() {
+        ProcessingContext<Object> ctx = mock(ProcessingContext.class);
+        when(ctx.hasError()).thenReturn(true);
+        when(ctx.getErrors()).thenReturn(List.of(new dynamic.mapper.processor.ProcessingException("Cumulocity down",
+                new com.cumulocity.sdk.client.SDKException(503, "unavailable"))));
+        CompletableFuture<List<ProcessingContext<Object>>> future = CompletableFuture.completedFuture(
+                Collections.singletonList(ctx));
+        return ProcessingResultWrapper.<Object>builder()
+                .processingResult((java.util.concurrent.Future) future)
+                .consolidatedQos(Qos.AT_LEAST_ONCE)
+                .pipelineTimeoutMS(0)
+                .build();
+    }
+
+    private AckReplyConsumer deliver(GooglePubSubClient client, String messageId) {
+        AckReplyConsumer consumer = mock(AckReplyConsumer.class);
+        PubsubMessage message = PubsubMessage.newBuilder()
+                .setData(ByteString.copyFromUtf8("{\"value\":3}"))
+                .setMessageId(messageId)
+                .build();
+        client.processPubSubMessage(message, consumer, "test-topic", Qos.AT_LEAST_ONCE);
+        return consumer;
+    }
+
+    private GooglePubSubClient clientReturning(java.util.function.Supplier<ProcessingResultWrapper<Object>> result)
+            throws Exception {
         InboundMessageDispatcher dispatcher = mock(InboundMessageDispatcher.class);
         ServiceConfiguration sc = mock(ServiceConfiguration.class);
         when(sc.getLogPayload()).thenReturn(false);
-        doReturn(errorWrapper()).when(dispatcher).onMessage(any(ConnectorMessage.class));
+        when(sc.getMaxProcessingAttempts()).thenReturn(3);
+        when(dispatcher.onMessage(any(ConnectorMessage.class))).thenAnswer(inv -> result.get());
+        return clientWithMocks(dispatcher, sc);
+    }
 
-        GooglePubSubClient client = clientWithMocks(dispatcher, sc);
-        AckReplyConsumer consumer = mock(AckReplyConsumer.class);
+    @Test
+    public void testProcessPubSubMessage_atLeastOnce_acksAMappingErrorWithoutHttpStatus() throws Exception {
+        // a retry would repeat a mapping error, so it is acked like on every other connector
+        AckReplyConsumer consumer = deliver(clientReturning(this::errorWrapper), "msg-3");
 
-        PubsubMessage message = PubsubMessage.newBuilder()
-                .setData(ByteString.copyFromUtf8("{\"value\":3}"))
-                .setMessageId("msg-3")
-                .build();
+        verify(consumer).ack();
+        verify(consumer, never()).nack();
+    }
 
-        client.processPubSubMessage(message, consumer, "test-topic", Qos.AT_LEAST_ONCE);
+    @Test
+    public void testProcessPubSubMessage_atLeastOnce_nacksAServerError() throws Exception {
+        AckReplyConsumer consumer = deliver(clientReturning(this::serverErrorWrapper), "msg-3");
 
         verify(consumer).nack();
         verify(consumer, never()).ack();
+    }
+
+    @Test
+    public void testProcessPubSubMessage_atLeastOnce_dropsAMessageAfterTheConfiguredAttempts() throws Exception {
+        GooglePubSubClient client = clientReturning(this::serverErrorWrapper); // limit is 3
+
+        AckReplyConsumer first = deliver(client, "poison");
+        AckReplyConsumer second = deliver(client, "poison");
+        AckReplyConsumer third = deliver(client, "poison");
+
+        verify(first).nack();
+        verify(second).nack();
+        verify(third).ack();
+        verify(third, never()).nack();
+    }
+
+    @Test
+    public void testProcessPubSubMessage_atLeastOnce_countsFailuresPerMessage() throws Exception {
+        GooglePubSubClient client = clientReturning(this::serverErrorWrapper);
+
+        deliver(client, "a");
+        deliver(client, "a");
+        AckReplyConsumer otherMessage = deliver(client, "b"); // its own first failure
+
+        verify(otherMessage).nack();
     }
 
     @Test

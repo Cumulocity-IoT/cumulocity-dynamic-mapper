@@ -55,7 +55,7 @@ context.getRequests().addAll(output.getRequests());
 1. Extend `AConnectorClient` and implement its abstract methods (`initialize()`, `connect()`, `disconnect()`, `isConfigValid()`, `publishMEAO()`, `supportsWildcardInTopic()`, `supportedDirections()`, `subscribe()`, `unsubscribe()`, `connectorSpecificHousekeeping()`).
 2. Provide a `ConnectorSpecification` declaring the configuration schema (and set `supportedQos` if the broker cannot honor all three levels).
 3. Add a `ConnectorType` value, a case in `ConnectorClientFactory.createConnectorClient()`, and the specification in `ConnectorRegistry.registerConnectors()`.
-4. Implement a callback that forwards broker messages to `GenericMessageCallback`.
+4. Implement a callback that forwards broker messages to `GenericMessageCallback`. For QoS above 0, settle the message with `ProcessingResultHelper.awaitOutcome(...)` (or `awaitAckable` for a boolean) after the dispatcher returned, never before. Count retries with a `MessageFailureTracker` (`forConfiguration(serviceConfiguration)`), keyed by something that survives redelivery, and drop the message when `recordFailureReachedLimit` returns true. Do not copy the decision logic into the connector.
 
 See [extensions.md](../extensions.md) for the full guide and `AConnectorClient` helper methods.
 

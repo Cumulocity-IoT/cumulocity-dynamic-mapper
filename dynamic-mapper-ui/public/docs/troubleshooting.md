@@ -66,6 +66,10 @@ record connector, subscription, and mapping state changes, for example a mapping
   `sparkPlugB_DBIRTH_*`) under
   [**Configuration → Service configuration → Caching → Fragments from inventory to cache**](/c8y-pkg-dynamic-mapper/node3/serviceConfiguration/caching),
   and clear the inventory cache or wait for it to refresh.
+- **A message disappears after repeated failures**: when a message fails the number of times set in **Maximum
+  processing attempts per message** (**Configuration → Service configuration → Processing**, default 3), the connector
+  acknowledges and drops it, so it does not block the subscription. The error stays in **Last error** of the mapping
+  statistics. Fix the cause, or raise the setting if the cause is temporary, such as a short Cumulocity outage.
 - **Mapping deactivated after repeated failures**: the mapping reached **Max failure count**. Fix the cause, then
   activate the mapping again, which resets the count. A `d11r_mappingFailureEvent` in **Service events** shows when
   it happened.

@@ -95,6 +95,24 @@ class AMQPCallbacksAcknowledgementTest {
         verify(channel, never()).basicNack(anyLong(), anyBoolean(), anyBoolean());
     }
 
+    @Test
+    void amqp091DropsAMessageAfterTheConfiguredAttempts() throws Exception {
+        // the redelivery of a message has a new delivery tag but the same message id
+        Channel channel = mock(Channel.class);
+        when(dispatcher.onMessage(any())).thenAnswer(inv -> failed());
+        AMQPCallback callback = new AMQPCallback(channel, false, "t1", serviceRegistry, dispatcher, "id", "name");
+        AMQP.BasicProperties properties = new AMQP.BasicProperties.Builder().messageId("poison").build();
+
+        for (long tag = 1; tag <= 3; tag++) {
+            callback.handleDelivery("tag", new Envelope(tag, true, "exchange", "a.b"), properties, "x".getBytes());
+        }
+
+        verify(channel).basicNack(1L, false, true);
+        verify(channel).basicNack(2L, false, true);
+        verify(channel).basicAck(3L, false);   // third failure: dropped
+        verify(channel, never()).basicNack(3L, false, true);
+    }
+
     // ---- AMQP 1.0 ----
 
     private BytesMessage jmsMessage() throws Exception {

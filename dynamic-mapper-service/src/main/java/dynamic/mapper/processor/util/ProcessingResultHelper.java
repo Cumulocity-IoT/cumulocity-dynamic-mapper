@@ -375,45 +375,70 @@ public class ProcessingResultHelper {
         }
     }
 
+    /** What a connector does with a message after the pipeline ran. */
+    public enum AckOutcome {
+        /** The message is settled: acknowledge it (also for client errors, which a retry would repeat). */
+        ACK,
+        /** The pipeline failed in a way a retry may fix: do not acknowledge, let the broker redeliver. */
+        RETRY
+    }
+
     /**
      * Waits for the pipeline of a message and decides whether the connector may acknowledge it.
-     *
-     * <p>For connectors whose callback thread can block on the result (AMQP, HTTP, Kafka). The wait
-     * is always bounded; on timeout the pipeline is cancelled and drained. Returns {@code false}, so
-     * the caller must not acknowledge (or must negative-acknowledge), when the pipeline timed out,
-     * was interrupted or cancelled, threw, or reported a server-side (5xx) error. Client errors
-     * (4xx) and messages the dispatcher skipped without a pipeline are acknowledged, as in the
-     * MQTT, Pulsar, and Pub/Sub callbacks.
+     * See {@link #awaitOutcome} for the rule.
      *
      * @return {@code true} if the message is safe to acknowledge
      */
     public static boolean awaitAckable(ProcessingResultWrapper<?> processedResults,
                                        String tenant, String topic, Logger log) {
+        return awaitOutcome(processedResults, tenant, topic, log, null) == AckOutcome.ACK;
+    }
+
+    /**
+     * The one rule every connector applies to the result of a pipeline run. The wait is always bounded;
+     * on timeout the pipeline is cancelled and drained.
+     *
+     * <ul>
+     *   <li>{@code RETRY}: the pipeline timed out, was interrupted or cancelled (for example a Smart
+     *       Function stopped by the CPU limit), threw, or reported a server-side (5xx) error.</li>
+     *   <li>{@code ACK}: everything else, including no errors, errors without an HTTP status, and client
+     *       errors (4xx), which a redelivery would only repeat, and messages the dispatcher skipped
+     *       without a pipeline.</li>
+     * </ul>
+     *
+     * A caller that retries decides separately how often (see {@code MessageFailureTracker}).
+     *
+     * @param timeoutOverrideMs wait this long instead of the mapping's budget (for example a longer wait on
+     *                          a retransmission), or {@code null} for the default
+     */
+    public static AckOutcome awaitOutcome(ProcessingResultWrapper<?> processedResults,
+                                          String tenant, String topic, Logger log, Long timeoutOverrideMs) {
         if (processedResults == null || processedResults.getProcessingResult() == null) {
-            return true;
+            return AckOutcome.ACK;
         }
         int timeout = processedResults.getPipelineTimeoutMS();
-        long effectiveTimeout = timeout > 0 ? timeout : ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
+        long effectiveTimeout = timeoutOverrideMs != null ? timeoutOverrideMs
+                : timeout > 0 ? timeout : ServiceConfiguration.PROCESSING_HARD_CEILING_MS;
         try {
             List<? extends ProcessingContext<?>> results = processedResults.getProcessingResult()
                     .get(effectiveTimeout, TimeUnit.MILLISECONDS);
             if (processedResults.getCancellationRequested().get()) {
                 log.warn("{} - Processing cancelled (CPU timeout), not acknowledging, topic: [{}]", tenant, topic);
-                return false;
+                return AckOutcome.RETRY;
             }
-            return extractMaxHttpStatus(results, tenant, topic, log) < 500;
+            return extractMaxHttpStatus(results, tenant, topic, log) < 500 ? AckOutcome.ACK : AckOutcome.RETRY;
         } catch (TimeoutException e) {
             boolean drained = processedResults.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
             log.warn("{} - Processing timed out after {}ms, not acknowledging, topic: [{}], drained: {}",
                     tenant, effectiveTimeout, topic, drained);
-            return false;
+            return AckOutcome.RETRY;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.warn("{} - Interrupted while waiting for processing, not acknowledging, topic: [{}]", tenant, topic);
-            return false;
+            return AckOutcome.RETRY;
         } catch (ExecutionException e) {
             log.warn("{} - Processing failed, not acknowledging, topic: [{}]", tenant, topic, e);
-            return false;
+            return AckOutcome.RETRY;
         }
     }
 

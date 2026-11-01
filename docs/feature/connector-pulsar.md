@@ -85,7 +85,7 @@ failures); other QoS levels use blocking `producer.send()`.
 immediately acks `AT_MOST_ONCE` messages regardless of processing outcome. For
 `AT_LEAST_ONCE`/`EXACTLY_ONCE`, ack/nack is deferred to the processing result: ack on an
 HTTP-style result code below 500, `negativeAcknowledge()` at or above 500 or on a timeout,
-with a poison-pill discard (positive ack) after `MAX_CONSECUTIVE_FAILURES=5` failures of the
+with a poison-pill discard (positive ack) after `maxProcessingAttempts` (default 3) failures of the
 same message (`AbstractPulsarCallback.handleFailureOrPoisonPill`). `EXACTLY_ONCE` is only
 as strong as `AT_LEAST_ONCE` plus the exclusive subscription; there is no deduplication.
 

@@ -71,10 +71,12 @@ itself. Subscribers are created in `subscribe()` and started with
 - `AT_MOST_ONCE`: the consumer acks immediately, before dispatching to the processing
   pipeline — fire-and-forget.
 - Anything above `AT_MOST_ONCE`: ack only after the pipeline processing result is
-  known — nack (triggering redelivery) if the processing context reports an error, if the
-  pipeline was cancelled (for example a Smart Function stopped by the CPU limit), or
-  on any exception (including a restored-interrupt on `InterruptedException`); ack
-  otherwise.
+  known, by the shared rule (`ProcessingResultHelper.awaitOutcome`): nack (triggering redelivery) on a
+  server error (5xx), a timeout, a cancelled pipeline (for example a Smart Function stopped by the CPU
+  limit), or an exception (including a restored interrupt); ack otherwise. Client errors (4xx) and mapping
+  errors without an HTTP status are acked, because a redelivery would repeat them. Until 2026-11-01 every
+  error was nacked. After `maxProcessingAttempts` failures (default 3, keyed by the Pub/Sub message id) the
+  message is acked and dropped, so a dead-letter policy on the subscription is no longer the only protection.
 - No explicit ack-deadline configuration is set on the subscriber builder — it uses the
   library's default deadline.
 

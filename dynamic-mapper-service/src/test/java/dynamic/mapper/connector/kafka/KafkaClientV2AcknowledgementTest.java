@@ -88,4 +88,38 @@ class KafkaClientV2AcknowledgementTest {
         assertTrue(result.getCancellationRequested().get());
         verify(wrapper, never()).requestCommit(any(), any());
     }
+
+    @Test
+    void aRecordIsDroppedAfterTheConfiguredAttemptsSoThePartitionDoesNotBlock() {
+        ProcessingResultWrapper<Object> failing = ProcessingResultHelper.successAsync(
+                failedFuture(), Qos.AT_LEAST_ONCE, 1000);
+
+        assertFalse(client.processMessageWithQos(record, wrapper, failing, 1000)); // attempt 1: seek back
+        assertFalse(client.processMessageWithQos(record, wrapper, failing, 1000)); // attempt 2: seek back
+        verify(wrapper, never()).requestCommit(any(), any());
+
+        assertTrue(client.processMessageWithQos(record, wrapper, failing, 1000)); // attempt 3: drop
+        verify(wrapper).requestCommit(new TopicPartition("t", 0), new OffsetAndMetadata(6L));
+    }
+
+    @Test
+    void aSuccessForgetsEarlierFailuresOfTheRecord() {
+        ProcessingResultWrapper<Object> failing = ProcessingResultHelper.successAsync(
+                failedFuture(), Qos.AT_LEAST_ONCE, 1000);
+        ProcessingResultWrapper<Object> ok = ProcessingResultHelper.success(List.<ProcessingContext<Object>>of());
+
+        client.processMessageWithQos(record, wrapper, failing, 1000);
+        client.processMessageWithQos(record, wrapper, failing, 1000);
+        assertTrue(client.processMessageWithQos(record, wrapper, ok, 0));
+
+        // the count restarted: two more failures are still retried
+        assertFalse(client.processMessageWithQos(record, wrapper, failing, 1000));
+        assertFalse(client.processMessageWithQos(record, wrapper, failing, 1000));
+    }
+
+    private static CompletableFuture<List<ProcessingContext<Object>>> failedFuture() {
+        CompletableFuture<List<ProcessingContext<Object>>> failed = new CompletableFuture<>();
+        failed.completeExceptionally(new IllegalStateException("boom"));
+        return failed;
+    }
 }

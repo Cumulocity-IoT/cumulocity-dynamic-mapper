@@ -1,5 +1,42 @@
 # Dynamic Mapper Service for Cumulocity
 
+## Release 6.6.1 (in development)
+
+### Acknowledgement and retries (behaviour change)
+
+A message is now acknowledged only after the mapping pipeline settled it. One rule applies to every connector:
+acknowledge on success, on a client error (4xx), and on a mapping error without an HTTP status; do not acknowledge on
+a server error (5xx), a timeout, a cancelled pipeline, or an exception, so the broker redelivers.
+
+- **AMQP, Kafka, the HTTP connector.** Before, AMQP 0-9-1 never sent an ack for at-least-once subscriptions (the callback
+  had no channel), AMQP 1.0 and the HTTP connector acknowledged before the pipeline finished, and Kafka could commit
+  past a failed record. The HTTP connector now answers `500` when the pipeline fails or times out, so the sender can
+  retry. Kafka seeks the partition back to the failed record.
+- **Google Pub/Sub** no longer redelivers client errors and mapping errors without an HTTP status (it nacked every
+  error before). A cancelled pipeline is nacked.
+- **New setting `maxProcessingAttempts`** (Service configuration, Processing tab, default 3, minimum 1): after this many
+  failures of the same message, MQTT, Pulsar, the Cumulocity MQTT Service, Kafka, AMQP 0-9-1, and Pub/Sub acknowledge
+  and drop it, and the error stays in the mapping status. MQTT and Pulsar dropped after 5 before; MQTT now also drops
+  when `reconnectOnProcessingError` is off. AMQP 1.0 has no limit. Existing configurations get the default.
+- A Smart Function leg cancelled by the pipeline timeout counts as a failure. An empty result from a Java extension is
+  ignored, not a failure.
+
+### State in Smart Functions and Java extensions (behaviour change)
+
+- A message writes back only the state keys it changed, so a message that only reads state no longer reverts what
+  concurrent messages wrote, and `setState(key, null)` no longer loses the whole update. Two messages writing the same
+  key still race.
+- **Java extension state is now saved** (`setNativeState`), for inbound and outbound extensions. It was loaded but
+  never saved before. It is not saved when the extension throws.
+- **The flow state lifetime is per mapping.** A mapping's state expires when that mapping has not written it for
+  `flowStateRetention` minutes. Before, one timer covered the whole tenant. A read does not restart the timer.
+
+### Other fixes
+
+- The `SHARED` code template cannot be deleted (answer `406`); engine creation tolerates a tenant without it.
+- Creating a connector (for example by import) drops secrets still masked as `****`; they must be entered again.
+- `GET /mapping/version-counts` and `GET /extension` need the Admin or Create role.
+
 ## Release 6.5.3
 
 ### Mapping testing: Dry Run and Live Test (behaviour change)

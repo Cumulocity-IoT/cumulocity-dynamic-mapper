@@ -87,30 +87,51 @@ Pub/Sub keeps its current error rule and gains only the cancelled check.
    acknowledgement, and neither does a cancelled one.
 5. **Decide the Pub/Sub error rule** (options above).
 
+## Decisions (2026-11-01)
+
+| Question | Decision |
+|---|---|
+| Pub/Sub error rule | Follow the common rule: ack client errors and mapping errors without an HTTP status, nack only on a server error, timeout, cancellation, or exception |
+| Failed message | Drop after N attempts and keep the error in the mapping status; N is `maxProcessingAttempts`, **default 3** |
+| Migration scope | All broker callbacks except REST polling |
+
 ## Status
 
 | Step | State |
 |---|---|
-| 1. Kafka on the helper, Pub/Sub cancelled check, tests | Done 2026-11-01, see below |
-| 2. One policy method | open |
-| 3. One poison-message rule | open |
-| 4. Contract test | partly: per-connector tests added for AMQP, Kafka, and Pub/Sub; no shared parameterized test yet |
-| 5. Pub/Sub error rule | open, needs a decision |
+| 1. Kafka on the helper, Pub/Sub cancelled check, tests | Done |
+| 2. One policy method | Done for MQTT, Pulsar, Cumulocity MQTT Service, Pub/Sub, Kafka, AMQP, and the HTTP connector (`ProcessingResultHelper.awaitOutcome`). Not migrated: REST polling (by decision) and `CustomWebSocketClient` (outbound notifications, own limit of 5) |
+| 3. One poison-message rule | Done: `MessageFailureTracker` and the setting `maxProcessingAttempts` (default 3) in the service configuration, the UI (Processing tab), and the docs. Not covered: AMQP 1.0 (see below), REST polling, `CustomWebSocketClient` |
+| 4. Contract test | Partly: per-connector tests for AMQP, Kafka, Pub/Sub, and the HTTP controller; unit tests for the helper and the tracker. No single parameterized test over all connectors yet |
+| 5. Pub/Sub error rule | Done (decision above) |
 
-### Done in step 1
+### What changed
 
-- **Kafka** (`KafkaClientV2.processMessageWithQos`) now calls `ProcessingResultHelper.awaitAckable` instead of its own
-  copy. The rule is the same (4xx counts as success, 5xx and timeout do not) and adds the cancelled check, so finding 1
-  is fixed for Kafka. A record whose pipeline was cancelled is no longer committed. The method is package-private
-  for tests, and the unused `handleProcessingTimeout` and imports were removed.
-- **Pub/Sub** (`GooglePubSubClient.processPubSubMessage`) nacks a cancelled pipeline. Its error rule is unchanged,
-  pending the decision above.
-- **Tests added:**
-  - `KafkaClientV2AcknowledgementTest`: success requests the commit for offset + 1; a failed, cancelled, or timed-out
-    pipeline requests no commit and returns `false`, which makes the poll loop seek back.
-  - `AMQPCallbacksAcknowledgementTest`: AMQP 0-9-1 acks on success, nacks with requeue on failure, sends neither for
-    an auto-ack consumer; AMQP 1.0 acknowledges on success, not on failure, and before dispatch for at-most-once.
-  - `GooglePubSubClientTest`: a cancelled pipeline is nacked.
-- The full backend suite passes (1,467 tests, 0 failures, 7 skipped).
-- Still untested: the HTTP connector response (`HttpConnectorController`), and MQTT, Pulsar, and REST polling
-  against a shared contract.
+- **`ProcessingResultHelper.awaitOutcome`** returns `ACK` or `RETRY` and accepts a wait-time override, which MQTT and
+  the Cumulocity MQTT Service use to lengthen the wait on a retransmission. `awaitAckable` calls it.
+- **`MessageFailureTracker`** counts failures per message, bounded in memory, with a limit read from the service
+  configuration on every failure. Keys survive redelivery: Pub/Sub message id, Kafka topic-partition-offset, AMQP
+  message id or routing key and body hash, MQTT and Pulsar as before.
+- **Behavior changes to be aware of:**
+  - Pub/Sub no longer redelivers client errors and mapping errors without an HTTP status.
+  - The default limit is 3 instead of 5 for MQTT and Pulsar (it was 5), so a failing message is dropped sooner.
+  - MQTT now counts and drops after the limit also when `reconnectOnProcessingError` is off. Before, nothing
+    bounded the retransmissions in that case.
+  - AMQP 0-9-1 and Kafka now drop a message after the limit. Before, nothing did.
+- **Bug found on the way and fixed:** `HttpConnectorController` did not compile after the previous change, because
+  `HttpClient.onMessage` returned `void`. See [the note below](#note-on-the-earlier-build).
+
+### Still open
+
+- **AMQP 1.0:** an unacknowledged message is redelivered only when the session restarts, so the limit cannot count.
+  The JMS specification also says `acknowledge()` acknowledges every message the session has consumed, which would let a
+  later success acknowledge an earlier failed message. Needs a test against the Qpid client before changing.
+- **REST polling and `CustomWebSocketClient`** keep their own copies and limits.
+- **One parameterized contract test** that every connector must pass.
+
+### Note on the earlier build
+
+The Maven runs after the first acknowledgement commit reported "Nothing to compile - all classes are up to date",
+because the IDE had already compiled the classes. A compile error in `HttpConnectorController` was therefore hidden:
+the HTTP connector endpoint would have failed at run time. It was found when a configuration change forced a real
+compile. All results in this report come from `mvn clean test`, which compiles everything with `javac`.

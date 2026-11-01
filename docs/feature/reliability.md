@@ -7,7 +7,7 @@ configured per mapping, plus the transport-level retry that sits underneath them
 |---|---|---|---|
 | Delivery guarantee | `Mapping.qos` | When may the broker message be acknowledged — before processing, or only after it succeeded? | [Quality of Service](#quality-of-service) |
 | Failure threshold | `Mapping.maxFailureCount` | When should a mapping that keeps failing be taken out of service? | [Failure handling](#failure-handling) |
-| Poison-pill guard | — (fixed at 5) | How often may one message be redelivered before it is dropped? | [The poison-pill guard](#the-poison-pill-guard) |
+| Poison-pill guard | `maxProcessingAttempts` (default 3) | How often may one message be redelivered before it is dropped? | [The poison-pill guard](#the-poison-pill-guard) |
 | Processing budgets | `maxCPUTimeMS`, `pipelineTimeoutMS` (service configuration) | How long may one message occupy CPU and a worker thread before it is killed? | [Processing timeouts](#processing-timeouts) |
 | Runtime counters | — (reported, not configured) | What is actually happening per mapping, and to messages that match none? | [Status and counters](#status-and-counters) |
 
@@ -416,24 +416,30 @@ a deserialization error followed by a transformation error on the same leg) adds
 #### The poison-pill guard
 
 Independently of the mapping-level threshold, every callback that can request redelivery
-caps how often it will do so for the *same message*: `MAX_CONSECUTIVE_FAILURES` /
-`MAX_CONSECUTIVE_RECONNECTS`, **fixed at 5** in
+caps how often it will do so for the *same message*. The limit is the service configuration
+`maxProcessingAttempts` (**default 3**, minimum 1), shared by
 [`AbstractMqttCallback`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/AbstractMqttCallback.java),
-[`AbstractPulsarCallback`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/pulsar/AbstractPulsarCallback.java),
+[`AbstractPulsarCallback`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/pulsar/AbstractPulsarCallback.java)
+(plain Pulsar and the Cumulocity MQTT Service),
 [`KafkaClientV2`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/kafka/KafkaClientV2.java),
-[`HttpPollingConnector`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/httppolling/HttpPollingConnector.java) and
-[`CustomWebSocketClient`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/notification/websocket/CustomWebSocketClient.java).
-Once the limit is reached the message is acknowledged and dropped, so one undigestible payload
-cannot block a subscription forever. This is not configurable per mapping. The exact cut-off
-differs: `CustomWebSocketClient` drops on the 5th failure (4 redeliveries), while
-`AbstractMqttCallback` checks the count before incrementing it and drops on the 6th (5
-reconnects). Google Pub/Sub has no such guard: a `nack`ed message is redelivered by Pub/Sub
-until it succeeds or the subscription's own dead-letter policy applies.
+[`AMQPCallback`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/amqp/AMQPCallback.java) (0-9-1) and
+[`GooglePubSubClient`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/googlepubsub/GooglePubSubClient.java)
+through one counter,
+[`MessageFailureTracker`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/core/callback/MessageFailureTracker.java).
+Each retry-worthy failure (server error, timeout, cancellation, exception) is counted; on the
+failure that reaches the limit the message is acknowledged and dropped, so one undigestible
+payload cannot block a subscription forever. The error stays in the mapping status. The count is
+per message, keyed by something that survives redelivery (a message id, an offset, or a hash of
+topic and payload, never a delivery tag), cleared as soon as the message succeeds, and bounded in
+memory (the oldest 10,000 are forgotten). `HttpPollingConnector` and `CustomWebSocketClient` still
+use their own limit of 5; AMQP 1.0 has no limit because an unacknowledged message is not redelivered
+until the session restarts. Errors that a retry would only repeat (client errors, mapping errors
+without an HTTP status) are acknowledged at once and never counted.
 
-For MQTT the redelivery is achieved by *reconnecting* (with exponential back-off), so the
-broker retransmits whatever it has not seen acknowledged — which is why it is gated by the
-connector property `reconnectOnProcessingError`. With that property off, the connector
-simply leaves the message unacknowledged and waits for the broker to retransmit on its own.
+For MQTT the redelivery is achieved by *reconnecting* (with back-off), so the broker retransmits
+whatever it has not seen acknowledged. The connector property `reconnectOnProcessingError` gates the
+reconnect only: with the property off, the connector leaves the message unacknowledged and waits for
+the broker to retransmit on its own, and the limit still applies to the retransmissions.
 
 Note the two counters are per different things: the poison-pill counter is **per message**
 (and cleared as soon as that message succeeds), `currentFailureCount` is **per mapping**.
@@ -574,12 +580,13 @@ loaded; the next housekeeping cycle restores them.
   function ran, `AbstractFlowProcessor` records an error and extends the failure streak, the same as a
   killed function. It is not booked as processed and does not reset the streak. An empty result from a
   Java extension is the opposite case: it means "ignore" and is booked as filtered.
-- **Connectors without their own result handling wait through one helper.** AMQP (both variants), the
-  HTTP connector, and Kafka (QoS above 0) call `ProcessingResultHelper.awaitAckable`: acknowledge on
-  success or 4xx, refuse on 5xx, timeout, cancellation, or exception. Kafka also seeks the partition
-  back to the failed record. MQTT, Pulsar, and REST polling still carry their own copy of this rule, and
-  Pub/Sub keeps its own rule (it nacks every error, including 4xx, and since 2026-11-01 also a cancelled
-  pipeline). See [ack-harmonization.md](../improvements/ack-harmonization.md).
+- **One rule decides acknowledgement.** MQTT, Pulsar, the Cumulocity MQTT Service, Kafka (QoS above 0), AMQP
+  (both variants), Google Pub/Sub, and the HTTP connector call `ProcessingResultHelper.awaitOutcome`
+  (`awaitAckable` for the boolean form): acknowledge on success, on a client error (4xx), and on a mapping
+  error without an HTTP status, because a redelivery would repeat them; do not acknowledge on a server error
+  (5xx), a timeout, a cancelled pipeline, or an exception. Kafka also seeks the partition back to the failed
+  record. The wait is always bounded. REST polling still has its own decision, because it decides whether to
+  advance a cursor. See [ack-harmonization.md](../improvements/ack-harmonization.md).
 - **`errors` and `currentFailureCount` move together on a failure**, but only the streak
   moves back on success. If `currentFailureCount` is 0 while `errors` is large, the mapping
   is working now but has a history worth investigating.

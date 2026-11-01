@@ -26,6 +26,7 @@ import com.rabbitmq.client.*;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
+import dynamic.mapper.connector.core.callback.MessageFailureTracker;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
@@ -48,6 +49,7 @@ public class AMQPCallback extends DefaultConsumer {
     private final ServiceConfiguration serviceConfiguration;
     private final ExecutorService virtualThreadPool;
     private final boolean autoAck;
+    private final MessageFailureTracker failureTracker;
 
     /**
      * Constructor
@@ -64,6 +66,7 @@ public class AMQPCallback extends DefaultConsumer {
             String connectorName) {
         super(channel);
         this.autoAck = autoAck;
+        this.failureTracker = MessageFailureTracker.forConfiguration(serviceRegistry.getServiceConfiguration(tenant));
         this.genericMessageCallback = callback;
         this.tenant = tenant;
         this.connectorIdentifier = connectorIdentifier;
@@ -108,10 +111,17 @@ public class AMQPCallback extends DefaultConsumer {
                             tenant, routingKey, connectorIdentifier);
                 }
 
-                // Acknowledge only after the pipeline succeeded; nack with requeue otherwise.
+                // Acknowledge only after the pipeline succeeded; nack with requeue otherwise, until the
+                // message failed maxProcessingAttempts times: then it is dropped (acked).
                 // With autoAck=true the broker already considers the message delivered, so nothing to do.
                 if (this.getChannel() != null && !autoAck) {
+                    String failureKey = failureKey(properties, routingKey, body);
                     if (ProcessingResultHelper.awaitAckable(processedResults, tenant, topic, log)) {
+                        failureTracker.clear(failureKey);
+                        this.getChannel().basicAck(deliveryTag, false);
+                    } else if (failureTracker.recordFailureReachedLimit(failureKey)) {
+                        log.error("{} - Dropping AMQP message after {} failed attempts: routing key: [{}], connector: {}",
+                                tenant, failureTracker.limit(), routingKey, connectorIdentifier);
                         this.getChannel().basicAck(deliveryTag, false);
                     } else {
                         this.getChannel().basicNack(deliveryTag, false, true);
@@ -137,6 +147,17 @@ public class AMQPCallback extends DefaultConsumer {
                 }
             }
         }
+    }
+
+    /**
+     * Identifies a message across redeliveries: the delivery tag changes on every redelivery, so use the
+     * AMQP message id when the publisher set one, and otherwise the routing key and a hash of the body.
+     */
+    private static String failureKey(AMQP.BasicProperties properties, String routingKey, byte[] body) {
+        if (properties != null && properties.getMessageId() != null) {
+            return "id:" + properties.getMessageId();
+        }
+        return routingKey + "#" + java.util.Arrays.hashCode(body);
     }
 
     @Override

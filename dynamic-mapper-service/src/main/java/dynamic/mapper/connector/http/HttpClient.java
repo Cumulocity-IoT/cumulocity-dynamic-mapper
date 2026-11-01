@@ -27,6 +27,7 @@ import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
@@ -240,8 +241,9 @@ public class HttpClient extends AConnectorClient {
      * retry, since the controller's error handling could never trigger.
      *
      * @param message The connector message containing the HTTP request data
+     * @return the pipeline result, which the controller waits on before it answers the caller
      */
-    public void onMessage(ConnectorMessage message) {
+    public ProcessingResultWrapper<?> onMessage(ConnectorMessage message) {
         if (dispatcher == null) {
             log.error("{} - Dispatcher is not initialized, cannot process message", tenant);
             throw new IllegalStateException("Dispatcher is not initialized, cannot process message");
@@ -252,7 +254,7 @@ public class HttpClient extends AConnectorClient {
                     tenant, message.getTopic());
         }
 
-        dispatcher.onMessage(message);
+        return dispatcher.onMessage(message);
     }
 
     /**

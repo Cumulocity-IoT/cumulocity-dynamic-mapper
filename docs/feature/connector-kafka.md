@@ -158,7 +158,8 @@ A 5xx result, a timeout, a cancelled pipeline (for example a Smart Function stop
 makes the loop seek the partition back to the failed record and skip the
 rest of that partition's batch, so a later success can never commit past it. The next poll
 redelivers the record after a pause of `CONSUMER_RESTART_DELAY_MS` (5 s). Other partitions of
-the same batch continue.
+the same batch continue. A record that failed `maxProcessingAttempts` times (default 3, keyed by
+topic, partition, and offset) is dropped: it is committed past, so the partition does not block on it.
 
 The wait runs on the poll thread, so one slow batch delays the next `poll()`. The total must stay
 below `max.poll.interval.ms`, or the broker rebalances the group.

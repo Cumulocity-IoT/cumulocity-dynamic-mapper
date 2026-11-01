@@ -226,6 +226,26 @@
               </div>
             </div>
           </c8y-li>
+          <c8y-li>
+            <c8y-li-icon icon="refresh"></c8y-li-icon>
+            <div class="d-flex a-i-center">
+              <div>
+                <p>{{ 'Maximum processing attempts per message' | translate }}</p>
+                <p>
+                  <small translate>How many times a message may fail before the connector drops it instead of asking
+                    the broker to deliver it again. The error stays in the mapping status. Applies to MQTT, Pulsar,
+                    Cumulocity MQTT Service, Kafka, AMQP, and Google Pub/Sub. The default is 3.</small>
+                </p>
+              </div>
+              <div class="d-flex j-c-end a-i-center m-l-auto config-control-col">
+                <label class="editable" title="{{ 'Maximum processing attempts per message' | translate }}">
+                  <input class="form-control" name="maxProcessingAttempts" type="number" min="1"
+                    formControlName="maxProcessingAttempts" />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+          </c8y-li>
           @if (expertMode) {
           <c8y-li class="p-t-16">
             <div class="text-medium text-12 text-uppercase separator-bottom p-b-8">

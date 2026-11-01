@@ -81,8 +81,9 @@ Apache Pulsar offer all three levels.
 With QoS 1 or 2, a failed message stays unacknowledged, and the broker delivers it again. A client-side error (HTTP
 status below 500) counts as handled and is acknowledged, because a redelivery would fail again. Redelivery
 repeats the whole mapping, so a mapping must tolerate duplicates. To prevent one faulty message from blocking a
-subscription, most connectors drop a message after five failed deliveries. Google Pub/Sub relies on the dead-letter
-policy of the subscription instead. A slow mapping delays acknowledgments and
+subscription, connectors that retry (MQTT, Pulsar, Cumulocity MQTT Service, Kafka, AMQP, and Google Pub/Sub) drop a message
+after it failed the number of times set in **Maximum processing attempts per message** (Service configuration,
+Processing tab, default 3). The error stays in the mapping status. A slow mapping delays acknowledgments and
 therefore the whole subscription. Use QoS 0 for high-volume data that tolerates loss.
 
 QoS covers the leg between the broker and the Dynamic Mapper only. For example, over Cumulocity MQTT-Service a

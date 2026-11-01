@@ -71,6 +71,7 @@ public class ServiceConfiguration implements Cloneable {
         this.javaScriptAgent = null;
         this.smartFunctionAgent = null;
         this.flowStateRetention = 1440;
+        this.maxProcessingAttempts = DEFAULT_MAX_PROCESSING_ATTEMPTS;
         this.supportESM = true;
         this.cacheAliasMaps = false;
         this.externalIdBinding = true;
@@ -210,6 +211,9 @@ public class ServiceConfiguration implements Cloneable {
      */
     public static final int PROCESSING_HARD_CEILING_MS = 120_000;
 
+    /** How often a message may fail before the connector drops it instead of retrying. */
+    public static final int DEFAULT_MAX_PROCESSING_ATTEMPTS = 3;
+
     /**
      * The JavaScript CPU budget actually applied, with the default substituted for a missing
      * value.
@@ -259,6 +263,10 @@ public class ServiceConfiguration implements Cloneable {
     @NotNull
     @JsonSetter(nulls = Nulls.SKIP)
     private Integer flowStateRetention;
+
+    @Schema(description = "How many times a message may fail before the connector drops it (acknowledges it, with the error kept in the mapping status) instead of asking the broker to redeliver it. Applies to connectors that retry: MQTT, Pulsar, Cumulocity MQTT Service, Kafka, AMQP, and Google Pub/Sub. Default 3.", example = "3", minimum = "1")
+    @JsonSetter(nulls = Nulls.SKIP)
+    private Integer maxProcessingAttempts;
 
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "Suppress deprecation warning in UI.", example = "false")
     @NotNull

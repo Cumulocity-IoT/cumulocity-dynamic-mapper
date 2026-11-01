@@ -34,8 +34,15 @@ that true; the per-connector pages describe only where a broker genuinely differ
   deployed to that connector needs it, and released when the last one stops — several mappings
   sharing a topic must not cause duplicate delivery, and removing one must not silently unsubscribe
   the others.
+- **Acknowledge only after the pipeline result.** A message is acknowledged (or an HTTP request answered)
+  once the mapping pipeline has settled it: success, or an error that a retry would only repeat (a client
+  error, a mapping error without an HTTP status). A server error, a timeout, a cancelled pipeline, or an
+  exception leaves the message unacknowledged so the broker redelivers it. Every connector applies the same
+  rule; see [reliability.md](reliability.md).
 - **Survive a bad message.** A single payload that always fails must not block a subscription
-  indefinitely; see [reliability.md](reliability.md).
+  indefinitely: after `maxProcessingAttempts` failures (default 3, a service configuration setting) the
+  connector acknowledges and drops it, and the error stays in the mapping status. See
+  [reliability.md](reliability.md).
 
 ### Deliberate non-goals
 

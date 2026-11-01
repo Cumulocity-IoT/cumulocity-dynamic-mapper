@@ -30,6 +30,7 @@ import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.connector.core.callback.MessageFailureTracker;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
@@ -800,8 +801,9 @@ public class KafkaClientV2 extends AConnectorClient {
      * Process message with QoS handling: waits for the pipeline result and settles the record.
      *
      * <p>The decision is the shared one ({@link ProcessingResultHelper#awaitAckable}): success and
-     * client errors commit, a server error, timeout, cancellation, or exception does not. Package-private
-     * for unit tests.</p>
+     * client errors commit, a server error, timeout, cancellation, or exception does not. A record that
+     * failed {@code maxProcessingAttempts} times is dropped: it is committed past, so the partition does not
+     * block on it. Package-private for unit tests.</p>
      *
      * @return {@code true} if the record is settled and the loop may continue; {@code false} if it must
      *         be redelivered
@@ -810,7 +812,19 @@ public class KafkaClientV2 extends AConnectorClient {
             KafkaConsumerWrapper wrapper,
             ProcessingResultWrapper<?> processedResults,
             int timeout) {
+        // topic-partition-offset is the same on every redelivery of the record
+        String recordKey = record.topic() + "-" + record.partition() + "@" + record.offset();
+        MessageFailureTracker tracker = failureTracker();
         if (ProcessingResultHelper.awaitAckable(processedResults, tenant, record.topic(), log)) {
+            tracker.clear(recordKey);
+            handleSuccessfulProcessing(record, wrapper);
+            return true;
+        }
+        if (tracker.recordFailureReachedLimit(recordKey)) {
+            // Drop: commit past the record so the partition does not block on it forever
+            log.error("{} - Dropping record after {} failed attempts: topic: [{}], partition: {}, offset: {}, "
+                    + "connector: {}", tenant, tracker.limit(), record.topic(), record.partition(),
+                    record.offset(), connectorIdentifier);
             handleSuccessfulProcessing(record, wrapper);
             return true;
         }
@@ -818,6 +832,22 @@ public class KafkaClientV2 extends AConnectorClient {
                 record.partition(), record.offset());
         handleProcessingError(record, wrapper, 0);
         return false;
+    }
+
+    private volatile MessageFailureTracker failureTracker;
+
+    /** Created on first use: the service configuration is only known once the client is wired. */
+    private MessageFailureTracker failureTracker() {
+        MessageFailureTracker tracker = failureTracker;
+        if (tracker == null) {
+            synchronized (this) {
+                if (failureTracker == null) {
+                    failureTracker = MessageFailureTracker.forConfiguration(serviceConfiguration);
+                }
+                tracker = failureTracker;
+            }
+        }
+        return tracker;
     }
 
     /**

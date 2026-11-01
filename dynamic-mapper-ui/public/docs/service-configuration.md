@@ -37,6 +37,7 @@ Cumulocity MQTT Service** is off, the client relation page is hidden.
 |---|---|
 | **Maximum CPU time for Smart Function JavaScript code** | Default 5000 ms. The service stops a Smart Function that uses more CPU time than this. |
 | **Maximum end-to-end processing time for Smart Functions** | Default 8000 ms (1000 to 120000). Covers the JavaScript and the Cumulocity API calls that follow. When it expires, the message is not acknowledged (QoS above 0) and the broker redelivers it. Must be greater than the CPU time limit, otherwise the form does not save. |
+| **Maximum processing attempts per message** | Default 3, minimum 1. How many times a message may fail before the connector drops it instead of asking the broker to deliver it again. The error stays in the mapping status. Applies to MQTT, Pulsar, Cumulocity MQTT Service, Kafka, AMQP, and Google Pub/Sub. |
 | **Support ESM modules** (Expert settings) | Allows `export function` syntax in mapping code. |
 | **GraalVM engine rotation threshold** (Expert settings) | Number of distinct code sources after which the JavaScript engine is replaced to release memory. Default 1000. |
 | **GraalVM context pool size** (Expert settings) | Idle JavaScript contexts kept per mapping. Default 20, range 1 to 100. |

@@ -26,8 +26,8 @@ product are MQTT's.
 - **TLS with a self-signed or private CA certificate must be possible**, since brokers are
   frequently not publicly trusted.
 - **A processing failure must not silently drop the message** at QoS > 0: the connector withholds
-  the acknowledgement so the broker redelivers. The poison-pill guard that bounds redelivery applies only when
-  "reconnect on processing error" is enabled.
+  the acknowledgement so the broker redelivers. The poison-pill guard (`maxProcessingAttempts`) bounds the
+  redelivery.
 - **Sparkplug B is supported** as a payload convention on top of MQTT, including the host
   application's birth/death certificate lifecycle.
 
@@ -114,10 +114,10 @@ tenant are allowed.
   acked manually after successful processing, with increasing retransmission timeouts
   per retry (up to 3x the base pipeline timeout, `MAX_TIMEOUT_ESCALATION_FACTOR`). A message
   is not acknowledged on a timeout, on a JS CPU timeout, or on an HTTP 5xx result; a 4xx
-  result is acknowledged. Poison-pill detection (ack and discard after
-  `MAX_CONSECUTIVE_RECONNECTS=5`) only runs when `reconnectOnProcessingError=true`. With the
-  default `false`, the connector only withholds the ack and waits for the broker to
-  retransmit, with no failure cap.
+  result is acknowledged. Poison-pill detection (ack and discard after `maxProcessingAttempts`
+  failures, default 3) runs whatever `reconnectOnProcessingError` is. The property only decides
+  whether a failure also triggers a reconnect; with it off, the connector withholds the ack and waits
+  for the broker to retransmit, and the limit still applies.
 - Retained-message publish is honored via `retain(context.isRetain())`.
 
 ### Wildcard support

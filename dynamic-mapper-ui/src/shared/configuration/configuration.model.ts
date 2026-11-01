@@ -42,6 +42,7 @@ export interface ServiceConfiguration {
   codeTemplates?: any;
   maxCPUTimeMS: number;
   pipelineTimeoutMS?: number;
+  maxProcessingAttempts?: number;
   jsonataAgent: string;
   javaScriptAgent: string;
   smartFunctionAgent: string;

@@ -95,9 +95,13 @@ runs in parallel.
 
 #### Gotchas
 
-- **Nack always requeues** (`basicNack(..., requeue=true)`) with no backoff or attempt
-  limit — a permanently-failing message can loop forever, unlike Pulsar's poison-pill
-  cutoff.
+- **Nack requeues** (`basicNack(..., requeue=true)`) with no backoff, but only until the message failed
+  `maxProcessingAttempts` times (default 3); then it is acked and dropped. The message is identified by its
+  AMQP `messageId` property, or by routing key and body hash when the publisher set none, because the
+  delivery tag changes on every redelivery. **AMQP 1.0 has no such limit:** an unacknowledged message is
+  redelivered only when the session restarts. Also, the JMS specification says `acknowledge()` in
+  client-acknowledge mode acknowledges every message the session has consumed so far, so a later success may
+  acknowledge an earlier failed message. Not verified against the Qpid JMS client here.
 - **The callback needs the channel.** `AMQPCallback` receives the channel and the `autoAck` flag
   in its constructor. Earlier it was built with a `null` channel, so it never sent an ack for
   `AT_LEAST_ONCE` subscriptions, and it skipped the ack for redelivered messages. Both are fixed;
