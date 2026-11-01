@@ -287,6 +287,13 @@ Key properties this diagram makes explicit:
   any point in the loop (bad HTTP status, failed/timed-out processing) skips straight to
   `handlePollFailure` without touching `MappingStatus.cursor`, so the next poll resumes from the
   last page that actually completed, never from data that was fetched but not confirmed processed.
+  The one exception is a page that keeps failing: after `maxProcessingAttempts` failures (default 3) it is
+  **skipped**. `settlePage()` counts the failures with a `MessageFailureTracker`, keyed by the cursor (the stuck
+  position; the body of the same unprocessed range grows as new data arrives), or by a hash of the body when no
+  cursor is configured. On the skip, the poll loop advances the cursor past the page as if it had been processed, the
+  mapping's last error (`MappingStatus.recordError`) says `Skipped polled data of topic [...] after N failed
+  processing attempts`, and an error is logged. The data of that page is not processed. Failed HTTP fetches are not
+  counted here; they keep escalating `RETRYING` to `FAILED`.
 - **Failure accounting and the resulting backoff/`FAILED` transition are per-topic** — one topic
   reaching `FAILED` (a status only; its polling continues at the capped delay) does not affect any other topic's
   own counter or schedule.

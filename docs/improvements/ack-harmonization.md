@@ -100,8 +100,8 @@ Pub/Sub keeps its current error rule and gains only the cancelled check.
 | Step | State |
 |---|---|
 | 1. Kafka on the helper, Pub/Sub cancelled check, tests | Done |
-| 2. One policy method | Done for MQTT, Pulsar, Cumulocity MQTT Service, Pub/Sub, Kafka, AMQP, and the HTTP connector (`ProcessingResultHelper.awaitOutcome`). `CustomWebSocketClient` (outbound notifications) since 2026-11-01. Not migrated: REST polling (by decision) |
-| 3. One poison-message rule | Done: `MessageFailureTracker` and the setting `maxProcessingAttempts` (default 3) in the service configuration, the UI (Processing tab), and the docs. `CustomWebSocketClient` uses it too. Not covered: AMQP 1.0 (see below) and REST polling |
+| 2. One policy method | Done for MQTT, Pulsar, Cumulocity MQTT Service, Pub/Sub, Kafka, AMQP, and the HTTP connector (`ProcessingResultHelper.awaitOutcome`). `CustomWebSocketClient` (outbound notifications) since 2026-11-01. REST polling skips a page that keeps failing, with its own cursor logic |
+| 3. One poison-message rule | Done: `MessageFailureTracker` and the setting `maxProcessingAttempts` (default 3) in the service configuration, the UI (Processing tab), and the docs. `CustomWebSocketClient` and REST polling use it too. Not covered: AMQP 1.0 (see below) |
 | 4. Contract test | Partly: per-connector tests for AMQP, Kafka, Pub/Sub, and the HTTP controller; unit tests for the helper and the tracker. No single parameterized test over all connectors yet |
 | 5. Pub/Sub error rule | Done (decision above) |
 
@@ -134,14 +134,33 @@ Inbound callers and REST polling are unchanged. Tests: `CustomWebSocketClientAck
 cancelled, server and client error on a request, drop after the limit, a success forgets earlier failures) and request-error
 cases in `ProcessingResultHelperAwaitAckableTest`.
 
+### REST polling: skip a page that keeps failing (2026-11-01)
+
+A polled page whose processing failed was retried forever: the cursor held, the connector status went `RETRYING` and
+then `FAILED`, and nothing ever skipped the page, so one bad page blocked the topic. The decision was to skip such a
+page with a recorded error.
+
+- `HttpPollingConnector.settlePage()` counts failures of the same page with a `MessageFailureTracker` and skips the page
+  when it failed `maxProcessingAttempts` times (default 3). The key is the cursor, because the body of the same
+  unprocessed range grows as new data arrives; without a cursor it is a hash of the body.
+- On a skip the cursor advances past the page, the mapping's last error records `Skipped polled data of topic [...]
+  after N failed processing attempts`, and an error is logged. The data of the page is not processed.
+- **Unchanged:** a failed fetch (bad HTTP status, timeout) is not counted and still escalates `RETRYING` to `FAILED`.
+  The rule for what counts as a failed page is unchanged: any error, including a 4xx, still holds the cursor until the
+  limit. Only the "forever" is gone.
+- **Risk to know:** a Cumulocity outage that lasts longer than three poll attempts (the delay grows with each attempt)
+  now skips the pages polled meanwhile. Broker connectors have the same exposure. If that is not acceptable for a
+  polled source, count only failures that are not server errors, or raise `maxProcessingAttempts`.
+- Tests: `HttpPollingConnectorSkipTest` (retry until the limit then skip with a recorded error, cursor versus body keys,
+  a success forgets earlier failures, a skip without a mapping).
+
 ### Still open
 
 - **AMQP 1.0:** an unacknowledged message is redelivered only when the session restarts, so the limit cannot count.
   The JMS specification also says `acknowledge()` acknowledges every message the session has consumed, which would let a
   later success acknowledge an earlier failed message. Needs a test against the Qpid client before changing.
-- **REST polling** keeps its own decision, because it decides whether the cursor advances, not whether to acknowledge.
-  A message that always fails blocks that topic forever and nothing drops it. Whether to skip such a message with a
-  recorded error or keep blocking and alert is a product decision that is still open.
+- **REST polling** still makes its own decision, because it decides whether the cursor advances, not whether to
+  acknowledge. See the next section for how a page that always fails is now skipped.
 - **One parameterized contract test** that every connector must pass.
 
 ### Note on the earlier build

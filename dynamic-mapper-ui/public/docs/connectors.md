@@ -113,6 +113,13 @@ The cursor advances after *every* page is successfully processed, not just once 
 so if pagination fails partway through, the next poll resumes from the last page that made it
 through rather than re-fetching already-processed pages or losing the unprocessed remainder.
 
+If the mapping fails to process a page, the cursor does not move and the next poll tries the same page again,
+with a growing delay. When the same page has failed **Maximum processing attempts per message** times (Service
+configuration, default 3), the connector skips it: the cursor moves past the page, the data of that page is not
+processed, and the skip is recorded as the **Last error** of the mapping and in the microservice log. Fix the
+mapping and, if the data matters, fetch it again from the source. Without a cursor, every poll returns the same
+full response, so the response itself identifies the page.
+
 Message Explorer works on this connector too, but with a cost that does not apply to broker-based
 connectors: exploring a topic with no mapping deployed on it yet starts real periodic requests
 against the endpoint for as long as the session is open. See the note in

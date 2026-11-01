@@ -21,6 +21,10 @@ a server error (5xx), a timeout, a cancelled pipeline, or an exception, so the b
 - **Outbound notifications (`CustomWebSocketClient`)** use the same rule and the same `maxProcessingAttempts`. A webhook
   answering 5xx is still retried and a 4xx is not. A timeout now waits for the worker to leave, as on every other
   connector.
+- **REST polling skips a page that keeps failing.** Before, a polled page whose processing failed was retried forever
+  and blocked the topic. Now, after `maxProcessingAttempts` failures of the same page, the connector skips it: the
+  cursor moves on, the data of that page is not processed, and the skip is recorded as the mapping's last error and in
+  the log. A failed HTTP fetch still escalates `RETRYING` to `FAILED` and is not counted.
 - A Smart Function leg cancelled by the pipeline timeout counts as a failure. An empty result from a Java extension is
   ignored, not a failure.
 

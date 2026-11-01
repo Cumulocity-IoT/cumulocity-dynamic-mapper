@@ -30,6 +30,7 @@ import dynamic.mapper.connector.core.ConnectorPropertyType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.ConnectorSpecificationBuilder;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.connector.core.callback.MessageFailureTracker;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.ConnectorType;
@@ -67,6 +68,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -584,12 +586,14 @@ public class HttpPollingConnector extends AConnectorClient {
 
                 if (dispatcher != null) {
                     ProcessingResultWrapper<?> resultWrapper = dispatcher.onMessage(connectorMessage);
-                    if (!awaitProcessingSuccess(resultWrapper, topic)) {
+                    boolean processed = awaitProcessingSuccess(resultWrapper, topic);
+                    if (!settlePage(mapping, topic, body, processed)) {
                         // Treated exactly like a failed fetch: caught by the surrounding
                         // try/catch below, which routes through handlePollFailure (backoff,
                         // RETRYING/FAILED) — the cursor is not advanced for this page, and
                         // pagination stops here, so the next poll resumes from the last page
-                        // that actually completed successfully.
+                        // that actually completed successfully. After maxProcessingAttempts
+                        // failures of the same page, settlePage() skips it instead.
                         throw new ConnectorException("Mapping processing did not complete " +
                                 "successfully for topic [" + topic + "]");
                     }
@@ -643,6 +647,58 @@ public class HttpPollingConnector extends AConnectorClient {
         }
 
         scheduleNextPoll(topic, pollIntervalMs);
+    }
+
+    /**
+     * Decides whether a polled page is settled once its processing finished.
+     *
+     * <p>A page that was processed is settled. A page whose processing failed is retried by the next poll
+     * (the cursor holds), until it failed {@code maxProcessingAttempts} times: then it is <em>skipped</em>. The
+     * skip is recorded as the mapping's last error and logged as an error, and the caller advances the cursor
+     * past the page, so one page that always fails cannot block the topic forever. The data of a skipped page is
+     * not processed.</p>
+     *
+     * <p>The failures are counted per position, not per body: with a cursor the position is the cursor, because
+     * the body of the same unprocessed range grows as new data arrives; without a cursor every poll returns the
+     * same full response, so the body identifies it.</p>
+     *
+     * @return {@code true} if the page is settled (processed or skipped), {@code false} if it must be retried
+     */
+    boolean settlePage(Mapping mapping, String topic, String body, boolean processed) {
+        MessageFailureTracker tracker = failureTracker();
+        String cursor = currentCursor(mapping);
+        String pageKey = topic + "|" + (cursor != null ? cursor : "body:" + Objects.hashCode(body));
+        if (processed) {
+            tracker.clear(pageKey);
+            return true;
+        }
+        if (!tracker.recordFailureReachedLimit(pageKey)) {
+            return false;
+        }
+        String message = String.format("Skipped polled data of topic [%s] after %d failed processing attempts%s",
+                topic, tracker.limit(), cursor != null ? " (cursor: " + cursor + ")" : "");
+        log.error("{} - {}, mapping: {}, connector: {}", tenant, message,
+                mapping != null ? mapping.getIdentifier() : null, connectorIdentifier);
+        if (mapping != null) {
+            mappingService.getMappingStatus(tenant, mapping).recordError(System.currentTimeMillis(), message);
+        }
+        return true;
+    }
+
+    private volatile MessageFailureTracker failureTracker;
+
+    /** Created on first use: the service configuration is only known once the client is wired. */
+    private MessageFailureTracker failureTracker() {
+        MessageFailureTracker tracker = failureTracker;
+        if (tracker == null) {
+            synchronized (this) {
+                if (failureTracker == null) {
+                    failureTracker = MessageFailureTracker.forConfiguration(serviceConfiguration);
+                }
+                tracker = failureTracker;
+            }
+        }
+        return tracker;
     }
 
     /**

@@ -264,7 +264,7 @@ public class ServiceConfiguration implements Cloneable {
     @JsonSetter(nulls = Nulls.SKIP)
     private Integer flowStateRetention;
 
-    @Schema(description = "How many times a message may fail before the connector drops it (acknowledges it, with the error kept in the mapping status) instead of asking the broker to redeliver it. Applies to connectors that retry: MQTT, Pulsar, Cumulocity MQTT Service, Kafka, AMQP, and Google Pub/Sub. Default 3.", example = "3", minimum = "1")
+    @Schema(description = "How many times a message may fail before the connector drops it (acknowledges it, with the error kept in the mapping status) instead of asking the broker to redeliver it. Applies to connectors that retry: MQTT, Pulsar, Cumulocity MQTT Service, Kafka, AMQP, Google Pub/Sub, outbound Notification 2.0, and REST polling, where a failing page of polled data is skipped. Default 3.", example = "3", minimum = "1")
     @JsonSetter(nulls = Nulls.SKIP)
     private Integer maxProcessingAttempts;
 

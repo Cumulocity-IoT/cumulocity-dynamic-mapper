@@ -429,8 +429,9 @@ failure that reaches the limit the message is acknowledged and dropped, so one u
 payload cannot block a subscription forever. The error stays in the mapping status. The count is
 per message, keyed by something that survives redelivery (a message id, an offset, or a hash of
 topic and payload, never a delivery tag), cleared as soon as the message succeeds, and bounded in
-memory (the oldest 10,000 are forgotten). `CustomWebSocketClient` (outbound notifications) uses the same tracker; `HttpPollingConnector` still
-uses its own limit of 5, for the connector status, not for dropping a message; AMQP 1.0 has no limit because an unacknowledged message is not redelivered
+memory (the oldest 10,000 are forgotten). `CustomWebSocketClient` (outbound notifications) uses the same tracker; `HttpPollingConnector` uses the tracker for a
+polled page that keeps failing, which it skips after the limit (its own limit of 5 only drives the connector status,
+`RETRYING` to `FAILED`, for failed fetches); AMQP 1.0 has no limit because an unacknowledged message is not redelivered
 until the session restarts. Errors that a retry would only repeat (client errors, mapping errors
 without an HTTP status) are acknowledged at once and never counted.
 
