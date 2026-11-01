@@ -115,10 +115,13 @@ through rather than re-fetching already-processed pages or losing the unprocesse
 
 If the mapping fails to process a page, the cursor does not move and the next poll tries the same page again,
 with a growing delay. When the same page has failed **Maximum processing attempts per message** times (Service
-configuration, default 3), the connector skips it: the cursor moves past the page, the data of that page is not
-processed, and the skip is recorded as the **Last error** of the mapping and in the microservice log. Fix the
-mapping and, if the data matters, fetch it again from the source. Without a cursor, every poll returns the same
-full response, so the response itself identifies the page.
+configuration, default 3), the connector skips it. A failure with a server error (HTTP 5xx), for example while
+Cumulocity is unavailable, is retried but not counted, so an outage never skips data.
+
+When the connector skips a page, the cursor moves past it and the data of that page is not processed. The skip is
+recorded as the **Last error** of the mapping and in the microservice log. Fix the mapping and, if the data matters,
+fetch it again from the source. Without a cursor, every poll returns the same full response, so the response itself
+identifies the page.
 
 Message Explorer works on this connector too, but with a cost that does not apply to broker-based
 connectors: exploring a topic with no mapping deployed on it yet starts real periodic requests

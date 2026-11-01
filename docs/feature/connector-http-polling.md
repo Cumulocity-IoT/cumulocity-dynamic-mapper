@@ -288,7 +288,10 @@ Key properties this diagram makes explicit:
   `handlePollFailure` without touching `MappingStatus.cursor`, so the next poll resumes from the
   last page that actually completed, never from data that was fetched but not confirmed processed.
   The one exception is a page that keeps failing: after `maxProcessingAttempts` failures (default 3) it is
-  **skipped**. `settlePage()` counts the failures with a `MessageFailureTracker`, keyed by the cursor (the stuck
+  **skipped**. `settlePage()` counts the failures with a `MessageFailureTracker`, but not the ones that are server
+  errors (`awaitProcessingOutcome()` returns `SERVER_ERROR` for an HTTP status of 500 or more, as `extractMaxHttpStatus`
+  reads it), so a Cumulocity outage holds the cursor and retries without ever skipping data; a server error neither
+  counts nor resets the count. The count is keyed by the cursor (the stuck
   position; the body of the same unprocessed range grows as new data arrives), or by a hash of the body when no
   cursor is configured. On the skip, the poll loop advances the cursor past the page as if it had been processed, the
   mapping's last error (`MappingStatus.recordError`) says `Skipped polled data of topic [...] after N failed

@@ -148,11 +148,15 @@ page with a recorded error.
 - **Unchanged:** a failed fetch (bad HTTP status, timeout) is not counted and still escalates `RETRYING` to `FAILED`.
   The rule for what counts as a failed page is unchanged: any error, including a 4xx, still holds the cursor until the
   limit. Only the "forever" is gone.
-- **Risk to know:** a Cumulocity outage that lasts longer than three poll attempts (the delay grows with each attempt)
-  now skips the pages polled meanwhile. Broker connectors have the same exposure. If that is not acceptable for a
-  polled source, count only failures that are not server errors, or raise `maxProcessingAttempts`.
+- **Server errors do not count.** A failure with an HTTP status of 500 or more (for example while Cumulocity is
+  unavailable) is retried with the usual backoff but neither counted toward the skip nor does it reset the count, so an
+  outage never makes the connector skip data. Without this, an outage longer than three poll attempts would have
+  skipped the pages polled meanwhile. Timeouts and cancellations are still counted, because a page that always times
+  out or exhausts the CPU limit would otherwise block the topic forever. A connection failure to Cumulocity that carries
+  no HTTP status is also counted, which is a remaining small exposure.
 - Tests: `HttpPollingConnectorSkipTest` (retry until the limit then skip with a recorded error, cursor versus body keys,
-  a success forgets earlier failures, a skip without a mapping).
+  a success forgets earlier failures, a skip without a mapping, server errors never counted, and how a processing result
+  is classified).
 
 ### Still open
 

@@ -586,14 +586,14 @@ public class HttpPollingConnector extends AConnectorClient {
 
                 if (dispatcher != null) {
                     ProcessingResultWrapper<?> resultWrapper = dispatcher.onMessage(connectorMessage);
-                    boolean processed = awaitProcessingSuccess(resultWrapper, topic);
-                    if (!settlePage(mapping, topic, body, processed)) {
+                    PageOutcome outcome = awaitProcessingOutcome(resultWrapper, topic);
+                    if (!settlePage(mapping, topic, body, outcome)) {
                         // Treated exactly like a failed fetch: caught by the surrounding
                         // try/catch below, which routes through handlePollFailure (backoff,
                         // RETRYING/FAILED) — the cursor is not advanced for this page, and
                         // pagination stops here, so the next poll resumes from the last page
                         // that actually completed successfully. After maxProcessingAttempts
-                        // failures of the same page, settlePage() skips it instead.
+                        // failures of the same page (server errors do not count), settlePage() skips it.
                         throw new ConnectorException("Mapping processing did not complete " +
                                 "successfully for topic [" + topic + "]");
                     }
@@ -658,17 +658,24 @@ public class HttpPollingConnector extends AConnectorClient {
      * past the page, so one page that always fails cannot block the topic forever. The data of a skipped page is
      * not processed.</p>
      *
+     * <p>A server error (HTTP 5xx, for example while Cumulocity is unavailable) is not the page's fault: it is
+     * retried but <em>not counted</em>, so an outage never makes the connector skip data. It does not reset
+     * the count either.</p>
+     *
      * <p>The failures are counted per position, not per body: with a cursor the position is the cursor, because
      * the body of the same unprocessed range grows as new data arrives; without a cursor every poll returns the
      * same full response, so the body identifies it.</p>
      *
      * @return {@code true} if the page is settled (processed or skipped), {@code false} if it must be retried
      */
-    boolean settlePage(Mapping mapping, String topic, String body, boolean processed) {
+    boolean settlePage(Mapping mapping, String topic, String body, PageOutcome outcome) {
+        if (outcome == PageOutcome.SERVER_ERROR) {
+            return false;
+        }
         MessageFailureTracker tracker = failureTracker();
         String cursor = currentCursor(mapping);
         String pageKey = topic + "|" + (cursor != null ? cursor : "body:" + Objects.hashCode(body));
-        if (processed) {
+        if (outcome == PageOutcome.PROCESSED) {
             tracker.clear(pageKey);
             return true;
         }
@@ -715,6 +722,20 @@ public class HttpPollingConnector extends AConnectorClient {
      *         failure/timeout (already logged) — the caller must not advance the cursor then.
      */
     private boolean awaitProcessingSuccess(ProcessingResultWrapper<?> resultWrapper, String topic) {
+        return awaitProcessingOutcome(resultWrapper, topic) == PageOutcome.PROCESSED;
+    }
+
+    /** How the processing of one polled page ended. */
+    enum PageOutcome {
+        /** Processed without any error. */
+        PROCESSED,
+        /** Failed in a way that can repeat with the same page: a mapping or client error, a timeout, a cancellation. */
+        FAILED,
+        /** Failed with a server error (HTTP 5xx), for example while Cumulocity is unavailable: not the page's fault. */
+        SERVER_ERROR
+    }
+
+    PageOutcome awaitProcessingOutcome(ProcessingResultWrapper<?> resultWrapper, String topic) {
         // Found in review 2026-09-22: ProcessingResultHelper.failure() — an early-exit wrapper
         // for a dispatch that never even started real (async) processing, e.g. payload
         // deserialization failure or no mapping resolved — builds a wrapper with NO
@@ -725,7 +746,7 @@ public class HttpPollingConnector extends AConnectorClient {
         if (resultWrapper.getProcessingResult() == null) {
             log.warn("{} - Dispatch for topic [{}] failed before processing started (no mapping " +
                     "resolved, or the payload could not be deserialized)", tenant, topic);
-            return false;
+            return PageOutcome.FAILED;
         }
 
         long timeoutMs = resultWrapper.getPipelineTimeoutMS() > 0
@@ -740,19 +761,22 @@ public class HttpPollingConnector extends AConnectorClient {
             if (resultWrapper.getCancellationRequested().get()) {
                 log.warn("{} - Processing for topic [{}] was cancelled (JS CPU timeout) before " +
                         "the wall-clock timeout, treating as failed", tenant, topic);
-                return false;
+                return PageOutcome.FAILED;
             }
 
             int httpStatusCode = ProcessingResultHelper.extractMaxHttpStatus(results, tenant, topic, log);
-            return httpStatusCode < 0;
+            if (httpStatusCode < 0) {
+                return PageOutcome.PROCESSED;
+            }
+            return httpStatusCode >= 500 ? PageOutcome.SERVER_ERROR : PageOutcome.FAILED;
         } catch (InterruptedException | ExecutionException e) {
             log.warn("{} - Mapping processing failed for topic [{}]: {}", tenant, topic, e.getMessage());
-            return false;
+            return PageOutcome.FAILED;
         } catch (TimeoutException e) {
             boolean drained = resultWrapper.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
             log.warn("{} - Mapping processing timed out for topic [{}] after {}ms (drained={})",
                     tenant, topic, timeoutMs, drained);
-            return false;
+            return PageOutcome.FAILED;
         }
     }
 

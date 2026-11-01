@@ -24,7 +24,8 @@ a server error (5xx), a timeout, a cancelled pipeline, or an exception, so the b
 - **REST polling skips a page that keeps failing.** Before, a polled page whose processing failed was retried forever
   and blocked the topic. Now, after `maxProcessingAttempts` failures of the same page, the connector skips it: the
   cursor moves on, the data of that page is not processed, and the skip is recorded as the mapping's last error and in
-  the log. A failed HTTP fetch still escalates `RETRYING` to `FAILED` and is not counted.
+  the log. A failed HTTP fetch still escalates `RETRYING` to `FAILED` and is not counted, and neither is a failure
+  with a server error (HTTP 5xx), so an outage of Cumulocity never skips data.
 - A Smart Function leg cancelled by the pipeline timeout counts as a failure. An empty result from a Java extension is
   ignored, not a failure.
 
