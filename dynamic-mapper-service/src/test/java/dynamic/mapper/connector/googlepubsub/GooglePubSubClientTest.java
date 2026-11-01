@@ -292,4 +292,28 @@ public class GooglePubSubClientTest {
         verify(consumer).nack();
         verify(consumer, never()).ack();
     }
+
+    @Test
+    public void testProcessPubSubMessage_atLeastOnce_nacksWhenThePipelineWasCancelled() throws Exception {
+        // a CPU timeout completes the future early with the cancellation flag set and no error recorded
+        InboundMessageDispatcher dispatcher = mock(InboundMessageDispatcher.class);
+        ServiceConfiguration sc = mock(ServiceConfiguration.class);
+        when(sc.getLogPayload()).thenReturn(false);
+        ProcessingResultWrapper<Object> cancelled = successWrapper();
+        cancelled.getCancellationRequested().set(true);
+        doReturn(cancelled).when(dispatcher).onMessage(any(ConnectorMessage.class));
+
+        GooglePubSubClient client = clientWithMocks(dispatcher, sc);
+        AckReplyConsumer consumer = mock(AckReplyConsumer.class);
+
+        PubsubMessage message = PubsubMessage.newBuilder()
+                .setData(ByteString.copyFromUtf8("{\"value\":4}"))
+                .setMessageId("msg-4")
+                .build();
+
+        client.processPubSubMessage(message, consumer, "test-topic", Qos.AT_LEAST_ONCE);
+
+        verify(consumer).nack();
+        verify(consumer, never()).ack();
+    }
 }

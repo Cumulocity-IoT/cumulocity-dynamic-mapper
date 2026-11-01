@@ -375,7 +375,11 @@ public class GooglePubSubClient extends AConnectorClient {
                 List<? extends ProcessingContext<?>> contexts =
                         result.getProcessingResult().get(effectiveTimeout, TimeUnit.MILLISECONDS);
 
-                boolean hasError = contexts != null && contexts.stream().anyMatch(ProcessingContext::hasError);
+                // A CPU timeout can complete the future early with the cancellation flag set: the message
+                // was not processed, so it must be redelivered, as the other connectors do.
+                boolean cancelled = result.getCancellationRequested().get();
+                boolean hasError = cancelled
+                        || (contexts != null && contexts.stream().anyMatch(ProcessingContext::hasError));
                 if (hasError) {
                     log.warn("{} - Processing error for Pub/Sub message: topic=[{}], messageId={} — nacking",
                             tenant, topic, messageId);

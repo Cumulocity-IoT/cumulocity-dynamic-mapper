@@ -23,7 +23,6 @@ package dynamic.mapper.connector.kafka;
 
 import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import dynamic.mapper.util.TenantLogContext;
-import com.cumulocity.sdk.client.SDKException;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorPropertyGroup;
@@ -38,13 +37,13 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableInt;
@@ -798,73 +797,27 @@ public class KafkaClientV2 extends AConnectorClient {
     }
 
     /**
-     * Process message with QoS handling
+     * Process message with QoS handling: waits for the pipeline result and settles the record.
+     *
+     * <p>The decision is the shared one ({@link ProcessingResultHelper#awaitAckable}): success and
+     * client errors commit, a server error, timeout, cancellation, or exception does not. Package-private
+     * for unit tests.</p>
+     *
+     * @return {@code true} if the record is settled and the loop may continue; {@code false} if it must
+     *         be redelivered
      */
-    private boolean processMessageWithQos(ConsumerRecord<String, String> record,
+    boolean processMessageWithQos(ConsumerRecord<String, String> record,
             KafkaConsumerWrapper wrapper,
             ProcessingResultWrapper<?> processedResults,
             int timeout) {
-        String topic = record.topic();
-
-        try {
-            List<? extends ProcessingContext<?>> results;
-            if (timeout > 0) {
-                results = processedResults.getProcessingResult().get(timeout, TimeUnit.MILLISECONDS);
-            } else {
-                // Always bounded — an unbounded get() parks this worker, and blocks the offset
-                // commit, forever if the pipeline hangs in I/O.
-                results = processedResults.getProcessingResult()
-                        .get(ServiceConfiguration.PROCESSING_HARD_CEILING_MS, TimeUnit.MILLISECONDS);
-            }
-
-            boolean hasErrors = false;
-            int httpStatusCode = 0;
-
-            if (results != null) {
-                for (ProcessingContext<?> context : results) {
-                    if (context.hasError()) {
-                        for (Exception error : context.getErrors()) {
-                            if (error instanceof ProcessingException) {
-                                Throwable origin = ((ProcessingException) error).getOriginException();
-                                if (origin instanceof SDKException) {
-                                    int status = ((SDKException) origin).getHttpStatus();
-                                    if (status > httpStatusCode) {
-                                        httpStatusCode = status;
-                                    }
-                                }
-                            }
-                        }
-                        hasErrors = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!hasErrors || httpStatusCode < 500) {
-                handleSuccessfulProcessing(record, wrapper);
-                return true;
-            }
-            handleProcessingError(record, wrapper, httpStatusCode);
-            return false;
-
-        } catch (InterruptedException | ExecutionException e) {
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-            log.warn("{} - Processing interrupted for topic: [{}], offset: {}",
-                    tenant, topic, record.offset(), e);
-            handleProcessingError(record, wrapper, 0);
-            return false;
-        } catch (TimeoutException e) {
-            // cancelAndDrain, not Future.cancel(true): the bare cancel only interrupts the worker
-            // thread, which CPU-bound GraalVM JavaScript ignores — the registered cancel actions
-            // (Context.close(cancelIfExecuting=true)) are what actually stop it.
-            boolean drained = processedResults.cancelAndDrain(ProcessingResultWrapper.DEFAULT_DRAIN_MILLIS);
-            log.warn("{} - Processing timed out for topic: [{}], offset: {}, worker drained: {}",
-                    tenant, topic, record.offset(), drained);
-            handleProcessingTimeout(record, wrapper);
-            return false;
+        if (ProcessingResultHelper.awaitAckable(processedResults, tenant, record.topic(), log)) {
+            handleSuccessfulProcessing(record, wrapper);
+            return true;
         }
+        log.warn("{} - Not committing topic: [{}], partition: {}, offset: {}", tenant, record.topic(),
+                record.partition(), record.offset());
+        handleProcessingError(record, wrapper, 0);
+        return false;
     }
 
     /**
@@ -921,15 +874,6 @@ public class KafkaClientV2 extends AConnectorClient {
                 }
             });
         }
-    }
-
-    /**
-     * Handle processing timeout
-     */
-    private void handleProcessingTimeout(ConsumerRecord<String, String> record, KafkaConsumerWrapper wrapper) {
-        log.warn("{} - Processing timeout for topic: [{}], partition: {}, offset: {}",
-                tenant, record.topic(), record.partition(), record.offset());
-        handleProcessingError(record, wrapper, 0);
     }
 
     /**

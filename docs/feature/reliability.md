@@ -577,7 +577,9 @@ loaded; the next housekeeping cycle restores them.
 - **Connectors without their own result handling wait through one helper.** AMQP (both variants), the
   HTTP connector, and Kafka (QoS above 0) call `ProcessingResultHelper.awaitAckable`: acknowledge on
   success or 4xx, refuse on 5xx, timeout, cancellation, or exception. Kafka also seeks the partition
-  back to the failed record.
+  back to the failed record. MQTT, Pulsar, and REST polling still carry their own copy of this rule, and
+  Pub/Sub keeps its own rule (it nacks every error, including 4xx, and since 2026-11-01 also a cancelled
+  pipeline). See [ack-harmonization.md](../improvements/ack-harmonization.md).
 - **`errors` and `currentFailureCount` move together on a failure**, but only the streak
   moves back on success. If `currentFailureCount` is 0 while `errors` is large, the mapping
   is working now but has a history worth investigating.

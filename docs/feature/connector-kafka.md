@@ -152,8 +152,10 @@ Both `INBOUND` and `OUTBOUND`. Kafka has no native QoS concept. `supportedQos` i
 committed after a successful result only when `enable.auto.commit=false` (the shipped default).
 For a record whose consolidated mapping QoS is 0, the offset is queued for commit without waiting
 for the pipeline. For QoS above 0, the poll-loop thread waits for the pipeline result before it
-moves to the next record of that partition; an HTTP 4xx result counts as success. A 5xx result,
-a timeout, or an error makes the loop seek the partition back to the failed record and skip the
+moves to the next record of that partition. The decision is the shared one
+(`ProcessingResultHelper.awaitAckable`, see [reliability.md](reliability.md)): an HTTP 4xx result counts as success.
+A 5xx result, a timeout, a cancelled pipeline (for example a Smart Function stopped by the CPU limit), or an exception
+makes the loop seek the partition back to the failed record and skip the
 rest of that partition's batch, so a later success can never commit past it. The next poll
 redelivers the record after a pause of `CONSUMER_RESTART_DELAY_MS` (5 s). Other partitions of
 the same batch continue.

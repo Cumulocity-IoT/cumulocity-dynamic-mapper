@@ -71,7 +71,8 @@ itself. Subscribers are created in `subscribe()` and started with
 - `AT_MOST_ONCE`: the consumer acks immediately, before dispatching to the processing
   pipeline — fire-and-forget.
 - Anything above `AT_MOST_ONCE`: ack only after the pipeline processing result is
-  known — nack (triggering redelivery) if the processing context reports an error, or
+  known — nack (triggering redelivery) if the processing context reports an error, if the
+  pipeline was cancelled (for example a Smart Function stopped by the CPU limit), or
   on any exception (including a restored-interrupt on `InterruptedException`); ack
   otherwise.
 - No explicit ack-deadline configuration is set on the subscriber builder — it uses the
