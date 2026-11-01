@@ -49,32 +49,96 @@ meets your reliability requirements.
 Higher QoS levels (1-2) provide better delivery guarantees, but not all connectors support them. Only MQTT and
 Apache Pulsar offer all three levels.
 
-| Connector | QoS | Inbound | Outbound |
-|---|:---:|---|---|
-| **AMQP 0-9-1** (RabbitMQ, etc.) | 0 | Automatic acknowledgment, before processing | Non-persistent delivery |
-| **AMQP 0-9-1** (RabbitMQ, etc.) | 1 | Acknowledged after processing, requeued on failure | Persistent delivery |
-| **AMQP 0-9-1** (RabbitMQ, etc.) | 2 | Handled as QoS 1 | Handled as QoS 1 |
-| **AMQP 1.0** (Azure Service Bus, Artemis, Solace, etc.) | 0 | Acknowledged before processing | `NON_PERSISTENT` delivery mode |
-| **AMQP 1.0** (Azure Service Bus, Artemis, Solace, etc.) | 1 | `CLIENT_ACKNOWLEDGE` after processing | `PERSISTENT` delivery mode |
-| **AMQP 1.0** (Azure Service Bus, Artemis, Solace, etc.) | 2 | Handled as QoS 1 | Handled as QoS 1 |
-| **Apache Pulsar** | 0 | Acknowledged immediately | Asynchronous send, no acknowledgment |
-| **Apache Pulsar** | 1 | Acknowledged after successful processing, negative acknowledgment on failure | Blocking send |
-| **Apache Pulsar** | 2 | As QoS 1, plus broker-side duplicate suppression | Blocking send |
-| **Cumulocity MQTT-Service (device isolation)** | 0 | Not used. Messages are always acknowledged after processing. | Asynchronous send to the MQTT Service, failures are only logged |
-| **Cumulocity MQTT-Service (device isolation)** | 1 | Not used. Messages are always acknowledged after processing. | The send waits for the MQTT Service to confirm |
-| **Cumulocity MQTT-Service (device isolation)** | 2 | Handled as QoS 1 | Handled as QoS 1 |
-| **Google Cloud Pub/Sub** | 0 | Ack sent immediately, before processing (at-most-once) | QoS setting has no effect. Publish always waits for the Pub/Sub publish acknowledgement (message ID). |
-| **Google Cloud Pub/Sub** | 1 | Ack sent only after successful processing, nack (redelivery) on error | QoS setting has no effect. Publish always waits for the Pub/Sub publish acknowledgement (message ID). |
-| **Google Cloud Pub/Sub** | 2 | Handled as QoS 1 | QoS setting has no effect. Publish always waits for the Pub/Sub publish acknowledgement (message ID). |
-| **HTTP Endpoint** | any | Response sent after the pipeline ran: `200` on success, `500` on pipeline failure or timeout. QoS 0 is handled as QoS 1. | not applicable |
-| **Kafka** | 0 | Offset committed immediately | Waits for the broker acknowledgment of all in-sync replicas (`acks=all` default, overridable per connector) |
-| **Kafka** | 1 | Offset committed after successful processing, record read again on failure | Same as QoS 0 |
-| **Kafka** | 2 | Handled as QoS 1 | Handled as QoS 1 |
-| **MQTT** | 0 | ACKs are sent to broker directly after message received | Received as QoS 1 at Notification 2.0 but published as QoS 0 |
-| **MQTT** | 1 | ACKs are sent only when the message is successfully processed at C8Y | ACKs are sent only to Notification 2.0 when the message is successfully published to broker, published as QoS 1 |
-| **MQTT** | 2 | Currently handled as QoS 1, no logic to check for de-duplication | Handled as QoS 1, published as QoS 2 |
-| **REST Polling** | any | Poll response acknowledged after the pipeline ran | not applicable |
-| **Webhook** | any | not applicable | Always at-least-once: the Notification 2.0 message is acknowledged only when the HTTP request succeeded |
+#### QoS behavior by connector {#qos-by-connector}
+
+Each connector below lists what happens at each QoS level, for messages that come in from the broker (inbound) and
+for messages the Dynamic Mapper sends to it (outbound).
+
+##### AMQP 0-9-1 (RabbitMQ, etc.)
+
+<!--table:equal-columns-->
+
+| QoS | Inbound | Outbound |
+|:---:|---|---|
+| 0 | Automatic acknowledgment, before processing | Non-persistent delivery |
+| 1 | Acknowledged after processing, requeued on failure | Persistent delivery |
+| 2 | Handled as QoS 1 | Handled as QoS 1 |
+
+##### AMQP 1.0 (Azure Service Bus, Artemis, Solace, etc.)
+
+<!--table:equal-columns-->
+
+| QoS | Inbound | Outbound |
+|:---:|---|---|
+| 0 | Acknowledged before processing | `NON_PERSISTENT` delivery mode |
+| 1 | `CLIENT_ACKNOWLEDGE` after processing | `PERSISTENT` delivery mode |
+| 2 | Handled as QoS 1 | Handled as QoS 1 |
+
+##### Apache Pulsar
+
+<!--table:equal-columns-->
+
+| QoS | Inbound | Outbound |
+|:---:|---|---|
+| 0 | Acknowledged immediately | Asynchronous send, no acknowledgment |
+| 1 | Acknowledged after successful processing, negative acknowledgment on failure | Blocking send |
+| 2 | As QoS 1, plus broker-side duplicate suppression | Blocking send |
+
+##### Cumulocity MQTT-Service (device isolation)
+
+<!--table:equal-columns-->
+
+| QoS | Inbound | Outbound |
+|:---:|---|---|
+| 0 | Not used. Messages are always acknowledged after processing. | Asynchronous send to the MQTT Service, failures are only logged |
+| 1 | Not used. Messages are always acknowledged after processing. | The send waits for the MQTT Service to confirm |
+| 2 | Handled as QoS 1 | Handled as QoS 1 |
+
+##### Google Cloud Pub/Sub
+
+<!--table:equal-columns-->
+
+| QoS | Inbound |
+|:---:|---|
+| 0 | Ack sent immediately, before processing (at-most-once) |
+| 1 | Ack sent only after successful processing, nack (redelivery) on error |
+| 2 | Handled as QoS 1 |
+
+Outbound: the QoS setting has no effect. Publish always waits for the Pub/Sub publish acknowledgement (message ID).
+
+##### HTTP Endpoint
+
+Inbound only, for every QoS level. The response is sent after the pipeline ran: `200` on success, `500` on pipeline
+failure or timeout. QoS 0 is handled as QoS 1.
+
+##### Kafka
+
+<!--table:equal-columns-->
+
+| QoS | Inbound | Outbound |
+|:---:|---|---|
+| 0 | Offset committed immediately | Waits for the broker acknowledgment of all in-sync replicas (`acks=all` default, overridable per connector) |
+| 1 | Offset committed after successful processing, record read again on failure | Same as QoS 0 |
+| 2 | Handled as QoS 1 | Handled as QoS 1 |
+
+##### MQTT
+
+<!--table:equal-columns-->
+
+| QoS | Inbound | Outbound |
+|:---:|---|---|
+| 0 | ACKs are sent to broker directly after message received | Received as QoS 1 at Notification 2.0 but published as QoS 0 |
+| 1 | ACKs are sent only when the message is successfully processed at C8Y | ACKs are sent only to Notification 2.0 when the message is successfully published to broker, published as QoS 1 |
+| 2 | Currently handled as QoS 1, no logic to check for de-duplication | Handled as QoS 1, published as QoS 2 |
+
+##### REST Polling
+
+Inbound only, for every QoS level. The poll response is acknowledged after the pipeline ran.
+
+##### Webhook
+
+Outbound only, for every QoS level. It always works at-least-once: the Notification 2.0 message is acknowledged only
+when the HTTP request succeeded.
 
 #### Acknowledgment and redelivery
 

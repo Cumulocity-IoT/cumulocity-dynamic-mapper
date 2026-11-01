@@ -174,8 +174,13 @@ function unwrapImageCaptions(html: string): string {
 // borders/padding/striping under the .table/.table-striped classes (used by hand-written doc
 // pages elsewhere), so apply them here too instead of duplicating the rules, and wrap in
 // .table-responsive so wide tables scroll horizontally instead of overflowing the page.
+//
+// A table preceded by <!--table:equal-columns--> also gets .table-equal-columns (see doc-shared.css), so
+// several tables with the same number of columns line up, for example one small table per connector.
 function styleTables(html: string): string {
   return html
+    .replace(/<!--table:equal-columns-->\s*<table>/g,
+      '<div class="table-responsive"><table class="table table-striped table-equal-columns">')
     .replace(/<table>/g, '<div class="table-responsive"><table class="table table-striped">')
     .replace(/<\/table>/g, '</table></div>');
 }
