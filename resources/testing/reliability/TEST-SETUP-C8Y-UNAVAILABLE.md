@@ -374,11 +374,23 @@ list that the mapping's own request gets the 502 before judging the result.
 
 1. Use an MQTT connector with a mapping that writes to a faulted path and targets an existing device. Note the service
    configuration value of `maxProcessingAttempts`.
-2. Publish one message every 5 s with a running counter in the payload, QoS 1, for example with
-   `mosquitto_pub -q 1`.
-3. **Short outage.** Switch `fault.on`, wait about 30 s, switch `fault.off`. Expected: measurements with every
-   counter value, none missing (older messages may arrive late and out of order); the connector may go through
-   `RETRYING` and back to `CONNECTED`; the log shows the reconnects. No `POISON PILL` entry.
+2. Start a publisher that sends one message every 5 s at QoS 1. Each payload carries a counter that increases by 1,
+   so a missing measurement shows up as a gap. For example:
+   ```bash
+   i=0; while true; do i=$((i+1)); mosquitto_pub -q 1 -t "<topic>" -m "{\"counter\": $i}"; sleep 5; done
+   ```
+   Keep it running through steps 3 to 5.
+3. **Short outage.** About 30 s is short enough that no message reaches `maxProcessingAttempts`.
+   1. Switch `fault.on`.
+   2. Wait about 30 s.
+   3. Switch `fault.off`.
+   4. Wait until the connector is `CONNECTED` and a few more messages have arrived.
+
+   Expected:
+   - Every counter value exists as a measurement, none missing. Messages sent during the outage may arrive late and
+     out of order.
+   - The connector may go through `RETRYING` and back to `CONNECTED`, and the log shows the reconnects.
+   - The log has no `POISON PILL` entry.
 4. **Long outage.** Switch `fault.on` for 10 min. Expected: a `POISON PILL: <n> failed attempts` entry in the log
    per message that reached the limit, and a gap in the counter values for those messages. Record the number
    of reconnects and the number of lost messages.

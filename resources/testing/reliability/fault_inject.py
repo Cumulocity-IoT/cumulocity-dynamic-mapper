@@ -13,12 +13,16 @@ FAULT_PATH_PREFIX = "/inventory/managedObjects"
 # lookup/registration of ServiceLogSourceLocator. Switched on separately, because faulting /event/events also hits the
 # mapper's own events.
 SERVICE_LOG_PATH_PREFIXES = ("/event/events", "/identity/externalIds")
+# Measurements written by the mappings (and nothing else of the mapper's own). Switched on separately from the
+# inventory and the service log, so a measurement outage can be simulated without touching events or mapping reload.
+MEASUREMENT_PATH_PREFIX = "/measurement/measurements"
 
 
 class FaultInjector:
     def __init__(self):
         self.enabled = False
         self.service_log = False
+        self.measurements = False
 
     # Activate from the mitmproxy TUI: press ":" to open the command bar, type
     # "fault.toggle" (or "fault.on" / "fault.off" for an explicit state) and hit Enter.
@@ -50,6 +54,18 @@ class FaultInjector:
         self.service_log = False
         ctx.log.alert("service log fault injection DISABLED")
 
+    # "fault.measurements.on" / "fault.measurements.off": fail only POSTs to /measurement/measurements. Independent
+    # of "fault.on" (inventory) and "fault.logs.on" (events and external ids).
+    @command.command("fault.measurements.on")
+    def measurements_on(self) -> None:
+        self.measurements = True
+        ctx.log.alert("measurement fault injection ENABLED")
+
+    @command.command("fault.measurements.off")
+    def measurements_off(self) -> None:
+        self.measurements = False
+        ctx.log.alert("measurement fault injection DISABLED")
+
     def request(self, flow: http.HTTPFlow):
         # Reverse-proxy mode forwards whatever Host header the client sent
         # (localhost:8888); Cumulocity routes tenants by subdomain, so the
@@ -59,8 +75,10 @@ class FaultInjector:
 
     def response(self, flow: http.HTTPFlow):
         path = flow.request.path
-        faulted = (self.enabled and path.startswith(FAULT_PATH_PREFIX)) or (
-            self.service_log and path.startswith(SERVICE_LOG_PATH_PREFIXES)
+        faulted = (
+            (self.enabled and path.startswith(FAULT_PATH_PREFIX))
+            or (self.service_log and path.startswith(SERVICE_LOG_PATH_PREFIXES))
+            or (self.measurements and path.startswith(MEASUREMENT_PATH_PREFIX))
         )
         if faulted:
             # Applied after the platform handled the request, as in a real gateway failure: a POST can have taken
