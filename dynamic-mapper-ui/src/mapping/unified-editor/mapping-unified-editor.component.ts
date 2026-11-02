@@ -54,7 +54,7 @@ import {
   stripTemplateMetadataTags
 } from '../../shared/mapping/util';
 import { gettext } from '@c8y/ngx-components/gettext';
-import { ConfirmationModalComponent } from '../../shared';
+import { ALERT_ACTION_REQUIRED_TIMEOUT, ConfirmationModalComponent } from '../../shared';
 import { MappingValidationError } from '../../shared/mapping/mapping-validation-error';
 import { ConfirmsUnsavedChanges } from '../core/unsaved-changes.guard';
 import { MappingValidationDrawerComponent } from '../validation/mapping-validation-drawer.component';
@@ -65,6 +65,7 @@ import {
   MappingStepperService,
   snapshotConnectors
 } from '../service/mapping-stepper.service';
+import { MappingPublishService } from '../versions/mapping-publish.service';
 import { SubstitutionManagementService } from '../service/substitution-management.service';
 import { CommonModule } from '@angular/common';
 import { MappingStepPropertiesComponent } from '../step-properties/mapping-step-properties.component';
@@ -72,6 +73,7 @@ import { MappingConnectorComponent } from '../step-connector/mapping-connector.c
 import { MappingSubstitutionStepComponent } from '../step-transformation/mapping-substitution-step.component';
 import { MappingTemplateStepComponent } from '../step-template/mapping-template-step.component';
 import { PopoverModule } from 'ngx-bootstrap/popover';
+import { BsDropdownModule } from 'ngx-bootstrap/dropdown';
 import { MappingEditorBase } from '../editor-base/mapping-editor.base';
 import { MappingExtensionSelectorComponent } from '../editor-base/mapping-extension-selector.component';
 
@@ -109,6 +111,7 @@ const TAB_FOR_BLOCKER: Partial<Record<CommitBlocker, number>> = {
     TabsOutletComponent,
     EditorComponent,
     PopoverModule,
+    BsDropdownModule,
     MappingStepPropertiesComponent,
     MappingConnectorComponent,
     MappingSubstitutionStepComponent,
@@ -129,6 +132,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
   @ViewChild('transformationStep', { static: false }) transformationStepRef!: MappingSubstitutionStepComponent;
 
   private readonly mappingService = inject(MappingService);
+  private readonly publishService = inject(MappingPublishService);
   private readonly subscriptionService = inject(SubscriptionService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -336,7 +340,25 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     this.updateTestingTemplate.next(buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, true));
   }
 
-  async onCommitButton(): Promise<void> {
+  /** The split button's main action: the last choice from its dropdown. */
+  saveAndActivate = false;
+
+  get saveButtonText(): string {
+    return this.saveAndActivate ? gettext('Save & Activate') : gettext('Save');
+  }
+
+  /** Only blockers the user cannot fix from inside the editor disable Save; see the template. */
+  get saveDisabled(): boolean {
+    return (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole)
+      || !!this.stepperConfiguration.readOnly
+      || this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE;
+  }
+
+  /**
+   * @param activateAfterSave "Save & Activate": after the draft is saved, publish it as a version
+   *   and activate it. Saving alone only writes the draft, so the running mapping is unchanged.
+   */
+  async onCommitButton(activateAfterSave = false): Promise<void> {
     // Sync any pending template edits before saving
     this.updateTemplatesInEditors();
 
@@ -382,7 +404,8 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     const alert = commitSuccessMessage(result, this.mapping.name, this.stepperConfiguration.persistence);
     // add() rather than success(): success() leaves the timeout unset, and Cumulocity then
     // auto-dismisses a detail-less success alert after 3s — too short to read an instruction.
-    if (alert) this.alertService.add({ text: alert.text, type: 'success', timeout: alert.timeout });
+    // Skipped for Save & Activate: its "publish and activate" instruction is carried out below.
+    if (alert && !(activateAfterSave && !result.deploymentFailed)) this.alertService.add({ text: alert.text, type: 'success', timeout: alert.timeout });
 
     // Saving closes the editor. Re-baselining first matters: navigation is guarded by
     // unsavedChangesGuard, which would otherwise see the just-saved edits as unsaved and prompt.
@@ -392,19 +415,61 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
     // editors apply the same post-save check — an OUTBOUND mapping with no device subscribed
     // to receive it otherwise silently does nothing once activated.
     // It is advisory and the mapping is already saved, so a failure must not strand the user in
-    // an editor whose state was just rebaselined.
-    try {
-      await this.subscriptionService.validateSubscriptionOutbound(this.stepperConfiguration.direction);
-    } catch (error) {
-      console.error('Post-save subscription check failed:', error);
-      this.alertService.warning(gettext('The mapping was saved, but checking the device subscriptions failed.'));
+    // an editor whose state was just rebaselined. Save & Activate skips it: activation runs the
+    // same check and refuses, so showing it twice would only add noise.
+    if (!activateAfterSave) {
+      try {
+        await this.subscriptionService.validateSubscriptionOutbound(this.stepperConfiguration.direction);
+      } catch (error) {
+        console.error('Post-save subscription check failed:', error);
+        this.alertService.warning(gettext('The mapping was saved, but checking the device subscriptions failed.'));
+      }
     }
 
     // The mapping is saved but its connector assignment is not (error alert already raised):
     // stay in the editor so the selection isn't lost and Save can retry the deployment.
     if (result.deploymentFailed) return;
 
+    if (activateAfterSave) {
+      await this.publishAndActivate();
+      // Publishing and activating mutate this.mapping (active, version), which the unsaved-changes
+      // check compares as part of the mapping. Without re-baselining, the navigation below finds
+      // "unsaved changes" and traps the user in the discard prompt.
+      this.rebaselineAfterSave(this.mapping, false);
+    }
+
+    // The grid shows its cached list until a reload lands. commitMapping reloaded it before the
+    // publish and activation ran, so without this the grid briefly shows the outdated version.
+    await this.mappingService.reloadMappings(this.stepperConfiguration.direction);
+
     this.navigateToGrid();
+  }
+
+  /**
+   * Second half of Save & Activate. The draft is already saved; a cancelled publish dialog leaves
+   * it as a draft, which is what plain Save would have done, so say so rather than closing silently.
+   */
+  private async publishAndActivate(): Promise<void> {
+    const name = this.mapping.name;
+    try {
+      if (this.mapping.draftDirty) {
+        const outcome = await this.publishService.publishDraft(this.mapping);
+        if (outcome.cancelled) {
+          this.alertService.add({
+            text: gettext(`Saved draft for ${name}. It is not live yet: publish and activate it from the mapping list (Versions).`),
+            type: 'success',
+            timeout: ALERT_ACTION_REQUIRED_TIMEOUT
+          });
+        }
+      } else if (!this.mapping.active && this.mapping.version) {
+        // Connector-only change: no draft to publish, but an inactive mapping can still be switched on.
+        await this.publishService.activate(this.mapping, this.mapping.version);
+      } else {
+        this.alertService.info(gettext(`${name} has no unpublished changes.`));
+      }
+    } catch (error) {
+      this.alertService.danger(gettext('Saved, but activating the mapping failed'), (error as Error).message);
+    }
   }
 
   /**

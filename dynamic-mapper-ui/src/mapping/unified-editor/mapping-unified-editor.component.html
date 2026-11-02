@@ -168,12 +168,27 @@
       <!-- Only blockers the user cannot fix from inside the editor disable Save. A missing connector or
            topic does not: onCommitButton() reports it and jumps to the right tab, which is far easier to
            discover than a silently greyed-out button. -->
-      <button type="button" class="btn btn-primary" (click)="onCommitButton()"
-        [disabled]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) || stepperConfiguration.readOnly || mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE"
-        [title]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) ? ('Requires the Mapping Admin or Mapping Create role.' | translate) : mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : ''"
-        translate data-cy="dm-unified-editor-save">
-        Save
-      </button>
+      <!-- Split button. Plain Save only writes the draft, so the running mapping is unchanged until a
+           version is published and activated; "Save & Activate" does all three, so users do not have to
+           leave the editor and find the Activate toggle. The last choice stays the main action. -->
+      <div class="btn-group dropdown" role="group" [dropup]="true" dropdown
+        [isDisabled]="saveDisabled">
+        <button type="button" class="btn btn-primary" (click)="onCommitButton(saveAndActivate)"
+          [disabled]="saveDisabled"
+          [title]="(!feature?.userHasMappingAdminRole && !feature?.userHasMappingCreateRole) ? ('Requires the Mapping Admin or Mapping Create role.' | translate) : mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE ? ('Saving is disabled: SUBSTITUTION_AS_CODE mappings are deprecated and can no longer be modified.' | translate) : ''"
+          data-cy="dm-unified-editor-save">
+          {{ saveButtonText | translate }}
+        </button>
+        <button type="button" class="btn btn-primary" style="min-width: auto" dropdownToggle
+          [disabled]="saveDisabled" [attr.aria-label]="'More save options' | translate"
+          data-cy="dm-unified-editor-save-toggle">
+          <i c8yIcon="chevron-up"></i>
+        </button>
+        <ul class="dropdown-menu" *dropdownMenu>
+          <li><a (click)="saveAndActivate = false" data-cy="dm-unified-editor-save-only">{{ 'Save' | translate }}</a></li>
+          <li><a (click)="saveAndActivate = true" data-cy="dm-unified-editor-save-activate">{{ 'Save & Activate' | translate }}</a></li>
+        </ul>
+      </div>
     </div>
     <!-- right: spacer matching the left column width to keep buttons centered -->
     <div style="flex:1;"></div>

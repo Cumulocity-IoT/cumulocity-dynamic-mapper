@@ -5,6 +5,7 @@ import { BsModalService } from 'ngx-bootstrap/modal';
 import { Subject } from 'rxjs';
 import { MappingVersionDrawerComponent } from './mapping-version-drawer.component';
 import { MappingService } from '../core/mapping.service';
+import { SubscriptionService } from '../core/subscription.service';
 import { Mapping, MappingVersion } from '../../shared';
 
 /**
@@ -74,6 +75,7 @@ describe('MappingVersionDrawerComponent', () => {
       imports: [MappingVersionDrawerComponent],
       providers: [
         { provide: MappingService, useValue: mockMappingService },
+        { provide: SubscriptionService, useValue: jasmine.createSpyObj('SubscriptionService', ['validateSubscriptionOutbound']) },
         { provide: AlertService, useValue: mockAlertService },
         { provide: BsModalService, useValue: mockBsModalService },
         { provide: BottomDrawerRef, useValue: mockDrawerRef }

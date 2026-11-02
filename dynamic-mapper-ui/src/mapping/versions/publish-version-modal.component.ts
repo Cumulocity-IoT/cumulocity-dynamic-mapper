@@ -29,7 +29,7 @@ const SEMVER_RE = /^\d+\.\d+\.\d+$/;
  *
  * Shows the current active version, three bump-buttons (patch / minor / major)
  * that pre-fill the editable version field, and a note textarea. Resolves with
- * `{ version, note }` on confirm or `null` on cancel.
+ * `{ version, note, activate }` on confirm or `null` on cancel.
  */
 @Component({
   selector: 'd11r-publish-version-modal',
@@ -71,6 +71,22 @@ const SEMVER_RE = /^\d+\.\d+\.\d+$/;
       </div>
 
       <div class="form-group">
+        <label class="c8y-checkbox">
+          <input type="checkbox" [(ngModel)]="activate" data-cy="dm-publish-activate" />
+          <span></span>
+          <span>{{ activateLabel }}</span>
+        </label>
+        @if (activate && mappingActive) {
+          <span class="help-block text-muted">The mapping keeps running {{ currentVersion }} until you confirm.</span>
+        }
+        @if (!activate) {
+          <span class="help-block text-muted">
+            {{ mappingActive ? 'The mapping keeps running ' + currentVersion + ' until you activate the new version.' : 'The mapping stays inactive and processes no messages until you activate it.' }}
+          </span>
+        }
+      </div>
+
+      <div class="form-group">
         <label>Change note <span class="text-muted">(optional)</span></label>
         <textarea class="form-control" rows="3" [(ngModel)]="note" placeholder="Describe what changed in this version"></textarea>
       </div>
@@ -78,7 +94,7 @@ const SEMVER_RE = /^\d+\.\d+\.\d+$/;
     <div class="modal-footer">
       <button type="button" class="btn btn-default" (click)="cancel()">Cancel</button>
       <button type="button" class="btn btn-primary" [disabled]="!isValid()" (click)="confirm()">
-        Publish
+        {{ activate ? 'Publish & activate' : 'Publish' }}
       </button>
     </div>
   `
@@ -88,11 +104,20 @@ export class PublishVersionModalComponent implements OnInit {
   @Input() currentVersion: string | null = null;
   @Input() suggestions: { patch: string; minor: string; major: string } = { patch: '1.0.0', minor: '1.0.0', major: '1.0.0' };
 
+  /** Whether the mapping is currently active: decides the wording of the activation option. */
+  @Input() mappingActive = false;
+  /** Preset for the activation option. Save & Activate passes true; it is always the user's call. */
+  @Input() activate = true;
+
   version = '';
   note = '';
 
-  /** Emits the chosen version+note on confirm, or null on cancel. */
-  closeSubject = new Subject<{ version: string; note: string } | null>();
+  get activateLabel(): string {
+    return this.mappingActive ? 'Switch the running mapping to this version' : 'Activate the mapping with this version';
+  }
+
+  /** Emits the chosen version, note and activation choice on confirm, or null on cancel. */
+  closeSubject = new Subject<{ version: string; note: string; activate: boolean } | null>();
 
   ngOnInit(): void {
     this.version = this.suggestions.patch;
@@ -108,7 +133,7 @@ export class PublishVersionModalComponent implements OnInit {
 
   confirm(): void {
     if (!this.isValid()) return;
-    this.closeSubject.next({ version: this.version.trim(), note: this.note.trim() });
+    this.closeSubject.next({ version: this.version.trim(), note: this.note.trim(), activate: this.activate });
     this.closeSubject.complete();
   }
 
