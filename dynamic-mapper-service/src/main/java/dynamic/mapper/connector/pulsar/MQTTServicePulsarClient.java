@@ -73,7 +73,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
     private static final int DEFAULT_CONNECTION_TIMEOUT = 30;
     private static final int DEFAULT_OPERATION_TIMEOUT = 30;
     private static final int DEFAULT_KEEP_ALIVE = 30;
-    private static final long DEFAULT_NEGATIVE_ACK_DELAY = 60;
+    private static final int DEFAULT_NEGATIVE_ACK_DELAY = 60;
 
     // Cumulocity-specific consumer and producer
     private Consumer<byte[]> platformConsumer;
