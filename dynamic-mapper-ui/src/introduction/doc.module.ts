@@ -42,7 +42,9 @@ const MARKDOWN_PAGES = [
   // Start
   'quickstart-inbound', 'quickstart-outbound', 'concepts',
   // Guides
-  'managing-connectors', 'connectors', 'define-mapping',
+  'managing-connectors', 'connectors', 'connector-http', 'connector-webhook',
+  'connector-rest-polling', 'connector-kafka', 'connector-pulsar',
+  'how-to-pulsar-kafka-mqtt', 'define-mapping',
   'define-subscription-for-outbound', 'transformation-types',
   'jsonata', 'smartfunction', 'javaextension', 'custom-routing',
   'message-explorer', 'monitoring', 'troubleshooting',

@@ -119,6 +119,54 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 792,
       preventDuplicates: true
     }),
+    httpConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'globe',
+      label: gettext('HTTP connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-http',
+      priority: 791.9,
+      preventDuplicates: true
+    }),
+    webhookConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'share-alt',
+      label: gettext('Webhook connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-webhook',
+      priority: 791.8,
+      preventDuplicates: true
+    }),
+    restPollingConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'refresh',
+      label: gettext('REST Polling connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-rest-polling',
+      priority: 791.7,
+      preventDuplicates: true
+    }),
+    kafkaConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'exchange',
+      label: gettext('Kafka connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-kafka',
+      priority: 791.6,
+      preventDuplicates: true
+    }),
+    pulsarConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'plug',
+      label: gettext('Pulsar connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-pulsar',
+      priority: 791.5,
+      preventDuplicates: true
+    }),
+    brokerConceptsNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'table',
+      label: gettext('Pulsar, Kafka, and MQTT compared'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/how-to-pulsar-kafka-mqtt',
+      priority: 791.4,
+      preventDuplicates: true
+    }),
     definingMappingNode: new NavigatorNode({
       parent: gettext('Guides'),
       icon: 'exchange',
