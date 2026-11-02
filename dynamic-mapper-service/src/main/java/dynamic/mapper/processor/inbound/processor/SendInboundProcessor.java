@@ -81,6 +81,12 @@ public class SendInboundProcessor extends BaseProcessor {
             // Update the sparkPlugB_isActive flag: TRUE for BIRTH/DATA, FALSE for DEATH.
             updateSparkPlugBActiveStatus(context);
 
+            // Commit extension state only for a fully delivered message; on failure the message is
+            // redelivered and must not look like a duplicate.
+            if (!context.hasError()) {
+                context.runDeferredStateCommit();
+            }
+
             // At least one request failed above (recorded via context.addError, not thrown) —
             // bookkeeping mirrors the catch block below, just for isolated per-request failures.
             if (context.hasError() && context.affectsMappingStatus()) {

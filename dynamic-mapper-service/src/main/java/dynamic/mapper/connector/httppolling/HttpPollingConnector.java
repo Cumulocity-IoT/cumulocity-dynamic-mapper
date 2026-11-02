@@ -616,7 +616,7 @@ public class HttpPollingConnector extends AConnectorClient {
                     case "NextLinkHeader" -> {
                         nextUri = HttpPollingRequestHelper.resolveSameOrigin(
                                 HttpPollingRequestHelper.extractNextLinkUri(response, tenant, log),
-                                baseUrl, tenant, log);
+                                requestUri(topic, nextUri), baseUrl, tenant, log);
                         hasMore = nextUri != null;
                     }
                     case "NextFieldInBody" -> {
@@ -700,7 +700,7 @@ public class HttpPollingConnector extends AConnectorClient {
         if (tracker == null) {
             synchronized (this) {
                 if (failureTracker == null) {
-                    failureTracker = MessageFailureTracker.forConfiguration(serviceConfiguration);
+                    failureTracker = MessageFailureTracker.forConfiguration(this::currentServiceConfiguration);
                 }
                 tracker = failureTracker;
             }
@@ -965,6 +965,16 @@ public class HttpPollingConnector extends AConnectorClient {
      *                    this URI directly instead of {@link #baseUrl} + path + {@code queryParams}
      *                    — the server already handed back the complete next-page URL.
      */
+    /** The URL the poll request for {@code topic} was sent to: the followed Link, or base URL plus topic path. */
+    private URI requestUri(String topic, URI followedLink) {
+        if (followedLink != null) {
+            return followedLink;
+        }
+        String base = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        return org.springframework.web.util.UriComponentsBuilder.fromUriString(base)
+                .path(HttpPollingRequestHelper.topicPath(topic)).build().encode().toUri();
+    }
+
     private Mono<ResponseEntity<String>> executeGet(String topic, Map<String, String> queryParams, URI absoluteUri) {
         WebClient.RequestHeadersSpec<?> request;
         if (absoluteUri != null) {

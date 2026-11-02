@@ -1,6 +1,7 @@
 package dynamic.mapper.processor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -93,10 +94,27 @@ class ExtensibleProcessorStatePersistenceTest {
         ExtensibleInboundProcessor processor = new ExtensibleInboundProcessor(
                 mappingService, registry, null, store);
 
-        processor.process(context(new byte[0], false, Direction.INBOUND));
-        processor.process(context(new byte[0], false, Direction.INBOUND));
+        // SendInboundProcessor runs the deferred commit after a successful delivery.
+        for (int i = 0; i < 2; i++) {
+            ProcessingContext<byte[]> ctx = context(new byte[0], false, Direction.INBOUND);
+            processor.process(ctx);
+            ctx.runDeferredStateCommit();
+        }
 
         assertEquals(2, store.loadState(TENANT, MAPPING_ID).get("seen"));
+    }
+
+    @Test
+    void inboundStateIsNotWrittenUntilDeliverySucceeds() throws Exception {
+        when(inboundExtension.onMessage(any(), any())).thenAnswer(inv -> {
+            ((dynamic.mapper.processor.model.JavaExtensionContext) inv.getArgument(1)).setNativeState("id", "m1");
+            return new CumulocityObject[] { new CumulocityObject() };
+        });
+        ProcessingContext<byte[]> ctx = context(new byte[0], false, Direction.INBOUND);
+
+        new ExtensibleInboundProcessor(mappingService, registry, null, store).process(ctx);
+
+        assertNull(store.loadState(TENANT, MAPPING_ID).get("id"));
     }
 
     @Test
@@ -158,10 +176,27 @@ class ExtensibleProcessorStatePersistenceTest {
         });
         ExtensibleOutboundProcessor processor = new ExtensibleOutboundProcessor(mappingService, registry, store);
 
-        processor.process(context(new Object(), false, Direction.OUTBOUND));
-        processor.process(context(new Object(), false, Direction.OUTBOUND));
+        // SendOutboundProcessor runs the deferred commit after a successful publish.
+        for (int i = 0; i < 2; i++) {
+            ProcessingContext<Object> ctx = context(new Object(), false, Direction.OUTBOUND);
+            processor.process(ctx);
+            ctx.runDeferredStateCommit();
+        }
 
         assertEquals(2, store.loadState(TENANT, MAPPING_ID).get("seen"));
+    }
+
+    @Test
+    void outboundStateIsNotWrittenUntilPublishSucceeds() throws Exception {
+        when(outboundExtension.onMessage(any(), any())).thenAnswer(inv -> {
+            ((dynamic.mapper.processor.model.JavaExtensionContext) inv.getArgument(1)).setNativeState("id", "m1");
+            return new DeviceMessage[] { new DeviceMessage() };
+        });
+
+        new ExtensibleOutboundProcessor(mappingService, registry, store)
+                .process(context(new Object(), false, Direction.OUTBOUND));
+
+        assertNull(store.loadState(TENANT, MAPPING_ID).get("id"));
     }
 
     @Test

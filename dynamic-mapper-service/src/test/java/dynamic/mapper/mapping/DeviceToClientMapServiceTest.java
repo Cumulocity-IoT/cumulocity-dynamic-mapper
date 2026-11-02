@@ -69,6 +69,7 @@ class DeviceToClientMapServiceTest {
     void sendsRemovedDevicesAsNullSoTheInventoryMergeDropsThem() {
         stored(Map.of("1", "clientA", "2", "clientB"));
         when(serviceRegistry.getAllClientRelations(TENANT)).thenReturn(Map.of("1", "clientA"));
+        when(serviceRegistry.getRemovedClientRelations(TENANT)).thenReturn(java.util.Set.of("2"));
 
         service.sendToInventory(TENANT);
 
@@ -78,6 +79,17 @@ class DeviceToClientMapServiceTest {
         assertEquals("clientA", sent.get("1"));
         assertTrue(sent.containsKey("2"));
         assertNull(sent.get("2"));
+    }
+
+    @Test
+    void keepsRelationsRegisteredByAnotherInstance() {
+        stored(Map.of("1", "clientA", "2", "clientB"));
+        when(serviceRegistry.getAllClientRelations(TENANT)).thenReturn(Map.of("1", "clientA"));
+        when(serviceRegistry.getRemovedClientRelations(TENANT)).thenReturn(java.util.Set.of());
+
+        service.sendToInventory(TENANT);
+
+        verify(inventoryApi, never()).update(any(), any());
     }
 
     @Test

@@ -102,9 +102,11 @@ subscriptions are always active, they just define routing rules."
 intentional so `HttpConnectorController` can map them to an HTTP 400 response.
 Previously swallowing exceptions here caused malformed payloads to always get a 200 OK
 with no retry signal to the caller — a documented past bug, now fixed by letting the
-exception propagate to the controller layer. Note that `dispatcher.onMessage()` returns once the
-message is submitted to the async pipeline and the returned `ProcessingResultWrapper` is
-discarded, so only synchronous failures reach the controller.
+exception propagate to the controller layer. `HttpConnectorController` then waits for the returned
+`ProcessingResultWrapper` with `ProcessingResultHelper.awaitAckable()`. The wait is bounded; on
+timeout the pipeline is cancelled. It returns 200 only when the pipeline succeeded (or failed with a
+client-side error that a retry would repeat), and HTTP 500 for retry-worthy pipeline failures and
+timeouts, so the sender can retry.
 
 ### Gotchas
 

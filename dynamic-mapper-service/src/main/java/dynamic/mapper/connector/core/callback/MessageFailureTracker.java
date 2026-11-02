@@ -3,6 +3,7 @@ package dynamic.mapper.connector.core.callback;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 
@@ -35,10 +36,15 @@ public class MessageFailureTracker {
         this.maxAttempts = maxAttempts;
     }
 
-    /** A tracker whose limit follows the tenant's service configuration, read on every failure. */
-    public static MessageFailureTracker forConfiguration(ServiceConfiguration configuration) {
+    /**
+     * A tracker that resolves the tenant's current configuration on every failure. Use this form with a
+     * registry lookup: updating the service configuration replaces the registry entry, so a captured
+     * instance would keep the old limit.
+     */
+    public static MessageFailureTracker forConfiguration(Supplier<ServiceConfiguration> configuration) {
         return new MessageFailureTracker(() -> {
-            Integer configured = configuration == null ? null : configuration.getMaxProcessingAttempts();
+            ServiceConfiguration current = configuration.get();
+            Integer configured = current == null ? null : current.getMaxProcessingAttempts();
             return configured == null || configured < 1 ? DEFAULT_MAX_ATTEMPTS : configured;
         });
     }

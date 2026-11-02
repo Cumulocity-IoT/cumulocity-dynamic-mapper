@@ -79,6 +79,8 @@ public class TenantRegistry {
 
     // Structure: < Tenant, < DeviceId, ConnectorClientId > >
     private final Map<String, Map<String, String>> deviceToClientPerTenant = new ConcurrentHashMap<>();
+    /** Devices whose relation was removed on this instance and not yet deleted from the persisted map. */
+    private final Map<String, Set<String>> removedClientRelationsPerTenant = new ConcurrentHashMap<>();
 
     // Structure: < Tenant, ManagedObject Id > — C8Y inventory ID of the persisted device-to-client map
     private final Map<String, String>              deviceToClientMapIds    = new ConcurrentHashMap<>();
@@ -176,19 +178,26 @@ public class TenantRegistry {
     // =========================================================================
 
     /**
-     * Initialises the device-to-client map for a tenant from the persisted
-     * {@link DeviceToClientMapRepresentation}. Replaces any existing in-memory map.
+     * Loads the persisted {@link DeviceToClientMapRepresentation} into the in-memory map of a tenant.
+     * Relations already collected in memory win over persisted ones (they are newer), and persisted
+     * relations this instance removed since are not restored. The in-memory map is updated in place,
+     * so relations added concurrently are not lost.
      */
     public void initializeDeviceToClientMap(String tenant,
             DeviceToClientMapRepresentation representation) {
         deviceToClientMapIds.put(tenant, representation.getId());
-        Map<String, String> clientMap = new ConcurrentHashMap<>();
+        Map<String, String> clientMap = deviceToClientPerTenant.computeIfAbsent(tenant,
+                k -> new ConcurrentHashMap<>());
         if (representation.getDeviceToClientMap() != null) {
             log.debug("{} - Initializing Device To Client Map with {} entries", tenant,
                     representation.getDeviceToClientMap().size());
-            clientMap.putAll(representation.getDeviceToClientMap());
+            Set<String> removed = pendingRemovals(tenant);
+            representation.getDeviceToClientMap().forEach((deviceId, clientId) -> {
+                if (!removed.contains(deviceId)) {
+                    clientMap.putIfAbsent(deviceId, clientId);
+                }
+            });
         }
-        deviceToClientPerTenant.put(tenant, clientMap);
     }
 
     public String getDeviceToClientMapId(String tenant) {
@@ -198,6 +207,7 @@ public class TenantRegistry {
     public void addOrUpdateClientRelation(String tenant, String clientId, String deviceId) {
         deviceToClientPerTenant.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>())
                 .put(deviceId, clientId);
+        pendingRemovals(tenant).remove(deviceId);
         log.debug("Added client mapping for tenant {}: device {} -> client {}", tenant, deviceId, clientId);
     }
 
@@ -208,7 +218,10 @@ public class TenantRegistry {
         }
         Map<String, String> tenantMappings = deviceToClientPerTenant
                 .computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
-        deviceIds.forEach(deviceId -> tenantMappings.put(deviceId, clientId));
+        deviceIds.forEach(deviceId -> {
+            tenantMappings.put(deviceId, clientId);
+            pendingRemovals(tenant).remove(deviceId);
+        });
         log.debug("Added {} client mappings for tenant {}: devices {} -> client {}",
                 deviceIds.size(), tenant, deviceIds, clientId);
     }
@@ -218,6 +231,7 @@ public class TenantRegistry {
         if (tenantMappings != null) {
             String removedClientId = tenantMappings.remove(deviceId);
             if (removedClientId != null) {
+                pendingRemovals(tenant).add(deviceId);
                 log.debug("Removed client mapping for tenant {}: device {} (was mapped to client {})",
                         tenant, deviceId, removedClientId);
             }
@@ -232,14 +246,32 @@ public class TenantRegistry {
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toList());
             toRemove.forEach(tenantMappings::remove);
+            pendingRemovals(tenant).addAll(toRemove);
             log.debug("Removed {} device mappings for client {} in tenant {}",
                     toRemove.size(), clientId, tenant);
         }
     }
 
     public void clearCacheDeviceToClient(String tenant) {
-        deviceToClientPerTenant.put(tenant, new ConcurrentHashMap<>());
+        Map<String, String> previous = deviceToClientPerTenant.put(tenant, new ConcurrentHashMap<>());
+        if (previous != null) {
+            pendingRemovals(tenant).addAll(previous.keySet());
+        }
         log.debug("Cleared all client mappings for tenant {}", tenant);
+    }
+
+    private Set<String> pendingRemovals(String tenant) {
+        return removedClientRelationsPerTenant.computeIfAbsent(tenant, k -> ConcurrentHashMap.newKeySet());
+    }
+
+    /** Devices whose relation this instance removed since the last acknowledged sync. */
+    public Set<String> getRemovedClientRelations(String tenant) {
+        return new HashSet<>(pendingRemovals(tenant));
+    }
+
+    /** Forgets removals that are now reflected in the persisted map. */
+    public void acknowledgeRemovedClientRelations(String tenant, Set<String> deviceIds) {
+        pendingRemovals(tenant).removeAll(deviceIds);
     }
 
     public String resolveDeviceToClient(String tenant, String deviceId) {

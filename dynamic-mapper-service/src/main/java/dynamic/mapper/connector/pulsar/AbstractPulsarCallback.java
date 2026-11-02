@@ -80,7 +80,7 @@ public abstract class AbstractPulsarCallback implements MessageListener<byte[]> 
         this.connectorName = connectorName;
         this.serviceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
         this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
-        this.failureTracker = MessageFailureTracker.forConfiguration(this.serviceConfiguration);
+        this.failureTracker = MessageFailureTracker.forConfiguration(() -> serviceRegistry.getServiceConfiguration(tenant));
     }
 
     /**

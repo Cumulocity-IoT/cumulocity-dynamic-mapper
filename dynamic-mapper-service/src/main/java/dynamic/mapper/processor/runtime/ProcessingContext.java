@@ -251,6 +251,13 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     private Object extensionResult;
 
+    /**
+     * Commits extension native state once the result has been delivered. Set by the inbound extension
+     * processor for a non-empty result; run by SendInboundProcessor only when every request succeeded,
+     * so a failed delivery that is redelivered is not mistaken for a duplicate.
+     */
+    private Runnable deferredStateCommit;
+
     private DataPrepContext flowContext;
 
     private Map<String, Object> flowState;
@@ -273,6 +280,15 @@ public class ProcessingContext<O> implements AutoCloseable {
      */
     public boolean affectsMappingStatus() {
         return !testing && !testRun;
+    }
+
+    /** Runs the deferred extension-state commit once, if one was registered. */
+    public void runDeferredStateCommit() {
+        Runnable commit = deferredStateCommit;
+        deferredStateCommit = null;
+        if (commit != null) {
+            commit.run();
+        }
     }
 
     public boolean hasError() {

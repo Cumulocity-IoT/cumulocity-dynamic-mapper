@@ -141,6 +141,15 @@ public abstract class AConnectorClient {
     @Getter
     @Setter
     protected ServiceConfiguration serviceConfiguration;
+
+    /**
+     * The tenant's current configuration. Updating it replaces the registry entry, so long-lived
+     * consumers resolve it here instead of keeping {@link #serviceConfiguration}.
+     */
+    protected ServiceConfiguration currentServiceConfiguration() {
+        ServiceConfiguration current = serviceRegistry == null ? null : serviceRegistry.getServiceConfiguration(tenant);
+        return current != null ? current : serviceConfiguration;
+    }
     @Getter
     @Setter
     protected Certificate cert;

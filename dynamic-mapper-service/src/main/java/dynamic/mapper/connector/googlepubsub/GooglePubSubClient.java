@@ -397,7 +397,7 @@ public class GooglePubSubClient extends AConnectorClient {
         if (tracker == null) {
             synchronized (this) {
                 if (failureTracker == null) {
-                    failureTracker = MessageFailureTracker.forConfiguration(serviceConfiguration);
+                    failureTracker = MessageFailureTracker.forConfiguration(this::currentServiceConfiguration);
                 }
                 tracker = failureTracker;
             }

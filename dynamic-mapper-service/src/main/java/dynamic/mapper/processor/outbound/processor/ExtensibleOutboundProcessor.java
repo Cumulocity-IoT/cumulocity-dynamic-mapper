@@ -131,19 +131,22 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor<Obj
 
             // 3. Call new pattern method
             DeviceMessage[] results = extension.onMessage(message, prepContext);
-            // Also for an empty result: deduplication extensions record what they saw and return nothing.
-            prepContext.persistNativeState();
 
             // 4. Store results in context for processing by ExtensibleResultOutboundProcessor
             if (results != null && results.length > 0) {
                 log.debug("{} - Extension returned {} DeviceMessage(s)", tenant, results.length);
                 context.setExtensionResult(results);
+                // Returning normally does not mean the publish succeeded: commit the state after
+                // sending, so a redelivery after a failure is not treated as a duplicate.
+                context.setDeferredStateCommit(prepContext::persistNativeState);
             } else {
                 String errorMsg = String.format(
                     "%s - Extension '%s' (class: %s) onMessage() returned null or empty array - nothing to publish, ignoring",
                     tenant, extensionEntry.getEventName(), extensionEntry.getFqnClassName());
                 log.info(errorMsg);
                 // An empty result means "nothing to do" (e.g. deduplication), as for Smart Functions; not a failure.
+                // Nothing is published, so deduplication extensions record what they saw right away.
+                prepContext.persistNativeState();
                 context.setIgnoreFurtherProcessing(true);
             }
 

@@ -75,7 +75,7 @@ public class CustomWebSocketClient extends WebSocketClient {
         this.tenant = tenant;
         this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
         this.serviceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
-        this.failureTracker = MessageFailureTracker.forConfiguration(this.serviceConfiguration);
+        this.failureTracker = MessageFailureTracker.forConfiguration(() -> serviceRegistry.getServiceConfiguration(tenant));
     }
 
     @Override

@@ -88,10 +88,14 @@ public class SendOutboundProcessor extends BaseProcessor {
             createProcessingAlarms(context);
 
             //FIXME Is context.getErrors() sufficient or do we need to check also context.currentRequests.getErrors()?
-            if(context.hasError())
+            if(context.hasError()) {
                 autoAckOperation(context, tenant, mapping, OperationStatus.FAILED);
-            else
+            } else {
+                // Commit extension state only for a fully published message; on failure the message
+                // is redelivered and must not look like a duplicate.
+                context.runDeferredStateCommit();
                 autoAckOperation(context, tenant, mapping, OperationStatus.SUCCESSFUL);
+            }
         } catch (Exception e) {
             String errorMessage = String.format(
                     "Tenant %s - Error in SendOutboundProcessor: %s for mapping: %s",

@@ -32,7 +32,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Manages device-to-client mapping persistence
@@ -50,10 +52,12 @@ public class DeviceToClientMapService {
      * Persists the in-memory device-to-client map to the inventory managed object that the Cumulocity
      * MQTT Service reads to decide which client receives outbound messages.
      * <p>
-     * The inventory merges nested fragments on update, so entries that were removed in memory
+     * The inventory merges nested fragments on update, so a relation removed on this instance
      * (device deleted, relation removed, cache cleared) would survive and come back after a restart.
-     * Removed keys are therefore sent explicitly as {@code null}. Nothing is written when the stored
-     * map already equals the in-memory one.
+     * Explicitly removed devices are therefore sent as {@code null}. A key that is merely absent from
+     * this instance's map is left alone: it may have been registered by another instance, whose map
+     * this one does not refresh. Nothing is written when no local relation differs from the stored one
+     * and no removal is pending.
      */
     public void sendToInventory(String tenant) {
         String deviceToClientMapId = serviceRegistry.getDeviceToClientMapId(tenant);
@@ -62,28 +66,40 @@ public class DeviceToClientMapService {
             return;
         }
         Map<String, String> deviceToClientMap = serviceRegistry.getAllClientRelations(tenant);
+        Set<String> removed = serviceRegistry.getRemovedClientRelations(tenant);
 
         subscriptionsService.runForTenant(tenant, () -> {
             Map<String, Object> persisted = readPersistedMap(inventoryApi.get(GId.asGId(deviceToClientMapId), false));
-            if (persisted.equals(deviceToClientMap)) {
+
+            Map<String, Object> merged = new HashMap<>(deviceToClientMap);
+            Set<String> tombstones = new HashSet<>();
+            removed.stream()
+                    .filter(deviceId -> !deviceToClientMap.containsKey(deviceId))
+                    .filter(persisted::containsKey)
+                    .forEach(deviceId -> {
+                        merged.put(deviceId, null);
+                        tombstones.add(deviceId);
+                    });
+
+            boolean changed = !tombstones.isEmpty()
+                    || deviceToClientMap.entrySet().stream()
+                            .anyMatch(e -> !e.getValue().equals(persisted.get(e.getKey())));
+            if (!changed) {
                 log.debug("{} - Device-to-client map unchanged ({} entries), not sending", tenant,
                         deviceToClientMap.size());
+                serviceRegistry.acknowledgeRemovedClientRelations(tenant, removed);
                 return;
             }
 
-            Map<String, Object> merged = new HashMap<>(deviceToClientMap);
-            persisted.keySet().stream()
-                    .filter(deviceId -> !deviceToClientMap.containsKey(deviceId))
-                    .forEach(deviceId -> merged.put(deviceId, null));
-
             log.debug("{} - Sending device-to-client map with {} entries, {} removed", tenant,
-                    deviceToClientMap.size(), merged.size() - deviceToClientMap.size());
+                    deviceToClientMap.size(), tombstones.size());
 
             ManagedObjectRepresentation updateMor = new ManagedObjectRepresentation();
             updateMor.setId(GId.asGId(deviceToClientMapId));
             updateMor.setAttrs(Map.of(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT, merged));
 
             inventoryApi.update(updateMor, false);
+            serviceRegistry.acknowledgeRemovedClientRelations(tenant, removed);
         });
     }
 

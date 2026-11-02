@@ -238,16 +238,18 @@ final class HttpPollingRequestHelper {
      * Resolves a server-provided next-page URI against the connector's base URL and accepts it only
      * if it has the same scheme, host, and port. The poll client sends the configured credentials
      * with every request, so following a Link header to another host would leak them (and bypass
-     * the base URL's outbound validation). Relative references are resolved against the base URL.
+     * the base URL's outbound validation). Relative references are resolved against the URL of the
+     * request that produced the response (RFC 8288), and the origin is checked against the base URL.
      *
+     * @param requestUri the URL of the request whose response carried the link
      * @return the absolute URI, or {@code null} if {@code next} is null or points elsewhere
      */
-    static URI resolveSameOrigin(URI next, String baseUrl, String tenant, Logger log) {
+    static URI resolveSameOrigin(URI next, URI requestUri, String baseUrl, String tenant, Logger log) {
         if (next == null) {
             return null;
         }
         URI base = URI.create(baseUrl.endsWith("/") ? baseUrl : baseUrl + "/");
-        URI resolved = base.resolve(next);
+        URI resolved = resolveReference(requestUri, next);
         if (!java.util.Objects.equals(base.getScheme(), resolved.getScheme())
                 || !java.util.Objects.equals(base.getHost(), resolved.getHost())
                 || effectivePort(base) != effectivePort(resolved)) {
@@ -255,6 +257,19 @@ final class HttpPollingRequestHelper {
             return null;
         }
         return resolved;
+    }
+
+    /**
+     * {@link URI#resolve(URI)} drops the last path segment for a query-only reference such as
+     * {@code ?page=2}; RFC 3986 keeps the base path and replaces only the query.
+     */
+    private static URI resolveReference(URI requestUri, URI next) {
+        if (next.getScheme() == null && next.getRawAuthority() == null
+                && (next.getRawPath() == null || next.getRawPath().isEmpty()) && next.getRawQuery() != null) {
+            return URI.create(requestUri.getScheme() + "://" + requestUri.getRawAuthority()
+                    + requestUri.getRawPath() + "?" + next.getRawQuery());
+        }
+        return requestUri.resolve(next);
     }
 
     private static int effectivePort(URI uri) {

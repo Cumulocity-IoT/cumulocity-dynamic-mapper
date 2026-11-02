@@ -134,8 +134,6 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor<byte
         CumulocityObject[] results;
         try {
             results = extension.onMessage(message, prepContext);
-            // Also for an empty result: deduplication extensions record what they saw and return nothing.
-            prepContext.persistNativeState();
         } catch (AbstractMethodError e) {
             String errorMsg = String.format(
                 "%s - Extension '%s' (class: %s) is incompatible with the current interface. " +
@@ -153,12 +151,17 @@ public class ExtensibleInboundProcessor extends AbstractExtensibleProcessor<byte
         if (results != null && results.length > 0) {
             log.debug("{} - Extension returned {} CumulocityObject(s)", tenant, results.length);
             context.setExtensionResult(results);
+            // Returning normally does not mean delivery succeeded: commit the state after the
+            // requests were sent, so a redelivery after a failure is not treated as a duplicate.
+            context.setDeferredStateCommit(prepContext::persistNativeState);
         } else {
             String errorMsg = String.format(
                 "%s - Extension '%s' (class: %s) onMessage() returned null or empty array - nothing to process, ignoring",
                 tenant, extensionEntry.getEventName(), extensionEntry.getFqnClassName());
             log.info(errorMsg);
             // An empty result means "nothing to do" (e.g. deduplication), as for Smart Functions; not a failure.
+            // Nothing is delivered, so deduplication extensions record what they saw right away.
+            prepContext.persistNativeState();
             context.setIgnoreFurtherProcessing(true);
         }
     }

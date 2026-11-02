@@ -110,7 +110,7 @@ public abstract class AbstractMqttCallback<M> implements Consumer<M> {
         this.serviceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
         this.virtualThreadPool = serviceRegistry.getVirtualThreadPool();
         this.reconnectTrigger = reconnectTrigger;
-        this.failureTracker = MessageFailureTracker.forConfiguration(this.serviceConfiguration);
+        this.failureTracker = MessageFailureTracker.forConfiguration(() -> serviceRegistry.getServiceConfiguration(tenant));
 
         boolean reconnect = true;
         try {

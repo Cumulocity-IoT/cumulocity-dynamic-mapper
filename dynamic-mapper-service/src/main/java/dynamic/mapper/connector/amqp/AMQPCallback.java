@@ -66,7 +66,7 @@ public class AMQPCallback extends DefaultConsumer {
             String connectorName) {
         super(channel);
         this.autoAck = autoAck;
-        this.failureTracker = MessageFailureTracker.forConfiguration(serviceRegistry.getServiceConfiguration(tenant));
+        this.failureTracker = MessageFailureTracker.forConfiguration(() -> serviceRegistry.getServiceConfiguration(tenant));
         this.genericMessageCallback = callback;
         this.tenant = tenant;
         this.connectorIdentifier = connectorIdentifier;

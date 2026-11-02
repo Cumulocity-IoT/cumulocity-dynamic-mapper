@@ -55,7 +55,7 @@ class MessageFailureTrackerTest {
     void theLimitFollowsTheConfigurationOnEveryFailure() {
         ServiceConfiguration configuration = mock(ServiceConfiguration.class);
         when(configuration.getMaxProcessingAttempts()).thenReturn(2);
-        MessageFailureTracker followed = MessageFailureTracker.forConfiguration(configuration);
+        MessageFailureTracker followed = MessageFailureTracker.forConfiguration(() -> configuration);
 
         assertFalse(followed.recordFailureReachedLimit("m"));
         assertTrue(followed.recordFailureReachedLimit("m"));
@@ -66,18 +66,33 @@ class MessageFailureTrackerTest {
     }
 
     @Test
+    void theLimitFollowsAReplacedConfigurationObject() {
+        ServiceConfiguration first = mock(ServiceConfiguration.class);
+        when(first.getMaxProcessingAttempts()).thenReturn(2);
+        ServiceConfiguration second = mock(ServiceConfiguration.class);
+        when(second.getMaxProcessingAttempts()).thenReturn(7);
+        java.util.concurrent.atomic.AtomicReference<ServiceConfiguration> registry =
+                new java.util.concurrent.atomic.AtomicReference<>(first);
+        MessageFailureTracker followed = MessageFailureTracker.forConfiguration(registry::get);
+
+        assertEquals(2, followed.limit());
+        registry.set(second);
+        assertEquals(7, followed.limit());
+    }
+
+    @Test
     void aMissingOrInvalidConfigurationFallsBackToTheDefault() {
         ServiceConfiguration configuration = mock(ServiceConfiguration.class);
         when(configuration.getMaxProcessingAttempts()).thenReturn(null, 0, -1);
 
         assertEquals(ServiceConfiguration.DEFAULT_MAX_PROCESSING_ATTEMPTS,
-                MessageFailureTracker.forConfiguration(configuration).limit());
+                MessageFailureTracker.forConfiguration(() -> configuration).limit());
         assertEquals(ServiceConfiguration.DEFAULT_MAX_PROCESSING_ATTEMPTS,
-                MessageFailureTracker.forConfiguration(configuration).limit());
+                MessageFailureTracker.forConfiguration(() -> configuration).limit());
         assertEquals(ServiceConfiguration.DEFAULT_MAX_PROCESSING_ATTEMPTS,
-                MessageFailureTracker.forConfiguration(configuration).limit());
+                MessageFailureTracker.forConfiguration(() -> configuration).limit());
         assertEquals(ServiceConfiguration.DEFAULT_MAX_PROCESSING_ATTEMPTS,
-                MessageFailureTracker.forConfiguration(null).limit());
+                MessageFailureTracker.forConfiguration(() -> null).limit());
         assertEquals(5, ServiceConfiguration.DEFAULT_MAX_PROCESSING_ATTEMPTS);
     }
 
