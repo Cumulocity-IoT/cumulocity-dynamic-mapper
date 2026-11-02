@@ -41,6 +41,7 @@ class AMQPCallbacksAcknowledgementTest {
         serviceRegistry = mock(ServiceRegistry.class);
         ServiceConfiguration configuration = mock(ServiceConfiguration.class);
         when(configuration.getLogPayload()).thenReturn(false);
+        when(configuration.getMaxProcessingAttempts()).thenReturn(3);
         when(serviceRegistry.getServiceConfiguration(any())).thenReturn(configuration);
         dispatcher = mock(GenericMessageCallback.class);
     }

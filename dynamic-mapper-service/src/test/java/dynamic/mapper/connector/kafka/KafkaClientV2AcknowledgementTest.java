@@ -9,6 +9,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Properties;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.kafka.KafkaClientV2.KafkaConsumerWrapper;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.runtime.ProcessingContext;
@@ -42,6 +44,9 @@ class KafkaClientV2AcknowledgementTest {
     void setUp() {
         client = spy(new KafkaClientV2());
         ReflectionTestUtils.setField(client, "tenant", "t1");
+        ServiceConfiguration configuration = mock(ServiceConfiguration.class);
+        when(configuration.getMaxProcessingAttempts()).thenReturn(3); // the tests below count three attempts
+        ReflectionTestUtils.setField(client, "serviceConfiguration", configuration);
         Properties consumerProperties = new Properties();
         consumerProperties.put("enable.auto.commit", "false"); // the shipped default: the connector commits
         ReflectionTestUtils.setField(client, "kafkaConsumerProperties", consumerProperties);
