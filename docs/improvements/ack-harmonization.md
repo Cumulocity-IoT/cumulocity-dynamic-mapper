@@ -92,7 +92,7 @@ Pub/Sub keeps its current error rule and gains only the cancelled check.
 | Question | Decision |
 |---|---|
 | Pub/Sub error rule | Follow the common rule: ack client errors and mapping errors without an HTTP status, nack only on a server error, timeout, cancellation, or exception |
-| Failed message | Drop after N attempts and keep the error in the mapping status; N is `maxProcessingAttempts`, **default 3** |
+| Failed message | Drop after N attempts and keep the error in the mapping status; N is `maxProcessingAttempts`, **default 5** |
 | Migration scope | All broker callbacks except REST polling |
 
 ## Status
@@ -101,7 +101,7 @@ Pub/Sub keeps its current error rule and gains only the cancelled check.
 |---|---|
 | 1. Kafka on the helper, Pub/Sub cancelled check, tests | Done |
 | 2. One policy method | Done for MQTT, Pulsar, Cumulocity MQTT Service, Pub/Sub, Kafka, AMQP, and the HTTP connector (`ProcessingResultHelper.awaitOutcome`). `CustomWebSocketClient` (outbound notifications) since 2026-11-01. REST polling skips a page that keeps failing, with its own cursor logic |
-| 3. One poison-message rule | Done: `MessageFailureTracker` and the setting `maxProcessingAttempts` (default 3) in the service configuration, the UI (Processing tab), and the docs. `CustomWebSocketClient` and REST polling use it too. Not covered: AMQP 1.0 (see below) |
+| 3. One poison-message rule | Done: `MessageFailureTracker` and the setting `maxProcessingAttempts` (default 5) in the service configuration, the UI (Processing tab), and the docs. `CustomWebSocketClient` and REST polling use it too. Not covered: AMQP 1.0 (see below) |
 | 4. Contract test | Partly: per-connector tests for AMQP, Kafka, Pub/Sub, and the HTTP controller; unit tests for the helper and the tracker. No single parameterized test over all connectors yet |
 | 5. Pub/Sub error rule | Done (decision above) |
 
@@ -141,7 +141,7 @@ then `FAILED`, and nothing ever skipped the page, so one bad page blocked the to
 page with a recorded error.
 
 - `HttpPollingConnector.settlePage()` counts failures of the same page with a `MessageFailureTracker` and skips the page
-  when it failed `maxProcessingAttempts` times (default 3). The key is the cursor, because the body of the same
+  when it failed `maxProcessingAttempts` times (default 5). The key is the cursor, because the body of the same
   unprocessed range grows as new data arrives; without a cursor it is a hash of the body.
 - On a skip the cursor advances past the page, the mapping's last error records `Skipped polled data of topic [...]
   after N failed processing attempts`, and an error is logged. The data of the page is not processed.

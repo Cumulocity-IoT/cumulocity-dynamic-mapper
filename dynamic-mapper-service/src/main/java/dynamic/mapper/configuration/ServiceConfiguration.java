@@ -212,7 +212,7 @@ public class ServiceConfiguration implements Cloneable {
     public static final int PROCESSING_HARD_CEILING_MS = 120_000;
 
     /** How often a message may fail before the connector drops it instead of retrying. */
-    public static final int DEFAULT_MAX_PROCESSING_ATTEMPTS = 3;
+    public static final int DEFAULT_MAX_PROCESSING_ATTEMPTS = 5;
 
     /**
      * The JavaScript CPU budget actually applied, with the default substituted for a missing

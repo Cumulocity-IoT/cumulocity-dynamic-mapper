@@ -78,7 +78,7 @@ class MessageFailureTrackerTest {
                 MessageFailureTracker.forConfiguration(configuration).limit());
         assertEquals(ServiceConfiguration.DEFAULT_MAX_PROCESSING_ATTEMPTS,
                 MessageFailureTracker.forConfiguration(null).limit());
-        assertEquals(3, ServiceConfiguration.DEFAULT_MAX_PROCESSING_ATTEMPTS);
+        assertEquals(5, ServiceConfiguration.DEFAULT_MAX_PROCESSING_ATTEMPTS);
     }
 
     @Test

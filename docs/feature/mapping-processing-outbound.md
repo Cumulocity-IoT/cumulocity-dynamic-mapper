@@ -172,7 +172,7 @@ Waiting, acknowledging and cancelling are done by the caller of `onNotification(
 - Success, or errors whose HTTP status is below 500: the notification is acknowledged. Server
   errors (500 and above), timeouts, or a cancellation requested by the JS CPU limit: no ack; a
   failure counter per message decides between WebSocket reconnect/retransmission and giving up.
-  After `maxProcessingAttempts` failures (default 3) the notification is acknowledged and dropped.
+  After `maxProcessingAttempts` failures (default 5) the notification is acknowledged and dropped.
 - On timeout the shared rule calls `cancelAndDrain()`, which interrupts the pipeline futures,
   closes active GraalVM contexts, and waits for the worker to actually leave (see
   [reliability.md](reliability.md)). Until 2026-11-01 `CustomWebSocketClient` called

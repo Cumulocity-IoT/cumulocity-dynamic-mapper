@@ -40,7 +40,7 @@ that true; the per-connector pages describe only where a broker genuinely differ
   exception leaves the message unacknowledged so the broker redelivers it. Every connector applies the same
   rule; see [reliability.md](reliability.md).
 - **Survive a bad message.** A single payload that always fails must not block a subscription
-  indefinitely: after `maxProcessingAttempts` failures (default 3, a service configuration setting) the
+  indefinitely: after `maxProcessingAttempts` failures (default 5, a service configuration setting) the
   connector acknowledges and drops it, and the error stays in the mapping status. See
   [reliability.md](reliability.md).
 

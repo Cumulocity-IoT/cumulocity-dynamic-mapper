@@ -287,7 +287,7 @@ Key properties this diagram makes explicit:
   any point in the loop (bad HTTP status, failed/timed-out processing) skips straight to
   `handlePollFailure` without touching `MappingStatus.cursor`, so the next poll resumes from the
   last page that actually completed, never from data that was fetched but not confirmed processed.
-  The one exception is a page that keeps failing: after `maxProcessingAttempts` failures (default 3) it is
+  The one exception is a page that keeps failing: after `maxProcessingAttempts` failures (default 5) it is
   **skipped**. `settlePage()` counts the failures with a `MessageFailureTracker`, but not the ones that are server
   errors (`awaitProcessingOutcome()` returns `SERVER_ERROR` for an HTTP status of 500 or more, as `extractMaxHttpStatus`
   reads it), so a Cumulocity outage holds the cursor and retries without ever skipping data; a server error neither

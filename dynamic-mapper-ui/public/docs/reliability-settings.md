@@ -190,7 +190,7 @@ status below 500) counts as handled and is acknowledged, because a redelivery wo
 repeats the whole mapping, so a mapping must tolerate duplicates. To prevent one faulty message from blocking a
 subscription, connectors that retry (MQTT, Pulsar, Cumulocity MQTT Service, Kafka, AMQP, and Google Pub/Sub) drop a message
 after it failed the number of times set in **Maximum processing attempts per message** (Service configuration,
-Processing tab, default 3). The error stays in the mapping status. A slow mapping delays acknowledgments and
+Processing tab, default 5). The error stays in the mapping status. A slow mapping delays acknowledgments and
 therefore the whole subscription. Use QoS 0 for high-volume data that tolerates loss.
 
 QoS covers the leg between the broker and the Dynamic Mapper only. For example, over Cumulocity MQTT-Service a

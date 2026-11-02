@@ -115,7 +115,7 @@ through rather than re-fetching already-processed pages or losing the unprocesse
 
 If the mapping fails to process a page, the cursor does not move and the next poll tries the same page again,
 with a growing delay. When the same page has failed **Maximum processing attempts per message** times (Service
-configuration, default 3), the connector skips it. A failure with a server error (HTTP 5xx), for example while
+configuration, default 5), the connector skips it. A failure with a server error (HTTP 5xx), for example while
 Cumulocity is unavailable, is retried but not counted, so an outage never skips data.
 
 When the connector skips a page, the cursor moves past it and the data of that page is not processed. The skip is

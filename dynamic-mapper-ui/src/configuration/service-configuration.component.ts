@@ -77,7 +77,7 @@ export class ServiceConfigurationComponent implements OnInit, OnDestroy {
     inventoryFragmentsToCache: ['type'],  // always add type
     maxCPUTimeMS: 5000,  // 5 seconds
     pipelineTimeoutMS: 8000,  // 8 seconds
-    maxProcessingAttempts: 3,
+    maxProcessingAttempts: 5,
     engineRotationThreshold: 1000,
     contextPoolSize: 20,
     jsonataAgent: undefined,

@@ -14,7 +14,7 @@ a server error (5xx), a timeout, a cancelled pipeline, or an exception, so the b
   retry. Kafka seeks the partition back to the failed record.
 - **Google Pub/Sub** no longer redelivers client errors and mapping errors without an HTTP status (it nacked every
   error before). A cancelled pipeline is nacked.
-- **New setting `maxProcessingAttempts`** (Service configuration, Processing tab, default 3, minimum 1): after this many
+- **New setting `maxProcessingAttempts`** (Service configuration, Processing tab, default 5, minimum 1): after this many
   failures of the same message, MQTT, Pulsar, the Cumulocity MQTT Service, Kafka, AMQP 0-9-1, and Pub/Sub acknowledge
   and drop it, and the error stays in the mapping status. MQTT and Pulsar dropped after 5 before; MQTT now also drops
   when `reconnectOnProcessingError` is off. AMQP 1.0 has no limit. Existing configurations get the default.

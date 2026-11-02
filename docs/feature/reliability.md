@@ -7,7 +7,7 @@ configured per mapping, plus the transport-level retry that sits underneath them
 |---|---|---|---|
 | Delivery guarantee | `Mapping.qos` | When may the broker message be acknowledged — before processing, or only after it succeeded? | [Quality of Service](#quality-of-service) |
 | Failure threshold | `Mapping.maxFailureCount` | When should a mapping that keeps failing be taken out of service? | [Failure handling](#failure-handling) |
-| Poison-pill guard | `maxProcessingAttempts` (default 3) | How often may one message be redelivered before it is dropped? | [The poison-pill guard](#the-poison-pill-guard) |
+| Poison-pill guard | `maxProcessingAttempts` (default 5) | How often may one message be redelivered before it is dropped? | [The poison-pill guard](#the-poison-pill-guard) |
 | Processing budgets | `maxCPUTimeMS`, `pipelineTimeoutMS` (service configuration) | How long may one message occupy CPU and a worker thread before it is killed? | [Processing timeouts](#processing-timeouts) |
 | Runtime counters | — (reported, not configured) | What is actually happening per mapping, and to messages that match none? | [Status and counters](#status-and-counters) |
 
@@ -415,7 +415,7 @@ a deserialization error followed by a transformation error on the same leg) adds
 
 Independently of the mapping-level threshold, every callback that can request redelivery
 caps how often it will do so for the *same message*. The limit is the service configuration
-`maxProcessingAttempts` (**default 3**, minimum 1), shared by
+`maxProcessingAttempts` (**default 5**, minimum 1), shared by
 [`AbstractMqttCallback`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/mqtt/AbstractMqttCallback.java),
 [`AbstractPulsarCallback`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/connector/pulsar/AbstractPulsarCallback.java)
 (plain Pulsar and the Cumulocity MQTT Service),

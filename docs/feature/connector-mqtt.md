@@ -115,7 +115,7 @@ tenant are allowed.
   per retry (up to 3x the base pipeline timeout, `MAX_TIMEOUT_ESCALATION_FACTOR`). A message
   is not acknowledged on a timeout, on a JS CPU timeout, or on an HTTP 5xx result; a 4xx
   result is acknowledged. Poison-pill detection (ack and discard after `maxProcessingAttempts`
-  failures, default 3) runs whatever `reconnectOnProcessingError` is. The property only decides
+  failures, default 5) runs whatever `reconnectOnProcessingError` is. The property only decides
   whether a failure also triggers a reconnect; with it off, the connector withholds the ack and waits
   for the broker to retransmit, and the limit still applies.
 - Retained-message publish is honored via `retain(context.isRetain())`.
