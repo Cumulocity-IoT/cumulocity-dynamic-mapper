@@ -351,6 +351,7 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
   get saveDisabled(): boolean {
     return (!this.feature?.userHasMappingAdminRole && !this.feature?.userHasMappingCreateRole)
       || !!this.stepperConfiguration.readOnly
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- deprecated mappings are read-only
       || this.mapping.transformationType === TransformationType.SUBSTITUTION_AS_CODE;
   }
 
