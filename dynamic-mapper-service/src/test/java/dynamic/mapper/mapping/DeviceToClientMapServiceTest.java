@@ -54,10 +54,14 @@ class DeviceToClientMapServiceTest {
         when(inventoryApi.get(GId.asGId(MAP_ID), false)).thenReturn(mor);
     }
 
+    private void pending(Map<String, String> changes) {
+        when(serviceRegistry.getPendingClientChanges(TENANT)).thenReturn(changes);
+    }
+
     @Test
-    void skipsWriteWhenStoredMapIsUnchanged() {
+    void skipsWriteWhenNothingChangedLocally() {
         stored(Map.of("1", "clientA"));
-        when(serviceRegistry.getAllClientRelations(TENANT)).thenReturn(Map.of("1", "clientA"));
+        pending(Map.of());
 
         service.sendToInventory(TENANT);
 
@@ -65,31 +69,38 @@ class DeviceToClientMapServiceTest {
     }
 
     @Test
+    void skipsWriteWhenPendingChangesAreAlreadyStored() {
+        stored(Map.of("1", "clientA"));
+        Map<String, String> changes = new HashMap<>();
+        changes.put("1", "clientA");
+        changes.put("2", null);
+        pending(changes);
+
+        service.sendToInventory(TENANT);
+
+        verify(inventoryApi, never()).update(any(), any());
+        verify(serviceRegistry).acknowledgeClientChanges(TENANT, changes);
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
-    void sendsRemovedDevicesAsNullSoTheInventoryMergeDropsThem() {
-        stored(Map.of("1", "clientA", "2", "clientB"));
-        when(serviceRegistry.getAllClientRelations(TENANT)).thenReturn(Map.of("1", "clientA"));
-        when(serviceRegistry.getRemovedClientRelations(TENANT)).thenReturn(java.util.Set.of("2"));
+    void sendsOnlyLocalChangesAndRemovalsAsNull() {
+        stored(Map.of("1", "clientA", "2", "clientB", "3", "clientC"));
+        Map<String, String> changes = new HashMap<>();
+        changes.put("2", null);
+        changes.put("4", "clientD");
+        pending(changes);
 
         service.sendToInventory(TENANT);
 
         ArgumentCaptor<ManagedObjectRepresentation> captor = ArgumentCaptor.forClass(ManagedObjectRepresentation.class);
         verify(inventoryApi).update(captor.capture(), eq(false));
         Map<String, Object> sent = (Map<String, Object>) captor.getValue().getAttrs().get(FRAGMENT);
-        assertEquals("clientA", sent.get("1"));
+        assertEquals(2, sent.size());
         assertTrue(sent.containsKey("2"));
         assertNull(sent.get("2"));
-    }
-
-    @Test
-    void keepsRelationsRegisteredByAnotherInstance() {
-        stored(Map.of("1", "clientA", "2", "clientB"));
-        when(serviceRegistry.getAllClientRelations(TENANT)).thenReturn(Map.of("1", "clientA"));
-        when(serviceRegistry.getRemovedClientRelations(TENANT)).thenReturn(java.util.Set.of());
-
-        service.sendToInventory(TENANT);
-
-        verify(inventoryApi, never()).update(any(), any());
+        assertEquals("clientD", sent.get("4"));
+        verify(serviceRegistry).acknowledgeClientChanges(TENANT, changes);
     }
 
     @Test

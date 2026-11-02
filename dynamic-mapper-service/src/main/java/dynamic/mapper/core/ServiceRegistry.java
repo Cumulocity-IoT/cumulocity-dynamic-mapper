@@ -243,12 +243,12 @@ public class ServiceRegistry implements IMapperConfiguration {
         tenantRegistry.clearCacheDeviceToClient(tenant);
     }
 
-    public java.util.Set<String> getRemovedClientRelations(String tenant) {
-        return tenantRegistry.getRemovedClientRelations(tenant);
+    public Map<String, String> getPendingClientChanges(String tenant) {
+        return tenantRegistry.getPendingClientChanges(tenant);
     }
 
-    public void acknowledgeRemovedClientRelations(String tenant, java.util.Set<String> deviceIds) {
-        tenantRegistry.acknowledgeRemovedClientRelations(tenant, deviceIds);
+    public void acknowledgeClientChanges(String tenant, Map<String, String> persisted) {
+        tenantRegistry.acknowledgeClientChanges(tenant, persisted);
     }
 
     public String resolveDeviceToClient(String tenant, String deviceId) {

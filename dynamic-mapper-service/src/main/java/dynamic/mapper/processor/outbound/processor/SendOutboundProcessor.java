@@ -92,8 +92,11 @@ public class SendOutboundProcessor extends BaseProcessor {
                 autoAckOperation(context, tenant, mapping, OperationStatus.FAILED);
             } else {
                 // Commit extension state only for a fully published message; on failure the message
-                // is redelivered and must not look like a duplicate.
-                context.runDeferredStateCommit();
+                // is redelivered and must not look like a duplicate. An empty error list does not prove
+                // it: a connector can break off on interruption or record a failure only on the request.
+                if (publishedCompletely(context, wrapper)) {
+                    context.runDeferredStateCommit();
+                }
                 autoAckOperation(context, tenant, mapping, OperationStatus.SUCCESSFUL);
             }
         } catch (Exception e) {
@@ -114,6 +117,12 @@ public class SendOutboundProcessor extends BaseProcessor {
             }
         }
 
+    }
+
+    private static boolean publishedCompletely(ProcessingContext<Object> context, ProcessingResultWrapper<?> wrapper) {
+        return (wrapper == null || !wrapper.getCancellationRequested().get())
+                && !Thread.currentThread().isInterrupted()
+                && context.getRequests().stream().noneMatch(request -> request.hasError());
     }
 
     /**

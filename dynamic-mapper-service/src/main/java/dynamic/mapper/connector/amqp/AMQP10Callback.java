@@ -140,7 +140,7 @@ public class AMQP10Callback implements MessageListener {
                 // delivered, as the listener runs serially), until it failed maxProcessingAttempts
                 // times: then it is dropped (acknowledged).
                 if (qos != Qos.AT_MOST_ONCE) {
-                    settle(message, address, processedResults);
+                    settle(message, address, payload, processedResults);
                 }
 
                 if (serviceConfiguration.getLogPayload()) {
@@ -155,8 +155,9 @@ public class AMQP10Callback implements MessageListener {
         }
     }
 
-    private void settle(Message message, String address, ProcessingResultWrapper<?> processedResults) {
-        String failureKey = failureKey(message, address);
+    private void settle(Message message, String address, byte[] payload,
+            ProcessingResultWrapper<?> processedResults) {
+        String failureKey = failureKey(message, address, payload);
         if (ProcessingResultHelper.awaitAckable(processedResults, tenant, address, log)) {
             failureTracker.clear(failureKey);
             acknowledgeQuietly(message, address);
@@ -169,17 +170,21 @@ public class AMQP10Callback implements MessageListener {
         }
     }
 
-    /** The JMS message id is stable across redeliveries; fall back to the address when it is unavailable. */
-    private static String failureKey(Message message, String address) {
+    /**
+     * Identifies a message across redeliveries: the JMS message id when the producer set one, otherwise the
+     * address and a hash of the payload. The provider may hand out a new {@link Message} object for each
+     * redelivery, so the object identity cannot be used.
+     */
+    private static String failureKey(Message message, String address, byte[] payload) {
         try {
             String id = message.getJMSMessageID();
             if (id != null) {
-                return id;
+                return "id:" + id;
             }
         } catch (JMSException e) {
-            // fall through
+            // fall back to the payload
         }
-        return address + "#" + System.identityHashCode(message);
+        return address + "#" + java.util.Arrays.hashCode(payload);
     }
 
     /** Redeliver the unacknowledged messages of the session, swallowing (and logging) any JMSException. */
