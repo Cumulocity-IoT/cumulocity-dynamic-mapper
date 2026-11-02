@@ -25,6 +25,8 @@ import dynamic.mapper.util.TenantLogContext;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
+import dynamic.mapper.connector.core.callback.MessageFailureTracker;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
@@ -34,6 +36,7 @@ import jakarta.jms.JMSException;
 import jakarta.jms.Message;
 import jakarta.jms.MessageListener;
 import jakarta.jms.Queue;
+import jakarta.jms.Session;
 import jakarta.jms.TextMessage;
 import jakarta.jms.Topic;
 import lombok.extern.slf4j.Slf4j;
@@ -62,6 +65,8 @@ public class AMQP10Callback implements MessageListener {
     private final String subscriptionTopic;
     private final Qos qos;
     private final ServiceConfiguration serviceConfiguration;
+    private final Session session;
+    private final MessageFailureTracker failureTracker;
 
     /**
      * Constructor
@@ -73,6 +78,8 @@ public class AMQP10Callback implements MessageListener {
      * @param connectorName        connector display name
      * @param subscriptionTopic    the topic/address this consumer was subscribed on
      * @param qos                  the QoS this consumer was subscribed with
+     * @param session              the CLIENT_ACKNOWLEDGE session the consumer belongs to, recovered to
+     *                             redeliver a failed message (acknowledge() would also settle it)
      */
     public AMQP10Callback(String tenant,
             ServiceRegistry serviceRegistry,
@@ -80,7 +87,8 @@ public class AMQP10Callback implements MessageListener {
             String connectorIdentifier,
             String connectorName,
             String subscriptionTopic,
-            Qos qos) {
+            Qos qos,
+            Session session) {
         this.genericMessageCallback = callback;
         this.tenant = tenant;
         this.connectorIdentifier = connectorIdentifier;
@@ -88,6 +96,9 @@ public class AMQP10Callback implements MessageListener {
         this.subscriptionTopic = subscriptionTopic;
         this.qos = qos;
         this.serviceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
+        this.session = session;
+        this.failureTracker = MessageFailureTracker.forConfiguration(
+                () -> serviceRegistry.getServiceConfiguration(tenant));
     }
 
     @Override
@@ -122,11 +133,14 @@ public class AMQP10Callback implements MessageListener {
 
                 var processedResults = genericMessageCallback.onMessage(connectorMessage);
 
-                // AT_LEAST_ONCE: only ack once the pipeline has succeeded, so a failure
-                // leaves the message unacknowledged and it gets redelivered.
-                if (qos != Qos.AT_MOST_ONCE
-                        && ProcessingResultHelper.awaitAckable(processedResults, tenant, address, log)) {
-                    acknowledgeQuietly(message, address);
+                // AT_LEAST_ONCE: ack only once the pipeline has succeeded. Not acknowledging is not
+                // enough to get a redelivery: in a CLIENT_ACKNOWLEDGE session the acknowledge() of a
+                // later message settles every consumed message, including the failed one. A failed
+                // message therefore recovers the session (redelivering it before the next message is
+                // delivered, as the listener runs serially), until it failed maxProcessingAttempts
+                // times: then it is dropped (acknowledged).
+                if (qos != Qos.AT_MOST_ONCE) {
+                    settle(message, address, processedResults);
                 }
 
                 if (serviceConfiguration.getLogPayload()) {
@@ -138,6 +152,43 @@ public class AMQP10Callback implements MessageListener {
                 log.error("{} - Error processing AMQP 1.0 message on address: [{}]",
                         tenant, address, e);
             }
+        }
+    }
+
+    private void settle(Message message, String address, ProcessingResultWrapper<?> processedResults) {
+        String failureKey = failureKey(message, address);
+        if (ProcessingResultHelper.awaitAckable(processedResults, tenant, address, log)) {
+            failureTracker.clear(failureKey);
+            acknowledgeQuietly(message, address);
+        } else if (failureTracker.recordFailureReachedLimit(failureKey)) {
+            log.error("{} - Dropping AMQP 1.0 message after {} failed attempts: address: [{}], connector: {}",
+                    tenant, failureTracker.limit(), address, connectorIdentifier);
+            acknowledgeQuietly(message, address);
+        } else {
+            recoverQuietly(address);
+        }
+    }
+
+    /** The JMS message id is stable across redeliveries; fall back to the address when it is unavailable. */
+    private static String failureKey(Message message, String address) {
+        try {
+            String id = message.getJMSMessageID();
+            if (id != null) {
+                return id;
+            }
+        } catch (JMSException e) {
+            // fall through
+        }
+        return address + "#" + System.identityHashCode(message);
+    }
+
+    /** Redeliver the unacknowledged messages of the session, swallowing (and logging) any JMSException. */
+    private void recoverQuietly(String address) {
+        try {
+            session.recover();
+        } catch (JMSException e) {
+            log.error("{} - Failed to recover AMQP 1.0 session for redelivery, address: [{}]",
+                    tenant, address, e);
         }
     }
 

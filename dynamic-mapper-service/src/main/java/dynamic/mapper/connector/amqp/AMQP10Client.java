@@ -371,7 +371,8 @@ public class AMQP10Client extends AConnectorClient {
                     connectorIdentifier,
                     connectorName,
                     topic,
-                    qos);
+                    qos,
+                    session);
 
             MessageConsumer consumer = session.createConsumer(destination);
             consumer.setMessageListener(callback);

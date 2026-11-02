@@ -116,6 +116,8 @@ class AMQPCallbacksAcknowledgementTest {
 
     // ---- AMQP 1.0 ----
 
+    private final jakarta.jms.Session session = mock(jakarta.jms.Session.class);
+
     private BytesMessage jmsMessage() throws Exception {
         BytesMessage message = mock(BytesMessage.class);
         when(message.getBodyLength()).thenReturn(1L);
@@ -127,7 +129,7 @@ class AMQPCallbacksAcknowledgementTest {
         BytesMessage message = jmsMessage();
         when(dispatcher.onMessage(any())).thenReturn((ProcessingResultWrapper) succeeded());
 
-        new AMQP10Callback("t1", serviceRegistry, dispatcher, "id", "name", "addr", Qos.AT_LEAST_ONCE)
+        new AMQP10Callback("t1", serviceRegistry, dispatcher, "id", "name", "addr", Qos.AT_LEAST_ONCE, session)
                 .onMessage(message);
 
         verify(message).acknowledge();
@@ -138,10 +140,28 @@ class AMQPCallbacksAcknowledgementTest {
         BytesMessage message = jmsMessage();
         when(dispatcher.onMessage(any())).thenReturn((ProcessingResultWrapper) failed());
 
-        new AMQP10Callback("t1", serviceRegistry, dispatcher, "id", "name", "addr", Qos.AT_LEAST_ONCE)
+        new AMQP10Callback("t1", serviceRegistry, dispatcher, "id", "name", "addr", Qos.AT_LEAST_ONCE, session)
                 .onMessage(message);
 
         verify(message, never()).acknowledge();
+        verify(session).recover();
+    }
+
+    @Test
+    void amqp10DropsTheMessageAfterTheConfiguredAttempts() throws Exception {
+        BytesMessage message = jmsMessage();
+        when(message.getJMSMessageID()).thenReturn("ID:1");
+        when(dispatcher.onMessage(any())).thenReturn((ProcessingResultWrapper) failed());
+        AMQP10Callback callback = new AMQP10Callback("t1", serviceRegistry, dispatcher, "id", "name", "addr",
+                Qos.AT_LEAST_ONCE, session);
+
+        for (int i = 0; i < dynamic.mapper.configuration.ServiceConfiguration.DEFAULT_MAX_PROCESSING_ATTEMPTS; i++) {
+            callback.onMessage(message);
+        }
+
+        verify(session, org.mockito.Mockito.times(
+                dynamic.mapper.configuration.ServiceConfiguration.DEFAULT_MAX_PROCESSING_ATTEMPTS - 1)).recover();
+        verify(message).acknowledge();
     }
 
     @Test
@@ -149,7 +169,7 @@ class AMQPCallbacksAcknowledgementTest {
         BytesMessage message = jmsMessage();
         when(dispatcher.onMessage(any())).thenReturn((ProcessingResultWrapper) failed());
 
-        new AMQP10Callback("t1", serviceRegistry, dispatcher, "id", "name", "addr", Qos.AT_MOST_ONCE)
+        new AMQP10Callback("t1", serviceRegistry, dispatcher, "id", "name", "addr", Qos.AT_MOST_ONCE, session)
                 .onMessage(message);
 
         verify(message).acknowledge();
