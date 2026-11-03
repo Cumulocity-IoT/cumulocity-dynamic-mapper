@@ -45,7 +45,7 @@ import { MappingService } from '../core/mapping.service';
 import { MappingTokens } from '../../shared/mapping/processor/processor.model';
 import { AgentObjectDefinition, AgentTextDefinition } from '../../shared/mapping/ai-prompt.model';
 import { ServiceConfiguration } from '../../configuration';
-import { base64ToBytes } from '../../shared/mapping/util';
+import { base64ToString } from '../../shared/mapping/util';
 
 
 /** MCP tools (dynamic-mapper-service, MappingResultTools) through which the agents hand over their final result. */
@@ -453,9 +453,7 @@ export class AiPromptComponent implements OnInit {
     if (!mapping.code) {
       return '';
     }
-    const enc = new TextDecoder("utf-8");
-    const mappingCodeTemplateDecoded = enc.decode(base64ToBytes(mapping.code));
-    return mappingCodeTemplateDecoded;
+    return base64ToString(mapping.code);
   }
 
   async sendMessage(): Promise<void> {

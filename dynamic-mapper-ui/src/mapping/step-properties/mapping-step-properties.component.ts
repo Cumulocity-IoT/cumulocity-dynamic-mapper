@@ -73,6 +73,16 @@ import { findUncachedFilterAttributes } from './inventory-filter-fragments';
   styles: [`
     .d11r-props-compact .legend.form-block { margin: 12px 0 4px; }
     .d11r-props-compact .form-group { margin-bottom: 8px; }
+    /* Same box as .form-control, so the text starts where the neighboring input's text starts. */
+    .d11r-props-compact .filter-result {
+      padding: 5px 8px;
+      border: 1px solid transparent;
+      line-height: 20px;
+      min-height: 32px;
+      box-sizing: border-box;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
   `],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
@@ -94,6 +104,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   readonly readOnlyHelp = ' This mapping is read-only: it uses a deprecated transformation type, or your user lacks the Mapping Admin / Mapping Create role.';
 
   propertyFormlyFields: FormlyFieldConfig[] = [];
+  private filterResultField: FormlyFieldConfig;
   sourceSystem: string;
   targetSystem: string;
   // Initialised here, not only in ngOnInit: ngOnInit awaits before it gets to initializeFilterModels(),
@@ -269,7 +280,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
         fieldGroupClassName: 'row',
         fieldGroup: [
           {
-            className: 'col-lg-12',
+            className: 'col-lg-6',
             key: 'filterInventory',
             type: 'input',
             // The project wrapper, not the stock c8y one: it can show the "not in the inventory
@@ -285,9 +296,13 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
                 this.filterInventoryField = field;
-                // An existing mapping opens with its filter already set: check it right away
-                // instead of only after the first edit.
-                void this.refreshFilterInventoryWarning(this.mapping.filterInventory);
+                // An existing mapping opens with its filter already set: evaluate it right away
+                // (result and cache warning) instead of only after the first edit.
+                if (this.mapping.filterInventory) {
+                  void this.updateFilterInventoryExpressionResult(this.mapping.filterInventory);
+                } else {
+                  void this.refreshFilterInventoryWarning(this.mapping.filterInventory);
+                }
                 field.formControl.valueChanges.pipe(
                   debounceTime(1500),
                   distinctUntilChanged(),
@@ -297,7 +312,19 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                 });
               }
             }
-          }
+          },
+          // Result of evaluating the filter against the sample device, shown beside the
+          // expression. A template field shares the row's grid; syncFilterInventoryResultField()
+          // updates it, because formly re-evaluates expressions on model changes only and the
+          // result arrives asynchronously.
+          (this.filterResultField = {
+            className: 'col-lg-6',
+            type: 'template',
+            hide: true,
+            // Must be non-empty: formly only resolves a template field's type from a truthy
+            // template, and un-hiding an empty one fails with 'type "template" could not be found'.
+            template: '<div></div>'
+          })
         ]
       },
       {
@@ -479,6 +506,24 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private renderFilterInventoryResult(): string {
+    const { resultType, result } = this.filterInventoryModel.filterExpression;
+    const text = this.escapeHtml(String(result ?? ''));
+    return (
+      `<div class="form-group"><label>Filter Inventory Result [${this.escapeHtml(String(resultType))}]</label>` +
+      `<div class="filter-result font-smaller" ` +
+      `data-cy="dm-mapping-properties-filter-inventory-result">${text}</div></div>`
+    );
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   async updateFilterInventoryExpressionResult(path: string) {
     this.clearAlerts();
     // The cache note is part of the field's help text, and a missing attribute is reported right
@@ -504,6 +549,15 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       this.propertyFormly.get('filterInventory').markAsTouched();
     }
     this.filterInventoryModel = { ...this.filterInventoryModel };
+    this.syncFilterInventoryResultField();
+  }
+
+  private syncFilterInventoryResultField(): void {
+    if (!this.filterResultField) {
+      return;
+    }
+    this.filterResultField.template = this.renderFilterInventoryResult();
+    this.filterResultField.hide = this.filterInventoryModel.filterExpression.resultType === 'empty';
   }
 
   /**
