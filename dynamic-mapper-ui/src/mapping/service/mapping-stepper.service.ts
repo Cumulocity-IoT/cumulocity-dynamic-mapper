@@ -1119,13 +1119,13 @@ export function commitSuccessMessage(
     // The two draft messages instruct a follow-up action, so they get the longer dwell time.
     if (result.contentChanged && deploymentChanged) {
         return {
-            text: gettext(`Saved draft and connector assignments for ${mappingName}. Publish and activate it (Versions) to apply the changes.`),
+            text: gettext(`Saved draft and connector assignments for ${mappingName}. It is not live yet: use Save & Activate, or publish and activate it (Versions).`),
             timeout: ALERT_ACTION_REQUIRED_TIMEOUT
         };
     }
     if (result.contentChanged) {
         return {
-            text: gettext(`Saved draft for ${mappingName}. Publish and activate it (Versions) to apply the changes.`),
+            text: gettext(`Saved draft for ${mappingName}. It is not live yet: use Save & Activate, or publish and activate it (Versions).`),
             timeout: ALERT_ACTION_REQUIRED_TIMEOUT
         };
     }

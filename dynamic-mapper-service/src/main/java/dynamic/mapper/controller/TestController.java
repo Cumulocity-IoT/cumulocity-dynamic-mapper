@@ -25,9 +25,12 @@ import com.cumulocity.model.ID;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.ReentrantLock;
 
 import jakarta.servlet.http.HttpServletRequest;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
@@ -38,6 +41,7 @@ import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
+import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.TestContext;
@@ -124,6 +128,11 @@ public class TestController {
         log.info("{} - Test mapping: {}, {}, send={}", tenant, mapping.getName(), mapping.getId(), send);
         // debug, not info: the payload is arbitrary user content that should not land in the tenant's log by default.
         log.debug("{} - Test payload: {}", tenant, payload);
+
+        // The mock identity and inventory stores are shared by every test of a tenant, and a run clears
+        // them before and after itself. Two runs at once would wipe each other's devices mid-run and fail
+        // with errors that have nothing to do with the mapping, so runs of one tenant are serialized.
+        ReentrantLock tenantLock = acquireTenantTestLock(tenant);
 
         // Reset mock caches for this tenant so state from previous test runs does not leak
         clearMockCaches(tenant);
@@ -250,6 +259,13 @@ public class TestController {
                         if (processingContext.getLogs() != null) {
                             result.getLogs().addAll(processingContext.getLogs());
                         }
+                        if (processingContext.getPublishedConnectors() != null) {
+                            for (String connectorName : processingContext.getPublishedConnectors()) {
+                                if (!result.getPublishedConnectors().contains(connectorName)) {
+                                    result.getPublishedConnectors().add(connectorName);
+                                }
+                            }
+                        }
                         if (result.getKey() == null) {
                             result.setKey(processingContext.getKey());
                         }
@@ -263,6 +279,7 @@ public class TestController {
                             }
                         }
                     }
+                    addRequestErrors(result);
                     if (staleTestDevice) {
                         result.getErrors().add("The test device '" + liveTestIdentity.getValue() + "' no longer "
                                 + "exists but its ID is still cached, and "
@@ -314,11 +331,58 @@ public class TestController {
                     "Test execution failed: " + (e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
         } catch (Exception ex) {
             log.error("{} - Error transforming payload: {}", tenant, ex.getMessage(), ex);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getLocalizedMessage());
+            // describeError never returns null: an exception without a message (a NullPointerException,
+            // say) used to reach the UI as an empty message and show only "Could not be tested!".
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The test could not be run: " + describeError(ex));
         } finally {
             // Leave nothing behind, whatever the outcome: devices created in the mock by this run
             // must not be found by the next one, and the mock should not hold memory between runs.
-            clearMockCaches(tenant);
+            try {
+                clearMockCaches(tenant);
+            } finally {
+                tenantLock.unlock();
+            }
+        }
+    }
+
+    /** How long a test waits for another test of the same tenant to finish before giving up. */
+    private long testLockWaitMs = 30_000;
+
+    private final ConcurrentMap<String, ReentrantLock> tenantTestLocks = new ConcurrentHashMap<>();
+
+    private ReentrantLock acquireTenantTestLock(String tenant) {
+        ReentrantLock lock = tenantTestLocks.computeIfAbsent(tenant, t -> new ReentrantLock());
+        try {
+            if (!lock.tryLock(testLockWaitMs, TimeUnit.MILLISECONDS)) {
+                log.warn("{} - Test rejected: another test of this tenant did not finish within {} ms", tenant,
+                        testLockWaitMs);
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Another test of this tenant is still running. Wait for it to finish and run this test again.");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Test execution interrupted");
+        }
+        return lock;
+    }
+
+    /**
+     * Reports the requests that failed without leaving an error on a context. A connector that has no
+     * topic to publish to only marks the request, so a Live Test used to come back successful although
+     * nothing was sent. An error already reported through a context (its text contains the request's)
+     * is not repeated, so this runs after the contexts' own errors were collected.
+     */
+    private static void addRequestErrors(TestResult result) {
+        List<DynamicMapperRequest> requests = result.getRequests();
+        for (int i = 0; i < requests.size(); i++) {
+            DynamicMapperRequest request = requests.get(i);
+            if (request == null || !request.hasError()) {
+                continue;
+            }
+            String text = describeError(request.getError());
+            if (result.getErrors().stream().noneMatch(known -> known.contains(text))) {
+                result.getErrors().add("Request " + (i + 1) + " failed: " + text);
+            }
         }
     }
 

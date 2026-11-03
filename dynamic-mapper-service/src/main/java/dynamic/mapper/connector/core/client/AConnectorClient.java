@@ -1162,6 +1162,15 @@ public abstract class AConnectorClient {
     }
 
     /**
+     * Whether the mapping is assigned to this connector in the deployment, regardless of the mapping's
+     * active flag. Unlike {@link #isMappingOutboundDeployed(String)}, which only knows the active
+     * mappings, this also answers for an inactive mapping (needed by an outbound Live Test).
+     */
+    public boolean isMappingAssignedToConnector(Mapping mapping) {
+        return isDeployedInConnector(mapping);
+    }
+
+    /**
      * Check if mapping is deployed in this connector
      */
     private Boolean isDeployedInConnector(Mapping mapping) {

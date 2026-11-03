@@ -14,17 +14,17 @@ The mapper supports the following connectors:
 
 | Connector | Inbound | Outbound |
 |---|:---:|:---:|
-| **AMQP Connector** (AMQP 0-9-1, RabbitMQ, etc.) | ✓ | ✓ |
-| **AMQP 1.0 Connector** (Azure Service Bus, Artemis, Solace, etc.) | ✓ | ✓ |
-| **Apache Pulsar** | ✓ | ✓ |
-| **Cumulocity API** (for internal Cumulocity REST API) | – | ✓ |
-| **Cumulocity MQTT-Service** (device isolation, one instance per tenant) | ✓ | ✓ |
-| **Google Cloud Pub/Sub** (e.g. Google Manufacturing Data Engine) | ✓ | ✓ |
-| **HTTP Endpoint** (the Default HTTP Connector, one instance per tenant) | ✓ | – |
-| **Kafka** | ✓ | ✓ |
-| **MQTT** (MQTT 3.1.1) and **MQTT 5.0** | ✓ | ✓ |
-| **REST Polling** (for external REST APIs with no push capability) | ✓ | – |
-| **Webhook** (for external REST APIs) | – | ✓ |
+| [**AMQP Connector**](/c8y-pkg-dynamic-mapper/introduction/connector-amqp) (AMQP 0-9-1, RabbitMQ, etc.) | ✓ | ✓ |
+| [**AMQP 1.0 Connector**](/c8y-pkg-dynamic-mapper/introduction/connector-amqp10) (Azure Service Bus, Artemis, Solace, etc.) | ✓ | ✓ |
+| [**Apache Pulsar**](/c8y-pkg-dynamic-mapper/introduction/connector-pulsar) | ✓ | ✓ |
+| [**Cumulocity API**](/c8y-pkg-dynamic-mapper/introduction/connector-cumulocity-api) (for internal Cumulocity REST API) | – | ✓ |
+| [**Cumulocity MQTT-Service**](/c8y-pkg-dynamic-mapper/introduction/connector-c8y-mqtt-service) (device isolation, one instance per tenant) | ✓ | ✓ |
+| [**Google Cloud Pub/Sub**](/c8y-pkg-dynamic-mapper/introduction/connector-pubsub) (e.g. Google Manufacturing Data Engine) | ✓ | ✓ |
+| [**HTTP Endpoint**](/c8y-pkg-dynamic-mapper/introduction/connector-http) (the Default HTTP Connector, one instance per tenant) | ✓ | – |
+| [**Kafka**](/c8y-pkg-dynamic-mapper/introduction/connector-kafka) | ✓ | ✓ |
+| [**MQTT**](/c8y-pkg-dynamic-mapper/introduction/connector-mqtt) (MQTT 3.1.1) and **MQTT 5.0** | ✓ | ✓ |
+| [**REST Polling**](/c8y-pkg-dynamic-mapper/introduction/connector-rest-polling) (for external REST APIs with no push capability) | ✓ | – |
+| [**Webhook**](/c8y-pkg-dynamic-mapper/introduction/connector-webhook) (for external REST APIs) | – | ✓ |
 
 **Payload format is a per-mapping choice, not a connector restriction**: every connector above
 carries raw message bytes into the same pipeline, and the mapping's own configured
@@ -59,7 +59,7 @@ A new connector starts disabled. Switch on **Enabled** in the connector table to
 to the connectors it should run on, because a mapping that is not deployed to a connector never runs there. See
 [Troubleshooting](/c8y-pkg-dynamic-mapper/introduction/troubleshooting).
 
-For screenshots of the connector form, the connector and connection-log tables, the Webhook setting **Use Cumulocity
-API of this tenant**, and Kafka's security and TLS configuration, see the
-[**Connector Reference**](/c8y-pkg-dynamic-mapper/introduction/connectors) page.
+For screenshots of the connector form and the connector and connection-log tables, see the
+[**Connector Reference**](/c8y-pkg-dynamic-mapper/introduction/connectors) page. It links to a page for each connector with
+specific setup: HTTP, Webhook, REST Polling, Kafka, and Pulsar.
 

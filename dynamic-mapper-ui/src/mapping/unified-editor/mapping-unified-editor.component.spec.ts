@@ -238,8 +238,10 @@ describe('MappingUnifiedEditorComponent', () => {
       'saveDraft',
       'createMapping',
       'refreshMappings',
+      'reloadMappings',
       'updateDefinedDeploymentMapEntry'
     ]);
+    mockMappingService.reloadMappings.and.resolveTo();
     mockRouter = jasmine.createSpyObj('Router', ['navigateByUrl'], { url: '/mappings/inbound/edit/42' });
     mockGlobalContextService = jasmine.createSpyObj('GlobalContextService', ['register', 'unregister']);
     mockSubscriptionService = jasmine.createSpyObj('SubscriptionService', ['validateSubscriptionOutbound']);

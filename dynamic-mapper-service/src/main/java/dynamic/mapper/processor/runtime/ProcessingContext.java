@@ -144,6 +144,10 @@ public class ProcessingContext<O> implements AutoCloseable {
     @Builder.Default
     private List<String> logs = new CopyOnWriteArrayList<>();
 
+    /** Names of the connectors an outbound Live Test published through. Empty for every other run. */
+    @Builder.Default
+    private List<String> publishedConnectors = new CopyOnWriteArrayList<>();
+
     @Builder.Default
     private ProcessingType processingType = ProcessingType.UNDEFINED;
 

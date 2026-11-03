@@ -27,7 +27,7 @@ Moving a mapping to another broker then means changing the connector, not the ma
 A full Pulsar topic name has this form:
 
 ```
-persistent://example-tenant/example-namespace/COMMON
+persistent://example-tenant/example-namespace/telemetry
 └─ domain ┘  └── tenant ──┘ └─ namespace ───┘ └topic┘
 ```
 
@@ -48,15 +48,15 @@ The connector builds the full name from the connector configuration plus the map
 
 | Mapping topic | Connector configuration | Resulting Pulsar topic |
 |---|---|---|
-| `COMMON` | `pulsarTenant=example-tenant`, `pulsarNamespace=example-namespace` | `persistent://example-tenant/example-namespace/COMMON` |
-| `COMMON` | `pulsarNamespace=example-tenant/example-namespace` (combined form) | `persistent://example-tenant/example-namespace/COMMON` |
-| `COMMON` | as above, `pulsarTopicDomain=non-persistent` | `non-persistent://example-tenant/example-namespace/COMMON` |
+| `telemetry` | `pulsarTenant=example-tenant`, `pulsarNamespace=example-namespace` | `persistent://example-tenant/example-namespace/telemetry` |
+| `telemetry` | `pulsarNamespace=example-tenant/example-namespace` (combined form) | `persistent://example-tenant/example-namespace/telemetry` |
+| `telemetry` | as above, `pulsarTopicDomain=non-persistent` | `non-persistent://example-tenant/example-namespace/telemetry` |
 | `devices/+/data` | `pulsarTenant=public`, `pulsarNamespace=default` | topics matching `persistent://public/default/devices-<one level>-data` |
-| `persistent://t/n/COMMON` | any | used as written (tenant, namespace, and type settings are ignored) |
+| `persistent://t/n/telemetry` | any | used as written (tenant, namespace, and type settings are ignored) |
 
 Defaults are tenant `public`, namespace `default`, and persistent.
 
-Prefer the logical form (`COMMON`). A full `persistent://...` name in a mapping ties that mapping to one broker layout.
+Prefer the logical form (`telemetry`). A full `persistent://...` name in a mapping ties that mapping to one broker layout.
 The combined `tenant/namespace` form in `pulsarNamespace` overrides `pulsarTenant`.
 
 ### Topic name conversion
@@ -68,11 +68,11 @@ MQTT topics use `/` as a level separator. A Pulsar topic name is a single segmen
 | `/` becomes `-` | `devices/sensor1/data` becomes `devices-sensor1-data` |
 | Spaces and characters outside `a-z A-Z 0-9 . _ -` become `_` | `my topic!` becomes `my_topic_` |
 | Leading and trailing `.`, `_`, `-` are removed | `-abc-` becomes `abc` |
-| Letter case is kept | `COMMON` stays `COMMON` |
+| Letter case is kept | `Telemetry` stays `Telemetry` |
 
 Inbound, the connector reverses the conversion when it can verify the result against the mapping's topic filter, so
 `_TOPIC_LEVEL_` and topic-based mapping resolution keep working with `devices/sensor1/data`. When it cannot verify
-the match, the mapping sees the Pulsar local name (for example `COMMON`).
+the match, the mapping sees the Pulsar local name (for example `telemetry`).
 
 Because the conversion turns `/` into `-`, a topic level that itself contains `-` is ambiguous in wildcard
 subscriptions. For Pulsar, prefer topic names that need no levels.
@@ -129,20 +129,20 @@ MQTT has no key, tenant, namespace, or subscription name. The session and client
 
 ## Choosing the Pulsar settings: a checklist
 
-Given a name such as `persistent://example-tenant/example-namespace/COMMON` and a subscription `example-subscription`:
+Given a name such as `persistent://example-tenant/example-namespace/telemetry` and a subscription `example-subscription`:
 
 1. Split the name into domain, tenant, namespace, and topic.
 2. Set `pulsarTenant` and `pulsarNamespace` (or the combined `tenant/namespace` form) on the connector.
 3. Leave `pulsarTopicDomain` on Persistent, or set Non-persistent if the broker says so.
 4. Set `subscriptionName` and enable **Use subscription name as is** if the broker requires that exact name.
-5. In the mapping, use only the topic: `COMMON`.
+5. In the mapping, use only the topic: `telemetry`.
 6. Use the key only through `_CONTEXT_DATA_.key` or the transport field `key`.
 
 ## Known limits
 
 - Short topic names always resolve inside the single namespace configured on the connector. To read from two
   namespaces, create two connectors, or use a full `persistent://...` topic in one mapping.
-- Letter case is significant. `COMMON` and `common` are different Pulsar topics.
+- Letter case is significant. `Telemetry` and `telemetry` are different Pulsar topics.
 - The Pulsar domain setting applies only to short topic names. A full topic name carries its own domain.
 
 ## Related

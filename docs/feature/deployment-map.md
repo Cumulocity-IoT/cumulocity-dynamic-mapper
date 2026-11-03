@@ -63,11 +63,17 @@ move or copy mappings between tenants, and import/export does not carry it (see
 
 | Method and path | Role | Returns |
 |---|---|---|
-| `GET /deployment/defined` | any | `{ mappingIdentifier: [connectorIdentifier] }` for the whole tenant |
+| `GET /deployment/defined[?expand=true]` | any | `{ mappingIdentifier: [connectorIdentifier] }` for the whole tenant |
 | `GET /deployment/defined/{mappingIdentifier}` | any | the connector identifier list of one mapping, `[]` when absent |
 | `PUT /deployment/defined/{mappingIdentifier}` | Admin or Create | `201`; body is a JSON array of connector identifiers |
-| `GET /deployment/effective` | any | `{ mappingIdentifier: DeploymentMapEntry }` built from the live connectors |
+| `GET /deployment/effective[?expand=true]` | any | `{ mappingIdentifier: DeploymentMapEntry }` built from the live connectors |
 | `POST /operation` with `RESET_DEPLOYMENT_MAP` | Admin | clears the map, reconciles every connector |
+
+With `expand=true`, `defined` and `effective` return the same readable shape:
+`{ mappingIdentifier: { identifier, name, direction, connectors: [{ identifier, name, connectorType }] } }`.
+Names come from a lookup at request time. A mapping or connector that no longer exists keeps its
+identifier, and its `name` (and `direction`) is `null`, which exposes stale entries. The connector view has
+no properties, so it cannot leak credentials.
 
 ### Defined: storage
 

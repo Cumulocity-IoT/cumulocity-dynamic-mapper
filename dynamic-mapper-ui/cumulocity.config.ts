@@ -170,6 +170,10 @@ export default {
         to: 'image/Dynamic_Mapper_Connector_Kafka.png'
       },
       {
+        from: '../resources/image-optimized/Dynamic_Mapper_Connector_Pulsar.png',
+        to: 'image/Dynamic_Mapper_Connector_Pulsar.png'
+      },
+      {
         from: '../resources/image-optimized/Dynamic_Mapper_Connector_Http.png',
         to: 'image/Dynamic_Mapper_Connector_Http.png'
       },

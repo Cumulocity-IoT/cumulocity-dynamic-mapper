@@ -224,6 +224,8 @@ public class SubstitutionResultOutboundProcessor extends BaseProcessor {
                     payloadTarget.jsonString(), null, mapping);
             dynamicMapperRequest.setMethod(method);
             dynamicMapperRequest.setSourceId(deviceSource);
+            // Per request, like the flow and extension processors: the test result and the UI read the topic here.
+            dynamicMapperRequest.setPublishTopic(context.getResolvedPublishTopic());
 
         } else {
             // FIXME Why are INVENTORY API messages ignored?! Needs to be implemented

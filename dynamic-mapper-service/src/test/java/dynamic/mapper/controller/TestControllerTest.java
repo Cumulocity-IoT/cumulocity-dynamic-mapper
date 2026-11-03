@@ -763,4 +763,96 @@ class TestControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
+
+    @Test
+    void testMapping_aRequestThatFailedWithoutAContextError_failsTheTest() throws Exception {
+        // A connector with no topic to publish to only marks the request: the Live Test used to be green.
+        ProcessingContext<Object> context = contextWithExternalId();
+        context.setRequests(new java.util.ArrayList<>(List.of(DynamicMapperRequest.builder()
+                .request("{}").error(new Exception("No publish topic specified")).build())));
+        stubDispatcherResult(context);
+
+        TestResult result = controller.testMapping(dryRunContext()).getBody();
+
+        assertTrue(!result.getSuccess());
+        assertEquals(List.of("Request 1 failed: No publish topic specified"), result.getErrors());
+    }
+
+    @Test
+    void testMapping_aRequestErrorAlreadyReportedByTheContextIsNotRepeated() throws Exception {
+        ProcessingContext<Object> context = contextWithExternalId();
+        Exception cause = new IllegalStateException("connection reset");
+        context.setRequests(new java.util.ArrayList<>(List.of(DynamicMapperRequest.builder()
+                .request("{}").error(cause).build())));
+        context.addError(new dynamic.mapper.processor.ProcessingException("Failed to publish message 1/1", cause));
+        stubDispatcherResult(context);
+
+        TestResult result = controller.testMapping(dryRunContext()).getBody();
+
+        assertEquals(1, result.getErrors().size(), result.getErrors().toString());
+    }
+
+    @Test
+    void testMapping_theResultCarriesNoStackTrace() throws Exception {
+        ProcessingContext<Object> context = contextWithExternalId();
+        context.setRequests(new java.util.ArrayList<>(List.of(DynamicMapperRequest.builder()
+                .request("{}").error(new IllegalStateException("boom")).build())));
+        stubDispatcherResult(context);
+
+        TestResult result = controller.testMapping(dryRunContext()).getBody();
+        String json = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(result);
+
+        assertTrue(json.contains("\"errorMessage\":\"boom\""), json);
+        assertTrue(!json.contains("stackTrace") && !json.contains("IllegalStateException"),
+                "the exception itself must not be serialized: " + json);
+    }
+
+    @Test
+    void testMapping_anExceptionWithoutAMessage_stillYieldsAReadableMessage() throws Exception {
+        when(connectorRegistry.getClientForTenant(TENANT, TestClient.TEST_CONNECTOR_IDENTIFIER))
+                .thenThrow(new NullPointerException());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> controller.testMapping(dryRunContext()));
+
+        assertTrue(ex.getReason() != null && ex.getReason().contains("NullPointerException"), ex.getReason());
+    }
+
+    @Test
+    void testMapping_testsOfOneTenantDoNotOverlap_andTheLockIsReleasedAfterwards() throws Exception {
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "testLockWaitMs", 50L);
+        java.util.concurrent.CountDownLatch insideFirst = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch releaseFirst = new java.util.concurrent.CountDownLatch(1);
+        when(connectorRegistry.getClientForTenant(TENANT, TestClient.TEST_CONNECTOR_IDENTIFIER)).thenAnswer(inv -> {
+            insideFirst.countDown();
+            releaseFirst.await();
+            throw new ConnectorRegistryException("stop here");
+        }).thenThrow(new ConnectorRegistryException("stop here"));
+
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newSingleThreadExecutor();
+        try {
+            java.util.concurrent.Future<?> first = pool.submit(() -> {
+                try {
+                    controller.testMapping(dryRunContext());
+                } catch (ResponseStatusException expected) {
+                    // 404 from the stub: the point is that the run held the lock meanwhile
+                }
+            });
+            assertTrue(insideFirst.await(5, java.util.concurrent.TimeUnit.SECONDS));
+
+            ResponseStatusException busy = assertThrows(ResponseStatusException.class,
+                    () -> controller.testMapping(dryRunContext()));
+            assertEquals(HttpStatus.CONFLICT, busy.getStatusCode());
+
+            releaseFirst.countDown();
+            first.get(5, java.util.concurrent.TimeUnit.SECONDS);
+
+            ResponseStatusException afterwards = assertThrows(ResponseStatusException.class,
+                    () -> controller.testMapping(dryRunContext()));
+            assertEquals(HttpStatus.NOT_FOUND, afterwards.getStatusCode(), "the lock must be free again");
+        } finally {
+            releaseFirst.countDown();
+            pool.shutdownNow();
+        }
+    }
 }
