@@ -316,6 +316,36 @@ class MappingOutboundExecutionIntegrationTest {
     }
 
     @Test
+    void substitutionRequestCarriesTheResolvedPublishTopic() throws Exception {
+        // The test result, and so the Live Test console, read the topic from the request.
+        Mapping mapping = findMappingByName(outboundMappings, "Mapping - 51");
+        assertNotNull(mapping, "Mapping - 51 should exist");
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("id", "12345");
+        payload.put("type", "c8y_DeviceStatusEvent");
+        payload.put("text", "Device came online");
+        payload.put("time", "2025-01-19T12:00:00.000Z");
+        Map<String, Object> source = new HashMap<>();
+        source.put("id", "67890");
+        payload.put("source", source);
+
+        ProcessingContext<Object> context = createProcessingContext(mapping, payload, API.EVENT);
+        context.setTopic(mapping.getPublishTopic());
+        MappingStatus mappingStatus = new MappingStatus(
+                mapping.getId(), mapping.getName(), mapping.getIdentifier(),
+                Direction.OUTBOUND, mapping.getMappingTopic(), "", 0L, 0L, 0L, null);
+        when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
+
+        jsonataProcessor.extractFromSource(context);
+        substitutionProcessor.process(context);
+
+        assertFalse(context.getRequests().isEmpty(), "A request should have been created");
+        assertNotNull(context.getResolvedPublishTopic());
+        assertEquals(context.getResolvedPublishTopic(), context.getRequests().get(0).getPublishTopic());
+    }
+
+    @Test
     void testResolvedPublishTopicCalculation() throws Exception {
         // Given - Mapping with wildcard in publishTopic
         Mapping mapping = findMappingByName(outboundMappings, "Mapping - 51");
