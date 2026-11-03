@@ -46,6 +46,7 @@ import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.model.RepairStrategy;
 import dynamic.mapper.processor.model.SubstituteValue;
 import dynamic.mapper.processor.model.SubstituteValue.TYPE;
+import dynamic.mapper.processor.util.OutboundRequestFinalizer;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.util.Utils;
@@ -226,6 +227,14 @@ public class SubstitutionResultOutboundProcessor extends BaseProcessor {
             dynamicMapperRequest.setSourceId(deviceSource);
             // Per request, like the flow and extension processors: the test result and the UI read the topic here.
             dynamicMapperRequest.setPublishTopic(context.getResolvedPublishTopic());
+            // PUT/PATCH/DELETE address the device in the URL path, not in the body; without this
+            // an internal webhook would send them to the collection path. POST is left untouched.
+            if (dynamicMapperRequest.getApi() != null && deviceSource != null && !deviceSource.isEmpty()
+                    && (method == RequestMethod.PUT || method == RequestMethod.PATCH
+                            || method == RequestMethod.DELETE)) {
+                OutboundRequestFinalizer.finalizeRequest(dynamicMapperRequest, deviceSource,
+                        dynamicMapperRequest.getRequest(), tenant);
+            }
 
         } else {
             // FIXME Why are INVENTORY API messages ignored?! Needs to be implemented

@@ -27,6 +27,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.AbstractExtensibleResultProcessor;
@@ -36,6 +37,8 @@ import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.runtime.OutputCollector;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.RoutingContext;
+import dynamic.mapper.processor.util.OutboundRequestFinalizer;
+import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -171,33 +174,35 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
             // Serialize payload if needed
             String payloadString = serializePayload(deviceMsg.getPayload());
 
-            // Apply transport fields to context if present
-            if (deviceMsg.getTransportFields() != null && !deviceMsg.getTransportFields().isEmpty()) {
-                // Extract key for Kafka messages
-                String key = deviceMsg.getTransportFields().get(Mapping.CONTEXT_DATA_KEY_NAME);
-                if (key != null && !Mapping.CONTEXT_DATA_KEY_PLACEHOLDER.equals(key)) {
-                    context.setKey(key);
-                }
-                log.debug("{} - DeviceMessage has {} transport field(s)",
-                        tenant, deviceMsg.getTransportFields().size());
-            }
+            // Same API derivation as the Smart Function path: cumulocityType first, then the topic.
+            API api = OutboundRequestFinalizer.deriveApi(deviceMsg.getCumulocityType(), publishTopic);
 
-            // Build the request for outbound publishing
+            // Build the request for outbound publishing. The method is required by the webhook
+            // connector (it switches on it), so it is always set; the action defaults to POST.
             DynamicMapperRequest request = DynamicMapperRequest.builder()
                     .predecessor(context.getCurrentRequest() != null
                             ? context.getCurrentRequest().getPredecessor()
                             : -1)
+                    .method(ProcessingResultHelper.mapActionToRequestMethod(deviceMsg.getAction()))
+                    .api(api)
                     .publishTopic(publishTopic)
                     .retain(deviceMsg.getRetain())
                     .sourceId(context.getSourceId())
+                    .externalIdType(context.getMapping().getExternalIdType())
+                    .externalId(context.getExternalId())
                     .request(payloadString)
                     .build();
+            if (api != null) {
+                // Source identifier in the body and the device ID in the path for PUT/PATCH/DELETE.
+                OutboundRequestFinalizer.finalizeRequest(request, context.getSourceId(), payloadString, tenant,
+                        objectMapper);
+            }
 
             // Add request to thread-safe output collector
             output.addRequest(request);
 
-            // Set retain flag on context
-            context.setRetain(Boolean.TRUE.equals(deviceMsg.getRetain()));
+            // Broker message key and retain flag on the context
+            OutboundRequestFinalizer.applyTransportFields(context, deviceMsg);
 
             log.debug("{} - Created outbound request: topic={}, retain={}",
                     tenant, publishTopic, deviceMsg.getRetain());

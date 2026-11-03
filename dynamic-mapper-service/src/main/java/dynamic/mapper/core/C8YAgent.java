@@ -955,7 +955,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
 
                     // Remove device from Cache
                     if (s.getHttpStatus() == 422) {
-                        ID identity = new ID(currentRequest.getExternalId(), currentRequest.getExternalId());
+                        ID identity = new ID(currentRequest.getExternalIdType(), currentRequest.getExternalId());
                         cacheManager.removeDeviceFromInboundExternalIdCache(tenant, identity);
                     }
                 }
