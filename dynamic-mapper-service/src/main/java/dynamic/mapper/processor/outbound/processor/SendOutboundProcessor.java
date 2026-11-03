@@ -269,7 +269,8 @@ public class SendOutboundProcessor extends BaseProcessor {
                         client.getConnectorName()));
                 continue;
             }
-            if (!client.isMappingOutboundDeployed(mapping.getIdentifier())) {
+            // Deployment only: a Live Test must also work for a mapping that is still inactive.
+            if (!client.isMappingAssignedToConnector(mapping)) {
                 log.debug("{} - Mapping '{}' not deployed on connector '{}', skipping",
                         tenant, mapping.getName(), client.getConnectorName());
                 context.getWarnings().add(String.format(

@@ -43,8 +43,7 @@ import {
   Mapping,
   MappingType,
   StepperConfiguration,
-  isSubstitutionsAsCode,
-  ALERT_INFO_TIMEOUT
+  isSubstitutionsAsCode
 } from '../../shared/';
 import { DynamicMapperRequest, TestResult, TestContext, MappingTokens } from '../../shared/mapping/processor/processor.model';
 import { TestingService } from '../core/testing.service';
@@ -380,9 +379,13 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     try {
       const result = await this.performTest(sendPayload, assumeDeviceExists);
       await this.handleTestResult(result, sendPayload, assumeDeviceExists);
-
       if (this.testingModel.results.length > 0) {
         this.displayTestResult(0);
+      }
+      // Results are reported in the console, so a collapsed console is opened when a run wrote to it.
+      // After displayTestResult: it adds the "No response in test mode" line of a Dry Run.
+      if (this.testingModel.logs?.length) {
+        this.showConsole = true;
       }
     } catch (error) {
       this.handleError(gettext('Test execution failed'), error);
@@ -500,9 +503,7 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     if (!result.success) {
       const errorLogs = (result.errors ?? []).map(e => `ERROR: ${e}`);
       this.testingModel.logs = [...(this.testingModel.logs ?? []), ...errorLogs];
-      // The console alone is easy to miss: it can be collapsed, and a Live Test may already have sent
-      // part of its requests. The alert carries the first error; the console has the rest.
-      this.alertService.add({ text: this.describeFailure(result, sendPayload), type: 'danger' });
+      // The errors are listed in the console output; no alert repeats them.
       return;
     }
 
@@ -513,36 +514,13 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         ? gettext('The mapping produced no request, so nothing was sent.')
         : gettext('The mapping produced no request for this payload.'));
       this.testingModel.logs = [...(this.testingModel.logs ?? []), note];
-      if (sendPayload) {
-        this.alertService.add({ text: this.t(gettext('Live test ran, but the mapping produced no request: nothing was sent.')), type: 'warning', timeout: ALERT_INFO_TIMEOUT });
-      }
       return;
     }
 
     if (sendPayload) {
-      const warnings = result.warnings?.length ?? 0;
-      let text = this.describeSendResult(result);
-      if (warnings > 0) {
-        // e.g. an outbound connector that was skipped: success, but not what the user may expect.
-        text += ' ' + this.t(warnings === 1
-          ? gettext('1 warning is shown in the console.')
-          : gettext('{{count}} warnings are shown in the console.'), { count: warnings });
-      }
-      this.alertService.add({ text, type: warnings > 0 ? 'warning' : 'info', timeout: ALERT_INFO_TIMEOUT });
+      // The console is the record of a run; no alert repeats the result. Warnings are already in the console.
+      this.testingModel.logs = [...(this.testingModel.logs ?? []), 'INFO ' + this.describeSendResult(result)];
     }
-  }
-
-  /** The first error, and how many more the console holds. */
-  describeFailure(result: TestResult, sendPayload: boolean): string {
-    const [first, ...more] = result.errors ?? [];
-    const head = this.t(sendPayload ? gettext('Live test failed: {{error}}') : gettext('Dry run failed: {{error}}'),
-      { error: first ?? '' });
-    if (more.length === 0) {
-      return head;
-    }
-    return head + ' ' + this.t(more.length === 1
-      ? gettext('1 more error is shown in the console.')
-      : gettext('{{count}} more errors are shown in the console.'), { count: more.length });
   }
 
   /**

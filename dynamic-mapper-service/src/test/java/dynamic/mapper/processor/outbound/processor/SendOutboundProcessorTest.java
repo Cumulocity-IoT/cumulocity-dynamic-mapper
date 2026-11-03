@@ -180,7 +180,7 @@ class SendOutboundProcessorTest {
         when(client.getConnectorType()).thenReturn(dynamic.mapper.connector.core.client.ConnectorType.MQTT);
         when(client.getConnectorName()).thenReturn(name);
         when(client.isConnected()).thenReturn(connected);
-        when(client.isMappingOutboundDeployed(mapping.getIdentifier())).thenReturn(deployed);
+        when(client.isMappingAssignedToConnector(mapping)).thenReturn(deployed);
         return client;
     }
 
@@ -196,6 +196,19 @@ class SendOutboundProcessorTest {
         assertTrue(context.getErrors().get(0).getMessage().contains("Nothing was published"));
         assertTrue(context.getWarnings().stream().anyMatch(w -> w.contains("Broker A") && w.contains("not connected")),
                 "the reason each connector was skipped must reach the user, not only the log");
+    }
+
+    @Test
+    void liveTest_publishesAnInactiveMappingThatIsDeployed() throws Exception {
+        useLiveTestContext();
+        mapping.setActive(false);
+        AConnectorClient publishing = realClient("Broker B", true, true);
+        when(connectorRegistry.getClientsForTenant(TEST_TENANT)).thenReturn(java.util.Map.of("b", publishing));
+
+        processor.process(context, TEST_CONNECTOR);
+
+        verify(publishing).publishMEAO(context);
+        assertFalse(context.hasError());
     }
 
     @Test

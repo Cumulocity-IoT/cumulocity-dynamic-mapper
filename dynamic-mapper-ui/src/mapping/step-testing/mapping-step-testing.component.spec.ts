@@ -404,7 +404,7 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
       expect(alertService.danger).toHaveBeenCalledWith('Failed to clear cache: no connection');
     });
 
-    it('a successful Live Test raises the alert that says what was created', async () => {
+    it('a successful Live Test logs what was created without an alert', async () => {
       testingService.testMapping.and.returnValue(Promise.resolve({
         success: true, errors: [], warnings: [],
         requests: [{ api: 'ALARM', sourceId: '4711', response: '{"id":"99"}' } as DynamicMapperRequest]
@@ -412,10 +412,8 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
 
       await component.onSendTest();
 
-      expect(alertService.add).toHaveBeenCalledTimes(1);
-      const alert = alertService.add.calls.mostRecent().args[0] as { text: string; type: string };
-      expect(alert.type).toBe('info');
-      expect(alert.text).toContain('created alarm 99 on device 4711');
+      expect(alertService.add).not.toHaveBeenCalled();
+      expect(component.testingModel.logs?.some(l => l.startsWith('INFO ') && l.includes('created alarm 99 on device 4711'))).toBeTrue();
     });
 
     it('a Live Test that produced no request says nothing was sent instead of claiming a creation', async () => {
@@ -423,11 +421,30 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
 
       await component.onSendTest();
 
-      const alert = alertService.add.calls.mostRecent().args[0] as { text: string; type: string };
-      expect(alert.type).toBe('warning');
-      expect(alert.text).toContain('nothing was sent');
-      expect(alert.text).not.toContain('created');
+      expect(alertService.add).not.toHaveBeenCalled();
+      expect(component.testingModel.logs?.some(l => l.includes('created'))).toBeFalse();
       expect(component.testingModel.logs).toContain('INFO The mapping produced no request, so nothing was sent.');
+    });
+
+    it('expands a collapsed console when a run wrote to it', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve(ok));
+      component.showConsole = false;
+
+      await component.onTestTransformation();
+
+      expect(component.showConsole).toBeTrue();
+    });
+
+    it('expands a collapsed console for a Dry Run whose only line is the test-mode note', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve({
+        success: true, errors: [], warnings: [],
+        requests: [{ api: 'MEASUREMENT', request: { a: 1 } } as DynamicMapperRequest]
+      }));
+      component.showConsole = false;
+
+      await component.onTestTransformation();
+
+      expect(component.showConsole).toBeTrue();
     });
 
     it('a Dry Run without a request explains the empty result in the console', async () => {
@@ -511,29 +528,22 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
     const failed = (errors: string[], extra: Partial<TestResult> = {}): TestResult =>
       ({ success: false, requests: [], errors, warnings: [], ...extra });
 
-    it('a failed Dry Run raises an alert with the first error, so a collapsed console cannot hide it', async () => {
+    it('a failed Dry Run logs the error to the console without an alert', async () => {
       testingService.testMapping.and.returnValue(Promise.resolve(failed(['Error evaluating $.temp'])));
 
       await component.onTestTransformation();
 
-      const alert = alertService.add.calls.mostRecent().args[0] as { text: string; type: string };
-      expect(alert.type).toBe('danger');
-      expect(alert.text).toBe('Dry run failed: Error evaluating $.temp');
+      expect(alertService.add).not.toHaveBeenCalled();
       expect(component.testingModel.logs).toContain('ERROR: Error evaluating $.temp');
     });
 
-    it('a failed Live Test says so and counts the errors left in the console', async () => {
+    it('a failed Live Test logs every error to the console without an alert', async () => {
       testingService.testMapping.and.returnValue(Promise.resolve(failed(['first', 'second', 'third'])));
 
       await component.onSendTest();
 
-      const alert = alertService.add.calls.mostRecent().args[0] as { text: string; type: string };
-      expect(alert.text).toBe('Live test failed: first 2 more errors are shown in the console.');
-    });
-
-    it('says "1 more error" in the singular', () => {
-      expect(component.describeFailure(failed(['a', 'b']), false))
-        .toBe('Dry run failed: a 1 more error is shown in the console.');
+      expect(alertService.add).not.toHaveBeenCalled();
+      expect(component.testingModel.logs).toContain('ERROR: first');
     });
 
     it('a request that is not JSON no longer discards the result: it is shown as text with a note', async () => {
@@ -563,7 +573,7 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
       expect(component.testingModel.logs?.some(l => l.includes('not a JSON object'))).toBeFalse();
     });
 
-    it('a Live Test that succeeded with warnings raises a warning alert that points to the console', async () => {
+    it('a Live Test that succeeded with warnings keeps them in the console without an alert', async () => {
       testingService.testMapping.and.returnValue(Promise.resolve({
         success: true, errors: [], warnings: ["Connector 'A' was skipped: it is not connected."],
         requests: [{ api: 'ALARM', sourceId: '4711', response: '{"id":"99"}' } as DynamicMapperRequest]
@@ -571,9 +581,8 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
 
       await component.onSendTest();
 
-      const alert = alertService.add.calls.mostRecent().args[0] as { text: string; type: string };
-      expect(alert.type).toBe('warning');
-      expect(alert.text).toContain('1 warning is shown in the console.');
+      expect(alertService.add).not.toHaveBeenCalled();
+      expect(component.testingModel.logs).toContain("WARNING: Connector 'A' was skipped: it is not connected.");
     });
   });
 
