@@ -252,6 +252,9 @@ public class SendOutboundProcessor extends BaseProcessor {
             allClients = connectorRegistry.getClientsForTenant(tenant);
         } catch (Exception e) {
             log.error("{} - Failed to look up connectors for outbound test send: {}", tenant, e.getMessage(), e);
+            // Reported on the context: a Live Test that only logged this came back as successful.
+            context.addError(new ProcessingException(
+                    "The connectors could not be looked up, so nothing was published: " + e.getMessage(), e));
             return;
         }
 
@@ -262,11 +265,15 @@ public class SendOutboundProcessor extends BaseProcessor {
             }
             if (!client.isConnected()) {
                 log.warn("{} - Skipping connector '{}': not connected", tenant, client.getConnectorName());
+                context.getWarnings().add(String.format("Connector '%s' was skipped: it is not connected.",
+                        client.getConnectorName()));
                 continue;
             }
             if (!client.isMappingOutboundDeployed(mapping.getIdentifier())) {
                 log.debug("{} - Mapping '{}' not deployed on connector '{}', skipping",
                         tenant, mapping.getName(), client.getConnectorName());
+                context.getWarnings().add(String.format(
+                        "Connector '%s' was skipped: this mapping is not deployed on it.", client.getConnectorName()));
                 continue;
             }
             try {
@@ -275,12 +282,17 @@ public class SendOutboundProcessor extends BaseProcessor {
                 log.info("{} - Published outbound test message via connector: {}", tenant, client.getConnectorName());
             } catch (Exception e) {
                 log.error("{} - Failed to publish via connector '{}': {}", tenant, client.getConnectorName(), e.getMessage(), e);
+                context.addError(new ProcessingException(String.format("Failed to publish via connector '%s': %s",
+                        client.getConnectorName(), e.getMessage()), e));
             }
         }
 
         if (publishCount == 0) {
             log.warn("{} - No connected real connector found to publish outbound test message for mapping: {}",
                     tenant, mapping.getName());
+            context.addError(new ProcessingException(
+                    "Nothing was published: no connected connector has this mapping deployed. "
+                            + "Connect a connector and deploy the mapping to it, or use a Dry Run."));
         }
     }
 

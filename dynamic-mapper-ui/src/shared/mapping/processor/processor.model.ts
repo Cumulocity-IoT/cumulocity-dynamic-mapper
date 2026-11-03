@@ -37,7 +37,8 @@ export interface DynamicMapperRequest {
   externalIdType?: string;
   request?: any;
   response?: any;
-  error?: string;
+  /** Why this request failed; absent when it succeeded. */
+  errorMessage?: string;
   hidden?: boolean;
 }
 

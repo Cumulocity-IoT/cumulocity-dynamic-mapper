@@ -507,6 +507,98 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
       expect(alertService.danger).toHaveBeenCalledWith('<Test execution failed>: boom');
     });
   });
+  describe('failures', () => {
+    const failed = (errors: string[], extra: Partial<TestResult> = {}): TestResult =>
+      ({ success: false, requests: [], errors, warnings: [], ...extra });
+
+    it('a failed Dry Run raises an alert with the first error, so a collapsed console cannot hide it', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve(failed(['Error evaluating $.temp'])));
+
+      await component.onTestTransformation();
+
+      const alert = alertService.add.calls.mostRecent().args[0] as { text: string; type: string };
+      expect(alert.type).toBe('danger');
+      expect(alert.text).toBe('Dry run failed: Error evaluating $.temp');
+      expect(component.testingModel.logs).toContain('ERROR: Error evaluating $.temp');
+    });
+
+    it('a failed Live Test says so and counts the errors left in the console', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve(failed(['first', 'second', 'third'])));
+
+      await component.onSendTest();
+
+      const alert = alertService.add.calls.mostRecent().args[0] as { text: string; type: string };
+      expect(alert.text).toBe('Live test failed: first 2 more errors are shown in the console.');
+    });
+
+    it('says "1 more error" in the singular', () => {
+      expect(component.describeFailure(failed(['a', 'b']), false))
+        .toBe('Dry run failed: a 1 more error is shown in the console.');
+    });
+
+    it('a request that is not JSON no longer discards the result: it is shown as text with a note', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve({
+        success: true, errors: [], warnings: [],
+        requests: [{ api: 'MEASUREMENT', request: 'temp;21.5\n', response: undefined } as DynamicMapperRequest]
+      }));
+
+      await component.onTestTransformation();
+
+      expect(alertService.danger).not.toHaveBeenCalled();
+      expect(component.testingModel.results.length).toBe(1);
+      expect(component.testingModel.request).toEqual({ payload: 'temp;21.5\n' });
+      expect(component.testingModel.logs).toContain(
+        'INFO A request or response is not a JSON object, so it is shown as text under "payload".');
+    });
+
+    it('a JSON request is parsed as before, without the note', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve({
+        success: true, errors: [], warnings: [],
+        requests: [{ api: 'ALARM', request: '{"b":1,"a":2}' } as DynamicMapperRequest]
+      }));
+
+      await component.onTestTransformation();
+
+      expect(component.testingModel.request).toEqual({ a: 2, b: 1 });
+      expect(component.testingModel.logs?.some(l => l.includes('not a JSON object'))).toBeFalse();
+    });
+
+    it('a Live Test that succeeded with warnings raises a warning alert that points to the console', async () => {
+      testingService.testMapping.and.returnValue(Promise.resolve({
+        success: true, errors: [], warnings: ["Connector 'A' was skipped: it is not connected."],
+        requests: [{ api: 'ALARM', sourceId: '4711', response: '{"id":"99"}' } as DynamicMapperRequest]
+      }));
+
+      await component.onSendTest();
+
+      const alert = alertService.add.calls.mostRecent().args[0] as { text: string; type: string };
+      expect(alert.type).toBe('warning');
+      expect(alert.text).toContain('1 warning is shown in the console.');
+    });
+  });
+
+  describe('outbound Live Test result', () => {
+    beforeEach(() => {
+      component.mapping.direction = Direction.OUTBOUND;
+    });
+
+    it('says what was published instead of claiming an object was created', () => {
+      const text = component.describeSendResult({
+        success: true, errors: [], warnings: [],
+        requests: [{ api: 'ALARM', publishTopic: 'out/alarm/4711', sourceId: '4711' } as DynamicMapperRequest]
+      });
+      expect(text).toBe('Live test successful: published 1 message to topic out/alarm/4711.');
+    });
+
+    it('counts several messages', () => {
+      const text = component.describeSendResult({
+        success: true, errors: [], warnings: [],
+        requests: [{ api: 'ALARM' } as DynamicMapperRequest, { api: 'ALARM' } as DynamicMapperRequest]
+      });
+      expect(text).toBe('Live test successful: published 2 messages; see "Show Next Test Result".');
+    });
+  });
+
   describe('payload sync with the mapping being edited', () => {
     // Regression: running a test used to rewrite mapping.sourceTemplate and push the payload back
     // to the host, so the editor reported "unsaved changes" for a mapping nobody had edited.

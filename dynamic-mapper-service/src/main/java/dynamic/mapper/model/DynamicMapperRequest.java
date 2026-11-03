@@ -21,6 +21,8 @@
 
 package dynamic.mapper.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -60,7 +62,9 @@ public class DynamicMapperRequest {
     private String pathCumulocity;
     @Schema(description = "Response received from the target system")
     private String response;
-    @Schema(description = "Error that occurred during request execution, if any")
+    // Not serialized: Jackson would write the whole Exception (stack trace, class names, causes) into the
+    // test result. Clients get the readable text from getErrorMessage() instead.
+    @JsonIgnore
     private Exception error;
     @Schema(description = "Pre-encoded binary payload (e.g. SparkPlug B proto bytes). When set, connectors use this instead of encoding request as UTF-8.")
     private byte[] binaryPayload;
@@ -69,5 +73,13 @@ public class DynamicMapperRequest {
     // private Boolean alreadySubmitted;
     public boolean hasError() {
         return error != null;
+    }
+
+    @Schema(description = "Message of the error that occurred during request execution; absent when the request succeeded", accessMode = Schema.AccessMode.READ_ONLY)
+    public String getErrorMessage() {
+        if (error == null) {
+            return null;
+        }
+        return error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName();
     }
 }

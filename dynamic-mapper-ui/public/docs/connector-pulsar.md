@@ -28,7 +28,7 @@ The connector resolves the name in two steps.
    | `/` becomes `-` | `pulsar/test/inbound` becomes `pulsar-test-inbound` |
    | Spaces and characters outside `a-z A-Z 0-9 . _ -` become `_` | `my topic!` becomes `my_topic_` |
    | Leading and trailing `.`, `_`, and `-` are removed | `-abc-` becomes `abc` |
-   | Letter case is kept | `COMMON` stays `COMMON` |
+   | Letter case is kept | `Telemetry` stays `Telemetry` |
 
 2. **Add domain, tenant, and namespace** from the connector properties:
 
@@ -45,11 +45,11 @@ More examples:
 
 | Mapping topic | Connector settings | Resulting Pulsar topic |
 |---|---|---|
-| `COMMON` | Tenant `example-tenant`, Namespace `mqtt` | `persistent://example-tenant/mqtt/COMMON` |
-| `COMMON` | Namespace `example-tenant/mqtt` (combined form) | `persistent://example-tenant/mqtt/COMMON` |
-| `COMMON` | Topic type Non-persistent | `non-persistent://example-tenant/mqtt/COMMON` |
+| `telemetry` | Tenant `example-tenant`, Namespace `mqtt` | `persistent://example-tenant/mqtt/telemetry` |
+| `telemetry` | Namespace `example-tenant/mqtt` (combined form) | `persistent://example-tenant/mqtt/telemetry` |
+| `telemetry` | Topic type Non-persistent | `non-persistent://example-tenant/mqtt/telemetry` |
 | `devices/+/data` | Tenant `public`, Namespace `default` | Topics that match `persistent://public/default/devices-<one level>-data` |
-| `persistent://t/n/COMMON` | any | Used as written. The tenant, namespace, and topic type settings are ignored. |
+| `persistent://t/n/telemetry` | any | Used as written. The tenant, namespace, and topic type settings are ignored. |
 
 If you enter `tenant/namespace` in **Namespace**, that value overrides **Tenant**. **Topic type** applies only to
 topics that you do not enter as a full Pulsar name.
@@ -68,7 +68,7 @@ connector cannot verify the match, the mapping sees the Pulsar local name, for e
 
 - Because `/` becomes `-`, `a/b-c` and `a-b/c` both resolve to `a-b-c`. Avoid `-` inside topic levels when you use
   wildcards.
-- Letter case matters. `COMMON` and `common` are different Pulsar topics.
+- Letter case matters. `Telemetry` and `telemetry` are different Pulsar topics.
 - A short topic name always resolves inside the one namespace of the connector. To read from two namespaces, create
   two connectors, or enter a full `persistent://...` name in one mapping.
 - Prefer the logical form. A full `persistent://...` name ties that mapping to one broker layout.

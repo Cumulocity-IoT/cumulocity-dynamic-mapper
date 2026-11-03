@@ -393,11 +393,29 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   }
 
 
-  private parseRequestResponse(req: DynamicMapperRequest): DynamicMapperRequest {
+  /**
+   * The editors show JSON objects. A request or response that is something else (the CSV or hex text an
+   * outbound mapping publishes, the error text of a failed call) used to make JSON.parse throw, which
+   * discarded the whole result and its errors; sorting the keys of such text would also have turned it
+   * into one entry per character. It is shown as { "payload": <text> } instead, and the caller adds a note.
+   */
+  private toEditable(value: unknown): { value: any; wrapped: boolean } {
+    if (typeof value !== 'string' || value === '') {
+      return { value, wrapped: false };
+    }
+    const parsed = this.tryParse(value);
+    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return { value: parsed, wrapped: false };
+    }
+    return { value: { payload: parsed === undefined ? value : parsed }, wrapped: true };
+  }
+
+  private parseRequestResponse(req: DynamicMapperRequest): { request: DynamicMapperRequest; wrapped: boolean } {
+    const request = this.toEditable(req.request);
+    const response = this.toEditable(req.response);
     return {
-      ...req,
-      request: typeof req.request === 'string' ? JSON.parse(req.request) : req.request,
-      response: typeof req.response === 'string' ? JSON.parse(req.response) : req.response
+      request: { ...req, request: request.value, response: response.value },
+      wrapped: request.wrapped || response.wrapped
     };
   }
 
@@ -444,9 +462,13 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     const result = await this.testingService.testMapping(testContext);
 
     // Convert request and response from JSON string to object for all items
-    this.testingModel.results = result.requests.map(req => this.parseRequestResponse(req));
+    const parsed = result.requests.map(req => this.parseRequestResponse(req));
+    this.testingModel.results = parsed.map(p => p.request);
     this.generatedKey = result.key;
     const staticLogs = this.testingModel.logs?.filter(l => l.startsWith('INFO')) ?? [];
+    if (parsed.some(p => p.wrapped)) {
+      staticLogs.push('INFO ' + this.t(gettext('A request or response is not a JSON object, so it is shown as text under "payload".')));
+    }
     const warningLogs = (result.warnings ?? []).map(w => `WARNING: ${w}`);
     this.testingModel.logs = [...staticLogs, ...(result.logs ?? []), ...warningLogs];
 
@@ -478,6 +500,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     if (!result.success) {
       const errorLogs = (result.errors ?? []).map(e => `ERROR: ${e}`);
       this.testingModel.logs = [...(this.testingModel.logs ?? []), ...errorLogs];
+      // The console alone is easy to miss: it can be collapsed, and a Live Test may already have sent
+      // part of its requests. The alert carries the first error; the console has the rest.
+      this.alertService.add({ text: this.describeFailure(result, sendPayload), type: 'danger' });
       return;
     }
 
@@ -495,8 +520,29 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     }
 
     if (sendPayload) {
-      this.alertService.add({ text: this.describeSendResult(result), type: 'info', timeout: ALERT_INFO_TIMEOUT });
+      const warnings = result.warnings?.length ?? 0;
+      let text = this.describeSendResult(result);
+      if (warnings > 0) {
+        // e.g. an outbound connector that was skipped: success, but not what the user may expect.
+        text += ' ' + this.t(warnings === 1
+          ? gettext('1 warning is shown in the console.')
+          : gettext('{{count}} warnings are shown in the console.'), { count: warnings });
+      }
+      this.alertService.add({ text, type: warnings > 0 ? 'warning' : 'info', timeout: ALERT_INFO_TIMEOUT });
     }
+  }
+
+  /** The first error, and how many more the console holds. */
+  describeFailure(result: TestResult, sendPayload: boolean): string {
+    const [first, ...more] = result.errors ?? [];
+    const head = this.t(sendPayload ? gettext('Live test failed: {{error}}') : gettext('Dry run failed: {{error}}'),
+      { error: first ?? '' });
+    if (more.length === 0) {
+      return head;
+    }
+    return head + ' ' + this.t(more.length === 1
+      ? gettext('1 more error is shown in the console.')
+      : gettext('{{count}} more errors are shown in the console.'), { count: more.length });
   }
 
   /**
@@ -505,6 +551,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
    * The bare id alone does not tell the user whether it is an alarm, an event or the device itself.
    */
   describeSendResult(result: TestResult): string {
+    if (this.mapping?.direction === Direction.OUTBOUND) {
+      return this.describePublishResult(result);
+    }
     const first = result.requests?.[0];
     const rawResponse = first?.response;
     const response = typeof rawResponse === 'string' ? this.tryParse(rawResponse) : rawResponse;
@@ -551,6 +600,19 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
         : this.t(gettext('Test device {{testDevice}} created; remove it under Monitoring > Test device.'), { testDevice }));
     }
     return text;
+  }
+
+  /** An outbound Live Test publishes to the broker; it does not create anything in Cumulocity. */
+  private describePublishResult(result: TestResult): string {
+    const requests = result.requests ?? [];
+    const topic = requests[0]?.publishTopic;
+    if (requests.length === 1) {
+      return topic
+        ? this.t(gettext('Live test successful: published 1 message to topic {{topic}}.'), { topic })
+        : this.t(gettext('Live test successful: published 1 message.'));
+    }
+    return this.t(gettext('Live test successful: published {{count}} messages; see "Show Next Test Result".'),
+      { count: requests.length });
   }
 
   /** The (translatable) noun for the kind of object a request creates. */
