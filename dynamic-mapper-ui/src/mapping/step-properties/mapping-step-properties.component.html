@@ -42,9 +42,8 @@
   </div>
 </div> -->
 <div class="inner-scroll fit-h">
-  <div class="card-block p-b-0">
+  <div class="card-block p-b-0 d11r-props-compact">
     <div [formGroup]="propertyFormly">
-      <div class="legend form-block">Topics</div>
       <formly-form [form]="propertyFormly" [fields]="propertyFormlyFields" [model]="mapping"></formly-form>
     </div>
     @if (filterInventoryModel.filterExpression.resultType !== 'empty') {
