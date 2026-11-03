@@ -268,7 +268,7 @@ export class MappingSubstitutionStepComponent implements OnInit, OnDestroy {
       this.substitutionFormly.get('pathSource').setErrors(null);
 
       if (result.resultType == 'Array' && !this.substitutionModel.expandArray) {
-        this.alertService.add({ text: 'Current expression extracts an array. Consider using "Expand as array"...', type: 'info', timeout: ALERT_INFO_TIMEOUT });
+        this.alertService.add({ text: 'Current expression extracts an array. To create one request per element, add the substitution and then switch on "Expand as array" in the substitution table.', type: 'info', timeout: ALERT_INFO_TIMEOUT });
       }
     } catch (error) {
       // sourceExpression can still be unset here (e.g. right after selecting an existing

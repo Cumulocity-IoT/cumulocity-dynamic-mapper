@@ -186,6 +186,7 @@ expression and the parser's message — see [Error detail](#error-detail) above.
 |---|---|---|
 | `Substitution_Source_Expression_Must_Be_Valid_JSONata` | `pathSource: "temperature +"`, `pathSource: "$number(temperature"` | `pathSource: "temperature"`, `"$number(payload.value)"`, `"readings[type='temp'].value"`, `"does.not.exist"` (a path resolving to nothing is legal) |
 | `Substitution_Paths_Must_Not_Be_Empty` | `pathSource: ""` or `pathTarget: "  "` | Both non-blank |
+| `Substitution_Expand_Array_Not_Supported_For_Outbound` | outbound mapping with `expandArray: true` | `expandArray: false` (or an inbound mapping) |
 
 Deliberately **not** rejected, because each can describe a mapping that works today and
 rejecting it would break editing an existing one — both are surfaced as warnings in the AI

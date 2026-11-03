@@ -344,8 +344,7 @@ public class ProcessingContext<O> implements AutoCloseable {
     /**
      * Adds a substitution to the processing cache.
      *
-     * NOTE: This method is NOT thread-safe due to TreeMap not being thread-safe.
-     * If multiple threads call this method concurrently, consider synchronizing or using ConcurrentHashMap.
+     * The cache is a ConcurrentSkipListMap, so concurrent calls are safe; the value list itself is not shared.
      *
      * @param key the substitution key
      * @param value the substitution value

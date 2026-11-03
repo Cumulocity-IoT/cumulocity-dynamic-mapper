@@ -1037,6 +1037,10 @@ export const ValidationFormlyError = {
   Substitution_Paths_Must_Not_Be_Empty: {
     message:
       'At least one substitution has an empty source or target path. Both must be set.'
+  },
+  Substitution_Expand_Array_Not_Supported_For_Outbound: {
+    message:
+      'At least one substitution of this outbound mapping has "Expand as array" set. Outbound mappings produce exactly one message, so switch it off.'
   }
 };
 
