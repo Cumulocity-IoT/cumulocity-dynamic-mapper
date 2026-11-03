@@ -280,6 +280,7 @@ public class SendOutboundProcessor extends BaseProcessor {
             try {
                 client.publishMEAO(context);
                 publishCount++;
+                context.getPublishedConnectors().add(client.getConnectorName());
                 log.info("{} - Published outbound test message via connector: {}", tenant, client.getConnectorName());
             } catch (Exception e) {
                 log.error("{} - Failed to publish via connector '{}': {}", tenant, client.getConnectorName(), e.getMessage(), e);

@@ -80,6 +80,8 @@ function stableStringify(value: unknown): string {
 })
 export class MappingStepTestingComponent implements OnInit, OnDestroy {
   @Input() mapping!: Mapping;
+  /** The Connector tab has changes that are not saved yet; an outbound Live Test ignores them. */
+  @Input() connectorsUnsaved = false;
   @Input() stepperConfiguration!: StepperConfiguration;
   @Input() updateTestingTemplate!: ReplaySubject<Mapping>;
   @Output() sourceTemplateChanged = new EventEmitter<any>();
@@ -503,6 +505,9 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     if (!result.success) {
       const errorLogs = (result.errors ?? []).map(e => `ERROR: ${e}`);
       this.testingModel.logs = [...(this.testingModel.logs ?? []), ...errorLogs];
+      if (sendPayload && this.mapping?.direction === Direction.OUTBOUND && this.connectorsUnsaved) {
+        this.testingModel.logs.push('INFO ' + this.t(gettext('Live Test uses the saved connector selection; your unsaved changes in the Connector tab are not applied. Save to apply them.')));
+      }
       // The errors are listed in the console output; no alert repeats them.
       return;
     }
@@ -584,13 +589,23 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
   private describePublishResult(result: TestResult): string {
     const requests = result.requests ?? [];
     const topic = requests[0]?.publishTopic;
+    let text: string;
     if (requests.length === 1) {
-      return topic
+      text = topic
         ? this.t(gettext('Live test successful: published 1 message to topic {{topic}}.'), { topic })
         : this.t(gettext('Live test successful: published 1 message.'));
+    } else {
+      text = this.t(gettext('Live test successful: published {{count}} messages; see "Show Next Test Result".'),
+        { count: requests.length });
     }
-    return this.t(gettext('Live test successful: published {{count}} messages; see "Show Next Test Result".'),
-      { count: requests.length });
+    const connectors = (result.publishedConnectors ?? []).join(', ');
+    if (connectors) {
+      text += ' ' + this.t(gettext('Published through connector(s): {{connectors}}.'), { connectors });
+    }
+    if (this.connectorsUnsaved) {
+      text += ' ' + this.t(gettext('Live Test uses the saved connector selection; your unsaved changes in the Connector tab are not applied. Save to apply them.'));
+    }
+    return text;
   }
 
   /** The (translatable) noun for the kind of object a request creates. */

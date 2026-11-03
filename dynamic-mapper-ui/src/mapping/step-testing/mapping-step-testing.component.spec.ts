@@ -254,6 +254,33 @@ describe('MappingStepTestingComponent – device does not exist (Dry Run)', () =
     });
   });
 
+  describe('describeSendResult for an outbound Live Test', () => {
+    const published = (extra: Partial<TestResult> = {}): TestResult => ({
+      success: true, errors: [], requests: [{ publishTopic: 'measurements/x' } as DynamicMapperRequest], ...extra
+    });
+
+    beforeEach(() => {
+      component.mapping.direction = Direction.OUTBOUND;
+    });
+
+    it('names the connectors the message went through', () => {
+      const text = component.describeSendResult(published({ publishedConnectors: ['Hive', 'Remote Pulsar'] }));
+      expect(text).toBe('Live test successful: published 1 message to topic measurements/x. '
+        + 'Published through connector(s): Hive, Remote Pulsar.');
+    });
+
+    it('warns that unsaved connector changes were not applied', () => {
+      component.connectorsUnsaved = true;
+      const text = component.describeSendResult(published({ publishedConnectors: ['Hive'] }));
+      expect(text).toContain('unsaved changes in the Connector tab are not applied');
+    });
+
+    it('stays silent about the connector selection when it is saved', () => {
+      component.connectorsUnsaved = false;
+      expect(component.describeSendResult(published())).not.toContain('Connector tab');
+    });
+  });
+
   describe('the "assume device exists" choice is per run', () => {
     it('is not written into testMapping, so it does not stick', async () => {
       testingService.testMapping.and.returnValues(Promise.resolve(notFoundAsError), Promise.resolve(ok));

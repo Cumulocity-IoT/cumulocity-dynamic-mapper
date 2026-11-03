@@ -259,6 +259,13 @@ public class TestController {
                         if (processingContext.getLogs() != null) {
                             result.getLogs().addAll(processingContext.getLogs());
                         }
+                        if (processingContext.getPublishedConnectors() != null) {
+                            for (String connectorName : processingContext.getPublishedConnectors()) {
+                                if (!result.getPublishedConnectors().contains(connectorName)) {
+                                    result.getPublishedConnectors().add(connectorName);
+                                }
+                            }
+                        }
                         if (result.getKey() == null) {
                             result.setKey(processingContext.getKey());
                         }

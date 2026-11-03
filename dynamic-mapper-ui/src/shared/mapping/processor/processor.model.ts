@@ -59,6 +59,8 @@ export interface TestResult {
   testDeviceCreated?: boolean;
   /** "d11r_liveTest_" + the mapping's external ID: the external ID the test device is registered under. */
   testDeviceExternalId?: string;
+  /** Outbound Live Test: names of the connectors the message was published through (the saved deployment). */
+  publishedConnectors?: string[];
   /**
    * Broker message key produced by the transformation (e.g. the Kafka record key). Context-level
    * rather than per-request, since one publish call reads a single key for the whole message —

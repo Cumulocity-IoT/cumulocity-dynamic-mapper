@@ -136,6 +136,7 @@
     <!-- Tab 4: Testing -->
     @if (activeTabIndex === TAB_TEST_MAPPING && isTabVisible(TAB_TEST_MAPPING)) {
     <d11r-mapping-testing #mappingTestingStep [updateTestingTemplate]="updateTestingTemplate" [mapping]="mapping"
+      [connectorsUnsaved]="connectorsUnsaved"
       [stepperConfiguration]="stepperConfiguration" (sourceTemplateChanged)="onTestingSourceTemplateChanged($event)">
     </d11r-mapping-testing>
     }

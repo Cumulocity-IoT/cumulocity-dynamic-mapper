@@ -156,6 +156,11 @@ export class MappingUnifiedEditorComponent extends MappingEditorBase implements 
   private initialContentSnapshot: MappingContentSnapshot = { mappingJson: '', sourceTemplateJson: '', targetTemplateJson: '', mappingCode: '' };
   private initialDeploymentConnectors = '';
 
+  /** The connector selection differs from the saved deployment. A Live Test publishes to the saved one. */
+  get connectorsUnsaved(): boolean {
+    return snapshotConnectors(this.deploymentMapEntry) !== this.initialDeploymentConnectors;
+  }
+
   async ngOnInit(): Promise<void> {
     // Hide auto-refresh button – this is an editor page, not a live-data view
     this.globalContextService.register('mapping-unified-editor', { showAutoRefresh: false, showTimeContext: false });
