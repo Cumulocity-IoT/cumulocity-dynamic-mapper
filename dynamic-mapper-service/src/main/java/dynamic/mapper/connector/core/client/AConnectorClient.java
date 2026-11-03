@@ -1597,6 +1597,9 @@ public abstract class AConnectorClient {
             List<Runnable> stoppedTasks = housekeepingExecutor.shutdownNow();
             log.info("{} - Stopped {} housekeeping tasks", tenant, stoppedTasks.size());
         }
+        if (connectionStateManager != null) {
+            connectionStateManager.close();
+        }
         close();
     }
 

@@ -72,6 +72,7 @@ public class OutboundMessageDispatcher implements NotificationCallback {
     private OutboundMessageRouter outboundMessageRouter;
     private final Timer outboundProcessingTimer;
     private final Counter outboundProcessingCounter;
+    private final Counter outboundErrorCounter;
     /**
      * Constructor matching DispatcherInbound signature
      */
@@ -91,6 +92,11 @@ public class OutboundMessageDispatcher implements NotificationCallback {
         this.outboundProcessingCounter = Counter.builder("dynmapper_outbound_message_total")
                 .tag("tenant", connectorClient.getTenant()).description("Total number of outbound messages")
                 .tag("connector", connectorClient.getConnectorIdentifier()).register(Metrics.globalRegistry);
+        this.outboundErrorCounter = Counter.builder("dynmapper_outbound_processing_errors_total")
+                .tag("tenant", connectorClient.getTenant())
+                .tag("connector", connectorClient.getConnectorIdentifier())
+                .description("Total number of outbound messages that failed processing")
+                .register(Metrics.globalRegistry);
     }
 
     @Override
@@ -331,6 +337,9 @@ public class OutboundMessageDispatcher implements NotificationCallback {
             if (mappingStatusUnspecified != null) {
                 mappingStatusUnspecified.incrementErrors();
             }
+            if (testMapping == null) {
+                outboundErrorCounter.increment();
+            }
 
             return result;
         }
@@ -360,6 +369,18 @@ public class OutboundMessageDispatcher implements NotificationCallback {
             try {
                 List<ProcessingContext<Object>> contexts = outboundMessageRouter.processOutboundMessage(
                         c8yMessage, connectorIdentifier, resolvedMappings, testing, serviceConfiguration, result);
+                if (testMapping == null && contexts != null) {
+                    boolean hasError = false;
+                    for (ProcessingContext<?> context : contexts) {
+                        if (context != null && context.hasError()) {
+                            hasError = true;
+                            break;
+                        }
+                    }
+                    if (hasError) {
+                        outboundErrorCounter.increment();
+                    }
+                }
                 return contexts != null ? contexts : new ArrayList<>();
 
             } catch (Exception e) {
@@ -375,6 +396,9 @@ public class OutboundMessageDispatcher implements NotificationCallback {
                             tenant, e.getMessage(), connectorIdentifier);
                     Thread.interrupted(); // clear residual interrupt flag to avoid cascading effects
                     return new ArrayList<>();
+                }
+                if (testMapping == null) {
+                    outboundErrorCounter.increment();
                 }
                 log.error("{} - Error processing outbound message: {}", tenant, e.getMessage(), e);
                 throw new RuntimeException("Outbound processing failed", e);

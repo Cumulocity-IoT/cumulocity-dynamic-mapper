@@ -43,6 +43,7 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
 
     private final Timer inboundProcessingTimer;
     private final Counter inboundProcessingCounter;
+    private final Counter inboundErrorCounter;
 
 
     /**
@@ -63,6 +64,11 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
         this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total")
                 .tag("tenant", connectorClient.getTenant()).description("Total number of inbound messages")
                 .tag("connector", connectorClient.getConnectorIdentifier()).register(Metrics.globalRegistry);
+        this.inboundErrorCounter = Counter.builder("dynmapper_inbound_processing_errors_total")
+                .tag("tenant", connectorClient.getTenant())
+                .tag("connector", connectorClient.getConnectorIdentifier())
+                .description("Total number of inbound messages that failed processing")
+                .register(Metrics.globalRegistry);
     }
 
     @Override
@@ -174,6 +180,9 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
             if (mappingStatusUnspecified != null) {
                 mappingStatusUnspecified.incrementErrors();
             }
+            if (testMapping == null) {
+                inboundErrorCounter.increment();
+            }
             return result;
         }
 
@@ -194,11 +203,13 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
                         connectorMessage, resolvedMappings, testing, serviceConfiguration, result);
 
                 boolean resend = false;
+                boolean hasError = false;
                 if (contexts != null) {
                     for (ProcessingContext<?> context : contexts) {
                         if (context == null) continue;
                         int httpStatus = 0;
                         if (context.hasError()) {
+                            hasError = true;
                             for (Exception error : context.getErrors()) {
                                 if (error instanceof ProcessingException) {
                                     if (((ProcessingException) error)
@@ -245,6 +256,9 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
                         }
                     }
                 }
+                if (hasError && testMapping == null) {
+                    inboundErrorCounter.increment();
+                }
                 // Stop the timer
                 if (testMapping == null) {
                     timer.stop(inboundProcessingTimer);
@@ -252,6 +266,9 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
                 return contexts != null ? contexts : new ArrayList<>();
 
             } catch (Exception e) {
+                if (testMapping == null) {
+                    inboundErrorCounter.increment();
+                }
                 log.error("{} - Error processing inbound message: {}", tenant, e.getMessage(), e);
                 throw new RuntimeException("Inbound processing failed", e);
             } finally {

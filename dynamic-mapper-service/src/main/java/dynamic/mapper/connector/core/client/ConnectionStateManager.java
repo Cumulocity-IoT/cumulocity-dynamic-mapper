@@ -25,6 +25,8 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.model.status.ConnectorStatusEvent;
 import dynamic.mapper.model.status.ConnectorStatusHistory;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Metrics;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.mutable.MutableBoolean;
@@ -49,7 +51,12 @@ public class ConnectionStateManager {
     
     @Getter
     private final AtomicReference<ConnectorStatusEvent> connectorStatus;
-    
+
+    /** Current status exposed as its {@link ConnectorStatus} ordinal (see the enum's declaration
+     * order), so Grafana/Prometheus can alert on a connector sitting in FAILED without needing a
+     * separate up/down metric per status. Deregistered in {@link #close()}. */
+    private final Gauge statusGauge;
+
     /** Guards {@link #previousStatus} and the session bundling in {@link #updateSession}, which
      * must be evaluated together atomically: both are mutated from independent caller threads
      * (broker client callback threads, the housekeeping thread, and the virtual threads driving
@@ -99,6 +106,25 @@ public class ConnectionStateManager {
         this.connectorRegistry = connectorRegistry;
         this.connectorStatus = new AtomicReference<>(
             ConnectorStatusEvent.unknown(connectorName, connectorIdentifier));
+        this.statusGauge = Gauge.builder("dynmapper_connector_status", connectorStatus,
+                ref -> {
+                    ConnectorStatusEvent event = ref.get();
+                    ConnectorStatus status = event != null ? event.getStatus() : null;
+                    return status != null ? status.ordinal() : -1;
+                })
+                .tag("tenant", tenant)
+                .tag("connector", connectorIdentifier)
+                .description("Current connector status as the ConnectorStatus enum ordinal: "
+                        + "0=UNKNOWN, 1=CONFIGURED, 2=ENABLED, 3=CONNECTING, 4=CONNECTED, "
+                        + "5=DISCONNECTED, 6=DISCONNECTING, 7=FAILED, 8=RETRYING")
+                .register(Metrics.globalRegistry);
+    }
+
+    /** Deregisters this manager's gauge. Call once the connector it belongs to is torn down
+     * (see {@code AConnectorClient.stopHousekeepingAndClose()}) — otherwise the gauge keeps
+     * reporting the last status forever under a (tenant, connector) pair that no longer exists. */
+    public void close() {
+        Metrics.globalRegistry.remove(statusGauge);
     }
     
     public boolean isConnected() {
