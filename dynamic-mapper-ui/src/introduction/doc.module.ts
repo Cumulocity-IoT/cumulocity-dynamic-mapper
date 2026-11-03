@@ -42,7 +42,8 @@ const MARKDOWN_PAGES = [
   // Start
   'quickstart-inbound', 'quickstart-outbound', 'concepts',
   // Guides
-  'managing-connectors', 'connectors', 'connector-http', 'connector-webhook',
+  'managing-connectors', 'connectors', 'connector-mqtt', 'connector-amqp', 'connector-amqp10', 'connector-pubsub',
+  'connector-c8y-mqtt-service', 'connector-cumulocity-api', 'connector-http', 'connector-webhook',
   'connector-rest-polling', 'connector-kafka', 'connector-pulsar',
   'how-to-pulsar-kafka-mqtt', 'define-mapping',
   'define-subscription-for-outbound', 'transformation-types',

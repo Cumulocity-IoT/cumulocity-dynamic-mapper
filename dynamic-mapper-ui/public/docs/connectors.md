@@ -46,6 +46,12 @@ Each connector with connector-specific setup has its own page:
 
 | Connector | What the page covers |
 |---|---|
+| [MQTT connector](/c8y-pkg-dynamic-mapper/introduction/connector-mqtt) | MQTT 3.1.1 and 5.0, TLS, session handling, wildcards, and Sparkplug B hosting |
+| [AMQP 0-9-1 connector](/c8y-pkg-dynamic-mapper/introduction/connector-amqp) | Exchange, queues, routing key, TLS, and recovery |
+| [AMQP 1.0 connector](/c8y-pkg-dynamic-mapper/introduction/connector-amqp10) | Destination type, content type, TLS, and recovery |
+| [Google Cloud Pub/Sub connector](/c8y-pkg-dynamic-mapper/introduction/connector-pubsub) | Project, topic, subscription, service account, and ADC authentication |
+| [Cumulocity MQTT Service connector](/c8y-pkg-dynamic-mapper/introduction/connector-c8y-mqtt-service) | The preconfigured single instance per tenant, QoS, and Sparkplug host |
+| [Cumulocity API connector](/c8y-pkg-dynamic-mapper/introduction/connector-cumulocity-api) | Outbound access to the REST API of the tenant |
 | [HTTP connector](/c8y-pkg-dynamic-mapper/introduction/connector-http) | The Default HTTP Connector, its endpoint, role, and response codes |
 | [Webhook connector](/c8y-pkg-dynamic-mapper/introduction/connector-webhook) | Outbound calls, and the setting **Use Cumulocity API of this tenant** |
 | [REST Polling connector](/c8y-pkg-dynamic-mapper/introduction/connector-rest-polling) | Poll interval, authentication, incremental fetch, and pagination |

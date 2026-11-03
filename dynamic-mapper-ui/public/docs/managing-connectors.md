@@ -14,15 +14,15 @@ The mapper supports the following connectors:
 
 | Connector | Inbound | Outbound |
 |---|:---:|:---:|
-| **AMQP Connector** (AMQP 0-9-1, RabbitMQ, etc.) | ✓ | ✓ |
-| **AMQP 1.0 Connector** (Azure Service Bus, Artemis, Solace, etc.) | ✓ | ✓ |
+| [**AMQP Connector**](/c8y-pkg-dynamic-mapper/introduction/connector-amqp) (AMQP 0-9-1, RabbitMQ, etc.) | ✓ | ✓ |
+| [**AMQP 1.0 Connector**](/c8y-pkg-dynamic-mapper/introduction/connector-amqp10) (Azure Service Bus, Artemis, Solace, etc.) | ✓ | ✓ |
 | [**Apache Pulsar**](/c8y-pkg-dynamic-mapper/introduction/connector-pulsar) | ✓ | ✓ |
-| **Cumulocity API** (for internal Cumulocity REST API) | – | ✓ |
-| **Cumulocity MQTT-Service** (device isolation, one instance per tenant) | ✓ | ✓ |
-| **Google Cloud Pub/Sub** (e.g. Google Manufacturing Data Engine) | ✓ | ✓ |
+| [**Cumulocity API**](/c8y-pkg-dynamic-mapper/introduction/connector-cumulocity-api) (for internal Cumulocity REST API) | – | ✓ |
+| [**Cumulocity MQTT-Service**](/c8y-pkg-dynamic-mapper/introduction/connector-c8y-mqtt-service) (device isolation, one instance per tenant) | ✓ | ✓ |
+| [**Google Cloud Pub/Sub**](/c8y-pkg-dynamic-mapper/introduction/connector-pubsub) (e.g. Google Manufacturing Data Engine) | ✓ | ✓ |
 | [**HTTP Endpoint**](/c8y-pkg-dynamic-mapper/introduction/connector-http) (the Default HTTP Connector, one instance per tenant) | ✓ | – |
 | [**Kafka**](/c8y-pkg-dynamic-mapper/introduction/connector-kafka) | ✓ | ✓ |
-| **MQTT** (MQTT 3.1.1) and **MQTT 5.0** | ✓ | ✓ |
+| [**MQTT**](/c8y-pkg-dynamic-mapper/introduction/connector-mqtt) (MQTT 3.1.1) and **MQTT 5.0** | ✓ | ✓ |
 | [**REST Polling**](/c8y-pkg-dynamic-mapper/introduction/connector-rest-polling) (for external REST APIs with no push capability) | ✓ | – |
 | [**Webhook**](/c8y-pkg-dynamic-mapper/introduction/connector-webhook) (for external REST APIs) | – | ✓ |
 

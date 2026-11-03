@@ -119,6 +119,54 @@ export class DocNavigationFactory implements NavigatorNodeFactory {
       priority: 792,
       preventDuplicates: true
     }),
+    mqttConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'exchange',
+      label: gettext('MQTT connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-mqtt',
+      priority: 791.95,
+      preventDuplicates: true
+    }),
+    amqpConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'exchange',
+      label: gettext('AMQP 0-9-1 connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-amqp',
+      priority: 791.93,
+      preventDuplicates: true
+    }),
+    amqp10ConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'exchange',
+      label: gettext('AMQP 1.0 connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-amqp10',
+      priority: 791.92,
+      preventDuplicates: true
+    }),
+    pubsubConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'cloud',
+      label: gettext('Google Cloud Pub/Sub connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-pubsub',
+      priority: 791.91,
+      preventDuplicates: true
+    }),
+    c8yMqttServiceConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'plug',
+      label: gettext('Cumulocity MQTT Service connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-c8y-mqtt-service',
+      priority: 791.85,
+      preventDuplicates: true
+    }),
+    c8yApiConnectorNode: new NavigatorNode({
+      parent: gettext('Connector reference'),
+      icon: 'globe',
+      label: gettext('Cumulocity API connector'),
+      path: '/c8y-pkg-dynamic-mapper/introduction/connector-cumulocity-api',
+      priority: 791.84,
+      preventDuplicates: true
+    }),
     httpConnectorNode: new NavigatorNode({
       parent: gettext('Connector reference'),
       icon: 'globe',
