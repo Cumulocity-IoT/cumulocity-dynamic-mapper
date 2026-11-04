@@ -39,6 +39,25 @@ a server error (5xx), a timeout, a cancelled pipeline, or an exception, so the b
 - **The flow state lifetime is per mapping.** A mapping's state expires when that mapping has not written it for
   `flowStateRetention` minutes. Before, one timer covered the whole tenant. A read does not restart the timer.
 
+### Telemetry export with OpenTelemetry (OTLP)
+
+The service now exports logs, traces, and metrics over OTLP (`http/protobuf`). The default endpoint is
+`http://cumulocity-grafana-alloy:4318`, configured in `application-prod.properties`.
+
+- **Metrics.** All Micrometer meters (prefix `dynmapper_`) and the JVM runtime metrics (memory, GC, threads, CPU) are
+  exported every 15 seconds. The inbound and outbound message, error, and processing-time meters carry the tags
+  `tenant`, `connectorName`, and `connectorType`. Further meters cover Cumulocity request time, free Cumulocity
+  connections, identity and inventory cache sizes and hits, and the connector status (`dynmapper_connector_status`,
+  the `ConnectorStatus` ordinal).
+- **Dashboards.** Two Grafana dashboards for these metrics are in `resources/grafana`.
+- **Configuration.** Set `OTEL_EXPORTER_OTLP_ENDPOINT` to use another collector, add credentials with
+  `otel.exporter.otlp.headers` for a hosted gateway such as Grafana Cloud, or set `OTEL_SDK_DISABLED=true` to turn the
+  export off.
+- **An unreachable collector does not affect message processing.** Export runs on its own threads. If the collector is
+  down, for example while the Alloy microservice restarts, the service logs `Failed to export ... The request could not
+  be executed` with a timeout and drops that batch.
+- When a tenant unsubscribes, the service removes that tenant's meters.
+
 ### Other fixes
 
 - **Multi-tenancy: complete cleanup when a sub-tenant unsubscribes.** Connectors now stop first, and the service waits
