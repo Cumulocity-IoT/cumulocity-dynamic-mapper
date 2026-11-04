@@ -38,6 +38,10 @@
     <logger name="org.glassfish.jersey.client" level="ERROR" />
     <logger name="org.glassfish.jersey.internal.Errors" level="ERROR" />
     <logger name="org.glassfish.jersey.p.internal.ExecutorProviders" level="ERROR" />
+    <!-- Suppress OTLP exporter connection-failure spam (e.g. unreachable cumulocity-grafana-alloy
+         collector). The OTel SDK keeps retrying export in the background regardless; see
+         docs/installation.md "Monitoring (OpenTelemetry)". -->
+    <logger name="io.opentelemetry.exporter" level="OFF" />
 
     <springProfile name="dev">
         <logger name="org.springframework.web" level="INFO" />
