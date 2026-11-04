@@ -34,7 +34,7 @@ null (empty response body)
 
 <a name="read"></a>
 # **read**
-> Page read(dateFrom, dateTo, mapping)
+> ServiceLogPage read(dateFrom, dateTo, mapping)
 
 Read the collected service log
 
@@ -50,7 +50,7 @@ Read the collected service log
 
 ### Return type
 
-[**Page**](../Models/Page.md)
+[**ServiceLogPage**](../Models/ServiceLogPage.md)
 
 ### Authorization
 

@@ -13,8 +13,8 @@
 | **level** | **String** |  | [optional] [default to null] |
 | **tenant** | **String** |  | [optional] [default to null] |
 | **treeLock** | [**oas_any_type_not_mapped**](.md) |  | [optional] [default to null] |
-| **mappingOptional** | [**Mapping**](Mapping.md) |  | [optional] [default to null] |
 | **parentOptional** | [**MappingTreeNode**](MappingTreeNode.md) |  | [optional] [default to null] |
+| **mappingOptional** | [**Mapping**](Mapping.md) |  | [optional] [default to null] |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

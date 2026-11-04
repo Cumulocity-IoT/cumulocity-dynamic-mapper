@@ -536,6 +536,7 @@
         }, {
           "name" : "search",
           "in" : "query",
+          "description" : "Restrict the result to devices whose id, name, type, or group matches this text (case-insensitive substring; * and ? act as wildcards)",
           "required" : false,
           "schema" : {
             "type" : "string"
@@ -2809,7 +2810,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Page"
+                  "$ref" : "#/components/schemas/ServiceLogPage"
                 }
               }
             }
@@ -4383,11 +4384,11 @@
             "type" : "string"
           },
           "treeLock" : { },
-          "mappingOptional" : {
-            "$ref" : "#/components/schemas/Mapping"
-          },
           "parentOptional" : {
             "$ref" : "#/components/schemas/MappingTreeNode"
+          },
+          "mappingOptional" : {
+            "$ref" : "#/components/schemas/Mapping"
           }
         }
       },
@@ -4555,41 +4556,51 @@
         },
         "required" : [ "connectorIdentifier", "connectorName", "date", "message", "status" ]
       },
-      "Page" : {
+      "ServiceLogPage" : {
         "type" : "object",
+        "description" : "A window of the calling tenant's collected service log",
         "properties" : {
           "dateFrom" : {
             "type" : "string",
-            "format" : "date-time"
+            "format" : "date-time",
+            "description" : "Start time of the first chunk in this page"
           },
           "dateTo" : {
             "type" : "string",
-            "format" : "date-time"
+            "format" : "date-time",
+            "description" : "End time of the last chunk in this page"
           },
           "before" : {
             "type" : "string",
-            "format" : "date-time"
+            "format" : "date-time",
+            "description" : "Cursor for the page before this one: the end time of this page's first chunk"
           },
           "chunks" : {
             "type" : "integer",
-            "format" : "int32"
+            "format" : "int32",
+            "description" : "Number of chunks in this page"
           },
           "lines" : {
             "type" : "integer",
-            "format" : "int32"
+            "format" : "int32",
+            "description" : "Number of log lines in this page"
           },
           "omitted" : {
             "type" : "integer",
-            "format" : "int32"
+            "format" : "int32",
+            "description" : "Number of lines left out of this page"
           },
           "more" : {
-            "type" : "boolean"
+            "type" : "boolean",
+            "description" : "Whether more chunks exist beyond this page in the requested direction"
           },
           "empty" : {
-            "type" : "boolean"
+            "type" : "boolean",
+            "description" : "True when no collected log exists at all for this tenant, as opposed to an empty page"
           },
           "logs" : {
-            "type" : "string"
+            "type" : "string",
+            "description" : "The log lines, one per line"
           }
         }
       },

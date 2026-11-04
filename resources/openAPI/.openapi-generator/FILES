@@ -32,9 +32,9 @@ Models/MappingVersion.md
 Models/MappingVersionCount.md
 Models/NotificationSubscriptionRequest.md
 Models/NotificationSubscriptionResponse.md
-Models/Page.md
 Models/Paging.md
 Models/ServiceConfiguration.md
+Models/ServiceLogPage.md
 Models/ServiceLogsConfiguration.md
 Models/ServiceOperation.md
 Models/StartSessionRequest.md

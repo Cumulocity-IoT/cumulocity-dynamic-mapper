@@ -134,7 +134,7 @@ Get device notification subscriptions
 | **currentPage** | **Integer**|  | [optional] [default to null] |
 | **pageSize** | **Integer**|  | [optional] [default to null] |
 | **withTotalPages** | **Boolean**|  | [optional] [default to true] |
-| **search** | **String**|  | [optional] [default to null] |
+| **search** | **String**| Restrict the result to devices whose id, name, type, or group matches this text (case-insensitive substring; * and ? act as wildcards) | [optional] [default to null] |
 
 ### Return type
 
