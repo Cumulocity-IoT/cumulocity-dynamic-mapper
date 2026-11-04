@@ -94,6 +94,13 @@ public class NotificationSubscriber {
         connectionManager.disconnect(tenant);
     }
 
+    /** Drops all per-tenant state after {@link #disconnect(String)}; tenant removal only. */
+    public void removeTenantResources(String tenant) {
+        connectionManager.removeTenantResources(tenant);
+        tokenManager.removeTenant(tenant);
+        subscriptionManager.removeTenant(tenant);
+    }
+
     // === Device Subscription Methods ===
 
     public Future<NotificationSubscriptionRepresentation> subscribeDeviceAndConnect(

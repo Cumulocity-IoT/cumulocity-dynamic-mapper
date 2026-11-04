@@ -41,6 +41,10 @@ a server error (5xx), a timeout, a cancelled pipeline, or an exception, so the b
 
 ### Other fixes
 
+- **Multi-tenancy: complete cleanup when a sub-tenant unsubscribes.** Connectors now stop first, and the service waits
+  for a running housekeeping cycle, which removes the `NullPointerException` ("Error during housekeeping: null") logged
+  after an unsubscribe. A failing step no longer skips the later ones. The service now also removes the device-to-client
+  maps, extension classloaders, notification callbacks and tokens, Explorer sessions, and per-tenant metrics.
 - The `SHARED` code template cannot be deleted (answer `406`); engine creation tolerates a tenant without it.
 - Creating a connector (for example by import) drops secrets still masked as `****`; they must be entered again.
 - `GET /mapping/version-counts` and `GET /extension` need the Admin or Create role.

@@ -430,6 +430,24 @@ public class ExplorerService {
         inboundDedupCache.entrySet().removeIf(e -> now - e.getValue() > INBOUND_DEDUP_WINDOW_MS);
     }
 
+    /** Stops all explorer sessions of a tenant that unsubscribed, so no listeners or buffers outlive it. */
+    @org.springframework.context.event.EventListener
+    public void onTenantUnsubscribed(
+            com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent event) {
+        String tenant = event.getTenant();
+        ConcurrentHashMap<String, ExplorerSession> tenantSessions = sessions.remove(tenant);
+        if (tenantSessions != null) {
+            tenantSessions.values().forEach(session -> {
+                try {
+                    unregisterListener(tenant, session.getSessionId(), session);
+                } catch (Exception e) {
+                    log.warn("{} - Error stopping explorer session {}: {}", tenant, session.getSessionId(),
+                            e.getMessage());
+                }
+            });
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------

@@ -168,7 +168,7 @@ public class WebHook extends AConnectorClient {
             props.put("baseUrlHealthEndpoint",
                     new ConnectorProperty("Endpoint called with a GET request to test the connection.", false, 6,
                             ConnectorPropertyType.STRING_PROPERTY, true, true,
-                            "http://cumulocity:8111/notification2", null, null));
+                            "/notification2", null, null));
         }
     }
 

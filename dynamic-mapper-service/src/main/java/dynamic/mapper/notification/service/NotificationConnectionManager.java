@@ -429,6 +429,35 @@ public class NotificationConnectionManager {
     }
 
     /**
+     * Drops all remaining per-tenant state after {@link #disconnect(String)}: the (now empty)
+     * client maps, registered callbacks (the management callback owns a group cache with its own
+     * cleanup thread), the init lock and the WebSocket status codes. Only for tenant removal;
+     * {@link #disconnect(String)} alone is also used for reconnects.
+     */
+    public void removeTenantResources(String tenant) {
+        if (tenant == null) {
+            return;
+        }
+        NotificationCallback managementCallback = managementCallbacks.remove(tenant);
+        if (managementCallback instanceof ManagementSubscriptionClient msc) {
+            try {
+                msc.cleanup();
+            } catch (Exception e) {
+                log.warn("{} - Error cleaning up management callback: {}", tenant, e.getMessage());
+            }
+        }
+        cacheInventoryCallbacks.remove(tenant);
+        staticDeviceClients.remove(tenant);
+        dynamicDeviceClients.remove(tenant);
+        managementClients.remove(tenant);
+        cacheInventoryClients.remove(tenant);
+        managementInitLocks.remove(tenant);
+        deviceWSStatusCodes.remove(tenant);
+        managementWSStatusCodes.remove(tenant);
+        cacheInventoryWSStatusCodes.remove(tenant);
+    }
+
+    /**
      * Closes only the per-connector device WebSockets (static + dynamic). The management client
      * (type/group watcher) and cache-inventory client stay up, so type/group subscriptions that
      * currently match no devices keep discovering new ones.

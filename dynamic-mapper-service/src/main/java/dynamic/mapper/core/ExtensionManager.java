@@ -463,6 +463,7 @@ public class ExtensionManager {
             closeAllClassLoaders(tenantClassLoaders, tenant);
             log.info("{} - Cleaned up {} extension classloaders", tenant, tenantClassLoaders.size());
         }
+        tenantLocks.remove(tenant);
     }
 
     /**

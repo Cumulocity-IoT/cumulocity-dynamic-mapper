@@ -120,6 +120,16 @@ public class TokenManager {
         return tenant != null ? cacheInventoryTokens.get(tenant) : null;
     }
 
+    /** Drops every token reference of a tenant (no platform call; see the unsubscribe* methods for that). */
+    public void removeTenant(String tenant) {
+        if (tenant == null) {
+            return;
+        }
+        deviceTokens.remove(tenant);
+        managementTokens.remove(tenant);
+        cacheInventoryTokens.remove(tenant);
+    }
+
     public void unsubscribeDeviceSubscriber(String tenant) {
         if (tenant == null) {
             return;

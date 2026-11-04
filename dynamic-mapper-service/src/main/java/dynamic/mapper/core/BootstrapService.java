@@ -44,6 +44,7 @@ import org.springframework.stereotype.Service;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionAddedEvent;
 import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent;
+import io.micrometer.core.instrument.Metrics;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
@@ -173,6 +174,16 @@ public class BootstrapService {
 
         NotificationSubscriber subscriber = serviceRegistry.getNotificationSubscriber();
 
+        // First: stop connector clients and their housekeeping threads (waits for a running
+        // housekeeping cycle), so nothing is still using the resources removed below.
+        try {
+            // Unregister all connector clients
+            connectorRegistry.unregisterAllClientsForTenant(tenant);
+            log.debug("{} - Unregistered all connector clients", tenant);
+        } catch (Exception e) {
+            log.error("{} - Error unregistering clients: {}", tenant, e.getMessage(), e);
+        }
+
         try {
             // Disconnect all notification connections
             subscriber.disconnect(tenant);
@@ -198,11 +209,11 @@ public class BootstrapService {
         }
 
         try {
-            // Unregister all connector clients
-            connectorRegistry.unregisterAllClientsForTenant(tenant);
-            log.debug("{} - Unregistered all connector clients", tenant);
+            // Drop remaining notification state: callbacks, group cache thread, locks, token refs
+            subscriber.removeTenantResources(tenant);
+            log.debug("{} - Removed notification resources", tenant);
         } catch (Exception e) {
-            log.error("{} - Error unregistering clients: {}", tenant, e.getMessage(), e);
+            log.error("{} - Error removing notification resources: {}", tenant, e.getMessage(), e);
         }
 
         try {
@@ -215,21 +226,38 @@ public class BootstrapService {
 
         try {
             // DO NOT REMOVE DeviceIsolationMQTTService feature
-            ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-            if (Boolean.TRUE.equals(serviceConfiguration.getDeviceIsolationMQTTServiceEnabled())) {
-                serviceRegistry.clearCacheDeviceToClient(tenant);
-            }
-
-            serviceRegistry.removeMapperServiceRepresentation(tenant);
-            serviceRegistry.getGraalVMContextService().removeGraalsResources(tenant);
-            serviceRegistry.removeMicroserviceCredentials(tenant);
-            log.debug("{} - Removed configuration registry resources", tenant);
+            // (relations are dropped in memory only; nothing may be persisted for an unsubscribed tenant)
+            serviceRegistry.removeDeviceToClientState(tenant);
+            log.debug("{} - Removed device-to-client state", tenant);
         } catch (Exception e) {
-            log.error("{} - Error removing configuration registry resources: {}", tenant, e.getMessage(), e);
+            log.error("{} - Error removing device-to-client state: {}", tenant, e.getMessage(), e);
+        }
+
+        try {
+            serviceRegistry.removeMapperServiceRepresentation(tenant);
+            log.debug("{} - Removed mapper service representation", tenant);
+        } catch (Exception e) {
+            log.error("{} - Error removing mapper service representation: {}", tenant, e.getMessage(), e);
+        }
+
+        try {
+            serviceRegistry.getGraalVMContextService().removeGraalsResources(tenant);
+            log.debug("{} - Removed GraalVM resources", tenant);
+        } catch (Exception e) {
+            log.error("{} - Error removing GraalVM resources: {}", tenant, e.getMessage(), e);
+        }
+
+        try {
+            serviceRegistry.removeMicroserviceCredentials(tenant);
+            log.debug("{} - Removed microservice credentials", tenant);
+        } catch (Exception e) {
+            log.error("{} - Error removing microservice credentials: {}", tenant, e.getMessage(), e);
         }
 
         try {
             extensionInboundRegistry.deleteExtensions(tenant);
+            // closes the tenant's extension classloaders (previously only done at application shutdown)
+            extensionManager.cleanupTenantExtensions(tenant);
             log.debug("{} - Deleted extensions", tenant);
         } catch (Exception e) {
             log.error("{} - Error deleting extensions: {}", tenant, e.getMessage(), e);
@@ -275,6 +303,16 @@ public class BootstrapService {
             log.debug("{} - Cleared processing-mode connector cache", tenant);
         } catch (Exception e) {
             log.error("{} - Error clearing processing-mode connector cache: {}", tenant, e.getMessage(), e);
+        }
+
+        try {
+            // Per-tenant meters (dispatcher timers/counters, identity counters) would otherwise stay
+            // registered for the lifetime of the JVM.
+            Metrics.globalRegistry.getMeters().stream()
+                    .filter(m -> tenant.equals(m.getId().getTag("tenant")))
+                    .forEach(Metrics.globalRegistry::remove);
+        } catch (Exception e) {
+            log.error("{} - Error removing tenant meters: {}", tenant, e.getMessage(), e);
         }
 
         log.info("{} - Completed tenant resource cleanup", tenant);

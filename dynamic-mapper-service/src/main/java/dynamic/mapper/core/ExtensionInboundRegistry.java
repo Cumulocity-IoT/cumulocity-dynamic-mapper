@@ -80,7 +80,8 @@ public class ExtensionInboundRegistry {
     }
 
     public void deleteExtensions(String tenant) {
-        tenantExtensionProcessors.put(tenant, new ConcurrentHashMap<>());
+        // remove (not re-create): getExtensions() lazily re-creates an entry on demand
+        tenantExtensionProcessors.remove(tenant);
     }
 
     public void updateStatusExtension(String tenant, String extName) {
