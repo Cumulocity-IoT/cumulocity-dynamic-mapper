@@ -743,7 +743,9 @@ export interface Extension {
   name: string;
   // Deserialized from JSON as a plain object, not a real ES Map — do not treat as one.
   extensionEntries: Record<string, ExtensionEntry>;
-  loaded: boolean;
+  loaded: ExtensionStatus;
+  /** Why the whole extension could not be loaded (e.g. missing registration file); per-event reasons are on the entries. */
+  message?: string;
   external: boolean;
 }
 

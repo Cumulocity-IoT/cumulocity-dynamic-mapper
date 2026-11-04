@@ -172,7 +172,9 @@ export class ExtensionService {
       );
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // 409 carries the mappings that still use the extension, 400 the reason it cannot be deleted
+        const body = await response.json().catch(() => undefined);
+        throw new Error(body?.message || `HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
       console.error(`Failed to delete processor extension ${name}:`, error);
@@ -199,6 +201,7 @@ export class ExtensionService {
         return {
           ...ext,
           loaded: backendExt.loaded,
+          message: backendExt.message,
           external: backendExt.external,
           extensionEntries: Object.values(backendExt.extensionEntries || {})
         };

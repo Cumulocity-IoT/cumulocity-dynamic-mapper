@@ -25,10 +25,13 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.yaml.snakeyaml.Yaml;
 
@@ -45,6 +48,7 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.extension.Extension;
 import dynamic.mapper.model.extension.ExtensionConfig;
 import dynamic.mapper.model.extension.ExtensionEntry;
+import dynamic.mapper.model.extension.ExtensionStatus;
 import dynamic.mapper.model.extension.ExtensionType;
 import dynamic.mapper.processor.extension.ExtensionsComponent;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
@@ -90,92 +94,111 @@ public class ExtensionManager {
     }
 
     // Track classloaders (and their backing temp jar files) for proper cleanup
-    private final Map<String, Map<String, ExtensionClassLoaderHolder>> tenantExtensionClassLoaders = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, Map<String, ExtensionClassLoaderHolder>> tenantExtensionClassLoaders = new ConcurrentHashMap<>();
 
+    // Serializes load/reload/delete per tenant so two admins cannot interleave a swap
+    private final Map<String, Object> tenantLocks = new ConcurrentHashMap<>();
+
+    private Object lockFor(String tenant) {
+        return tenantLocks.computeIfAbsent(tenant, t -> new Object());
+    }
+
+    /**
+     * (Re-)load all extensions of a tenant. The new set is built off to the side and swapped into
+     * the registry in one step, so mappings that process messages during a reload keep using the
+     * previous extensions instead of failing with "Extension not found". The previous classloaders
+     * are closed after the swap.
+     */
     public void loadProcessorExtensions(String tenant) {
-        ClassLoader internalClassloader = ExtensionManager.class.getClassLoader();
+        synchronized (lockFor(tenant)) {
+            Map<String, ExtensionClassLoaderHolder> newLoaders = new ConcurrentHashMap<>();
+            Map<String, Extension> loaded = new LinkedHashMap<>();
+            ClassLoader internalClassloader = ExtensionManager.class.getClassLoader();
 
-        for (ManagedObjectRepresentation extension : extensionsComponent.get()) {
-            Map<?, ?> props = (Map<?, ?>) (extension.get(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE));
-            String extName = props.get("name").toString();
-            boolean external = (Boolean) props.get("external");
-            log.debug("{} - Trying to load extension id: {}, name: {}", tenant, extension.getId().getValue(),
-                    extName);
-
-            if (external && !extensionConfiguration.isExternalExtensionsEnabled()) {
-                log.info("{} - Skipping loading of external extension: {} because external extensions are disabled via configuration (app.externalExtensionsEnabled=false)",
-                        tenant, extName);
-                continue;
-            }
-
-            InputStream downloadInputStream = null;
-            FileOutputStream outputStream = null;
-            URLClassLoader externalClassLoader = null;
-            File tempFile = null;
-            try {
-                if (external) {
-                    // step 1 download extension for binary repository
-                    downloadInputStream = binaryApi.downloadFile(extension.getId());
-
-                    // step 2 create temporary file,because classloader needs a url resource
-                    tempFile = File.createTempFile(extName, "jar");
-                    tempFile.deleteOnExit();
-                    String canonicalPath = tempFile.getCanonicalPath();
-                    String path = tempFile.getPath();
-                    String pathWithProtocol = "file://".concat(tempFile.getPath());
-                    log.debug("{} - CanonicalPath: {}, Path: {}, PathWithProtocol: {}", tenant, canonicalPath,
-                            path,
-                            pathWithProtocol);
-                    outputStream = new FileOutputStream(tempFile);
-                    IOUtils.copy(downloadInputStream, outputStream);
-
-                    // step 3 parse list of extensions
-                    URL[] urls = { tempFile.toURI().toURL() };
-                    externalClassLoader = new URLClassLoader(urls, App.class.getClassLoader());
-
-                    registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, externalClassLoader,
-                            external);
-
-                    // Only track the classloader after successful registration so a failed
-                    // registration does not leave a closed loader in the map.
-                    // If an entry already exists for this tenant+extension name (re-registration),
-                    // close and clean it up first to avoid leaking classloaders/temp files.
-                    Map<String, ExtensionClassLoaderHolder> tenantClassLoaders = tenantExtensionClassLoaders
-                            .computeIfAbsent(tenant, k -> new java.util.concurrent.ConcurrentHashMap<>());
-                    ExtensionClassLoaderHolder previousHolder = tenantClassLoaders
-                            .put(extName, new ExtensionClassLoaderHolder(externalClassLoader, tempFile));
-                    if (previousHolder != null) {
-                        log.debug("{} - Extension {} was already loaded, closing previous classloader before replacing it",
-                                tenant, extName);
-                        closeClassLoader(previousHolder, tenant, extName);
-                    }
-                } else {
-                    registerExtensionInProcessor(tenant, extension.getId().getValue(), extName, internalClassloader,
-                            external);
+            for (ManagedObjectRepresentation extension : extensionsComponent.get()) {
+                Object fragment = extension.get(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE);
+                Object name = fragment instanceof Map<?, ?> props ? props.get("name") : null;
+                if (name == null) {
+                    // One malformed managed object must not stop the remaining extensions from loading
+                    log.warn("{} - Skipping extension managed object {}: fragment {} has no name", tenant,
+                            extension.getId() != null ? extension.getId().getValue() : null,
+                            ExtensionsComponent.PROCESSOR_EXTENSION_TYPE);
+                    continue;
                 }
-            } catch (IOException e) {
-                log.error("{} - IO Exception occurred when loading extension: ", tenant, e);
-                closeClassLoaderAndDeleteFile(externalClassLoader, tempFile, tenant, extName);
-            } catch (RuntimeException e) {
-                log.error("{} - Unexpected error loading extension: ", tenant, e);
-                closeClassLoaderAndDeleteFile(externalClassLoader, tempFile, tenant, extName);
-            } finally {
-                if (downloadInputStream != null) {
-                    try {
-                        downloadInputStream.close();
-                    } catch (IOException e) {
-                        log.warn("{} - Failed to close download stream", tenant, e);
-                    }
+                String extName = name.toString();
+                boolean external = Boolean.TRUE.equals(((Map<?, ?>) fragment).get("external"));
+                String id = extension.getId().getValue();
+                log.debug("{} - Trying to load extension id: {}, name: {}", tenant, id, extName);
+
+                if (external && !extensionConfiguration.isExternalExtensionsEnabled()) {
+                    log.info("{} - Skipping loading of external extension: {} because external extensions are disabled via configuration (app.externalExtensionsEnabled=false)",
+                            tenant, extName);
+                    continue;
                 }
-                if (outputStream != null) {
-                    try {
-                        outputStream.close();
-                    } catch (IOException e) {
-                        log.warn("{} - Failed to close output stream", tenant, e);
-                    }
+
+                Extension loadedExtension = external
+                        ? loadExternalExtension(tenant, extension, extName, newLoaders)
+                        : loadInternalExtension(tenant, id, extName, internalClassloader);
+                if (loaded.put(extName, loadedExtension) != null) {
+                    log.warn("{} - More than one extension is named {}, the last one overrides the others", tenant,
+                            extName);
                 }
             }
+
+            Map<String, ExtensionClassLoaderHolder> oldLoaders = tenantExtensionClassLoaders.put(tenant, newLoaders);
+            extensionInboundRegistry.replaceExtensions(tenant, loaded);
+            closeAllClassLoaders(oldLoaders, tenant);
         }
+    }
+
+    private Extension loadInternalExtension(String tenant, String id, String extName, ClassLoader classLoader) {
+        try {
+            return buildExtension(tenant, id, extName, classLoader, false);
+        } catch (IOException | RuntimeException e) {
+            log.error("{} - Failed to load internal extension {}: ", tenant, extName, e);
+            return failedExtension(id, extName, false, e);
+        }
+    }
+
+    /**
+     * Download the jar of an external extension, load it with its own classloader and register its
+     * entries. A jar that cannot be read yields an extension with status NOT_LOADED and the reason in
+     * {@link Extension#getMessage()} instead of aborting the load of the other extensions.
+     */
+    private Extension loadExternalExtension(String tenant, ManagedObjectRepresentation extension, String extName,
+            Map<String, ExtensionClassLoaderHolder> newLoaders) {
+        String id = extension.getId().getValue();
+        File tempFile = null;
+        URLClassLoader classLoader = null;
+        try (InputStream downloadInputStream = binaryApi.downloadFile(extension.getId())) {
+            // The classloader needs a url resource, so the jar goes to a temporary file
+            tempFile = File.createTempFile("dm-ext-" + extName.replaceAll("[^A-Za-z0-9._-]", "_") + "-", ".jar");
+            tempFile.deleteOnExit();
+            try (OutputStream outputStream = new FileOutputStream(tempFile)) {
+                IOUtils.copy(downloadInputStream, outputStream);
+            }
+
+            classLoader = new URLClassLoader(new URL[] { tempFile.toURI().toURL() }, App.class.getClassLoader());
+            Extension result = buildExtension(tenant, id, extName, classLoader, true);
+
+            ExtensionClassLoaderHolder previous = newLoaders.put(extName,
+                    new ExtensionClassLoaderHolder(classLoader, tempFile));
+            if (previous != null) {
+                closeClassLoader(previous, tenant, extName);
+            }
+            return result;
+        } catch (IOException | RuntimeException e) {
+            log.error("{} - Failed to load extension {}: ", tenant, extName, e);
+            closeClassLoaderAndDeleteFile(classLoader, tempFile, tenant, extName);
+            return failedExtension(id, extName, true, e);
+        }
+    }
+
+    private static Extension failedExtension(String id, String extName, boolean external, Exception cause) {
+        Extension failed = new Extension(id, extName, external);
+        failed.setLoaded(ExtensionStatus.NOT_LOADED);
+        failed.setMessage(cause.getMessage() != null ? cause.getMessage() : cause.getClass().getSimpleName());
+        return failed;
     }
 
     private void closeClassLoader(ExtensionClassLoaderHolder holder, String tenant, String extName) {
@@ -183,6 +206,13 @@ public class ExtensionManager {
             return;
         }
         closeClassLoaderAndDeleteFile(holder.classLoader, holder.tempFile, tenant, extName);
+    }
+
+    private void closeAllClassLoaders(Map<String, ExtensionClassLoaderHolder> loaders, String tenant) {
+        if (loaders == null) {
+            return;
+        }
+        loaders.forEach((extName, holder) -> closeClassLoader(holder, tenant, extName));
     }
 
     /**
@@ -216,40 +246,48 @@ public class ExtensionManager {
     private void registerExtensionInProcessor(String tenant, String id, String extensionName, ClassLoader dynamicLoader,
             boolean external)
             throws IOException {
-        // manage extensions for Camel routes
-        extensionInboundRegistry.addExtension(tenant, new Extension(id, extensionName, external));
+        extensionInboundRegistry.addExtension(tenant, buildExtension(tenant, id, extensionName, dynamicLoader, external));
+    }
 
+    /**
+     * Read the registration file of the extension and instantiate every class it lists.
+     * Failures of a single entry are recorded on that entry (loaded=false, message=reason);
+     * failures that affect the whole jar (missing or unparsable registration file) are thrown.
+     */
+    private Extension buildExtension(String tenant, String id, String extensionName, ClassLoader dynamicLoader,
+            boolean external)
+            throws IOException {
         String resource = external ? EXTENSION_EXTERNAL_FILE : EXTENSION_INTERNAL_FILE;
-        InputStream resourceAsStream = dynamicLoader.getResourceAsStream(resource);
-
-        if (resourceAsStream == null) {
-            log.error("{} - Registration file: {} missing, ignoring to load extensions from: {}", tenant,
-                    resource,
-                    (external ? "EXTERNAL" : "INTERNAL"));
-            throw new IOException("Registration file: " + resource + " missing, ignoring to load extensions from:"
-                    + (external ? "EXTERNAL" : "INTERNAL"));
-        }
-
-        // Parse YAML configuration
-        Yaml yaml = new Yaml();
         ExtensionConfig extensionConfig;
-        try {
-            extensionConfig = yaml.loadAs(resourceAsStream, ExtensionConfig.class);
+        try (InputStream resourceAsStream = dynamicLoader.getResourceAsStream(resource)) {
+            if (resourceAsStream == null) {
+                log.error("{} - Registration file: {} missing, ignoring to load extensions from: {}", tenant,
+                        resource, (external ? "EXTERNAL" : "INTERNAL"));
+                throw new IOException("Registration file: " + resource + " missing, ignoring to load extensions from:"
+                        + (external ? "EXTERNAL" : "INTERNAL"));
+            }
+            extensionConfig = new Yaml().loadAs(resourceAsStream, ExtensionConfig.class);
+        } catch (IOException e) {
+            throw e;
         } catch (Exception e) {
             log.error("{} - Failed to parse YAML file: {}", tenant, resource, e);
-            throw new IOException("Failed to parse YAML file: " + resource, e);
+            throw new IOException("Failed to parse YAML file: " + resource + ": " + e.getMessage(), e);
         }
 
-        if (extensionConfig == null || extensionConfig.getExtensions() == null) {
+        Extension extension = new Extension(id, extensionName, external);
+
+        if (extensionConfig == null || extensionConfig.getExtensions() == null
+                || extensionConfig.getExtensions().isEmpty()) {
             log.warn("{} - No extensions found in: {}", tenant, resource);
-            return;
+            extension.setLoaded(ExtensionStatus.NOT_LOADED);
+            extension.setMessage("No extensions defined in " + resource);
+            return extension;
         }
 
         log.debug("{} - Preparing to load {} extensions from {}", tenant,
                 extensionConfig.getExtensions().size(), resource);
 
         for (ExtensionConfig.ExtensionDefinition definition : extensionConfig.getExtensions()) {
-            Class<?> clazz;
             ExtensionEntry extensionEntry = ExtensionEntry.builder()
                     .eventName(definition.getEventName())
                     .extensionName(extensionName)
@@ -262,106 +300,85 @@ public class ExtensionManager {
                     .direction(Direction.UNSPECIFIED)
                     .build();
 
-            // manage extensions for Camel routes
-            extensionInboundRegistry.addExtensionEntry(tenant, extensionName, extensionEntry);
+            if (extension.getExtensionEntries().put(definition.getEventName(), extensionEntry) != null) {
+                log.warn("{} - Extension entry with eventName {} is defined more than once in {}, the last one wins",
+                        tenant, definition.getEventName(), extensionName);
+            }
+            loadEntry(tenant, dynamicLoader, external, definition, extensionEntry);
+        }
 
-            try {
-                clazz = dynamicLoader.loadClass(definition.getClassName());
+        extension.setLoaded(ExtensionInboundRegistry.computeStatus(extension));
+        return extension;
+    }
 
-                if (external && !clazz.getPackageName().startsWith(extensionConfiguration.getExternalExtensionsAllowedPackage())) {
-                    extensionEntry.setMessage(
-                            "Implementation must be in package: '" + extensionConfiguration.getExternalExtensionsAllowedPackage() + "' instead of: "
-                                    + clazz.getPackageName());
-                    extensionEntry.setLoaded(false);
-                } else {
-                    // Instantiate once and reuse the same instance
-                    Object extensionInstance = clazz.getDeclaredConstructor().newInstance();
+    private void loadEntry(String tenant, ClassLoader dynamicLoader, boolean external,
+            ExtensionConfig.ExtensionDefinition definition, ExtensionEntry extensionEntry) {
+        try {
+            Class<?> clazz = dynamicLoader.loadClass(definition.getClassName());
 
-                    boolean isValidExtension = false;
+            if (external && !clazz.getPackageName().startsWith(extensionConfiguration.getExternalExtensionsAllowedPackage())) {
+                extensionEntry.setMessage(
+                        "Implementation must be in package: '" + extensionConfiguration.getExternalExtensionsAllowedPackage() + "' instead of: "
+                                + clazz.getPackageName());
+                extensionEntry.setLoaded(false);
+                return;
+            }
 
-                    // Auto-detect direction from marker interfaces
-                    if (extensionInstance instanceof ProcessorExtensionInbound) {
-                        extensionEntry.setDirection(Direction.INBOUND);
-                        log.debug("{} - Extension auto-detected as INBOUND via InboundExtension", tenant);
-                    } else if (extensionInstance instanceof ProcessorExtensionOutbound) {
-                        extensionEntry.setDirection(Direction.OUTBOUND);
-                        log.debug("{} - Extension auto-detected as OUTBOUND via OutboundExtension", tenant);
-                    }
+            // Instantiate once and reuse the same instance: implementations must be thread-safe
+            Object extensionInstance = clazz.getDeclaredConstructor().newInstance();
 
-                    // Determine extension type - check specific types first
-                    if (extensionInstance instanceof ProcessorExtensionInbound) {
-                        // Complete inbound processing with C8YAgent
-                        extensionEntry.setExtensionImplInbound((ProcessorExtensionInbound<?>) extensionInstance);
-                        extensionEntry.setExtensionType(ExtensionType.EXTENSION_INBOUND);
-                        isValidExtension = true;
-                        log.debug("{} - Registered ProcessorExtensionInbound: {} for key: {}",
-                                tenant, definition.getClassName(), definition.getEventName());
-                    } else if (extensionInstance instanceof ProcessorExtensionOutbound) {
-                        // Complete outbound processing with request preparation
-                        extensionEntry.setExtensionImplOutbound((ProcessorExtensionOutbound<?>) extensionInstance);
-                        extensionEntry.setExtensionType(ExtensionType.EXTENSION_OUTBOUND);
-                        isValidExtension = true;
-                        log.debug("{} - Registered ProcessorExtensionOutbound: {} for key: {}",
-                                tenant, definition.getClassName(), definition.getEventName());
-                    }
+            if (extensionInstance instanceof ProcessorExtensionInbound) {
+                extensionEntry.setDirection(Direction.INBOUND);
+                extensionEntry.setExtensionImplInbound((ProcessorExtensionInbound<?>) extensionInstance);
+                extensionEntry.setExtensionType(ExtensionType.EXTENSION_INBOUND);
+                log.debug("{} - Registered ProcessorExtensionInbound: {} for key: {}",
+                        tenant, definition.getClassName(), definition.getEventName());
+            } else if (extensionInstance instanceof ProcessorExtensionOutbound) {
+                extensionEntry.setDirection(Direction.OUTBOUND);
+                extensionEntry.setExtensionImplOutbound((ProcessorExtensionOutbound<?>) extensionInstance);
+                extensionEntry.setExtensionType(ExtensionType.EXTENSION_OUTBOUND);
+                log.debug("{} - Registered ProcessorExtensionOutbound: {} for key: {}",
+                        tenant, definition.getClassName(), definition.getEventName());
+            } else {
+                failEntry(tenant, extensionEntry, false, String.format(
+                        "Extension %s=%s must implement ProcessorExtensionInbound or ProcessorExtensionOutbound!",
+                        definition.getEventName(), definition.getClassName()), null);
+            }
+        } catch (ClassNotFoundException e) {
+            failEntry(tenant, extensionEntry, false, String.format("Could not load extension class %s:%s: %s",
+                    definition.getEventName(), definition.getClassName(), e.getMessage()), e);
+        } catch (LinkageError e) {
+            // NoClassDefFoundError (missing dependency), ExceptionInInitializerError (static init failed), ...
+            failEntry(tenant, extensionEntry, false, String.format("Missing dependency or invalid class for extension %s:%s: %s",
+                    definition.getEventName(), definition.getClassName(), e), e);
+        } catch (NoSuchMethodException e) {
+            failEntry(tenant, extensionEntry, false, String.format("Extension class %s:%s must have a public no-arg constructor",
+                    definition.getEventName(), definition.getClassName()), e);
+        } catch (InstantiationException | IllegalAccessException e) {
+            failEntry(tenant, extensionEntry, false, String.format("Could not instantiate extension class %s:%s: %s",
+                    definition.getEventName(), definition.getClassName(), e.getMessage()), e);
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            String exceptionMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+            failEntry(tenant, extensionEntry, false, String.format("Extension constructor threw exception for %s:%s: %s",
+                    definition.getEventName(), definition.getClassName(), exceptionMsg), e);
+        } catch (Exception e) {
+            String exceptionMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+            failEntry(tenant, extensionEntry, true, String.format("Unexpected error loading extension %s:%s: %s",
+                    definition.getEventName(), definition.getClassName(), exceptionMsg), e);
+        }
+    }
 
-                    if (!isValidExtension) {
-                        String msg = String.format(
-                                "Extension %s=%s must implement InboundExtension, OutboundExtension, ProcessorExtensionInbound, or ProcessorExtensionOutbound!",
-                                definition.getEventName(),
-                                definition.getClassName());
-                        log.warn("{} - {}", tenant, msg);
-                        extensionEntry.setMessage(msg);
-                        extensionEntry.setLoaded(false);
-                    }
-                }
-            } catch (ClassNotFoundException e) {
-                String msg = String.format("Could not load extension class %s:%s: %s", definition.getEventName(),
-                        definition.getClassName(), e.getMessage());
-                log.warn("{} - {}", tenant, msg);
-                log.debug("{} - Exception details: ", tenant, e);
-                extensionEntry.setMessage(msg);
-                extensionEntry.setLoaded(false);
-            } catch (NoClassDefFoundError e) {
-                String msg = String.format("Missing dependency for extension class %s:%s: %s", definition.getEventName(),
-                        definition.getClassName(), e.getMessage());
-                log.warn("{} - {}", tenant, msg);
-                log.debug("{} - Exception details: ", tenant, e);
-                extensionEntry.setMessage(msg);
-                extensionEntry.setLoaded(false);
-            } catch (NoSuchMethodException e) {
-                String msg = String.format("Extension class %s:%s must have a public no-arg constructor", definition.getEventName(),
-                        definition.getClassName());
-                log.warn("{} - {}", tenant, msg);
-                log.debug("{} - Exception details: ", tenant, e);
-                extensionEntry.setMessage(msg);
-                extensionEntry.setLoaded(false);
-            } catch (InstantiationException | IllegalAccessException e) {
-                String msg = String.format("Could not instantiate extension class %s:%s: %s", definition.getEventName(),
-                        definition.getClassName(), e.getMessage());
-                log.warn("{} - {}", tenant, msg);
-                log.debug("{} - Exception details: ", tenant, e);
-                extensionEntry.setMessage(msg);
-                extensionEntry.setLoaded(false);
-            } catch (java.lang.reflect.InvocationTargetException e) {
-                String exceptionMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
-                String msg = String.format("Extension constructor threw exception for %s:%s: %s", definition.getEventName(),
-                        definition.getClassName(), exceptionMsg);
-                log.warn("{} - {}", tenant, msg);
-                log.debug("{} - Exception details: ", tenant, e);
-                extensionEntry.setMessage(msg);
-                extensionEntry.setLoaded(false);
-            } catch (Exception e) {
-                String exceptionMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
-                String msg = String.format("Unexpected error loading extension %s:%s: %s", definition.getEventName(),
-                        definition.getClassName(), exceptionMsg);
-                log.error("{} - {}", tenant, msg, e);
-                extensionEntry.setMessage(msg);
-                extensionEntry.setLoaded(false);
+    private void failEntry(String tenant, ExtensionEntry entry, boolean asError, String message, Throwable cause) {
+        if (asError) {
+            log.error("{} - {}", tenant, message, cause);
+        } else {
+            log.warn("{} - {}", tenant, message);
+            if (cause != null) {
+                log.debug("{} - Exception details: ", tenant, cause);
             }
         }
-        // manage extensions for Camel routes
-        extensionInboundRegistry.updateStatusExtension(tenant, extensionName);
+        entry.setMessage(message);
+        entry.setLoaded(false);
     }
 
     public Map<String, Extension> getProcessorExtensions(String tenant) {
@@ -372,41 +389,46 @@ public class ExtensionManager {
         return extensionInboundRegistry.getExtension(tenant, extension);
     }
 
+    /**
+     * Delete an external extension: removes its jar from the binary repository, closes its
+     * classloader and drops it from the registry. Built-in extensions are never deleted.
+     *
+     * @return the removed extension, or null if no such extension is registered
+     */
     public Extension deleteProcessorExtension(String tenant, String extensionName) {
-        for (ManagedObjectRepresentation extensionRepresentation : extensionsComponent.get()) {
-            // Match against the same "d11r_processorExtension.name" fragment property used
-            // during loading/registration, not the top-level managed object name, since these
-            // can differ.
-            Map<?, ?> props = (Map<?, ?>) extensionRepresentation.get(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE);
-            String extNameFromFragment = props != null && props.get("name") != null ? props.get("name").toString() : null;
-            if (extensionName.equals(extNameFromFragment)) {
-                binaryApi.deleteFile(extensionRepresentation.getId());
-                log.info("{} - Deleted extension: {} permanently!", tenant, extensionName);
+        synchronized (lockFor(tenant)) {
+            Extension registered = extensionInboundRegistry.getExtension(tenant, extensionName);
+            if (registered == null) {
+                return null;
             }
-        }
+            if (!registered.isExternal()) {
+                throw new IllegalArgumentException("Built-in extension " + extensionName + " cannot be deleted");
+            }
+            for (ManagedObjectRepresentation extensionRepresentation : extensionsComponent.get()) {
+                // Match against the same "d11r_processorExtension.name" fragment property used
+                // during loading/registration, not the top-level managed object name, since these
+                // can differ.
+                Object fragment = extensionRepresentation.get(ExtensionsComponent.PROCESSOR_EXTENSION_TYPE);
+                Object name = fragment instanceof Map<?, ?> props ? props.get("name") : null;
+                if (extensionName.equals(name)
+                        && Boolean.TRUE.equals(((Map<?, ?>) fragment).get("external"))) {
+                    binaryApi.deleteFile(extensionRepresentation.getId());
+                    log.info("{} - Deleted extension: {} permanently!", tenant, extensionName);
+                }
+            }
 
-        // Close and remove classloader (and backing temp file) for this extension
-        Map<String, ExtensionClassLoaderHolder> tenantClassLoaders = tenantExtensionClassLoaders.get(tenant);
-        if (tenantClassLoaders != null) {
-            ExtensionClassLoaderHolder holder = tenantClassLoaders.remove(extensionName);
-            closeClassLoader(holder, tenant, extensionName);
-        }
+            // Close and remove classloader (and backing temp file) for this extension
+            Map<String, ExtensionClassLoaderHolder> tenantClassLoaders = tenantExtensionClassLoaders.get(tenant);
+            if (tenantClassLoaders != null) {
+                closeClassLoader(tenantClassLoaders.remove(extensionName), tenant, extensionName);
+            }
 
-        // manage extensions for Camel routes
-        return extensionInboundRegistry.deleteExtension(tenant, extensionName);
+            return extensionInboundRegistry.deleteExtension(tenant, extensionName);
+        }
     }
 
+    /** Reload all extensions of the tenant from the binary repository; see {@link #loadProcessorExtensions}. */
     public void reloadExtensions(String tenant) {
-        // Close all classloaders (and backing temp files) for this tenant before reloading
-        Map<String, ExtensionClassLoaderHolder> tenantClassLoaders = tenantExtensionClassLoaders.remove(tenant);
-        if (tenantClassLoaders != null) {
-            for (Map.Entry<String, ExtensionClassLoaderHolder> entry : tenantClassLoaders.entrySet()) {
-                closeClassLoader(entry.getValue(), tenant, entry.getKey());
-            }
-        }
-
-        // manage extensions for Camel routes
-        extensionInboundRegistry.deleteExtensions(tenant);
         loadProcessorExtensions(tenant);
     }
 
@@ -438,9 +460,7 @@ public class ExtensionManager {
     public void cleanupTenantExtensions(String tenant) {
         Map<String, ExtensionClassLoaderHolder> tenantClassLoaders = tenantExtensionClassLoaders.remove(tenant);
         if (tenantClassLoaders != null) {
-            for (Map.Entry<String, ExtensionClassLoaderHolder> entry : tenantClassLoaders.entrySet()) {
-                closeClassLoader(entry.getValue(), tenant, entry.getKey());
-            }
+            closeAllClassLoaders(tenantClassLoaders, tenant);
             log.info("{} - Cleaned up {} extension classloaders", tenant, tenantClassLoaders.size());
         }
     }
