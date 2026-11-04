@@ -47,6 +47,7 @@ import jakarta.validation.Valid;
 
 import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -137,6 +138,7 @@ public class NotificationSubscriptionController {
             @RequestParam(value = "currentPage", required = false) Integer currentPage,
             @RequestParam(value = "pageSize", required = false) Integer pageSize,
             @RequestParam(value = "withTotalPages", defaultValue = "true") boolean withTotalPages,
+            @Parameter(description = "Restrict the result to devices whose id, name, type, or group matches this text (case-insensitive substring; * and ? act as wildcards)")
             @RequestParam(value = "search", required = false) String search) {
         String tenant = getTenant();
         validateOutboundMappingEnabled(tenant);

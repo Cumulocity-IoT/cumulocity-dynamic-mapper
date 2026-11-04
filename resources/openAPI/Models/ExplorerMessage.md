@@ -7,6 +7,7 @@
 | **topic** | **String** | The topic on which the message was received or sent | [optional] [default to null] |
 | **connectorIdentifier** | **String** | Unique identifier of the connector that received the message | [optional] [default to null] |
 | **clientId** | **String** | Client identifier of the broker client that sent the message | [optional] [default to null] |
+| **key** | **String** | Message key, if the broker protocol has one (e.g. Kafka record key); null otherwise | [optional] [default to null] |
 | **connectorName** | **String** | Display name of the connector | [optional] [default to null] |
 | **receivedAt** | **Long** | Epoch milliseconds when the message was received | [optional] [default to null] |
 | **payload** | **String** | Message payload as UTF-8 string, or Base64-encoded for binary payloads | [optional] [default to null] |

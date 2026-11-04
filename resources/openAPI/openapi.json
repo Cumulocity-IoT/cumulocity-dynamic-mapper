@@ -18,8 +18,8 @@
     "url" : "https://cumulocity.com/docs/"
   },
   "servers" : [ {
-    "url" : "http://localhost:8080",
-    "description" : "Generated server url"
+    "url" : "/service/dynamic-mapper-service",
+    "description" : "Cumulocity Dynamic Mapper Service"
   } ],
   "security" : [ {
     "basicAuth" : [ ]
@@ -28,20 +28,14 @@
     "name" : "Device Subscription Controller",
     "description" : "API for managing Cumulocity IoT notification subscriptions for outbound mappings"
   }, {
+    "name" : "Service Logs Controller",
+    "description" : "The collected log of this microservice for the calling tenant"
+  }, {
     "name" : "Extension Controller",
     "description" : "API for managing processor extensions that provide custom data transformation capabilities"
   }, {
-    "name" : "Operation Controller",
-    "description" : "API for executing various administrative and operational tasks on the dynamic mapper service"
-  }, {
-    "name" : "Configuration Management",
-    "description" : "Core configuration endpoints for connectors, service settings, and code templates"
-  }, {
     "name" : "Cache Controller",
     "description" : "Endpoints for querying cache sizes"
-  }, {
-    "name" : "Monitoring Controller",
-    "description" : "API for monitoring connector status, mapping statistics, and system health"
   }, {
     "name" : "Deployment Controller",
     "description" : "API for managing mapping deployments across connectors. Controls which mappings are active on which connectors and provides visibility into the current deployment state."
@@ -49,11 +43,20 @@
     "name" : "Mapping Controller",
     "description" : "API for managing dynamic mappings between external systems and Cumulocity IoT"
   }, {
-    "name" : "Client Relation Controller",
-    "description" : "API for managing relations from devices to MQTT clients for outbound mappings"
-  }, {
     "name" : "HTTP Connector Controller",
     "description" : "HTTP endpoint for receiving data from external systems via HTTP/HTTPS. Acts as a webhook receiver that processes incoming messages and routes them through the dynamic mapping system."
+  }, {
+    "name" : "Operation Controller",
+    "description" : "API for executing various administrative and operational tasks on the dynamic mapper service"
+  }, {
+    "name" : "Configuration Management",
+    "description" : "Core configuration endpoints for connectors, service settings, and code templates"
+  }, {
+    "name" : "Monitoring Controller",
+    "description" : "API for monitoring connector status, mapping statistics, and system health"
+  }, {
+    "name" : "Client Relation Controller",
+    "description" : "API for managing relations from devices to MQTT clients for outbound mappings"
   }, {
     "name" : "Message Explorer Controller",
     "description" : "API for live exploration of raw inbound messages from broker connectors"
@@ -530,6 +533,13 @@
             "type" : "boolean",
             "default" : true
           }
+        }, {
+          "name" : "search",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -860,9 +870,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -873,9 +881,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -886,9 +892,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -899,9 +903,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -912,9 +914,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -940,9 +940,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -953,9 +951,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -966,9 +962,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -979,9 +973,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -1042,6 +1034,11 @@
             "application/json" : {
               "schema" : {
                 "$ref" : "#/components/schemas/Mapping"
+              },
+              "encoding" : {
+                "mapping" : {
+                  "contentType" : "*/*"
+                }
               }
             }
           },
@@ -1071,7 +1068,14 @@
             "description" : "Active mappings cannot be updated"
           },
           "422" : {
-            "description" : "Mapping validation failed (duplicate topic, conflicting configuration)"
+            "description" : "Mapping validation failed (invalid topic structure, conflicting configuration)",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
           },
           "500" : {
             "description" : "Internal server error"
@@ -1346,9 +1350,7 @@
             "application/json" : {
               "schema" : {
                 "type" : "object",
-                "additionalProperties" : {
-                  "type" : "object"
-                }
+                "additionalProperties" : { }
               }
             }
           },
@@ -1544,7 +1546,7 @@
       "put" : {
         "tags" : [ "Configuration Management" ],
         "summary" : "Update code template",
-        "description" : "Updates the code template for the given ID with new JavaScript code.\n\n**Security:** Requires `ROLE_DYNAMIC_MAPPER_ADMIN`\n",
+        "description" : "Updates the code template for the given ID with new JavaScript code. Creates it when no\ntemplate is stored under that ID.\n\n**Note:** Read-only templates (e.g. `SYSTEM`) cannot be modified. `SYSTEM` is\nframework-owned and re-loaded from the shipped version on every startup.\n\n**Security:** Requires `ROLE_DYNAMIC_MAPPER_ADMIN`\n",
         "operationId" : "updateCodeTemplate",
         "parameters" : [ {
           "name" : "id",
@@ -1569,6 +1571,12 @@
         "responses" : {
           "200" : {
             "description" : "Code template updated successfully"
+          },
+          "400" : {
+            "description" : "Path ID and body ID do not match"
+          },
+          "406" : {
+            "description" : "Modification of read-only templates is not allowed"
           },
           "403" : {
             "description" : "Insufficient permissions"
@@ -1705,11 +1713,47 @@
         }
       }
     },
+    "/subscription/type/resync" : {
+      "post" : {
+        "tags" : [ "Device Subscription Controller" ],
+        "summary" : "Resync existing devices into a type subscription (type as query parameter)",
+        "description" : "Same as the path variant, but takes the type as a query parameter so that types containing '/' (which servlet containers reject as an encoded path segment) can be resynced.",
+        "operationId" : "resyncTypeSubscriptionByParam",
+        "parameters" : [ {
+          "name" : "type",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "202" : {
+            "description" : "Resync accepted, processing asynchronously"
+          },
+          "400" : {
+            "description" : "Type is not part of the configured type subscription"
+          },
+          "403" : {
+            "description" : "Forbidden - insufficient permissions"
+          },
+          "404" : {
+            "description" : "Outbound mapping is disabled"
+          },
+          "409" : {
+            "description" : "A resync of this type is already running"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        }
+      }
+    },
     "/subscription/type/resync/{type}" : {
       "post" : {
         "tags" : [ "Device Subscription Controller" ],
         "summary" : "Resync existing devices into a type subscription",
-        "description" : "Notification 2.0's tenant-level type filter only fires on future inventory CREATE events — devices that existed before the type was added are never picked up automatically. This scans the current inventory for the given (already-configured) type and subscribes any device not yet covered. Runs asynchronously in the background; watch the dynamic device subscription list to see it progress.",
+        "description" : "Notification 2.0's tenant-level type filter only fires on future inventory CREATE events — devices that existed before the type was added are never picked up automatically. This scans the current inventory for the given (already-configured) type and subscribes any device not yet covered. Runs asynchronously in the background; progress and the result (including incomplete runs) are reported as Service Events.",
         "operationId" : "resyncTypeSubscription",
         "parameters" : [ {
           "name" : "type",
@@ -1732,6 +1776,9 @@
           "404" : {
             "description" : "Outbound mapping is disabled"
           },
+          "409" : {
+            "description" : "A resync of this type is already running"
+          },
           "500" : {
             "description" : "Internal server error"
           }
@@ -1742,7 +1789,7 @@
       "post" : {
         "tags" : [ "Operation Controller" ],
         "summary" : "Execute a service operation",
-        "description" : "Executes various administrative and operational tasks such as reloading mappings, connecting/disconnecting connectors, managing caches, and other maintenance operations. Different operations require different permission levels.\n\n**Please note:** Each operation may have specific requirements and permissions. Ensure that the user has the necessary roles to perform the requested operation.\n`ROLE_DYNAMIC_MAPPER_CREATE` Operations:\n- `RELOAD_MAPPINGS`: Reloads all mappings for the current tenant.\n- `ACTIVATE_MAPPING`: Activates or deactivates a mapping.\n- `APPLY_MAPPING_FILTER`: Applies a filter to a mapping.\n- `UPDATE_CODE`: Update code for Smart Function or Substitution as Code.\n- `DEBUG_MAPPING`: Enables or disables debug mode for a mapping.\n- `REFRESH_STATUS_MAPPING`: Refreshes the status of all mappings.\n- `ADD_SAMPLE_MAPPINGS`: Adds sample mappings for inbound or outbound direction.\n\n\n`ROLE_DYNAMIC_MAPPER_ADMIN` Operations:\n- `CONNECT`: Connects a specific connector.\n- `DISCONNECT`: Disconnects a specific connector.\n- `RESET_STATISTICS_MAPPING`: Resets statistics for all mappings.\n- `RESET_DEPLOYMENT_MAP`: Resets the deployment map for the current tenant.\n- `RELOAD_EXTENSIONS`: Reloads all extensions for the current tenant.\n- `REFRESH_NOTIFICATIONS_SUBSCRIPTIONS`: Refreshes notification subscriptions for the current tenant.\n- `CLEAR_CACHE`: Clears a specific cache (e.g., inbound ID cache, inventory cache).\n- `INIT_CODE_TEMPLATES`: Initializes code templates for the current tenant.\n\n",
+        "description" : "Executes various administrative and operational tasks such as reloading mappings, connecting/disconnecting connectors, managing caches, and other maintenance operations. Different operations require different permission levels.\n\n**Please note:** Each operation may have specific requirements and permissions. Ensure that the user has the necessary roles to perform the requested operation.\n`ROLE_DYNAMIC_MAPPER_CREATE` Operations:\n- `RELOAD_MAPPINGS`: Reloads all mappings for the current tenant.\n- `ACTIVATE_MAPPING`: Activates or deactivates a mapping.\n- `APPLY_MAPPING_FILTER`: Applies a filter to a mapping.\n- `UPDATE_CODE`: Update code for Smart Function or Substitution as Code.\n- `DEBUG_MAPPING`: Enables or disables debug mode for a mapping.\n- `REFRESH_STATUS_MAPPING`: Refreshes the status of all mappings.\n- `ADD_SAMPLE_MAPPINGS`: Adds sample mappings for inbound or outbound direction.\n\n\n`ROLE_DYNAMIC_MAPPER_ADMIN` Operations:\n- `CONNECT`: Connects a specific connector.\n- `DISCONNECT`: Disconnects a specific connector.\n- `RESET_STATISTICS_MAPPING`: Resets statistics for all mappings.\n- `RESET_DEPLOYMENT_MAP`: Resets the deployment map for the current tenant.\n- `RELOAD_EXTENSIONS`: Reloads all extensions for the current tenant.\n- `REFRESH_NOTIFICATIONS_SUBSCRIPTIONS`: Refreshes notification subscriptions for the current tenant.\n- `CLEAR_CACHE`: Clears a specific cache (e.g., inbound ID cache, outbound ID cache, inventory cache).\n- `INIT_CODE_TEMPLATES`: Initializes code templates for the current tenant.\n\n",
         "operationId" : "runOperation",
         "requestBody" : {
           "description" : "Service operation to execute with parameters",
@@ -1819,6 +1866,19 @@
         }
       }
     },
+    "/monitoring/service-logs/flush" : {
+      "post" : {
+        "tags" : [ "Service Logs Controller" ],
+        "summary" : "Store the calling tenant's waiting log lines now",
+        "description" : "Stores the lines this service instance has captured for the calling tenant but not yet written, instead of waiting for the collection interval, so a following read returns them. Only the instance that handles the request is flushed. Requires `ROLE_DYNAMIC_MAPPER_ADMIN`.",
+        "operationId" : "flush",
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
     "/mapping" : {
       "get" : {
         "tags" : [ "Mapping Controller" ],
@@ -1864,6 +1924,11 @@
             "application/json" : {
               "schema" : {
                 "$ref" : "#/components/schemas/Mapping"
+              },
+              "encoding" : {
+                "mapping" : {
+                  "contentType" : "*/*"
+                }
               }
             }
           },
@@ -1887,7 +1952,14 @@
             "description" : "Insufficient permissions to create mapping"
           },
           "422" : {
-            "description" : "Mapping validation failed (duplicate topic, conflicting configuration)"
+            "description" : "Mapping validation failed (invalid topic structure, conflicting configuration)",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
           },
           "500" : {
             "description" : "Internal server error"
@@ -1941,7 +2013,14 @@
             "description" : "No draft to publish"
           },
           "422" : {
-            "description" : "Draft failed validation"
+            "description" : "Draft failed validation",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -1992,6 +2071,36 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/configuration/connector/test" : {
+      "post" : {
+        "tags" : [ "Configuration Management" ],
+        "summary" : "Test connector configuration",
+        "description" : "Verifies connectivity and authentication for the given (possibly unsaved) connector configuration\nusing a throwaway client; nothing is saved, registered or subscribed.\n\nSensitive properties sent as \"****\" are resolved from the stored configuration with the same identifier.\n\n**Security:** Requires `ROLE_DYNAMIC_MAPPER_ADMIN`\n",
+        "operationId" : "testConnectionConfiguration",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConnectorConfiguration"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConnectionTestResult"
                 }
               }
             }
@@ -2076,7 +2185,7 @@
               "*/*" : {
                 "schema" : {
                   "type" : "string",
-                  "enum" : [ "100 CONTINUE", "101 SWITCHING_PROTOCOLS", "102 PROCESSING", "103 EARLY_HINTS", "103 CHECKPOINT", "200 OK", "201 CREATED", "202 ACCEPTED", "203 NON_AUTHORITATIVE_INFORMATION", "204 NO_CONTENT", "205 RESET_CONTENT", "206 PARTIAL_CONTENT", "207 MULTI_STATUS", "208 ALREADY_REPORTED", "226 IM_USED", "300 MULTIPLE_CHOICES", "301 MOVED_PERMANENTLY", "302 FOUND", "302 MOVED_TEMPORARILY", "303 SEE_OTHER", "304 NOT_MODIFIED", "305 USE_PROXY", "307 TEMPORARY_REDIRECT", "308 PERMANENT_REDIRECT", "400 BAD_REQUEST", "401 UNAUTHORIZED", "402 PAYMENT_REQUIRED", "403 FORBIDDEN", "404 NOT_FOUND", "405 METHOD_NOT_ALLOWED", "406 NOT_ACCEPTABLE", "407 PROXY_AUTHENTICATION_REQUIRED", "408 REQUEST_TIMEOUT", "409 CONFLICT", "410 GONE", "411 LENGTH_REQUIRED", "412 PRECONDITION_FAILED", "413 PAYLOAD_TOO_LARGE", "413 REQUEST_ENTITY_TOO_LARGE", "414 URI_TOO_LONG", "414 REQUEST_URI_TOO_LONG", "415 UNSUPPORTED_MEDIA_TYPE", "416 REQUESTED_RANGE_NOT_SATISFIABLE", "417 EXPECTATION_FAILED", "418 I_AM_A_TEAPOT", "419 INSUFFICIENT_SPACE_ON_RESOURCE", "420 METHOD_FAILURE", "421 DESTINATION_LOCKED", "422 UNPROCESSABLE_ENTITY", "423 LOCKED", "424 FAILED_DEPENDENCY", "425 TOO_EARLY", "426 UPGRADE_REQUIRED", "428 PRECONDITION_REQUIRED", "429 TOO_MANY_REQUESTS", "431 REQUEST_HEADER_FIELDS_TOO_LARGE", "451 UNAVAILABLE_FOR_LEGAL_REASONS", "500 INTERNAL_SERVER_ERROR", "501 NOT_IMPLEMENTED", "502 BAD_GATEWAY", "503 SERVICE_UNAVAILABLE", "504 GATEWAY_TIMEOUT", "505 HTTP_VERSION_NOT_SUPPORTED", "506 VARIANT_ALSO_NEGOTIATES", "507 INSUFFICIENT_STORAGE", "508 LOOP_DETECTED", "509 BANDWIDTH_LIMIT_EXCEEDED", "510 NOT_EXTENDED", "511 NETWORK_AUTHENTICATION_REQUIRED" ]
+                  "enum" : [ "100 CONTINUE", "101 SWITCHING_PROTOCOLS", "102 PROCESSING", "103 EARLY_HINTS", "200 OK", "201 CREATED", "202 ACCEPTED", "203 NON_AUTHORITATIVE_INFORMATION", "204 NO_CONTENT", "205 RESET_CONTENT", "206 PARTIAL_CONTENT", "207 MULTI_STATUS", "208 ALREADY_REPORTED", "226 IM_USED", "300 MULTIPLE_CHOICES", "301 MOVED_PERMANENTLY", "302 FOUND", "303 SEE_OTHER", "304 NOT_MODIFIED", "307 TEMPORARY_REDIRECT", "308 PERMANENT_REDIRECT", "400 BAD_REQUEST", "401 UNAUTHORIZED", "402 PAYMENT_REQUIRED", "403 FORBIDDEN", "404 NOT_FOUND", "405 METHOD_NOT_ALLOWED", "406 NOT_ACCEPTABLE", "407 PROXY_AUTHENTICATION_REQUIRED", "408 REQUEST_TIMEOUT", "409 CONFLICT", "410 GONE", "411 LENGTH_REQUIRED", "412 PRECONDITION_FAILED", "413 CONTENT_TOO_LARGE", "413 PAYLOAD_TOO_LARGE", "414 URI_TOO_LONG", "415 UNSUPPORTED_MEDIA_TYPE", "416 REQUESTED_RANGE_NOT_SATISFIABLE", "417 EXPECTATION_FAILED", "418 I_AM_A_TEAPOT", "421 MISDIRECTED_REQUEST", "422 UNPROCESSABLE_CONTENT", "422 UNPROCESSABLE_ENTITY", "423 LOCKED", "424 FAILED_DEPENDENCY", "425 TOO_EARLY", "426 UPGRADE_REQUIRED", "428 PRECONDITION_REQUIRED", "429 TOO_MANY_REQUESTS", "431 REQUEST_HEADER_FIELDS_TOO_LARGE", "451 UNAVAILABLE_FOR_LEGAL_REASONS", "500 INTERNAL_SERVER_ERROR", "501 NOT_IMPLEMENTED", "502 BAD_GATEWAY", "503 SERVICE_UNAVAILABLE", "504 GATEWAY_TIMEOUT", "505 HTTP_VERSION_NOT_SUPPORTED", "506 VARIANT_ALSO_NEGOTIATES", "507 INSUFFICIENT_STORAGE", "508 LOOP_DETECTED", "509 BANDWIDTH_LIMIT_EXCEEDED", "510 NOT_EXTENDED", "511 NETWORK_AUTHENTICATION_REQUIRED" ]
                 }
               }
             }
@@ -2348,9 +2457,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -2361,9 +2468,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -2374,9 +2479,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -2396,9 +2499,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -2409,9 +2510,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -2422,9 +2521,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -2442,9 +2539,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -2455,9 +2550,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -2468,9 +2561,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -2481,9 +2572,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -2511,9 +2600,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -2524,9 +2611,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -2537,9 +2622,7 @@
               "application/json" : {
                 "schema" : {
                   "type" : "object",
-                  "additionalProperties" : {
-                    "type" : "object"
-                  }
+                  "additionalProperties" : { }
                 }
               }
             }
@@ -2688,6 +2771,48 @@
           },
           "500" : {
             "description" : "Internal server error"
+          }
+        }
+      }
+    },
+    "/monitoring/service-logs" : {
+      "get" : {
+        "tags" : [ "Service Logs Controller" ],
+        "summary" : "Read the collected service log",
+        "description" : "Returns a window of the calling tenant's collected log lines, in the paging shape of the platform's native log.\nNo parameter: the latest chunks. `dateFrom` only: the chunks after it (next page; use 1970-01-01T00:00:00Z for the first). `dateTo` only: the chunks before it (previous page). `mapping` (a mapping's identifier) restricts the result to the lines written while that mapping processed a payload; lines collected before this was introduced carry no mapping and never match. Requires `ROLE_DYNAMIC_MAPPER_ADMIN`.",
+        "operationId" : "read",
+        "parameters" : [ {
+          "name" : "dateFrom",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "dateTo",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "mapping",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Page"
+                }
+              }
+            }
           }
         }
       }
@@ -2892,6 +3017,9 @@
           "403" : {
             "description" : "Forbidden - insufficient permissions to delete extensions"
           },
+          "400" : {
+            "description" : "Built-in extensions cannot be deleted"
+          },
           "404" : {
             "description" : "Extension not found",
             "content" : {
@@ -2902,6 +3030,9 @@
                 }
               }
             }
+          },
+          "409" : {
+            "description" : "Extension is still used by mappings; the response message lists them"
           },
           "500" : {
             "description" : "Internal server error"
@@ -2981,8 +3112,18 @@
       "get" : {
         "tags" : [ "Deployment Controller" ],
         "summary" : "Get effective deployments",
-        "description" : "Retrieves the current effective deployment state by querying all active connectors\nto see which mappings are actually deployed and running. This shows the real-time\ndeployment status across all connectors.\n\n**Use Case:**\n- Monitor which mappings are currently active on each connector\n- Verify deployment consistency across connectors\n- Troubleshoot deployment issues\n\n**Response Format:**\n- Key: Mapping identifier\n- Value: DeploymentMapEntry with connector details\n",
+        "description" : "Retrieves the current effective deployment state by querying all active connectors\nto see which mappings are actually deployed and running. This shows the real-time\ndeployment status across all connectors.\n\n**Use Case:**\n- Monitor which mappings are currently active on each connector\n- Verify deployment consistency across connectors\n- Troubleshoot deployment issues\n\n**Response Format:**\n- Key: Mapping identifier\n- Value: DeploymentMapEntry with connector details\n\n**Query Parameter:**\n- `expand=true`: Value is a DeploymentMapEntryExpanded with the mapping name and\n  direction next to the identifier, and each connector reduced to identifier, name,\n  and connector type\n",
         "operationId" : "getMappingsDeployed",
+        "parameters" : [ {
+          "name" : "expand",
+          "in" : "query",
+          "description" : "Resolve mapping and connector names",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : false
+          }
+        } ],
         "responses" : {
           "200" : {
             "description" : "Effective deployments retrieved successfully",
@@ -3030,8 +3171,18 @@
       "get" : {
         "tags" : [ "Deployment Controller" ],
         "summary" : "Get complete deployment configuration",
-        "description" : "Retrieves the complete deployment configuration map showing all mappings and\nwhich connectors they are configured to be deployed to.\n\n**Response Format:**\n- Key: Mapping identifier\n- Value: List of connector identifiers\n\n**Use Cases:**\n- Get overview of all deployment configurations\n- Export/backup deployment settings\n- Audit deployment assignments\n- Bulk deployment management\n",
+        "description" : "Retrieves the complete deployment configuration map showing all mappings and\nwhich connectors they are configured to be deployed to.\n\n**Response Format:**\n- Key: Mapping identifier\n- Value: List of connector identifiers\n\n**Query Parameter:**\n- `expand=true`: Value is a DeploymentMapEntryExpanded with the mapping name and\n  direction next to the identifier, and each connector as identifier, name, and\n  connector type\n\n**Use Cases:**\n- Get overview of all deployment configurations\n- Export/backup deployment settings\n- Audit deployment assignments\n- Bulk deployment management\n",
         "operationId" : "getDeploymentMap",
+        "parameters" : [ {
+          "name" : "expand",
+          "in" : "query",
+          "description" : "Resolve mapping and connector names",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : false
+          }
+        } ],
         "responses" : {
           "200" : {
             "description" : "Complete deployment configuration retrieved successfully",
@@ -3065,7 +3216,7 @@
       "get" : {
         "tags" : [ "Configuration Management" ],
         "summary" : "Get feature flags",
-        "description" : "Returns feature flags indicating which functionality is available for the current tenant and user.\nThis is useful for UI applications to conditionally enable/disable features.\n\n**Feature Flags:**\n- `outputMappingEnabled`: Whether outbound mapping is available\n- `externalExtensionsEnabled`: Whether external processor extensions are supported\n- `userHasMappingCreateRole`: Whether user can create/modify mappings\n- `userHasMappingAdminRole`: Whether user has administrative privileges\n- `pulsarAvailable`: Whether pulsar is available\n- `deviceIsolationMQTTServiceEnabled`: Whether device siolation for Cumulocity MQTT Service is enabled\n",
+        "description" : "Returns feature flags indicating which functionality is available for the current tenant and user.\nThis is useful for UI applications to conditionally enable/disable features.\n\n**Feature Flags:**\n- `outputMappingEnabled`: Whether outbound mapping is available\n- `externalExtensionsEnabled`: Whether external processor extensions are supported\n- `userHasMappingCreateRole`: Whether user can create/modify mappings\n- `userHasMappingAdminRole`: Whether user has administrative privileges\n- `pulsarAvailable`: Whether pulsar is available\n- `deviceIsolationMQTTServiceEnabled`: Whether device isolation for Cumulocity MQTT Service is enabled\n",
         "operationId" : "getFeatures",
         "responses" : {
           "200" : {
@@ -3114,12 +3265,12 @@
       "get" : {
         "tags" : [ "Cache Controller" ],
         "summary" : "Get cache size",
-        "description" : "Returns the current number of entries in the specified cache. Supported values for cacheId: INVENTORY_CACHE, INBOUND_ID_CACHE.",
+        "description" : "Returns the current number of entries in the specified cache. Supported values for cacheId: INVENTORY_CACHE, INBOUND_ID_CACHE, OUTBOUND_ID_CACHE.",
         "operationId" : "getCacheSize",
         "parameters" : [ {
           "name" : "cacheId",
           "in" : "query",
-          "description" : "Identifier of the cache to query. Allowed values: INVENTORY_CACHE, INBOUND_ID_CACHE",
+          "description" : "Identifier of the cache to query. Allowed values: INVENTORY_CACHE, INBOUND_ID_CACHE, OUTBOUND_ID_CACHE",
           "required" : true,
           "schema" : {
             "type" : "string"
@@ -3145,6 +3296,44 @@
                 "schema" : {
                   "type" : "integer",
                   "format" : "int32"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/smartfunction_agent.json" : {
+      "get" : {
+        "tags" : [ "agent-definition-controller" ],
+        "operationId" : "getSmartFunctionAgent",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/jsonata_agent.json" : {
+      "get" : {
+        "tags" : [ "agent-definition-controller" ],
+        "operationId" : "getJsonataAgent",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
                 }
               }
             }
@@ -3412,6 +3601,13 @@
             "description" : "Current subscription status",
             "enum" : [ "ACTIVE", "INACTIVE", "ERROR", "PENDING" ]
           },
+          "failedDeviceIds" : {
+            "type" : "array",
+            "description" : "Ids of devices whose subscription could not be created (status ERROR)",
+            "items" : {
+              "type" : "string"
+            }
+          },
           "paging" : {
             "$ref" : "#/components/schemas/Paging",
             "description" : "Pagination metadata for the returned devices"
@@ -3470,9 +3666,13 @@
           },
           "parameter" : {
             "type" : "object",
-            "additionalProperties" : {
-              "type" : "object"
-            }
+            "additionalProperties" : { }
+          },
+          "loaded" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
           },
           "extensionType" : {
             "type" : "string",
@@ -3492,7 +3692,7 @@
           "id" : {
             "type" : "string",
             "description" : "Unique identifier for the mapping generated by Cumulocity Core",
-            "example" : 34573838974
+            "example" : "34573838974"
           },
           "identifier" : {
             "type" : "string",
@@ -3563,7 +3763,7 @@
             "type" : "string",
             "description" : "Type of processing the transformation",
             "enum" : [ "DEFAULT", "SUBSTITUTION_AS_CODE", "SMART_FUNCTION", "JSONATA", "EXTENSION_JAVA" ],
-            "example" : "DEFAULT"
+            "example" : "JSONATA"
           },
           "substitutions" : {
             "type" : "array",
@@ -3629,18 +3829,24 @@
           "maxFailureCount" : {
             "type" : "integer",
             "format" : "int64",
-            "description" : "Maximum number of failures before disabling mapping",
+            "description" : "Number of consecutive failures after which the mapping is automatically deactivated. 0 (the default) disables the check. The counter is reset by the first message that processes without an error, and on (re)activation.",
             "example" : 10
           },
           "qos" : {
             "type" : "string",
-            "description" : "Quality of Service level for MQTT",
+            "description" : "Requested delivery guarantee. Clamped at runtime to what the connector the mapping is deployed to actually supports.",
             "enum" : [ "AT_MOST_ONCE", "AT_LEAST_ONCE", "EXACTLY_ONCE" ],
             "example" : "AT_LEAST_ONCE"
           },
           "code" : {
             "type" : "string",
             "description" : "Base64 encoded code for custom substitutions"
+          },
+          "substitutionsAsCode" : {
+            "type" : "boolean",
+            "deprecated" : true,
+            "description" : "Define substitutions as JavaScript code",
+            "writeOnly" : true
           },
           "lastUpdate" : {
             "type" : "integer",
@@ -3676,12 +3882,6 @@
             "description" : "Whether the mapping supports message context - DEPRECATED: This property is no longer used and will be removed in a future version",
             "example" : false,
             "writeOnly" : true
-          },
-          "substitutionsAsCode" : {
-            "type" : "boolean",
-            "deprecated" : true,
-            "description" : "Define substitutions as JavaScript code",
-            "writeOnly" : true
           }
         },
         "required" : [ "active", "debug", "direction", "id", "identifier", "lastUpdate", "mappingType", "maxFailureCount", "name", "qos", "sourceTemplate", "substitutions", "targetAPI", "targetTemplate", "transformationType", "useExternalId" ]
@@ -3714,6 +3914,65 @@
         },
         "required" : [ "pathSource", "pathTarget", "repairStrategy" ]
       },
+      "ValidationErrorResponse" : {
+        "type" : "object",
+        "description" : "Structured response body for a mapping validation failure",
+        "properties" : {
+          "message" : {
+            "type" : "string",
+            "description" : "Human-readable summary of the failure",
+            "example" : "Mapping validation failed"
+          },
+          "errors" : {
+            "type" : "array",
+            "description" : "The individual validation error codes that caused the failure",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "Only_One_Multi_Level_Wildcard", "Multi_Level_Wildcard_Only_At_End", "Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used", "One_Substitution_Defining_Device_Identifier_Must_Be_Used", "Target_Template_Must_Be_Valid_JSON", "Source_Template_Must_Be_Valid_JSON", "MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name", "MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name", "PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name", "PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name", "Wrong_Transformation_Type_Array_In_Source_Template_Or_Target_Template_Requires_Transformation_Type_Smart_Function", "Extension_Must_Be_Defined_For_Extension_Java_Mapping", "Unparsed_MappingType_Requires_Smart_Function_Transformation_Type", "Substitution_Source_Expression_Must_Be_Valid_JSONata", "Substitution_Paths_Must_Not_Be_Empty", "Substitution_Expand_Array_Not_Supported_For_Outbound" ]
+            }
+          },
+          "details" : {
+            "type" : "array",
+            "description" : "Per-failure detail: which element failed and why, when the rule could determine it",
+            "items" : {
+              "$ref" : "#/components/schemas/ValidationIssue"
+            }
+          }
+        }
+      },
+      "ValidationIssue" : {
+        "type" : "object",
+        "description" : "A single validation failure, including which element failed and why",
+        "properties" : {
+          "code" : {
+            "type" : "string",
+            "description" : "Machine-readable error code",
+            "enum" : [ "Only_One_Multi_Level_Wildcard", "Multi_Level_Wildcard_Only_At_End", "Only_One_Substitution_Defining_Device_Identifier_Can_Be_Used", "One_Substitution_Defining_Device_Identifier_Must_Be_Used", "Target_Template_Must_Be_Valid_JSON", "Source_Template_Must_Be_Valid_JSON", "MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name", "MappingTopic_And_MappingTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name", "PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Number_Of_Levels_In_Topic_Name", "PublishTopic_And_PublishTopicSample_Do_Not_Have_Same_Structure_In_Topic_Name", "Wrong_Transformation_Type_Array_In_Source_Template_Or_Target_Template_Requires_Transformation_Type_Smart_Function", "Extension_Must_Be_Defined_For_Extension_Java_Mapping", "Unparsed_MappingType_Requires_Smart_Function_Transformation_Type", "Substitution_Source_Expression_Must_Be_Valid_JSONata", "Substitution_Paths_Must_Not_Be_Empty", "Substitution_Expand_Array_Not_Supported_For_Outbound" ],
+            "example" : "Substitution_Source_Expression_Must_Be_Valid_JSONata"
+          },
+          "field" : {
+            "type" : "string",
+            "description" : "Path of the offending field within the mapping",
+            "example" : "substitutions[2].pathSource"
+          },
+          "index" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Index of the offending substitution, when the failure concerns one",
+            "example" : 2
+          },
+          "value" : {
+            "type" : "string",
+            "description" : "The offending value",
+            "example" : "temperature +"
+          },
+          "reason" : {
+            "type" : "string",
+            "description" : "Why it was rejected, e.g. the expression parser's message",
+            "example" : "Expected end of expression"
+          }
+        }
+      },
       "ConnectorConfiguration" : {
         "type" : "object",
         "properties" : {
@@ -3725,7 +3984,7 @@
           "connectorType" : {
             "type" : "string",
             "description" : "The type of a connector. Must be one of MQTT, CUMULOCITY_MQTT_SERVICE, KAFKA, HTTP, WEB_HOOK",
-            "enum" : [ "MQTT", "CUMULOCITY_MQTT_SERVICE", "KAFKA", "HTTP", "WEB_HOOK", "WEB_HOOK_INTERNAL", "PULSAR", "CUMULOCITY_MQTT_SERVICE_PULSAR", "AMQP_091", "AMQP_10", "TEST" ],
+            "enum" : [ "MQTT", "CUMULOCITY_MQTT_SERVICE", "KAFKA", "HTTP", "WEB_HOOK", "WEB_HOOK_INTERNAL", "PULSAR", "CUMULOCITY_MQTT_SERVICE_PULSAR", "AMQP_091", "AMQP_10", "GOOGLE_PUBSUB", "REST_POLLING", "TEST" ],
             "example" : "MQTT"
           },
           "enabled" : {
@@ -3740,9 +3999,7 @@
           },
           "properties" : {
             "type" : "object",
-            "additionalProperties" : {
-              "type" : "object"
-            },
+            "additionalProperties" : { },
             "description" : "The properties of the connector used to establish a connection",
             "example" : {
               "protocol" : "mqtt://",
@@ -3770,10 +4027,6 @@
             "type" : "string",
             "enum" : [ "INBOUND", "OUTBOUND", "INBOUND_SUBSTITUTION_AS_CODE", "OUTBOUND_SUBSTITUTION_AS_CODE", "INBOUND_SMART_FUNCTION", "OUTBOUND_SMART_FUNCTION", "SHARED", "SYSTEM" ]
           },
-          "direction" : {
-            "type" : "string",
-            "enum" : [ "INBOUND", "OUTBOUND", "UNSPECIFIED" ]
-          },
           "code" : {
             "type" : "string"
           },
@@ -3785,6 +4038,17 @@
           },
           "defaultTemplate" : {
             "type" : "boolean"
+          },
+          "samplePayload" : {
+            "type" : "string"
+          },
+          "sampleTopic" : {
+            "type" : "string"
+          },
+          "direction" : {
+            "type" : "string",
+            "enum" : [ "INBOUND", "OUTBOUND", "UNSPECIFIED" ],
+            "readOnly" : true
           }
         },
         "required" : [ "code", "defaultTemplate", "description", "id", "internal", "name", "readonly", "templateType" ]
@@ -3848,7 +4112,7 @@
           "sourceId" : {
             "type" : "string",
             "description" : "Cumulocity internal device source ID",
-            "example" : 12345
+            "example" : "12345"
           },
           "externalId" : {
             "type" : "string",
@@ -3877,146 +4141,15 @@
             "type" : "string",
             "description" : "Response received from the target system"
           },
-          "error" : {
-            "type" : "object",
-            "description" : "Error that occurred during request execution, if any",
-            "properties" : {
-              "cause" : {
-                "type" : "object",
-                "properties" : {
-                  "stackTrace" : {
-                    "type" : "array",
-                    "items" : {
-                      "type" : "object",
-                      "properties" : {
-                        "classLoaderName" : {
-                          "type" : "string"
-                        },
-                        "moduleName" : {
-                          "type" : "string"
-                        },
-                        "moduleVersion" : {
-                          "type" : "string"
-                        },
-                        "methodName" : {
-                          "type" : "string"
-                        },
-                        "fileName" : {
-                          "type" : "string"
-                        },
-                        "lineNumber" : {
-                          "type" : "integer",
-                          "format" : "int32"
-                        },
-                        "className" : {
-                          "type" : "string"
-                        },
-                        "nativeMethod" : {
-                          "type" : "boolean"
-                        }
-                      }
-                    }
-                  },
-                  "message" : {
-                    "type" : "string"
-                  },
-                  "localizedMessage" : {
-                    "type" : "string"
-                  }
-                }
-              },
-              "stackTrace" : {
-                "type" : "array",
-                "items" : {
-                  "type" : "object",
-                  "properties" : {
-                    "classLoaderName" : {
-                      "type" : "string"
-                    },
-                    "moduleName" : {
-                      "type" : "string"
-                    },
-                    "moduleVersion" : {
-                      "type" : "string"
-                    },
-                    "methodName" : {
-                      "type" : "string"
-                    },
-                    "fileName" : {
-                      "type" : "string"
-                    },
-                    "lineNumber" : {
-                      "type" : "integer",
-                      "format" : "int32"
-                    },
-                    "className" : {
-                      "type" : "string"
-                    },
-                    "nativeMethod" : {
-                      "type" : "boolean"
-                    }
-                  }
-                }
-              },
-              "message" : {
-                "type" : "string"
-              },
-              "suppressed" : {
-                "type" : "array",
-                "items" : {
-                  "type" : "object",
-                  "properties" : {
-                    "stackTrace" : {
-                      "type" : "array",
-                      "items" : {
-                        "type" : "object",
-                        "properties" : {
-                          "classLoaderName" : {
-                            "type" : "string"
-                          },
-                          "moduleName" : {
-                            "type" : "string"
-                          },
-                          "moduleVersion" : {
-                            "type" : "string"
-                          },
-                          "methodName" : {
-                            "type" : "string"
-                          },
-                          "fileName" : {
-                            "type" : "string"
-                          },
-                          "lineNumber" : {
-                            "type" : "integer",
-                            "format" : "int32"
-                          },
-                          "className" : {
-                            "type" : "string"
-                          },
-                          "nativeMethod" : {
-                            "type" : "boolean"
-                          }
-                        }
-                      }
-                    },
-                    "message" : {
-                      "type" : "string"
-                    },
-                    "localizedMessage" : {
-                      "type" : "string"
-                    }
-                  }
-                }
-              },
-              "localizedMessage" : {
-                "type" : "string"
-              }
-            }
-          },
           "binaryPayload" : {
             "type" : "string",
             "format" : "byte",
             "description" : "Pre-encoded binary payload (e.g. SparkPlug B proto bytes). When set, connectors use this instead of encoding request as UTF-8."
+          },
+          "errorMessage" : {
+            "type" : "string",
+            "description" : "Message of the error that occurred during request execution; absent when the request succeeded",
+            "readOnly" : true
           }
         }
       },
@@ -4062,11 +4195,18 @@
           },
           "testDeviceCreated" : {
             "type" : "boolean",
-            "description" : "Whether the test device was created by this test (true) or already existed and was used as is (false). An existing device is not re-tagged d11r_testDevice. Only set when testDeviceId is set."
+            "description" : "Whether the test device was created by this test (true) or already existed and was used as is (false). An existing device is not tagged d11r_testDevice and is not listed under Monitoring > Test device. Only set when testDeviceId is set."
           },
           "testDeviceExternalId" : {
             "type" : "string",
             "description" : "External ID the test device is registered under: \"d11r_liveTest_\" + the external ID the mapping produces, so a live test never uses the external ID of the real device. Only set when testDeviceId is set."
+          },
+          "publishedConnectors" : {
+            "type" : "array",
+            "description" : "Names of the connectors an outbound live test (send=true) published through: the connectors the mapping is deployed on, as saved. Empty for every other test.",
+            "items" : {
+              "type" : "string"
+            }
           },
           "key" : {
             "type" : "string",
@@ -4077,7 +4217,7 @@
       },
       "ServiceOperation" : {
         "type" : "object",
-        "description" : "Service operation request containing the operation type and parameters",
+        "description" : "Service operation to execute",
         "properties" : {
           "operation" : {
             "type" : "string",
@@ -4106,7 +4246,7 @@
           "id" : {
             "type" : "string",
             "description" : "Managed-object id of this version record, assigned by Cumulocity Core",
-            "example" : 34573838974
+            "example" : "34573838974"
           },
           "identifier" : {
             "type" : "string",
@@ -4155,7 +4295,8 @@
           "topic" : {
             "type" : "string",
             "description" : "Topic to subscribe to (MQTT wildcards supported)",
-            "example" : "sensors/#"
+            "example" : "sensors/#",
+            "minLength" : 1
           },
           "maxMessages" : {
             "type" : "integer",
@@ -4172,7 +4313,7 @@
           "sourceId" : {
             "type" : "string",
             "description" : "C8Y managed object ID (device or group) for outbound notifications (OUTBOUND only; required — without a source ID no Notification 2.0 subscription is created and no events will be captured).",
-            "example" : 12345
+            "example" : "12345"
           },
           "deviceType" : {
             "type" : "string",
@@ -4187,6 +4328,21 @@
           }
         },
         "required" : [ "topic" ]
+      },
+      "ConnectionTestResult" : {
+        "type" : "object",
+        "properties" : {
+          "success" : {
+            "type" : "boolean"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "statusCode" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
       },
       "MappingTreeNode" : {
         "type" : "object",
@@ -4226,14 +4382,12 @@
           "tenant" : {
             "type" : "string"
           },
-          "treeLock" : {
-            "type" : "object"
+          "treeLock" : { },
+          "mappingOptional" : {
+            "$ref" : "#/components/schemas/Mapping"
           },
           "parentOptional" : {
             "$ref" : "#/components/schemas/MappingTreeNode"
-          },
-          "mappingOptional" : {
-            "$ref" : "#/components/schemas/Mapping"
           }
         }
       },
@@ -4244,7 +4398,7 @@
           "id" : {
             "type" : "string",
             "description" : "Unique identifier for the mapping generated by Cumulocity Core",
-            "example" : 34573838974
+            "example" : "34573838974"
           },
           "name" : {
             "type" : "string",
@@ -4275,13 +4429,13 @@
           "messagesReceived" : {
             "type" : "integer",
             "format" : "int64",
-            "description" : "Total number of messages processed by this mapping",
+            "description" : "Total number of messages processed by this mapping. Counted per mapping, so one message matching several mappings increments each of them.",
             "example" : 1247
           },
           "errors" : {
             "type" : "integer",
             "format" : "int64",
-            "description" : "Total number of processing errors",
+            "description" : "Total number of processing errors over the lifetime of this mapping. Never reset by successful processing.",
             "example" : 3
           },
           "currentFailureCount" : {
@@ -4292,11 +4446,81 @@
           },
           "loadingError" : {
             "type" : "string",
-            "description" : "Error message if mapping failed to load",
+            "description" : "Error message if the mapping failed to load; empty otherwise",
             "example" : "Invalid JSON template"
+          },
+          "cursor" : {
+            "type" : "string",
+            "description" : "Incremental-fetch cursor for connectors that support it (e.g. REST Polling); null if unused",
+            "example" : "2026-09-21T10:00:00.000Z"
+          },
+          "messagesProcessed" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Messages that completed processing without error and were not filtered out",
+            "example" : 1240
+          },
+          "messagesFiltered" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Messages dropped on purpose (filter did not match, or the mapping chose to ignore them); not an error",
+            "example" : 4
+          },
+          "lastMessageAt" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Epoch milliseconds of the last message this mapping finished processing (any outcome); 0 if none",
+            "example" : 1759478400000
+          },
+          "lastErrorAt" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Epoch milliseconds of the last error; 0 if none",
+            "example" : 1759478400000
+          },
+          "lastError" : {
+            "type" : "string",
+            "description" : "Message of the most recent error, truncated; null if none",
+            "example" : "Substitution failed: no value for 'time'"
+          },
+          "requestsCreated" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Requests produced by this mapping (Cumulocity calls inbound, broker publishes outbound)",
+            "example" : 1302
+          },
+          "requestsFailed" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Requests that failed",
+            "example" : 2
+          },
+          "warnings" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Warnings raised while processing",
+            "example" : 4
+          },
+          "timedMessages" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Number of messages the processing-time figures are based on",
+            "example" : 1247
+          },
+          "processingTimeTotalMs" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Total processing time in milliseconds over timedMessages",
+            "example" : 9800
+          },
+          "processingTimeMaxMs" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Slowest single message in milliseconds",
+            "example" : 420
           }
         },
-        "required" : [ "currentFailureCount", "direction", "errors", "id", "identifier", "loadingError", "mappingTopic", "messagesReceived", "name", "publishTopic" ]
+        "required" : [ "currentFailureCount", "direction", "errors", "id", "identifier", "mappingTopic", "messagesReceived", "name", "publishTopic" ]
       },
       "ConnectorStatusEvent" : {
         "type" : "object",
@@ -4315,7 +4539,7 @@
           "status" : {
             "type" : "string",
             "description" : "Current connection status",
-            "enum" : [ "UNKNOWN", "CONFIGURED", "ENABLED", "CONNECTING", "CONNECTED", "DISCONNECTED", "DISCONNECTING", "FAILED" ],
+            "enum" : [ "UNKNOWN", "CONFIGURED", "ENABLED", "CONNECTING", "CONNECTED", "DISCONNECTED", "DISCONNECTING", "FAILED", "RETRYING" ],
             "example" : "CONNECTED"
           },
           "message" : {
@@ -4325,11 +4549,49 @@
           },
           "date" : {
             "type" : "string",
-            "description" : "Timestamp of the status event in yyyy-MM-dd HH:mm:ss format",
-            "example" : "2024-01-15 10:30:00"
+            "description" : "ISO-8601 UTC timestamp of the status event",
+            "example" : "2024-01-15T10:30:00.000Z"
           }
         },
         "required" : [ "connectorIdentifier", "connectorName", "date", "message", "status" ]
+      },
+      "Page" : {
+        "type" : "object",
+        "properties" : {
+          "dateFrom" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "dateTo" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "before" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "chunks" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "lines" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "omitted" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "more" : {
+            "type" : "boolean"
+          },
+          "empty" : {
+            "type" : "boolean"
+          },
+          "logs" : {
+            "type" : "string"
+          }
+        }
       },
       "MappingVersionCount" : {
         "type" : "object",
@@ -4338,7 +4600,7 @@
           "id" : {
             "type" : "string",
             "description" : "Managed-object id of the mapping",
-            "example" : 34573838974
+            "example" : "34573838974"
           },
           "versionCount" : {
             "type" : "integer",
@@ -4372,6 +4634,11 @@
             "type" : "boolean",
             "description" : "Whether this is an external extension (true) or built-in extension (false)",
             "example" : true
+          },
+          "message" : {
+            "type" : "string",
+            "description" : "Reason why the extension could not be loaded at all, e.g. a missing or invalid registration file. Empty if the jar could be read; see the entries for per-entry failures.",
+            "example" : "Registration file: extension-external.yaml missing"
           },
           "extensionEntries" : {
             "type" : "object",
@@ -4407,6 +4674,11 @@
             "description" : "Client identifier of the broker client that sent the message",
             "example" : "device-1234"
           },
+          "key" : {
+            "type" : "string",
+            "description" : "Message key, if the broker protocol has one (e.g. Kafka record key); null otherwise",
+            "example" : "863859042393327"
+          },
           "connectorName" : {
             "type" : "string",
             "description" : "Display name of the connector",
@@ -4430,7 +4702,7 @@
           "sourceId" : {
             "type" : "string",
             "description" : "C8Y source device ID (outbound only)",
-            "example" : 12345
+            "example" : "12345"
           }
         }
       },
@@ -4502,6 +4774,20 @@
             "example" : 24,
             "minimum" : 1
           },
+          "outboundExternalIdCacheSize" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Size of the cache for outbound external ID lookups (internal id -> external id, used by mappings with useExternalId enabled). Set to 0 to disable caching.",
+            "example" : 1000,
+            "minimum" : 0
+          },
+          "outboundExternalIdCacheRetention" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Retention time in hours for outbound external ID cache entries.",
+            "example" : 24,
+            "minimum" : 1
+          },
           "inventoryCacheSize" : {
             "type" : "integer",
             "format" : "int32",
@@ -4563,6 +4849,13 @@
             "example" : 1440,
             "minimum" : 0
           },
+          "maxProcessingAttempts" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "How many times a message may fail before the connector drops it (acknowledges it, with the error kept in the mapping status) instead of asking the broker to redeliver it. Applies to connectors that retry: MQTT, Pulsar, Cumulocity MQTT Service, Kafka, AMQP, Google Pub/Sub, outbound Notification 2.0, and REST polling, where a page of polled data that keeps failing is skipped (server errors do not count). Default 3.",
+            "example" : 3,
+            "minimum" : 1
+          },
           "suppressDeprecationWarning" : {
             "type" : "boolean",
             "description" : "Suppress deprecation warning in UI.",
@@ -4571,7 +4864,7 @@
           "acceptedDeprecationNotice" : {
             "type" : "string",
             "description" : "Holds the version string of the last accepted SUBSTITUTION_AS_CODE deprecation notice (e.g. '6.2.0'). If the value matches the current release version the notice is not shown again. A new version string triggers a new acceptance.",
-            "example" : 6.2
+            "example" : "6.2"
           },
           "supportESM" : {
             "type" : "boolean",
@@ -4602,6 +4895,18 @@
             "example" : 1000,
             "minimum" : 1
           },
+          "contextPoolSize" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Maximum number of GraalVM contexts kept idle in the per-mapping context pool. Higher values reduce per-message context-creation overhead at high throughput; lower values reduce memory usage. Each pooled context holds a pre-loaded onMessage function and shared/system code.",
+            "example" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          },
+          "serviceLogs" : {
+            "$ref" : "#/components/schemas/ServiceLogsConfiguration",
+            "description" : "Settings of the service log (Monitoring > Service logs): what is stored for this tenant, how much, and for how long. Every value has a default; unset values keep it."
+          },
           "codeTemplates" : {
             "type" : "object",
             "additionalProperties" : {
@@ -4610,7 +4915,70 @@
             "description" : "Map of code templates used for custom processing logic in mappings"
           }
         },
-        "required" : [ "cacheAliasMaps", "deviceIsolationMQTTServiceEnabled", "engineRotationThreshold", "externalExtensionEnabled", "externalIdBinding", "flowStateRetention", "inboundExternalIdCacheRetention", "inboundExternalIdCacheSize", "inventoryCacheRetention", "inventoryCacheSize", "inventoryFragmentsToCache", "logConnectorErrorInBackend", "logPayload", "logSubstitution", "mappingVersionRetention", "maxCPUTimeMS", "outboundMappingEnabled", "pipelineTimeoutMS", "sendConnectorLifecycle", "sendMappingStatus", "sendNotificationLifecycle", "sendSubscriptionEvents", "supportESM", "suppressDeprecationWarning" ]
+        "required" : [ "cacheAliasMaps", "contextPoolSize", "deviceIsolationMQTTServiceEnabled", "engineRotationThreshold", "externalExtensionEnabled", "externalIdBinding", "flowStateRetention", "inboundExternalIdCacheRetention", "inboundExternalIdCacheSize", "inventoryCacheRetention", "inventoryCacheSize", "inventoryFragmentsToCache", "logConnectorErrorInBackend", "logPayload", "logSubstitution", "mappingVersionRetention", "maxCPUTimeMS", "outboundExternalIdCacheRetention", "outboundExternalIdCacheSize", "outboundMappingEnabled", "pipelineTimeoutMS", "sendConnectorLifecycle", "sendMappingStatus", "sendNotificationLifecycle", "sendSubscriptionEvents", "supportESM", "suppressDeprecationWarning" ]
+      },
+      "ServiceLogsConfiguration" : {
+        "type" : "object",
+        "description" : "Settings of the service log: which of this tenant's log lines are stored, how many, and for how long",
+        "properties" : {
+          "enabled" : {
+            "type" : "boolean",
+            "description" : "Store this tenant's log lines so its administrators can read them under Monitoring > Service logs.",
+            "example" : true
+          },
+          "minLevel" : {
+            "type" : "string",
+            "description" : "Lowest level that is stored: TRACE, DEBUG, INFO, WARN or ERROR. INFO lines can contain device payloads.",
+            "example" : "INFO"
+          },
+          "intervalMs" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "How often this tenant's collected lines are stored, in milliseconds (5000 to 3600000).",
+            "example" : 30000
+          },
+          "maxLinesPerRun" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Most lines stored per run; the rest follows in the next run (1 to 5000).",
+            "example" : 500
+          },
+          "maxChunkBytes" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Size of one stored event in bytes (1024 to 262144).",
+            "example" : 65536
+          },
+          "maxRecordBytes" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "A single very long message or stack trace is cut to this size in bytes (256 to 65536, at most the event size).",
+            "example" : 8192
+          },
+          "maxBufferedRecords" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Lines that may wait in memory between two runs; when full the oldest are dropped (100 to 10000, and at most 16 MB in total).",
+            "example" : 2000
+          },
+          "retentionHours" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "How long stored lines are kept, in hours (1 to 720).",
+            "example" : 24
+          },
+          "retentionEnabled" : {
+            "type" : "boolean",
+            "description" : "Delete stored lines once they are older than the retention. Keep on, or they pile up.",
+            "example" : true
+          },
+          "retentionIntervalMs" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "How often old lines are deleted, in milliseconds (60000 to 86400000).",
+            "example" : 3600000
+          }
+        }
       },
       "Feature" : {
         "type" : "object",
@@ -4654,7 +5022,7 @@
           "acceptedDeprecationNotice" : {
             "type" : "string",
             "description" : "Holds the version string of the last accepted SUBSTITUTION_AS_CODE deprecation notice (e.g. '6.2.0'). If the value matches the current release version the notice is not shown again.",
-            "example" : 6.2
+            "example" : "6.2"
           }
         },
         "required" : [ "deviceIsolationMQTTServiceEnabled", "externalExtensionsEnabled", "outputMappingEnabled", "pulsarAvailable", "suppressDeprecationWarning", "userHasMappingAdminRole", "userHasMappingCreateRole" ]
@@ -4674,7 +5042,7 @@
           },
           "type" : {
             "type" : "string",
-            "enum" : [ "ID_STRING_PROPERTY", "STRING_PROPERTY", "SENSITIVE_STRING_PROPERTY", "NUMERIC_PROPERTY", "BOOLEAN_PROPERTY", "OPTION_PROPERTY", "STRING_LARGE_PROPERTY", "MAP_PROPERTY" ]
+            "enum" : [ "ID_STRING_PROPERTY", "STRING_PROPERTY", "SENSITIVE_STRING_PROPERTY", "NUMERIC_PROPERTY", "BOOLEAN_PROPERTY", "OPTION_PROPERTY", "STRING_LARGE_PROPERTY", "SENSITIVE_STRING_LARGE_PROPERTY", "MAP_PROPERTY" ]
           },
           "readonly" : {
             "type" : "boolean"
@@ -4682,9 +5050,7 @@
           "hidden" : {
             "type" : "boolean"
           },
-          "defaultValue" : {
-            "type" : "object"
-          },
+          "defaultValue" : { },
           "options" : {
             "type" : "object",
             "additionalProperties" : {
@@ -4693,6 +5059,12 @@
           },
           "condition" : {
             "$ref" : "#/components/schemas/ConnectorPropertyCondition"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "group" : {
+            "type" : "string"
           }
         },
         "required" : [ "description", "hidden", "order", "readonly", "required", "type" ]
@@ -4728,7 +5100,7 @@
           "connectorType" : {
             "type" : "string",
             "description" : "The type of the Connector",
-            "enum" : [ "MQTT", "CUMULOCITY_MQTT_SERVICE", "KAFKA", "HTTP", "WEB_HOOK", "WEB_HOOK_INTERNAL", "PULSAR", "CUMULOCITY_MQTT_SERVICE_PULSAR", "AMQP_091", "AMQP_10", "TEST" ],
+            "enum" : [ "MQTT", "CUMULOCITY_MQTT_SERVICE", "KAFKA", "HTTP", "WEB_HOOK", "WEB_HOOK_INTERNAL", "PULSAR", "CUMULOCITY_MQTT_SERVICE_PULSAR", "AMQP_091", "AMQP_10", "GOOGLE_PUBSUB", "REST_POLLING", "TEST" ],
             "example" : "MQTT"
           },
           "singleton" : {
@@ -4765,6 +5137,20 @@
               "type" : "string",
               "enum" : [ "INBOUND", "OUTBOUND", "UNSPECIFIED" ]
             }
+          },
+          "supportedQos" : {
+            "type" : "array",
+            "description" : "The QoS levels this connector can actually honour. A mapping configured with a stronger level is clamped to the strongest level in this list when it runs on this connector.",
+            "example" : [ "AT_MOST_ONCE", "AT_LEAST_ONCE" ],
+            "items" : {
+              "type" : "string",
+              "enum" : [ "AT_MOST_ONCE", "AT_LEAST_ONCE", "EXACTLY_ONCE" ]
+            }
+          },
+          "supportsConnectionTest" : {
+            "type" : "boolean",
+            "description" : "True if the connector can verify connectivity/authentication of an (unsaved) configuration via the connector test endpoint.",
+            "example" : true
           }
         },
         "required" : [ "connectorType", "description", "name", "properties", "singleton", "supportedDirections", "supportsMessageContext" ]

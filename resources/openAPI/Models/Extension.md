@@ -7,7 +7,7 @@
 | **loaded** | **String** | Loading status of the extension | [default to null] |
 | **name** | **String** | Display name of the extension | [default to null] |
 | **external** | **Boolean** | Whether this is an external extension (true) or built-in extension (false) | [default to null] |
-| **message** | **String** | Reason why the extension could not be loaded at all, for example a missing or invalid registration file. Empty if the jar could be read; see the entries for per-entry failures. | [optional] [default to null] |
+| **message** | **String** | Reason why the extension could not be loaded at all, e.g. a missing or invalid registration file. Empty if the jar could be read; see the entries for per-entry failures. | [optional] [default to null] |
 | **extensionEntries** | [**Map**](ExtensionEntry.md) | Map of available extension entry points and their configurations | [default to null] |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
