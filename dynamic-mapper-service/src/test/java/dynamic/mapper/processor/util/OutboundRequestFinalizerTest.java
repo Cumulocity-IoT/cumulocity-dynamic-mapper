@@ -45,6 +45,16 @@ class OutboundRequestFinalizerTest {
     }
 
     @Test
+    void aNonNumericResourceIdCannotAlterThePath() {
+        DynamicMapperRequest r = request(API.EVENT, RequestMethod.PUT, "{\"id\":\"../other\",\"text\":\"x\"}");
+
+        OutboundRequestFinalizer.finalizeRequest(r, "42", r.getRequest(), "t");
+
+        assertTrue(r.hasError());
+        assertNull(r.getPathCumulocity());
+    }
+
+    @Test
     void updatingAnEventWithoutItsIdFailsInsteadOfUsingTheDeviceId() {
         DynamicMapperRequest r = request(API.EVENT, RequestMethod.DELETE, "{\"text\":\"x\"}");
 

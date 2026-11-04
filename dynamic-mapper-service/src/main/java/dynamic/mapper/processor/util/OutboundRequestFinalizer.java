@@ -122,7 +122,7 @@ public final class OutboundRequestFinalizer {
             String resourceId = request.getApi() == API.INVENTORY ? internalId
                     : readResourceId(payloadJson, objectMapper);
             if (resourceId == null) {
-                String message = String.format("%s requires the id of the %s to address in the payload",
+                String message = String.format("%s requires a numeric id of the %s to address in the payload",
                         request.getMethod(), request.getApi().name);
                 log.warn("{} - {}", tenant, message);
                 request.setError(new IllegalArgumentException(message));
@@ -147,11 +147,12 @@ public final class OutboundRequestFinalizer {
         }
     }
 
-    /** The top-level "id" of the resource in the payload, or null when absent or not a JSON object. */
+    /** The top-level "id" of the resource in the payload, or null when absent, not a JSON object or not
+     * numeric. Cumulocity IDs are numeric; anything else would alter the URL path it is appended to. */
     private static String readResourceId(String payload, ObjectMapper objectMapper) {
         try {
             JsonNode id = objectMapper.readTree(payload).get("id");
-            return id == null || id.isNull() || id.asText().isEmpty() ? null : id.asText();
+            return id == null || id.isNull() || !id.asText().matches("\\d+") ? null : id.asText();
         } catch (Exception e) {
             return null;
         }
