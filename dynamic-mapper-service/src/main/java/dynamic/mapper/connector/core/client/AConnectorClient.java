@@ -627,6 +627,7 @@ public abstract class AConnectorClient {
                 tenant,
                 connectorName,
                 connectorIdentifier,
+                () -> this.connectorType,
                 this::sendConnectorLifecycle, connectorRegistry);
 
         // This is a fresh client instance — either a genuine microservice restart, or simply this

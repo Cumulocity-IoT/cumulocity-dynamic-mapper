@@ -36,6 +36,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 /**
  * Manages connection state and status transitions for a connector.
@@ -54,8 +55,17 @@ public class ConnectionStateManager {
 
     /** Current status exposed as its {@link ConnectorStatus} ordinal (see the enum's declaration
      * order), so Grafana/Prometheus can alert on a connector sitting in FAILED without needing a
-     * separate up/down metric per status. Deregistered in {@link #close()}. */
-    private final Gauge statusGauge;
+     * separate up/down metric per status. Deregistered in {@link #close()}.
+     *
+     * <p>Registration is deferred to the first status update (see {@link #ensureStatusGaugeRegistered()})
+     * rather than done here in the constructor: {@code connectorTypeSupplier} reads
+     * {@code AConnectorClient.connectorType}, which every concrete connector subclass sets in its
+     * own constructor body, i.e. only AFTER this manager is constructed from within the shared
+     * {@code AConnectorClient} base constructor. By the time any status update fires, the
+     * connector has finished constructing and the type is available. */
+    private volatile Gauge statusGauge;
+    private final Object statusGaugeLock = new Object();
+    private final Supplier<ConnectorType> connectorTypeSupplier;
 
     /** Guards {@link #previousStatus} and the session bundling in {@link #updateSession}, which
      * must be evaluated together atomically: both are mutated from independent caller threads
@@ -97,34 +107,53 @@ public class ConnectionStateManager {
     public ConnectionStateManager(String tenant,
                                  String connectorName,
                                  String connectorIdentifier,
+                                 Supplier<ConnectorType> connectorTypeSupplier,
                                  BiConsumer<ConnectorStatusHistory, Boolean> statusChangeCallback,
                                  ConnectorRegistry connectorRegistry) {
         this.tenant = tenant;
         this.connectorName = connectorName;
         this.connectorIdentifier = connectorIdentifier;
+        this.connectorTypeSupplier = connectorTypeSupplier;
         this.statusChangeCallback = statusChangeCallback;
         this.connectorRegistry = connectorRegistry;
         this.connectorStatus = new AtomicReference<>(
             ConnectorStatusEvent.unknown(connectorName, connectorIdentifier));
-        this.statusGauge = Gauge.builder("dynmapper_connector_status", connectorStatus,
-                ref -> {
-                    ConnectorStatusEvent event = ref.get();
-                    ConnectorStatus status = event != null ? event.getStatus() : null;
-                    return status != null ? status.ordinal() : -1;
-                })
-                .tag("tenant", tenant)
-                .tag("connector", connectorIdentifier)
-                .description("Current connector status as the ConnectorStatus enum ordinal: "
-                        + "0=UNKNOWN, 1=CONFIGURED, 2=ENABLED, 3=CONNECTING, 4=CONNECTED, "
-                        + "5=DISCONNECTED, 6=DISCONNECTING, 7=FAILED, 8=RETRYING")
-                .register(Metrics.globalRegistry);
+    }
+
+    /** Registers {@link #statusGauge} on first use — see the field's javadoc for why this can't
+     * happen in the constructor. Safe to call repeatedly; only the first call registers anything. */
+    private void ensureStatusGaugeRegistered() {
+        if (statusGauge != null) {
+            return;
+        }
+        synchronized (statusGaugeLock) {
+            if (statusGauge != null) {
+                return;
+            }
+            ConnectorType type = connectorTypeSupplier != null ? connectorTypeSupplier.get() : null;
+            statusGauge = Gauge.builder("dynmapper_connector_status", connectorStatus,
+                    ref -> {
+                        ConnectorStatusEvent event = ref.get();
+                        ConnectorStatus status = event != null ? event.getStatus() : null;
+                        return status != null ? status.ordinal() : -1;
+                    })
+                    .tag("tenant", tenant)
+                    .tag("connectorName", connectorName)
+                    .tag("connectorType", type != null ? type.name() : "UNKNOWN")
+                    .description("Current connector status as the ConnectorStatus enum ordinal: "
+                            + "0=UNKNOWN, 1=CONFIGURED, 2=ENABLED, 3=CONNECTING, 4=CONNECTED, "
+                            + "5=DISCONNECTED, 6=DISCONNECTING, 7=FAILED, 8=RETRYING")
+                    .register(Metrics.globalRegistry);
+        }
     }
 
     /** Deregisters this manager's gauge. Call once the connector it belongs to is torn down
      * (see {@code AConnectorClient.stopHousekeepingAndClose()}) — otherwise the gauge keeps
      * reporting the last status forever under a (tenant, connector) pair that no longer exists. */
     public void close() {
-        Metrics.globalRegistry.remove(statusGauge);
+        if (statusGauge != null) {
+            Metrics.globalRegistry.remove(statusGauge);
+        }
     }
     
     public boolean isConnected() {
@@ -164,6 +193,7 @@ public class ConnectionStateManager {
     }
 
     private void updateStatus(ConnectorStatus status, String message, boolean sendEvent) {
+        ensureStatusGaugeRegistered();
         // Suppress reporting a DISCONNECTING transition when there's no live connection to tear
         // down in the first place — e.g. reconnect()'s disconnect-initialize-connect sequence
         // runs its defensive disconnect() step even for a connector that was never connected,
@@ -209,6 +239,7 @@ public class ConnectionStateManager {
     }
 
     public void updateStatusWithError(Exception e) {
+        ensureStatusGaugeRegistered();
         // Copy-on-write: create a new event instead of mutating the shared object.
         ConnectorStatusEvent newStatus = new ConnectorStatusEvent(ConnectorStatus.FAILED);
         newStatus.connectorName = connectorName;
@@ -231,6 +262,7 @@ public class ConnectionStateManager {
      * a retry is already scheduled.
      */
     public void updateStatusRetrying(Exception e, long nextRetryDelaySeconds) {
+        ensureStatusGaugeRegistered();
         ConnectorStatusEvent newStatus = new ConnectorStatusEvent(ConnectorStatus.RETRYING);
         newStatus.connectorName = connectorName;
         newStatus.connectorIdentifier = connectorIdentifier;

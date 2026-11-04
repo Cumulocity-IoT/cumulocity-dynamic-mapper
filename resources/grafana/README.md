@@ -13,7 +13,14 @@ then select a Prometheus-compatible datasource when prompted.
 
 - **datasource** — any Prometheus-compatible datasource (Prometheus/Mimir/VictoriaMetrics).
 - **tenant** — from the `tenant` label on `dynmapper_inbound_message_total`.
-- **connector** — from the `connector` label, scoped to the selected tenant(s).
+- **connectorName** — from the `connectorName` label, scoped to the selected tenant(s).
+- **connectorType** — from the `connectorType` label (e.g. `MQTT`, `KAFKA`, `HTTP`), scoped to the
+  selected tenant(s) and connector name(s).
+
+Connector metrics are tagged by `connectorName`/`connectorType` rather than the connector's
+internal identifier, so dashboards and alerts read as e.g. `"Plant A MQTT" / MQTT` instead of an
+opaque id. Two names could in principle collide (e.g. after a rename), in which case their series
+sum together — this trades a theoretical collision for a dashboard that's actually readable.
 
 ## Known caveats — verify before relying on this dashboard
 
@@ -38,7 +45,7 @@ then select a Prometheus-compatible datasource when prompted.
   is shown for outbound; the inbound panel has a true hit-rate percentage since
   `dynmapper_inbound_identity_requests_total` counts every lookup.
 - **C8Y Processing Time** and **Available C8Y Connections** are process-wide,
-  untagged metrics — the Tenant/Connector selectors don't filter them.
+  untagged metrics — the Tenant/Connector Name/Connector Type selectors don't filter them.
 - The Inventory cache (`dynmapper_inbound_inventory_cache_size`) has no hit
   counter at all, so only its size is shown.
 
@@ -46,12 +53,12 @@ then select a Prometheus-compatible datasource when prompted.
 
 | Metric | Type | Tags | Source |
 |---|---|---|---|
-| `dynmapper_inbound_message_total` | Counter | tenant, connector | `InboundMessageDispatcher` |
-| `dynmapper_inbound_processing_time` | Timer | tenant, connector | `InboundMessageDispatcher` |
-| `dynmapper_inbound_processing_errors_total` | Counter | tenant, connector | `InboundMessageDispatcher` |
-| `dynmapper_outbound_message_total` | Counter | tenant, connector | `OutboundMessageDispatcher` |
-| `dynmapper_outbound_processing_time` | Timer | tenant, connector | `OutboundMessageDispatcher` |
-| `dynmapper_outbound_processing_errors_total` | Counter | tenant, connector | `OutboundMessageDispatcher` |
+| `dynmapper_inbound_message_total` | Counter | tenant, connectorName, connectorType | `InboundMessageDispatcher` |
+| `dynmapper_inbound_processing_time` | Timer | tenant, connectorName, connectorType | `InboundMessageDispatcher` |
+| `dynmapper_inbound_processing_errors_total` | Counter | tenant, connectorName, connectorType | `InboundMessageDispatcher` |
+| `dynmapper_outbound_message_total` | Counter | tenant, connectorName, connectorType | `OutboundMessageDispatcher` |
+| `dynmapper_outbound_processing_time` | Timer | tenant, connectorName, connectorType | `OutboundMessageDispatcher` |
+| `dynmapper_outbound_processing_errors_total` | Counter | tenant, connectorName, connectorType | `OutboundMessageDispatcher` |
 | `dynmapper_c8y_request_processing_time` | Timer | — | `C8YAgent` |
 | `dynmapper_available_c8y_connections` | Gauge | — | `C8YAgent` |
 | `dynmapper_inbound_identity_requests_total` | Counter | tenant | `C8YAgent` |
@@ -60,7 +67,7 @@ then select a Prometheus-compatible datasource when prompted.
 | `dynmapper_inbound_identity_cache_size` | Gauge | tenant | `InboundExternalIdCache` |
 | `dynmapper_outbound_identity_cache_size` | Gauge | tenant | `OutboundExternalIdCache` |
 | `dynmapper_inbound_inventory_cache_size` | Gauge | tenant | `InventoryCache` |
-| `dynmapper_connector_status` | Gauge | tenant, connector | `ConnectionStateManager` |
+| `dynmapper_connector_status` | Gauge | tenant, connectorName, connectorType | `ConnectionStateManager` |
 
 `dynmapper_inbound_processing_errors_total` / `dynmapper_outbound_processing_errors_total` and
 `dynmapper_connector_status` were added to close the gap in detecting errors: previously a failed

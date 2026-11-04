@@ -85,16 +85,26 @@ public class OutboundMessageDispatcher implements NotificationCallback {
         this.notificationSubscriber = serviceRegistry.getNotificationSubscriber();
         this.outboundMessageRouter = serviceRegistry.getOutboundMessageRouter();
 
+        String connectorNameTag = connectorClient.getConnectorName() != null
+                ? connectorClient.getConnectorName() : "unknown";
+        String connectorTypeTag = connectorClient.getConnectorType() != null
+                ? connectorClient.getConnectorType().name() : "UNKNOWN";
         this.outboundProcessingTimer = Timer.builder("dynmapper_outbound_processing_time")
                 .tag("tenant", connectorClient.getTenant())
-                .tag("connector", connectorClient.getConnectorIdentifier())
-                .description("Processing time of outbound messages").register(Metrics.globalRegistry);
+                .tag("connectorName", connectorNameTag)
+                .tag("connectorType", connectorTypeTag)
+                .description("Processing time of outbound messages")
+                .publishPercentileHistogram()
+                .register(Metrics.globalRegistry);
         this.outboundProcessingCounter = Counter.builder("dynmapper_outbound_message_total")
                 .tag("tenant", connectorClient.getTenant()).description("Total number of outbound messages")
-                .tag("connector", connectorClient.getConnectorIdentifier()).register(Metrics.globalRegistry);
+                .tag("connectorName", connectorNameTag)
+                .tag("connectorType", connectorTypeTag)
+                .register(Metrics.globalRegistry);
         this.outboundErrorCounter = Counter.builder("dynmapper_outbound_processing_errors_total")
                 .tag("tenant", connectorClient.getTenant())
-                .tag("connector", connectorClient.getConnectorIdentifier())
+                .tag("connectorName", connectorNameTag)
+                .tag("connectorType", connectorTypeTag)
                 .description("Total number of outbound messages that failed processing")
                 .register(Metrics.globalRegistry);
     }

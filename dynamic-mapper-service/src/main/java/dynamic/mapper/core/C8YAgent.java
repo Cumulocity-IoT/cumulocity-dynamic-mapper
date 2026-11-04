@@ -147,7 +147,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     public static final String MEASUREMENT_COLLECTION_PATH = "/measurement/measurements";
 
     private Timer c8yRequestTimer = Timer.builder("dynmapper_c8y_request_processing_time")
-            .description("C8Y Request Processing time").register(Metrics.globalRegistry);
+            .description("C8Y Request Processing time")
+            .publishPercentileHistogram()
+            .register(Metrics.globalRegistry);
 
     public C8YAgent(
             EventApi eventApi,

@@ -57,16 +57,26 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
         this.serviceRegistry = serviceRegistry;
         this.inboundMessageRouter = serviceRegistry.getInboundMessageRouter();
 
+        String connectorNameTag = connectorClient.getConnectorName() != null
+                ? connectorClient.getConnectorName() : "unknown";
+        String connectorTypeTag = connectorClient.getConnectorType() != null
+                ? connectorClient.getConnectorType().name() : "UNKNOWN";
         this.inboundProcessingTimer = Timer.builder("dynmapper_inbound_processing_time")
                 .tag("tenant", connectorClient.getTenant())
-                .tag("connector", connectorClient.getConnectorIdentifier())
-                .description("Processing time of inbound messages").register(Metrics.globalRegistry);
+                .tag("connectorName", connectorNameTag)
+                .tag("connectorType", connectorTypeTag)
+                .description("Processing time of inbound messages")
+                .publishPercentileHistogram()
+                .register(Metrics.globalRegistry);
         this.inboundProcessingCounter = Counter.builder("dynmapper_inbound_message_total")
                 .tag("tenant", connectorClient.getTenant()).description("Total number of inbound messages")
-                .tag("connector", connectorClient.getConnectorIdentifier()).register(Metrics.globalRegistry);
+                .tag("connectorName", connectorNameTag)
+                .tag("connectorType", connectorTypeTag)
+                .register(Metrics.globalRegistry);
         this.inboundErrorCounter = Counter.builder("dynmapper_inbound_processing_errors_total")
                 .tag("tenant", connectorClient.getTenant())
-                .tag("connector", connectorClient.getConnectorIdentifier())
+                .tag("connectorName", connectorNameTag)
+                .tag("connectorType", connectorTypeTag)
                 .description("Total number of inbound messages that failed processing")
                 .register(Metrics.globalRegistry);
     }
