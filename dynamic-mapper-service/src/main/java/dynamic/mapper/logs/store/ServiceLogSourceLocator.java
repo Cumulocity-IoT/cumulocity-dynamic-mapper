@@ -167,7 +167,7 @@ public class ServiceLogSourceLocator {
     }
 
     @EventListener
-    public void onUnsubscribed(MicroserviceSubscriptionRemovedEvent event) {
+    public void onTenantUnsubscribed(MicroserviceSubscriptionRemovedEvent event) {
         cache.remove(event.getTenant());
     }
 }

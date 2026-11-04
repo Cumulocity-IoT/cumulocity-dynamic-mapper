@@ -67,6 +67,7 @@ import dynamic.mapper.processor.runtime.PooledGraalContext;
 import dynamic.mapper.processor.runtime.SubstitutionContext;
 import dynamic.mapper.processor.util.JavaScriptModuleStripper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 
 /**
  * Manages per-tenant GraalVM {@link Engine} instances and pre-compiled
@@ -85,7 +86,7 @@ import lombok.extern.slf4j.Slf4j;
  * stock OpenJDK built with {@code jlink}, without JVMCI and without the Graal compiler. Truffle
  * therefore uses its fallback runtime, which has no runtime compilation: JavaScript runs in the
  * AST interpreter and no JIT-compiled JS code is ever produced. That is why
- * {@code engine.WarnInterpreterOnly} is set to {@code false} in {@link #createGraalsResources}.
+ * {@code engine.WarnInterpreterOnly} is set to {@code false} in {@link #initializeTenant}.
  * {@code resources/testing/performance/graalvm-memory/verify-graalvm-runtime.sh} checks this on a given JDK or image.
  *
  * <p><b>Where the memory is.</b> Truffle ASTs and the per-{@link Context} state live on the Java
@@ -143,7 +144,8 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Component
-public class GraalVMContextService {
+@Order(TenantScoped.ORDER_GRAALVM)
+public class GraalVMContextService implements TenantScoped {
 
     /**
      * Number of unique JS source compilations after which the shared {@link Engine}
@@ -314,7 +316,7 @@ public class GraalVMContextService {
      * @param tenant               tenant identifier
      * @param serviceConfiguration the tenant's service configuration (provides code templates)
      */
-    public void createGraalsResources(String tenant, ServiceConfiguration serviceConfiguration) {
+    public void initializeTenant(String tenant, ServiceConfiguration serviceConfiguration) {
         tenantServiceConfigs.put(tenant, serviceConfiguration);
         compilationCounters.put(tenant, new AtomicInteger(0));
         compiledSourceKeys.put(tenant, ConcurrentHashMap.newKeySet());
@@ -322,7 +324,13 @@ public class GraalVMContextService {
         Engine eng = Engine.newBuilder()
                 .option("engine.WarnInterpreterOnly", "false")
                 .build();
-        graalEngines.put(tenant, eng);
+        Engine previous = graalEngines.put(tenant, eng);
+        if (previous != null) {
+            // re-initialization without removeTenant (e.g. a repeated subscribe event): don't orphan the old engine
+            invalidateTenantPool(tenant);
+            retiredEngines.add(previous);
+            closeEngineIfDrained(previous);
+        }
         engineActiveContexts.put(eng, new AtomicInteger(0));
         log.info("{} - GraalVM Engine created — baseline {}", tenant, metaspaceUsageSummary());
 
@@ -770,8 +778,8 @@ public class GraalVMContextService {
         if (oldEngine != null) {
             retiredEngines.add(oldEngine);
         }
-        // createGraalsResources puts a fresh Engine into graalEngines and resets contextCounters.
-        createGraalsResources(tenant, config);
+        // initializeTenant puts a fresh Engine into graalEngines and resets contextCounters.
+        initializeTenant(tenant, config);
         // Close the old Engine immediately if it has no open Contexts; otherwise the last
         // in-flight Context's engineReleaseAction callback will drain the count to zero and
         // call closeEngineIfDrained() for us.
@@ -844,7 +852,7 @@ public class GraalVMContextService {
     /**
      * Closes the engine if it is retired and has no more in-flight Contexts.
      * Safe to call from both {@link #releaseEngine(Engine)} (per-context drain) and
-     * from {@link #rotateEngine}/{@link #removeGraalsResources} (idle-at-retirement
+     * from {@link #rotateEngine}/{@link #removeTenant} (idle-at-retirement
      * fast path).  The {@code retiredEngines.remove()} CAS ensures only one caller
      * wins the close race.
      */
@@ -1011,7 +1019,7 @@ public class GraalVMContextService {
         return MappingLogContext.isValid(identifier) ? identifier : null;
     }
 
-    public void removeGraalsResources(String tenant) {
+    public void removeTenant(String tenant) {
         // Close all idle pooled contexts first to release references to the old engine
         invalidateTenantPool(tenant);
         Engine eng = graalEngines.remove(tenant);
@@ -1033,7 +1041,7 @@ public class GraalVMContextService {
     /**
      * The host-class allow-list for every GraalVM context this service builds — a security
      * boundary, so it is deliberately narrow and lives in exactly one place. All four
-     * {@code allowHostClassLookup} call sites reference it: {@link #createGraalsResources},
+     * {@code allowHostClassLookup} call sites reference it: {@link #initializeTenant},
      * {@link #warmupMappingCodes}, the pooled-context builder, and
      * {@code AbstractEnrichmentProcessor.createGraalContext}. Do not inline a copy — an earlier
      * duplicate in that last one had to be kept in step by review.

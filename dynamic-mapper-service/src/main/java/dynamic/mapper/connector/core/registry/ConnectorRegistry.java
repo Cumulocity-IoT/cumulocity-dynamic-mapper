@@ -21,6 +21,7 @@
 
 package dynamic.mapper.connector.core.registry;
 
+import dynamic.mapper.core.TenantScoped;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import lombok.extern.slf4j.Slf4j;
@@ -50,10 +51,12 @@ import java.util.Set;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import org.springframework.core.annotation.Order;
 
 @Component
 @Slf4j
-public class ConnectorRegistry {
+@Order(TenantScoped.ORDER_CONNECTORS)
+public class ConnectorRegistry implements TenantScoped {
 
     // Structure: < Tenant, < ConnectorIdentifier, ConnectorInstance > >
     private Map<String, Map<String, AConnectorClient>> connectorTenantMap = new ConcurrentHashMap<>();
@@ -67,7 +70,7 @@ public class ConnectorRegistry {
     /**
      * Tenants whose resources were removed (unsubscribed). A late status update from a stray
      * thread must not re-create their status map via {@link #getConnectorStatusMap}; cleared
-     * again by {@link #initializeResources} when the tenant re-subscribes.
+     * again by {@link #initializeTenant} when the tenant re-subscribes.
      */
     private final Set<String> removedTenants = ConcurrentHashMap.newKeySet();
 
@@ -204,9 +207,9 @@ public class ConnectorRegistry {
     }
 
     public Map<String, ConnectorStatusEvent> getConnectorStatusMap(String tenant) {
-        // computeIfAbsent ensures the map always exists after initializeResources,
+        // computeIfAbsent ensures the map always exists after initializeTenant,
         // and guards against races during startup where updateStatus is called before
-        // initializeResources has run for this tenant.
+        // initializeTenant has run for this tenant.
         if (removedTenants.contains(tenant)) {
             // tenant unsubscribed: hand out a detached map so the update is dropped, not stored
             return new ConcurrentHashMap<>();
@@ -214,7 +217,7 @@ public class ConnectorRegistry {
         return connectorStatusMaps.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
     }
 
-    public void initializeResources(String tenant) {
+    public void initializeTenant(String tenant) {
         removedTenants.remove(tenant);
         connectorStatusMaps.put(tenant, new ConcurrentHashMap<>());
         dispatcherOutboundMaps.put(tenant, new ConcurrentHashMap<>());
@@ -226,7 +229,17 @@ public class ConnectorRegistry {
      * the tenant's client map but leaves the (now empty) tenant entry behind, so remove it here
      * too and keep the cleanup contract uniform: no key of an unsubscribed tenant survives.
      */
-    public void removeResources(String tenant) {
+    @Override
+    public void stopTenant(String tenant) {
+        try {
+            unregisterAllClientsForTenant(tenant);
+        } catch (ConnectorRegistryException e) {
+            throw new IllegalStateException(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void removeTenant(String tenant) {
         removedTenants.add(tenant);
         connectorStatusMaps.remove(tenant);
         dispatcherOutboundMaps.remove(tenant);

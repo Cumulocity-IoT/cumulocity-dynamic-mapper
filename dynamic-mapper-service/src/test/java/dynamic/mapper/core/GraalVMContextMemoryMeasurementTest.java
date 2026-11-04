@@ -138,7 +138,7 @@ class GraalVMContextMemoryMeasurementTest {
         GraalVMContextService service = new GraalVMContextService();
         ServiceConfiguration config = serviceConfig(shared, system);
         config.setContextPoolSize(Math.max(perMapping, 1));
-        service.createGraalsResources(TENANT, config);
+        service.initializeTenant(TENANT, config);
         Engine engine = service.peekGraalEngine(TENANT);
         Source sharedSource = service.getGraalsSourceShared(TENANT);
         Source systemSource = service.getGraalsSourceSystem(TENANT);
@@ -195,7 +195,7 @@ class GraalVMContextMemoryMeasurementTest {
                     executed.heapMb() - before.heapMb(), failures,
                     executed.heapMb() - released.heapMb());
         } finally {
-            service.removeGraalsResources(TENANT);
+            service.removeTenant(TENANT);
         }
     }
 

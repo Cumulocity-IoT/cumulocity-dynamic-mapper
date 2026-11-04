@@ -68,6 +68,7 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.notification.websocket.CustomWebSocketClient;
+import java.util.concurrent.Semaphore;
 
 /**
  * Unit tests for {@link NotificationConnectionManager}.
@@ -142,9 +143,9 @@ class NotificationConnectionManagerTest {
     void removeTenantResources_dropsStatusCodesAndInitLockOfThatTenantOnly() throws Exception {
         ((Map<String, Integer>) getField("managementWSStatusCodes")).put(TENANT, 401);
         ((Map<String, Integer>) getField("managementWSStatusCodes")).put("t2", 401);
-        ((Map<String, Object>) getField("managementInitLocks")).put(TENANT, new java.util.concurrent.Semaphore(1));
+        ((Map<String, Object>) getField("managementInitLocks")).put(TENANT, new Semaphore(1));
 
-        manager.removeTenantResources(TENANT);
+        manager.removeTenant(TENANT);
 
         assertFalse(((Map<String, ?>) getField("managementWSStatusCodes")).containsKey(TENANT));
         assertFalse(((Map<String, ?>) getField("managementInitLocks")).containsKey(TENANT));

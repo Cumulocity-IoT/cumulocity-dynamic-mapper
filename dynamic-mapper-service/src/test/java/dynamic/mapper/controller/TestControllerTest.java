@@ -33,6 +33,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -73,6 +74,10 @@ import dynamic.mapper.processor.outbound.serializer.SparkPlugBSerializer;
 import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.model.TransformationType;
+import java.lang.reflect.Field;
+import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
+import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent;
 
 /**
  * Unit tests for {@link TestController#testMapping}, which previously had no direct
@@ -854,5 +859,22 @@ class TestControllerTest {
             releaseFirst.countDown();
             pool.shutdownNow();
         }
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void unsubscribeDropsTheTenantTestLock() throws Exception {
+        Field f = TestController.class.getDeclaredField("tenantTestLocks");
+        f.setAccessible(true);
+        Map<String, Object> locks = (Map<String, Object>) f.get(controller);
+        locks.put(TENANT, new ReentrantLock());
+        locks.put("other", new ReentrantLock());
+        MicroserviceSubscriptionRemovedEvent event = mock(MicroserviceSubscriptionRemovedEvent.class);
+        when(event.getTenant()).thenReturn(TENANT);
+
+        controller.onTenantUnsubscribed(event);
+
+        assertFalse(locks.containsKey(TENANT));
+        assertTrue(locks.containsKey("other"));
     }
 }

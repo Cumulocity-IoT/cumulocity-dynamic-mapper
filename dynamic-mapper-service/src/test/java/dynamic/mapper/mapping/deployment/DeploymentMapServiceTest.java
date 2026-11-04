@@ -205,8 +205,8 @@ class DeploymentMapServiceTest {
         service.updateDeployment(TENANT, "m1", List.of("c1"));
         service.removeMappingDeployment(TENANT, "m1");
 
-        service.removeTenantDeploymentMap(TENANT);
-        service.initializeTenantDeploymentMap(TENANT, false);
+        service.removeTenant(TENANT);
+        service.initializeTenant(TENANT, false);
 
         assertTrue(service.getDeploymentMap(TENANT).isEmpty());
         assertTrue(rep.getDeploymentMap().isEmpty());

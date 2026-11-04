@@ -43,6 +43,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.Consumer;
+import org.springframework.context.event.EventListener;
+import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent;
 
 /**
  * Manages Message Explorer sessions.
@@ -431,9 +433,9 @@ public class ExplorerService {
     }
 
     /** Stops all explorer sessions of a tenant that unsubscribed, so no listeners or buffers outlive it. */
-    @org.springframework.context.event.EventListener
+    @EventListener
     public void onTenantUnsubscribed(
-            com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent event) {
+            MicroserviceSubscriptionRemovedEvent event) {
         String tenant = event.getTenant();
         ConcurrentHashMap<String, ExplorerSession> tenantSessions = sessions.remove(tenant);
         if (tenantSessions != null) {

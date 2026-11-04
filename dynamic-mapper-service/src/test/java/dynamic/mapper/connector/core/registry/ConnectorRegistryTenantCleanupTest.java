@@ -5,10 +5,13 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
 import dynamic.mapper.connector.core.client.AConnectorClient;
+import dynamic.mapper.model.status.ConnectorStatusEvent;
 
 class ConnectorRegistryTenantCleanupTest {
 
@@ -42,23 +45,38 @@ class ConnectorRegistryTenantCleanupTest {
     @Test
     void lateStatusUpdateAfterRemovalDoesNotRecreateTheStatusMap() {
         ConnectorRegistry registry = new ConnectorRegistry();
-        registry.initializeResources(TENANT);
-        registry.getConnectorStatusMap(TENANT).put("a", mock(dynamic.mapper.model.status.ConnectorStatusEvent.class));
+        registry.initializeTenant(TENANT);
+        registry.getConnectorStatusMap(TENANT).put("a", mock(ConnectorStatusEvent.class));
 
-        registry.removeResources(TENANT);
-        registry.getConnectorStatusMap(TENANT).put("a", mock(dynamic.mapper.model.status.ConnectorStatusEvent.class));
+        registry.removeTenant(TENANT);
+        registry.getConnectorStatusMap(TENANT).put("a", mock(ConnectorStatusEvent.class));
 
-        org.junit.jupiter.api.Assertions.assertTrue(registry.getConnectorStatusMap(TENANT).isEmpty());
+        assertTrue(registry.getConnectorStatusMap(TENANT).isEmpty());
     }
 
     @Test
     void resubscribeRestoresTheStatusMap() {
         ConnectorRegistry registry = new ConnectorRegistry();
-        registry.removeResources(TENANT);
+        registry.removeTenant(TENANT);
 
-        registry.initializeResources(TENANT);
-        registry.getConnectorStatusMap(TENANT).put("a", mock(dynamic.mapper.model.status.ConnectorStatusEvent.class));
+        registry.initializeTenant(TENANT);
+        registry.getConnectorStatusMap(TENANT).put("a", mock(ConnectorStatusEvent.class));
 
-        org.junit.jupiter.api.Assertions.assertEquals(1, registry.getConnectorStatusMap(TENANT).size());
+        assertEquals(1, registry.getConnectorStatusMap(TENANT).size());
+    }
+
+    @Test
+    void stopTenantCleansUpClientsButKeepsTheRegistryEntry() throws Exception {
+        ConnectorRegistry registry = new ConnectorRegistry();
+        AConnectorClient c = client("a");
+        registry.registerClient(TENANT, c);
+
+        registry.stopTenant(TENANT);
+
+        verify(c).cleanup();
+        // stopTenant is the shutdown phase; removeTenant drops the status/dispatcher maps afterwards
+        registry.initializeTenant(TENANT);
+        registry.removeTenant(TENANT);
+        assertTrue(registry.getConnectorStatusMap(TENANT).isEmpty());
     }
 }

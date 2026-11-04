@@ -54,10 +54,12 @@ import dynamic.mapper.processor.extension.ExtensionsComponent;
 import dynamic.mapper.processor.extension.ProcessorExtensionInbound;
 import dynamic.mapper.processor.extension.ProcessorExtensionOutbound;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 
 @Slf4j
 @Component
-public class ExtensionManager {
+@Order(TenantScoped.ORDER_EXTENSIONS)
+public class ExtensionManager implements TenantScoped {
 
     private static final String EXTENSION_INTERNAL_FILE = "extension-internal.yaml";
     private static final String EXTENSION_EXTERNAL_FILE = "extension-external.yaml";
@@ -457,7 +459,7 @@ public class ExtensionManager {
     /**
      * Clean up all classloaders for a tenant. Should be called during tenant offboarding.
      */
-    public void cleanupTenantExtensions(String tenant) {
+    public void removeTenant(String tenant) {
         Map<String, ExtensionClassLoaderHolder> tenantClassLoaders = tenantExtensionClassLoaders.remove(tenant);
         if (tenantClassLoaders != null) {
             closeAllClassLoaders(tenantClassLoaders, tenant);
@@ -471,7 +473,7 @@ public class ExtensionManager {
      */
     public void cleanupAllExtensions() {
         for (String tenant : tenantExtensionClassLoaders.keySet()) {
-            cleanupTenantExtensions(tenant);
+            removeTenant(tenant);
         }
         log.info("Cleaned up all extension classloaders");
     }

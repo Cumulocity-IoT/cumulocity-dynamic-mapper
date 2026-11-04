@@ -48,10 +48,12 @@ import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.mapping.MappingService;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 
 @Slf4j
 @Component
-public class ServiceRegistry implements IMapperConfiguration {
+@Order(TenantScoped.ORDER_REGISTRY)
+public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
 
     @Getter
     private final TenantRegistry tenantRegistry;
@@ -147,7 +149,7 @@ public class ServiceRegistry implements IMapperConfiguration {
         return true;
     }
 
-    public void initializeResources(String tenant) {
+    public void initializeTenant(String tenant) {
     }
 
     public MapperServiceRepresentation storeMapperServiceRepresentation(String tenant,
@@ -176,6 +178,16 @@ public class ServiceRegistry implements IMapperConfiguration {
 
     public void addServiceConfiguration(String tenant, ServiceConfiguration configuration) {
         tenantRegistry.addServiceConfiguration(tenant, configuration);
+    }
+
+    /** Last step: credentials and configuration may still be read while the other beans are removed. */
+    @Override
+    public void removeTenant(String tenant) {
+        clearExternalIdCache(tenant); // keyed "tenant|…"; would grow across tenant churn and resolve stale ids
+        removeDeviceToClientState(tenant);
+        removeMapperServiceRepresentation(tenant);
+        removeServiceConfiguration(tenant);
+        removeMicroserviceCredentials(tenant);
     }
 
     public void removeDeviceToClientState(String tenant) {

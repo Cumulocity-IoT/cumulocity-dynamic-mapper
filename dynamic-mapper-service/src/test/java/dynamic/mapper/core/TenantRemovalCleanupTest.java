@@ -2,12 +2,14 @@ package dynamic.mapper.core;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
 import dynamic.mapper.model.device.DeviceToClientMapRepresentation;
+import java.lang.reflect.Field;
 
 /** What the tenant registries hold for a tenant must be gone after the tenant unsubscribes. */
 class TenantRemovalCleanupTest {
@@ -51,17 +53,17 @@ class TenantRemovalCleanupTest {
         registry.removeDeviceToClientState(TENANT);
 
         assertNull(registry.resolveDeviceToClient(TENANT, "1"));
-        org.junit.jupiter.api.Assertions.assertEquals("clientB", registry.resolveDeviceToClient("t2", "1"));
+        assertEquals("clientB", registry.resolveDeviceToClient("t2", "1"));
     }
 
     @Test
     void deleteExtensionsRemovesTheTenantEntry() throws Exception {
         ExtensionInboundRegistry registry = new ExtensionInboundRegistry();
-        registry.initializeExtensions(TENANT);
+        registry.initializeTenant(TENANT);
 
-        registry.deleteExtensions(TENANT);
+        registry.removeTenant(TENANT);
 
-        java.lang.reflect.Field f = ExtensionInboundRegistry.class.getDeclaredField("tenantExtensionProcessors");
+        Field f = ExtensionInboundRegistry.class.getDeclaredField("tenantExtensionProcessors");
         f.setAccessible(true);
         assertTrue(((Map<?, ?>) f.get(registry)).isEmpty(), "entry must be removed, not replaced by an empty map");
     }

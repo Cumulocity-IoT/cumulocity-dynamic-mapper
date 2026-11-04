@@ -64,6 +64,12 @@ import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
 @Service
 @EnableScheduling
@@ -90,6 +96,25 @@ public class BootstrapService {
     private final AIAgentService aiAgentService;
     private final ExtensionManager extensionManager;
     private final dynamic.mapper.processor.flow.FlowStateStore flowStateStore;
+    /** Initialization state per tenant; absent = unknown or already removed. */
+    public enum TenantState { INITIALIZING, RETRYING, READY, FAILED }
+
+    /** Attempts of the initial tenant initialization before the tenant is left {@link TenantState#FAILED}. */
+    static final int MAX_INIT_ATTEMPTS = 5;
+    private static final long INIT_RETRY_BASE_DELAY_SECONDS = 10;
+    private static final long INIT_RETRY_MAX_DELAY_SECONDS = 300;
+
+    private final Map<String, TenantState> tenantStates = new ConcurrentHashMap<>();
+    private final Map<String, ScheduledFuture<?>> pendingInitRetries = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService initRetryExecutor =
+            Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "tenant-init-retry");
+                t.setDaemon(true);
+                return t;
+            });
+
+    /** All per-tenant beans, sorted by {@code @Order}; see {@link TenantScoped}. */
+    private final List<TenantScoped> tenantScoped;
 
     public BootstrapService(
             ConnectorRegistry connectorRegistry,
@@ -105,6 +130,7 @@ public class BootstrapService {
             AIAgentService aiAgentService,
             ExtensionManager extensionManager,
             dynamic.mapper.processor.flow.FlowStateStore flowStateStore,
+            List<TenantScoped> tenantScoped,
             @Value("${APP.additionalSubscriptionIdTest:}") String additionalSubscriptionIdTest,
             @Value("#{new Integer('${APP.inboundExternalIdCacheSize}')}") Integer inboundExternalIdCacheSize,
             @Value("#{new Integer('${APP.outboundExternalIdCacheSize}')}") Integer outboundExternalIdCacheSize,
@@ -123,6 +149,7 @@ public class BootstrapService {
         this.aiAgentService = aiAgentService;
         this.extensionManager = extensionManager;
         this.flowStateStore = flowStateStore;
+        this.tenantScoped = tenantScoped;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
         this.inboundExternalIdCacheSize = inboundExternalIdCacheSize;
         this.outboundExternalIdCacheSize = outboundExternalIdCacheSize;
@@ -136,174 +163,73 @@ public class BootstrapService {
     @PreDestroy
     public void destroy() {
         log.info("Shutting down mapper...");
+        initRetryExecutor.shutdownNow();
         subscriptionsService.runForEachTenant(() -> {
             String tenant = subscriptionsService.getTenant();
-            try {
-                log.info("{} - Cleaning up tenant resources", tenant);
-
-                // Disconnect notification subscriber
-                serviceRegistry.getNotificationSubscriber().disconnect(tenant);
-
-                // Unregister all connector clients
-                connectorRegistry.unregisterAllClientsForTenant(tenant);
-
-                log.info("{} - Successfully cleaned up tenant resources", tenant);
-            } catch (ConnectorRegistryException e) {
-                log.error("{} - Error during shutdown: {}", tenant, e.getMessage(), e);
-                throw new RuntimeException(e);
-            }
+            log.info("{} - Stopping tenant", tenant);
+            // a failing tenant must not keep the remaining tenants from being stopped
+            stopTenant(tenant);
+            log.info("{} - Tenant stopped", tenant);
         });
 
         log.info("Mapper shutdown completed");
     }
 
+    /**
+     * Phase 1 of the tenant lifecycle ({@link TenantScoped#stopTenant}): ends running activity of all beans but
+     * keeps their state and the platform subscriptions. Shared by shutdown ({@link #destroy()}) and unsubscribe
+     * ({@link #removeTenantState(String)}).
+     */
+    private void stopTenant(String tenant) {
+        forEachTenantScoped(tenant, "stop", TenantScoped::stopTenant);
+    }
+
+    /** Calls {@code action} on every {@link TenantScoped} bean in {@code @Order}; a failing bean does not skip the others. */
+    private void forEachTenantScoped(String tenant, String phase, BiConsumer<TenantScoped, String> action) {
+        for (TenantScoped bean : tenantScoped) {
+            try {
+                action.accept(bean, tenant);
+                log.debug("{} - {} {}", tenant, phase, bean.getClass().getSimpleName());
+            } catch (Exception e) {
+                log.error("{} - Error during {} of {}: {}", tenant, phase, bean.getClass().getSimpleName(),
+                        e.getMessage(), e);
+            }
+        }
+    }
+
     @EventListener
-    public void unsubscribeTenant(MicroserviceSubscriptionRemovedEvent event) {
+    public void onTenantUnsubscribed(MicroserviceSubscriptionRemovedEvent event) {
         String tenant = event.getTenant();
         log.info("{} - Microservice unsubscribed", tenant);
+        tenantStates.remove(tenant);
+        ScheduledFuture<?> pending = pendingInitRetries.remove(tenant);
+        if (pending != null) {
+            pending.cancel(false);
+        }
 
         try {
-            cleanTenantResources(tenant);
+            removeTenantState(tenant);
         } catch (Exception e) {
             log.error("{} - Error during unsubscribing cleanup: {}", tenant, e.getMessage(), e);
         }
     }
 
-    private void cleanTenantResources(String tenant) throws ConnectorRegistryException {
+    private void removeTenantState(String tenant) {
+        removeTenantStateKeepingStatus(tenant);
+    }
+
+    /** Stop and remove everything of the tenant; does not touch the init state (used between init retries). */
+    private void removeTenantStateKeepingStatus(String tenant) {
         log.info("{} - Starting tenant resource cleanup", tenant);
 
-        NotificationSubscriber subscriber = serviceRegistry.getNotificationSubscriber();
+        // Phase 1 for all beans before phase 2 for any: nothing may still run on resources removed below
+        // (connector housekeeping, notification connections).
+        stopTenant(tenant);
+        forEachTenantScoped(tenant, "remove", TenantScoped::removeTenant);
 
-        // First: stop connector clients and their housekeeping threads (waits for a running
-        // housekeeping cycle), so nothing is still using the resources removed below.
-        try {
-            // Unregister all connector clients
-            connectorRegistry.unregisterAllClientsForTenant(tenant);
-            log.debug("{} - Unregistered all connector clients", tenant);
-        } catch (Exception e) {
-            log.error("{} - Error unregistering clients: {}", tenant, e.getMessage(), e);
-        }
-
-        try {
-            // Disconnect all notification connections
-            subscriber.disconnect(tenant);
-            log.debug("{} - Disconnected notification subscriber", tenant);
-        } catch (Exception e) {
-            log.error("{} - Error disconnecting subscriber: {}", tenant, e.getMessage(), e);
-        }
-
-        try {
-            // Unsubscribe device tokens
-            subscriber.unsubscribeDeviceSubscriber(tenant);
-            log.debug("{} - Unsubscribed device subscriber", tenant);
-        } catch (Exception e) {
-            log.error("{} - Error unsubscribing device subscriber: {}", tenant, e.getMessage(), e);
-        }
-
-        try {
-            // Unsubscribe device group tokens
-            subscriber.unsubscribeDeviceGroupSubscriber(tenant);
-            log.debug("{} - Unsubscribed device group subscriber", tenant);
-        } catch (Exception e) {
-            log.error("{} - Error unsubscribing device group subscriber: {}", tenant, e.getMessage(), e);
-        }
-
-        try {
-            // Drop remaining notification state: callbacks, group cache thread, locks, token refs
-            subscriber.removeTenantResources(tenant);
-            log.debug("{} - Removed notification resources", tenant);
-        } catch (Exception e) {
-            log.error("{} - Error removing notification resources: {}", tenant, e.getMessage(), e);
-        }
-
-        try {
-            // Clean up configurations
-            serviceRegistry.removeServiceConfiguration(tenant);
-            log.debug("{} - Removed service configuration", tenant);
-        } catch (Exception e) {
-            log.error("{} - Error removing service configuration: {}", tenant, e.getMessage(), e);
-        }
-
-        try {
-            // DO NOT REMOVE DeviceIsolationMQTTService feature
-            // (relations are dropped in memory only; nothing may be persisted for an unsubscribed tenant)
-            serviceRegistry.removeDeviceToClientState(tenant);
-            log.debug("{} - Removed device-to-client state", tenant);
-        } catch (Exception e) {
-            log.error("{} - Error removing device-to-client state: {}", tenant, e.getMessage(), e);
-        }
-
-        try {
-            serviceRegistry.removeMapperServiceRepresentation(tenant);
-            log.debug("{} - Removed mapper service representation", tenant);
-        } catch (Exception e) {
-            log.error("{} - Error removing mapper service representation: {}", tenant, e.getMessage(), e);
-        }
-
-        try {
-            serviceRegistry.getGraalVMContextService().removeGraalsResources(tenant);
-            log.debug("{} - Removed GraalVM resources", tenant);
-        } catch (Exception e) {
-            log.error("{} - Error removing GraalVM resources: {}", tenant, e.getMessage(), e);
-        }
-
-        try {
-            serviceRegistry.removeMicroserviceCredentials(tenant);
-            log.debug("{} - Removed microservice credentials", tenant);
-        } catch (Exception e) {
-            log.error("{} - Error removing microservice credentials: {}", tenant, e.getMessage(), e);
-        }
-
-        try {
-            extensionInboundRegistry.deleteExtensions(tenant);
-            // closes the tenant's extension classloaders (previously only done at application shutdown)
-            extensionManager.cleanupTenantExtensions(tenant);
-            log.debug("{} - Deleted extensions", tenant);
-        } catch (Exception e) {
-            log.error("{} - Error deleting extensions: {}", tenant, e.getMessage(), e);
-        }
-
-        try {
-            mappingService.removeResources(tenant);
-            log.debug("{} - Removed mapping service resources", tenant);
-        } catch (Exception e) {
-            log.error("{} - Error removing mapping service resources: {}", tenant, e.getMessage(), e);
-        }
-
-        try {
-            connectorRegistry.removeResources(tenant);
-            log.debug("{} - Removed connector registry resources", tenant);
-        } catch (Exception e) {
-            log.error("{} - Error removing connector registry resources: {}", tenant, e.getMessage(), e);
-        }
-
-        try {
-            cacheManager.removeInboundExternalIdCache(tenant);
-            cacheManager.removeOutboundExternalIdCache(tenant);
-            cacheManager.removeInventoryCache(tenant);
-            log.debug("{} - Removed C8Y agent caches", tenant);
-        } catch (Exception e) {
-            log.error("{} - Error removing C8Y agent caches: {}", tenant, e.getMessage(), e);
-        }
-
-        try {
-            // The external-ID resolution cache and its per-ID locks are keyed "tenant|…", so they
-            // survive an unsubscribe unless cleared explicitly: the entries would grow without
-            // bound across tenant churn, and a tenant that re-subscribes would resolve external
-            // IDs to managed objects that may have been deleted in the meantime.
-            serviceRegistry.clearExternalIdCache(tenant);
-            log.debug("{} - Cleared external ID cache", tenant);
-        } catch (Exception e) {
-            log.error("{} - Error clearing external ID cache: {}", tenant, e.getMessage(), e);
-        }
-
-        try {
-            // Holds the tenant's service-user credentials — must not outlive the subscription.
-            c8YAgent.clearProcessingModeConnectorCache(tenant);
-            log.debug("{} - Cleared processing-mode connector cache", tenant);
-        } catch (Exception e) {
-            log.error("{} - Error clearing processing-mode connector cache: {}", tenant, e.getMessage(), e);
-        }
+        cacheInboundExternalIdRetentionStartMap.remove(tenant);
+        cacheOutboundExternalIdRetentionStartMap.remove(tenant);
+        cacheInventoryRetentionStartMap.remove(tenant);
 
         try {
             // Per-tenant meters (dispatcher timers/counters, identity counters) would otherwise stay
@@ -319,20 +245,74 @@ public class BootstrapService {
     }
 
     @EventListener
-    public void subscribeTenant(MicroserviceSubscriptionAddedEvent event) {
+    public void onTenantSubscribed(MicroserviceSubscriptionAddedEvent event) {
         String tenant = event.getCredentials().getTenant();
         log.info("{} - Microservice subscribed", tenant);
-
-        try {
-            initializeTenantResources(tenant, event.getCredentials());
-        } catch (Exception e) {
-            log.error("{} - Initialization error: {}", tenant, e.getMessage(), e);
-        }
+        tenantStates.put(tenant, TenantState.INITIALIZING);
+        attemptInitialization(tenant, event.getCredentials(), 1);
     }
 
-    private void initializeTenantResources(String tenant, MicroserviceCredentials credentials) {
+    // package-private: overridden in tests
+    long initRetryDelaySeconds(int attempt) {
+        return Math.min(INIT_RETRY_MAX_DELAY_SECONDS, INIT_RETRY_BASE_DELAY_SECONDS << (attempt - 1));
+    }
 
-        extensionInboundRegistry.initializeExtensions(tenant);
+    /** {@code true} once the tenant is fully initialized; {@code false} while initializing, retrying, or failed. */
+    public boolean isTenantReady(String tenant) {
+        return tenantStates.get(tenant) == TenantState.READY;
+    }
+
+    public TenantState getTenantState(String tenant) {
+        return tenantStates.get(tenant);
+    }
+
+    /**
+     * Initializes the tenant. A failure (typically a platform outage while loading configuration or mappings)
+     * would leave the tenant half built, so every message of it could hit missing state. Instead the half-built
+     * tenant is removed (clean slate) and the initialization is retried with exponential backoff; after
+     * {@link #MAX_INIT_ATTEMPTS} the tenant is left clean and {@link TenantState#FAILED}.
+     */
+    private void attemptInitialization(String tenant, MicroserviceCredentials credentials, int attempt) {
+        try {
+            initializeTenantState(tenant, credentials);
+            tenantStates.replace(tenant, TenantState.INITIALIZING, TenantState.READY);
+            tenantStates.replace(tenant, TenantState.RETRYING, TenantState.READY);
+            log.info("{} - Tenant initialized (attempt {})", tenant, attempt);
+            return;
+        } catch (Exception e) {
+            log.error("{} - Initialization attempt {}/{} failed: {}", tenant, attempt, MAX_INIT_ATTEMPTS,
+                    e.getMessage(), e);
+        }
+
+        if (!tenantStates.containsKey(tenant)) {
+            return; // unsubscribed while initializing: removal already ran or is running
+        }
+        // Clean slate, so neither a retry nor the failed state leaves half-built resources behind.
+        removeTenantStateKeepingStatus(tenant);
+
+        if (attempt >= MAX_INIT_ATTEMPTS) {
+            tenantStates.replace(tenant, TenantState.RETRYING, TenantState.FAILED);
+            tenantStates.replace(tenant, TenantState.INITIALIZING, TenantState.FAILED);
+            log.error("{} - Giving up initializing the tenant after {} attempts; re-subscribe or restart to retry",
+                    tenant, attempt);
+            return;
+        }
+        long delay = initRetryDelaySeconds(attempt);
+        tenantStates.replace(tenant, TenantState.INITIALIZING, TenantState.RETRYING);
+        log.warn("{} - Retrying initialization in {}s", tenant, delay);
+        pendingInitRetries.put(tenant, initRetryExecutor.schedule(() -> {
+            pendingInitRetries.remove(tenant);
+            if (tenantStates.get(tenant) != TenantState.RETRYING) {
+                return; // unsubscribed meanwhile
+            }
+            subscriptionsService.runForTenant(tenant, () -> attemptInitialization(tenant, credentials, attempt + 1));
+        }, delay, TimeUnit.SECONDS));
+    }
+
+    // package-private: overridden in tests
+    void initializeTenantState(String tenant, MicroserviceCredentials credentials) {
+
+        extensionInboundRegistry.initializeTenant(tenant);
 
         c8YAgent.createExtensibleProcessor(tenant);
         extensionManager.loadProcessorExtensions(tenant);
@@ -341,8 +321,8 @@ public class BootstrapService {
         initializeCaches(tenant, serviceConfiguration);
 
         serviceRegistry.addMicroserviceCredentials(tenant, credentials);
-        serviceRegistry.initializeResources(tenant);
-        serviceRegistry.getGraalVMContextService().createGraalsResources(tenant, serviceConfiguration);
+        serviceRegistry.initializeTenant(tenant);
+        serviceRegistry.getGraalVMContextService().initializeTenant(tenant, serviceConfiguration);
         serviceRegistry.storeMapperServiceRepresentation(tenant,
                 c8YAgent.initializeMapperServiceRepresentation(tenant));
 
@@ -352,14 +332,14 @@ public class BootstrapService {
                         c8YAgent.initializeDeviceToClientMapRepresentation(tenant));
         }
 
-        mappingService.createResources(tenant);
+        mappingService.initializeTenant(tenant);
         serviceRegistry.getGraalVMContextService().warmupMappingCodes(tenant, buildMappingCodeMap(tenant));
         // Register a supplier so the service re-warms all active mapping codes automatically
         // on every future Engine rotation, keeping cold-start latency bounded.
         serviceRegistry.getGraalVMContextService()
                 .setMappingCodeSupplier(tenant, () -> buildMappingCodeMap(tenant));
 
-        connectorRegistry.initializeResources(tenant);
+        connectorRegistry.initializeTenant(tenant);
 
         // Clean up any orphaned Notifications 2.0 subscribers from a previous run
         // (e.g. from connectors that were deleted or disabled without proper cleanup)
@@ -389,7 +369,7 @@ public class BootstrapService {
         }
         // only initialize mapping after all connectors are initialized
         // and connected
-        mappingService.initializeResources(tenant);
+        mappingService.loadTenantMappings(tenant);
         aiAgentService.initializeAIAgents();
 
         initResourcesForOutbound(tenant, serviceConfiguration);
@@ -463,7 +443,7 @@ public class BootstrapService {
             // ...and always re-load the framework-owned SYSTEM template. It is @internal/@readonly
             // and holds only the Java.type bindings the runtime needs, so the packaged copy is
             // authoritative. Customer code lives in SHARED, which is never touched here. This runs
-            // before createGraalsResources() below, so the refreshed code is what gets compiled.
+            // before initializeTenant() below, so the refreshed code is what gets compiled.
             if (serviceConfigurationService.refreshSystemTemplate(serviceConfig)) {
                 requiresSave = true;
             }

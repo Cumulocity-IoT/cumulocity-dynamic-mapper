@@ -21,6 +21,7 @@
 
 package dynamic.mapper.notification;
 
+import dynamic.mapper.core.TenantScoped;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 
@@ -40,6 +41,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
+import org.springframework.core.annotation.Order;
 
 /**
  * Facade/Orchestrator for notification subscription management.
@@ -48,7 +50,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class NotificationSubscriber {
+@Order(TenantScoped.ORDER_NOTIFICATIONS)
+public class NotificationSubscriber implements TenantScoped {
 
     private final SubscriptionManager subscriptionManager;
     private final NotificationConnectionManager connectionManager;
@@ -94,11 +97,31 @@ public class NotificationSubscriber {
         connectionManager.disconnect(tenant);
     }
 
-    /** Drops all per-tenant state after {@link #disconnect(String)}; tenant removal only. */
-    public void removeTenantResources(String tenant) {
-        connectionManager.removeTenantResources(tenant);
+    @Override
+    public void stopTenant(String tenant) {
+        disconnect(tenant);
+    }
+
+    /**
+     * Unsubscribes the tenant's Notification 2.0 tokens on the platform, then drops all per-tenant state.
+     * Runs after {@link #stopTenant}. Not used for reconnects, see {@link #disconnect(String)}.
+     */
+    @Override
+    public void removeTenant(String tenant) {
+        try {
+            unsubscribeDeviceSubscriber(tenant);
+        } catch (Exception e) {
+            log.error("{} - Error unsubscribing device subscriber: {}", tenant, e.getMessage(), e);
+        }
+        try {
+            unsubscribeDeviceGroupSubscriber(tenant); // reads the management token: before removeTenant of tokens
+        } catch (Exception e) {
+            log.error("{} - Error unsubscribing device group subscriber: {}", tenant, e.getMessage(), e);
+        }
+        connectionManager.removeTenant(tenant);
         tokenManager.removeTenant(tenant);
         subscriptionManager.removeTenant(tenant);
+        deviceDiscoveryService.removeTenant(tenant);
     }
 
     // === Device Subscription Methods ===

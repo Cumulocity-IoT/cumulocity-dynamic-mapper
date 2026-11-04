@@ -434,7 +434,7 @@ public class NotificationConnectionManager {
      * cleanup thread), the init lock and the WebSocket status codes. Only for tenant removal;
      * {@link #disconnect(String)} alone is also used for reconnects.
      */
-    public void removeTenantResources(String tenant) {
+    public void removeTenant(String tenant) {
         if (tenant == null) {
             return;
         }

@@ -10,10 +10,12 @@ import dynamic.mapper.model.extension.Extension;
 import dynamic.mapper.model.extension.ExtensionEntry;
 import dynamic.mapper.model.extension.ExtensionStatus;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 
 @Service
 @Slf4j
-public class ExtensionInboundRegistry {
+@Order(TenantScoped.ORDER_EXTENSIONS)
+public class ExtensionInboundRegistry implements TenantScoped {
 
     private final Map<String, Map<String, Extension>> tenantExtensionProcessors = new ConcurrentHashMap<>();
 
@@ -37,7 +39,7 @@ public class ExtensionInboundRegistry {
     /**
      * Initialize extension processor for tenant (called during bootstrap)
      */
-    public Map<String, Extension> initializeExtensions(String tenant) {
+    public Map<String, Extension> initializeTenant(String tenant) {
         Map<String, Extension> extensions = new ConcurrentHashMap<>();
         tenantExtensionProcessors.put(tenant, extensions);
         log.info("{} - Initialized Extensions", tenant);
@@ -79,7 +81,7 @@ public class ExtensionInboundRegistry {
         return result;
     }
 
-    public void deleteExtensions(String tenant) {
+    public void removeTenant(String tenant) {
         // remove (not re-create): getExtensions() lazily re-creates an entry on demand
         tenantExtensionProcessors.remove(tenant);
     }

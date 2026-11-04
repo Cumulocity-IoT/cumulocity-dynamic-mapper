@@ -87,7 +87,7 @@ class GraalVMContextCancellationRaceTest {
     void setUp() {
         graalVMContextService = new GraalVMContextService();
         serviceConfiguration = buildServiceConfig();
-        graalVMContextService.createGraalsResources(TENANT, serviceConfiguration);
+        graalVMContextService.initializeTenant(TENANT, serviceConfiguration);
         workerExecutor = Executors.newSingleThreadExecutor(r -> {
             Thread t = new Thread(r, "cancel-race-worker");
             t.setDaemon(true);
@@ -99,7 +99,7 @@ class GraalVMContextCancellationRaceTest {
     void tearDown() {
         workerExecutor.shutdownNow();
         try {
-            graalVMContextService.removeGraalsResources(TENANT);
+            graalVMContextService.removeTenant(TENANT);
         } catch (Exception ignored) {
         }
     }

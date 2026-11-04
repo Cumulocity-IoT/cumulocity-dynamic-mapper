@@ -46,7 +46,7 @@ import lombok.extern.slf4j.Slf4j;
  * strict consistency should add application-level guards.</p>
  *
  * <p>State is cleared automatically when a mapping is deleted
- * ({@link #clearMappingState}), a tenant is removed ({@link #clearTenantState}),
+ * ({@link #clearMappingState}), a tenant is removed ({@link #removeTenant}),
  * or a mapping has not written its state for the retention period
  * ({@link #clearExpiredEntries}). Expiry is decided per mapping, from that mapping's own last
  * write, so a busy mapping neither keeps an idle one alive nor causes a recent one to be removed.</p>
@@ -225,7 +225,7 @@ public class FlowStateStore {
      *
      * @param tenant the tenant identifier
      */
-    public void clearTenantState(String tenant) {
+    public void removeTenant(String tenant) {
         if (tenant == null) {
             return;
         }

@@ -41,10 +41,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>Per tenant, the inbound side (mappings by id, by stable identifier, and the topic resolver
  * tree) lives in one {@link InboundState} that a rebuild swaps in a single volatile write, so a
  * reader never sees the map and the tree out of sync. Incremental changes are serialized per
- * tenant. Getters never create tenant state; only {@link #createTenantCache} and the rebuilds do,
- * so a late call after {@link #removeTenantCache} cannot resurrect (and leak) a removed tenant.
+ * tenant. Getters never create tenant state; only {@link #initializeTenant} and the rebuilds do,
+ * so a late call after {@link #removeTenant} cannot resurrect (and leak) a removed tenant.
  *
- * <p>{@link #createTenantCache} also registers a {@code dynmapper_mapping_count} gauge per
+ * <p>{@link #initializeTenant} also registers a {@code dynmapper_mapping_count} gauge per
  * (direction, transformation type) combination, tagged with the tenant. Each gauge's value
  * function re-reads the live cache on every scrape, so no mutation method needs to touch a
  * counter; {@code this} (a Spring singleton, so never garbage-collected for the life of the
@@ -91,7 +91,7 @@ public class MappingCacheManager {
     /**
      * Initializes cache structures for a tenant (idempotent)
      */
-    public void createTenantCache(String tenant) {
+    public void initializeTenant(String tenant) {
         tenants.computeIfAbsent(tenant, TenantCache::new);
         registerMappingCountGauges(tenant);
         log.debug("{} - Cache structures created", tenant);
@@ -100,7 +100,7 @@ public class MappingCacheManager {
     /**
      * Removes all cache data for a tenant
      */
-    public void removeTenantCache(String tenant) {
+    public void removeTenant(String tenant) {
         tenants.remove(tenant);
         List<Gauge> gauges = mappingCountGauges.remove(tenant);
         if (gauges != null) {
@@ -111,7 +111,7 @@ public class MappingCacheManager {
 
     /**
      * Registers the {@code dynmapper_mapping_count} gauges for a tenant, one per (direction,
-     * transformation type) combination. Idempotent, mirroring {@link #createTenantCache}.
+     * transformation type) combination. Idempotent, mirroring {@link #initializeTenant}.
      */
     private void registerMappingCountGauges(String tenant) {
         if (mappingCountGauges.containsKey(tenant)) {

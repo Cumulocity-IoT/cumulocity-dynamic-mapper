@@ -155,8 +155,8 @@ class MappingStatusServiceFailureCountTest {
     @Test
     @DisplayName("each tenant gets its own catch-all status")
     void unspecifiedStatusIsNotSharedBetweenTenants() {
-        service.initializeTenantStatus("tenant-a", true);
-        service.initializeTenantStatus("tenant-b", true);
+        service.initializeTenant("tenant-a", true);
+        service.initializeTenant("tenant-b", true);
 
         MappingStatus a = service.getAllStatuses("tenant-a").stream()
                 .filter(MappingStatus::isUnspecified).findFirst().orElseThrow();

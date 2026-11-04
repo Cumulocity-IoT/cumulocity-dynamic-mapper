@@ -386,7 +386,7 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleResetDeploymentMap(String tenant) throws Exception {
-        deploymentMapService.initializeTenantDeploymentMap(tenant, true);
+        deploymentMapService.initializeTenant(tenant, true);
 
         // Apply the now-empty deployment live (same as a deployment PUT): without this,
         // connectors keep their inbound subscriptions until a reconnect or reload.
@@ -494,7 +494,7 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleResetStatusMapping(String tenant) throws Exception {
-        mappingStatusService.initializeTenantStatus(tenant, true);
+        mappingStatusService.initializeTenant(tenant, true);
         mappingService.sendMappingStatus(tenant);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -637,7 +637,7 @@ public class OperationController {
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         } else if ("FLOW_STATE_CACHE".equals(cacheId)) {
-            flowStateStore.clearTenantState(tenant);
+            flowStateStore.removeTenant(tenant);
             log.info("{} - Cache cleared: {}", tenant, cacheId);
             return ResponseEntity.status(HttpStatus.CREATED).build();
         }

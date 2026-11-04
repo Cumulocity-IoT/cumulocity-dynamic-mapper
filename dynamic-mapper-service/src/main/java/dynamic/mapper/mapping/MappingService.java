@@ -21,6 +21,7 @@
 
 package dynamic.mapper.mapping;
 
+import dynamic.mapper.core.TenantScoped;
 import dynamic.mapper.util.MappingLogContext;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
@@ -56,6 +57,7 @@ import org.springframework.validation.annotation.Validated;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.core.annotation.Order;
 
 /**
  * Main orchestrating service for mapping operations.
@@ -65,7 +67,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Validated
 @Service
 @RequiredArgsConstructor
-public class MappingService {
+@Order(TenantScoped.ORDER_MAPPINGS)
+public class MappingService implements TenantScoped {
 
     private final InventoryFacade inventoryApi;
     private final MappingRepository mappingRepository;
@@ -95,41 +98,42 @@ public class MappingService {
     // ========== Resource Lifecycle Management ==========
 
     /**
-     * Creates all necessary resources for a tenant
+     * Creates the empty per-tenant state (caches, status, deployment map, dirty set).
+     * Counterpart of {@link #removeTenant(String)}; mappings are loaded by {@link #loadTenantMappings}.
      */
-    public void createResources(String tenant) {
-        cacheManager.createTenantCache(tenant);
-        statusService.initializeTenantStatus(tenant, false);
-        deploymentMapService.initializeTenantDeploymentMap(tenant, false);
+    public void initializeTenant(String tenant) {
+        cacheManager.initializeTenant(tenant);
+        statusService.initializeTenant(tenant, false);
+        deploymentMapService.initializeTenant(tenant, false);
         dirtyMappings.put(tenant, ConcurrentHashMap.newKeySet());
 
-        log.info("{} - Resources created", tenant);
+        log.info("{} - Tenant initialized", tenant);
     }
 
     /**
-     * Initializes resources by loading mappings from inventory
+     * Loads the tenant's mappings from inventory and rebuilds the mapping caches.
+     * Requires {@link #initializeTenant(String)} to have run.
      */
-    public void initializeResources(String tenant) {
-        statusService.initializeTenantStatus(tenant, false);
+    public void loadTenantMappings(String tenant) {
         rebuildMappingCaches(tenant, ConnectorId.INTERNAL);
 
-        log.info("{} - Resources initialized", tenant);
+        log.info("{} - Mappings loaded", tenant);
     }
 
     /**
-     * Removes all resources for a tenant
+     * Drops all per-tenant state. Counterpart of {@link #initializeTenant(String)}.
      */
-    public void removeResources(String tenant) {
-        cacheManager.removeTenantCache(tenant);
-        statusService.removeTenantStatus(tenant);
-        deploymentMapService.removeTenantDeploymentMap(tenant);
-        flowStateStore.clearTenantState(tenant);
+    public void removeTenant(String tenant) {
+        cacheManager.removeTenant(tenant);
+        statusService.removeTenant(tenant);
+        deploymentMapService.removeTenant(tenant);
+        flowStateStore.removeTenant(tenant);
         mappingRepository.clearReportedWarnings(tenant);
         dirtyMappings.remove(tenant);
         activationLocks.keySet().removeIf(key -> key.startsWith(tenant + ":"));
         deactivationsInFlight.removeIf(key -> key.startsWith(tenant + ":"));
 
-        log.info("{} - Resources removed", tenant);
+        log.info("{} - Tenant removed", tenant);
     }
 
     // ========== Mapping CRUD Operations ==========

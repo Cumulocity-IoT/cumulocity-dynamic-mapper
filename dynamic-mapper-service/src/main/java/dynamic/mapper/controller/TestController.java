@@ -79,6 +79,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
+import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -349,6 +351,13 @@ public class TestController {
     private long testLockWaitMs = 30_000;
 
     private final ConcurrentMap<String, ReentrantLock> tenantTestLocks = new ConcurrentHashMap<>();
+
+    /** Drops the per-tenant test lock once the tenant unsubscribed. */
+    @EventListener
+    public void onTenantUnsubscribed(
+            MicroserviceSubscriptionRemovedEvent event) {
+        tenantTestLocks.remove(event.getTenant());
+    }
 
     private ReentrantLock acquireTenantTestLock(String tenant) {
         ReentrantLock lock = tenantTestLocks.computeIfAbsent(tenant, t -> new ReentrantLock());

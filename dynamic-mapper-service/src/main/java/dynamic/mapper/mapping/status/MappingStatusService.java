@@ -94,7 +94,7 @@ public class MappingStatusService {
      * @param reset if true, clears existing status data; if false, preserves existing data
      * @throws IllegalArgumentException if tenant is null or empty
      */
-    public void initializeTenantStatus(String tenant, boolean reset) {
+    public void initializeTenant(String tenant, boolean reset) {
         validateTenant(tenant);
         MapperServiceRepresentation serviceRep = serviceRegistry.getMapperServiceRepresentation(tenant);
 
@@ -131,7 +131,7 @@ public class MappingStatusService {
      *
      * @param tenant the tenant identifier to remove
      */
-    public void removeTenantStatus(String tenant) {
+    public void removeTenant(String tenant) {
         mappingStatuses.remove(tenant);
         initialized.remove(tenant);
         reportedLoadingErrors.removeIf(key -> key.startsWith(tenant + ":"));

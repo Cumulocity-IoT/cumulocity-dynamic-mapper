@@ -238,4 +238,10 @@ public class DeviceDiscoveryService {
         recursionDepth.remove();
         log.info("DeviceDiscoveryService cleanup completed");
     }
+
+    /** Drops tenant-scoped in-flight markers on tenant removal. */
+    public void removeTenant(String tenant) {
+        String prefix = tenant + ":";
+        processingDevices.removeIf(k -> k.startsWith(prefix));
+    }
 }

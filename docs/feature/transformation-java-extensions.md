@@ -226,7 +226,7 @@ lookup, resource cleanup, UI polish") changed the following in
   closed/deleted together. Re-registering an already-loaded extension closes the previous
   classloader first (`loadProcessorExtensions`); deleting an extension
   (`deleteProcessorExtension`) and tenant offboarding/shutdown
-  (`cleanupTenantExtensions`/`cleanupAllExtensions`) all route through the same
+  (`removeTenant`/`cleanupAllExtensions`) all route through the same
   `closeClassLoaderAndDeleteFile` helper, which explicitly deletes the temp jar rather
   than relying solely on `File.deleteOnExit()` (which only fires at JVM shutdown and would
   otherwise leak temp files for the life of the process).
