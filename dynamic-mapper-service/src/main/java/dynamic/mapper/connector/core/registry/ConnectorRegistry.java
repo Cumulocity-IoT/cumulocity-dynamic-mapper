@@ -46,6 +46,7 @@ import jakarta.annotation.PreDestroy;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -62,6 +63,13 @@ public class ConnectorRegistry {
 
     // Structure: < Tenant, < ConnectorIdentifier, ConnectorStatusEvent > >
     private Map<String, Map<String, ConnectorStatusEvent>> connectorStatusMaps = new ConcurrentHashMap<>();
+
+    /**
+     * Tenants whose resources were removed (unsubscribed). A late status update from a stray
+     * thread must not re-create their status map via {@link #getConnectorStatusMap}; cleared
+     * again by {@link #initializeResources} when the tenant re-subscribes.
+     */
+    private final Set<String> removedTenants = ConcurrentHashMap.newKeySet();
 
     // Structure: < Tenant, < ConnectorIdentifier, OutboundMessageDispatcher > >
     // Added for NotificationSubscriber support
@@ -135,7 +143,15 @@ public class ConnectorRegistry {
             Iterator<Entry<String, AConnectorClient>> iterator = connectorMap.entrySet().iterator();
             while (iterator.hasNext()) {
                 Entry<String, AConnectorClient> entryNext = iterator.next();
-                entryNext.getValue().stopHousekeepingAndClose();
+                try {
+                    // same as unregisterClient: release the dispatcher to avoid memory leaks
+                    entryNext.getValue().setDispatcher(null);
+                    // cleanup() = stop housekeeping + close + clear subscription state
+                    entryNext.getValue().cleanup();
+                } catch (Exception e) {
+                    // one failing client must not leave the remaining ones running
+                    log.warn("{} - Error cleaning up connector {}: {}", tenant, entryNext.getKey(), e.getMessage());
+                }
                 iterator.remove();
             }
         }
@@ -191,10 +207,15 @@ public class ConnectorRegistry {
         // computeIfAbsent ensures the map always exists after initializeResources,
         // and guards against races during startup where updateStatus is called before
         // initializeResources has run for this tenant.
+        if (removedTenants.contains(tenant)) {
+            // tenant unsubscribed: hand out a detached map so the update is dropped, not stored
+            return new ConcurrentHashMap<>();
+        }
         return connectorStatusMaps.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
     }
 
     public void initializeResources(String tenant) {
+        removedTenants.remove(tenant);
         connectorStatusMaps.put(tenant, new ConcurrentHashMap<>());
         dispatcherOutboundMaps.put(tenant, new ConcurrentHashMap<>());
     }
@@ -206,6 +227,7 @@ public class ConnectorRegistry {
      * too and keep the cleanup contract uniform: no key of an unsubscribed tenant survives.
      */
     public void removeResources(String tenant) {
+        removedTenants.add(tenant);
         connectorStatusMaps.remove(tenant);
         dispatcherOutboundMaps.remove(tenant);
         connectorTenantMap.remove(tenant);

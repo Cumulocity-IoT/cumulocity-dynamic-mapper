@@ -88,8 +88,12 @@ microservice is required. Build the jar first, the **End-to-end overview** above
    extension, loading happens asynchronously, and the banner reports progress while it runs.
 
 The jar must contain an `extension-external.yaml` naming each processor and its implementation class. An
-extension whose descriptor is missing or malformed uploads successfully but contributes **0 Loaded** processors.
-If you see that, check the descriptor before looking anywhere else.
+extension whose descriptor is missing or malformed uploads successfully but shows **Not Loaded** on its card, with the
+reason below it. Check the descriptor before looking anywhere else. **Reload** replaces all extensions in one step, so
+mappings keep running with the previous version until the new one is ready.
+
+You cannot delete an extension while a mapping uses it. The delete fails and names the mappings to change or delete
+first. Built-in extensions cannot be deleted.
 
 Once loaded, the extension's processors become selectable in the mapping wizard as described above, and the jar
 survives microservice restarts, it is stored in the tenant, not on the container's filesystem.

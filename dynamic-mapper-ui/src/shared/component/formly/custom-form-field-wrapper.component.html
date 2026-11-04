@@ -55,7 +55,7 @@
         </div>
     }
 
-    @if (!showError && props.description && !showDescriptionAsPopup) {
+    @if (!showError && props.description && !showDescriptionAsPopup && !props['hideInlineDescription']) {
         <div class="help-block has-info text-muted">
             {{ props.description | translate }}
         </div>

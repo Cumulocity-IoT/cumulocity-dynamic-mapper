@@ -193,7 +193,6 @@ public class ConnectionStateManager {
     }
 
     private void updateStatus(ConnectorStatus status, String message, boolean sendEvent) {
-        ensureStatusGaugeRegistered();
         // Suppress reporting a DISCONNECTING transition when there's no live connection to tear
         // down in the first place — e.g. reconnect()'s disconnect-initialize-connect sequence
         // runs its defensive disconnect() step even for a connector that was never connected,
@@ -239,7 +238,6 @@ public class ConnectionStateManager {
     }
 
     public void updateStatusWithError(Exception e) {
-        ensureStatusGaugeRegistered();
         // Copy-on-write: create a new event instead of mutating the shared object.
         ConnectorStatusEvent newStatus = new ConnectorStatusEvent(ConnectorStatus.FAILED);
         newStatus.connectorName = connectorName;
@@ -262,7 +260,6 @@ public class ConnectionStateManager {
      * a retry is already scheduled.
      */
     public void updateStatusRetrying(Exception e, long nextRetryDelaySeconds) {
-        ensureStatusGaugeRegistered();
         ConnectorStatusEvent newStatus = new ConnectorStatusEvent(ConnectorStatus.RETRYING);
         newStatus.connectorName = connectorName;
         newStatus.connectorIdentifier = connectorIdentifier;

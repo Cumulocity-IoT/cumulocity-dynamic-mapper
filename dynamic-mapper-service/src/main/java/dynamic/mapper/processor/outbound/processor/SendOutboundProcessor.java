@@ -81,7 +81,7 @@ public class SendOutboundProcessor extends BaseProcessor {
             autoAckOperation(context, tenant, mapping, OperationStatus.EXECUTING);
 
             // Process all C8Y requests that were created by SubstitutionProcessor
-            processAndPrepareRequests(context, connectorIdentifier);
+            boolean delivered = processAndPrepareRequests(context, connectorIdentifier);
 
 
             // Create alarms for any processing issues
@@ -94,7 +94,7 @@ public class SendOutboundProcessor extends BaseProcessor {
                 // Commit extension state only for a fully published message; on failure the message
                 // is redelivered and must not look like a duplicate. An empty error list does not prove
                 // it: a connector can break off on interruption or record a failure only on the request.
-                if (publishedCompletely(context, wrapper)) {
+                if (delivered && publishedCompletely(context, wrapper)) {
                     context.runDeferredStateCommit();
                 }
                 autoAckOperation(context, tenant, mapping, OperationStatus.SUCCESSFUL);
@@ -154,8 +154,10 @@ public class SendOutboundProcessor extends BaseProcessor {
 
     /**
      * Process and send all C8Y requests created during substitution
+     *
+     * @return false when the connector was not connected, so the requests were never published
      */
-    private void processAndPrepareRequests(ProcessingContext<Object> context, String connectorIdentifier) {
+    private boolean processAndPrepareRequests(ProcessingContext<Object> context, String connectorIdentifier) {
         String tenant = context.getTenant();
         Mapping mapping = context.getMapping();
 
@@ -164,12 +166,12 @@ public class SendOutboundProcessor extends BaseProcessor {
 
         if (requests == null || requests.isEmpty()) {
             log.debug("{} - No requests to process, skipping send", tenant);
-            return;
+            return true;
         }
 
         if (!context.isSendPayload()) {
             log.warn("{} - Not sending messages: sendPayload is false", tenant);
-            return;
+            return true;
         }
 
         try {
@@ -179,14 +181,14 @@ public class SendOutboundProcessor extends BaseProcessor {
             // is always synthetic for outbound tests.
             if (Boolean.TRUE.equals(context.isTesting())) {
                 publishToRealConnectors(context, tenant);
-                return;
+                return true;
             }
 
             AConnectorClient connectorClient = connectorRegistry.getClientForTenant(tenant, connectorIdentifier);
 
             if (!connectorClient.isConnected()) {
                 log.warn("{} - Not sending messages: connector not connected", tenant);
-                return;
+                return false;
             }
 
             // Route API.CUSTOM requests via C8YAgent (HTTP POST to Cumulocity microservice endpoint).
@@ -239,6 +241,7 @@ public class SendOutboundProcessor extends BaseProcessor {
                             String.format("%s - Error processing outbound requests: %s", tenant, e.getMessage()),
                             e));
         }
+        return true;
     }
 
     /**

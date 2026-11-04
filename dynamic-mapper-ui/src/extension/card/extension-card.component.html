@@ -51,6 +51,9 @@
         @if (app['loaded'] === ExtensionStatus.NOT_LOADED) {
           <div>
             <span class="text-muted">Not Loaded</span>
+            @if (app['message']) {
+              <p class="text-danger small m-b-0 m-t-4 text-break">{{ app['message'] }}</p>
+            }
           </div>
         }
         @if (app['loaded'] === ExtensionStatus.PARTIALLY) {

@@ -98,19 +98,31 @@ exposes `GET /extension` and `GET /extension/{extensionName}` (`ROLE_DYNAMIC_MAP
 `DELETE /extension/{extensionName}` (`ROLE_DYNAMIC_MAPPER_ADMIN`). Per-tenant isolation comes from reading the
 extension managed objects as the calling tenant; the class loaders and the registry are keyed by tenant.
 
+`DELETE` is guarded in `ExtensionController`:
+
+| Status | Condition |
+|--------|-----------|
+| 404 | No extension with that name is registered. |
+| 400 | The extension is built-in. Only external extensions can be deleted. |
+| 409 | At least one mapping, active or not, references the extension. The message lists the mapping names. |
+
+The UI shows the message of a failed delete as a warning.
+
 ### Loading and lookup
 
 [`ExtensionManager`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/core/ExtensionManager.java) owns the lifecycle of extension JARs per tenant:
 
 - `loadProcessorExtensions(tenant)` iterates every extension managed object
   (`extensionsComponent.get()`), downloads external ones from the Cumulocity binaries API
-  into a temp file, builds a `URLClassLoader` over it (internal extensions instead reuse
+  into a `.jar` temp file, builds a `URLClassLoader` over it (internal extensions instead reuse
   `ExtensionManager.class.getClassLoader()`), and reads an `extension-internal.yaml` /
   `extension-external.yaml` manifest resource that lists each extension's implementation
-  class, event name, description, and parameters.
+  class, event name, description, and parameters. A managed object whose
+  `d11r_processorExtension` fragment has no `name` is skipped with a warning.
 - Each listed class is instantiated once via its no-arg constructor and reused for every
-  subsequent message; its direction (`INBOUND`/`OUTBOUND`) is auto-detected from which
-  marker interface it implements.
+  subsequent message, so implementations must be thread-safe. Its direction (`INBOUND`/`OUTBOUND`)
+  is detected from the interface it implements. A class cannot implement both, because the
+  two `onMessage` methods have the same parameters and different return types.
 - External extension classes must live under a configured allowed package
   (`ExtensionConfiguration.getExternalExtensionsAllowedPackage()`, property
   `APP.externalExtensionsAllowedPackage`, default `dynamic.mapper.processor.extension.external`); loading external JARs
@@ -122,7 +134,28 @@ extension managed objects as the calling tenant; the class loaders and the regis
   where `ExtensionEntry` (
   [`ExtensionEntry.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/model/extension/ExtensionEntry.java)) holds the instantiated
   `ProcessorExtensionInbound`/`Outbound` object plus load status (`loaded`, `message`) for
-  the UI to surface.
+  the UI to surface. `loaded` and `message` are part of the REST response but are ignored when a
+  mapping that embeds the entry is read or stored (`@JsonIgnoreProperties(allowGetters = true)`).
+
+#### Reload and load failures
+
+`loadProcessorExtensions(tenant)` and `reloadExtensions(tenant)` are the same operation. They run under a
+per-tenant lock and build the new set of extensions without touching the registry. They then replace the
+registry content in one step (`ExtensionInboundRegistry.replaceExtensions`) and close the previous classloaders
+afterwards. A mapping that processes a message during a reload therefore keeps using the previous
+extension and does not fail with "Extension not found". A call that is already running on the old classloader
+can still fail with a class loading error, which the processors report as a `ProcessingException`.
+
+Failures never abort the load of the other extensions:
+
+| Failure | Result |
+|---------|--------|
+| JAR cannot be downloaded, `extension-external.yaml` is missing or invalid | The extension is registered with `loaded = NOT_LOADED` and the reason in `Extension.message`. The UI shows it on the extension card. |
+| Manifest lists no extensions | `NOT_LOADED`, message `No extensions defined in <file>`. |
+| Class not found, missing dependency, failing static initializer, no public no-arg constructor, constructor throws | That entry gets `loaded = false` and a message. The other entries load, so the extension status is `PARTIALLY`. |
+| Class does not implement `ProcessorExtensionInbound` or `ProcessorExtensionOutbound`, or is outside the allowed package | Same as above. |
+
+The extension status is `COMPLETE` when all entries loaded, `PARTIALLY` when some did, and `NOT_LOADED` when none did.
 
 At processing time, `AbstractExtensibleProcessor.getProcessorExtensionInbound()` /
 `getProcessorExtensionOutbound()`
@@ -167,7 +200,12 @@ the extension returns `null`/empty — logs at info level and sets
 deduplication), as for Smart Functions, so it does not count toward the failure streak. A distinct `AbstractMethodError` catch block detects the
 specific case of an extension JAR compiled against an older `ProcessorExtensionInbound`
 interface signature and reports it as an incompatibility rather than a cryptic linkage
-error.
+error. Any other `LinkageError`, for example a `NoClassDefFoundError` after the JAR was replaced or deleted
+while a message was processed, is reported as a `ProcessingException` in both directions.
+
+The lookup reads the entry from the registry, not the copy stored in the mapping, which can be stale. It fails with a
+specific message when the extension or event is unknown, when the entry is not loaded (the message includes the load
+failure), or when the entry implements the other direction.
 
 `AbstractExtensibleProcessor` (the shared base for both directions,
 [`AbstractExtensibleProcessor.java`](../../dynamic-mapper-service/src/main/java/dynamic/mapper/processor/AbstractExtensibleProcessor.java)) provides the Template Method skeleton

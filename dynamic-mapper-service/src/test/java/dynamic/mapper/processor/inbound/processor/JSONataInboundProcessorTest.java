@@ -716,4 +716,24 @@ class JSONataInboundProcessorTest {
 
         log.info("✅ Complex nested expressions validated");
     }
+
+    @Test
+    void emptyArrayWithExpandArrayIsTreatedAsMissingValueAndWarns() throws Exception {
+        Mapping mapping = createCompleteMapping();
+        mapping.setSubstitutions(new Substitution[] {
+                Substitution.builder().pathSource("ID").pathTarget("_IDENTITY_.externalId")
+                        .repairStrategy(RepairStrategy.DEFAULT).expandArray(false).build(),
+                Substitution.builder().pathSource("[]").pathTarget("onguardMeasurement")
+                        .repairStrategy(RepairStrategy.DEFAULT).expandArray(true).build()
+        });
+        ProcessingContext<Object> context = createProcessingContext(mapping);
+        when(mappingService.getMappingStatus(TEST_TENANT, mapping)).thenReturn(mappingStatus);
+
+        processor.process(context);
+
+        List<SubstituteValue> cached = context.getProcessingCache().get("onguardMeasurement");
+        assertEquals(1, cached.size());
+        assertNull(cached.get(0).value);
+        assertTrue(context.getWarnings().stream().anyMatch(w -> w.contains("empty array")));
+    }
 }

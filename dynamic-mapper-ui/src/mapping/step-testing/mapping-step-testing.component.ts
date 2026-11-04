@@ -451,8 +451,14 @@ export class MappingStepTestingComponent implements OnInit, OnDestroy {
     // regardless of whether onChange fired (tree-mode edits may not always trigger it)
     this.syncPayload(this.editorTestingPayload?.get() ?? this.sourceTemplate, undefined, false);
 
+    // Raw-payload types carry their text in a `payload` property. An ANY_PAYLOAD mapping handled by a
+    // Java extension can instead have a plain JSON source template (the shipped IN-17 sample): then
+    // there is no `payload` property, the request went out without one and the backend answered 400.
+    const rawPayload = this.sourceTemplate?.['payload'];
     const extractedPayload = this.requiresRawPayload()
-      ? this.sourceTemplate?.['payload']
+      ? (typeof rawPayload === 'string' || this.testMapping.mappingType !== MappingType.ANY_PAYLOAD
+          ? rawPayload
+          : this.testMapping.sourceTemplate)
       : this.testMapping.sourceTemplate;
 
     // Create test context and call remote testing endpoint

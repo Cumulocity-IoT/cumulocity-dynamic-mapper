@@ -81,7 +81,7 @@ export class SubstitutionGridComponent implements OnDestroy {
   readonly definesDeviceIdentifier = definesDeviceIdentifier;
   readonly substitutionTemplateHelp = 'Substitutions defining the device identifier are marked with an "*". Before adding a substitution target and source property in templates have to be selected.';
   readonly targetHelp = 'The JSON path in the target template where the value extracted from the source is written to.';
-  readonly expandArrayHelp = 'When the source expression extracts an array, create one substitution per array element instead of a single combined value. Not available for outbound mappings.';
+  readonly expandArrayHelp = 'When the source expression extracts an array, create one Cumulocity request per array element instead of writing the whole array into one request. Arrays from several substitutions are paired by position. Not available for outbound mappings.';
   readonly repairStrategyHelp = 'How to handle a missing, null, or array source value: skip the substitution, remove the target node, create the target node if missing, or use the first/last element of an extracted array.';
   /**
    * One combined popover for all column meanings, shown above the table, rather than one

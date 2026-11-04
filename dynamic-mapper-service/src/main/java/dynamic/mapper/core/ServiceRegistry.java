@@ -178,6 +178,10 @@ public class ServiceRegistry implements IMapperConfiguration {
         tenantRegistry.addServiceConfiguration(tenant, configuration);
     }
 
+    public void removeDeviceToClientState(String tenant) {
+        tenantRegistry.removeDeviceToClientState(tenant);
+    }
+
     public void removeServiceConfiguration(String tenant) {
         tenantRegistry.removeServiceConfiguration(tenant);
     }

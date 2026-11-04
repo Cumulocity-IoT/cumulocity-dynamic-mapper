@@ -163,6 +163,12 @@ public class ExtensibleOutboundProcessor extends AbstractExtensibleProcessor<Obj
                 extensionEntry.getFqnClassName());
             log.error(message, e);
             throw new ProcessingException(message, e);
+        } catch (LinkageError e) {
+            // e.g. NoClassDefFoundError when the extension jar was replaced or deleted while processing
+            String message = String.format("%s - Extension '%s' (class: %s) failed with a class loading error: %s",
+                tenant, extensionEntry.getEventName(), extensionEntry.getFqnClassName(), e);
+            log.error(message, e);
+            throw new ProcessingException(message, e);
         } catch (Exception e) {
             String message = String.format(
                     "Tenant %s - Error in outbound extension processing: %s",

@@ -46,5 +46,6 @@ public enum ValidationError {
   Extension_Must_Be_Defined_For_Extension_Java_Mapping,
   Unparsed_MappingType_Requires_Smart_Function_Transformation_Type,
   Substitution_Source_Expression_Must_Be_Valid_JSONata,
-  Substitution_Paths_Must_Not_Be_Empty
+  Substitution_Paths_Must_Not_Be_Empty,
+  Substitution_Expand_Array_Not_Supported_For_Outbound
 }

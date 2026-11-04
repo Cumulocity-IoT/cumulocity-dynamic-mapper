@@ -73,9 +73,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IIdentified } from '@c8y/client';
 import { gettext } from '@c8y/ngx-components/gettext';
 import { BsModalService } from 'ngx-bootstrap/modal';
-import { BehaviorSubject, finalize, Subject, take, takeUntil } from 'rxjs';
+import { BehaviorSubject, finalize, firstValueFrom, Subject, take, takeUntil } from 'rxjs';
 import { CodeTemplate } from '../../shared/configuration/configuration.model';
 import { MappingService } from '../core/mapping.service';
+import { CopySource, CopySourceModalComponent } from './copy-source-modal/copy-source-modal.component';
 import { MappingBulkOperationsService } from '../core/mapping-bulk-operations.service';
 import { ExplorerMappingHandoffService } from '../core/explorer-mapping-handoff.service';
 import { SubscriptionService } from '../core/subscription.service';
@@ -735,7 +736,10 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async copyMapping(m: MappingEnriched) {
-    const { mapping } = m;
+    const source = await this.chooseCopySource(m.mapping);
+    if (!source) return;
+    // The list holds the active configuration; edits live in the draft until published.
+    const mapping = source === 'draft' ? await this.mappingService.getDraft(m.mapping.id) ?? m.mapping : m.mapping;
     this.setStepperConfiguration(
       mapping.mappingType,
       mapping.transformationType,
@@ -770,6 +774,18 @@ export class MappingComponent implements OnInit, OnDestroy {
     }
 
     this.showConfigMapping = true;
+  }
+
+  /**
+   * A line with unpublished changes has two candidates to copy. Resolves to the choice, to
+   * 'active' without asking when there is no draft, or to null when the user cancels.
+   */
+  private async chooseCopySource(mapping: Mapping): Promise<CopySource | null> {
+    if (!mapping.draftDirty) return 'active';
+    const modalRef = this.bsModalService.show(CopySourceModalComponent, {
+      initialState: { mappingName: mapping.name, activeVersion: mapping.version }
+    });
+    return (await firstValueFrom(modalRef.content!.closeSubject, { defaultValue: null })) ?? null;
   }
 
   async toggleDebugMapping(m: MappingEnriched) {

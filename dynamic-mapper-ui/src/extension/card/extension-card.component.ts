@@ -74,7 +74,7 @@ export class ExtensionCardComponent implements OnInit {
       await this.extensionService.deleteProcessorExtension(this.app);
       this.appDeleted.emit();
     } catch (error) {
-      this.alertService.addServerFailure(error);
+      this.alertService.warning('Failed to delete Java Extension', error?.message);
     }
   }
 

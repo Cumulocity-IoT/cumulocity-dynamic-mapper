@@ -278,6 +278,17 @@ public class TenantRegistry {
         }
     }
 
+    /**
+     * Drops all in-memory device-to-client state of a tenant (relations, pending changes, persisted
+     * map id). Unlike {@link #clearCacheDeviceToClient} it records no pending changes, since the
+     * tenant is gone and nothing must be persisted for it afterwards.
+     */
+    public void removeDeviceToClientState(String tenant) {
+        deviceToClientPerTenant.remove(tenant);
+        pendingClientChangesPerTenant.remove(tenant);
+        deviceToClientMapIds.remove(tenant);
+    }
+
     public void clearCacheDeviceToClient(String tenant) {
         Map<String, String> tenantMappings = deviceToClientPerTenant.computeIfAbsent(tenant,
                 k -> new ConcurrentHashMap<>());

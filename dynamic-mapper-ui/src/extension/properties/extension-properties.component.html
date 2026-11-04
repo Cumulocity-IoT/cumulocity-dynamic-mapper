@@ -53,10 +53,13 @@
         @for (entry of filteredEntries; track entry; let i = $index) {
         <c8y-li role="listitem" class="p-t-4" #li>
           <c8y-li-icon [icon]="'plugin'"></c8y-li-icon>
-          <div class="col-md-4">
-            <span class="m-r-16">{{ entry.eventName }}</span>
-          </div>
           <div class="col-md-6">
+            <strong class="m-r-16">{{ entry.eventName }}</strong>
+            @if (entry.description) {
+            <p class="text-muted small m-b-0 m-t-4">{{ entry.description }}</p>
+            }
+          </div>
+          <div class="col-md-4">
             @if (entry.direction) {
             <span class="label label-primary m-l-4">
               {{ entry.direction | formatStringAsWords }}

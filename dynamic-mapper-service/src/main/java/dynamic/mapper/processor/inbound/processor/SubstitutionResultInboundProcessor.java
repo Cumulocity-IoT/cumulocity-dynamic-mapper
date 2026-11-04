@@ -377,6 +377,13 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 } else {
                     substitute = new SubstituteValue("NOT_DEFINED", TYPE.TEXTUAL, RepairStrategy.DEFAULT, false);
                 }
+                if (finalI == pathTargetSubstitute.size()) {
+                    // Once per pathTarget, so test results show the gap without one line per request.
+                    context.getWarnings().add(String.format(
+                            "Target '%s' has %d value(s) but %d request(s) are created; the remaining"
+                                    + " request(s) use repairStrategy '%s'",
+                            pathTarget, pathTargetSubstitute.size(), size, declared));
+                }
                 log.warn(
                         "{} - Mapping '{}' has only {} value(s) cached for pathTarget: '{}' but a cardinality of {};"
                                 + " applying repairStrategy: '{}' for request {}.",

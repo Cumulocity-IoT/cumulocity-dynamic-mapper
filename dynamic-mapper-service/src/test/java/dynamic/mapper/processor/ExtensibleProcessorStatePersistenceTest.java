@@ -58,7 +58,7 @@ class ExtensibleProcessorStatePersistenceTest {
                 .extension(configured)
                 .build();
         registered = ExtensionEntry.builder()
-                .extensionName("ext").eventName("evt").fqnClassName("x.Y").direction(Direction.UNSPECIFIED).build();
+                .extensionName("ext").eventName("evt").fqnClassName("x.Y").direction(Direction.UNSPECIFIED).loaded(true).build();
         registered.setExtensionImplInbound(inboundExtension);
         registered.setExtensionImplOutbound(outboundExtension);
         Extension extension = new Extension("id", "ext");

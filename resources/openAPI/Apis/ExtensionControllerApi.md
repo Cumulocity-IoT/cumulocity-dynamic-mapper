@@ -17,6 +17,16 @@ Delete a processor extension
 
     Deletes a processor extension from the system. This will remove the extension and make it unavailable for use in mappings. Only external extensions can be deleted - built-in extensions cannot be removed.  **Security:** Requires ROLE_DYNAMIC_MAPPER_ADMIN role. 
 
+### Responses
+
+| Status | Description |
+|--------|-------------|
+| 200 | Extension deleted successfully |
+| 400 | Built-in extensions cannot be deleted |
+| 403 | Forbidden - insufficient permissions to delete extensions |
+| 404 | Extension not found |
+| 409 | Extension is still used by mappings; the response message lists them |
+
 ### Parameters
 
 |Name | Type | Description  | Notes |

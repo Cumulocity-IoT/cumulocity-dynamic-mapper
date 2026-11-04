@@ -69,6 +69,21 @@ import { findUncachedFilterAttributes } from './inventory-filter-fragments';
   selector: 'd11r-mapping-properties',
   templateUrl: 'mapping-step-properties.component.html',
   styleUrls: ['../../shared/mapping/mapping.style.css'],
+  // Tighter vertical rhythm so the whole tab fits one screen; scoped to this tab's wrapper.
+  styles: [`
+    .d11r-props-compact .legend.form-block { margin: 12px 0 4px; }
+    .d11r-props-compact .form-group { margin-bottom: 8px; }
+    /* Same box as .form-control, so the text starts where the neighboring input's text starts. */
+    .d11r-props-compact .filter-result {
+      padding: 5px 8px;
+      border: 1px solid transparent;
+      line-height: 20px;
+      min-height: 32px;
+      box-sizing: border-box;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+  `],
   encapsulation: ViewEncapsulation.None,
   standalone: true,
   imports: [CoreModule, PopoverModule]
@@ -89,6 +104,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
   readonly readOnlyHelp = ' This mapping is read-only: it uses a deprecated transformation type, or your user lacks the Mapping Admin / Mapping Create role.';
 
   propertyFormlyFields: FormlyFieldConfig[] = [];
+  private filterResultField: FormlyFieldConfig;
   sourceSystem: string;
   targetSystem: string;
   // Initialised here, not only in ngOnInit: ngOnInit awaits before it gets to initializeFilterModels(),
@@ -125,15 +141,27 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     this.initializeDirection();
     this.initializeFilterModels();
 
+    const isInbound = this.stepperConfiguration.direction === Direction.INBOUND;
+    const isOutbound = this.stepperConfiguration.direction === Direction.OUTBOUND;
+    // Switches share this shape; hideLabel puts the label next to the toggle.
+    const switchProps = (label: string, description: string) => ({
+      label,
+      description,
+      disabled: this.isFieldDisabled,
+      required: false,
+      switchMode: true,
+      indeterminate: false,
+      hideLabel: true,
+      // The switch already offers the description as a help popover; no second copy below it.
+      hideInlineDescription: true
+    });
+
     this.propertyFormlyFields = [
       {
-        validators: {
-          validation: [
-            this.stepperConfiguration.direction === Direction.INBOUND
-              ? 'checkTopicsInboundAreValid'
-              : 'checkTopicsOutboundAreValid'
-          ]
-        },
+        type: 'template',
+        template: '<div class="legend form-block">General, topic, and filter</div>'
+      },
+      {
         fieldGroupClassName: 'row',
         fieldGroup: [
           {
@@ -143,11 +171,31 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             type: 'input',
             templateOptions: {
-              label: 'Mapping Name',
+              label: 'Mapping name',
               disabled: this.isFieldDisabled,
               required: true
             }
           },
+          {
+            // Mapping and transformation type cannot be edited here, so they are shown as a
+            // summary instead of two disabled inputs.
+            className: 'col-lg-6',
+            type: 'template',
+            expressions: {
+              template: (field: FormlyFieldConfig) =>
+                `<div class="form-group"><label>Mapping and transformation type</label>` +
+                `<div class="m-t-4"><span class="label label-default m-r-8" data-cy="dm-mapping-properties-mapping-type">${field.model?.mappingType ?? ''}</span>` +
+                `<span class="label label-default" data-cy="dm-mapping-properties-transformation-type">${field.model?.transformationType ?? ''}</span></div></div>`
+            }
+          }
+        ]
+      },
+      {
+        validators: {
+          validation: [isInbound ? 'checkTopicsInboundAreValid' : 'checkTopicsOutboundAreValid']
+        },
+        fieldGroupClassName: 'row',
+        fieldGroup: [
           {
             className: 'col-lg-6',
             key: 'mappingTopic',
@@ -155,26 +203,22 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             type: 'input',
             templateOptions: {
-              label: 'Mapping Topic',
-              placeholder: 'The MappingTopic defines a key to which this mapping is bound. It is a kind of key to organize the mappings internally',
+              label: 'Mapping topic',
+              placeholder: 'plant1/+/+',
               disabled: this.isFieldDisabled,
-              description: 'Mapping Topic',
+              description:
+                'The mapping topic is the key to which this mapping is bound. It is used to organize the mappings internally.',
               change: () => {
                 const newTopic = this.propertyFormly.get('mappingTopic').value;
-                const sampleKey =
-                  this.stepperConfiguration.direction === Direction.INBOUND
-                    ? 'mappingTopicSample'
-                    : 'publishTopicSample';
-                const sampleControl = this.propertyFormly.get(sampleKey);
+                const sampleControl = this.propertyFormly.get('mappingTopicSample');
                 if (topicsHaveSameStructure(newTopic, sampleControl.value)) {
                   return;
                 }
                 sampleControl.setValue(deriveSampleTopicFromTopic(newTopic));
               },
-              required: this.stepperConfiguration.direction === Direction.INBOUND
+              required: true
             },
-            hideExpression:
-              this.stepperConfiguration.direction === Direction.OUTBOUND
+            hideExpression: isOutbound
           },
           {
             className: 'col-lg-6',
@@ -182,8 +226,8 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             wrappers: ['c8y-form-field'],
             type: 'input',
             templateOptions: {
-              label: 'Publish Topic',
-              placeholder: 'Publish Topic ...',
+              label: 'Publish topic',
+              placeholder: 'measurements/+',
               disabled: this.isFieldDisabled,
               change: () => {
                 const newTopic = this.propertyFormly.get('publishTopic').value;
@@ -193,12 +237,48 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                 }
                 sampleControl.setValue(deriveSampleTopicFromTopic(newTopic));
               },
-              required:
-                true
+              required: true
             },
-            hideExpression:
-              this.stepperConfiguration.direction === Direction.INBOUND
+            hideExpression: isInbound
           },
+          {
+            className: 'col-lg-6',
+            key: 'mappingTopicSample',
+            id: 'mappingTopicSample',
+            type: 'input',
+            wrappers: ['c8y-form-field'],
+            templateOptions: {
+              label: 'Mapping topic sample',
+              placeholder: 'e.g. device/110',
+              disabled: this.isFieldDisabled,
+              description: `The mapping topic sample
+              must have the same structure and number of
+              levels as the mapping topic. Wildcards, i.e. <code>+</code> in the mapping topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
+              required: true
+            },
+            hideExpression: isOutbound
+          },
+          {
+            className: 'col-lg-6',
+            key: 'publishTopicSample',
+            type: 'input',
+            wrappers: ['c8y-form-field'],
+            templateOptions: {
+              label: 'Publish topic sample',
+              placeholder: 'e.g. device/110',
+              disabled: this.isFieldDisabled,
+              description: `The publish topic sample
+              must have the same structure and number of
+              levels as the publish topic. Wildcards, i.e. <code>+</code> in the publish topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
+              required: true
+            },
+            hideExpression: !isOutbound
+          }
+        ]
+      },
+      {
+        fieldGroupClassName: 'row',
+        fieldGroup: [
           {
             className: 'col-lg-6',
             key: 'filterInventory',
@@ -207,19 +287,22 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             // cache" warning under the input (props.warning).
             wrappers: ['d11r-wrapper-form-field'],
             templateOptions: {
-              label: 'Filter Inventory',
-              placeholder: `type = "lora_device_type`,
+              label: 'Filter inventory',
+              placeholder: 'type = "lora_device_type"',
               disabled: this.isFieldDisabled,
               description: MappingStepPropertiesComponent.FILTER_INVENTORY_DESCRIPTION,
-              required:
-                false
+              required: false
             },
             hooks: {
               onInit: (field: FormlyFieldConfig) => {
                 this.filterInventoryField = field;
-                // An existing mapping opens with its filter already set: check it right away
-                // instead of only after the first edit.
-                void this.refreshFilterInventoryWarning(this.mapping.filterInventory);
+                // An existing mapping opens with its filter already set: evaluate it right away
+                // (result and cache warning) instead of only after the first edit.
+                if (this.mapping.filterInventory) {
+                  void this.updateFilterInventoryExpressionResult(this.mapping.filterInventory);
+                } else {
+                  void this.refreshFilterInventoryWarning(this.mapping.filterInventory);
+                }
                 field.formControl.valueChanges.pipe(
                   debounceTime(1500),
                   distinctUntilChanged(),
@@ -230,88 +313,39 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               }
             }
           },
-          {
+          // Result of evaluating the filter against the sample device, shown beside the
+          // expression. A template field shares the row's grid; syncFilterInventoryResultField()
+          // updates it, because formly re-evaluates expressions on model changes only and the
+          // result arrives asynchronously.
+          (this.filterResultField = {
             className: 'col-lg-6',
-            key: 'mappingTopicSample',
-            id: 'mappingTopicSample',
-            type: 'input',
-            wrappers: ['c8y-form-field'],
-            templateOptions: {
-              label: 'Mapping Topic Sample',
-              placeholder: 'e.g. device/110',
-              disabled: this.isFieldDisabled,
-              description: `The Mapping Topic Sample name
-              must have the same structure and number of
-              levels as the MappingTopic. Wildcards, i.e. <code>+</code> in the Mapping Topic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
-              required: true
-            },
-            hideExpression:
-              this.stepperConfiguration.direction === Direction.OUTBOUND
-          },
-          {
-            className: 'col-lg-6',
-            key: 'publishTopicSample',
-            type: 'input',
-            wrappers: ['c8y-form-field'],
-            templateOptions: {
-              label: 'Publish Topic Sample',
-              placeholder: 'e.g. device/110',
-              disabled: this.isFieldDisabled,
-              description: `The Publish Topic Sample name
-              must have the same structure and number of
-              levels as the PublishTopic. Wildcards, i.e. <code>+</code> in the PublishTopic are replaced with concrete runtime values. This helps to identify the relevant positions in the substitutions`,
-              required: true
-            },
-            hideExpression:
-              this.stepperConfiguration.direction !== Direction.OUTBOUND
-          }
+            type: 'template',
+            hide: true,
+            // Must be non-empty: formly only resolves a template field's type from a truthy
+            // template, and un-hiding an empty one fails with 'type "template" could not be found'.
+            template: '<div></div>'
+          })
         ]
       },
       {
         type: 'template',
-        template: '<div class="legend form-block">Properties</div>'
+        template: `<div class="legend form-block">${isInbound ? 'Target' : 'Source'} and device</div>`
       },
       {
+        // The API select takes the left half; the option that applies to the chosen API sits in
+        // the right half. Hidden options are removed from the DOM, so no spacer is needed.
         fieldGroupClassName: 'row',
         fieldGroup: [
           {
             className: 'col-lg-6',
-            key: 'mappingType',
-            type: 'input',
-            wrappers: ['c8y-form-field'],
-            templateOptions: {
-              label: 'Mapping type',
-              disabled: true,
-              required: false
-            },
-          },
-                    {
-            className: 'col-lg-6',
-            key: 'transformationType',
-            type: 'input',
-            wrappers: ['c8y-form-field'],
-            templateOptions: {
-              label: 'Transformation type',
-              disabled: true,
-              required: false
-            },
-          }
-        ]
-      },
-      {
-        fieldGroupClassName: 'row',
-        fieldGroup: [
-          {
-            className: 'col-lg-3',
             key: 'targetAPI',
             type: 'select',
             wrappers: ['c8y-form-field'],
             templateOptions: {
-              label: this.stepperConfiguration.direction === Direction.INBOUND ? 'Target API' : 'Source API',
-              description:
-                this.stepperConfiguration.direction === Direction.OUTBOUND
-                  ? 'Used as a filter to select which mappings apply when a notification arrives.'
-                  : undefined,
+              label: isInbound ? 'Target API' : 'Source API',
+              description: isOutbound
+                ? 'Used as a filter to select which mappings apply when a notification arrives.'
+                : undefined,
               options: Object.keys(API)
                 .filter((key) => key !== API.ALL.name)
                 .map((key) => {
@@ -331,67 +365,87 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
             key: 'createNonExistingDevice',
             type: 'switch',
             wrappers: ['d11r-wrapper-form-field'],
-            templateOptions: {
-              label: 'Create device',
-              disabled: this.isFieldDisabled,
-              description:
-                'In case a MEAO (Measuremente, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.',
-              required: false,
-              switchMode: true,
-              indeterminate: false,
-              hideLabel: true
-            },
-            hideExpression: () =>
-              this.stepperConfiguration.direction === Direction.OUTBOUND ||
-              this.mapping.targetAPI === API.INVENTORY.name
+            templateOptions: switchProps(
+              'Create device',
+              'In case a MEAO (Measurement, Event, Alarm, Operation) is received and the referenced device does not yet exist, it can be created automatically.'
+            ),
+            hideExpression: () => isOutbound || this.mapping.targetAPI === API.INVENTORY.name
           },
           {
             className: 'col-lg-3',
             key: 'updateExistingDevice',
             type: 'switch',
             wrappers: ['d11r-wrapper-form-field'],
-            templateOptions: {
-              label: 'Update Existing Device',
-              disabled: this.isFieldDisabled,
-              description: 'Update Existing Device.',
-              required: false,
-              switchMode: true,
-              indeterminate: false,
-              hideLabel: true
-            },
-            hideExpression: () =>
-              this.stepperConfiguration.direction === Direction.OUTBOUND ||
-              (this.stepperConfiguration.direction === Direction.INBOUND &&
-                this.mapping.targetAPI !== API.INVENTORY.name)
+            templateOptions: switchProps(
+              'Update existing device',
+              'Update the managed object of the device if it already exists.'
+            ),
+            hideExpression: () => isOutbound || this.mapping.targetAPI !== API.INVENTORY.name
+          },
+          {
+            className: 'col-lg-3',
+            key: 'eventWithAttachment',
+            type: 'switch',
+            wrappers: ['d11r-wrapper-form-field'],
+            templateOptions: switchProps(
+              'Event contains attachment',
+              'Event contains attachment, e.g. image, ... that is stored separately.'
+            ),
+            hideExpression: () => isOutbound || this.mapping.targetAPI !== API.EVENT.name
           },
           {
             className: 'col-lg-3',
             key: 'autoAckOperation',
             type: 'switch',
             wrappers: ['d11r-wrapper-form-field'],
-            templateOptions: {
-              label: 'Auto acknowledge',
-              disabled: this.isFieldDisabled,
-              description: 'Auto acknowledge outbound operation.',
-              required: false,
-              switchMode: true,
-              indeterminate: false,
-              hideLabel: true
-            },
-            hideExpression: () =>
-              this.stepperConfiguration.direction === Direction.INBOUND ||
-              (this.stepperConfiguration.direction === Direction.OUTBOUND &&
-                this.mapping.targetAPI !== API.OPERATION.name)
-          },
-
+            templateOptions: switchProps(
+              'Auto acknowledge',
+              'Auto acknowledge outbound operation.'
+            ),
+            hideExpression: () => isInbound || this.mapping.targetAPI !== API.OPERATION.name
+          }
+        ]
+      },
+      {
+        fieldGroupClassName: 'row',
+        fieldGroup: [
           {
-            className: 'col-lg-3',
-            template: '<div class="form-group row" style="height:80px"></div>',
-            hideExpression: () =>
-              this.stepperConfiguration.direction === Direction.INBOUND ||
-              (this.stepperConfiguration.direction === Direction.OUTBOUND &&
-                this.mapping.targetAPI === API.OPERATION.name)
+            className: 'col-lg-6',
+            key: 'useExternalId',
+            type: 'switch',
+            wrappers: ['d11r-wrapper-form-field'],
+            templateOptions: {
+              ...switchProps(
+                'Use external id',
+                'If this is enabled then the device id is identified by its external id which is looked up and translated using the external id type.'
+              ),
+              change: () => {
+                this.mapping.useExternalId = !!this.propertyFormly.get('useExternalId').value;
+                this.stepperService.notifyMappingPropertyChanged(this.mapping);
+              }
+            }
           },
+          {
+            className: 'col-lg-6',
+            key: 'externalIdType',
+            type: 'input',
+            wrappers: ['c8y-form-field'],
+            defaultValue: 'c8y_Serial',
+            templateOptions: {
+              label: 'External id type',
+              disabled: this.isFieldDisabled
+            },
+            hideExpression: (model) => !model.useExternalId
+          }
+        ]
+      },
+      {
+        type: 'template',
+        template: '<div class="legend form-block">Delivery</div>'
+      },
+      {
+        fieldGroupClassName: 'row',
+        fieldGroup: [
           {
             className: 'col-lg-6',
             key: 'qos',
@@ -405,7 +459,7 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
                 // Outbound publishing is offered at at-most-once / at-least-once only.
                 .filter(
                   (option) =>
-                    this.stepperConfiguration.direction !== Direction.OUTBOUND ||
+                    !isOutbound ||
                     option.value !== Qos.EXACTLY_ONCE
                 )
                 .map((option) => ({ label: option.label, value: option.value })),
@@ -417,70 +471,6 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
               // picked will be clamped by one of the connectors this mapping is deployed to.
               'templateOptions.description': (field) => this.describeQos(field.model?.qos)
             }
-          }
-        ]
-      },
-      {
-        fieldGroupClassName: 'row',
-        fieldGroup: [
-          {
-            className: 'col-lg-3',
-            key: 'eventWithAttachment',
-            type: 'switch',
-            wrappers: ['d11r-wrapper-form-field'],
-            templateOptions: {
-              label: 'Event contains attachment',
-              disabled: this.isFieldDisabled,
-              description: 'Event contains attachment, e.g. image, ... that is stored separately.',
-              required: false,
-              switchMode: true,
-              indeterminate: false,
-              hideLabel: true
-            },
-            hideExpression: () =>
-              this.stepperConfiguration.direction === Direction.OUTBOUND ||
-              this.mapping.targetAPI !== API.EVENT.name
-          }
-        ]
-      },
-      {
-        fieldGroupClassName: 'row',
-        fieldGroup: [
-          {
-            className: 'col-lg-3',
-            key: 'useExternalId',
-            type: 'switch',
-            wrappers: ['d11r-wrapper-form-field'],
-            templateOptions: {
-              label: 'Use external id',
-              switchMode: true,
-              disabled: this.isFieldDisabled,
-              description:
-                'If this is enabled then the device id is identified by its  external id which is looked up and translated using the externalIdType.',
-              indeterminate: false,
-              hideLabel: true,
-              change: () => {
-                this.mapping.useExternalId = !!this.propertyFormly.get('useExternalId').value;
-                this.stepperService.notifyMappingPropertyChanged(this.mapping);
-              }
-            }
-          },
-          {
-            className: 'col-lg-3',
-            key: 'externalIdType',
-            type: 'input',
-            defaultValue: 'c8y_Serial',
-            templateOptions: {
-              label: 'External Id type',
-              disabled: this.isFieldDisabled,
-            },
-            hideExpression: (model) => !model.useExternalId
-          },
-          // filler
-          {
-            className: 'col-lg-3',
-            template: '<div class="form-group row" style="height:80px"></div>',
-            hideExpression: (model) => model.useExternalId
           },
           {
             className: 'col-lg-6',
@@ -516,6 +506,24 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  private renderFilterInventoryResult(): string {
+    const { resultType, result } = this.filterInventoryModel.filterExpression;
+    const text = this.escapeHtml(String(result ?? ''));
+    return (
+      `<div class="form-group"><label>Filter Inventory Result [${this.escapeHtml(String(resultType))}]</label>` +
+      `<div class="filter-result font-smaller" ` +
+      `data-cy="dm-mapping-properties-filter-inventory-result">${text}</div></div>`
+    );
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   async updateFilterInventoryExpressionResult(path: string) {
     this.clearAlerts();
     // The cache note is part of the field's help text, and a missing attribute is reported right
@@ -541,6 +549,15 @@ export class MappingStepPropertiesComponent implements OnInit, OnDestroy {
       this.propertyFormly.get('filterInventory').markAsTouched();
     }
     this.filterInventoryModel = { ...this.filterInventoryModel };
+    this.syncFilterInventoryResultField();
+  }
+
+  private syncFilterInventoryResultField(): void {
+    if (!this.filterResultField) {
+      return;
+    }
+    this.filterResultField.template = this.renderFilterInventoryResult();
+    this.filterResultField.hide = this.filterInventoryModel.filterExpression.resultType === 'empty';
   }
 
   /**

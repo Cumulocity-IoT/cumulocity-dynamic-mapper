@@ -593,6 +593,11 @@ public abstract class AConnectorClient {
         }
     }
 
+    /** True while a probe client is being constructed on this thread. */
+    static boolean isProbeConstruction() {
+        return PROBE_CONSTRUCTION.get();
+    }
+
     /** Releases what construction allocated, for a client that was only used to test a connection. */
     public void discardProbe() {
         if (housekeepingExecutor != null) {
@@ -769,7 +774,12 @@ public abstract class AConnectorClient {
         try {
             performHousekeeping();
         } catch (Exception e) {
-            log.error("{} - Error during housekeeping: {}", tenant, e.getMessage(), e);
+            if (housekeepingExecutor.isShutdown()) {
+                // Connector is being torn down (e.g. tenant unsubscribed): its resources may already be gone.
+                log.debug("{} - Housekeeping aborted during shutdown: {}", tenant, e.toString());
+            } else {
+                log.error("{} - Error during housekeeping: {}", tenant, e, e);
+            }
         }
     }
 
@@ -1606,6 +1616,16 @@ public abstract class AConnectorClient {
         if (housekeepingExecutor != null && !housekeepingExecutor.isShutdown()) {
             List<Runnable> stoppedTasks = housekeepingExecutor.shutdownNow();
             log.info("{} - Stopped {} housekeeping tasks", tenant, stoppedTasks.size());
+            // shutdownNow() only interrupts: a housekeeping run that is already executing keeps
+            // going. Wait for it, so callers (e.g. tenant unsubscribe) can safely remove the
+            // tenant's shared resources right after this returns.
+            try {
+                if (!housekeepingExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                    log.warn("{} - Housekeeping still running after 5s for connector: {}", tenant, connectorName);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
         if (connectionStateManager != null) {
             connectionStateManager.close();

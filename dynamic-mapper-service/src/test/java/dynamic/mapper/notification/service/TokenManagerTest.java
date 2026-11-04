@@ -58,6 +58,22 @@ class TokenManagerTest {
         tokenManager = new TokenManager(tokenApi, subscriptionsService);
     }
 
+    @Test
+    void removeTenant_dropsAllTokenReferencesOfThatTenantOnly() {
+        tokenManager.storeDeviceToken("t1", "conn", "d");
+        tokenManager.storeManagementToken("t1", "m");
+        tokenManager.storeCacheInventoryToken("t1", "c");
+        tokenManager.storeManagementToken("t2", "m2");
+
+        tokenManager.removeTenant("t1");
+
+        assertNull(tokenManager.getDeviceToken("t1", "conn"));
+        assertNull(tokenManager.getManagementToken("t1"));
+        assertNull(tokenManager.getCacheInventoryToken("t1"));
+        assertEquals("m2", tokenManager.getManagementToken("t2"));
+        verifyNoInteractions(tokenApi); // reference removal only, no platform call for an unsubscribed tenant
+    }
+
     @AfterEach
     void tearDown() {
         tokenManager.cleanup();
