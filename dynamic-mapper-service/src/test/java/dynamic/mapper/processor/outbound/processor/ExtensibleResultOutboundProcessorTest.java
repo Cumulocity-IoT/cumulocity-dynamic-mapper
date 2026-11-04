@@ -52,7 +52,7 @@ class ExtensibleResultOutboundProcessorTest {
 
     @Test
     void actionAndCumulocityTypeAreHonored() throws Exception {
-        DeviceMessage message = DeviceMessage.forTopic("device/out").payload("{\"text\":\"x\"}").build();
+        DeviceMessage message = DeviceMessage.forTopic("device/out").payload("{\"id\":\"7001\",\"text\":\"x\"}").build();
         message.setAction(MappingAction.UPDATE);
         message.setCumulocityType(CumulocityType.EVENT);
 
@@ -60,6 +60,7 @@ class ExtensibleResultOutboundProcessorTest {
 
         assertEquals(RequestMethod.PUT, r.getMethod());
         assertEquals(API.EVENT, r.getApi());
-        assertEquals(API.EVENT.path + "/42", r.getPathCumulocity());
+        // the event's own id, not the source device (42)
+        assertEquals(API.EVENT.path + "/7001", r.getPathCumulocity());
     }
 }

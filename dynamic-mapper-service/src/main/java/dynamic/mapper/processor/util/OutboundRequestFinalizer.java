@@ -88,8 +88,9 @@ public final class OutboundRequestFinalizer {
      * PUT/PATCH/DELETE operations. Called by both processDeviceMessage and
      * processCumulocityObject so the logic lives in one place.
      *
-     * @param internalId  internal C8Y managed object ID — what Cumulocity REST API expects
-     *                    in source.id / id (never an external EUI or serial number)
+     * @param internalId  internal C8Y managed object ID of the source device — what Cumulocity REST API expects
+     *                    in source.id / id (never an external EUI or serial number); for
+     *                    non-inventory PUT/PATCH/DELETE the resource's own id is read from the payload
      * @param payloadJson raw JSON string before source-identifier injection
      */
     public static void finalizeRequest(DynamicMapperRequest request, String internalId,
@@ -115,18 +116,44 @@ public final class OutboundRequestFinalizer {
                 (request.getMethod() == RequestMethod.PUT ||
                  request.getMethod() == RequestMethod.PATCH ||
                  request.getMethod() == RequestMethod.DELETE)) {
-            // ID goes in the URL path; remove it from the body
-            String pathWithId = request.getApi().path + "/" + internalId;
+            // The URL addresses the resource itself: the managed object for INVENTORY, otherwise the
+            // event/alarm/operation carried in the payload's own "id". The device ID only identifies
+            // the source and must never stand in for it.
+            String resourceId = request.getApi() == API.INVENTORY ? internalId
+                    : readResourceId(payloadJson, objectMapper);
+            if (resourceId == null) {
+                String message = String.format("%s requires the id of the %s to address in the payload",
+                        request.getMethod(), request.getApi().name);
+                log.warn("{} - {}", tenant, message);
+                request.setError(new IllegalArgumentException(message));
+                return;
+            }
+            String pathWithId = request.getApi().path + "/" + resourceId;
             request.setPathCumulocity(pathWithId);
+            // ID goes in the URL path; remove it from the body
             if (request.getRequestCumulocity() != null) {
-                request.setRequestCumulocity(
-                        removeIdentifierFromPayload(request.getRequestCumulocity(), request.getApi().identifier, tenant, objectMapper));
+                String body = removeIdentifierFromPayload(request.getRequestCumulocity(), request.getApi().identifier,
+                        tenant, objectMapper);
+                if (request.getApi() != API.INVENTORY) {
+                    body = removeIdentifierFromPayload(body, "id", tenant, objectMapper);
+                }
+                request.setRequestCumulocity(body);
             }
             log.debug("{} - Set pathCumulocity for {}: {}", tenant, request.getMethod(), pathWithId);
         } else if (request.getMethod() == RequestMethod.POST && request.getApi() != null) {
             // POST uses the base API path — never append an ID
             request.setPathCumulocity(request.getApi().path);
             log.debug("{} - Using base API path for POST: {}", tenant, request.getApi().path);
+        }
+    }
+
+    /** The top-level "id" of the resource in the payload, or null when absent or not a JSON object. */
+    private static String readResourceId(String payload, ObjectMapper objectMapper) {
+        try {
+            JsonNode id = objectMapper.readTree(payload).get("id");
+            return id == null || id.isNull() || id.asText().isEmpty() ? null : id.asText();
+        } catch (Exception e) {
+            return null;
         }
     }
 

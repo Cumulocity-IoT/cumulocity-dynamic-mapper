@@ -54,7 +54,9 @@ public class ConnectionStateManager {
 
     /** Current status exposed as its {@link ConnectorStatus} ordinal (see the enum's declaration
      * order), so Grafana/Prometheus can alert on a connector sitting in FAILED without needing a
-     * separate up/down metric per status. Deregistered in {@link #close()}. */
+     * separate up/down metric per status. Deregistered in {@link #close()}.
+     * Null for a connection-test probe: it shares the (tenant, connector) tags with the live connector, so
+     * registering would make Micrometer reuse the probe's status reference for the live connector. */
     private final Gauge statusGauge;
 
     /** Guards {@link #previousStatus} and the session bundling in {@link #updateSession}, which
@@ -106,7 +108,7 @@ public class ConnectionStateManager {
         this.connectorRegistry = connectorRegistry;
         this.connectorStatus = new AtomicReference<>(
             ConnectorStatusEvent.unknown(connectorName, connectorIdentifier));
-        this.statusGauge = Gauge.builder("dynmapper_connector_status", connectorStatus,
+        this.statusGauge = AConnectorClient.isProbeConstruction() ? null : Gauge.builder("dynmapper_connector_status", connectorStatus,
                 ref -> {
                     ConnectorStatusEvent event = ref.get();
                     ConnectorStatus status = event != null ? event.getStatus() : null;
@@ -124,7 +126,9 @@ public class ConnectionStateManager {
      * (see {@code AConnectorClient.stopHousekeepingAndClose()}) — otherwise the gauge keeps
      * reporting the last status forever under a (tenant, connector) pair that no longer exists. */
     public void close() {
-        Metrics.globalRegistry.remove(statusGauge);
+        if (statusGauge != null) {
+            Metrics.globalRegistry.remove(statusGauge);
+        }
     }
     
     public boolean isConnected() {

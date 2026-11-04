@@ -82,8 +82,10 @@ public class SendInboundProcessor extends BaseProcessor {
             updateSparkPlugBActiveStatus(context);
 
             // Commit extension state only for a fully delivered message; on failure the message is
-            // redelivered and must not look like a duplicate.
-            if (!context.hasError()) {
+            // redelivered and must not look like a duplicate. A timeout can interrupt a send (createMEAO
+            // swallows the interrupt without recording an error), so cancellation counts as a failure too.
+            if (!context.hasError() && (wrapper == null || !wrapper.getCancellationRequested().get())
+                    && !Thread.currentThread().isInterrupted()) {
                 context.runDeferredStateCommit();
             }
 

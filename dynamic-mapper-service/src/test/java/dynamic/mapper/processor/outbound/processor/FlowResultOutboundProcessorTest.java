@@ -45,6 +45,7 @@ import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import static org.mockito.ArgumentMatchers.anyString;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
@@ -124,6 +125,9 @@ void setUp() throws Exception {
         }
     });
     
+    when(objectMapper.readTree(anyString())).thenAnswer(invocation ->
+        new ObjectMapper().readTree((String) invocation.getArgument(0)));
+
     when(objectMapper.convertValue(any(), eq(Map.class))).thenAnswer(invocation -> {
         Object arg = invocation.getArgument(0);
         if (arg instanceof Map) {
@@ -657,8 +661,10 @@ void setUp() throws Exception {
         DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
         deviceMsg.setTopic("event/events");
         deviceMsg.setAction(MappingAction.UPDATE);
-        // Outbound DeviceMessages carry the internal managed object ID in sourceId; it is appended to the path
+        // Outbound DeviceMessages carry the internal managed object ID in sourceId; it belongs in the body, while the
+        // path addresses the event itself, whose id differs from the device's
         deviceMsg.setSourceId(TEST_DEVICE_ID);
+        deviceMsg.setPayload(new java.util.HashMap<>(Map.of("id", "7001", "text", "x")));
 
         processingContext.setFlowResult(deviceMsg);
 
@@ -670,8 +676,8 @@ void setUp() throws Exception {
         DynamicMapperRequest request = processingContext.getRequests().get(0);
 
         assertEquals(RequestMethod.PUT, request.getMethod(), "Should use PUT method for update action");
-        assertEquals("/event/events/" + TEST_DEVICE_ID, request.getPathCumulocity(),
-                "PUT should append device ID to pathCumulocity");
+        assertEquals("/event/events/7001", request.getPathCumulocity(),
+                "PUT should address the event id in pathCumulocity");
 
         log.info("✅ PUT request with ID test passed");
         log.info("   - Method: {}", request.getMethod());
@@ -717,8 +723,10 @@ void setUp() throws Exception {
         DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
         deviceMsg.setTopic("event/events");
         deviceMsg.setAction(MappingAction.DELETE);
-        // Outbound DeviceMessages carry the internal managed object ID in sourceId; it is appended to the path
+        // Outbound DeviceMessages carry the internal managed object ID in sourceId; it belongs in the body, while the
+        // path addresses the event itself, whose id differs from the device's
         deviceMsg.setSourceId(TEST_DEVICE_ID);
+        deviceMsg.setPayload(new java.util.HashMap<>(Map.of("id", "7001", "text", "x")));
 
         processingContext.setFlowResult(deviceMsg);
 
@@ -730,8 +738,8 @@ void setUp() throws Exception {
         DynamicMapperRequest request = processingContext.getRequests().get(0);
 
         assertEquals(RequestMethod.DELETE, request.getMethod(), "Should use DELETE method");
-        assertEquals("/event/events/" + TEST_DEVICE_ID, request.getPathCumulocity(),
-                "DELETE should append device ID to pathCumulocity");
+        assertEquals("/event/events/7001", request.getPathCumulocity(),
+                "DELETE should address the event id in pathCumulocity");
 
         log.info("✅ DELETE request with ID test passed");
         log.info("   - Method: {}", request.getMethod());
@@ -838,8 +846,10 @@ void setUp() throws Exception {
         DeviceMessage deviceMsg = createTemperatureMeasurementDeviceMessage();
         deviceMsg.setTopic("event/events");
         deviceMsg.setAction(MappingAction.UPDATE);
-        // Outbound DeviceMessages carry the internal managed object ID in sourceId; it is appended to the path
+        // Outbound DeviceMessages carry the internal managed object ID in sourceId; it belongs in the body, while the
+        // path addresses the event itself, whose id differs from the device's
         deviceMsg.setSourceId(TEST_DEVICE_ID);
+        deviceMsg.setPayload(new java.util.HashMap<>(Map.of("id", "7001", "text", "x")));
 
         processingContext.setFlowResult(deviceMsg);
 
@@ -851,8 +861,8 @@ void setUp() throws Exception {
         DynamicMapperRequest request = processingContext.getRequests().get(0);
 
         assertEquals(RequestMethod.PUT, request.getMethod(), "Should use PUT method for update");
-        assertEquals("/event/events/" + TEST_DEVICE_ID, request.getPathCumulocity(),
-                "PUT should include device ID in pathCumulocity");
+        assertEquals("/event/events/7001", request.getPathCumulocity(),
+                "PUT should address the event id in pathCumulocity");
 
         log.info("✅ Event update test passed");
         log.info("   - Method: {}", request.getMethod());

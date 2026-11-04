@@ -593,6 +593,11 @@ public abstract class AConnectorClient {
         }
     }
 
+    /** True while a probe client is being constructed on this thread. */
+    static boolean isProbeConstruction() {
+        return PROBE_CONSTRUCTION.get();
+    }
+
     /** Releases what construction allocated, for a client that was only used to test a connection. */
     public void discardProbe() {
         if (housekeepingExecutor != null) {

@@ -24,14 +24,34 @@ class OutboundRequestFinalizerTest {
     }
 
     @Test
-    void putAddressesTheDeviceInThePathAndRemovesTheIdFromTheBody() {
-        DynamicMapperRequest r = request(API.EVENT, RequestMethod.PUT, "{\"text\":\"x\"}");
+    void putAddressesTheResourceNotTheDeviceAndRemovesTheIdsFromTheBody() {
+        DynamicMapperRequest r = request(API.EVENT, RequestMethod.PUT, "{\"id\":\"7001\",\"text\":\"x\"}");
 
         OutboundRequestFinalizer.finalizeRequest(r, "42", r.getRequest(), "t");
 
-        assertEquals(API.EVENT.path + "/42", r.getPathCumulocity());
+        assertEquals(API.EVENT.path + "/7001", r.getPathCumulocity());
         assertFalse(r.getRequestCumulocity().contains("\"42\""));
+        assertFalse(r.getRequestCumulocity().contains("7001"));
         assertTrue(r.getRequestCumulocity().contains("\"text\""));
+    }
+
+    @Test
+    void inventoryUpdatesAddressTheDevice() {
+        DynamicMapperRequest r = request(API.INVENTORY, RequestMethod.PUT, "{\"name\":\"x\"}");
+
+        OutboundRequestFinalizer.finalizeRequest(r, "42", r.getRequest(), "t");
+
+        assertEquals(API.INVENTORY.path + "/42", r.getPathCumulocity());
+    }
+
+    @Test
+    void updatingAnEventWithoutItsIdFailsInsteadOfUsingTheDeviceId() {
+        DynamicMapperRequest r = request(API.EVENT, RequestMethod.DELETE, "{\"text\":\"x\"}");
+
+        OutboundRequestFinalizer.finalizeRequest(r, "42", r.getRequest(), "t");
+
+        assertTrue(r.hasError());
+        assertNull(r.getPathCumulocity());
     }
 
     @Test
