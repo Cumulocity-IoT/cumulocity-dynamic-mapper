@@ -186,7 +186,7 @@ class MockIsolationRegressionTest {
         C8YAgent agent = new C8YAgent(
                 null, null, identityFacade, null, null, null, null, null,
                 subscriptionsService, null, null, null, null,
-                new ObjectMapper(), tenantRegistry, null, cacheManager, null, null, null, null,
+                new ObjectMapper(), tenantRegistry, new DeviceToClientRegistry(), null, cacheManager, null, null, null, null,
                 "1.0.0", 10);
 
         ExternalIDRepresentation result = agent.resolveExternalId2GlobalId(TEST_TENANT, identity, true);
@@ -267,7 +267,7 @@ class MockIsolationRegressionTest {
         return new C8YAgent(
                 null, null, identityFacade, null, null, null, null, null,
                 subscriptionsService, null, null, null, null,
-                new ObjectMapper(), tenantRegistry, null, cm, null, null, null, null,
+                new ObjectMapper(), tenantRegistry, new DeviceToClientRegistry(), null, cm, null, null, null, null,
                 "1.0.0", 10);
     }
 
@@ -418,7 +418,7 @@ class MockIsolationRegressionTest {
         C8YAgent agent = new C8YAgent(
                 null, inventoryFacade, identityFacade, null, null, null, null, null,
                 subscriptionsService, contextService, null, null, null,
-                new ObjectMapper(), tenantRegistry, null, cacheManager, null, null, null, null,
+                new ObjectMapper(), tenantRegistry, new DeviceToClientRegistry(), null, cacheManager, null, null, null, null,
                 "1.0.0", 10);
 
         C8YAgent.TestDevice device = agent.ensureTestDevice(TEST_TENANT, "d11r_liveTest_x", "d11r_liveTest_x", "c8y_Serial");
@@ -459,7 +459,7 @@ class MockIsolationRegressionTest {
         C8YAgent agent = new C8YAgent(
                 null, inventoryFacade, identityFacade, null, null, null, null, null,
                 subscriptionsService, contextService, null, null, null,
-                new ObjectMapper(), tenantRegistry, null, cacheManager, null, null, null, null,
+                new ObjectMapper(), tenantRegistry, new DeviceToClientRegistry(), null, cacheManager, null, null, null, null,
                 "1.0.0", 10);
 
         C8YAgent.TestDevice device = agent.ensureTestDevice(TEST_TENANT, externalId, externalId, "c8y_Serial");

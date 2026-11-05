@@ -47,7 +47,7 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.sdk.client.ProcessingMode;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.TenantRegistry;
+import dynamic.mapper.core.DeviceToClientRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.BinaryInfo;
 import dynamic.mapper.model.Direction;
@@ -78,7 +78,7 @@ class SubstitutionResultInboundProcessorTest {
     private C8YAgent c8yAgent;
 
         @Mock
-    private TenantRegistry tenantRegistry;
+    private DeviceToClientRegistry deviceToClientRegistry;
 
     @Mock
     private IdentityResolutionService identityResolutionService;
@@ -96,7 +96,7 @@ class SubstitutionResultInboundProcessorTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        processor = new SubstitutionResultInboundProcessor(c8yAgent, mappingService, tenantRegistry, identityResolutionService);
+        processor = new SubstitutionResultInboundProcessor(c8yAgent, mappingService, deviceToClientRegistry, identityResolutionService);
 
         mapping = createCompleteMapping();
         mappingStatus = new MappingStatus(

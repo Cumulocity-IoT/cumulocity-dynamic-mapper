@@ -40,7 +40,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.TenantRegistry;
+import dynamic.mapper.core.DeviceToClientRegistry;
 import dynamic.mapper.core.IdentityResolutionService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Direction;
@@ -74,7 +74,7 @@ class SendInboundProcessorParallelTest {
     private C8YAgent c8yAgent;
 
     @Mock
-    private TenantRegistry tenantRegistry;
+    private DeviceToClientRegistry deviceToClientRegistry;
 
     @Mock
     private IdentityResolutionService identityResolutionService;
@@ -95,7 +95,7 @@ class SendInboundProcessorParallelTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        processor = new SendInboundProcessor(c8yAgent, tenantRegistry, identityResolutionService,
+        processor = new SendInboundProcessor(c8yAgent, deviceToClientRegistry, identityResolutionService,
                 new ObjectMapper(), mappingService);
 
         mapping = buildJsonMapping();
@@ -251,7 +251,7 @@ class SendInboundProcessorParallelTest {
 
         processUnresolvedRequest(false, true);
 
-        verify(tenantRegistry, never()).addOrUpdateClientRelation(any(), any(), any());
+        verify(deviceToClientRegistry, never()).addOrUpdateClientRelation(any(), any(), any());
     }
 
     @Test

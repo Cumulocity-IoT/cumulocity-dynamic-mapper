@@ -32,7 +32,7 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.TenantRegistry;
+import dynamic.mapper.core.DeviceToClientRegistry;
 import dynamic.mapper.core.IdentityResolutionService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
@@ -58,14 +58,14 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
 
     private final MappingService mappingService;
 
-    private final TenantRegistry tenantRegistry;
+    private final DeviceToClientRegistry deviceToClientRegistry;
     private final IdentityResolutionService identityResolutionService;
 
     public SubstitutionResultInboundProcessor(C8YAgent c8yAgent, MappingService mappingService,
-            TenantRegistry tenantRegistry, IdentityResolutionService identityResolutionService) {
+            DeviceToClientRegistry deviceToClientRegistry, IdentityResolutionService identityResolutionService) {
         this.c8yAgent = c8yAgent;
         this.mappingService = mappingService;
-        this.tenantRegistry = tenantRegistry;
+        this.deviceToClientRegistry = deviceToClientRegistry;
         this.identityResolutionService = identityResolutionService;
     }
 
@@ -214,7 +214,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
                 // cache the mapping of device to client ID
                 if (!context.isTesting() && context.getClientId() != null
                         && context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled()) {
-                    tenantRegistry.addOrUpdateClientRelation(tenant,
+                    deviceToClientRegistry.addOrUpdateClientRelation(tenant,
                             context.getClientId(),
                             sourceId.getValue().toString());
                 }
@@ -233,7 +233,7 @@ public class SubstitutionResultInboundProcessor extends BaseProcessor {
             // DO NOT REMOVE DeviceIsolationMQTTService feature
             // cache the mapping of device to client ID
             if (!context.isTesting() && context.getClientId() != null && context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled()) {
-                tenantRegistry.addOrUpdateClientRelation(tenant,
+                deviceToClientRegistry.addOrUpdateClientRelation(tenant,
                         context.getClientId(),
                         sourceId.getValue().toString());
             }

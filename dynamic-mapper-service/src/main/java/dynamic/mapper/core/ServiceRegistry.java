@@ -54,6 +54,7 @@ public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
 
     @Getter
     private final TenantRegistry tenantRegistry;
+    private final DeviceToClientRegistry deviceToClientRegistry;
 
     @Getter
     private final GraalVMContextService graalVMContextService;
@@ -111,6 +112,7 @@ public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
 
     public ServiceRegistry(
             TenantRegistry tenantRegistry,
+            DeviceToClientRegistry deviceToClientRegistry,
             GraalVMContextService graalVMContextService,
             ConnectorRegistry connectorRegistry,
             NotificationSubscriber notificationSubscriber,
@@ -124,6 +126,7 @@ public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
             @Lazy ConnectorConfigurationService connectorConfigurationService,
             @Lazy ServiceConfigurationService serviceConfigurationService) {
         this.tenantRegistry = tenantRegistry;
+        this.deviceToClientRegistry = deviceToClientRegistry;
         this.graalVMContextService = graalVMContextService;
         this.connectorRegistry = connectorRegistry;
         this.notificationSubscriber = notificationSubscriber;
@@ -169,7 +172,7 @@ public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
             ManagedObjectRepresentation mor) {
         DeviceToClientMapRepresentation deviceToClientMapRepresentation = objectMapper
                 .convertValue(mor, DeviceToClientMapRepresentation.class);
-        tenantRegistry.initializeDeviceToClientMap(tenant, deviceToClientMapRepresentation);
+        deviceToClientRegistry.initializeDeviceToClientMap(tenant, deviceToClientMapRepresentation);
         return deviceToClientMapRepresentation;
     }
 
@@ -197,7 +200,7 @@ public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
     }
 
     public void removeDeviceToClientState(String tenant) {
-        tenantRegistry.removeDeviceToClientState(tenant);
+        deviceToClientRegistry.removeDeviceToClientState(tenant);
     }
 
     public void removeServiceConfiguration(String tenant) {
@@ -218,7 +221,7 @@ public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
     }
 
     public String getDeviceToClientMapId(String tenant) {
-        return tenantRegistry.getDeviceToClientMapId(tenant);
+        return deviceToClientRegistry.getDeviceToClientMapId(tenant);
     }
 
     public void addMicroserviceCredentials(String tenant, MicroserviceCredentials credentials) {

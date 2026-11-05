@@ -131,6 +131,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     final CumulocityClientProperties clientProperties;
     private final ObjectMapper objectMapper;
     private final TenantRegistry tenantRegistry;
+    private final DeviceToClientRegistry deviceToClientRegistry;
     private final ExtensionManager extensionManager;
     private final CacheManager cacheManager;
     private final CertificateService certificateService;
@@ -167,6 +168,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             CumulocityClientProperties clientProperties,
             ObjectMapper objectMapper,
             TenantRegistry tenantRegistry,
+            DeviceToClientRegistry deviceToClientRegistry,
             ExtensionManager extensionManager,
             CacheManager cacheManager,
             CertificateService certificateService,
@@ -190,6 +192,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         this.clientProperties = clientProperties;
         this.objectMapper = objectMapper;
         this.tenantRegistry = tenantRegistry;
+        this.deviceToClientRegistry = deviceToClientRegistry;
         this.extensionManager = extensionManager;
         this.cacheManager = cacheManager;
         this.certificateService = certificateService;
@@ -1438,7 +1441,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         }
         tenantRegistry.removeFromExternalIdCacheByInternalId(tenant, sourceId);
         // Device isolation: a deleted device must not stay registered to a client
-        tenantRegistry.removeClientRelation(tenant, sourceId);
+        deviceToClientRegistry.removeClientRelation(tenant, sourceId);
         cacheManager.removeSourceIdFromExternalIdCaches(tenant, sourceId);
     }
 

@@ -12,13 +12,13 @@ import dynamic.mapper.model.device.DeviceToClientMapRepresentation;
 import java.lang.reflect.Field;
 
 /** What the tenant registries hold for a tenant must be gone after the tenant unsubscribes. */
-class TenantRemovalCleanupTest {
+class DeviceToClientRegistryRemovalTest {
 
     private static final String TENANT = "t1";
 
     @Test
     void removeDeviceToClientStateDropsRelationsPendingChangesAndMapId() {
-        TenantRegistry registry = new TenantRegistry();
+        DeviceToClientRegistry registry = new DeviceToClientRegistry();
         DeviceToClientMapRepresentation persisted = new DeviceToClientMapRepresentation();
         persisted.setId("mo");
         persisted.setDeviceToClientMap(Map.of("1", "clientA"));
@@ -35,7 +35,7 @@ class TenantRemovalCleanupTest {
 
     @Test
     void removeDeviceToClientStateRecordsNoPendingChange() {
-        TenantRegistry registry = new TenantRegistry();
+        DeviceToClientRegistry registry = new DeviceToClientRegistry();
         registry.addOrUpdateClientRelation(TENANT, "clientA", "1");
 
         registry.removeDeviceToClientState(TENANT);
@@ -46,7 +46,7 @@ class TenantRemovalCleanupTest {
 
     @Test
     void removeDeviceToClientStateKeepsOtherTenants() {
-        TenantRegistry registry = new TenantRegistry();
+        DeviceToClientRegistry registry = new DeviceToClientRegistry();
         registry.addOrUpdateClientRelation(TENANT, "clientA", "1");
         registry.addOrUpdateClientRelation("t2", "clientB", "1");
 

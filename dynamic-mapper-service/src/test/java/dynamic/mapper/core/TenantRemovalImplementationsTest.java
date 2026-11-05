@@ -69,13 +69,15 @@ class TenantRemovalImplementationsTest {
     void serviceRegistryRemovesCredentialsAndConfigurationLast() throws Exception {
         ServiceRegistry registry = mock(ServiceRegistry.class, withSettings().defaultAnswer(CALLS_REAL_METHODS));
         TenantRegistry tenantRegistry = mock(TenantRegistry.class);
+        DeviceToClientRegistry deviceToClientRegistry = mock(DeviceToClientRegistry.class);
         set(registry, "tenantRegistry", tenantRegistry);
+        set(registry, "deviceToClientRegistry", deviceToClientRegistry);
 
         registry.removeTenant(TENANT);
 
-        InOrder order = inOrder(tenantRegistry);
+        InOrder order = inOrder(tenantRegistry, deviceToClientRegistry);
         order.verify(tenantRegistry).clearExternalIdCache(TENANT);
-        order.verify(tenantRegistry).removeDeviceToClientState(TENANT);
+        order.verify(deviceToClientRegistry).removeDeviceToClientState(TENANT);
         order.verify(tenantRegistry).removeMapperServiceRepresentation(TENANT);
         order.verify(tenantRegistry).removeServiceConfiguration(TENANT);
         order.verify(tenantRegistry).removeMicroserviceCredentials(TENANT);

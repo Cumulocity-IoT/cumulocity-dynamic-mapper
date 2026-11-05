@@ -10,10 +10,10 @@ import org.junit.jupiter.api.Test;
 
 import dynamic.mapper.model.device.DeviceToClientMapRepresentation;
 
-class TenantRegistryClientChangesTest {
+class DeviceToClientRegistryChangesTest {
 
     private static final String TENANT = "t1";
-    private final TenantRegistry registry = new TenantRegistry();
+    private final DeviceToClientRegistry registry = new DeviceToClientRegistry();
 
     @Test
     void theStartupSnapshotIsNotAPendingChange() {
