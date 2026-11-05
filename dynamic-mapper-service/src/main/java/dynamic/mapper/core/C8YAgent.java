@@ -26,8 +26,6 @@ import static java.util.Map.entry;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -36,14 +34,7 @@ import com.cumulocity.sdk.client.user.UserApi;
 import org.joda.time.DateTime;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.client.RestTemplate;
 import com.cumulocity.microservice.api.CumulocityClientProperties;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
@@ -58,10 +49,8 @@ import com.cumulocity.rest.representation.alarm.AlarmRepresentation;
 import com.cumulocity.rest.representation.event.EventRepresentation;
 import com.cumulocity.rest.representation.identity.ExternalIDRepresentation;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import com.cumulocity.rest.representation.measurement.MeasurementCollectionRepresentation;
 import com.cumulocity.rest.representation.measurement.MeasurementRepresentation;
 import com.cumulocity.rest.representation.operation.OperationRepresentation;
-import com.cumulocity.sdk.client.ProcessingMode;
 import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.alarm.AlarmApi;
 import com.cumulocity.sdk.client.buffering.Future;
@@ -69,9 +58,7 @@ import com.cumulocity.sdk.client.devicecontrol.DeviceControlApi;
 import com.cumulocity.sdk.client.event.EventApi;
 import com.cumulocity.sdk.client.measurement.MeasurementApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import c8y.IsDevice;
 import dynamic.mapper.configuration.ServiceConfiguration;
@@ -90,6 +77,7 @@ import dynamic.mapper.processor.ProcessingException;
 import dynamic.mapper.model.DynamicMapperRequest;
 import dynamic.mapper.processor.model.ExternalId;
 import dynamic.mapper.processor.runtime.ProcessingContext;
+import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Metrics;
@@ -97,7 +85,6 @@ import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import static com.cumulocity.rest.representation.measurement.MeasurementMediaType.MEASUREMENT_COLLECTION;
 import static com.cumulocity.rest.representation.event.EventMediaType.EVENT;
 import static com.cumulocity.rest.representation.alarm.AlarmMediaType.ALARM;
 
@@ -134,6 +121,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     private final String version;
     private final Integer maxConnections;
     private final Semaphore c8ySemaphore;
+    // Sends the requests of a mapping to Cumulocity; shares this agent's semaphore and API clients
+    private final ApiRequestSender apiRequestSender;
 
     private static final String C8Y_NOTIFICATION_CONNECTOR = "C8YNotificationConnector";
 
@@ -194,6 +183,8 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         this.version = version;
         this.maxConnections = maxConnections;
         this.c8ySemaphore = new Semaphore(maxConnections, false);
+        this.apiRequestSender = new ApiRequestSender(c8ySemaphore, eventApi, alarmApi, measurementApi,
+                deviceControlApi, processingModeService, objectMapper, contextService, clientProperties);
     }
 
     @PostConstruct
@@ -412,167 +403,20 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return certificateService.loadCertificateByName(certificateName, fingerprint, tenant, connectorName);
     }
 
-    private boolean isTransient(ProcessingContext<?> context) {
-        return context.getProcessingMode() != null && ProcessingMode.TRANSIENT.equals(context.getProcessingMode());
-    }
-
-    /** Creates the event, through the transient connector when the context asks for TRANSIENT processing. */
-    private EventRepresentation postEvent(ProcessingContext<?> context, String tenant, EventRepresentation event) throws Exception {
-        if (isTransient(context)) {
-            EventRepresentation created = processingModeService.callWithProcessingMode("TRANSIENT",
-                    (connector) -> (EventRepresentation) connector.post("/event/events", EVENT, event));
-            log.info("{} - Using TRANSIENT processing mode for event", tenant);
-            return created;
-        }
-        log.debug("{} - Using PERSISTENT processing mode for event", tenant);
-        return eventApi.create(event);
-    }
-
-    /** Creates the alarm, through the transient connector when the context asks for TRANSIENT processing. */
-    private AlarmRepresentation postAlarm(ProcessingContext<?> context, String tenant, AlarmRepresentation alarm) throws Exception {
-        if (isTransient(context)) {
-            AlarmRepresentation created = processingModeService.callWithProcessingMode("TRANSIENT",
-                    (connector) -> (AlarmRepresentation) connector.post("/alarm/alarms", ALARM, alarm));
-            log.info("{} - Using TRANSIENT processing mode for alarm", tenant);
-            return created;
-        }
-        log.debug("{} - Using PERSISTENT processing mode for alarm", tenant);
-        return alarmApi.create(alarm);
-    }
-
-    /** Creates the measurements in bulk, through the transient connector when the context asks for TRANSIENT processing. */
-    private MeasurementCollectionRepresentation postMeasurements(ProcessingContext<?> context, String tenant,
-            MeasurementCollectionRepresentation measurements) throws Exception {
-        if (isTransient(context)) {
-            MeasurementCollectionRepresentation created = processingModeService.callWithProcessingMode("TRANSIENT",
-                    (connector) -> (MeasurementCollectionRepresentation) connector.post(
-                            MEASUREMENT_COLLECTION_PATH, MEASUREMENT_COLLECTION, measurements));
-            log.info("{} - Using TRANSIENT processing mode for measurement(s)", tenant);
-            return created;
-        }
-        log.debug("{} - Using PERSISTENT processing mode for measurement(s)", tenant);
-        return measurementApi.createBulk(measurements);
-    }
-
-    /** Calls a custom Cumulocity route with the request's method and payload; the body of the answer becomes the response. */
-    private void callCustomRoute(String tenant, DynamicMapperRequest request, String payload) {
-        String customPath = request.getPathCumulocity();
-        RequestMethod requestMethod = request.getMethod();
-        HttpMethod httpMethod;
-        switch (requestMethod != null ? requestMethod : RequestMethod.POST) {
-            case PUT: httpMethod = HttpMethod.PUT; break;
-            case PATCH: httpMethod = HttpMethod.PATCH; break;
-            case DELETE: httpMethod = HttpMethod.DELETE; break;
-            case GET: httpMethod = HttpMethod.GET; break;
-            default: httpMethod = HttpMethod.POST; break;
-        }
-        HttpHeaders customHeaders = new HttpHeaders();
-        customHeaders.set("Authorization",
-                contextService.getContext().toCumulocityCredentials().getAuthenticationString());
-        customHeaders.setContentType(MediaType.APPLICATION_JSON);
-        String customUrl = clientProperties.getBaseURL() + customPath;
-        HttpEntity<String> customEntity = new HttpEntity<>(payload, customHeaders);
-        ResponseEntity<String> customResponse = new RestTemplate().exchange(
-                customUrl, httpMethod, customEntity, String.class);
-        request.setResponse(customResponse.getBody());
-        log.info("{} - SEND: custom route called: path={}, method={}, status={}",
-                tenant, customPath, requestMethod, customResponse.getStatusCode());
-    }
-
-    public CompletableFuture<AbstractExtensibleRepresentation> createMEAOAsync(ProcessingContext<?> context,
-            int requestIndex)
-            throws ProcessingException {
-        return CompletableFuture.supplyAsync(() -> {
-            String tenant = context.getTenant();
-            StringBuffer error = new StringBuffer("");
-            DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
-            String payload = currentRequest.getRequest();
-            // API is now always initialized when creating DynamicMapperRequest
-            API targetAPI = currentRequest.getApi();
-            AbstractExtensibleRepresentation result = subscriptionsService.callForTenant(tenant, () -> {
-                MicroserviceCredentials contextCredentials = removeAppKeyHeaderFromContext(contextService.getContext());
-                return contextService.callWithinContext(contextCredentials, () -> {
-                    AbstractExtensibleRepresentation rt = null;
-                    try {
-                        if (targetAPI.equals(API.EVENT)) {
-                            EventRepresentation eventRepresentation = objectMapper.readValue(
-                                    payload,
-                                    EventRepresentation.class);
-                            rt = postEvent(context, tenant, eventRepresentation);
-                            log.info("{} - SEND: event posted with Id {}", tenant,
-                                    ((EventRepresentation) rt).getId().getValue());
-                        } else if (targetAPI.equals(API.ALARM)) {
-                            AlarmRepresentation alarmRepresentation = objectMapper.readValue(
-                                    payload,
-                                    AlarmRepresentation.class);
-                            rt = postAlarm(context, tenant, alarmRepresentation);
-                            log.info("{} - SEND: alarm posted with Id {}", tenant,
-                                    ((AlarmRepresentation) rt).getId().getValue());
-                        } else if (targetAPI.equals(API.MEASUREMENT)) {
-                            // Auto-detect payload format: { "measurements": [...] } = collection; anything else = single.
-                            // Always POST via createBulk — single measurements are wrapped in a one-element collection.
-                            MeasurementCollectionRepresentation collectionRepresentation;
-                            if (objectMapper.readTree(payload).has("measurements")) {
-                                collectionRepresentation = objectMapper
-                                        .readValue(payload, MeasurementCollectionRepresentation.class);
-                            } else {
-                                MeasurementRepresentation mr = objectMapper
-                                        .readValue(payload, MeasurementRepresentation.class);
-                                collectionRepresentation = new MeasurementCollectionRepresentation();
-                                collectionRepresentation.setMeasurements(List.of(mr));
-                            }
-                            rt = postMeasurements(context, tenant, collectionRepresentation);
-                            int count = collectionRepresentation.getMeasurements() != null
-                                    ? collectionRepresentation.getMeasurements().size() : 0;
-                            log.info("{} - SEND: measurement(s) posted: {} measurement(s)", tenant, count);
-                        } else if (targetAPI.equals(API.OPERATION)) {
-                            OperationRepresentation operationRepresentation = objectMapper
-                                    .readValue(
-                                            payload, OperationRepresentation.class);
-                            rt = deviceControlApi.create(operationRepresentation);
-                            log.info("{} - SEND: operation posted with Id {}", tenant,
-                                    rt != null ? ((OperationRepresentation) rt).getId().getValue() : "null");
-                        } else if (targetAPI.equals(API.CUSTOM)) {
-                            callCustomRoute(tenant, currentRequest, payload);
-                        } else {
-                            log.error("{} - Not existing API!", tenant);
-                        }
-                    } catch (JsonProcessingException e) {
-                        log.error("{} - Could not map payload: {} {}", tenant, targetAPI, payload);
-                        error.append("Could not map payload: " + targetAPI + "/" + payload);
-                    } catch (SDKException s) {
-                        logSendFailure(tenant, targetAPI + " " + payload, s);
-                        error.append(sendFailureText(targetAPI, payload, s));
-                    }
-                    return rt;
-                });
-            });
-            if (!error.toString().equals("")) {
-                throw new CompletionException(new ProcessingException(error.toString()));
-            }
-            return result;
-        });
-
-    }
-
     public AbstractExtensibleRepresentation createMEAO(ProcessingContext<?> context, int requestIndex)
             throws ProcessingException {
-        // initializeTransientApis();
-        // log.info("{} - C8Y Connections available: {}",
-        // context.getTenant(),c8ySemaphore.availablePermits());
         String tenant = context.getTenant();
-        // this.c8yRequestTimerMap.get(tenant);
         Timer.Sample timer = Timer.start(Metrics.globalRegistry);
         AtomicReference<ProcessingException> pe = new AtomicReference<>();
         DynamicMapperRequest currentRequest = context.getRequests().get(requestIndex);
         String payload = currentRequest.getRequest();
-        ServiceConfiguration serviceConfiguration = tenantRegistry.getServiceConfiguration(tenant);
+        boolean logPayload = tenantRegistry.getServiceConfiguration(tenant).getLogPayload();
         // API is now always initialized when creating DynamicMapperRequest
         API targetAPI = currentRequest.getApi();
 
         // Check for cancellation BEFORE starting any C8Y API calls
         // This prevents unnecessary HTTP requests when the processing has already timed out
-        dynamic.mapper.processor.runtime.ProcessingResultWrapper<?> wrapper = context.getProcessingResultWrapper();
+        ProcessingResultWrapper<?> wrapper = context.getProcessingResultWrapper();
         if (wrapper != null && wrapper.getCancellationRequested().get()) {
             log.info("{} - Cancellation detected in createMEAO before API call, aborting C8Y request for API: {}",
                     tenant, targetAPI);
@@ -584,137 +428,21 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
             return contextService.callWithinContext(contextCredentials, () -> {
                 AbstractExtensibleRepresentation rt = null;
                 try {
-                    if (targetAPI.equals(API.EVENT)) {
-                        EventRepresentation eventRepresentation = objectMapper.readValue(
-                                payload,
-                                EventRepresentation.class);
-                        try {
-                            c8ySemaphore.acquire();
-
-                            // Check cancellation before making HTTP call
-                            if (wrapper != null && wrapper.getCancellationRequested().get()) {
-                                log.info("{} - Cancellation detected before EVENT API call, aborting", tenant);
-                                throw new ProcessingException("Processing cancelled before EVENT API call");
+                    switch (targetAPI) {
+                        case EVENT -> rt = apiRequestSender.sendEvent(context, payload, logPayload, event -> {
+                            if (context.getMapping().getEventWithAttachment()) {
+                                uploadEventAttachment(context.getBinaryInfo(), event.getId().getValue(), false);
                             }
-
-                            rt = postEvent(context, tenant, eventRepresentation);
-                        } catch (InterruptedException e) {
-                            log.error("{} - Failed to acquire semaphore for creating event", tenant, e);
-                        } finally {
-                            c8ySemaphore.release();
-                        }
-                        GId eventId = ((EventRepresentation) rt).getId();
-                        if (context.getMapping().getEventWithAttachment()) {
-                            BinaryInfo binaryInfo = context.getBinaryInfo();
-                            uploadEventAttachment(binaryInfo, eventId.getValue(), false);
-                        }
-                        if (serviceConfiguration.getLogPayload())
-                            log.info("{} - SEND: event posted: {}", tenant, rt);
-                        else
-                            log.info("{} - SEND: event posted with Id {}", tenant,
-                                    ((EventRepresentation) rt).getId().getValue());
-
-                    } else if (targetAPI.equals(API.ALARM)) {
-                        AlarmRepresentation alarmRepresentation = objectMapper.readValue(
-                                payload,
-                                AlarmRepresentation.class);
-                        try {
-                            c8ySemaphore.acquire();
-
-                            // Check cancellation before making HTTP call
-                            if (wrapper != null && wrapper.getCancellationRequested().get()) {
-                                log.info("{} - Cancellation detected before ALARM API call, aborting", tenant);
-                                throw new ProcessingException("Processing cancelled before ALARM API call");
-                            }
-
-                            rt = postAlarm(context, tenant, alarmRepresentation);
-                        } catch (InterruptedException e) {
-                            log.error("{} - Failed to acquire semaphore for creating alarm", tenant, e);
-                        } finally {
-                            c8ySemaphore.release();
-                        }
-                        if (serviceConfiguration.getLogPayload())
-                            log.info("{} - SEND: alarm posted: {}", tenant, rt);
-                        else
-                            log.info("{} - SEND: alarm posted with Id {}", tenant,
-                                    ((AlarmRepresentation) rt).getId().getValue());
-                    } else if (targetAPI.equals(API.MEASUREMENT)) {
-                        // Auto-detect payload format: { "measurements": [...] } = collection; anything else = single.
-                        // Always POST via createBulk — single measurements are wrapped in a one-element collection.
-                        MeasurementCollectionRepresentation collectionRepresentation;
-                        if (objectMapper.readTree(payload).has("measurements")) {
-                            collectionRepresentation = objectMapper
-                                    .readValue(payload, MeasurementCollectionRepresentation.class);
-                        } else {
-                            MeasurementRepresentation mr = objectMapper
-                                    .readValue(payload, MeasurementRepresentation.class);
-                            collectionRepresentation = new MeasurementCollectionRepresentation();
-                            collectionRepresentation.setMeasurements(List.of(mr));
-                        }
-                        try {
-                            c8ySemaphore.acquire();
-
-                            // Check cancellation before making HTTP call
-                            if (wrapper != null && wrapper.getCancellationRequested().get()) {
-                                log.info("{} - Cancellation detected before MEASUREMENT API call, aborting", tenant);
-                                throw new ProcessingException("Processing cancelled before MEASUREMENT API call");
-                            }
-
-                            rt = postMeasurements(context, tenant, collectionRepresentation);
-                        } catch (InterruptedException e) {
-                            log.error("{} - Failed to acquire semaphore for creating measurement(s)", tenant, e);
-                        } finally {
-                            c8ySemaphore.release();
-                        }
-                        int count = collectionRepresentation.getMeasurements() != null
-                                ? collectionRepresentation.getMeasurements().size() : 0;
-                        if (serviceConfiguration.getLogPayload())
-                            log.info("{} - SEND: measurement(s) posted: {}", tenant, rt);
-                        else
-                            log.info("{} - SEND: measurement(s) posted: {} measurement(s)", tenant, count);
-                    } else if (targetAPI.equals(API.OPERATION)) {
-                        // C8Y DeviceControl API rejects 'status' on create (HTTP 422 "status is not allowed here")
-                        JsonNode opNode = objectMapper.readTree(payload);
-                        if (opNode.isObject()) {
-                            ((ObjectNode) opNode).remove("status");
-                        }
-                        OperationRepresentation operationRepresentation = objectMapper
-                                .treeToValue(opNode, OperationRepresentation.class);
-                        try {
-                            c8ySemaphore.acquire();
-
-                            // Check cancellation before making HTTP call
-                            if (wrapper != null && wrapper.getCancellationRequested().get()) {
-                                log.info("{} - Cancellation detected before OPERATION API call, aborting", tenant);
-                                throw new ProcessingException("Processing cancelled before OPERATION API call");
-                            }
-
-                            rt = deviceControlApi.create(operationRepresentation);
-                        } catch (InterruptedException e) {
-                            log.error("{} - Failed to acquire semaphore for creating Operation", tenant, e);
-                        } finally {
-                            c8ySemaphore.release();
-                        }
-                        if (serviceConfiguration.getLogPayload())
-                            log.info("{} - SEND: operation posted: {}", tenant, rt);
-                        else
-                            log.info("{} - SEND: operation posted with Id {}", tenant,
-                                    rt != null ? ((OperationRepresentation) rt).getId().getValue() : "null");
-                    } else if (targetAPI.equals(API.CUSTOM)) {
-                        // Check cancellation before making HTTP call
-                        if (wrapper != null && wrapper.getCancellationRequested().get()) {
-                            log.info("{} - Cancellation detected before CUSTOM API call, aborting", tenant);
-                            throw new ProcessingException("Processing cancelled before CUSTOM API call");
-                        }
-
-                        callCustomRoute(tenant, currentRequest, payload);
-                    } else {
-                        log.error("{} - Not existing API!", tenant);
+                        });
+                        case ALARM -> rt = apiRequestSender.sendAlarm(context, payload, logPayload);
+                        case MEASUREMENT -> rt = apiRequestSender.sendMeasurements(context, payload, logPayload);
+                        case OPERATION -> rt = apiRequestSender.sendOperation(context, payload, logPayload);
+                        case CUSTOM -> apiRequestSender.sendCustom(context, currentRequest);
+                        default -> log.error("{} - Not existing API!", tenant);
                     }
                 } catch (JsonProcessingException e) {
                     log.error("{} - Could not map payload: {} {}", tenant, targetAPI, payload, e);
                     pe.set(new ProcessingException("Could not map payload: " + targetAPI + "/" + payload, e));
-                    // error.append("Could not map payload: " + targetAPI + "/" + payload);
                 } catch (SDKException s) {
                     logSendFailure(tenant, targetAPI + " " + payload, s);
                     pe.set(new ProcessingException(sendFailureText(targetAPI, payload, s), s));
