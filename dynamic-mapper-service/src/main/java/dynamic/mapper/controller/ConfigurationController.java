@@ -110,7 +110,7 @@ public class ConfigurationController {
     private final MappingService mappingService;
     private final ConnectorConfigurationService connectorConfigurationService;
     private final ServiceConfigurationService serviceConfigurationService;
-    private final BootstrapService bootstrapService;
+    private final ConnectorLifecycleService connectorLifecycleService;
     private final ContextService<UserCredentials> contextService;
     private final ServiceRegistry serviceRegistry;
     private final ObjectMapper objectMapper;
@@ -367,7 +367,7 @@ public class ConfigurationController {
                     connectorConfigurationService.saveConnectorConfiguration(configuration);
 
                     ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-                    Future<?> connectTask = bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
+                    Future<?> connectTask = connectorLifecycleService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
 
                     // Wait for connector to connect (with timeout)
                     try {
@@ -379,18 +379,18 @@ public class ConfigurationController {
                 }
 
                 // Delete connector-specific resources (e.g., Pulsar subscriptions)
-                bootstrapService.deleteConnectorResources(tenant, identifier);
+                connectorLifecycleService.deleteConnectorResources(tenant, identifier);
             } finally {
                 // Best-effort teardown: one failing step must not skip the others or
                 // leave the connector configuration behind.
                 try {
-                    bootstrapService.disableConnector(tenant, identifier);
+                    connectorLifecycleService.disableConnector(tenant, identifier);
                 } catch (Exception e) {
                     log.warn("{} - Error disabling connector {} during delete: {}", tenant, identifier, e.getMessage());
                 }
                 try {
                     // Clean up Notification 2.0 subscriptions
-                    bootstrapService.shutdownAndRemoveConnector(tenant, identifier);
+                    connectorLifecycleService.shutdownAndRemoveConnector(tenant, identifier);
                 } catch (Exception e) {
                     log.warn("{} - Error shutting down connector {} during delete: {}", tenant, identifier, e.getMessage());
                 }
@@ -581,7 +581,7 @@ public class ConfigurationController {
                     List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationService
                             .getConnectorConfigurations(tenant);
                     for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
-                        bootstrapService.initializeConnectorByConfiguration(connectorConfiguration,
+                        connectorLifecycleService.initializeConnectorByConfiguration(connectorConfiguration,
                                 serviceConfiguration, tenant);
                     }
                     serviceRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);

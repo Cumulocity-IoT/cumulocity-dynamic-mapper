@@ -623,6 +623,7 @@ public class MQTTServicePulsarClient extends PulsarConnectorClient {
      * If the consumer is already closed, it will temporarily reconnect to perform
      * the unsubscribe
      */
+    @Override
     public void deleteResources() {
         if (towardsPlatformTopic == null) {
             log.debug("{} - No platform topic configured, skipping subscription deletion", tenant);

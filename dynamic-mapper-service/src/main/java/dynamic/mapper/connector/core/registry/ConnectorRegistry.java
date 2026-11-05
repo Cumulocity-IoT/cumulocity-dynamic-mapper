@@ -53,6 +53,33 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import org.springframework.core.annotation.Order;
 
+/**
+ * Central, tenant-aware registry for connector state.
+ * <p>
+ * For each tenant, the registry holds:
+ * <ul>
+ * <li>the connector client instances, keyed by connector identifier
+ * ({@link AConnectorClient}),</li>
+ * <li>the last known {@link ConnectorStatusEvent} per connector, and</li>
+ * <li>the {@link OutboundMessageDispatcher} per connector, used by the
+ * notification subscriber.</li>
+ * </ul>
+ * It also holds the {@link ConnectorSpecification} of every supported
+ * {@link ConnectorType}. The specifications are tenant-independent and are
+ * filled once by {@link #registerConnectors()}.
+ * <p>
+ * <b>Tenant lifecycle:</b> as a {@link TenantScoped} component, the registry
+ * creates the per-tenant status and dispatcher maps in
+ * {@link #initializeTenant(String)}, closes all clients of a tenant in
+ * {@link #stopTenant(String)}, and drops all per-tenant state in
+ * {@link #removeTenant(String)}. After removal, the tenant is remembered so
+ * that a late status update from a stray thread does not re-create its status
+ * map. Re-subscribing the tenant clears this marker.
+ * <p>
+ * <b>Thread safety:</b> all maps are {@link ConcurrentHashMap} instances, so
+ * clients can be registered, looked up, and removed concurrently from
+ * connector, notification, and tenant-lifecycle threads.
+ */
 @Component
 @Slf4j
 @Order(TenantScoped.ORDER_CONNECTORS)

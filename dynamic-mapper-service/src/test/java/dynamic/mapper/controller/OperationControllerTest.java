@@ -53,7 +53,7 @@ import com.cumulocity.microservice.context.credentials.UserCredentials;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
-import dynamic.mapper.core.BootstrapService;
+import dynamic.mapper.core.ConnectorLifecycleService;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.CacheManager;
 import dynamic.mapper.core.ServiceRegistry;
@@ -91,7 +91,7 @@ class OperationControllerTest {
     @Mock private MappingService mappingService;
     @Mock private ConnectorConfigurationService connectorConfigurationService;
     @Mock private ServiceConfigurationService serviceConfigurationService;
-    @Mock private BootstrapService bootstrapService;
+    @Mock private ConnectorLifecycleService connectorLifecycleService;
     @Mock private C8YAgent c8YAgent;
     @Mock private ContextService<UserCredentials> contextService;
     @Mock private ServiceRegistry serviceRegistry;
@@ -109,7 +109,7 @@ class OperationControllerTest {
     @BeforeEach
     void setUp() throws Exception {
         controller = new OperationController(connectorRegistry, mappingService, connectorConfigurationService,
-                serviceConfigurationService, bootstrapService, c8YAgent, contextService, serviceRegistry,
+                serviceConfigurationService, connectorLifecycleService, c8YAgent, contextService, serviceRegistry,
                 cacheManager, deploymentMapService, mappingStatusService, identityFacade, inventoryFacade, flowStateStore,
                 extensionManager, objectMapper);
 

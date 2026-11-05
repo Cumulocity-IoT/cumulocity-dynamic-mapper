@@ -1637,6 +1637,14 @@ public abstract class AConnectorClient {
     }
 
     /**
+     * Deletes broker-side resources that outlive a disconnect, such as a durable subscription. Called
+     * only when the connector is deleted, before it is disconnected. The default does nothing;
+     * connectors that create such resources override it.
+     */
+    public void deleteResources() {
+    }
+
+    /**
      * Cleanup
      */
     public void cleanup() {

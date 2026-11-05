@@ -508,6 +508,78 @@ public class ServiceConfigurationService {
         tenantOptionApi.save(optionRepresentation);
     }
 
+    /**
+     * Loads the service configuration of a tenant at startup and fills every setting that is still
+     * missing: cache sizes and retentions, and the code templates. Saves the configuration only when
+     * something changed.
+     *
+     * @param inboundExternalIdCacheSize  default size of the inbound external ID cache
+     * @param outboundExternalIdCacheSize default size of the outbound external ID cache
+     * @param inventoryCacheSize          default size of the inventory cache
+     * @return the normalized configuration
+     */
+    public ServiceConfiguration ensureDefaults(String tenant, int inboundExternalIdCacheSize,
+            int outboundExternalIdCacheSize, int inventoryCacheSize) {
+        ServiceConfiguration serviceConfig = getServiceConfiguration(tenant);
+        boolean requiresSave = false;
+
+        if (serviceConfig.getInboundExternalIdCacheSize() == null
+                || serviceConfig.getInboundExternalIdCacheSize() == 0) {
+            serviceConfig.setInboundExternalIdCacheSize(inboundExternalIdCacheSize);
+            requiresSave = true;
+        }
+
+        if (serviceConfig.getInboundExternalIdCacheRetention() == null) {
+            serviceConfig.setInboundExternalIdCacheRetention(1);
+            requiresSave = true;
+        }
+
+        if (serviceConfig.getOutboundExternalIdCacheSize() == null
+                || serviceConfig.getOutboundExternalIdCacheSize() == 0) {
+            serviceConfig.setOutboundExternalIdCacheSize(outboundExternalIdCacheSize);
+            requiresSave = true;
+        }
+
+        if (serviceConfig.getOutboundExternalIdCacheRetention() == null) {
+            serviceConfig.setOutboundExternalIdCacheRetention(1);
+            requiresSave = true;
+        }
+
+        if (serviceConfig.getInventoryCacheSize() == null || serviceConfig.getInventoryCacheSize() == 0) {
+            serviceConfig.setInventoryCacheSize(inventoryCacheSize);
+            requiresSave = true;
+        }
+
+        Map<String, CodeTemplate> codeTemplates = serviceConfig.getCodeTemplates();
+        if (codeTemplates == null || codeTemplates.isEmpty()) {
+            // First start: load all templates from classpath
+            initCodeTemplates(serviceConfig, false);
+            requiresSave = true;
+        } else {
+            // Subsequent starts: add any newly deployed internal templates
+            if (addMissingInternalTemplates(serviceConfig)) {
+                requiresSave = true;
+            }
+            // ...and always re-load the framework-owned SYSTEM template. It is @internal/@readonly
+            // and holds only the Java.type bindings the runtime needs, so the packaged copy is
+            // authoritative. Customer code lives in SHARED, which is never touched here. The caller
+            // initializes the tenant beans afterwards, so the refreshed code is what gets compiled.
+            if (refreshSystemTemplate(serviceConfig)) {
+                requiresSave = true;
+            }
+        }
+
+        if (requiresSave) {
+            try {
+                saveServiceConfiguration(tenant, serviceConfig);
+            } catch (JsonProcessingException e) {
+                log.error("{} - Error saving service configuration: {}", tenant, e.getMessage(), e);
+            }
+        }
+
+        return serviceConfig;
+    }
+
     public ServiceConfiguration getServiceConfiguration(String tenant) {
         final OptionPK option = new OptionPK();
         option.setCategory(Utils.OPTION_CATEGORY_CONFIGURATION);
