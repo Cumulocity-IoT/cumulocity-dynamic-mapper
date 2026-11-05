@@ -46,6 +46,8 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.model.Direction;
+import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
 import lombok.extern.slf4j.Slf4j;
 
@@ -243,9 +245,29 @@ public class ConnectorLifecycleService {
             // needed
             future = connectorClient.reconnect();
             connectorClient.submitHousekeeping();
-            serviceRegistry.initializeOutboundMapping(tenant, serviceConfiguration, connectorClient);
+            initializeOutboundMapping(tenant, serviceConfiguration, connectorClient);
         }
         return future;
+    }
+
+    /**
+     * Registers the outbound dispatcher of a connector with Notification 2.0 when outbound mapping is
+     * enabled and the connector supports the outbound direction.
+     * <p>
+     * The dispatcher is registered whatever the enabled state of the connector, so that a Notification
+     * 2.0 WebSocket is established and the Message Explorer can capture outbound notifications even
+     * while connectors are disabled. {@code processNotification()} guards the actual mapping
+     * execution with {@code isConnected()}.
+     */
+    private void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration,
+            AConnectorClient connectorClient) {
+        if (serviceConfiguration.getOutboundMappingEnabled()
+                && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
+            OutboundMessageDispatcher dispatcherOutbound = new OutboundMessageDispatcher(serviceRegistry,
+                    connectorClient);
+            serviceRegistry.getNotificationSubscriber().addConnector(tenant,
+                    connectorClient.getConnectorIdentifier(), dispatcherOutbound);
+        }
     }
 
     // === Connector changes at runtime ===

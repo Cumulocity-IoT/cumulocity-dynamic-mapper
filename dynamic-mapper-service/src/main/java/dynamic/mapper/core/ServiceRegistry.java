@@ -34,13 +34,10 @@ import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.device.DeviceToClientMapRepresentation;
-import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.MapperServiceRepresentation;
 import dynamic.mapper.notification.NotificationSubscriber;
-import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import dynamic.mapper.processor.outbound.OutboundMessageRouter;
 import dynamic.mapper.processor.inbound.InboundMessageRouter;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
@@ -230,22 +227,6 @@ public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
 
     public void removeMicroserviceCredentials(String tenant) {
         tenantRegistry.removeMicroserviceCredentials(tenant);
-    }
-
-    public void initializeOutboundMapping(String tenant, ServiceConfiguration serviceConfiguration,
-            AConnectorClient connectorClient) {
-        if (serviceConfiguration.getOutboundMappingEnabled()
-                && connectorClient.supportedDirections().contains(Direction.OUTBOUND)) {
-            OutboundMessageDispatcher dispatcherOutbound = new OutboundMessageDispatcher(
-                    this, connectorClient);
-            // Always register the dispatcher so a Notification 2.0 WebSocket is established
-            // regardless of connector enabled state. This allows the Message Explorer to
-            // capture outbound notifications even when connectors are disabled.
-            // processNotification() guards actual mapping execution via isConnected().
-            getNotificationSubscriber().addConnector(tenant,
-                    connectorClient.getConnectorIdentifier(),
-                    dispatcherOutbound);
-        }
     }
 
     public void addOrUpdateClientRelation(String tenant, String clientId, String deviceId) {
