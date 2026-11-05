@@ -93,11 +93,15 @@ class TenantScopedWiringTest {
     @Order(TenantScoped.ORDER_CONNECTORS)
     static class EarlyBean implements TenantScoped {
         @Override
+        public void initializeTenant(TenantInitContext ctx) { }
+        @Override
         public void removeTenant(String tenant) { }
     }
 
     @Order(TenantScoped.ORDER_REGISTRY)
     static class LateBean implements TenantScoped {
+        @Override
+        public void initializeTenant(TenantInitContext ctx) { }
         @Override
         public void removeTenant(String tenant) { }
     }

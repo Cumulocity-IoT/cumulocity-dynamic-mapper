@@ -39,6 +39,11 @@ public class ExtensionInboundRegistry implements TenantScoped {
     /**
      * Initialize extension processor for tenant (called during bootstrap)
      */
+    @Override
+    public void initializeTenant(TenantInitContext ctx) {
+        initializeTenant(ctx.tenant());
+    }
+
     public Map<String, Extension> initializeTenant(String tenant) {
         Map<String, Extension> extensions = new ConcurrentHashMap<>();
         tenantExtensionProcessors.put(tenant, extensions);

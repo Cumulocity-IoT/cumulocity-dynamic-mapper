@@ -45,6 +45,11 @@ class BootstrapServiceTenantLifecycleTest {
         }
 
         @Override
+        public void initializeTenant(TenantInitContext ctx) {
+            log.add("init:" + name);
+        }
+
+        @Override
         public void stopTenant(String tenant) {
             log.add("stop:" + name);
             if (failOnStop) {
@@ -108,6 +113,8 @@ class BootstrapServiceTenantLifecycleTest {
     private static class TestableService extends BootstrapService {
         final AtomicInteger attempts = new AtomicInteger();
         final int failures;
+        volatile java.util.concurrent.CountDownLatch initStarted;
+        volatile java.util.concurrent.CountDownLatch releaseInit;
 
         TestableService(BootstrapService proto, int failures, List<TenantScoped> beans,
                 MicroserviceSubscriptionsService subscriptions) {
@@ -120,6 +127,14 @@ class BootstrapServiceTenantLifecycleTest {
 
         @Override
         void initializeTenantState(String tenant, MicroserviceCredentials credentials) {
+            if (initStarted != null) {
+                initStarted.countDown();
+                try {
+                    releaseInit.await(5, java.util.concurrent.TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
             if (attempts.incrementAndGet() <= failures) {
                 throw new IllegalStateException("platform unavailable");
             }
@@ -214,5 +229,107 @@ class BootstrapServiceTenantLifecycleTest {
         MicroserviceSubscriptionRemovedEvent removed = mock(MicroserviceSubscriptionRemovedEvent.class);
         when(removed.getTenant()).thenReturn("t1");
         return removed;
+    }
+
+    @Test
+    void unsubscribeDuringInitializationWaitsForItAndThenRemovesWhatItBuilt() throws Exception {
+        List<String> calls = java.util.Collections.synchronizedList(new ArrayList<>());
+        TestableService service = new TestableService(null, 0, List.of(new Recording("a", calls, false)),
+                runningSubscriptions());
+        service.initStarted = new java.util.concurrent.CountDownLatch(1);
+        service.releaseInit = new java.util.concurrent.CountDownLatch(1);
+
+        Thread subscribe = new Thread(() -> service.onTenantSubscribed(addedEvent()));
+        subscribe.start();
+        assertTrue(service.initStarted.await(5, java.util.concurrent.TimeUnit.SECONDS));
+
+        Thread unsubscribe = new Thread(() -> service.onTenantUnsubscribed(removedEvent()));
+        unsubscribe.start();
+        Thread.sleep(200);
+        assertTrue(calls.isEmpty(), "removal must wait while initialization is still building state");
+
+        service.releaseInit.countDown();
+        subscribe.join(5000);
+        unsubscribe.join(5000);
+
+        assertEquals(List.of("stop:a", "remove:a"), calls, "removal runs after the initialization finished");
+        assertNull(service.getTenantState("t1"));
+    }
+
+    @Test
+    void removeAllRunsEveryStepAndRethrowsTheFirstFailure() {
+        List<String> ran = new ArrayList<>();
+        IllegalStateException e = org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> TenantScoped.removeAll("t1", this,
+                        () -> ran.add("1"),
+                        () -> { throw new IllegalStateException("first"); },
+                        () -> ran.add("3"),
+                        () -> { throw new IllegalStateException("second"); }));
+        assertEquals("first", e.getMessage());
+        assertEquals(List.of("1", "3"), ran);
+    }
+
+    @Test
+    void beansInitializeInReverseOrderAndTheFirstFailureAbortsTheAttempt() {
+        List<String> calls = new ArrayList<>();
+        // beans arrive sorted by @Order: a = connectors (first), c = registry (last)
+        List<TenantScoped> beans = List.of(new Recording("a", calls, false), new Recording("b", calls, false),
+                new Recording("c", calls, false) {
+                    @Override
+                    public void initializeTenant(TenantInitContext ctx) {
+                        super.initializeTenant(ctx);
+                    }
+                });
+        List<String> started = new ArrayList<>();
+        BootstrapService service = new BootstrapService(mock(ConnectorRegistry.class), mock(ServiceRegistry.class),
+                null, mock(C8YAgent.class), mock(CacheManager.class), mock(MappingService.class),
+                mock(ServiceConfigurationService.class), mock(ConnectorConfigurationService.class),
+                mock(MicroserviceSubscriptionsService.class), mock(ExtensionInboundRegistry.class), null,
+                mock(ExtensionManager.class), mock(FlowStateStore.class), beans, "", 10, 10, 10) {
+            @Override
+            TenantInitContext prepareTenant(String tenant, MicroserviceCredentials credentials) {
+                return new TenantInitContext(tenant, credentials, null, null, null);
+            }
+
+            @Override
+            void startTenant(TenantInitContext ctx) {
+                started.add("start");
+            }
+        };
+
+        service.initializeTenantState("t1", mock(MicroserviceCredentials.class));
+
+        assertEquals(List.of("init:c", "init:b", "init:a"), calls, "registry first, connectors last");
+        assertEquals(List.of("start"), started, "start runs after all beans are initialized");
+
+        // a failing bean aborts: later beans and the start phase must not run
+        List<String> calls2 = new ArrayList<>();
+        List<String> started2 = new ArrayList<>();
+        TenantScoped failing = new Recording("fail", calls2, false) {
+            @Override
+            public void initializeTenant(TenantInitContext ctx) {
+                throw new IllegalStateException("boom");
+            }
+        };
+        BootstrapService service2 = new BootstrapService(mock(ConnectorRegistry.class), mock(ServiceRegistry.class),
+                null, mock(C8YAgent.class), mock(CacheManager.class), mock(MappingService.class),
+                mock(ServiceConfigurationService.class), mock(ConnectorConfigurationService.class),
+                mock(MicroserviceSubscriptionsService.class), mock(ExtensionInboundRegistry.class), null,
+                mock(ExtensionManager.class), mock(FlowStateStore.class),
+                List.of(new Recording("a", calls2, false), failing), "", 10, 10, 10) {
+            @Override
+            TenantInitContext prepareTenant(String tenant, MicroserviceCredentials credentials) {
+                return new TenantInitContext(tenant, credentials, null, null, null);
+            }
+
+            @Override
+            void startTenant(TenantInitContext ctx) {
+                started2.add("start");
+            }
+        };
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> service2.initializeTenantState("t1", mock(MicroserviceCredentials.class)));
+        assertTrue(calls2.isEmpty(), "bean a is after the failing one in init order and must not run");
+        assertTrue(started2.isEmpty());
     }
 }

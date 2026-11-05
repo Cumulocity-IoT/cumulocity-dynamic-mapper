@@ -23,6 +23,7 @@ package dynamic.mapper.core;
 
 import dynamic.mapper.ai.AIAgentService;
 
+import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -106,6 +107,16 @@ public class BootstrapService {
 
     private final Map<String, TenantState> tenantStates = new ConcurrentHashMap<>();
     private final Map<String, ScheduledFuture<?>> pendingInitRetries = new ConcurrentHashMap<>();
+    /**
+     * Serializes initialization attempts, subscribe and unsubscribe per tenant, so an unsubscribe never runs
+     * while an attempt is still building state (which would resurrect the removed tenant). Entries are tiny and
+     * never removed: dropping one while another thread waits on it would break the mutual exclusion.
+     */
+    private final Map<String, Object> tenantLifecycleLocks = new ConcurrentHashMap<>();
+
+    private Object lifecycleLock(String tenant) {
+        return tenantLifecycleLocks.computeIfAbsent(tenant, t -> new Object());
+    }
     private final ScheduledExecutorService initRetryExecutor =
             Executors.newSingleThreadScheduledExecutor(r -> {
                 Thread t = new Thread(r, "tenant-init-retry");
@@ -201,16 +212,23 @@ public class BootstrapService {
     public void onTenantUnsubscribed(MicroserviceSubscriptionRemovedEvent event) {
         String tenant = event.getTenant();
         log.info("{} - Microservice unsubscribed", tenant);
-        tenantStates.remove(tenant);
+        // waits for a running initialization attempt, then removes everything it built
+        synchronized (lifecycleLock(tenant)) {
+            tenantStates.remove(tenant);
+            cancelPendingInitRetry(tenant);
+
+            try {
+                removeTenantState(tenant);
+            } catch (Exception e) {
+                log.error("{} - Error during unsubscribing cleanup: {}", tenant, e.getMessage(), e);
+            }
+        }
+    }
+
+    private void cancelPendingInitRetry(String tenant) {
         ScheduledFuture<?> pending = pendingInitRetries.remove(tenant);
         if (pending != null) {
             pending.cancel(false);
-        }
-
-        try {
-            removeTenantState(tenant);
-        } catch (Exception e) {
-            log.error("{} - Error during unsubscribing cleanup: {}", tenant, e.getMessage(), e);
         }
     }
 
@@ -248,8 +266,11 @@ public class BootstrapService {
     public void onTenantSubscribed(MicroserviceSubscriptionAddedEvent event) {
         String tenant = event.getCredentials().getTenant();
         log.info("{} - Microservice subscribed", tenant);
-        tenantStates.put(tenant, TenantState.INITIALIZING);
-        attemptInitialization(tenant, event.getCredentials(), 1);
+        synchronized (lifecycleLock(tenant)) {
+            cancelPendingInitRetry(tenant); // a retry chain of an earlier subscription must not run on
+            tenantStates.put(tenant, TenantState.INITIALIZING);
+            attemptInitialization(tenant, event.getCredentials(), 1);
+        }
     }
 
     // package-private: overridden in tests
@@ -273,6 +294,15 @@ public class BootstrapService {
      * {@link #MAX_INIT_ATTEMPTS} the tenant is left clean and {@link TenantState#FAILED}.
      */
     private void attemptInitialization(String tenant, MicroserviceCredentials credentials, int attempt) {
+        synchronized (lifecycleLock(tenant)) {
+            attemptInitializationLocked(tenant, credentials, attempt);
+        }
+    }
+
+    private void attemptInitializationLocked(String tenant, MicroserviceCredentials credentials, int attempt) {
+        if (!tenantStates.containsKey(tenant)) {
+            return; // unsubscribed before this attempt started
+        }
         try {
             initializeTenantState(tenant, credentials);
             tenantStates.replace(tenant, TenantState.INITIALIZING, TenantState.READY);
@@ -284,9 +314,6 @@ public class BootstrapService {
                     e.getMessage(), e);
         }
 
-        if (!tenantStates.containsKey(tenant)) {
-            return; // unsubscribed while initializing: removal already ran or is running
-        }
         // Clean slate, so neither a retry nor the failed state leaves half-built resources behind.
         removeTenantStateKeepingStatus(tenant);
 
@@ -300,46 +327,70 @@ public class BootstrapService {
         long delay = initRetryDelaySeconds(attempt);
         tenantStates.replace(tenant, TenantState.INITIALIZING, TenantState.RETRYING);
         log.warn("{} - Retrying initialization in {}s", tenant, delay);
-        pendingInitRetries.put(tenant, initRetryExecutor.schedule(() -> {
+        ScheduledFuture<?> previous = pendingInitRetries.put(tenant, initRetryExecutor.schedule(() -> {
             pendingInitRetries.remove(tenant);
             if (tenantStates.get(tenant) != TenantState.RETRYING) {
-                return; // unsubscribed meanwhile
+                return; // unsubscribed or re-subscribed meanwhile
             }
             subscriptionsService.runForTenant(tenant, () -> attemptInitialization(tenant, credentials, attempt + 1));
         }, delay, TimeUnit.SECONDS));
+        if (previous != null) {
+            previous.cancel(false);
+        }
     }
 
     // package-private: overridden in tests
     void initializeTenantState(String tenant, MicroserviceCredentials credentials) {
+        // 1. Prepare: all platform I/O needed to build state. A failure here leaves nothing behind.
+        TenantInitContext ctx = prepareTenant(tenant, credentials);
+        // 2. Create the empty per-tenant state of every bean (see TenantScoped#initializeTenant).
+        initializeBeans(ctx);
+        // 3. Start activity: has data dependencies, so it is an explicit sequence, not an @Order.
+        startTenant(ctx);
+    }
 
-        extensionInboundRegistry.initializeTenant(tenant);
+    // package-private: overridden in tests
+    TenantInitContext prepareTenant(String tenant, MicroserviceCredentials credentials) {
+        ServiceConfiguration serviceConfiguration = initializeServiceConfiguration(tenant);
+        ManagedObjectRepresentation mapperServiceMo = c8YAgent.initializeMapperServiceRepresentation(tenant);
+        // DO NOT REMOVE DeviceIsolationMQTTService feature
+        ManagedObjectRepresentation deviceToClientMo = Boolean.TRUE
+                .equals(serviceConfiguration.getDeviceIsolationMQTTServiceEnabled())
+                        ? c8YAgent.initializeDeviceToClientMapRepresentation(tenant)
+                        : null;
+        return new TenantInitContext(tenant, credentials, serviceConfiguration, mapperServiceMo, deviceToClientMo);
+    }
+
+    /**
+     * Mirror of removal: beans initialize in reverse {@code @Order} (registry first, connectors last), so what a
+     * bean reads during its own initialization (credentials, configuration, representations) already exists.
+     * Unlike removal, the first failure aborts: a half-initialized tenant is cleaned up by the caller.
+     */
+    private void initializeBeans(TenantInitContext ctx) {
+        for (int i = tenantScoped.size() - 1; i >= 0; i--) {
+            TenantScoped bean = tenantScoped.get(i);
+            bean.initializeTenant(ctx);
+            log.debug("{} - initialized {}", ctx.tenant(), bean.getClass().getSimpleName());
+        }
+        String tenant = ctx.tenant();
+        cacheInboundExternalIdRetentionStartMap.put(tenant, Instant.now());
+        cacheOutboundExternalIdRetentionStartMap.put(tenant, Instant.now());
+        cacheInventoryRetentionStartMap.put(tenant, Instant.now());
+    }
+
+    // package-private: overridden in tests
+    void startTenant(TenantInitContext ctx) {
+        String tenant = ctx.tenant();
+        ServiceConfiguration serviceConfiguration = ctx.serviceConfiguration();
 
         c8YAgent.createExtensibleProcessor(tenant);
         extensionManager.loadProcessorExtensions(tenant);
 
-        ServiceConfiguration serviceConfiguration = initializeServiceConfiguration(tenant);
-        initializeCaches(tenant, serviceConfiguration);
-
-        serviceRegistry.addMicroserviceCredentials(tenant, credentials);
-        serviceRegistry.initializeTenant(tenant);
-        serviceRegistry.getGraalVMContextService().initializeTenant(tenant, serviceConfiguration);
-        serviceRegistry.storeMapperServiceRepresentation(tenant,
-                c8YAgent.initializeMapperServiceRepresentation(tenant));
-
-        // DO NOT REMOVE DeviceIsolationMQTTService feature
-        if (serviceConfiguration.getDeviceIsolationMQTTServiceEnabled()) {
-            serviceRegistry.storeDeviceToClientMapRepresentation(tenant,
-                        c8YAgent.initializeDeviceToClientMapRepresentation(tenant));
-        }
-
-        mappingService.initializeTenant(tenant);
         serviceRegistry.getGraalVMContextService().warmupMappingCodes(tenant, buildMappingCodeMap(tenant));
         // Register a supplier so the service re-warms all active mapping codes automatically
         // on every future Engine rotation, keeping cold-start latency bounded.
         serviceRegistry.getGraalVMContextService()
                 .setMappingCodeSupplier(tenant, () -> buildMappingCodeMap(tenant));
-
-        connectorRegistry.initializeTenant(tenant);
 
         // Clean up any orphaned Notifications 2.0 subscribers from a previous run
         // (e.g. from connectors that were deleted or disabled without proper cleanup)
@@ -457,33 +508,7 @@ public class BootstrapService {
             }
         }
 
-        serviceRegistry.addServiceConfiguration(tenant, serviceConfig);
         return serviceConfig;
-    }
-
-    private void initializeCaches(String tenant, ServiceConfiguration serviceConfig) {
-        int cacheSizeInbound = Optional.ofNullable(serviceConfig.getInboundExternalIdCacheSize())
-                .filter(size -> size != 0)
-                .orElse(inboundExternalIdCacheSize);
-
-        int cacheSizeOutbound = Optional.ofNullable(serviceConfig.getOutboundExternalIdCacheSize())
-                .filter(size -> size != 0)
-                .orElse(outboundExternalIdCacheSize);
-
-        int cacheSizeInventory = Optional.ofNullable(serviceConfig.getInventoryCacheSize())
-                .filter(size -> size != 0)
-                .orElse(inventoryCacheSize);
-
-        cacheManager.initializeInboundExternalIdCache(tenant, cacheSizeInbound);
-        cacheManager.initializeOutboundExternalIdCache(tenant, cacheSizeOutbound);
-
-        // to test cache eviction
-        // cacheManager.initializeInventoryCache(tenant, 1);
-        cacheManager.initializeInventoryCache(tenant, cacheSizeInventory);
-
-        cacheInboundExternalIdRetentionStartMap.put(tenant, Instant.now());
-        cacheOutboundExternalIdRetentionStartMap.put(tenant, Instant.now());
-        cacheInventoryRetentionStartMap.put(tenant, Instant.now());
     }
 
     private List<Future<?>> initializeConnectors(String tenant, ServiceConfiguration serviceConfig) {

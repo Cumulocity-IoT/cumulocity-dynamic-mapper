@@ -217,6 +217,11 @@ public class ConnectorRegistry implements TenantScoped {
         return connectorStatusMaps.computeIfAbsent(tenant, k -> new ConcurrentHashMap<>());
     }
 
+    @Override
+    public void initializeTenant(dynamic.mapper.core.TenantInitContext ctx) {
+        initializeTenant(ctx.tenant());
+    }
+
     public void initializeTenant(String tenant) {
         removedTenants.remove(tenant);
         connectorStatusMaps.put(tenant, new ConcurrentHashMap<>());

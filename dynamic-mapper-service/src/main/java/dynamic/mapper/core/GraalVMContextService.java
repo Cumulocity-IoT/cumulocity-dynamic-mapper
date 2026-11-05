@@ -316,6 +316,11 @@ public class GraalVMContextService implements TenantScoped {
      * @param tenant               tenant identifier
      * @param serviceConfiguration the tenant's service configuration (provides code templates)
      */
+    @Override
+    public void initializeTenant(TenantInitContext ctx) {
+        initializeTenant(ctx.tenant(), ctx.serviceConfiguration());
+    }
+
     public void initializeTenant(String tenant, ServiceConfiguration serviceConfiguration) {
         tenantServiceConfigs.put(tenant, serviceConfiguration);
         compilationCounters.put(tenant, new AtomicInteger(0));

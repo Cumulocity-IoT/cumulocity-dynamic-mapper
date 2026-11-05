@@ -30,6 +30,7 @@ import org.springframework.stereotype.Component;
 import com.cumulocity.model.ID;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
+import dynamic.mapper.configuration.ServiceConfiguration;
 
 import dynamic.mapper.core.cache.InboundExternalIdCache;
 import dynamic.mapper.core.cache.InventoryCache;
@@ -99,10 +100,20 @@ public class CacheManager implements TenantScoped {
     }
 
     @Override
+    public void initializeTenant(TenantInitContext ctx) {
+        // the configuration is normalized by BootstrapService: all three sizes are set and non-zero
+        ServiceConfiguration config = ctx.serviceConfiguration();
+        initializeInboundExternalIdCache(ctx.tenant(), config.getInboundExternalIdCacheSize());
+        initializeOutboundExternalIdCache(ctx.tenant(), config.getOutboundExternalIdCacheSize());
+        initializeInventoryCache(ctx.tenant(), config.getInventoryCacheSize());
+    }
+
+    @Override
     public void removeTenant(String tenant) {
-        removeInboundExternalIdCache(tenant);
-        removeOutboundExternalIdCache(tenant);
-        removeInventoryCache(tenant);
+        TenantScoped.removeAll(tenant, this,
+                () -> removeInboundExternalIdCache(tenant),
+                () -> removeOutboundExternalIdCache(tenant),
+                () -> removeInventoryCache(tenant));
     }
 
     public InboundExternalIdCache removeInboundExternalIdCache(String tenant) {

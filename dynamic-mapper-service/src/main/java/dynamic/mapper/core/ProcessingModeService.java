@@ -161,6 +161,11 @@ public class ProcessingModeService implements TenantScoped {
         return params;
     }
 
+    /** Nothing to create: the connector is cached on first use. */
+    @Override
+    public void initializeTenant(TenantInitContext ctx) {
+    }
+
     /**
      * Clear cached connector for a specific tenant (useful for credential updates)
      */

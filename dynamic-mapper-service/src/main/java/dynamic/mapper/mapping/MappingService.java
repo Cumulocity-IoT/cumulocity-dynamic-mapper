@@ -101,6 +101,11 @@ public class MappingService implements TenantScoped {
      * Creates the empty per-tenant state (caches, status, deployment map, dirty set).
      * Counterpart of {@link #removeTenant(String)}; mappings are loaded by {@link #loadTenantMappings}.
      */
+    @Override
+    public void initializeTenant(dynamic.mapper.core.TenantInitContext ctx) {
+        initializeTenant(ctx.tenant());
+    }
+
     public void initializeTenant(String tenant) {
         cacheManager.initializeTenant(tenant);
         statusService.initializeTenant(tenant, false);
@@ -124,14 +129,15 @@ public class MappingService implements TenantScoped {
      * Drops all per-tenant state. Counterpart of {@link #initializeTenant(String)}.
      */
     public void removeTenant(String tenant) {
-        cacheManager.removeTenant(tenant);
-        statusService.removeTenant(tenant);
-        deploymentMapService.removeTenant(tenant);
-        flowStateStore.removeTenant(tenant);
-        mappingRepository.clearReportedWarnings(tenant);
-        dirtyMappings.remove(tenant);
-        activationLocks.keySet().removeIf(key -> key.startsWith(tenant + ":"));
-        deactivationsInFlight.removeIf(key -> key.startsWith(tenant + ":"));
+        TenantScoped.removeAll(tenant, this,
+                () -> cacheManager.removeTenant(tenant),
+                () -> statusService.removeTenant(tenant),
+                () -> deploymentMapService.removeTenant(tenant),
+                () -> flowStateStore.removeTenant(tenant),
+                () -> mappingRepository.clearReportedWarnings(tenant),
+                () -> dirtyMappings.remove(tenant),
+                () -> activationLocks.keySet().removeIf(key -> key.startsWith(tenant + ":")),
+                () -> deactivationsInFlight.removeIf(key -> key.startsWith(tenant + ":")));
 
         log.info("{} - Tenant removed", tenant);
     }

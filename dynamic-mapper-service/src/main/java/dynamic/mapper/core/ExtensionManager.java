@@ -456,6 +456,11 @@ public class ExtensionManager implements TenantScoped {
                 ie.getId().getValue(), ie);
     }
 
+    /** Nothing to create: classloaders are built when the extensions are loaded. */
+    @Override
+    public void initializeTenant(TenantInitContext ctx) {
+    }
+
     /**
      * Clean up all classloaders for a tenant. Should be called during tenant offboarding.
      */

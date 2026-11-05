@@ -149,7 +149,15 @@ public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
         return true;
     }
 
-    public void initializeTenant(String tenant) {
+    @Override
+    public void initializeTenant(TenantInitContext ctx) {
+        String tenant = ctx.tenant();
+        addMicroserviceCredentials(tenant, ctx.credentials());
+        addServiceConfiguration(tenant, ctx.serviceConfiguration());
+        storeMapperServiceRepresentation(tenant, ctx.mapperServiceMo());
+        if (ctx.deviceToClientMo() != null) {
+            storeDeviceToClientMapRepresentation(tenant, ctx.deviceToClientMo());
+        }
     }
 
     public MapperServiceRepresentation storeMapperServiceRepresentation(String tenant,
@@ -183,11 +191,12 @@ public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
     /** Last step: credentials and configuration may still be read while the other beans are removed. */
     @Override
     public void removeTenant(String tenant) {
-        clearExternalIdCache(tenant); // keyed "tenant|…"; would grow across tenant churn and resolve stale ids
-        removeDeviceToClientState(tenant);
-        removeMapperServiceRepresentation(tenant);
-        removeServiceConfiguration(tenant);
-        removeMicroserviceCredentials(tenant);
+        TenantScoped.removeAll(tenant, this,
+                () -> clearExternalIdCache(tenant), // keyed "tenant|…"; would grow across tenant churn
+                () -> removeDeviceToClientState(tenant),
+                () -> removeMapperServiceRepresentation(tenant),
+                () -> removeServiceConfiguration(tenant),
+                () -> removeMicroserviceCredentials(tenant));
     }
 
     public void removeDeviceToClientState(String tenant) {

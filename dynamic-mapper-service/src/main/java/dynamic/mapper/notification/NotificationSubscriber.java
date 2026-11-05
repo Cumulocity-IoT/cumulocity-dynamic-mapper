@@ -97,6 +97,11 @@ public class NotificationSubscriber implements TenantScoped {
         connectionManager.disconnect(tenant);
     }
 
+    /** Nothing to create: connections and tokens are set up when connectors and subscriptions start. */
+    @Override
+    public void initializeTenant(dynamic.mapper.core.TenantInitContext ctx) {
+    }
+
     @Override
     public void stopTenant(String tenant) {
         disconnect(tenant);
