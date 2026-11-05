@@ -98,15 +98,17 @@ discarded before the current one:
    metric collapsed onto the one shared timestamp, discarding everything but the last processed
    tenant.
 
-**Current approach**: back to nine separate queries joined on `tenant` (the structurally
-correct tool for "many same-keyed values become many columns"), but this time every target gets
-an explicit, literal `legendFormat` (e.g. `"Connectors Configured"`) instead of `"__auto"` — so
-each one's value field carries a distinct, meaningful display name *before* the join runs, and
-`joinByField` has something real to key the output column on. `organize.renameByName` then
-additionally maps every auto-suffix convention observed in practice (`Value #A`..`Value #I` and
-`Value`/`Value 1`..`Value 8`) to the same friendly names, as a no-op safety net in case Grafana's
-internal disambiguation still kicks in — a mapping for a name that doesn't occur is simply
-ignored, so this costs nothing if the legend-based naming already won.
+**Current approach**: nine separate queries joined on `tenant` (the structurally correct tool for
+"many same-keyed values become many columns"), each with an explicit, literal `legendFormat`
+(e.g. `"Connectors Configured"`) instead of `"__auto"`, so the join has something distinct to
+key each output column on. In practice this correctly names most columns, but Grafana's join
+still leaves a handful of un-renamed `Value`/`Value N`/`Value #X` fields alongside the correctly
+named ones (the exact collision-disambiguation Grafana falls back to for the remainder isn't
+something this dashboard relies on knowing). Rather than chase the exact convention, the last
+transformation step is `filterFieldsByName` with `exclude: {"pattern": "^Value( .*|#.*)?$"}` —
+a convention-agnostic cleanup that hides **any** field still generically named `Value`-something
+after the rename pass, regardless of its exact suffix. A correctly renamed column (e.g.
+"Connectors Configured") never matches that pattern, so this only ever removes genuine leftovers.
 
 ### Rows
 
@@ -121,14 +123,17 @@ ignored, so this costs nothing if the legend-based naming already won.
   available, independent of whether the tenant is actively doing anything.
 - **Connectors** — one row per `(tenant, connector)` with its live status; see
   `dynmapper_connector_status` below for the ordinal mapping.
-- **Mappings** — one row per `(tenant, direction, transformation type)` with at least one
-  mapping cached. `dynmapper_mapping_count` is exposed by `MappingCacheManager` for every
-  direction (`INBOUND`/`OUTBOUND`) × transformation type combination, registered the moment a
-  tenant subscribes; each gauge's value function re-reads the live mapping cache on every
-  scrape, so counts are always current and no mutation path (add/remove/update/reload) needs to
-  touch a counter. Legacy/deprecated transformation types (`DEFAULT`, `SUBSTITUTION_AS_CODE`)
-  are included for completeness — expect them to taper to zero as mappings migrate to
-  `JSONATA`/`SMART_FUNCTION`.
+- **Mappings** — one row per `(tenant, direction, transformation type)` registered for a
+  subscribed tenant, zero counts shown explicitly rather than hidden (so the full set of
+  direction × transformation-type combinations is always visible, not just the ones currently in
+  use). `dynmapper_mapping_count` is exposed by `MappingCacheManager` for every direction
+  (`INBOUND`/`OUTBOUND`) × transformation type combination, registered the moment a tenant
+  subscribes; each gauge's value function re-reads the live mapping cache on every scrape, so
+  counts are always current and no mutation path (add/remove/update/reload) needs to touch a
+  counter, and the query is deduplicated across replicas the same way as the other per-tenant
+  gauges (see `isolation: MULTI_TENANT` above). Legacy/deprecated transformation types
+  (`DEFAULT`, `SUBSTITUTION_AS_CODE`) are included for completeness — expect them to taper to
+  zero as mappings migrate to `JSONATA`/`SMART_FUNCTION`.
 - **Activity by Tenant** — horizontal bar gauges of inbound/outbound msgs/sec per tenant; the
   same numbers as the table's two rate columns, shown as a quick visual comparison across
   tenants.

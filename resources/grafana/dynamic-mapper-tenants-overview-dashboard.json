@@ -360,6 +360,12 @@
               "Value 8": "Outbound Mappings"
             }
           }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "exclude": { "pattern": "^Value( .*|#.*)?$" }
+          }
         }
       ],
       "title": "Tenants",
@@ -449,11 +455,12 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "One row per (tenant, direction, transformation type) with at least one mapping currently cached. Counts are live — always reflect the current mapping cache, not a point-in-time snapshot. Legacy transformation types (DEFAULT, SUBSTITUTION_AS_CODE) are deprecated; expect them to taper to zero.",
+      "description": "One row per (tenant, direction, transformation type) that has ever been registered for a subscribed tenant — zero counts are shown explicitly, not hidden. Counts are live, deduplicated across replicas. Legacy transformation types (DEFAULT, SUBSTITUTION_AS_CODE) are deprecated; expect them to taper to zero.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
           "mappings": [],
+          "noValue": "0",
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
           "unit": "short"
         },
@@ -463,14 +470,13 @@
       "id": 51,
       "options": {
         "cellHeight": "sm",
-        "showHeader": true,
-        "sortBy": [{ "displayName": "Tenant", "desc": false }]
+        "showHeader": true
       },
       "pluginVersion": "11.0.0",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by (tenant, direction, transformationType) (dynmapper_mapping_count) > 0",
+          "expr": "max by (tenant, direction, transformationType) (dynmapper_mapping_count)",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -599,6 +605,6 @@
   "timezone": "",
   "title": "Dynamic Mapper — Tenants & Deployment Overview",
   "uid": "dynamic-mapper-tenants-overview",
-  "version": 6,
+  "version": 8,
   "weekStart": ""
 }
