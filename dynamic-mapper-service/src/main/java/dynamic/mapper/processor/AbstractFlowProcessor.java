@@ -139,6 +139,15 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
             return;
         }
 
+        // ── Early-exit: an earlier stage (e.g. payload deserialization) already failed. The Camel
+        // route still reaches this processor, and running the Smart Function with a null payload
+        // would only bury the real cause under a misleading "Cannot read property of null" error.
+        if (context.hasError()) {
+            log.info("{} - Skipping JS execution for mapping {}: an earlier processing stage failed: {}",
+                    tenant, mapping.getName(), context.getErrors().get(0).getMessage());
+            return;
+        }
+
         org.graalvm.polyglot.Context graalCtx = context.getGraalContext();
         dynamic.mapper.processor.runtime.PooledGraalContext pooledGraalCtx = context.getPooledGraalContext();
         Runnable cancelAction = null;
