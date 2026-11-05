@@ -299,6 +299,42 @@ public class MappingService implements TenantScoped {
     }
 
     /**
+     * Compiles the code of all Smart Function mappings of the tenant in the GraalVM service, and
+     * registers a supplier so the service re-warms them on every future engine rotation. This keeps
+     * the cold-start latency of the first message bounded.
+     */
+    public void warmupMappingCodes(String tenant) {
+        serviceRegistry.getGraalVMContextService().warmupMappingCodes(tenant, buildMappingCodeMap(tenant));
+        serviceRegistry.getGraalVMContextService()
+                .setMappingCodeSupplier(tenant, () -> buildMappingCodeMap(tenant));
+    }
+
+    /** Smart Function source of each mapping of the tenant, keyed by script name (module syntax stripped). */
+    private Map<String, String> buildMappingCodeMap(String tenant) {
+        Map<String, String> result = new HashMap<>();
+        for (Direction direction : Direction.values()) {
+            if (direction == Direction.UNSPECIFIED) continue;
+            for (Mapping mapping : getMappings(tenant, direction)) {
+                if (mapping.getCode() == null || mapping.getCode().isBlank()) continue;
+                try {
+                    byte[] decoded = Base64.getDecoder().decode(mapping.getCode());
+                    // Strip all ESM export/import declarations so the warm-up context
+                    // can compile the code as a plain script regardless of supportESM.
+                    String code = JavaScriptModuleStripper.toPlainScript(new String(decoded));
+                    if (TransformationType.SMART_FUNCTION.equals(mapping.getTransformationType())) {
+                        String id = Mapping.SMART_FUNCTION_NAME + "_" + mapping.getIdentifier();
+                        result.put(id + ".js", code);
+                    }
+                } catch (Exception e) {
+                    log.warn("{} - Could not prepare mapping code for warm-up [{}]: {}", tenant,
+                            mapping.getName(), e.getMessage());
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
      * Retrieves all mappings, optionally filtered by direction
      */
     public List<Mapping> getMappings(String tenant, Direction direction) {

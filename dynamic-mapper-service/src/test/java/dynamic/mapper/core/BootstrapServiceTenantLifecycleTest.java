@@ -64,11 +64,10 @@ class BootstrapServiceTenantLifecycleTest {
     }
 
     private BootstrapService service(List<TenantScoped> beans) {
-        return new BootstrapService(mock(ConnectorRegistry.class), mock(ServiceRegistry.class), null,
-                mock(C8YAgent.class), mock(CacheManager.class), mock(MappingService.class),
-                mock(ServiceConfigurationService.class), mock(ConnectorConfigurationService.class),
-                mock(MicroserviceSubscriptionsService.class), mock(ExtensionInboundRegistry.class), null,
-                mock(ExtensionManager.class), mock(FlowStateStore.class), beans, "", 10, 10, 10);
+        return new BootstrapService(mock(ServiceRegistry.class), mock(C8YAgent.class),
+                mock(MappingService.class), mock(ServiceConfigurationService.class),
+                mock(ConnectorLifecycleService.class), mock(MicroserviceSubscriptionsService.class), null,
+                mock(ExtensionManager.class), beans, 10, 10, 10);
     }
 
     @org.junit.jupiter.api.AfterEach
@@ -123,10 +122,9 @@ class BootstrapServiceTenantLifecycleTest {
 
         TestableService(BootstrapService proto, int failures, List<TenantScoped> beans,
                 MicroserviceSubscriptionsService subscriptions) {
-            super(mock(ConnectorRegistry.class), mock(ServiceRegistry.class), null, mock(C8YAgent.class),
-                    mock(CacheManager.class), mock(MappingService.class), mock(ServiceConfigurationService.class),
-                    mock(ConnectorConfigurationService.class), subscriptions, mock(ExtensionInboundRegistry.class),
-                    null, mock(ExtensionManager.class), mock(FlowStateStore.class), beans, "", 10, 10, 10);
+            super(mock(ServiceRegistry.class), mock(C8YAgent.class), mock(MappingService.class),
+                    mock(ServiceConfigurationService.class), mock(ConnectorLifecycleService.class), subscriptions,
+                    null, mock(ExtensionManager.class), beans, 10, 10, 10);
             this.failures = failures;
         }
 
@@ -205,31 +203,6 @@ class BootstrapServiceTenantLifecycleTest {
         assertFalse(service.isTenantReady("t1"));
     }
 
-    @Test
-    @SuppressWarnings("unchecked")
-    void unsubscribeForgetsTheRetentionTimestampsOfThatTenantOnly() throws Exception {
-        BootstrapService service = service(List.of());
-        for (String field : List.of("cacheInboundExternalIdRetentionStartMap",
-                "cacheOutboundExternalIdRetentionStartMap", "cacheInventoryRetentionStartMap")) {
-            Field f = BootstrapService.class.getDeclaredField(field);
-            f.setAccessible(true);
-            Map<String, Instant> map = (Map<String, Instant>) f.get(service);
-            map.put("t1", Instant.now());
-            map.put("t2", Instant.now());
-        }
-
-        service.onTenantUnsubscribed(removedEvent());
-
-        for (String field : List.of("cacheInboundExternalIdRetentionStartMap",
-                "cacheOutboundExternalIdRetentionStartMap", "cacheInventoryRetentionStartMap")) {
-            Field f = BootstrapService.class.getDeclaredField(field);
-            f.setAccessible(true);
-            Map<String, ?> map = (Map<String, ?>) f.get(service);
-            assertFalse(map.containsKey("t1"), field);
-            assertTrue(map.containsKey("t2"), field);
-        }
-    }
-
     private static MicroserviceSubscriptionRemovedEvent removedEvent() {
         MicroserviceSubscriptionRemovedEvent removed = mock(MicroserviceSubscriptionRemovedEvent.class);
         when(removed.getTenant()).thenReturn("t1");
@@ -286,11 +259,10 @@ class BootstrapServiceTenantLifecycleTest {
                     }
                 });
         List<String> started = new ArrayList<>();
-        BootstrapService service = new BootstrapService(mock(ConnectorRegistry.class), mock(ServiceRegistry.class),
-                null, mock(C8YAgent.class), mock(CacheManager.class), mock(MappingService.class),
-                mock(ServiceConfigurationService.class), mock(ConnectorConfigurationService.class),
-                mock(MicroserviceSubscriptionsService.class), mock(ExtensionInboundRegistry.class), null,
-                mock(ExtensionManager.class), mock(FlowStateStore.class), beans, "", 10, 10, 10) {
+        BootstrapService service = new BootstrapService(mock(ServiceRegistry.class), mock(C8YAgent.class),
+                mock(MappingService.class), mock(ServiceConfigurationService.class),
+                mock(ConnectorLifecycleService.class), mock(MicroserviceSubscriptionsService.class), null,
+                mock(ExtensionManager.class), beans, 10, 10, 10) {
             @Override
             TenantInitContext prepareTenant(String tenant, MicroserviceCredentials credentials) {
                 return new TenantInitContext(tenant, credentials, null, null, null);
@@ -316,12 +288,10 @@ class BootstrapServiceTenantLifecycleTest {
                 throw new IllegalStateException("boom");
             }
         };
-        BootstrapService service2 = new BootstrapService(mock(ConnectorRegistry.class), mock(ServiceRegistry.class),
-                null, mock(C8YAgent.class), mock(CacheManager.class), mock(MappingService.class),
-                mock(ServiceConfigurationService.class), mock(ConnectorConfigurationService.class),
-                mock(MicroserviceSubscriptionsService.class), mock(ExtensionInboundRegistry.class), null,
-                mock(ExtensionManager.class), mock(FlowStateStore.class),
-                List.of(new Recording("a", calls2, false), failing), "", 10, 10, 10) {
+        BootstrapService service2 = new BootstrapService(mock(ServiceRegistry.class), mock(C8YAgent.class),
+                mock(MappingService.class), mock(ServiceConfigurationService.class),
+                mock(ConnectorLifecycleService.class), mock(MicroserviceSubscriptionsService.class), null,
+                mock(ExtensionManager.class), List.of(new Recording("a", calls2, false), failing), 10, 10, 10) {
             @Override
             TenantInitContext prepareTenant(String tenant, MicroserviceCredentials credentials) {
                 return new TenantInitContext(tenant, credentials, null, null, null);

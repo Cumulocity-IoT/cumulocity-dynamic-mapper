@@ -38,7 +38,7 @@ import dynamic.mapper.connector.core.client.ConnectorException;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
-import dynamic.mapper.core.BootstrapService;
+import dynamic.mapper.core.ConnectorLifecycleService;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.CacheManager;
 import dynamic.mapper.core.ServiceRegistry;
@@ -93,7 +93,7 @@ public class OperationController {
     private final MappingService mappingService;
     private final ConnectorConfigurationService connectorConfigurationService;
     private final ServiceConfigurationService serviceConfigurationService;
-    private final BootstrapService bootstrapService;
+    private final ConnectorLifecycleService connectorLifecycleService;
     private final C8YAgent c8YAgent;
     private final ContextService<UserCredentials> contextService;
     private final ServiceRegistry serviceRegistry;
@@ -537,7 +537,7 @@ public class OperationController {
             log.info("{} - Client {} already registered, reconnecting existing client", tenant, configuration.getName());
             connectTask = existingClient.reconnect();
         } else {
-            connectTask = bootstrapService.initializeConnectorByConfiguration(configuration, serviceConfiguration,
+            connectTask = connectorLifecycleService.initializeConnectorByConfiguration(configuration, serviceConfiguration,
                     tenant);
         }
 
@@ -591,7 +591,7 @@ public class OperationController {
 
         configuration.setEnabled(false);
         connectorConfigurationService.saveConnectorConfiguration(configuration);
-        bootstrapService.disableConnector(tenant, client.getConnectorIdentifier());
+        connectorLifecycleService.disableConnector(tenant, client.getConnectorIdentifier());
         // Reconnect other notification clients for remaining connectors
         boolean reconnected = serviceRegistry.getNotificationSubscriber().notificationSubscriberReconnect(tenant);
         if (!reconnected) {
