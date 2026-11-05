@@ -497,6 +497,16 @@ discards its logs. It stops with a "SAVE THE LOGS NOW" prompt (`dm_pause_for_log
 reads from `/dev/tty`) so you can download them first. Without a terminal it only warns;
 set `DM_SKIP_LOG_PAUSE=1` to skip the prompt (e.g. unattended runs).
 
+### Restart in single- and multi-tenant setups
+
+`dm_restart_microservice` picks the method from the app owner. If the current tenant owns
+`dynamic-mapper-service` it disables/re-enables the app. If the app is only subscribed
+(multi-tenant, owned by the management tenant), a subtenant user gets `403 Access Denied`
+on unsubscribe, so the helper uses `DM_RESTART_USER` + `DM_RESTART_PASSWORD` (+ optional `DM_RESTART_TENANT`,
+default: the app owner, and `DM_RESTART_HOST`, the management tenant URL when it differs from the subtenant's) or `DM_RESTART_SESSION` (go-c8y-cli session of a
+management-tenant admin) to unsubscribe/re-subscribe the current tenant. Without it, the
+helper asks you to restart the service manually, or skips the test (exit 42) without a terminal.
+
 ### Tests needing the http-polling-mock
 
 `test-inbound-rest-polling` and `test-outbound-webhook` use the mock microservice in

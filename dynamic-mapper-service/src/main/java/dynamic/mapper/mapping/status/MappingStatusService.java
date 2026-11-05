@@ -306,6 +306,10 @@ public class MappingStatusService {
      * @param tenant the tenant identifier
      */
     public void sendStatusToInventory(String tenant) {
+        if (dynamic.mapper.core.TenantCredentials.isRevoked(tenant)) {
+            log.debug("{} - Skipping status send: tenant unsubscribed", tenant);
+            return;
+        }
         if (!shouldSendStatus(tenant)) {
             log.debug("{} - Skipping status send (not enabled or not initialized)", tenant);
             return;

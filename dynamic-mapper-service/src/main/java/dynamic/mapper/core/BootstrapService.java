@@ -212,6 +212,8 @@ public class BootstrapService {
     public void onTenantUnsubscribed(MicroserviceSubscriptionRemovedEvent event) {
         String tenant = event.getTenant();
         log.info("{} - Microservice unsubscribed", tenant);
+        // The platform already deleted the service user: cleanup must not call the platform (would only 401).
+        TenantCredentials.markRevoked(tenant);
         // waits for a running initialization attempt, then removes everything it built
         synchronized (lifecycleLock(tenant)) {
             tenantStates.remove(tenant);
@@ -266,6 +268,7 @@ public class BootstrapService {
     public void onTenantSubscribed(MicroserviceSubscriptionAddedEvent event) {
         String tenant = event.getCredentials().getTenant();
         log.info("{} - Microservice subscribed", tenant);
+        TenantCredentials.clearRevoked(tenant);
         synchronized (lifecycleLock(tenant)) {
             cancelPendingInitRetry(tenant); // a retry chain of an earlier subscription must not run on
             tenantStates.put(tenant, TenantState.INITIALIZING);

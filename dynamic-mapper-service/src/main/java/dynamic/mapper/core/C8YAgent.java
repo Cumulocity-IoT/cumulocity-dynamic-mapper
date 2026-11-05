@@ -424,6 +424,10 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
      */
     public GId createConnectorStatusEvent(String message, String severity, DateTime eventTime, String tenant,
             Map<String, String> properties, dynamic.mapper.model.status.ConnectorStatusHistory session) {
+        if (TenantCredentials.isRevoked(tenant)) {
+            log.debug("{} - Skipping connector status event: tenant unsubscribed", tenant);
+            return null;
+        }
         MapperServiceRepresentation source = mapperConfiguration.getMapperServiceRepresentation(tenant);
         return subscriptionsService.callForTenant(tenant, () -> {
             MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
@@ -461,6 +465,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
      */
     public void updateConnectorStatusEvent(GId eventId, String message, String severity, DateTime eventTime,
             String tenant, Map<String, String> properties, dynamic.mapper.model.status.ConnectorStatusHistory session) {
+        if (TenantCredentials.isRevoked(tenant)) {
+            return;
+        }
         subscriptionsService.runForTenant(tenant, () -> {
             MicroserviceCredentials context = removeAppKeyHeaderFromContext(contextService.getContext());
             contextService.runWithinContext(context, () -> {
@@ -1424,6 +1431,9 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
     }
 
     public void sendNotificationLifecycle(String tenant, ConnectorStatus connectorStatus, String message) {
+        if (TenantCredentials.isRevoked(tenant)) {
+            return;
+        }
         if (tenantRegistry.getServiceConfiguration(tenant).getSendNotificationLifecycle()
                 && !(connectorStatus.equals(previousConnectorStatus))) {
             previousConnectorStatus = connectorStatus;

@@ -137,6 +137,11 @@ public class TokenManager {
 
         // L1 fix: device subscriber tokens live in deviceTokens (per-connector map), not managementTokens
         Map<String, String> tenantTokens = deviceTokens.remove(tenant);
+        if (tenantTokens != null && dynamic.mapper.core.TenantCredentials.isRevoked(tenant)) {
+            log.debug("{} - Tenant unsubscribed, dropped {} device tokens without platform calls", tenant,
+                    tenantTokens.size());
+            return;
+        }
         if (tenantTokens != null) {
             int unsubscribedCount = 0;
             for (String token : tenantTokens.values()) {
@@ -158,6 +163,9 @@ public class TokenManager {
 
         // L1 fix: device group (management) token lives in managementTokens, not deviceTokens
         String token = managementTokens.remove(tenant);
+        if (token != null && dynamic.mapper.core.TenantCredentials.isRevoked(tenant)) {
+            return;
+        }
         if (token != null) {
             try {
                 tokenApi.unsubscribe(new Token(token));

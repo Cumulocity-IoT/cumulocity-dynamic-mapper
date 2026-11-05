@@ -71,6 +71,11 @@ class BootstrapServiceTenantLifecycleTest {
                 mock(ExtensionManager.class), mock(FlowStateStore.class), beans, "", 10, 10, 10);
     }
 
+    @org.junit.jupiter.api.AfterEach
+    void clearRevokedTenants() {
+        TenantCredentials.clearAll();
+    }
+
     @Test
     void unsubscribeStopsAllBeansBeforeRemovingAnyAndKeepsGoingAfterAFailure() {
         List<String> calls = new ArrayList<>();
