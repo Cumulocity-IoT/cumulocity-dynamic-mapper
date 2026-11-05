@@ -21,6 +21,7 @@
 
 package dynamic.mapper.processor;
 
+import dynamic.mapper.core.GraalHostAccessPolicy;
 import static dynamic.mapper.model.Substitution.toPrettyJsonString;
 
 import java.util.ArrayList;
@@ -454,7 +455,7 @@ public abstract class AbstractFlowProcessor extends CommonProcessor {
         }
 
         // Inject atob()/btoa() — GraalVM is ECMAScript-only; these are Web APIs not in the spec.
-        GraalVMContextService.installBase64Functions(graalContext);
+        GraalHostAccessPolicy.installBase64Functions(graalContext);
 
         // Use pre-cached Source if available - no decoding or parsing needed
         if (context.getSharedSource() != null) {

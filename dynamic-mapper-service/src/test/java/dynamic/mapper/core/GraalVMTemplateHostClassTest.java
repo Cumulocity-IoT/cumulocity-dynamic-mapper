@@ -50,7 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Two things have to hold for every such reference, and this test checks both, because either
  * one alone fails the same way: the class must exist, and
- * {@link GraalVMContextService#isAllowedHostClass(String)} must permit it.
+ * {@link GraalHostAccessPolicy#isAllowedHostClass(String)} must permit it.
  */
 class GraalVMTemplateHostClassTest {
 
@@ -104,7 +104,7 @@ class GraalVMTemplateHostClassTest {
     void everyJavaTypeInTheTemplatesIsOnTheHostClassAllowList() throws IOException {
         List<String> denied = new ArrayList<>();
         for (HostClassRef ref : hostClassReferences()) {
-            if (!GraalVMContextService.isAllowedHostClass(ref.className())) {
+            if (!GraalHostAccessPolicy.isAllowedHostClass(ref.className())) {
                 denied.add(ref.toString());
             }
         }
@@ -128,7 +128,7 @@ class GraalVMTemplateHostClassTest {
 
         List<String> missing = new ArrayList<>();
         for (String className : allowed) {
-            assertTrue(GraalVMContextService.isAllowedHostClass(className),
+            assertTrue(GraalHostAccessPolicy.isAllowedHostClass(className),
                     className + " is expected on the allow-list but was rejected");
             try {
                 Class.forName(className, false, getClass().getClassLoader());
@@ -150,18 +150,18 @@ class GraalVMTemplateHostClassTest {
         assertTrue(Files.exists(processor), processor + " not found — did the class move?");
         String source = Files.readString(processor);
 
-        assertTrue(source.contains("allowHostClassLookup(GraalVMContextService::isAllowedHostClass)"),
+        assertTrue(source.contains("allowHostClassLookup(GraalHostAccessPolicy::isAllowedHostClass)"),
                 "AbstractEnrichmentProcessor must delegate to the single allow-list");
         assertFalse(source.contains("dynamic.mapper.processor.runtime.SubstitutionContext\""),
                 "AbstractEnrichmentProcessor names allow-listed classes itself again — "
-                        + "delegate to GraalVMContextService.isAllowedHostClass instead");
+                        + "delegate to GraalHostAccessPolicy.isAllowedHostClass instead");
     }
 
     @Test
     void theAllowListRejectsAnythingElse() {
-        assertFalse(GraalVMContextService.isAllowedHostClass("java.lang.Runtime"));
-        assertFalse(GraalVMContextService.isAllowedHostClass("java.io.File"));
+        assertFalse(GraalHostAccessPolicy.isAllowedHostClass("java.lang.Runtime"));
+        assertFalse(GraalHostAccessPolicy.isAllowedHostClass("java.io.File"));
         // The pre-move package must not be resurrected silently.
-        assertFalse(GraalVMContextService.isAllowedHostClass("dynamic.mapper.processor.model.RepairStrategy"));
+        assertFalse(GraalHostAccessPolicy.isAllowedHostClass("dynamic.mapper.processor.model.RepairStrategy"));
     }
 }

@@ -21,6 +21,7 @@
 
 package dynamic.mapper.processor;
 
+import dynamic.mapper.core.GraalHostAccessPolicy;
 import static com.dashjoin.jsonata.Jsonata.jsonata;
 
 import java.nio.charset.StandardCharsets;
@@ -197,7 +198,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
                 .engine(graalEngine)
                 .option("js.text-encoding", "true")
                 .allowHostAccess(serviceRegistry.getGraalVMContextService().getHostAccess())
-                .allowHostClassLookup(GraalVMContextService::isAllowedHostClass);
+                .allowHostClassLookup(GraalHostAccessPolicy::isAllowedHostClass);
 
         if (supportESM) {
             builder.allowExperimentalOptions(true)

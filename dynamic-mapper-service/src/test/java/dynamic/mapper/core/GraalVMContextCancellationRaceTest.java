@@ -526,7 +526,7 @@ class GraalVMContextCancellationRaceTest {
                 .engine(engine)
                 .option("js.text-encoding", "true")
                 .allowHostAccess(graalVMContextService.getHostAccess())
-                .allowHostClassLookup(GraalVMContextService::isAllowedHostClass)
+                .allowHostClassLookup(GraalHostAccessPolicy::isAllowedHostClass)
                 .build();
         directContext.eval(graalVMContextService.getGraalsSourceShared(TENANT));
         directContext.eval(graalVMContextService.getGraalsSourceSystem(TENANT));
