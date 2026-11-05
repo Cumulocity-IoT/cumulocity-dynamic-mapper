@@ -5,10 +5,10 @@ Grafana Alloy; `otel.instrumentation.micrometer.enabled=true`, see `application-
 
 - **`dynamic-mapper-dashboard.json`** — per-tenant/per-connector drill-down: message rates,
   processing time, errors, cache hit rates, connector status.
-- **`dynamic-mapper-tenants-overview-dashboard.json`** — fleet-wide overview: which tenants
-  this service is currently deployed to, how many connectors each has and their status, and
-  which build version(s) are running. No tenant/connector selectors — it's meant to answer
-  "what's out there" before drilling into the first dashboard for a specific tenant.
+- **`dynamic-mapper-tenants-overview-dashboard.json`** — fleet-wide overview, no selectors: which
+  tenants this service is currently deployed to, how many connectors each has and their status,
+  mapping counts, and which build version(s) are running. Meant to answer "what's out there"
+  before drilling into the first dashboard for a specific tenant/connector.
 
 ## Import
 
@@ -56,27 +56,87 @@ sum together — this trades a theoretical collision for a dashboard that's actu
 
 ## `dynamic-mapper-tenants-overview-dashboard.json`
 
-Fleet-wide view, no selectors. "Active Tenants" and the tenants table are derived from
-`dynmapper_inbound_inventory_cache_size` (and the other two cache-size gauges), which are
-created unconditionally the moment a tenant subscribes — before any connector is configured
-or message flows — and removed on unsubscribe (`BootstrapService.cleanTenantResources` sweeps
-the registry for that tenant's meters). This makes them the most reliable "is this tenant
-currently here" signal available, independent of whether the tenant is actively doing anything.
+### Variables
 
-**"Deployed Version(s)"** reads `dynmapper_build_info`, added specifically to answer "what
-version is running" — previously nothing exposed the service version as a metric (it only
-existed in the OpenAPI spec and a Cumulocity inventory fragment, neither queryable from
-Grafana). It's the standard Prometheus "info" pattern: a gauge always `1`, with the real
-value in the `version` tag, since Micrometer has no native way to publish a plain string.
-**Needs a redeploy before it shows anything.**
+- **datasource** — any Prometheus-compatible datasource. No tenant/connector selectors — this
+  dashboard is deliberately fleet-wide; use `dynamic-mapper-dashboard.json` to drill into one
+  tenant/connector.
 
-**Mappings row** reads `dynmapper_mapping_count{tenant, direction, transformationType}`,
-exposed by `MappingCacheManager` for every direction (`INBOUND`/`OUTBOUND`) × transformation
-type combination, registered the moment a tenant subscribes. Each gauge's value function
-re-reads the live mapping cache on every scrape, so counts are always current and no mutation
-path (add/remove/update/reload) needs to touch a counter. Legacy/deprecated transformation
-types (`DEFAULT`, `SUBSTITUTION_AS_CODE`) are included for completeness — expect them to taper
-to zero as mappings migrate to `JSONATA`/`SMART_FUNCTION`.
+### `isolation: MULTI_TENANT` — why every per-tenant query uses `max by (tenant, ...)`
+
+This service's `cumulocity.json` sets `"isolation": "MULTI_TENANT"`: every replica/pod serves
+every subscribed tenant — tenants are never pinned to one instance. That means a per-tenant
+gauge (cache size, connector status) is reported **independently by every replica**, each
+carrying its own Prometheus/OTLP `instance` label. A naive `dynmapper_connector_status` query
+therefore returns one series per `(tenant, connector, instance)`, not per `(tenant, connector)`
+— joined into a table, that surfaces as extra, seemingly-duplicated columns instead of one
+clean row per tenant. Every query on this dashboard wraps the raw metric in
+`max by (tenant, ...)` (or `count by (tenant, ...)` on top of that) to collapse the replica
+dimension away before it reaches a table or join.
+
+The same reasoning means **`dynmapper_build_info` ("Deployed Version(s)") has no `tenant`
+label and is fleet-wide, not per-tenant** — every tenant shares the same running instances, so
+"which version is this tenant on" isn't a meaningful question under this isolation mode. If
+more than one version tile shows, a rollout is in progress and it affects all tenants equally.
+
+### Why the Tenant Overview table's query looks the way it does
+
+The consolidated table (panel "Tenants") needs nine different per-tenant numbers side by side
+(connector count, FAILED count, three cache sizes, two message rates, two mapping totals), one
+column each, one row per tenant — a pivot keyed by `tenant`. Two approaches were tried and
+discarded before the current one:
+
+1. **One query per metric (`labelsToFields` + `joinByField` on `tenant`), with
+   `legendFormat: "__auto"` on every target.** Without a distinctive legend, every target's
+   value field ends up named identically, so the join can't tell them apart and falls back to
+   generic suffixes (`Value`, `Value 1`, `Value 2`, ...) that don't correspond to any particular
+   query in a way `renameByName` can target reliably.
+2. **One query, `label_replace`-tagging each sub-expression with a `metric` label, pivoted via
+   `labelsToFields`'s `valueLabel` option.** `valueLabel` pivots *across time*, not across an
+   arbitrary key like `tenant` — with every sub-query being an instant query (all sharing the
+   same timestamp) and `tenant` not involved in the pivot key, every tenant's row for a given
+   metric collapsed onto the one shared timestamp, discarding everything but the last processed
+   tenant.
+
+**Current approach**: back to nine separate queries joined on `tenant` (the structurally
+correct tool for "many same-keyed values become many columns"), but this time every target gets
+an explicit, literal `legendFormat` (e.g. `"Connectors Configured"`) instead of `"__auto"` — so
+each one's value field carries a distinct, meaningful display name *before* the join runs, and
+`joinByField` has something real to key the output column on. `organize.renameByName` then
+additionally maps every auto-suffix convention observed in practice (`Value #A`..`Value #I` and
+`Value`/`Value 1`..`Value 8`) to the same friendly names, as a no-op safety net in case Grafana's
+internal disambiguation still kicks in — a mapping for a name that doesn't occur is simply
+ignored, so this costs nothing if the legend-based naming already won.
+
+### Rows
+
+- **Fleet Overview** — Active Tenants / Connectors Configured / Connectors FAILED and Deployed
+  Version(s) (all fleet-wide).
+- **Tenant Overview** — one consolidated table, one row per tenant: connector count, FAILED
+  count, the three cache sizes, inbound/outbound msgs/sec, and inbound/outbound mapping totals.
+  Derived from `dynmapper_inbound_inventory_cache_size` et al., which are created unconditionally
+  the moment a tenant subscribes — before any connector is configured or message flows — and
+  removed on unsubscribe (`BootstrapService.cleanTenantResources` sweeps the registry for that
+  tenant's meters). This makes them the most reliable "is this tenant currently here" signal
+  available, independent of whether the tenant is actively doing anything.
+- **Connectors** — one row per `(tenant, connector)` with its live status; see
+  `dynmapper_connector_status` below for the ordinal mapping.
+- **Mappings** — one row per `(tenant, direction, transformation type)` with at least one
+  mapping cached. `dynmapper_mapping_count` is exposed by `MappingCacheManager` for every
+  direction (`INBOUND`/`OUTBOUND`) × transformation type combination, registered the moment a
+  tenant subscribes; each gauge's value function re-reads the live mapping cache on every
+  scrape, so counts are always current and no mutation path (add/remove/update/reload) needs to
+  touch a counter. Legacy/deprecated transformation types (`DEFAULT`, `SUBSTITUTION_AS_CODE`)
+  are included for completeness — expect them to taper to zero as mappings migrate to
+  `JSONATA`/`SMART_FUNCTION`.
+- **Activity by Tenant** — horizontal bar gauges of inbound/outbound msgs/sec per tenant; the
+  same numbers as the table's two rate columns, shown as a quick visual comparison across
+  tenants.
+
+`dynmapper_build_info`, added specifically to answer "what version is running", is the standard
+Prometheus "info" pattern: a gauge always `1`, with the real value in the `version` tag, since
+Micrometer has no native way to publish a plain string. **Needs a redeploy before it shows
+anything.**
 
 ## Source metrics
 
