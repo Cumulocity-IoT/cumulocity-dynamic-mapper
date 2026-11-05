@@ -1218,46 +1218,15 @@ public abstract class AConnectorClient {
     }
 
     /**
-     * Determine maximum QoS for inbound mappings on a specific topic
+     * The single QoS the transport has to honour for the message that triggered these mappings: the
+     * strongest level the active mappings request ({@link Qos#strongestActive}), clamped to what this
+     * connector supports. Inbound and outbound mappings are treated alike.
      */
-    public Qos determineMaxQosInbound(String topic, List<Mapping> mappings) {
-        return determineMaxQos(mappings, m -> m.getMappingTopic().equals(topic) && m.getActive());
-    }
-
-    /**
-     * Determine maximum QoS for all inbound mappings
-     */
-    public Qos determineMaxQosInbound(List<Mapping> mappings) {
-        return determineMaxQos(mappings, Mapping::getActive);
-    }
-
-    /**
-     * Determine maximum QoS for all outbound mappings
-     */
-    public Qos determineMaxQosOutbound(List<Mapping> mappings) {
-        return determineMaxQos(mappings, Mapping::getActive);
-    }
-
-    /**
-     * Consolidates the QoS of a set of mappings into the single level the transport has to
-     * honour for the message that triggered them: the strongest requested level, clamped to
-     * what this connector supports.
-     *
-     * <p>Null-safe on both the list (an unresolved topic yields no mappings at all) and on the
-     * individual {@code qos} field (mappings created through the API before {@code qos} became
-     * a defaulted field may carry {@code null}).
-     */
-    private Qos determineMaxQos(List<Mapping> mappings, java.util.function.Predicate<Mapping> filter) {
+    public Qos determineMaxQos(List<Mapping> mappings) {
         if (mappings == null || mappings.isEmpty()) {
             return Qos.AT_MOST_ONCE;
         }
-        Qos maxQos = mappings.stream()
-                .filter(Objects::nonNull)
-                .filter(filter)
-                .map(m -> Qos.orDefault(m.getQos()))
-                .reduce(Qos::max)
-                .orElse(Qos.AT_MOST_ONCE);
-        return adjustQos(maxQos);
+        return adjustQos(Qos.strongestActive(mappings));
     }
 
     /**

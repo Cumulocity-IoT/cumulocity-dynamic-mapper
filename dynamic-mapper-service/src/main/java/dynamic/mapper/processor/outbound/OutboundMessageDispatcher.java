@@ -320,7 +320,7 @@ public class OutboundMessageDispatcher implements NotificationCallback {
             }
 
             // Determine consolidated QoS
-            consolidatedQos = connectorClient.determineMaxQosOutbound(resolvedMappings);
+            consolidatedQos = connectorClient.determineMaxQos(resolvedMappings);
             result.setConsolidatedQos(consolidatedQos);
 
             // For code-based (Smart Function) mappings the JS execution is bounded by

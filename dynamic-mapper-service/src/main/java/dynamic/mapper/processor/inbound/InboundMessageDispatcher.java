@@ -161,7 +161,7 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
             } else {
                 log.info("{} - Resolved {} mapping(s) for topic {}", tenant, resolvedMappings.size(), topic);
             }
-            result.setConsolidatedQos(connectorClient.determineMaxQosInbound(resolvedMappings));
+            result.setConsolidatedQos(connectorClient.determineMaxQos(resolvedMappings));
 
             // For code-based (Smart Function) mappings the JS execution itself is bounded
             // by serviceConfiguration.getMaxCPUTimeMS() via GraalVM context interruption.
