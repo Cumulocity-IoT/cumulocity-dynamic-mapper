@@ -298,7 +298,8 @@ public abstract class AConnectorClient {
                 publisher = eventPublisher;
                 if (publisher == null) {
                     publisher = new ConnectorEventPublisher(tenant, connectorName, connectorIdentifier,
-                            () -> c8yAgent, () -> serviceConfiguration);
+                            () -> c8yAgent, () -> serviceRegistry.getConnectorStatusEventService(),
+                            () -> serviceConfiguration);
                     eventPublisher = publisher;
                 }
             }
@@ -651,7 +652,8 @@ public abstract class AConnectorClient {
         // forever. Best-effort: failures are logged and swallowed inside the call itself, must
         // never block/fail connector startup.
         if (serviceConfiguration.getSendConnectorLifecycle() && !PROBE_CONSTRUCTION.get()) {
-            c8yAgent.closeOrphanedConnectorSession(tenant, connectorName, connectorIdentifier);
+            serviceRegistry.getConnectorStatusEventService().closeOrphanedConnectorSession(tenant, connectorName,
+                    connectorIdentifier);
         }
 
         this.housekeepingExecutor = new TenantScheduledThreadPoolExecutor(tenant, 1, r -> {

@@ -419,7 +419,7 @@ public class NotificationConnectionManager {
 
         // Send notification
         try {
-            serviceRegistry.getC8yAgent().sendNotificationLifecycle(
+            serviceRegistry.getConnectorStatusEventService().sendNotificationLifecycle(
                     tenant, ConnectorStatus.DISCONNECTED, null);
         } catch (Exception e) {
             log.warn("{} - Error sending disconnect notification: {}", tenant, e.getMessage());
@@ -875,7 +875,7 @@ public class NotificationConnectionManager {
         }
 
         try {
-            serviceRegistry.getC8yAgent().sendNotificationLifecycle(
+            serviceRegistry.getConnectorStatusEventService().sendNotificationLifecycle(
                     tenant, ConnectorStatus.CONNECTING, null);
 
             // L3: replace("http","ws") corrupts any hostname that contains "http" as a substring;
@@ -940,7 +940,7 @@ public class NotificationConnectionManager {
         } catch (Exception e) {
             log.error("{} - Error connecting WebSocket for connector {}: {}",
                     tenant, connectorId.getName(), e.getMessage(), e);
-            serviceRegistry.getC8yAgent().sendNotificationLifecycle(
+            serviceRegistry.getConnectorStatusEventService().sendNotificationLifecycle(
                     tenant, ConnectorStatus.FAILED, e.getLocalizedMessage());
             return null;
         }
@@ -1016,12 +1016,12 @@ public class NotificationConnectionManager {
                 reconnectDeviceClients(tenant);
                 reconnectManagementClients(tenant);
 
-                serviceRegistry.getC8yAgent().sendNotificationLifecycle(
+                serviceRegistry.getConnectorStatusEventService().sendNotificationLifecycle(
                         tenant, ConnectorStatus.CONNECTED, null);
 
             } catch (Exception e) {
                 log.error("{} - Error during reconnection: {}", tenant, e.getMessage(), e);
-                serviceRegistry.getC8yAgent().sendNotificationLifecycle(
+                serviceRegistry.getConnectorStatusEventService().sendNotificationLifecycle(
                         tenant, ConnectorStatus.FAILED, e.getLocalizedMessage());
             }
         });

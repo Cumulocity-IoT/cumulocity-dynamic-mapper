@@ -34,6 +34,7 @@ import com.cumulocity.model.idtype.GId;
 
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.C8YAgent;
+import dynamic.mapper.core.ConnectorStatusEventService;
 import dynamic.mapper.model.status.ConnectorStatusEvent;
 import dynamic.mapper.model.status.ConnectorStatusHistory;
 import dynamic.mapper.model.status.LoggingEventType;
@@ -53,6 +54,7 @@ final class ConnectorEventPublisher {
     private final String connectorName;
     private final String connectorIdentifier;
     private final Supplier<C8YAgent> c8yAgent;
+    private final Supplier<ConnectorStatusEventService> statusEvents;
     private final Supplier<ServiceConfiguration> serviceConfiguration;
 
     // Id of the Event backing the currently open session, so further transitions of the same session
@@ -60,11 +62,13 @@ final class ConnectorEventPublisher {
     private final AtomicReference<GId> activeStatusEventId = new AtomicReference<>();
 
     ConnectorEventPublisher(String tenant, String connectorName, String connectorIdentifier,
-            Supplier<C8YAgent> c8yAgent, Supplier<ServiceConfiguration> serviceConfiguration) {
+            Supplier<C8YAgent> c8yAgent, Supplier<ConnectorStatusEventService> statusEvents,
+            Supplier<ServiceConfiguration> serviceConfiguration) {
         this.tenant = tenant;
         this.connectorName = connectorName;
         this.connectorIdentifier = connectorIdentifier;
         this.c8yAgent = c8yAgent;
+        this.statusEvents = statusEvents;
         this.serviceConfiguration = serviceConfiguration;
     }
 
@@ -81,11 +85,11 @@ final class ConnectorEventPublisher {
         // session isn't new (e.g. the id was lost across a microservice restart mid-session).
         GId eventId = isNewSession ? null : activeStatusEventId.get();
         if (eventId == null) {
-            eventId = c8yAgent.get().createConnectorStatusEvent(message, severity, DateTime.now(), tenant,
+            eventId = statusEvents.get().createConnectorStatusEvent(message, severity, DateTime.now(), tenant,
                     statusMap, session);
             activeStatusEventId.set(eventId);
         } else {
-            c8yAgent.get().updateConnectorStatusEvent(eventId, message, severity, DateTime.now(), tenant,
+            statusEvents.get().updateConnectorStatusEvent(eventId, message, severity, DateTime.now(), tenant,
                     statusMap, session);
         }
     }

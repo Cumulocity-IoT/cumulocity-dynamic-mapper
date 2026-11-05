@@ -63,6 +63,9 @@ public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
     private final C8YAgent c8yAgent;
 
     @Getter
+    private final ConnectorStatusEventService connectorStatusEventService;
+
+    @Getter
     private final CacheManager cacheManager;
 
     @Value("${APP.mqttServiceUrl}")
@@ -121,6 +124,7 @@ public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
             @Lazy InboundMessageRouter inboundMessageRouter,
             @Lazy OutboundMessageRouter outboundMessageRouter,
             @Lazy C8YAgent c8yAgent,
+            @Lazy ConnectorStatusEventService connectorStatusEventService,
             CacheManager cacheManager,
             @Lazy MappingService mappingService,
             @Lazy ConnectorConfigurationService connectorConfigurationService,
@@ -135,6 +139,7 @@ public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
         this.inboundMessageRouter = inboundMessageRouter;
         this.outboundMessageRouter = outboundMessageRouter;
         this.c8yAgent = c8yAgent;
+        this.connectorStatusEventService = connectorStatusEventService;
         this.cacheManager = cacheManager;
         this.mappingService = mappingService;
         this.connectorConfigurationService = connectorConfigurationService;
