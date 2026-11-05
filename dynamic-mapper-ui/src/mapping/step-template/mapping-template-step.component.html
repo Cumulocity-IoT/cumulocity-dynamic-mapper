@@ -48,7 +48,7 @@
       </div>
       <!-- Editor row -->
       <div class="d-grid grid__col--6-6 gap-4">
-        <div class="column-right-border p-r-2">
+        <div class="column-right-border p-r-2 tpl-col">
           @if (stepperViewModel.showSourceEditor) {
           <d11r-mapping-json-editor [schema]="schemaSource" [options]="editorOptionsSourceTemplate"
             [class]="'jse-main-medium'" (contentChanged)="onSourceTemplateChanged($event)"
@@ -59,15 +59,14 @@
           <ng-content select="[extensionSource]"></ng-content>
           }
           @if (!stepperViewModel.showSourceEditor && !stepperViewModel.showExtensionSelectorsSource) {
-          <div class="jse-main-medium d-flex a-i-center j-c-center">
-            <small class="text-muted text-center">
-              <i c8yIcon="info-circle" class="m-r-4"></i>
-              {{ 'No source template — this payload type is not editable as JSON. The payload is decoded by the mapper or passed to your code as raw data.' | translate }}
-            </small>
+          <div class="tpl-empty" data-cy="dm-mapping-template-no-source">
+            <i c8yIcon="info-circle"></i>
+            <span class="tpl-empty-title" translate>No source template</span>
+            <span class="tpl-empty-text" translate>This payload type is not edited as JSON. The mapper decodes it, or your code receives the raw data.</span>
           </div>
           }
         </div>
-        <div class="column-left-border p-l-2">
+        <div class="column-left-border p-l-2 tpl-col">
           @if (stepperViewModel.showTargetEditor) {
           <d11r-mapping-json-editor [schema]="schemaTarget" [options]="editorOptionsTargetTemplate"
             [class]="'jse-main-medium'" (contentChanged)="onTargetTemplateChanged($event)"
@@ -78,11 +77,10 @@
           <ng-content select="[extensionTarget]"></ng-content>
           }
           @if (!stepperViewModel.showTargetContent) {
-          <div class="jse-main-medium d-flex a-i-center j-c-center">
-            <small class="text-muted text-center">
-              <i c8yIcon="info-circle" class="m-r-4"></i>
-              {{ 'No target template — the target payload structure is produced by your code.' | translate }}
-            </small>
+          <div class="tpl-empty" data-cy="dm-mapping-template-no-target">
+            <i c8yIcon="info-circle"></i>
+            <span class="tpl-empty-title" translate>No target template</span>
+            <span class="tpl-empty-text" translate>Your code produces the structure of the target payload.</span>
           </div>
           }
         </div>
@@ -90,16 +88,18 @@
       <!-- Sits outside the two-column editor grid: placing it inside the source column would make
            that column taller than the target column and break their alignment. -->
       @if (sampleTransportFields.length) {
-      <div class="p-t-8" data-cy="dm-mapping-template-transport-fields">
-        <small class="text-muted">
+      <div class="tpl-transport" data-cy="dm-mapping-template-transport-fields">
+        <div>
           <i c8yIcon="info-circle" class="m-r-4"></i>
-          <span translate>Transport fields</span>
+          <span class="tpl-transport-title" translate>Transport fields</span>
+          <span class="tpl-transport-hint m-l-8" translate>Sent with the message and available in your code.</span>
+        </div>
+        <dl class="tpl-transport-list">
           @for (field of sampleTransportFields; track field.name) {
-            &mdash; <code>{{ field.name }}: {{ field.value }}</code>
-            &middot; <span translate>available in code as</span>
-            <code>msg.transportFields.{{ field.name }}</code>
+            <dt><code>msg.transportFields.{{ field.name }}</code></dt>
+            <dd class="text-monospace text-12">{{ field.value }}</dd>
           }
-        </small>
+        </dl>
       </div>
       }
     </div>

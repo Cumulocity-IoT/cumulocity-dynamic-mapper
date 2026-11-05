@@ -372,14 +372,35 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
     });
   }
 
+  /**
+   * The "Generate with AI" button is unavailable without a deployed agent or in read-only mode.
+   * Substitutions are generated against the source editor, so they also need it. A Smart Function
+   * does not: ANY_PAYLOAD has no source editor because the message is binary, but its code can
+   * still be generated (the AI gets the base64 sample from the mapping).
+   */
+  get aiGenerationDisabled(): boolean {
+    const needsSourceEditor = !isSubstitutionsAsCode(this.mapping);
+    return !!this.stepperViewModel?.config.readOnly
+      || !this.aiAgentDeployed
+      || (needsSourceEditor && !this.stepperViewModel?.config.showEditorSource);
+  }
+
   async openGenerateSubstitutionDrawer(): Promise<void> {
     this.isGenerateSubstitutionOpen = true;
 
-    const testMapping = buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false);
-
-    const drawer = this.bottomDrawerService.openDrawer(AiPromptComponent, {
-      initialState: { mapping: testMapping, aiAgent: this.aiAgent, existingMapping: this.stepperConfiguration.persistence === 'draft' }
-    });
+    let drawer;
+    try {
+      const testMapping = buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false);
+      drawer = this.bottomDrawerService.openDrawer(AiPromptComponent, {
+        initialState: { mapping: testMapping, aiAgent: this.aiAgent, existingMapping: this.stepperConfiguration.persistence === 'draft' }
+      });
+    } catch (error) {
+      // Without this the click handler's promise rejects silently and the button just does nothing.
+      console.error('Could not open the AI assistant:', error);
+      this.alertService.danger(`Could not open the AI assistant: ${(error as Error)?.message ?? error}`);
+      this.isGenerateSubstitutionOpen = false;
+      return;
+    }
 
     try {
       const result = await drawer.instance.result;

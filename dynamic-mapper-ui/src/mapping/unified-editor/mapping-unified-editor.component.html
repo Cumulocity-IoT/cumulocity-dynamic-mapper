@@ -79,6 +79,7 @@
 
     <!-- Tab 2: Templates -->
     @if (activeTabIndex === TAB_SELECT_TEMPLATES && isTabVisible(TAB_SELECT_TEMPLATES)) {
+    @if (stepperViewModel) {
     <d11r-mapping-template-step #templateStep
       [mapping]="mapping"
       [stepperConfiguration]="stepperConfiguration"
@@ -113,6 +114,7 @@
       </ng-container>
       }
     </d11r-mapping-template-step>
+    }
     }
 
     <!-- Tab 3: Substitutions -->
@@ -224,7 +226,7 @@
           data-cy="dm-unified-editor-generate-with-ai"
           (click)="openGenerateSubstitutionDrawer()"
           title="{{ (stepperConfiguration.persistence === 'draft' ? 'Review / Refine with AI' : 'Generate with AI') | translate }}"
-          [disabled]="!stepperViewModel?.config.showEditorSource || stepperViewModel?.config.readOnly || !aiAgentDeployed">
+          [disabled]="aiGenerationDisabled">
           <span>{{ stepperConfiguration.persistence === 'draft' ? 'Review / Refine with AI' : 'Generate with AI' }}</span>
         </button>
         @if (!aiAgentDeployed) {
