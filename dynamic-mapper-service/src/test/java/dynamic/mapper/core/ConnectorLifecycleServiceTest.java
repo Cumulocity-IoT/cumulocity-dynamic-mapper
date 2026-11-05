@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -185,6 +186,69 @@ class ConnectorLifecycleServiceTest {
         ConnectorOperationException e = assertThrows(ConnectorOperationException.class,
                 () -> service.testConnection(TENANT, config(ConnectorType.MQTT, true)));
         assertEquals(Reason.NOT_ALLOWED, e.getReason());
+    }
+
+
+    // ---- service configuration update ----
+
+    private ServiceConfiguration outbound(boolean enabled) {
+        ServiceConfiguration c = new ServiceConfiguration();
+        c.setOutboundMappingEnabled(enabled);
+        return c;
+    }
+
+    @Test
+    void switchingOutboundMappingOffDisconnectsNotificationsWhenConnected() throws Exception {
+        when(serviceRegistry.getServiceConfiguration(TENANT)).thenReturn(outbound(true));
+        when(serviceConfigs.applyPartialUpdate(anyString(), any())).thenReturn(outbound(false));
+        when(notifications.getDeviceConnectionStatus(TENANT)).thenReturn(200);
+
+        service.updateServiceConfiguration(TENANT, java.util.Map.of("outboundMappingEnabled", false));
+
+        verify(notifications).disconnect(TENANT);
+        verify(notifications, never()).initializeDeviceClient(anyString());
+        verify(serviceRegistry).addServiceConfiguration(eq(TENANT), any());
+    }
+
+    @Test
+    void switchingOutboundMappingOnInitializesConnectorsAndNotificationClients() throws Exception {
+        when(serviceRegistry.getServiceConfiguration(TENANT)).thenReturn(outbound(false));
+        ServiceConfiguration updated = outbound(true);
+        when(serviceConfigs.applyPartialUpdate(anyString(), any())).thenReturn(updated);
+        when(notifications.getDeviceConnectionStatus(TENANT)).thenReturn(null);
+        when(connectorConfigs.getConnectorConfigurations(TENANT)).thenReturn(java.util.List.of());
+
+        service.updateServiceConfiguration(TENANT, java.util.Map.of("outboundMappingEnabled", true));
+
+        verify(notifications).initializeDeviceClient(TENANT);
+        verify(notifications).initializeManagementClient(TENANT);
+        verify(serviceRegistry).addServiceConfiguration(TENANT, updated);
+    }
+
+    @Test
+    void anUnrelatedConfigurationChangeLeavesNotificationsAlone() throws Exception {
+        when(serviceRegistry.getServiceConfiguration(TENANT)).thenReturn(outbound(true));
+        ServiceConfiguration updated = outbound(true);
+        when(serviceConfigs.applyPartialUpdate(anyString(), any())).thenReturn(updated);
+        when(notifications.getDeviceConnectionStatus(TENANT)).thenReturn(200);
+
+        service.updateServiceConfiguration(TENANT, java.util.Map.of("logPayload", true));
+
+        verify(notifications, never()).disconnect(anyString());
+        verify(notifications, never()).initializeDeviceClient(anyString());
+        verify(serviceRegistry).addServiceConfiguration(TENANT, updated);
+    }
+
+    @Test
+    void aFailedConfigurationUpdateIsReportedAndNotPublished() throws Exception {
+        when(serviceRegistry.getServiceConfiguration(TENANT)).thenReturn(outbound(true));
+        when(serviceConfigs.applyPartialUpdate(anyString(), any())).thenThrow(new java.io.IOException("bad field"));
+
+        ConnectorOperationException e = assertThrows(ConnectorOperationException.class,
+                () -> service.updateServiceConfiguration(TENANT, java.util.Map.of("x", 1)));
+
+        assertEquals(Reason.FAILED, e.getReason());
+        verify(serviceRegistry, never()).addServiceConfiguration(anyString(), any());
     }
 
     private static <T> org.mockito.stubbing.Stubber doReturn(T value) {

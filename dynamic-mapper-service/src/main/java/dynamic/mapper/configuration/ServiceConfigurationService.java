@@ -169,6 +169,21 @@ public class ServiceConfigurationService {
         return serviceConfig;
     }
 
+    /**
+     * Merges the given fields into the stored service configuration and saves it. Fields that are not
+     * in {@code updates} keep their value.
+     *
+     * @return the merged, saved configuration
+     */
+    public ServiceConfiguration applyPartialUpdate(String tenant, Map<String, Object> updates)
+            throws java.io.IOException {
+        ServiceConfiguration existing = getServiceConfiguration(tenant);
+        ServiceConfiguration merged = objectMapper.readerForUpdating(existing)
+                .readValue(objectMapper.writeValueAsBytes(updates));
+        saveServiceConfiguration(tenant, merged);
+        return merged;
+    }
+
     public ServiceConfiguration getServiceConfiguration(String tenant) {
         final OptionPK option = new OptionPK();
         option.setCategory(Utils.OPTION_CATEGORY_CONFIGURATION);

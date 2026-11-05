@@ -50,6 +50,7 @@ import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
 import dynamic.mapper.processor.inbound.InboundMessageDispatcher;
@@ -631,6 +632,46 @@ public class ConnectorLifecycleService {
     private boolean isOutboundMappingEnabled(String tenant) {
         ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         return serviceConfiguration.getOutboundMappingEnabled();
+    }
+
+    // === Service configuration ===
+
+    /**
+     * Applies a partial update to the service configuration and reacts to a change of the outbound
+     * mapping switch.
+     * <p>
+     * Switching outbound mapping off disconnects Notification 2.0 when it is connected. Switching it on
+     * (while Notification 2.0 is not connected) initializes every connector again and opens the device
+     * and management clients. The new configuration is published to the {@link ServiceRegistry} last.
+     */
+    public void updateServiceConfiguration(String tenant, java.util.Map<String, Object> updates) {
+        ServiceConfiguration previous = serviceRegistry.getServiceConfiguration(tenant);
+        try {
+            ServiceConfiguration updated = serviceConfigurationService.applyPartialUpdate(tenant, updates);
+            applyOutboundMappingChange(tenant, previous, updated);
+            serviceRegistry.addServiceConfiguration(tenant, updated);
+        } catch (Exception ex) {
+            log.error("{} - Error updating service configuration", tenant, ex);
+            throw new ConnectorOperationException(Reason.FAILED, ex.getLocalizedMessage(), ex);
+        }
+    }
+
+    private void applyOutboundMappingChange(String tenant, ServiceConfiguration previous,
+            ServiceConfiguration updated) throws ConnectorRegistryException, ConnectorException {
+        NotificationSubscriber notifications = serviceRegistry.getNotificationSubscriber();
+        Integer status = notifications.getDeviceConnectionStatus(tenant);
+        boolean connected = status != null && status == 200;
+
+        if (!updated.getOutboundMappingEnabled() && connected) {
+            notifications.disconnect(tenant);
+        } else if (!connected && updated.getOutboundMappingEnabled() && !previous.getOutboundMappingEnabled()) {
+            for (ConnectorConfiguration connectorConfiguration : connectorConfigurationService
+                    .getConnectorConfigurations(tenant)) {
+                initializeConnectorByConfiguration(connectorConfiguration, updated, tenant);
+            }
+            notifications.initializeDeviceClient(tenant);
+            notifications.initializeManagementClient(tenant);
+        }
     }
 
     // === Outbound resources ===

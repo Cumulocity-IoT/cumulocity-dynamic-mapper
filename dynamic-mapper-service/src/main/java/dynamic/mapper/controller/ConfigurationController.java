@@ -440,45 +440,13 @@ public class ConfigurationController {
     public ResponseEntity<HttpStatus> updateServiceConfiguration(
             @RequestBody Map<String, Object> updates) {
         String tenant = contextService.getContext().getTenant();
-        ServiceConfiguration currentServiceConfiguration = serviceRegistry.getServiceConfiguration(tenant);
-
         log.info("{} - Update service configuration with partial updates: {}", tenant, updates);
-
         try {
-            ServiceConfiguration existingConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-            ServiceConfiguration serviceConfiguration = objectMapper
-                    .readerForUpdating(existingConfiguration)
-                    .readValue(objectMapper.writeValueAsBytes(updates));
-            serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-            if (!serviceConfiguration.getOutboundMappingEnabled()
-                    && serviceRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != null
-                    && serviceRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == 200) {
-                serviceRegistry.getNotificationSubscriber().disconnect(tenant);
-            } else if (serviceRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) == null
-                    || serviceRegistry.getNotificationSubscriber().getDeviceConnectionStatus(tenant) != null
-                            && serviceRegistry.getNotificationSubscriber()
-                                    .getDeviceConnectionStatus(tenant) != 200) {
-
-                // Test if OutboundMapping is switched on
-                if (serviceConfiguration.getOutboundMappingEnabled()
-                        && !currentServiceConfiguration.getOutboundMappingEnabled()) {
-                    List<ConnectorConfiguration> connectorConfigurationList = connectorConfigurationService
-                            .getConnectorConfigurations(tenant);
-                    for (ConnectorConfiguration connectorConfiguration : connectorConfigurationList) {
-                        connectorLifecycleService.initializeConnectorByConfiguration(connectorConfiguration,
-                                serviceConfiguration, tenant);
-                    }
-                    serviceRegistry.getNotificationSubscriber().initializeDeviceClient(tenant);
-                    serviceRegistry.getNotificationSubscriber().initializeManagementClient(tenant);
-                }
-            }
-
-            serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-            return ResponseEntity.status(HttpStatus.CREATED).build();
-        } catch (Exception ex) {
-            log.error("{} - Error updating service configuration", tenant, ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            connectorLifecycleService.updateServiceConfiguration(tenant, updates);
+        } catch (ConnectorLifecycleService.ConnectorOperationException ex) {
+            throw Utils.toStatusException(ex);
         }
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @Operation(summary = "Get code template", description = "Returns the code template for the given ID. Code templates provide reusable JavaScript code for custom processing in mappings.")
