@@ -336,6 +336,22 @@ public class MappingService implements TenantScoped {
     }
 
     /**
+     * Creates the given sample mappings that the tenant does not have yet (matched by identifier) in
+     * the given direction. They are created inactive, so a sample never starts processing by itself.
+     */
+    public void addSampleMappings(String tenant, Direction direction, List<Mapping> samples) {
+        Set<String> existingIdentifiers = getMappings(tenant, direction).stream()
+                .map(Mapping::getIdentifier)
+                .collect(java.util.stream.Collectors.toSet());
+        for (Mapping sample : samples) {
+            if (!existingIdentifiers.contains(sample.getIdentifier())) {
+                sample.setActive(false);
+                createMapping(tenant, sample);
+            }
+        }
+    }
+
+    /**
      * Retrieves all mappings, optionally filtered by direction
      */
     public List<Mapping> getMappings(String tenant, Direction direction) {

@@ -303,39 +303,13 @@ public class OperationController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'direction' is required");
         }
         Direction direction = Direction.valueOf(directionParam);
-        if (direction.equals(Direction.INBOUND)) {
-            String samples = serviceConfigurationService.getSampleMappingsInbound_01();
-            List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
-            });
-            List<Mapping> existingMappings = mappingService.getMappings(tenant, Direction.INBOUND);
-            mappings.forEach(mapping -> {
-                AtomicBoolean alreadyExits = new AtomicBoolean(false);
-                existingMappings.forEach(existingMapping -> {
-                    if (existingMapping.getIdentifier().equals(mapping.getIdentifier()))
-                        alreadyExits.set(true);
-                });
-                if (!alreadyExits.get()) {
-                    mapping.setActive(false);
-                    mappingService.createMapping(tenant, mapping);
-                }
-            });
-        } else {
-            List<Mapping> existingMappings = mappingService.getMappings(tenant, Direction.OUTBOUND);
-            String samples = serviceConfigurationService.getSampleMappingsOutbound_01();
-            List<Mapping> mappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
-            });
-            mappings.forEach(mapping -> {
-                AtomicBoolean alreadyExits = new AtomicBoolean(false);
-                existingMappings.forEach(existingMapping -> {
-                    if (existingMapping.getIdentifier().equals(mapping.getIdentifier()))
-                        alreadyExits.set(true);
-                });
-                if (!alreadyExits.get()) {
-                    mapping.setActive(false);
-                    mappingService.createMapping(tenant, mapping);
-                }
-            });
-        }
+        String samples = direction.equals(Direction.INBOUND)
+                ? serviceConfigurationService.getSampleMappingsInbound_01()
+                : serviceConfigurationService.getSampleMappingsOutbound_01();
+        List<Mapping> sampleMappings = objectMapper.readValue(samples, new TypeReference<List<Mapping>>() {
+        });
+        mappingService.addSampleMappings(tenant, direction.equals(Direction.INBOUND) ? Direction.INBOUND
+                : Direction.OUTBOUND, sampleMappings);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
