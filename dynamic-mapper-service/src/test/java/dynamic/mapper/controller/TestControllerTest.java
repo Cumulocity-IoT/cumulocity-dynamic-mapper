@@ -92,6 +92,8 @@ class TestControllerTest {
 
     @Mock
     private ConnectorRegistry connectorRegistry;
+    @Mock
+    private dynamic.mapper.notification.OutboundDispatcherRegistry dispatcherRegistry;
 
     @Mock
     private C8YAgent c8YAgent;
@@ -109,7 +111,7 @@ class TestControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new TestController(connectorRegistry, c8YAgent, contextService, new SparkPlugBSerializer());
+        controller = new TestController(connectorRegistry, dispatcherRegistry, c8YAgent, contextService, new SparkPlugBSerializer());
 
         UserCredentials creds = mock(UserCredentials.class);
         when(creds.getTenant()).thenReturn(TENANT);

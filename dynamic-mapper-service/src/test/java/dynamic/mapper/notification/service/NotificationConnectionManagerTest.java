@@ -64,7 +64,7 @@ import org.mockito.quality.Strictness;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 
-import dynamic.mapper.connector.core.registry.ConnectorRegistry;
+import dynamic.mapper.notification.OutboundDispatcherRegistry;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.notification.websocket.CustomWebSocketClient;
@@ -101,7 +101,7 @@ class NotificationConnectionManagerTest {
     @Mock
     private MqttPushManager mqttPushManager;
     @Mock
-    private ConnectorRegistry connectorRegistry;
+    private OutboundDispatcherRegistry dispatcherRegistry;
     @Mock
     private SubscriptionQueryService queryService;
     @Mock
@@ -122,7 +122,7 @@ class NotificationConnectionManagerTest {
                 subscriptionsService,
                 tokenManager,
                 mqttPushManager,
-                connectorRegistry,
+                dispatcherRegistry,
                 queryService,
                 serviceRegistry);
     }

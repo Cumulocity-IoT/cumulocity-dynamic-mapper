@@ -36,6 +36,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
+import dynamic.mapper.notification.OutboundDispatcherRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.connector.test.TestClient;
 import dynamic.mapper.core.C8YAgent;
@@ -89,6 +90,7 @@ import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRe
 public class TestController {
 
     private final ConnectorRegistry connectorRegistry;
+    private final OutboundDispatcherRegistry dispatcherRegistry;
     private final C8YAgent c8YAgent;
     private final ContextService<UserCredentials> contextService;
     private final SparkPlugBSerializer sparkPlugBSerializer;
@@ -198,7 +200,7 @@ public class TestController {
             } else if (mapping.getDirection().equals(Direction.OUTBOUND)) {
                 Notification testNotification = createTestNotification(tenant, connectorClient, mapping.getTargetAPI(),
                         send, payload);
-                processingResultWrapper = connectorRegistry.getDispatcher(tenant, TestClient.TEST_CONNECTOR_IDENTIFIER)
+                processingResultWrapper = dispatcherRegistry.get(tenant, TestClient.TEST_CONNECTOR_IDENTIFIER)
                         .onTestNotification(
                                 testNotification,
                                 mapping,

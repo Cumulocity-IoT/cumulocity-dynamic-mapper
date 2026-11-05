@@ -26,7 +26,6 @@ import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.device.Device;
 import dynamic.mapper.notification.service.*;
@@ -58,17 +57,13 @@ public class NotificationSubscriber implements TenantScoped {
     private final MqttPushManager mqttPushManager;
     private final TokenManager tokenManager;
     private final MessagingManagementService messagingManagementService;
-    private final ConnectorRegistry connectorRegistry;
+    private final OutboundDispatcherRegistry dispatcherRegistry;
     private final DeviceDiscoveryService deviceDiscoveryService;
 
     @Getter
     private final SubscriptionQueryService queryService;
 
     // === Lifecycle Methods ===
-
-    public void addSubscriber(String tenant, String identifier, OutboundMessageDispatcher dispatcherOutbound) {
-        connectorRegistry.addSubscriber(tenant, identifier, dispatcherOutbound);
-    }
 
     public void initializeDeviceClient(String tenant) {
         connectionManager.initializeDynamicDeviceClient(tenant);
@@ -100,6 +95,7 @@ public class NotificationSubscriber implements TenantScoped {
     /** Nothing to create: connections and tokens are set up when connectors and subscriptions start. */
     @Override
     public void initializeTenant(dynamic.mapper.core.TenantInitContext ctx) {
+        dispatcherRegistry.initializeTenant(ctx.tenant());
     }
 
     @Override
@@ -113,6 +109,7 @@ public class NotificationSubscriber implements TenantScoped {
      */
     @Override
     public void removeTenant(String tenant) {
+        dispatcherRegistry.removeTenant(tenant);
         try {
             unsubscribeDeviceSubscriber(tenant);
         } catch (Exception e) {
@@ -411,7 +408,7 @@ public class NotificationSubscriber implements TenantScoped {
         log.info("{} - Removing connector {}", tenant, connectorIdentifier);
         
         // Remove subscriber from registry
-        connectorRegistry.removeSubscriber(tenant, connectorIdentifier);
+        dispatcherRegistry.remove(tenant, connectorIdentifier);
         
         // Handle connection cleanup
         connectionManager.handleConnectorRemoval(tenant, connectorIdentifier);
@@ -426,7 +423,7 @@ public class NotificationSubscriber implements TenantScoped {
         log.info("{} - Adding connector {}", tenant, connectorIdentifier);
         
         // Add subscriber to registry
-        connectorRegistry.addSubscriber(tenant, connectorIdentifier, dispatcherOutbound);
+        dispatcherRegistry.add(tenant, connectorIdentifier, dispatcherOutbound);
         
         log.info("{} - Successfully added connector {}", tenant, connectorIdentifier);
     }
@@ -460,12 +457,6 @@ public class NotificationSubscriber implements TenantScoped {
             mqttPushManager.cleanup();
         } catch (Exception e) {
             log.error("Error cleaning up MqttPushManager: {}", e.getMessage(), e);
-        }
-        
-        try {
-            connectorRegistry.cleanup();
-        } catch (Exception e) {
-            log.error("Error cleaning up ConnectorRegistry: {}", e.getMessage(), e);
         }
         
         log.info("NotificationSubscriber cleanup completed");

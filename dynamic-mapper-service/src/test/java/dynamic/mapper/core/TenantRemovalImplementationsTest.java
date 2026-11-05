@@ -39,6 +39,7 @@ import dynamic.mapper.mapping.resolver.MappingResolverService;
 import dynamic.mapper.mapping.status.MappingStatusService;
 import dynamic.mapper.mapping.MappingVersionService;
 import dynamic.mapper.notification.NotificationSubscriber;
+import dynamic.mapper.notification.OutboundDispatcherRegistry;
 import dynamic.mapper.notification.service.NotificationConnectionManager;
 import dynamic.mapper.notification.service.SubscriptionManager;
 import dynamic.mapper.notification.service.TokenManager;
@@ -109,9 +110,12 @@ class TenantRemovalImplementationsTest {
         set(subscriber, "connectionManager", connectionManager);
         set(subscriber, "subscriptionManager", subscriptionManager);
         set(subscriber, "deviceDiscoveryService", discovery);
+        OutboundDispatcherRegistry dispatcherRegistry = mock(OutboundDispatcherRegistry.class);
+        set(subscriber, "dispatcherRegistry", dispatcherRegistry);
 
         subscriber.removeTenant(TENANT);
 
+        verify(dispatcherRegistry).removeTenant(TENANT);
         InOrder order = inOrder(tokenManager);
         order.verify(tokenManager).unsubscribeDeviceSubscriber(TENANT);
         order.verify(tokenManager).unsubscribeDeviceGroupSubscriber(TENANT);
@@ -132,6 +136,7 @@ class TenantRemovalImplementationsTest {
         set(subscriber, "connectionManager", connectionManager);
         set(subscriber, "subscriptionManager", mock(SubscriptionManager.class));
         set(subscriber, "deviceDiscoveryService", mock(DeviceDiscoveryService.class));
+        set(subscriber, "dispatcherRegistry", mock(OutboundDispatcherRegistry.class));
 
         subscriber.removeTenant(TENANT);
 

@@ -27,7 +27,7 @@ import dynamic.mapper.connector.core.client.ConnectorType;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import com.cumulocity.rest.representation.reliable.notification.NotificationSubscriptionRepresentation;
 import dynamic.mapper.configuration.ConnectorId;
-import dynamic.mapper.connector.core.registry.ConnectorRegistry;
+import dynamic.mapper.notification.OutboundDispatcherRegistry;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.model.status.ConnectorStatus;
 import dynamic.mapper.notification.CacheInventoryUpdateClient;
@@ -59,20 +59,20 @@ public class NotificationConnectionManager {
     private final MicroserviceSubscriptionsService subscriptionsService;
     private final TokenManager tokenManager;
     private final MqttPushManager mqttPushManager;
-    private final ConnectorRegistry connectorRegistry;
+    private final OutboundDispatcherRegistry dispatcherRegistry;
     private final SubscriptionQueryService queryService;
     private final ServiceRegistry serviceRegistry;
 
     public NotificationConnectionManager(MicroserviceSubscriptionsService subscriptionsService,
                                           TokenManager tokenManager,
                                           MqttPushManager mqttPushManager,
-                                          ConnectorRegistry connectorRegistry,
+                                          OutboundDispatcherRegistry dispatcherRegistry,
                                           SubscriptionQueryService queryService,
                                           @Lazy ServiceRegistry serviceRegistry) {
         this.subscriptionsService = subscriptionsService;
         this.tokenManager = tokenManager;
         this.mqttPushManager = mqttPushManager;
-        this.connectorRegistry = connectorRegistry;
+        this.dispatcherRegistry = dispatcherRegistry;
         this.queryService = queryService;
         this.serviceRegistry = serviceRegistry;
     }
@@ -113,7 +113,7 @@ public class NotificationConnectionManager {
      * OutboundMessageDispatcher.onNotification) and would silently drop all events.
      */
     public void initializeExplorerDeviceClient(String tenant, String sessionId) {
-        Map<String, OutboundMessageDispatcher> dispatchers = connectorRegistry.getDispatchers(tenant);
+        Map<String, OutboundMessageDispatcher> dispatchers = dispatcherRegistry.getAll(tenant);
         if (dispatchers == null || dispatchers.isEmpty()) {
             log.warn("{} - No outbound dispatchers available for explorer session {}", tenant, sessionId);
             return;
@@ -558,7 +558,7 @@ public class NotificationConnectionManager {
         }
 
         // Disconnect if no more dispatchers
-        Map<String, OutboundMessageDispatcher> dispatchers = connectorRegistry.getDispatchers(tenant);
+        Map<String, OutboundMessageDispatcher> dispatchers = dispatcherRegistry.getAll(tenant);
         if (dispatchers == null || dispatchers.isEmpty()) {
             log.info("{} - No more connectors, disconnecting", tenant);
             disconnect(tenant);
@@ -638,7 +638,7 @@ public class NotificationConnectionManager {
     // === Private Helper Methods ===
 
     private void initializeStaticDeviceConnections(String tenant) throws URISyntaxException {
-        Map<String, OutboundMessageDispatcher> dispatchers = connectorRegistry.getDispatchers(tenant);
+        Map<String, OutboundMessageDispatcher> dispatchers = dispatcherRegistry.getAll(tenant);
         if (dispatchers == null || dispatchers.isEmpty()) {
             log.warn("{} - No outbound dispatchers registered", tenant);
             return;
@@ -699,7 +699,7 @@ public class NotificationConnectionManager {
     }
 
         private void initializeDynamicDeviceConnections(String tenant) throws URISyntaxException {
-        Map<String, OutboundMessageDispatcher> dispatchers = connectorRegistry.getDispatchers(tenant);
+        Map<String, OutboundMessageDispatcher> dispatchers = dispatcherRegistry.getAll(tenant);
         if (dispatchers == null || dispatchers.isEmpty()) {
             log.warn("{} - No outbound dispatchers registered", tenant);
             return;
