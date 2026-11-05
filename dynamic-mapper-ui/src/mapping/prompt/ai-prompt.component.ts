@@ -172,6 +172,9 @@ export class AiPromptComponent implements OnInit {
     language: 'javascript',
     readOnly: true,
     minimap: { enabled: false },
+    // Monaco's default ('selection') draws a dot for every space inside a selection; the other
+    // editors in this app already turn it off.
+    renderWhitespace: 'none',
     automaticLayout: true
   };
 

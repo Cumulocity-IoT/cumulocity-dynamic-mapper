@@ -154,7 +154,8 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       map((events: ExtensionEntry[]) =>
         (events || []).map(e => ({
           label: e.description ? `${e.eventName} — ${e.description}` : e.eventName,
-          value: e.eventName
+          value: e.eventName,
+          description: e.description
         }))
       ),
       shareReplay(1)

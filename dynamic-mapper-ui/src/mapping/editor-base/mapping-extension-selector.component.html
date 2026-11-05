@@ -1,5 +1,5 @@
 @if (showSelectors) {
-<div [formGroup]="form">
+<div [formGroup]="form" class="p-t-32" [class.p-l-24]="side === 'target'" [class.p-r-24]="side === 'source'">
   @if (isLoading) {
   <div class="text-center p-24">
     <c8y-loading></c8y-loading>
@@ -11,7 +11,7 @@
     {{ 'No Java extensions available — upload one first' | translate }}
   </div>
   } @else {
-  <div class="form-group p-b-8"
+  <div class="form-group m-b-16"
     [class.has-error]="form.get('extensionName')?.invalid && form.get('extensionName')?.touched">
     <label translate>Java Extension</label>
     <c8y-select [attr.data-cy]="dataCyPrefix + '-extension-' + side + '-name-select'" [items]="extensionItems"
@@ -21,13 +21,19 @@
     <span class="help-block"><small translate>Extension name is required.</small></span>
     }
   </div>
-  <div class="form-group" [class.has-error]="form.get('eventName')?.invalid && form.get('eventName')?.touched">
-    <label translate>Events for {{ mapping?.extension?.extensionName }}</label>
+  <div class="form-group m-b-16" [class.has-error]="form.get('eventName')?.invalid && form.get('eventName')?.touched">
+    <label translate>Event</label>
     <c8y-select [attr.data-cy]="dataCyPrefix + '-extension-' + side + '-event-select'"
       [items]="extensionEvents | async" formControlName="eventName" [filterItems]="true" aria-label="Event Name">
+      <!-- the list shows "name — description"; the closed dropdown shows only the name -->
+      <ng-template c8ySelectedItems let-item>{{ item.value }}</ng-template>
     </c8y-select>
     @if (form.get('eventName')?.invalid && form.get('eventName')?.touched) {
     <span class="help-block"><small translate>Event name is required.</small></span>
+    } @else if (extensionEvents | async; as events) {
+    @if (descriptionFor(events); as description) {
+    <small class="help-block text-muted m-t-4 m-b-0">{{ description }}</small>
+    }
     }
     @if (mapping?.extension?.loaded === false) {
     <div class="alert alert-warning d-flex a-i-center g-8 m-t-8">
@@ -38,7 +44,7 @@
   </div>
   }
   @if (hasParameter) {
-  <div class="form-group">
+  <div class="form-group m-b-16">
     <label translate>Extension Parameter (YAML)</label>
     <textarea class="form-control font-smaller font-monospace" [attr.data-cy]="dataCyPrefix + '-extension-' + side + '-parameter-input'"
       formControlName="extensionParameter" rows="6" placeholder="parameter:&#10;  key: value"></textarea>
