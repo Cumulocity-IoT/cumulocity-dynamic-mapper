@@ -34,7 +34,7 @@
       "options": {
         "mode": "markdown",
         "code": { "language": "plaintext", "showLineNumbers": false, "showMiniMap": false },
-        "content": "This is a **fleet-wide overview** across all tenants — no `$tenant`/`$connector` selectors, since the point is to see everything at once. For a per-tenant/per-connector drill-down (processing time, cache hit rates, error rates), use the main **Dynamic Mapper — Observability** dashboard.\n\n**Active Tenants / Tenants table** are derived from `dynmapper_inbound_inventory_cache_size` — this gauge is created unconditionally for every tenant at subscription time (before any connector is configured or message flows) and removed on unsubscribe, making it the most reliable \"is this tenant currently deployed here\" signal available. All three cache-size gauges (inbound/outbound identity, inventory) behave the same way.\n\n**Deployed Version(s)** reads `dynmapper_build_info`, a gauge added specifically for this dashboard (always `1`, with the real version in the `version` tag — the standard Prometheus \"info\" pattern, since Micrometer has no native way to publish a plain string metric). **This requires the service to be redeployed with that change before any data appears.** If multiple rows show up with different versions, that's a live mixed-version rollout (or a genuinely stale metric from an instance that hasn't been scraped recently) — check the `instance` column.",
+        "content": "This is a **fleet-wide overview** across all tenants — no selectors, since the point is to see everything at once. For a per-tenant/per-connector drill-down (processing time, cache hit rates, error rates), use the main **Dynamic Mapper — Observability** dashboard.\n\n**This service runs with `isolation: MULTI_TENANT`**: every replica/pod serves every subscribed tenant — tenants are not pinned to one instance. Two consequences for this dashboard: (1) **`dynmapper_build_info` (Deployed Version) has no `tenant` label and applies to the whole fleet**, not a specific tenant — if more than one version shows, a rollout is in progress and it affects all tenants equally, not a chosen few. (2) Per-tenant gauges (cache sizes, connector status) are reported **independently by every replica**, so every query here aggregates them with `max by (tenant, ...)` before display — without that, a multi-replica deployment would produce one row per (tenant × replica) and break the tables into extra, seemingly-duplicated columns.\n\n**Tenant Overview** table is derived from `dynmapper_inbound_inventory_cache_size` et al. — these gauges are created unconditionally for every tenant at subscription time (before any connector is configured or message flows) and removed on unsubscribe, making them the most reliable \"is this tenant currently deployed here\" signal available.",
         "mode": "markdown"
       },
       "pluginVersion": "11.0.0",
@@ -87,6 +87,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Deduplicated across replicas (a connector reported by 3 pods still counts once).",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -110,7 +111,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "count(dynmapper_connector_status) or vector(0)",
+          "expr": "count(max by (tenant, connectorName, connectorType) (dynmapper_connector_status)) or vector(0)",
           "instant": true,
           "range": false,
           "legendFormat": "connectors configured",
@@ -122,7 +123,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "Fleet-wide — not scoped to one tenant. Alert on this being > 0.",
+      "description": "Fleet-wide — not scoped to one tenant. Deduplicated across replicas. Alert on this being > 0.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -146,7 +147,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "count(dynmapper_connector_status == 7) or vector(0)",
+          "expr": "count(max by (tenant, connectorName, connectorType) (dynmapper_connector_status) == 7) or vector(0)",
           "instant": true,
           "range": false,
           "legendFormat": "failed connectors",
@@ -158,7 +159,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "Requires the dynmapper_build_info metric (added alongside this dashboard) — see Setup Notes.",
+      "description": "Fleet-wide — this gauge has no tenant label (MULTI_TENANT isolation means every tenant shares the same running instances). More than one tile means a rollout is in progress. Requires the dynmapper_build_info metric — see Setup Notes.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -182,7 +183,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "dynmapper_build_info",
+          "expr": "count by (version) (dynmapper_build_info)",
           "instant": true,
           "range": false,
           "legendFormat": "{{version}}",
@@ -197,60 +198,114 @@
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 13 },
       "id": 20,
       "panels": [],
-      "title": "Tenants",
+      "title": "Tenant Overview",
       "type": "row"
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "One row per currently-subscribed tenant. Absence from this table means the tenant is not subscribed (or was unsubscribed and its metrics aged out).",
+      "description": "One row per currently-subscribed tenant. Absence from this table means the tenant is not subscribed, or was unsubscribed and its metrics aged out. All counts are deduplicated across replicas, so a multi-pod deployment still shows one row per tenant.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
           "mappings": [],
+          "noValue": "0",
           "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
           "unit": "short"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Connectors FAILED" },
+            "properties": [
+              { "id": "custom.cellOptions", "value": { "type": "color-background" } },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "Inbound Msgs/sec|Outbound Msgs/sec" },
+            "properties": [{ "id": "unit", "value": "msgs/sec" }]
+          }
+        ]
       },
-      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 14 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 14 },
       "id": 21,
       "options": {
         "cellHeight": "sm",
-        "showHeader": true
+        "showHeader": true,
+        "sortBy": [{ "displayName": "Tenant", "desc": false }]
       },
       "pluginVersion": "11.0.0",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "dynmapper_inbound_identity_cache_size",
+          "expr": "count by (tenant) (max by (tenant, connectorName, connectorType) (dynmapper_connector_status))",
           "instant": true,
           "range": false,
-          "legendFormat": "__auto",
+          "legendFormat": "Connectors Configured",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "dynmapper_outbound_identity_cache_size",
+          "expr": "count by (tenant) (max by (tenant, connectorName, connectorType) (dynmapper_connector_status) == 7)",
           "instant": true,
           "range": false,
-          "legendFormat": "__auto",
+          "legendFormat": "Connectors FAILED",
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "dynmapper_inbound_inventory_cache_size",
+          "expr": "max by (tenant) (dynmapper_inbound_identity_cache_size)",
           "instant": true,
           "range": false,
-          "legendFormat": "__auto",
+          "legendFormat": "Inbound Identity Cache Size",
           "refId": "C"
         },
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "count by (tenant) (dynmapper_connector_status)",
+          "expr": "max by (tenant) (dynmapper_outbound_identity_cache_size)",
           "instant": true,
           "range": false,
-          "legendFormat": "__auto",
+          "legendFormat": "Outbound Identity Cache Size",
           "refId": "D"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "max by (tenant) (dynmapper_inbound_inventory_cache_size)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Inventory Cache Size",
+          "refId": "E"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (tenant) (rate(dynmapper_inbound_message_total[$__rate_interval]))",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Inbound Msgs/sec",
+          "refId": "F"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (tenant) (rate(dynmapper_outbound_message_total[$__rate_interval]))",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Outbound Msgs/sec",
+          "refId": "G"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (tenant) (dynmapper_mapping_count{direction=\"INBOUND\"})",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Inbound Mappings",
+          "refId": "H"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "sum by (tenant) (dynmapper_mapping_count{direction=\"OUTBOUND\"})",
+          "instant": true,
+          "range": false,
+          "legendFormat": "Outbound Mappings",
+          "refId": "I"
         }
       ],
       "transformations": [
@@ -265,83 +320,60 @@
         {
           "id": "organize",
           "options": {
-            "excludeByName": { "Time": true, "Time 1": true, "Time 2": true, "Time 3": true, "Time 4": true },
-            "indexByName": {},
+            "excludeByName": {
+              "Time": true, "Time 1": true, "Time 2": true, "Time 3": true, "Time 4": true,
+              "Time 5": true, "Time 6": true, "Time 7": true, "Time 8": true,
+              "Time #A": true, "Time #B": true, "Time #C": true, "Time #D": true, "Time #E": true,
+              "Time #F": true, "Time #G": true, "Time #H": true, "Time #I": true
+            },
+            "indexByName": {
+              "tenant": 0,
+              "Connectors Configured": 1,
+              "Connectors FAILED": 2,
+              "Inbound Identity Cache Size": 3,
+              "Outbound Identity Cache Size": 4,
+              "Inventory Cache Size": 5,
+              "Inbound Msgs/sec": 6,
+              "Outbound Msgs/sec": 7,
+              "Inbound Mappings": 8,
+              "Outbound Mappings": 9
+            },
             "renameByName": {
               "tenant": "Tenant",
-              "Value #A": "Inbound Identity Cache Size",
-              "Value #B": "Outbound Identity Cache Size",
-              "Value #C": "Inventory Cache Size",
-              "Value #D": "Connectors Configured"
+              "Value #A": "Connectors Configured",
+              "Value #B": "Connectors FAILED",
+              "Value #C": "Inbound Identity Cache Size",
+              "Value #D": "Outbound Identity Cache Size",
+              "Value #E": "Inventory Cache Size",
+              "Value #F": "Inbound Msgs/sec",
+              "Value #G": "Outbound Msgs/sec",
+              "Value #H": "Inbound Mappings",
+              "Value #I": "Outbound Mappings",
+              "Value": "Connectors Configured",
+              "Value 1": "Connectors FAILED",
+              "Value 2": "Inbound Identity Cache Size",
+              "Value 3": "Outbound Identity Cache Size",
+              "Value 4": "Inventory Cache Size",
+              "Value 5": "Inbound Msgs/sec",
+              "Value 6": "Outbound Msgs/sec",
+              "Value 7": "Inbound Mappings",
+              "Value 8": "Outbound Mappings"
             }
           }
-        }
-      ],
-      "title": "Tenants — Cache Sizes & Connector Count",
-      "type": "table"
-    },
-    {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
-      "id": 50,
-      "panels": [],
-      "title": "Mappings",
-      "type": "row"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "One row per (tenant, direction, transformation type) with at least one mapping currently cached. Counts are live — always reflect the current mapping cache, not a point-in-time snapshot. Legacy transformation types (DEFAULT, SUBSTITUTION_AS_CODE) are deprecated; expect them to taper to zero.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 24 },
-      "id": 51,
-      "options": {
-        "cellHeight": "sm",
-        "showHeader": true,
-        "sortBy": [{ "displayName": "Tenant", "desc": false }]
-      },
-      "pluginVersion": "11.0.0",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by (tenant, direction, transformationType) (dynmapper_mapping_count) > 0",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ],
-      "transformations": [
-        {
-          "id": "labelsToFields",
-          "options": {}
         },
         {
-          "id": "organize",
+          "id": "filterFieldsByName",
           "options": {
-            "excludeByName": { "Time": true, "__name__": true, "application": true, "instance": true },
-            "renameByName": {
-              "tenant": "Tenant",
-              "direction": "Direction",
-              "transformationType": "Transformation Type",
-              "Value": "# Mappings"
-            }
+            "exclude": { "pattern": "^Value( .*|#.*)?$" }
           }
         }
       ],
-      "title": "Mapping Counts by Tenant, Direction & Transformation Type",
+      "title": "Tenants",
       "type": "table"
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
       "id": 30,
       "panels": [],
       "title": "Connectors",
@@ -349,7 +381,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "description": "One row per (tenant, connector). Status column: 0=UNKNOWN, 1=CONFIGURED, 2=ENABLED, 3=CONNECTING, 4=CONNECTED, 5=DISCONNECTED, 6=DISCONNECTING, 7=FAILED, 8=RETRYING.",
+      "description": "One row per (tenant, connector), deduplicated across replicas. Status column: 0=UNKNOWN, 1=CONFIGURED, 2=ENABLED, 3=CONNECTING, 4=CONNECTED, 5=DISCONNECTED, 6=DISCONNECTING, 7=FAILED, 8=RETRYING.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -369,22 +401,23 @@
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Value" },
+            "matcher": { "id": "byName", "options": "Status" },
             "properties": [{ "id": "custom.cellOptions", "value": { "type": "color-background" } }]
           }
         ]
       },
-      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 34 },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 25 },
       "id": 31,
       "options": {
         "cellHeight": "sm",
-        "showHeader": true
+        "showHeader": true,
+        "sortBy": [{ "displayName": "Tenant", "desc": false }]
       },
       "pluginVersion": "11.0.0",
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "dynmapper_connector_status",
+          "expr": "max by (tenant, connectorName, connectorType) (dynmapper_connector_status)",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -414,7 +447,66 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 43 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 },
+      "id": 50,
+      "panels": [],
+      "title": "Mappings",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "One row per (tenant, direction, transformation type) that has ever been registered for a subscribed tenant — zero counts are shown explicitly, not hidden. Counts are live, deduplicated across replicas. Legacy transformation types (DEFAULT, SUBSTITUTION_AS_CODE) are deprecated; expect them to taper to zero.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 35 },
+      "id": 51,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "expr": "max by (tenant, direction, transformationType) (dynmapper_mapping_count)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "labelsToFields",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "application": true, "instance": true },
+            "renameByName": {
+              "tenant": "Tenant",
+              "direction": "Direction",
+              "transformationType": "Transformation Type",
+              "Value": "# Mappings"
+            }
+          }
+        }
+      ],
+      "title": "Mapping Counts by Tenant, Direction & Transformation Type",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 44 },
       "id": 40,
       "panels": [],
       "title": "Activity by Tenant",
@@ -431,7 +523,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 44 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 45 },
       "id": 41,
       "options": {
         "displayMode": "gradient",
@@ -464,7 +556,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 44 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 45 },
       "id": 42,
       "options": {
         "displayMode": "gradient",
@@ -513,6 +605,6 @@
   "timezone": "",
   "title": "Dynamic Mapper — Tenants & Deployment Overview",
   "uid": "dynamic-mapper-tenants-overview",
-  "version": 2,
+  "version": 8,
   "weekStart": ""
 }
