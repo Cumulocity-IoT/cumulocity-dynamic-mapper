@@ -1093,20 +1093,6 @@ public class MappingService implements TenantScoped {
     }
 
     /**
-     * Removes a connector from all mappings
-     */
-    public boolean removeConnectorFromDeploymentMap(String tenant, String connectorIdentifier) {
-        return deploymentMapService.removeConnectorFromAllMappings(tenant, connectorIdentifier);
-    }
-
-    /**
-     * Removes stale connector identifiers (those no longer configured) from all deployment entries.
-     */
-    public boolean cleanupStaleDeploymentConnectors(String tenant, Set<String> validConnectorIdentifiers) {
-        return deploymentMapService.cleanupStaleConnectors(tenant, validConnectorIdentifiers);
-    }
-
-    /**
      * Checks whether a mapping is deployed to a connector (no list copy).
      */
     public boolean isMappingDeployedToConnector(String tenant, String mappingIdentifier, String connectorIdentifier) {

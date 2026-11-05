@@ -49,7 +49,7 @@ import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.http.HttpClient;
 import dynamic.mapper.connector.test.TestClient;
-import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.mapping.deployment.DeploymentMapService;
 import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.processor.outbound.OutboundMessageDispatcher;
@@ -96,7 +96,7 @@ public class ConnectorLifecycleService {
     private final ServiceRegistry serviceRegistry;
     private final ConnectorConfigurationService connectorConfigurationService;
     private final ServiceConfigurationService serviceConfigurationService;
-    private final MappingService mappingService;
+    private final DeploymentMapService deploymentMapService;
     private final String additionalSubscriptionIdTest;
 
     public ConnectorLifecycleService(
@@ -105,14 +105,14 @@ public class ConnectorLifecycleService {
             ServiceRegistry serviceRegistry,
             ConnectorConfigurationService connectorConfigurationService,
             ServiceConfigurationService serviceConfigurationService,
-            MappingService mappingService,
+            DeploymentMapService deploymentMapService,
             @Value("${APP.additionalSubscriptionIdTest:}") String additionalSubscriptionIdTest) {
         this.connectorRegistry = connectorRegistry;
         this.connectorClientFactory = connectorClientFactory;
         this.serviceRegistry = serviceRegistry;
         this.connectorConfigurationService = connectorConfigurationService;
         this.serviceConfigurationService = serviceConfigurationService;
-        this.mappingService = mappingService;
+        this.deploymentMapService = deploymentMapService;
         this.additionalSubscriptionIdTest = additionalSubscriptionIdTest;
     }
 
@@ -132,7 +132,7 @@ public class ConnectorLifecycleService {
         Set<String> validConnectorIds = allConnectorConfigs.stream()
                 .map(ConnectorConfiguration::getIdentifier)
                 .collect(Collectors.toSet());
-        mappingService.cleanupStaleDeploymentConnectors(tenant, validConnectorIds);
+        deploymentMapService.cleanupStaleConnectors(tenant, validConnectorIds);
     }
 
     /**
@@ -579,7 +579,7 @@ public class ConnectorLifecycleService {
                 }
                 connectorConfigurationService.deleteConnectorConfiguration(identifier);
                 try {
-                    mappingService.removeConnectorFromDeploymentMap(tenant, identifier);
+                    deploymentMapService.removeConnectorFromAllMappings(tenant, identifier);
                 } catch (Exception e) {
                     log.warn("{} - Error removing connector {} from deployment map during delete: {}", tenant,
                             identifier, e.getMessage());

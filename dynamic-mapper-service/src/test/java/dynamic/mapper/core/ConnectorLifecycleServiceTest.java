@@ -29,7 +29,7 @@ import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.ConnectorLifecycleService.ConnectorOperationException;
 import dynamic.mapper.core.ConnectorLifecycleService.Reason;
-import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.mapping.deployment.DeploymentMapService;
 import dynamic.mapper.notification.NotificationSubscriber;
 
 /**
@@ -43,7 +43,7 @@ class ConnectorLifecycleServiceTest {
     private final ConnectorRegistry registry = mock(ConnectorRegistry.class);
     private final ConnectorConfigurationService connectorConfigs = mock(ConnectorConfigurationService.class);
     private final ServiceConfigurationService serviceConfigs = mock(ServiceConfigurationService.class);
-    private final MappingService mappingService = mock(MappingService.class);
+    private final DeploymentMapService deploymentMapService = mock(DeploymentMapService.class);
     private final ServiceRegistry serviceRegistry = mock(ServiceRegistry.class);
     private final NotificationSubscriber notifications = mock(NotificationSubscriber.class);
     private ConnectorLifecycleService service;
@@ -55,7 +55,7 @@ class ConnectorLifecycleServiceTest {
         config.setOutboundMappingEnabled(true);
         when(serviceConfigs.getServiceConfiguration(TENANT)).thenReturn(config);
         service = new ConnectorLifecycleService(registry, mock(ConnectorClientFactory.class), serviceRegistry,
-                connectorConfigs, serviceConfigs, mappingService, "");
+                connectorConfigs, serviceConfigs, deploymentMapService, "");
     }
 
     private ConnectorConfiguration config(ConnectorType type, boolean enabled) {
@@ -92,7 +92,7 @@ class ConnectorLifecycleServiceTest {
         assertThrows(ConnectorOperationException.class, () -> service.deleteConnector(TENANT, ID));
 
         verify(connectorConfigs).deleteConnectorConfiguration(ID);
-        verify(mappingService).removeConnectorFromDeploymentMap(TENANT, ID);
+        verify(deploymentMapService).removeConnectorFromAllMappings(TENANT, ID);
         verify(registry).removeClientFromStatusMap(TENANT, ID);
     }
 
@@ -105,11 +105,11 @@ class ConnectorLifecycleServiceTest {
         service.deleteConnector(TENANT, ID);
 
         verify(client).deleteResources();
-        InOrder order = inOrder(registry, notifications, connectorConfigs, mappingService);
+        InOrder order = inOrder(registry, notifications, connectorConfigs, deploymentMapService);
         order.verify(registry).unregisterClient(TENANT, ID);
         order.verify(notifications).unsubscribeDeviceSubscriberByConnector(TENANT, ID);
         order.verify(connectorConfigs).deleteConnectorConfiguration(ID);
-        order.verify(mappingService).removeConnectorFromDeploymentMap(TENANT, ID);
+        order.verify(deploymentMapService).removeConnectorFromAllMappings(TENANT, ID);
     }
 
     @Test
