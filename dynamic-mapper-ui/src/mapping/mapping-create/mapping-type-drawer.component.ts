@@ -76,6 +76,9 @@ interface SaveResult {
 })
 export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
   @Input() direction: Direction;
+  /** Mapping type to preselect instead of the default (e.g. ANY_PAYLOAD for a binary message).
+   *  Ignored when that type is not available for the direction. */
+  @Input() preferredMappingType?: MappingType;
 
   // Services
   private readonly cdr = inject(ChangeDetectorRef);
@@ -648,6 +651,10 @@ export class MappingTypeDrawerComponent implements OnInit, OnDestroy {
       const config = MappingTypeDescriptionMap[type];
       return config?.enabled && config.properties?.[this.direction]?.directionSupported;
     });
+
+    if (this.preferredMappingType && enabledTypes.includes(this.preferredMappingType)) {
+      return this.preferredMappingType;
+    }
 
     return enabledTypes.includes(this.DEFAULTS.MAPPING_TYPE) 
       ? this.DEFAULTS.MAPPING_TYPE 

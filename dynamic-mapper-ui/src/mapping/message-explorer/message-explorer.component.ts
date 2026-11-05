@@ -57,7 +57,7 @@ import {
 import { MappingTypeDrawerComponent } from '../mapping-create/mapping-type-drawer.component';
 import { SubscriptionChoiceDrawerComponent } from './subscription-choice-drawer.component';
 import { ExplorerMappingHandoffService } from '../core/explorer-mapping-handoff.service';
-import { ALERT_INFO_TIMEOUT, Direction } from '../../shared';
+import { ALERT_INFO_TIMEOUT, Direction, MappingType } from '../../shared';
 import {
   MessageExplorerDateRendererComponent,
   MessageExplorerPayloadRendererComponent
@@ -550,7 +550,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
 
     // Step 1: pick mapping format / transformation type
     const typeDrawer = this.bottomDrawerService.openDrawer(MappingTypeDrawerComponent, {
-      initialState: { direction }
+      // A binary payload cannot be parsed as JSON, so preselect Any Payload for it.
+      initialState: { direction, preferredMappingType: msg.binary ? MappingType.ANY_PAYLOAD : undefined }
     });
     let mappingResult: any;
     try {
@@ -637,6 +638,7 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       sessionTopic: this.sessionTopic,
       topic: msg.topic,
       payload: msg.payload,
+      binary: msg.binary,
       key: msg.key,
       mappingType: mappingResult.mappingType,
       transformationType: mappingResult.transformationType,

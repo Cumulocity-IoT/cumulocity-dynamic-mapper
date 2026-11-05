@@ -156,7 +156,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   mappingType!: MappingType;
   transformationType!: TransformationType;
   private readonly destroy$ = new Subject<void>();
-  private explorerPreFill: { sessionTopic?: string; topic: string; payload: string; key?: string; targetAPI?: string; publishTopic?: string; publishTopicSample?: string } | null = null;
+  private explorerPreFill: { sessionTopic?: string; topic: string; payload: string; binary?: boolean; key?: string; targetAPI?: string; publishTopic?: string; publishTopicSample?: string } | null = null;
 
   pagination: Pagination = {
     pageSize: 30,
@@ -243,6 +243,7 @@ export class MappingComponent implements OnInit, OnDestroy {
           sessionTopic: explorerHandoff.sessionTopic,
           topic: explorerHandoff.topic ?? '',
           payload: explorerHandoff.payload ?? '{}',
+          binary: explorerHandoff.binary,
           key: explorerHandoff.key,
           targetAPI: explorerHandoff.targetAPI,
           publishTopic: explorerHandoff.publishTopic,
@@ -250,6 +251,12 @@ export class MappingComponent implements OnInit, OnDestroy {
         };
         this.mappingType = explorerHandoff.mappingType;
         this.transformationType = explorerHandoff.transformationType;
+        // A binary payload cannot be parsed as JSON; the backend only passes raw bytes (as base64
+        // in msg.payload) to ANY_PAYLOAD + Smart Function mappings.
+        if (explorerHandoff.binary && this.mappingType === MappingType.JSON
+            && this.transformationType === TransformationType.SMART_FUNCTION) {
+          this.mappingType = MappingType.ANY_PAYLOAD;
+        }
         this.substitutionsAsCode = this.transformationType === TransformationType.SMART_FUNCTION;
         this.codeTemplate = explorerHandoff.codeTemplate;
         this.generateSmartFunctionWithAI = !!explorerHandoff.generateSmartFunctionWithAI;
@@ -642,6 +649,22 @@ export class MappingComponent implements OnInit, OnDestroy {
       // sessions (sourceSystem/targetSystem swap the same way in mapping-stepper.component.ts).
       // So the captured payload always belongs on sourceTemplate, regardless of direction.
       mapping.sourceTemplate = this.explorerPreFill.payload;
+      // Raw-payload mapping types keep their sample as {"payload": "<text or base64>"}; the
+      // captured payload is not JSON in that case, so wrap it instead of storing it as is.
+      if (
+        this.explorerPreFill.binary ||
+        [MappingType.ANY_PAYLOAD, MappingType.HEX, MappingType.FLAT_FILE].includes(mapping.mappingType)
+      ) {
+        let isJson = true;
+        try {
+          JSON.parse(mapping.sourceTemplate);
+        } catch {
+          isJson = false;
+        }
+        if (!isJson) {
+          mapping.sourceTemplate = JSON.stringify({ payload: this.explorerPreFill.payload } as PayloadWrapper);
+        }
+      }
       // Seed the captured broker message key (e.g. a Kafka record key) so the sample mirrors what
       // the mapping actually sees at runtime. Only for JSONata-style transformations, where the
       // backend injects the key into the payload as _CONTEXT_DATA_.key: Smart Functions and Java

@@ -27,6 +27,8 @@ export interface ExplorerMappingHandoff {
   sessionTopic?: string;
   topic: string;
   payload: string;
+  /** True when the payload is base64 text of non-printable bytes (see ExplorerService). */
+  binary?: boolean;
   key?: string;
   mappingType: MappingType;
   transformationType: TransformationType;
