@@ -108,10 +108,13 @@ class TestControllerTest {
     private GenericMessageCallback dispatcher;
 
     private TestController controller;
+    private dynamic.mapper.mapping.MappingTestService testService;
 
     @BeforeEach
     void setUp() {
-        controller = new TestController(connectorRegistry, dispatcherRegistry, c8YAgent, contextService, new SparkPlugBSerializer());
+        testService = new dynamic.mapper.mapping.MappingTestService(connectorRegistry, dispatcherRegistry, c8YAgent,
+                new SparkPlugBSerializer());
+        controller = new TestController(testService, contextService);
 
         UserCredentials creds = mock(UserCredentials.class);
         when(creds.getTenant()).thenReturn(TENANT);
@@ -592,7 +595,7 @@ class TestControllerTest {
         when(connectorClient.getDispatcher()).thenReturn(dispatcher);
         when(connectorClient.getConnectorIdentifier()).thenReturn(TestClient.TEST_CONNECTOR_IDENTIFIER);
         org.mockito.Mockito.doReturn(wrapper).when(dispatcher).onTestMessage(any(ConnectorMessage.class), any(Mapping.class));
-        org.springframework.test.util.ReflectionTestUtils.setField(controller, "testTimeoutMarginMs", 1L);
+        org.springframework.test.util.ReflectionTestUtils.setField(testService, "testTimeoutMarginMs", 1L);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> controller.testMapping(dryRunContext()));
@@ -827,7 +830,7 @@ class TestControllerTest {
 
     @Test
     void testMapping_testsOfOneTenantDoNotOverlap_andTheLockIsReleasedAfterwards() throws Exception {
-        org.springframework.test.util.ReflectionTestUtils.setField(controller, "testLockWaitMs", 50L);
+        org.springframework.test.util.ReflectionTestUtils.setField(testService, "testLockWaitMs", 50L);
         java.util.concurrent.CountDownLatch insideFirst = new java.util.concurrent.CountDownLatch(1);
         java.util.concurrent.CountDownLatch releaseFirst = new java.util.concurrent.CountDownLatch(1);
         when(connectorRegistry.getClientForTenant(TENANT, TestClient.TEST_CONNECTOR_IDENTIFIER)).thenAnswer(inv -> {
@@ -866,15 +869,15 @@ class TestControllerTest {
     @Test
     @SuppressWarnings("unchecked")
     void unsubscribeDropsTheTenantTestLock() throws Exception {
-        Field f = TestController.class.getDeclaredField("tenantTestLocks");
+        Field f = dynamic.mapper.mapping.MappingTestService.class.getDeclaredField("tenantTestLocks");
         f.setAccessible(true);
-        Map<String, Object> locks = (Map<String, Object>) f.get(controller);
+        Map<String, Object> locks = (Map<String, Object>) f.get(testService);
         locks.put(TENANT, new ReentrantLock());
         locks.put("other", new ReentrantLock());
         MicroserviceSubscriptionRemovedEvent event = mock(MicroserviceSubscriptionRemovedEvent.class);
         when(event.getTenant()).thenReturn(TENANT);
 
-        controller.onTenantUnsubscribed(event);
+        testService.onTenantUnsubscribed(event);
 
         assertFalse(locks.containsKey(TENANT));
         assertTrue(locks.containsKey("other"));
