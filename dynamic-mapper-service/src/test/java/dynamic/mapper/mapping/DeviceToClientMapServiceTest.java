@@ -13,7 +13,7 @@ import static org.mockito.Mockito.when;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.core.TenantRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.device.DeviceToClientMapRepresentation;
 import java.util.HashMap;
@@ -30,20 +30,20 @@ class DeviceToClientMapServiceTest {
     private static final String FRAGMENT = DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT;
 
     private InventoryFacade inventoryApi;
-    private ServiceRegistry serviceRegistry;
+    private TenantRegistry tenantRegistry;
     private DeviceToClientMapService service;
 
     @BeforeEach
     void setUp() {
         inventoryApi = mock(InventoryFacade.class);
-        serviceRegistry = mock(ServiceRegistry.class);
+        tenantRegistry = mock(TenantRegistry.class);
         MicroserviceSubscriptionsService subscriptions = mock(MicroserviceSubscriptionsService.class);
         Mockito.doAnswer(inv -> {
             ((Runnable) inv.getArgument(1)).run();
             return null;
         }).when(subscriptions).runForTenant(eq(TENANT), any(Runnable.class));
-        when(serviceRegistry.getDeviceToClientMapId(TENANT)).thenReturn(MAP_ID);
-        service = new DeviceToClientMapService(inventoryApi, serviceRegistry, subscriptions);
+        when(tenantRegistry.getDeviceToClientMapId(TENANT)).thenReturn(MAP_ID);
+        service = new DeviceToClientMapService(inventoryApi, tenantRegistry, subscriptions);
     }
 
     private void stored(Map<String, String> persisted) {
@@ -55,7 +55,7 @@ class DeviceToClientMapServiceTest {
     }
 
     private void pending(Map<String, String> changes) {
-        when(serviceRegistry.getPendingClientChanges(TENANT)).thenReturn(changes);
+        when(tenantRegistry.getPendingClientChanges(TENANT)).thenReturn(changes);
     }
 
     @Test
@@ -79,7 +79,7 @@ class DeviceToClientMapServiceTest {
         service.sendToInventory(TENANT);
 
         verify(inventoryApi, never()).update(any(), any());
-        verify(serviceRegistry).acknowledgeClientChanges(TENANT, changes);
+        verify(tenantRegistry).acknowledgeClientChanges(TENANT, changes);
     }
 
     @Test
@@ -100,12 +100,12 @@ class DeviceToClientMapServiceTest {
         assertTrue(sent.containsKey("2"));
         assertNull(sent.get("2"));
         assertEquals("clientD", sent.get("4"));
-        verify(serviceRegistry).acknowledgeClientChanges(TENANT, changes);
+        verify(tenantRegistry).acknowledgeClientChanges(TENANT, changes);
     }
 
     @Test
     void skipsWhenMapManagedObjectIsNotInitialized() {
-        when(serviceRegistry.getDeviceToClientMapId(TENANT)).thenReturn(null);
+        when(tenantRegistry.getDeviceToClientMapId(TENANT)).thenReturn(null);
 
         service.sendToInventory(TENANT);
 

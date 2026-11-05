@@ -97,6 +97,7 @@ class OperationControllerTest {
     @Mock private C8YAgent c8YAgent;
     @Mock private ContextService<UserCredentials> contextService;
     @Mock private ServiceRegistry serviceRegistry;
+    @Mock private dynamic.mapper.core.TenantRegistry tenantRegistry;
     @Mock private DeploymentMapService deploymentMapService;
     @Mock private MappingStatusService mappingStatusService;
     @Mock private IdentityFacade identityFacade;
@@ -111,7 +112,7 @@ class OperationControllerTest {
     @BeforeEach
     void setUp() throws Exception {
         controller = new OperationController(connectorRegistry, mappingService, mappingOrchestrationService, connectorConfigurationService,
-                serviceConfigurationService, mock(CodeTemplateLoader.class), connectorLifecycleService, c8YAgent, contextService, serviceRegistry,
+                serviceConfigurationService, mock(CodeTemplateLoader.class), connectorLifecycleService, c8YAgent, contextService, serviceRegistry, tenantRegistry,
                 cacheManager, deploymentMapService, mappingStatusService, identityFacade, inventoryFacade, flowStateStore,
                 extensionManager, objectMapper);
 

@@ -24,7 +24,7 @@ package dynamic.mapper.mapping;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
-import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.core.TenantRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
 import dynamic.mapper.model.device.DeviceToClientMapRepresentation;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +43,7 @@ import java.util.Map;
 public class DeviceToClientMapService {
 
     private final InventoryFacade inventoryApi;
-    private final ServiceRegistry serviceRegistry;
+    private final TenantRegistry tenantRegistry;
     private final MicroserviceSubscriptionsService subscriptionsService;
 
     /**
@@ -57,14 +57,14 @@ public class DeviceToClientMapService {
      * already matches the stored map.
      */
     public void sendToInventory(String tenant) {
-        String deviceToClientMapId = serviceRegistry.getDeviceToClientMapId(tenant);
+        String deviceToClientMapId = tenantRegistry.getDeviceToClientMapId(tenant);
         if (deviceToClientMapId == null) {
             log.warn("{} - Device-to-client map managed object is not initialized, skipping sync", tenant);
             return;
         }
         // One snapshot of the changes: it is consistent with the relation map, and only these are
         // acknowledged afterwards, so a change made while syncing stays pending.
-        Map<String, String> pending = serviceRegistry.getPendingClientChanges(tenant);
+        Map<String, String> pending = tenantRegistry.getPendingClientChanges(tenant);
         if (pending.isEmpty()) {
             log.debug("{} - No device-to-client changes pending, not sending", tenant);
             return;
@@ -84,7 +84,7 @@ public class DeviceToClientMapService {
             if (changes.isEmpty()) {
                 log.debug("{} - Device-to-client changes already persisted ({} pending), not sending", tenant,
                         pending.size());
-                serviceRegistry.acknowledgeClientChanges(tenant, pending);
+                tenantRegistry.acknowledgeClientChanges(tenant, pending);
                 return;
             }
 
@@ -96,7 +96,7 @@ public class DeviceToClientMapService {
             updateMor.setAttrs(Map.of(DeviceToClientMapRepresentation.DEVICE_TO_CLIENT_MAP_FRAGMENT, changes));
 
             inventoryApi.update(updateMor, false);
-            serviceRegistry.acknowledgeClientChanges(tenant, pending);
+            tenantRegistry.acknowledgeClientChanges(tenant, pending);
         });
     }
 

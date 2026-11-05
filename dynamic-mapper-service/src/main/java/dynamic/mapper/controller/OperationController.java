@@ -34,6 +34,7 @@ import dynamic.mapper.core.ConnectorLifecycleService;
 import dynamic.mapper.core.C8YAgent;
 import dynamic.mapper.core.CacheManager;
 import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.core.TenantRegistry;
 import dynamic.mapper.core.ExtensionManager;
 import dynamic.mapper.core.facade.IdentityFacade;
 import dynamic.mapper.core.facade.InventoryFacade;
@@ -93,6 +94,7 @@ public class OperationController {
     private final C8YAgent c8YAgent;
     private final ContextService<UserCredentials> contextService;
     private final ServiceRegistry serviceRegistry;
+    private final TenantRegistry tenantRegistry;
     private final CacheManager cacheManager;
     private final DeploymentMapService deploymentMapService;
     private final MappingStatusService mappingStatusService;
@@ -290,7 +292,7 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleClearCacheDeviceToClient(String tenant, Map<String, String> parameters) {
-        serviceRegistry.clearCacheDeviceToClient(tenant);
+        tenantRegistry.clearCacheDeviceToClient(tenant);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

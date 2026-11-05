@@ -17,7 +17,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dynamic.mapper.core.C8YAgent;
-import dynamic.mapper.core.ServiceRegistry;
+import dynamic.mapper.core.TenantRegistry;
 import dynamic.mapper.core.IdentityResolutionService;
 import dynamic.mapper.model.API;
 import dynamic.mapper.model.Mapping;
@@ -37,7 +37,7 @@ public class SendInboundProcessor extends BaseProcessor {
 
     private final C8YAgent c8yAgent;
 
-    private final ServiceRegistry serviceRegistry;
+    private final TenantRegistry tenantRegistry;
 
     private final IdentityResolutionService identityResolutionService;
 
@@ -45,11 +45,11 @@ public class SendInboundProcessor extends BaseProcessor {
 
     private final MappingService mappingService;
 
-    public SendInboundProcessor(C8YAgent c8yAgent, ServiceRegistry serviceRegistry,
+    public SendInboundProcessor(C8YAgent c8yAgent, TenantRegistry tenantRegistry,
             IdentityResolutionService identityResolutionService, ObjectMapper objectMapper,
             MappingService mappingService) {
         this.c8yAgent = c8yAgent;
-        this.serviceRegistry = serviceRegistry;
+        this.tenantRegistry = tenantRegistry;
         this.identityResolutionService = identityResolutionService;
         this.objectMapper = objectMapper;
         this.mappingService = mappingService;
@@ -301,7 +301,7 @@ public class SendInboundProcessor extends BaseProcessor {
                     // Cache the mapping of device to client ID
                     if (!context.isTesting() && context.getClientId() != null
                             && Boolean.TRUE.equals(context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled())) {
-                        serviceRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
+                        tenantRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                                 request.getSourceId());
                     }
                 }
@@ -356,7 +356,7 @@ public class SendInboundProcessor extends BaseProcessor {
                     // Cache the mapping of device to client ID
                     if (!context.isTesting() && context.getClientId() != null
                             && Boolean.TRUE.equals(context.getServiceConfiguration().getDeviceIsolationMQTTServiceEnabled())) {
-                        serviceRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
+                        tenantRegistry.addOrUpdateClientRelation(tenant, context.getClientId(),
                                 request.getSourceId());
                     }
                 } else {

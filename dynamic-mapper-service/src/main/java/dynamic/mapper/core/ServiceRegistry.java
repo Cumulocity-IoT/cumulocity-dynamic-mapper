@@ -229,58 +229,6 @@ public class ServiceRegistry implements IMapperConfiguration, TenantScoped {
         tenantRegistry.removeMicroserviceCredentials(tenant);
     }
 
-    public void addOrUpdateClientRelation(String tenant, String clientId, String deviceId) {
-        tenantRegistry.addOrUpdateClientRelation(tenant, clientId, deviceId);
-    }
-
-    public void addOrUpdateClientRelations(String tenant, String clientId, List<String> deviceIds) {
-        tenantRegistry.addOrUpdateClientRelations(tenant, clientId, deviceIds);
-    }
-
-    public void removeClientRelation(String tenant, String deviceId) {
-        tenantRegistry.removeClientRelation(tenant, deviceId);
-    }
-
-    public void removeClientById(String tenant, String clientId) {
-        tenantRegistry.removeClientById(tenant, clientId);
-    }
-
-    public void clearCacheDeviceToClient(String tenant) {
-        tenantRegistry.clearCacheDeviceToClient(tenant);
-    }
-
-    public Map<String, String> getPendingClientChanges(String tenant) {
-        return tenantRegistry.getPendingClientChanges(tenant);
-    }
-
-    public void acknowledgeClientChanges(String tenant, Map<String, String> persisted) {
-        tenantRegistry.acknowledgeClientChanges(tenant, persisted);
-    }
-
-    public String resolveDeviceToClient(String tenant, String deviceId) {
-        return tenantRegistry.resolveDeviceToClient(tenant, deviceId);
-    }
-
-    public Map<String, String> getAllClientRelations(String tenant) {
-        return tenantRegistry.getAllClientRelations(tenant);
-    }
-
-    public List<String> getDevicesForClient(String tenant, String clientId) {
-        return tenantRegistry.getDevicesForClient(tenant, clientId);
-    }
-
-    public List<String> getAllClients(String tenant) {
-        return tenantRegistry.getAllClients(tenant);
-    }
-
-    public int getClientRelationCount(String tenant) {
-        return tenantRegistry.getClientRelationCount(tenant);
-    }
-
-    public boolean hasClientRelation(String tenant, String deviceId) {
-        return tenantRegistry.hasClientRelation(tenant, deviceId);
-    }
-
     /**
      * Clear the external ID cache. Useful for testing or tenant cleanup.
      *
