@@ -41,7 +41,6 @@ import dynamic.mapper.model.status.ConnectorStatusEvent;
 import dynamic.mapper.model.status.ConnectorStatusHistory;
 import dynamic.mapper.model.DeploymentMapEntry;
 import dynamic.mapper.model.Direction;
-import dynamic.mapper.model.status.LoggingEventType;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.Qos;
 import dynamic.mapper.processor.runtime.ProcessingContext;
@@ -61,7 +60,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 import javax.net.ssl.HostnameVerifier;
@@ -69,9 +67,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
 import org.apache.commons.lang3.mutable.MutableInt;
-import org.joda.time.DateTime;
 
-import com.cumulocity.model.idtype.GId;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -291,6 +287,24 @@ public abstract class AConnectorClient {
     private final ReentrantLock connectDisconnectExecutionLock = new ReentrantLock();
     // Retries subscription work that failed for a transient reason; created together with the housekeeping executor
     private SubscriptionRetryScheduler retryScheduler;
+    // Reports the connection lifecycle and the subscriptions to Cumulocity as events. Created on first use:
+    // subclasses report subscription events without necessarily having gone through initializeManagers().
+    private volatile ConnectorEventPublisher eventPublisher;
+
+    private ConnectorEventPublisher eventPublisher() {
+        ConnectorEventPublisher publisher = eventPublisher;
+        if (publisher == null) {
+            synchronized (this) {
+                publisher = eventPublisher;
+                if (publisher == null) {
+                    publisher = new ConnectorEventPublisher(tenant, connectorName, connectorIdentifier,
+                            () -> c8yAgent, () -> serviceConfiguration);
+                    eventPublisher = publisher;
+                }
+            }
+        }
+        return publisher;
+    }
 
     // Abstract methods to be implemented by subclasses
     public abstract boolean initialize();
@@ -1450,51 +1464,12 @@ public abstract class AConnectorClient {
         return isConfigValid(connectorConfiguration) && connectorConfiguration.getEnabled();
     }
 
-    // Id of the Cumulocity Event backing the currently open connection-lifecycle session (see
-    // ConnectionStateManager.updateSession), so subsequent transitions of the same session are
-    // appended (PUT) to it instead of creating an independent Event per status change.
-    private final AtomicReference<GId> activeConnectorStatusEventId = new AtomicReference<>();
-
     /**
-     * Send connector lifecycle event.
-     * <p>
-     * Bundles all transitions of one connection-lifecycle session (e.g. CONNECTING -> CONNECTED,
-     * possibly with RETRYING in between) into a single Cumulocity Event: the first transition of
-     * a session creates the Event, further transitions update it in place — mirroring how a
-     * Cumulocity Operation accumulates its "history of changes" under one record.
+     * Send connector lifecycle event: bundles all transitions of one connection-lifecycle session into a
+     * single Cumulocity Event, see {@link ConnectorEventPublisher}.
      */
     public void sendConnectorLifecycle(ConnectorStatusHistory session, boolean isNewSession) {
-        if (!serviceConfiguration.getSendConnectorLifecycle()) {
-            return;
-        }
-        Map<String, String> statusMap = createStatusMap(session);
-        String message = statusMap.get("message");
-        String severity = session.getCurrentStatus().toSeverity();
-
-        // Defensive fallback: also (re-)create if no event id is on record even though the
-        // session isn't new (e.g. the id was lost across a microservice restart mid-session).
-        GId eventId = isNewSession ? null : activeConnectorStatusEventId.get();
-        if (eventId == null) {
-            eventId = c8yAgent.createConnectorStatusEvent(message, severity, DateTime.now(), tenant, statusMap, session);
-            activeConnectorStatusEventId.set(eventId);
-        } else {
-            c8yAgent.updateConnectorStatusEvent(eventId, message, severity, DateTime.now(), tenant, statusMap, session);
-        }
-    }
-
-    private Map<String, String> createStatusMap(ConnectorStatusHistory session) {
-        List<ConnectorStatusEvent> history = session.getHistory();
-        ConnectorStatusEvent latest = history.get(history.size() - 1);
-        String message = latest.getMessage();
-        if (message == null || "".equals(message)) {
-            message = String.format("Connector status: %s", session.getCurrentStatus());
-        }
-
-        return Map.ofEntries(
-                entry("status", session.getCurrentStatus().name()),
-                entry("message", message),
-                entry("connectorName", getConnectorName()),
-                entry("connectorIdentifier", getConnectorIdentifier()));
+        eventPublisher().sendConnectorLifecycle(session, isNewSession);
     }
 
     /**
@@ -1585,26 +1560,7 @@ public abstract class AConnectorClient {
     }
 
     public void sendSubscriptionEvents(String topic, String action) {
-        if (!serviceConfiguration.getSendSubscriptionEvents()) {
-            return;
-        }
-
-        String message = String.format("%s topic: %s", action, topic);
-        Map<String, String> eventMap = createSubscriptionEventMap(message);
-
-        c8yAgent.createLoggingEvent(
-                message,
-                LoggingEventType.SUBSCRIPTION_EVENT_TYPE,
-                DateTime.now(),
-                tenant,
-                eventMap);
-    }
-
-    private Map<String, String> createSubscriptionEventMap(String message) {
-        return Map.ofEntries(
-                entry("message", message),
-                entry("connectorName", getConnectorName()),
-                entry("connectorIdentifier", getConnectorIdentifier()));
+        eventPublisher().sendSubscriptionEvent(topic, action);
     }
 
     /**
