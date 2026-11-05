@@ -347,6 +347,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             // internalSourceId → source.id in the C8Y payload (must be the numeric managed object ID).
             // brokerRoutingId (e.g. LoRa EUI) is only used for broker topic-token replacement above.
             OutboundRequestFinalizer.finalizeRequest(request, internalSourceId, payloadJson, tenant, objectMapper);
+            OutboundRequestFinalizer.throwIfRejected(request);
 
             // Broker message key and retain flag
             OutboundRequestFinalizer.applyTransportFields(context, deviceMessage);
@@ -460,6 +461,7 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
             }
 
             OutboundRequestFinalizer.finalizeRequest(c8yRequest, resolvedDeviceId, payloadJson, tenant, objectMapper);
+            OutboundRequestFinalizer.throwIfRejected(c8yRequest);
 
             context.setRetain(Boolean.TRUE.equals(c8yRequest.getRetain()));
 

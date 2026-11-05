@@ -65,6 +65,9 @@ public class ConnectionStateManager {
      * connector has finished constructing and the type is available. */
     private volatile Gauge statusGauge;
     private final Object statusGaugeLock = new Object();
+    /** A probe (connection test) must not register the gauge: the meter id is shared with the live
+     * connector of the same name, so the probe's status would shadow the live one. */
+    private boolean probe;
     private final Supplier<ConnectorType> connectorTypeSupplier;
 
     /** Guards {@link #previousStatus} and the session bundling in {@link #updateSession}, which
@@ -123,7 +126,7 @@ public class ConnectionStateManager {
     /** Registers {@link #statusGauge} on first use — see the field's javadoc for why this can't
      * happen in the constructor. Safe to call repeatedly; only the first call registers anything. */
     private void ensureStatusGaugeRegistered() {
-        if (statusGauge != null) {
+        if (probe || statusGauge != null) {
             return;
         }
         synchronized (statusGaugeLock) {
@@ -156,6 +159,11 @@ public class ConnectionStateManager {
         }
     }
     
+    /** Marks this manager as belonging to a throwaway probe client; it then never registers a gauge. */
+    void markAsProbe() {
+        this.probe = true;
+    }
+
     public boolean isConnected() {
         return connectionState.booleanValue();
     }

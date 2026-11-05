@@ -186,8 +186,8 @@
           <i c8yIcon="chevron-up"></i>
         </button>
         <ul class="dropdown-menu" *dropdownMenu>
-          <li><a (click)="saveAndActivate = false" data-cy="dm-unified-editor-save-only">{{ 'Save' | translate }}</a></li>
-          <li><a (click)="saveAndActivate = true" data-cy="dm-unified-editor-save-activate">{{ 'Save & Activate' | translate }}</a></li>
+          <li><button type="button" class="dropdown-item" (click)="saveAndActivate = false" data-cy="dm-unified-editor-save-only">{{ 'Save' | translate }}</button></li>
+          <li><button type="button" class="dropdown-item" (click)="saveAndActivate = true" data-cy="dm-unified-editor-save-activate">{{ 'Save & Activate' | translate }}</button></li>
         </ul>
       </div>
     </div>

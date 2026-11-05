@@ -634,6 +634,9 @@ public abstract class AConnectorClient {
                 connectorIdentifier,
                 () -> this.connectorType,
                 this::sendConnectorLifecycle, connectorRegistry);
+        if (isProbeConstruction()) {
+            connectionStateManager.markAsProbe();
+        }
 
         // This is a fresh client instance — either a genuine microservice restart, or simply this
         // connector being disabled and re-enabled (ConnectorClientFactory always creates a new

@@ -227,8 +227,13 @@ export class ServiceLogsComponent implements OnInit, OnDestroy {
     ++this.requestSeq;
     this.inFlight = false;
     this.isLoading = true;
+    // activate() sets source/error before reporting a collected log as unavailable: keep them to restore.
+    const previous = { source: this.source, error: this.error, errorHint: this.errorHint };
     try {
       if (!(await this.activate(target))) {
+        this.source = previous.source;
+        this.error = previous.error;
+        this.errorHint = previous.errorHint;
         // Not available: stay on the current source, and make the switch say so (Angular would not redraw an unchanged binding).
         if (checkbox) checkbox.checked = this.isCollected;
         this.alertService.warning(collected ? 'The collected log is not available.' : 'The platform log is not available to your tenant.');

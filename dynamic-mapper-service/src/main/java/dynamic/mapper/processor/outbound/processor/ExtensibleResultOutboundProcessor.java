@@ -196,6 +196,9 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
                 // Source identifier in the body and the device ID in the path for PUT/PATCH/DELETE.
                 OutboundRequestFinalizer.finalizeRequest(request, context.getSourceId(), payloadString, tenant,
                         objectMapper);
+                // Never enqueue a request the finalizer rejected: the webhook would fall back to the
+                // collection path (e.g. DELETE /event/events).
+                OutboundRequestFinalizer.throwIfRejected(request);
             }
 
             // Add request to thread-safe output collector

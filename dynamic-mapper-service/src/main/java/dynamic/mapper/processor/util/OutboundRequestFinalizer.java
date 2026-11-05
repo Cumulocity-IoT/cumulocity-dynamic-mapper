@@ -78,6 +78,17 @@ public final class OutboundRequestFinalizer {
         context.setRetain(Boolean.TRUE.equals(message.getRetain()));
     }
 
+    /**
+     * Fails fast when {@link #finalizeRequest} flagged the request as invalid. Callers must do this
+     * before the request is queued: an errored request has no resource path, and the webhook would
+     * fall back to the API collection path.
+     */
+    public static void throwIfRejected(DynamicMapperRequest request) {
+        if (request.getError() != null) {
+            throw new IllegalArgumentException(request.getError().getMessage(), request.getError());
+        }
+    }
+
     public static void finalizeRequest(DynamicMapperRequest request, String internalId, String payloadJson,
             String tenant) {
         finalizeRequest(request, internalId, payloadJson, tenant, DEFAULT_MAPPER);

@@ -229,11 +229,17 @@ public class SubstitutionResultOutboundProcessor extends BaseProcessor {
             dynamicMapperRequest.setPublishTopic(context.getResolvedPublishTopic());
             // PUT/PATCH/DELETE address the device in the URL path, not in the body; without this
             // an internal webhook would send them to the collection path. POST is left untouched.
+            // The request carries the notification's API; the publish topic names the real target.
+            API topicApi = OutboundRequestFinalizer.deriveApi(null, context.getResolvedPublishTopic());
+            if (topicApi != null) {
+                dynamicMapperRequest.setApi(topicApi);
+            }
             if (dynamicMapperRequest.getApi() != null && deviceSource != null && !deviceSource.isEmpty()
                     && (method == RequestMethod.PUT || method == RequestMethod.PATCH
                             || method == RequestMethod.DELETE)) {
                 OutboundRequestFinalizer.finalizeRequest(dynamicMapperRequest, deviceSource,
                         dynamicMapperRequest.getRequest(), tenant);
+                OutboundRequestFinalizer.throwIfRejected(dynamicMapperRequest);
             }
 
         } else {
