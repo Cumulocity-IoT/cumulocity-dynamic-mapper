@@ -21,17 +21,13 @@
 
 package dynamic.mapper.controller;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import jakarta.validation.Valid;
-import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.configuration.ConnectorId;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.connector.core.registry.ConnectorRegistryException;
 import dynamic.mapper.core.ConnectorLifecycleService;
@@ -63,6 +59,7 @@ import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.status.LoggingEventType;
 import org.joda.time.DateTime;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
+import dynamic.mapper.mapping.MappingOrchestrationService;
 import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.configuration.CodeTemplateLoader;
 import dynamic.mapper.configuration.ServiceConfigurationService;
@@ -88,6 +85,7 @@ public class OperationController {
 
     private final ConnectorRegistry connectorRegistry;
     private final MappingService mappingService;
+    private final MappingOrchestrationService mappingOrchestrationService;
     private final ConnectorConfigurationService connectorConfigurationService;
     private final ServiceConfigurationService serviceConfigurationService;
     private final CodeTemplateLoader codeTemplateLoader;
@@ -364,22 +362,7 @@ public class OperationController {
     }
 
     private ResponseEntity<?> handleReloadMappings(String tenant) throws ConnectorRegistryException {
-        // Rebuild all caches at once
-        mappingService.rebuildMappingCaches(tenant, ConnectorId.INTERNAL);
-
-        // Reconcile each connector against the freshly rebuilt caches and the deployment map.
-        // This (un)subscribes inbound mappings and rebuilds the effective outbound set, so that
-        // mappings removed/un-deployed since the last reload are also dropped (not just added).
-        Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
-        connectorMap.values().forEach(client -> {
-            try {
-                client.reconcileSubscriptions();
-            } catch (Exception e) {
-                log.error("{} - Error reloading mappings for connector {}",
-                        tenant, client.getConnectorIdentifier(), e);
-            }
-        });
-
+        mappingOrchestrationService.reloadMappings(tenant);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -388,17 +371,7 @@ public class OperationController {
 
         // Apply the now-empty deployment live (same as a deployment PUT): without this,
         // connectors keep their inbound subscriptions until a reconnect or reload.
-        Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
-        if (connectorMap != null) {
-            connectorMap.values().forEach(client -> {
-                try {
-                    client.reconcileSubscriptions();
-                } catch (Exception e) {
-                    log.error("{} - Error reconciling connector {} after deployment map reset",
-                            tenant, client.getConnectorIdentifier(), e);
-                }
-            });
-        }
+        mappingOrchestrationService.reconcileConnectors(tenant, id -> true);
 
         c8YAgent.createLoggingEvent(
                 "Deployment map reset: all mappings are now undeployed",
@@ -425,28 +398,8 @@ public class OperationController {
         String version = (versionParam != null && !versionParam.isBlank()) ? versionParam.trim() : null;
         Mapping updatedMapping = mappingService.setActivationMapping(tenant, id, activation, version);
 
-        // Only the connectors this mapping is deployed to can have a subscription to
-        // (un)register; other connectors were never subscribed and reconcile independently
-        // when the deployment map itself changes (see DeploymentController). Mirrors
-        // MappingController's notifyDeployedConnectorsInbound for create/update.
-        List<String> deployedConnectorIds = mappingService.getDeploymentMapEntry(tenant, updatedMapping.getIdentifier());
-        Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
-        Map<String, String> failed = new HashMap<>();
-        for (AConnectorClient client : connectorMap.values()) {
-            if (!deployedConnectorIds.contains(client.getConnectorIdentifier())) {
-                continue;
-            }
-            if (updatedMapping.getDirection() == Direction.INBOUND) {
-                if (!client.updateSubscriptionForInbound(updatedMapping, false, true)) {
-                    ConnectorConfiguration conf = client.getConnectorConfiguration();
-                    failed.put(conf.getIdentifier(), conf.getName());
-                }
-            } else {
-                client.updateSubscriptionForOutbound(updatedMapping, false, true);
-            }
-        }
-
-        if (failed.size() > 0) {
+        Map<String, String> failed = mappingOrchestrationService.applyActivation(tenant, updatedMapping);
+        if (!failed.isEmpty()) {
             return new ResponseEntity<Map<String, String>>(failed, HttpStatus.BAD_REQUEST);
         }
         return ResponseEntity.status(HttpStatus.CREATED).build();

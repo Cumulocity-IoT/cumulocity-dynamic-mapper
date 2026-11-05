@@ -39,6 +39,7 @@ class DeploymentControllerTest {
         mappingService = mock(MappingService.class);
         connectorConfigurationService = mock(ConnectorConfigurationService.class);
         controller = new DeploymentController(mock(ConnectorRegistry.class), mappingService,
+                mock(dynamic.mapper.mapping.MappingOrchestrationService.class),
                 connectorConfigurationService, contextService);
     }
 

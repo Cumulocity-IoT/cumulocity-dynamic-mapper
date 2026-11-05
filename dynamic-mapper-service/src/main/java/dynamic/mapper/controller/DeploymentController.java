@@ -54,6 +54,7 @@ import dynamic.mapper.model.DeploymentMapEntry;
 import dynamic.mapper.model.DeploymentMapEntryExpanded;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
+import dynamic.mapper.mapping.MappingOrchestrationService;
 import dynamic.mapper.mapping.MappingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -76,6 +77,7 @@ public class DeploymentController {
 
 	private final ConnectorRegistry connectorRegistry;
 	private final MappingService mappingService;
+	private final MappingOrchestrationService mappingOrchestrationService;
 	private final ConnectorConfigurationService connectorConfigurationService;
 	private final ContextService<UserCredentials> contextService;
 
@@ -260,7 +262,7 @@ public class DeploymentController {
 				// Apply the new deployment immediately: reconcile the affected connectors so the
 				// mapping is (un)subscribed live. Without this the change is only persisted and would
 				// not take effect until a connector reconnect or an explicit RELOAD_MAPPINGS.
-				reconcileConnectors(tenant, affected);
+				mappingOrchestrationService.reconcileConnectors(tenant, affected::contains);
 				return ResponseEntity.status(HttpStatus.CREATED).build();
 			} catch (Exception ex) {
 				log.error("{} - Error updating deployment for mapping: {}", tenant, mappingIdentifier, ex);
@@ -289,30 +291,6 @@ public class DeploymentController {
 			log.warn("{} - Rejecting deployment with unknown connector identifier(s): {}", tenant, unknown);
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
 					"Unknown connector identifier(s): " + unknown);
-		}
-	}
-
-	/**
-	 * Reconcile the subscriptions of the given connectors against the current deployment map.
-	 * Only connectors whose identifier is in {@code affectedConnectorIdentifiers} are touched;
-	 * each is reconciled independently so a failure on one does not prevent the others.
-	 */
-	private void reconcileConnectors(String tenant, Set<String> affectedConnectorIdentifiers)
-			throws ConnectorRegistryException {
-		Map<String, AConnectorClient> connectorMap = connectorRegistry.getClientsForTenant(tenant);
-		if (connectorMap == null) {
-			return;
-		}
-		for (AConnectorClient client : connectorMap.values()) {
-			if (!affectedConnectorIdentifiers.contains(client.getConnectorIdentifier())) {
-				continue;
-			}
-			try {
-				client.reconcileSubscriptions();
-			} catch (Exception e) {
-				log.error("{} - Error reconciling subscriptions for connector {} after deployment change",
-						tenant, client.getConnectorIdentifier(), e);
-			}
 		}
 	}
 

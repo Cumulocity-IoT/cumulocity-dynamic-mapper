@@ -73,7 +73,7 @@ class MappingControllerTest {
     private static final String TENANT = "testTenant";
 
     @Mock
-    private ConnectorRegistry connectorRegistry;
+    private dynamic.mapper.mapping.MappingOrchestrationService mappingOrchestrationService;
 
     @Mock
     private MappingService mappingService;
@@ -85,7 +85,7 @@ class MappingControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new MappingController(connectorRegistry, mappingService, contextService);
+        controller = new MappingController(mappingOrchestrationService, mappingService, contextService);
 
         UserCredentials creds = mock(UserCredentials.class);
         when(creds.getTenant()).thenReturn(TENANT);

@@ -89,6 +89,7 @@ class OperationControllerTest {
     private static final String TENANT = "testTenant";
 
     @Mock private ConnectorRegistry connectorRegistry;
+    @Mock private dynamic.mapper.mapping.MappingOrchestrationService mappingOrchestrationService;
     @Mock private MappingService mappingService;
     @Mock private ConnectorConfigurationService connectorConfigurationService;
     @Mock private ServiceConfigurationService serviceConfigurationService;
@@ -109,7 +110,7 @@ class OperationControllerTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        controller = new OperationController(connectorRegistry, mappingService, connectorConfigurationService,
+        controller = new OperationController(connectorRegistry, mappingService, mappingOrchestrationService, connectorConfigurationService,
                 serviceConfigurationService, mock(CodeTemplateLoader.class), connectorLifecycleService, c8YAgent, contextService, serviceRegistry,
                 cacheManager, deploymentMapService, mappingStatusService, identityFacade, inventoryFacade, flowStateStore,
                 extensionManager, objectMapper);
