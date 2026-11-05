@@ -68,6 +68,7 @@ import dynamic.mapper.model.status.LoggingEventType;
 import org.joda.time.DateTime;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.configuration.CodeTemplateLoader;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.mapping.deployment.DeploymentMapService;
 import dynamic.mapper.mapping.status.MappingStatusService;
@@ -93,6 +94,7 @@ public class OperationController {
     private final MappingService mappingService;
     private final ConnectorConfigurationService connectorConfigurationService;
     private final ServiceConfigurationService serviceConfigurationService;
+    private final CodeTemplateLoader codeTemplateLoader;
     private final ConnectorLifecycleService connectorLifecycleService;
     private final C8YAgent c8YAgent;
     private final ContextService<UserCredentials> contextService;
@@ -345,7 +347,7 @@ public class OperationController {
         ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         log.debug("{} - Init system code template", tenant);
 
-        serviceConfigurationService.initCodeTemplates(serviceConfiguration, true);
+        codeTemplateLoader.initCodeTemplates(serviceConfiguration, true);
 
         try {
             serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);

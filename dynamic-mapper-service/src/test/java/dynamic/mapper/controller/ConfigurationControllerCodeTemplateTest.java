@@ -52,6 +52,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dynamic.mapper.configuration.CodeTemplate;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.configuration.ServiceConfiguration;
+import dynamic.mapper.configuration.CodeTemplateHeaderService;
+import dynamic.mapper.configuration.CodeTemplateLoader;
+import dynamic.mapper.configuration.CodeTemplateService;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
@@ -99,6 +102,8 @@ class ConfigurationControllerCodeTemplateTest {
                 mock(MappingService.class),
                 mock(ConnectorConfigurationService.class),
                 serviceConfigurationService,
+                new CodeTemplateService(serviceConfigurationService, mock(CodeTemplateLoader.class),
+                        new CodeTemplateHeaderService(new ObjectMapper()), serviceRegistry),
                 mock(ConnectorLifecycleService.class),
                 contextService,
                 serviceRegistry,
@@ -197,7 +202,9 @@ class ConfigurationControllerCodeTemplateTest {
         ResponseEntity<HttpStatus> response = controller.updateCodeTemplate("custom", replacement);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("b3RoZXI=", codeTemplates.get("custom").code);
+        // the real header service now runs, so the stored code is the new body under a regenerated header
+        String stored = new String(java.util.Base64.getDecoder().decode(codeTemplates.get("custom").code));
+        assertTrue(stored.endsWith("other"), stored);
     }
 
     @Test

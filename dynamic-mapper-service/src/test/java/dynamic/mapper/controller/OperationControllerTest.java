@@ -70,6 +70,7 @@ import org.springframework.web.server.ResponseStatusException;
 import dynamic.mapper.model.ServiceOperation;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.mapping.MappingService;
+import dynamic.mapper.configuration.CodeTemplateLoader;
 import dynamic.mapper.configuration.ServiceConfigurationService;
 import dynamic.mapper.processor.flow.FlowStateStore;
 import dynamic.mapper.mapping.deployment.DeploymentMapService;
@@ -109,7 +110,7 @@ class OperationControllerTest {
     @BeforeEach
     void setUp() throws Exception {
         controller = new OperationController(connectorRegistry, mappingService, connectorConfigurationService,
-                serviceConfigurationService, connectorLifecycleService, c8YAgent, contextService, serviceRegistry,
+                serviceConfigurationService, mock(CodeTemplateLoader.class), connectorLifecycleService, c8YAgent, contextService, serviceRegistry,
                 cacheManager, deploymentMapService, mappingStatusService, identityFacade, inventoryFacade, flowStateStore,
                 extensionManager, objectMapper);
 

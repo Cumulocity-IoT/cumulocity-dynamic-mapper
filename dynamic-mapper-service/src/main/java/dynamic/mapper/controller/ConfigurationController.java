@@ -29,9 +29,9 @@ import java.util.regex.Pattern;
 
 import jakarta.validation.Valid;
 import dynamic.mapper.configuration.CodeTemplate;
+import dynamic.mapper.configuration.CodeTemplateService;
 import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ServiceConfiguration;
-import dynamic.mapper.configuration.TemplateType;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.ConnectorType;
 import dynamic.mapper.connector.core.client.AConnectorClient;
@@ -110,6 +110,7 @@ public class ConfigurationController {
     private final MappingService mappingService;
     private final ConnectorConfigurationService connectorConfigurationService;
     private final ServiceConfigurationService serviceConfigurationService;
+    private final CodeTemplateService codeTemplateService;
     private final ConnectorLifecycleService connectorLifecycleService;
     private final ContextService<UserCredentials> contextService;
     private final ServiceRegistry serviceRegistry;
@@ -607,32 +608,11 @@ public class ConfigurationController {
     public ResponseEntity<CodeTemplate> getCodeTemplate(
             @Parameter(description = "The unique ID of the code template", example = "shared") @PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
-        ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         log.debug("{} - Get code template: {}", tenant, id);
-
-        Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
-        if (codeTemplates == null || codeTemplates.isEmpty()) {
-            // Initialize code templates from properties if not already set
-            serviceConfigurationService.initCodeTemplates(serviceConfiguration, false);
-            codeTemplates = serviceConfiguration.getCodeTemplates();
-
-            try {
-                serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-                serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-            } catch (JsonProcessingException ex) {
-                log.error("{} - Error saving service configuration with code templates: {}", tenant, ex);
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
-            }
-        }
-
-        CodeTemplate result = codeTemplates.get(id);
-        if (result == null) {
-            // Template not found - return 404 Not Found
-            log.warn("{} - Code template with ID [{}] not found", tenant, id);
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        } else {
-            // Template exists - return it with 200 OK
-            return new ResponseEntity<>(result, HttpStatus.OK);
+        try {
+            return new ResponseEntity<>(codeTemplateService.get(tenant, id), HttpStatus.OK);
+        } catch (CodeTemplateService.CodeTemplateException ex) {
+            return codeTemplateFailure(ex);
         }
     }
 
@@ -655,62 +635,12 @@ public class ConfigurationController {
     public ResponseEntity<CodeTemplate> deleteCodeTemplate(
             @Parameter(description = "The unique ID of the code template", example = "custom-template") @PathVariable String id) {
         String tenant = contextService.getContext().getTenant();
-        ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         log.debug("{} - Delete code template: {}", tenant, id);
-
-        Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
-        if (codeTemplates == null || codeTemplates.isEmpty()) {
-            // Initialize code templates from properties if not already set
-            serviceConfigurationService.initCodeTemplates(serviceConfiguration, false);
-            codeTemplates = serviceConfiguration.getCodeTemplates();
-
-            try {
-                serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-                serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-            } catch (JsonProcessingException ex) {
-                log.error("{} - Error saving service configuration with code templates: {}", tenant, ex);
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
-            }
-        }
-        // Checked before the try: both of these are documented outcomes, and the blanket
-        // catch(Exception) below would otherwise turn them into a 500 — the NPE on a missing
-        // template made the 404 branch at the end of this method unreachable, and the 406 was
-        // swallowed because ResponseStatusException is itself a RuntimeException.
-        CodeTemplate result = codeTemplates.get(id);
-        if (result == null) {
-            log.warn("{} - Code template with ID [{}] not found", tenant, id);
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        if (result.internal) {
-            throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE,
-                    "Deletion of internal templates not allowed");
-        }
-        // SHARED is customer-editable and so not internal, but every GraalVM engine loads it;
-        // removing it would make engine creation fail for the tenant. Clearing its code is the supported way.
-        if (TemplateType.SHARED.name().equals(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE,
-                    "The SHARED template cannot be deleted; clear its code instead");
-        }
-
         try {
-            result = codeTemplates.remove(id);
-            serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-
-            // Clear cached GraalVM sources if SHARED or SYSTEM templates are deleted
-            // (Though this should rarely happen since they're typically marked as internal)
-            if (TemplateType.SHARED.name().equals(id)) {
-                serviceRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, "");
-                log.info("{} - Cleared cached SHARED code source after deletion", tenant);
-            } else if (TemplateType.SYSTEM.name().equals(id)) {
-                serviceRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, "");
-                log.info("{} - Cleared cached SYSTEM code source after deletion", tenant);
-            }
-        } catch (Exception ex) {
-            log.error("{} - Error updating code template [{}]", tenant, id, ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            return new ResponseEntity<>(codeTemplateService.delete(tenant, id), HttpStatus.OK);
+        } catch (CodeTemplateService.CodeTemplateException ex) {
+            return codeTemplateFailure(ex);
         }
-        serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-        return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
     @Operation(summary = "Get all code templates", description = "Returns all code templates for the current tenant including both system and custom templates.")
@@ -721,11 +651,12 @@ public class ConfigurationController {
     @GetMapping(value = "/code", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, CodeTemplate>> getCodeTemplates() {
         String tenant = contextService.getContext().getTenant();
-        ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
         log.debug("{} - Get code templates", tenant);
-
-        Map<String, CodeTemplate> codeTemplates = getCodeTemplates(tenant, serviceConfiguration);
-        return new ResponseEntity<>(codeTemplates, HttpStatus.OK);
+        try {
+            return new ResponseEntity<>(codeTemplateService.getAll(tenant), HttpStatus.OK);
+        } catch (CodeTemplateService.CodeTemplateException ex) {
+            throw toStatusException(ex);
+        }
     }
 
     @Operation(summary = "Update code template", description = """
@@ -749,62 +680,11 @@ public class ConfigurationController {
     public ResponseEntity<HttpStatus> updateCodeTemplate(
             @Parameter(description = "The unique ID of the code template", example = "custom-template") @PathVariable String id,
             @Valid @RequestBody CodeTemplate codeTemplate) {
-        if (codeTemplate.id != null && !id.equals(codeTemplate.id)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    String.format("Path id '%s' does not match body id '%s'", id, codeTemplate.id));
-        }
-        codeTemplate.id = id;
         String tenant = contextService.getContext().getTenant();
         try {
-            ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-            Map<String, CodeTemplate> codeTemplates = getCodeTemplates(tenant, serviceConfiguration);
-
-            // A read-only template is framework-owned (SYSTEM holds the Java bindings the runtime
-            // needs). The UI disables its save button, but that was the ONLY thing stopping an
-            // overwrite — a direct API call could replace SYSTEM and break every Smart Function
-            // mapping in the tenant. SYSTEM is additionally re-loaded from the classpath on every
-            // startup, so such an edit would be silently reverted anyway; refusing it is clearer.
-            CodeTemplate existing = codeTemplates.get(id);
-            if (existing != null && existing.readonly) {
-                throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE,
-                        String.format("Template '%s' is read-only and cannot be modified", id));
-            }
-
-            // A hand-edit of @name / @description in the header is adopted before the header is
-            // regenerated from the fields, which would otherwise overwrite it.
-            if (existing != null) {
-                serviceConfigurationService.adoptHeaderMetadataEdits(codeTemplate, existing);
-                // A client that predates the sample fields drops them on a round-trip; keep the
-                // stored values rather than persisting a null over them.
-                if (codeTemplate.samplePayload == null) {
-                    codeTemplate.samplePayload = existing.samplePayload;
-                }
-                if (codeTemplate.sampleTopic == null) {
-                    codeTemplate.sampleTopic = existing.sampleTopic;
-                }
-            }
-            serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate);
-            codeTemplates.put(id, codeTemplate);
-            serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-            serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-
-            // Invalidate cached GraalVM sources if SHARED or SYSTEM templates are updated
-            if (TemplateType.SHARED.name().equals(id)) {
-                serviceRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, codeTemplate.getCode());
-                log.info("{} - Invalidated and updated cached SHARED code source", tenant);
-            } else if (TemplateType.SYSTEM.name().equals(id)) {
-                serviceRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, codeTemplate.getCode());
-                log.info("{} - Invalidated and updated cached SYSTEM code source", tenant);
-            }
-
-            log.debug("{} - Updated code template", tenant);
-        } catch (ResponseStatusException ex) {
-            // A deliberate status (e.g. the read-only refusal above) must not be flattened to 500.
-            log.warn("{} - Error updating code template [{}]: {}", tenant, id, ex.getReason());
-            throw ex;
-        } catch (Exception ex) {
-            log.error("{} - Error updating code template [{}]", tenant, id, ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            codeTemplateService.update(tenant, id, codeTemplate);
+        } catch (CodeTemplateService.CodeTemplateException ex) {
+            throw toStatusException(ex);
         }
         return new ResponseEntity<HttpStatus>(HttpStatus.OK);
     }
@@ -826,71 +706,30 @@ public class ConfigurationController {
             @Valid @RequestBody CodeTemplate codeTemplate) {
         String tenant = contextService.getContext().getTenant();
         try {
-            ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-            Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
-            if (codeTemplates.containsKey(codeTemplate.id)) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        String.format("Template with id '%s' already exists", codeTemplate.id));
-            }
-            // `defaultTemplate` means "this is the template a new mapping of this type starts
-            // from", and the seeding code expresses that by giving it the type's name as its id.
-            // A template with any other id therefore cannot be the default, whatever the request
-            // says. The UI's Duplicate action used to copy the flag along with the rest of the
-            // template, which left two templates of one type claiming it; the next startup then
-            // saw the type's default as already present and handed the shipped template a UUID id
-            // instead of its canonical one, breaking the editor's lookup of the starting template.
-            if (codeTemplate.defaultTemplate && codeTemplate.templateType != null
-                    && !codeTemplate.templateType.name().equals(codeTemplate.id)) {
-                log.info("{} - Ignoring defaultTemplate=true on new template [{}]: only '{}' can be "
-                        + "the default for {}", tenant, codeTemplate.id,
-                        codeTemplate.templateType.name(), codeTemplate.templateType);
-                codeTemplate.defaultTemplate = false;
-            }
-
-            serviceConfigurationService.rectifyHeaderInCodeTemplate(codeTemplate);
-            codeTemplates.put(codeTemplate.id, codeTemplate);
-            serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-            serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-
-            // Invalidate cached GraalVM sources if SHARED or SYSTEM templates are created
-            if (TemplateType.SHARED.name().equals(codeTemplate.id)) {
-                serviceRegistry.getGraalVMContextService().updateGraalsSourceShared(tenant, codeTemplate.getCode());
-                log.info("{} - Created and cached SHARED code source", tenant);
-            } else if (TemplateType.SYSTEM.name().equals(codeTemplate.id)) {
-                serviceRegistry.getGraalVMContextService().updateGraalsSourceSystem(tenant, codeTemplate.getCode());
-                log.info("{} - Created and cached SYSTEM code source", tenant);
-            }
-
-            log.debug("{} - Create code template", tenant);
-        } catch (ResponseStatusException ex) {
-            log.warn("{} - Error creating code template: {}", tenant, ex.getReason());
-            throw ex;
-        } catch (JsonProcessingException ex) {
-            log.error("{} - Error creating code template", tenant, ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
-        } catch (Exception ex) {
-            log.error("{} - Error creating code template", tenant, ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            codeTemplateService.create(tenant, codeTemplate);
+        } catch (CodeTemplateService.CodeTemplateException ex) {
+            throw toStatusException(ex);
         }
         return new ResponseEntity<HttpStatus>(HttpStatus.CREATED);
     }
 
-    private Map<String, CodeTemplate> getCodeTemplates(String tenant, ServiceConfiguration serviceConfiguration) {
-        Map<String, CodeTemplate> codeTemplates = serviceConfiguration.getCodeTemplates();
-        if (codeTemplates == null || codeTemplates.isEmpty()) {
-            // Initialize code templates from properties if not already set
-            serviceConfigurationService.initCodeTemplates(serviceConfiguration, false);
-            codeTemplates = serviceConfiguration.getCodeTemplates();
-
-            try {
-                serviceConfigurationService.saveServiceConfiguration(tenant, serviceConfiguration);
-                serviceRegistry.addServiceConfiguration(tenant, serviceConfiguration);
-            } catch (JsonProcessingException ex) {
-                log.error("{} - Error saving service configuration with code templates", tenant, ex);
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
-            }
+    /** A missing template answers with an empty 404; every other failure becomes an error response. */
+    private <T> ResponseEntity<T> codeTemplateFailure(CodeTemplateService.CodeTemplateException ex) {
+        if (ex.getReason() == CodeTemplateService.Reason.NOT_FOUND) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-        return codeTemplates;
+        throw toStatusException(ex);
+    }
+
+    private ResponseStatusException toStatusException(CodeTemplateService.CodeTemplateException ex) {
+        HttpStatus status = switch (ex.getReason()) {
+            case NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case NOT_ALLOWED -> HttpStatus.NOT_ACCEPTABLE;
+            case ID_MISMATCH -> HttpStatus.BAD_REQUEST;
+            case ALREADY_EXISTS -> HttpStatus.CONFLICT;
+            case FAILED -> HttpStatus.INTERNAL_SERVER_ERROR;
+        };
+        return new ResponseStatusException(status, ex.getMessage());
     }
 
     // TEST ONLY — not exposed in OpenAPI docs
