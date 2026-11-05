@@ -24,7 +24,6 @@ package dynamic.mapper.controller;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
 import jakarta.validation.Valid;
@@ -34,7 +33,6 @@ import dynamic.mapper.configuration.ConnectorConfiguration;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.ConnectorSpecification;
 import dynamic.mapper.connector.core.client.ConnectorType;
-import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.core.*;
@@ -57,7 +55,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
@@ -106,7 +103,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class ConfigurationController {
 
     private final ConnectorRegistry connectorRegistry;
-    private final ConnectorClientFactory connectorClientFactory;
     private final MappingService mappingService;
     private final ConnectorConfigurationService connectorConfigurationService;
     private final ServiceConfigurationService serviceConfigurationService;
@@ -208,24 +204,12 @@ public class ConfigurationController {
                     }
                     """))) @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
-        if (configuration.getConnectorType().equals(ConnectorType.HTTP)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Can't create a HttpConnector!");
-        }
-        // Remove sensitive data before printing to log
-        ConnectorSpecification connectorSpecification = connectorRegistry
-                .getConnectorSpecification(configuration.getConnectorType());
-        ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
-        log.info("{} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
-            // A new configuration has no stored secret, so a masked value (e.g. from an import) is dropped, not saved.
-            configuration.restoreMaskedSecrets(connectorSpecification, null);
-            dropInactiveProperties(tenant, connectorSpecification, configuration);
-            connectorConfigurationService.saveConnectorConfiguration(configuration);
-            return ResponseEntity.status(HttpStatus.CREATED).build();
-        } catch (Exception ex) {
-            log.error("{} - Error creating connector instance", tenant, ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            connectorLifecycleService.createConnectorConfiguration(tenant, configuration);
+        } catch (ConnectorLifecycleService.ConnectorOperationException ex) {
+            throw Utils.toStatusException(ex);
         }
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @Operation(summary = "Get connector configurations", description = """
@@ -338,74 +322,13 @@ public class ConfigurationController {
         String tenant = contextService.getContext().getTenant();
         log.info("{} - Delete connection instance {}", tenant, identifier);
         try {
-            ConnectorConfiguration configuration = connectorConfigurationService.getConnectorConfiguration(identifier,
-                    tenant);
-            if (configuration == null) {
-                // Idempotent / defensive: nothing to delete. Avoids a NullPointerException
-                // (and a misleading 500) when deleting an already-removed connector.
-                log.info("{} - Connector {} not found, nothing to delete", tenant, identifier);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Connector not found: " + identifier);
+            connectorLifecycleService.deleteConnector(tenant, identifier);
+        } catch (ConnectorLifecycleService.ConnectorOperationException ex) {
+            if (ex.getReason() == ConnectorLifecycleService.Reason.FAILED) {
+                throw Utils.toStatusException(ex);
             }
-            if (configuration.getConnectorType().equals(ConnectorType.HTTP)) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Can't delete a HttpConnector!");
-            }
-
-            boolean wasDisabled = !configuration.getEnabled();
-            boolean needsReconnect = wasDisabled &&
-                (configuration.getConnectorType().equals(ConnectorType.CUMULOCITY_MQTT_SERVICE_PULSAR));
-
-            // The teardown below MUST always run — even if the (optional) temporary
-            // re-enable + reconnect or the resource cleanup fails. Otherwise a failed
-            // delete of a disabled Pulsar connector would leave it persisted with
-            // enabled=true (resurrected and reconnected) instead of being removed.
-            try {
-                // For Pulsar connectors that are disabled, temporarily enable them so the
-                // broker subscription can be removed. This briefly persists enabled=true;
-                // the finally block guarantees the configuration is still deleted.
-                if (needsReconnect) {
-                    log.info("{} - Temporarily enabling connector {} to delete Pulsar subscription", tenant, identifier);
-                    configuration.setEnabled(true);
-                    connectorConfigurationService.saveConnectorConfiguration(configuration);
-
-                    ServiceConfiguration serviceConfiguration = serviceConfigurationService.getServiceConfiguration(tenant);
-                    Future<?> connectTask = connectorLifecycleService.initializeConnectorByConfiguration(configuration, serviceConfiguration, tenant);
-
-                    // Wait for connector to connect (with timeout)
-                    try {
-                        connectTask.get(10, java.util.concurrent.TimeUnit.SECONDS);
-                    } catch (Exception e) {
-                        log.warn("{} - Could not reconnect connector {} for subscription cleanup: {}", tenant, identifier, e.getMessage());
-                        // Continue anyway - deleteResources() has fallback logic
-                    }
-                }
-
-                // Delete connector-specific resources (e.g., Pulsar subscriptions)
-                connectorLifecycleService.deleteConnectorResources(tenant, identifier);
-            } finally {
-                // Best-effort teardown: one failing step must not skip the others or
-                // leave the connector configuration behind.
-                try {
-                    connectorLifecycleService.disableConnector(tenant, identifier);
-                } catch (Exception e) {
-                    log.warn("{} - Error disabling connector {} during delete: {}", tenant, identifier, e.getMessage());
-                }
-                try {
-                    // Clean up Notification 2.0 subscriptions
-                    connectorLifecycleService.shutdownAndRemoveConnector(tenant, identifier);
-                } catch (Exception e) {
-                    log.warn("{} - Error shutting down connector {} during delete: {}", tenant, identifier, e.getMessage());
-                }
-                connectorConfigurationService.deleteConnectorConfiguration(identifier);
-                try {
-                    mappingService.removeConnectorFromDeploymentMap(tenant, identifier);
-                } catch (Exception e) {
-                    log.warn("{} - Error removing connector {} from deployment map during delete: {}", tenant, identifier, e.getMessage());
-                }
-                connectorRegistry.removeClientFromStatusMap(tenant, identifier);
-            }
-        } catch (Exception ex) {
-            log.error("{} - Error deleting connector instance: {}", tenant, identifier, ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            // a missing or protected connector is answered with the reason as the body
+            return ResponseEntity.status(Utils.statusOf(ex)).body(ex.getMessage());
         }
         return ResponseEntity.status(HttpStatus.OK).body(identifier);
     }
@@ -423,35 +346,10 @@ public class ConfigurationController {
     public ResponseEntity<ConnectionTestResult> testConnectionConfiguration(
             @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
-        ConnectorSpecification spec = connectorRegistry.getConnectorSpecification(configuration.getConnectorType());
-        if (spec == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported connector type");
-        }
         try {
-            ConnectorConfiguration original = configuration.getIdentifier() == null ? null
-                    : connectorConfigurationService.getConnectorConfiguration(configuration.getIdentifier(), tenant);
-            configuration.restoreMaskedSecrets(spec, original);
-            configuration.copyPredefinedValues(spec);
-            AConnectorClient client = AConnectorClient
-                    .constructForProbe(() -> connectorClientFactory.createConnectorClient(configuration, "", tenant));
-            try {
-                if (client == null || !client.supportsConnectionTest()) {
-                    return ResponseEntity.ok(ConnectionTestResult.failed(
-                            "Connection test is not supported for this connector type", null));
-                }
-                // The registry's specification only has generic defaults; a client may predefine values of its own
-                // (e.g. the MQTT Service URL and the tenant's credentials), exactly as loadConfiguration() applies them.
-                configuration.copyPredefinedValues(client.getConnectorSpecification());
-                log.info("{} - Testing connector configuration, type: {}", tenant, configuration.getConnectorType());
-                return ResponseEntity.ok(client.testConnection());
-            } finally {
-                if (client != null) {
-                    client.discardProbe();
-                }
-            }
-        } catch (Exception ex) {
-            log.error("{} - Error testing connector configuration", tenant, ex);
-            return ResponseEntity.ok(ConnectionTestResult.failed("Test failed: " + ex.getMessage(), null));
+            return ResponseEntity.ok(connectorLifecycleService.testConnection(tenant, configuration));
+        } catch (ConnectorLifecycleService.ConnectorOperationException ex) {
+            throw Utils.toStatusException(ex);
         }
     }
 
@@ -492,27 +390,12 @@ public class ConfigurationController {
                     """))) @Valid @RequestBody ConnectorConfiguration configuration) {
         String tenant = contextService.getContext().getTenant();
         log.info("{} - Update connection instance {}", tenant, identifier);
-        // make sure we are using the correct identifier
-        configuration.setIdentifier(identifier);
-        // Remove sensitive data before printing to log
-        ConnectorSpecification connectorSpecification = connectorRegistry
-                .getConnectorSpecification(configuration.getConnectorType());
-        ConnectorConfiguration clonedConfig = configuration.getCleanedConfig(connectorSpecification);
-        log.info("{} - Post Connector configuration: {}", tenant, clonedConfig.toString());
         try {
-            // check if password filed was touched, e.g. != "****", then use password from
-            // new payload, otherwise copy password from previously saved configuration
-            ConnectorConfiguration originalConfiguration = connectorConfigurationService
-                    .getConnectorConfiguration(configuration.getIdentifier(), tenant);
-
-            configuration.restoreMaskedSecrets(connectorSpecification, originalConfiguration);
-            dropInactiveProperties(tenant, connectorSpecification, configuration);
-            connectorConfigurationService.saveConnectorConfiguration(configuration);
-        } catch (Exception ex) {
-            log.error("{} - Error updating connector instance: {}", tenant, identifier, ex);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(connectorLifecycleService.updateConnectorConfiguration(tenant, identifier, configuration));
+        } catch (ConnectorLifecycleService.ConnectorOperationException ex) {
+            throw Utils.toStatusException(ex);
         }
-        return ResponseEntity.status(HttpStatus.CREATED).body(configuration);
     }
 
     @Operation(summary = "Get service configuration", description = "Retrieves the service configuration for the current tenant including feature flags, cache settings, and operational parameters.")
@@ -750,21 +633,6 @@ public class ConfigurationController {
         } catch (Exception ex) {
             log.error("{} - [TEST] Error setting acceptedDeprecationNotice", tenant, ex);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getLocalizedMessage());
-        }
-    }
-
-    /**
-     * Removes the values of properties that do not apply to the configuration (their condition is not met), so
-     * that a stale value the UI no longer shows cannot stay active in the connector.
-     */
-    private void dropInactiveProperties(String tenant, ConnectorSpecification spec, ConnectorConfiguration configuration) {
-        if (spec == null || configuration.getProperties() == null) {
-            return;
-        }
-        List<String> removed = spec.removeInactiveProperties(configuration.getProperties());
-        if (!removed.isEmpty()) {
-            log.info("{} - Dropped properties that do not apply to connector {}: {}", tenant,
-                    configuration.getIdentifier(), removed);
         }
     }
 }
