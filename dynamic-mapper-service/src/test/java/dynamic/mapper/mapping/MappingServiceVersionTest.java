@@ -84,7 +84,8 @@ class MappingServiceVersionTest {
     void setUp() {
         service = spy(new MappingService(inventoryApi, mappingRepository, cacheManager, statusService,
                 resolverService, deploymentMapService, deviceToClientMapService, serviceRegistry,
-                subscriptionsService, mappingValidator, flowStateStore, mappingVersionService));
+                subscriptionsService, mappingValidator, flowStateStore, mappingVersionService,
+                org.mockito.Mockito.mock(org.springframework.context.ApplicationEventPublisher.class)));
     }
 
     private Mapping runnable() {

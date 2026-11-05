@@ -78,6 +78,7 @@ class MappingServiceFailureThresholdTest {
     @Mock private MappingVersionService mappingVersionService;
     @Mock private ConnectorRegistry connectorRegistry;
     @Mock private AConnectorClient connectorClient;
+    @Mock private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     private ExecutorService pool;
     private MappingService service;
@@ -87,7 +88,7 @@ class MappingServiceFailureThresholdTest {
         pool = Executors.newSingleThreadExecutor();
         MappingService real = new MappingService(inventoryApi, mappingRepository, cacheManager, statusService,
                 resolverService, deploymentMapService, deviceToClientMapService, serviceRegistry,
-                subscriptionsService, mappingValidator, flowStateStore, mappingVersionService);
+                subscriptionsService, mappingValidator, flowStateStore, mappingVersionService, eventPublisher);
         service = spy(real);
         lenient().when(serviceRegistry.getVirtualThreadPool()).thenReturn(pool);
         lenient().when(serviceRegistry.getConnectorRegistry()).thenReturn(connectorRegistry);
@@ -186,8 +187,8 @@ class MappingServiceFailureThresholdTest {
     }
 
     @Test
-    @DisplayName("deactivation also makes the deployed connectors drop the mapping")
-    void deactivationUnsubscribesDeployedConnectors() throws Exception {
+    @DisplayName("deactivation publishes an event so the deployed connectors drop the mapping")
+    void deactivationPublishesAnEventForTheConnectors() throws Exception {
         Mapping mapping = mapping(3);
         MappingStatus status = new MappingStatus();
         status.currentFailureCount = 3;
@@ -198,6 +199,21 @@ class MappingServiceFailureThresholdTest {
 
         awaitPool();
         // Otherwise the mapping would be flagged inactive while its topic stayed subscribed.
-        verify(connectorClient).updateSubscriptionForInbound(mapping, false, true);
+        verify(eventPublisher).publishEvent(new MappingDeactivatedEvent(TENANT, mapping));
+    }
+
+    @Test
+    @DisplayName("a failed deactivation publishes no event")
+    void aFailedDeactivationPublishesNoEvent() throws Exception {
+        Mapping mapping = mapping(3);
+        MappingStatus status = new MappingStatus();
+        status.currentFailureCount = 3;
+        when(statusService.incrementFailureCount(TENANT, mapping, status)).thenReturn(true);
+        doThrow(new RuntimeException("platform down")).when(service).setActivationMapping(TENANT, MO_ID, false, null);
+
+        service.increaseAndHandleFailureCount(TENANT, mapping, status);
+
+        awaitPool();
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
     }
 }

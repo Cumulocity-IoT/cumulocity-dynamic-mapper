@@ -30,7 +30,6 @@ import com.cumulocity.sdk.client.SDKException;
 import com.cumulocity.sdk.client.inventory.InventoryFilter;
 import com.cumulocity.sdk.client.inventory.ManagedObjectCollection;
 import dynamic.mapper.configuration.ConnectorId;
-import dynamic.mapper.connector.core.client.AConnectorClient;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.core.facade.InventoryFacade;
@@ -57,6 +56,7 @@ import org.springframework.validation.annotation.Validated;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.annotation.Order;
 
 /**
@@ -82,6 +82,7 @@ public class MappingService implements TenantScoped {
     private final MappingValidator mappingValidator;
     private final FlowStateStore flowStateStore;
     private final MappingVersionService mappingVersionService;
+    private final ApplicationEventPublisher eventPublisher;
 
     // Track dirty mappings that need to be persisted
     private final Map<String, Set<Mapping>> dirtyMappings = new ConcurrentHashMap<>();
@@ -1049,10 +1050,11 @@ public class MappingService implements TenantScoped {
                 }
                 Mapping deactivated = setActivationMapping(tenant, mapping.getId(), false, null);
                 // setActivationMapping only persists and updates the cache; the connectors have
-                // to be told separately, exactly as OperationController does for a manual
-                // (de)activation. Without this the mapping would be flagged inactive but its
-                // topic would stay subscribed, and every further message would keep failing.
-                notifyDeployedConnectorsOfDeactivation(tenant, deactivated != null ? deactivated : mapping);
+                // to be told separately, as for a manual (de)activation. The event makes
+                // MappingOrchestrationService do that; without it the mapping would be flagged
+                // inactive but its topic would stay subscribed, and every message would keep failing.
+                eventPublisher.publishEvent(
+                        new MappingDeactivatedEvent(tenant, deactivated != null ? deactivated : mapping));
                 log.warn("{} - Deactivated mapping {} after {} consecutive failures (maxFailureCount: {})",
                         tenant, mapping.displayLabel(), mappingStatus.getCurrentFailureCount(),
                         mapping.getMaxFailureCount());
@@ -1063,35 +1065,6 @@ public class MappingService implements TenantScoped {
                 deactivationsInFlight.remove(key);
             }
         });
-    }
-
-    /**
-     * Makes the connectors this mapping is deployed to drop it: inbound connectors release
-     * their topic subscription (reference-counted, so a topic shared with another active
-     * mapping stays subscribed), outbound connectors remove it from their applied set.
-     *
-     * <p>Best-effort per connector — one unreachable connector must not prevent the others
-     * from being updated.
-     */
-    private void notifyDeployedConnectorsOfDeactivation(String tenant, Mapping mapping) {
-        List<String> deployedConnectorIds = getDeploymentMapEntry(tenant, mapping.getIdentifier());
-        if (deployedConnectorIds == null || deployedConnectorIds.isEmpty()) {
-            return;
-        }
-        for (String connectorId : deployedConnectorIds) {
-            try {
-                AConnectorClient client = serviceRegistry.getConnectorRegistry()
-                        .getClientForTenant(tenant, connectorId);
-                if (Direction.OUTBOUND.equals(mapping.getDirection())) {
-                    client.updateSubscriptionForOutbound(mapping, false, true);
-                } else {
-                    client.updateSubscriptionForInbound(mapping, false, true);
-                }
-            } catch (Exception e) {
-                log.warn("{} - Could not update subscription on connector {} while deactivating mapping {}: {}",
-                        tenant, connectorId, mapping.displayLabel(), e.getMessage());
-            }
-        }
     }
 
     // ========== Deployment Map Operations ==========

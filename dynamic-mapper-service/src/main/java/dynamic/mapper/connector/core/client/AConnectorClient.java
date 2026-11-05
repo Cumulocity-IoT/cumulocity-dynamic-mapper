@@ -1096,6 +1096,21 @@ public abstract class AConnectorClient {
     }
 
     /**
+     * Applies the subscription change of a mapping in the direction the mapping has: inbound
+     * mappings (un)subscribe their topic, outbound mappings join or leave the applied set.
+     *
+     * @return {@code false} if an inbound subscription could not be updated; outbound changes
+     *         cannot fail and always return {@code true}
+     */
+    public boolean applyMappingSubscription(Mapping mapping, boolean create, boolean activationChanged) {
+        if (Direction.OUTBOUND.equals(mapping.getDirection())) {
+            updateSubscriptionForOutbound(mapping, create, activationChanged);
+            return true;
+        }
+        return updateSubscriptionForInbound(mapping, create, activationChanged);
+    }
+
+    /**
      * Update subscription for outbound mapping
      * Called when a mapping is created, updated, or its activation state changes
      */

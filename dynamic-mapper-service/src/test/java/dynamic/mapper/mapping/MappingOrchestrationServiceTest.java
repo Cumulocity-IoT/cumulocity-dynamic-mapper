@@ -47,7 +47,7 @@ class MappingOrchestrationServiceTest {
         conf.setIdentifier(id);
         conf.setName("name-" + id);
         when(c.getConnectorConfiguration()).thenReturn(conf);
-        when(c.updateSubscriptionForInbound(any(), anyBoolean(), anyBoolean())).thenReturn(true);
+        when(c.applyMappingSubscription(any(), anyBoolean(), anyBoolean())).thenReturn(true);
         clients.put(id, c);
         when(registry.getClientForTenant(TENANT, id)).thenReturn(c);
         return c;
@@ -129,13 +129,13 @@ class MappingOrchestrationServiceTest {
         AConnectorClient notDeployed = client("c3");
         Mapping m = mapping(Direction.INBOUND);
         when(mappingService.getDeploymentMapEntry(TENANT, "m1")).thenReturn(List.of("c1", "c2"));
-        when(refusing.updateSubscriptionForInbound(m, false, true)).thenReturn(false);
+        when(refusing.applyMappingSubscription(m, false, true)).thenReturn(false);
 
         Map<String, String> failed = service.applyActivation(TENANT, m);
 
         assertEquals(Map.of("c1", "name-c1"), failed);
-        verify(accepting).updateSubscriptionForInbound(m, false, true);
-        verify(notDeployed, never()).updateSubscriptionForInbound(any(), anyBoolean(), anyBoolean());
+        verify(accepting).applyMappingSubscription(m, false, true);
+        verify(notDeployed, never()).applyMappingSubscription(any(), anyBoolean(), anyBoolean());
     }
 
     @Test
@@ -146,7 +146,7 @@ class MappingOrchestrationServiceTest {
 
         assertTrue(service.applyActivation(TENANT, m).isEmpty());
 
-        verify(c).updateSubscriptionForOutbound(m, false, true);
+        verify(c).applyMappingSubscription(m, false, true);
     }
 
     @Test
@@ -171,5 +171,20 @@ class MappingOrchestrationServiceTest {
         org.mockito.InOrder order = org.mockito.Mockito.inOrder(mappingService, c);
         order.verify(mappingService).rebuildMappingCaches(TENANT, ConnectorId.INTERNAL);
         order.verify(c).reconcileSubscriptions();
+    }
+
+    @Test
+    void aDeactivatedMappingIsDroppedByItsDeployedConnectorsEvenWhenOneFails() throws Exception {
+        AConnectorClient failing = client("c1");
+        AConnectorClient healthy = client("c2");
+        AConnectorClient notDeployed = client("c3");
+        Mapping m = mapping(Direction.INBOUND);
+        when(mappingService.getDeploymentMapEntry(TENANT, "m1")).thenReturn(List.of("c1", "c2"));
+        doThrow(new RuntimeException("unreachable")).when(failing).applyMappingSubscription(m, false, true);
+
+        service.onMappingDeactivated(new MappingDeactivatedEvent(TENANT, m));
+
+        verify(healthy).applyMappingSubscription(m, false, true);
+        verify(notDeployed, never()).applyMappingSubscription(any(), anyBoolean(), anyBoolean());
     }
 }

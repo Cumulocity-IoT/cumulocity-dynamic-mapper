@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import dynamic.mapper.configuration.ConnectorConfiguration;
@@ -171,16 +172,40 @@ public class MappingOrchestrationService {
             if (!deployedConnectorIds.contains(client.getConnectorIdentifier())) {
                 continue;
             }
-            if (mapping.getDirection() == Direction.INBOUND) {
-                if (!client.updateSubscriptionForInbound(mapping, false, true)) {
-                    ConnectorConfiguration conf = client.getConnectorConfiguration();
-                    failed.put(conf.getIdentifier(), conf.getName());
-                }
-            } else {
-                client.updateSubscriptionForOutbound(mapping, false, true);
+            if (!client.applyMappingSubscription(mapping, false, true)) {
+                ConnectorConfiguration conf = client.getConnectorConfiguration();
+                failed.put(conf.getIdentifier(), conf.getName());
             }
         }
         return failed;
+    }
+
+    /**
+     * Makes the connectors this mapping is deployed to drop it after the service deactivated it:
+     * inbound connectors release their topic subscription (reference-counted, so a topic shared with
+     * another active mapping stays subscribed), outbound connectors remove it from their applied set.
+     * Without this the mapping would be flagged inactive while its topic stayed subscribed, and every
+     * further message would keep failing.
+     * <p>
+     * Best-effort per connector: one unreachable connector must not stop the others.
+     */
+    @EventListener
+    public void onMappingDeactivated(MappingDeactivatedEvent event) {
+        String tenant = event.tenant();
+        Mapping mapping = event.mapping();
+        List<String> deployedConnectorIds = mappingService.getDeploymentMapEntry(tenant, mapping.getIdentifier());
+        if (deployedConnectorIds == null || deployedConnectorIds.isEmpty()) {
+            return;
+        }
+        for (String connectorId : deployedConnectorIds) {
+            try {
+                connectorRegistry.getClientForTenant(tenant, connectorId)
+                        .applyMappingSubscription(mapping, false, true);
+            } catch (Exception e) {
+                log.warn("{} - Could not update subscription on connector {} while deactivating mapping {}: {}",
+                        tenant, connectorId, mapping.displayLabel(), e.getMessage());
+            }
+        }
     }
 
     // === Deployment map or mappings reloaded ===

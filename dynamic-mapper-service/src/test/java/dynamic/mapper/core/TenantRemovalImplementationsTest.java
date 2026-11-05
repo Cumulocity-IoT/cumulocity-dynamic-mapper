@@ -155,7 +155,8 @@ class TenantRemovalImplementationsTest {
         MappingService service = new MappingService(mock(InventoryFacade.class), repository, cache, status,
                 mock(MappingResolverService.class), deployment, mock(DeviceToClientMapService.class),
                 mock(ServiceRegistry.class), mock(MicroserviceSubscriptionsService.class),
-                mock(MappingValidator.class), flow, mock(MappingVersionService.class));
+                mock(MappingValidator.class), flow, mock(MappingVersionService.class),
+                mock(org.springframework.context.ApplicationEventPublisher.class));
         service.initializeTenant(TENANT);
 
         service.removeTenant(TENANT);
