@@ -27,13 +27,16 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 
 import org.joda.time.DateTime;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.MicroserviceCredentials;
+import com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent;
 import com.cumulocity.microservice.subscription.service.MicroserviceSubscriptionsService;
 import com.cumulocity.model.idtype.GId;
 import com.cumulocity.rest.representation.event.EventRepresentation;
@@ -73,8 +76,8 @@ public class ConnectorStatusEventService {
     private final TenantRegistry tenantRegistry;
     private final C8YAgent c8yAgent;
 
-    // The last status reported for the notification connection, so only a change is sent
-    private volatile ConnectorStatus previousConnectorStatus = ConnectorStatus.UNKNOWN;
+    // The last status reported for the notification connection of each tenant, so only a change is sent
+    private final Map<String, ConnectorStatus> previousConnectorStatus = new ConcurrentHashMap<>();
 
     public ConnectorStatusEventService(EventApi eventApi, MicroserviceSubscriptionsService subscriptionsService,
             ContextService<MicroserviceCredentials> contextService, IMapperConfiguration mapperConfiguration,
@@ -86,6 +89,12 @@ public class ConnectorStatusEventService {
         this.objectMapper = objectMapper;
         this.tenantRegistry = tenantRegistry;
         this.c8yAgent = c8yAgent;
+    }
+
+    /** Forgets the last notification status of a tenant that unsubscribed. */
+    @EventListener
+    public void onTenantUnsubscribed(MicroserviceSubscriptionRemovedEvent event) {
+        previousConnectorStatus.remove(event.getTenant());
     }
 
     private Semaphore semaphore() {
@@ -278,8 +287,8 @@ public class ConnectorStatusEventService {
             return;
         }
         if (tenantRegistry.getServiceConfiguration(tenant).getSendNotificationLifecycle()
-                && !(connectorStatus.equals(previousConnectorStatus))) {
-            previousConnectorStatus = connectorStatus;
+                && !connectorStatus.equals(previousConnectorStatus.get(tenant))) {
+            previousConnectorStatus.put(tenant, connectorStatus);
             Map<String, String> stMap = Map.ofEntries(
                     entry("status", connectorStatus.name()),
                     entry("message",

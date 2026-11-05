@@ -80,4 +80,31 @@ class ConnectorStatusEventServiceTest {
         verify(c8yAgent, never()).createLoggingEvent(anyString(), any(), anyString(), any(DateTime.class), anyString(),
                 any());
     }
+
+    @Test
+    void theLastStatusIsRememberedPerTenant() {
+        when(tenantRegistry.getServiceConfiguration("t2")).thenReturn(config);
+
+        service.sendNotificationLifecycle(TENANT, ConnectorStatus.CONNECTED, null);
+        service.sendNotificationLifecycle("t2", ConnectorStatus.CONNECTED, null); // same status, other tenant
+
+        verify(c8yAgent).createLoggingEvent(anyString(), eq(LoggingEventType.NOTIFICATION_EVENT_TYPE), anyString(),
+                any(DateTime.class), eq(TENANT), any());
+        verify(c8yAgent).createLoggingEvent(anyString(), eq(LoggingEventType.NOTIFICATION_EVENT_TYPE), anyString(),
+                any(DateTime.class), eq("t2"), any());
+    }
+
+    @Test
+    void anUnsubscribedTenantReportsItsFirstStatusAgainAfterResubscribing() {
+        service.sendNotificationLifecycle(TENANT, ConnectorStatus.CONNECTED, null);
+        com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent event =
+                mock(com.cumulocity.microservice.subscription.model.MicroserviceSubscriptionRemovedEvent.class);
+        when(event.getTenant()).thenReturn(TENANT);
+
+        service.onTenantUnsubscribed(event);
+        service.sendNotificationLifecycle(TENANT, ConnectorStatus.CONNECTED, null);
+
+        verify(c8yAgent, times(2)).createLoggingEvent(anyString(), eq(LoggingEventType.NOTIFICATION_EVENT_TYPE),
+                anyString(), any(DateTime.class), eq(TENANT), any());
+    }
 }
