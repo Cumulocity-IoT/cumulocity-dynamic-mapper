@@ -598,6 +598,73 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
         return certificateService.loadCertificateByName(certificateName, fingerprint, tenant, connectorName);
     }
 
+    private boolean isTransient(ProcessingContext<?> context) {
+        return context.getProcessingMode() != null && ProcessingMode.TRANSIENT.equals(context.getProcessingMode());
+    }
+
+    /** Creates the event, through the transient connector when the context asks for TRANSIENT processing. */
+    private EventRepresentation postEvent(ProcessingContext<?> context, String tenant, EventRepresentation event) throws Exception {
+        if (isTransient(context)) {
+            EventRepresentation created = processingModeService.callWithProcessingMode("TRANSIENT",
+                    (connector) -> (EventRepresentation) connector.post("/event/events", EVENT, event));
+            log.info("{} - Using TRANSIENT processing mode for event", tenant);
+            return created;
+        }
+        log.debug("{} - Using PERSISTENT processing mode for event", tenant);
+        return eventApi.create(event);
+    }
+
+    /** Creates the alarm, through the transient connector when the context asks for TRANSIENT processing. */
+    private AlarmRepresentation postAlarm(ProcessingContext<?> context, String tenant, AlarmRepresentation alarm) throws Exception {
+        if (isTransient(context)) {
+            AlarmRepresentation created = processingModeService.callWithProcessingMode("TRANSIENT",
+                    (connector) -> (AlarmRepresentation) connector.post("/alarm/alarms", ALARM, alarm));
+            log.info("{} - Using TRANSIENT processing mode for alarm", tenant);
+            return created;
+        }
+        log.debug("{} - Using PERSISTENT processing mode for alarm", tenant);
+        return alarmApi.create(alarm);
+    }
+
+    /** Creates the measurements in bulk, through the transient connector when the context asks for TRANSIENT processing. */
+    private MeasurementCollectionRepresentation postMeasurements(ProcessingContext<?> context, String tenant,
+            MeasurementCollectionRepresentation measurements) throws Exception {
+        if (isTransient(context)) {
+            MeasurementCollectionRepresentation created = processingModeService.callWithProcessingMode("TRANSIENT",
+                    (connector) -> (MeasurementCollectionRepresentation) connector.post(
+                            MEASUREMENT_COLLECTION_PATH, MEASUREMENT_COLLECTION, measurements));
+            log.info("{} - Using TRANSIENT processing mode for measurement(s)", tenant);
+            return created;
+        }
+        log.debug("{} - Using PERSISTENT processing mode for measurement(s)", tenant);
+        return measurementApi.createBulk(measurements);
+    }
+
+    /** Calls a custom Cumulocity route with the request's method and payload; the body of the answer becomes the response. */
+    private void callCustomRoute(String tenant, DynamicMapperRequest request, String payload) {
+        String customPath = request.getPathCumulocity();
+        RequestMethod requestMethod = request.getMethod();
+        HttpMethod httpMethod;
+        switch (requestMethod != null ? requestMethod : RequestMethod.POST) {
+            case PUT: httpMethod = HttpMethod.PUT; break;
+            case PATCH: httpMethod = HttpMethod.PATCH; break;
+            case DELETE: httpMethod = HttpMethod.DELETE; break;
+            case GET: httpMethod = HttpMethod.GET; break;
+            default: httpMethod = HttpMethod.POST; break;
+        }
+        HttpHeaders customHeaders = new HttpHeaders();
+        customHeaders.set("Authorization",
+                contextService.getContext().toCumulocityCredentials().getAuthenticationString());
+        customHeaders.setContentType(MediaType.APPLICATION_JSON);
+        String customUrl = clientProperties.getBaseURL() + customPath;
+        HttpEntity<String> customEntity = new HttpEntity<>(payload, customHeaders);
+        ResponseEntity<String> customResponse = new RestTemplate().exchange(
+                customUrl, httpMethod, customEntity, String.class);
+        request.setResponse(customResponse.getBody());
+        log.info("{} - SEND: custom route called: path={}, method={}, status={}",
+                tenant, customPath, requestMethod, customResponse.getStatusCode());
+    }
+
     public CompletableFuture<AbstractExtensibleRepresentation> createMEAOAsync(ProcessingContext<?> context,
             int requestIndex)
             throws ProcessingException {
@@ -617,46 +684,14 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             EventRepresentation eventRepresentation = objectMapper.readValue(
                                     payload,
                                     EventRepresentation.class);
-                            // Set processing mode for events
-                            if (context.getProcessingMode() != null &&
-                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
-                                    if (targetAPI.equals(API.EVENT)) {
-                                        // Now use the connector with the processing mode header
-                                        return (EventRepresentation) connector.post("/event/events",
-                                                EVENT,
-                                                eventRepresentation);
-                                    }
-                                    return null;
-                                });
-                                log.info("{} - Using TRANSIENT processing mode for event", tenant);
-                            } else {
-                                rt = eventApi.create(eventRepresentation);
-                                log.debug("{} - Using PERSISTENT processing mode for event", tenant);
-                            }
+                            rt = postEvent(context, tenant, eventRepresentation);
                             log.info("{} - SEND: event posted with Id {}", tenant,
                                     ((EventRepresentation) rt).getId().getValue());
                         } else if (targetAPI.equals(API.ALARM)) {
                             AlarmRepresentation alarmRepresentation = objectMapper.readValue(
                                     payload,
                                     AlarmRepresentation.class);
-                            // Set processing mode for alarms
-                            if (context.getProcessingMode() != null &&
-                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
-                                    if (targetAPI.equals(API.ALARM)) {
-                                        // Now use the connector with the processing mode header
-                                        return (AlarmRepresentation) connector.post("/alarm/alarms",
-                                                ALARM,
-                                                alarmRepresentation);
-                                    }
-                                    return null;
-                                });
-                                log.info("{} - Using TRANSIENT processing mode for alarm", tenant);
-                            } else {
-                                rt = alarmApi.create(alarmRepresentation);
-                                log.debug("{} - Using PERSISTENT processing mode for alarm", tenant);
-                            }
+                            rt = postAlarm(context, tenant, alarmRepresentation);
                             log.info("{} - SEND: alarm posted with Id {}", tenant,
                                     ((AlarmRepresentation) rt).getId().getValue());
                         } else if (targetAPI.equals(API.MEASUREMENT)) {
@@ -672,17 +707,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                 collectionRepresentation = new MeasurementCollectionRepresentation();
                                 collectionRepresentation.setMeasurements(List.of(mr));
                             }
-                            if (context.getProcessingMode() != null &&
-                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                final MeasurementCollectionRepresentation col = collectionRepresentation;
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) ->
-                                        (MeasurementCollectionRepresentation) connector.post(
-                                                MEASUREMENT_COLLECTION_PATH, MEASUREMENT_COLLECTION, col));
-                                log.info("{} - Using TRANSIENT processing mode for measurement(s)", tenant);
-                            } else {
-                                rt = measurementApi.createBulk(collectionRepresentation);
-                                log.debug("{} - Using PERSISTENT processing mode for measurement(s)", tenant);
-                            }
+                            rt = postMeasurements(context, tenant, collectionRepresentation);
                             int count = collectionRepresentation.getMeasurements() != null
                                     ? collectionRepresentation.getMeasurements().size() : 0;
                             log.info("{} - SEND: measurement(s) posted: {} measurement(s)", tenant, count);
@@ -694,27 +719,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             log.info("{} - SEND: operation posted with Id {}", tenant,
                                     rt != null ? ((OperationRepresentation) rt).getId().getValue() : "null");
                         } else if (targetAPI.equals(API.CUSTOM)) {
-                            String customPath = currentRequest.getPathCumulocity();
-                            RequestMethod requestMethod = currentRequest.getMethod();
-                            HttpMethod httpMethod;
-                            switch (requestMethod != null ? requestMethod : RequestMethod.POST) {
-                                case PUT: httpMethod = HttpMethod.PUT; break;
-                                case PATCH: httpMethod = HttpMethod.PATCH; break;
-                                case DELETE: httpMethod = HttpMethod.DELETE; break;
-                                case GET: httpMethod = HttpMethod.GET; break;
-                                default: httpMethod = HttpMethod.POST; break;
-                            }
-                            HttpHeaders customHeaders = new HttpHeaders();
-                            customHeaders.set("Authorization",
-                                    contextService.getContext().toCumulocityCredentials().getAuthenticationString());
-                            customHeaders.setContentType(MediaType.APPLICATION_JSON);
-                            String customUrl = clientProperties.getBaseURL() + customPath;
-                            HttpEntity<String> customEntity = new HttpEntity<>(payload, customHeaders);
-                            ResponseEntity<String> customResponse = new RestTemplate().exchange(
-                                    customUrl, httpMethod, customEntity, String.class);
-                            currentRequest.setResponse(customResponse.getBody());
-                            log.info("{} - SEND: custom route called: path={}, method={}, status={}",
-                                    tenant, customPath, requestMethod, customResponse.getStatusCode());
+                            callCustomRoute(tenant, currentRequest, payload);
                         } else {
                             log.error("{} - Not existing API!", tenant);
                         }
@@ -778,23 +783,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                 throw new ProcessingException("Processing cancelled before EVENT API call");
                             }
 
-                            // Set processing mode for events
-                            if (context.getProcessingMode() != null &&
-                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
-                                    if (targetAPI.equals(API.EVENT)) {
-                                        // Now use the connector with the processing mode header
-                                        return (EventRepresentation) connector.post("/event/events",
-                                                EVENT,
-                                                eventRepresentation);
-                                    }
-                                    return null;
-                                });
-                                log.info("{} - Using TRANSIENT processing mode for event", tenant);
-                            } else {
-                                rt = eventApi.create(eventRepresentation);
-                                log.debug("{} - Using PERSISTENT processing mode for event", tenant);
-                            }
+                            rt = postEvent(context, tenant, eventRepresentation);
                         } catch (InterruptedException e) {
                             log.error("{} - Failed to acquire semaphore for creating event", tenant, e);
                         } finally {
@@ -824,23 +813,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                 throw new ProcessingException("Processing cancelled before ALARM API call");
                             }
 
-                            // Set processing mode for alarms
-                            if (context.getProcessingMode() != null &&
-                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) -> {
-                                    if (targetAPI.equals(API.ALARM)) {
-                                        // Now use the connector with the processing mode header
-                                        return (AlarmRepresentation) connector.post("/alarm/alarms",
-                                                ALARM,
-                                                alarmRepresentation);
-                                    }
-                                    return null;
-                                });
-                                log.info("{} - Using TRANSIENT processing mode for alarm", tenant);
-                            } else {
-                                rt = alarmApi.create(alarmRepresentation);
-                                log.debug("{} - Using PERSISTENT processing mode for alarm", tenant);
-                            }
+                            rt = postAlarm(context, tenant, alarmRepresentation);
                         } catch (InterruptedException e) {
                             log.error("{} - Failed to acquire semaphore for creating alarm", tenant, e);
                         } finally {
@@ -873,17 +846,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                                 throw new ProcessingException("Processing cancelled before MEASUREMENT API call");
                             }
 
-                            if (context.getProcessingMode() != null &&
-                                    ProcessingMode.TRANSIENT.equals(context.getProcessingMode())) {
-                                final MeasurementCollectionRepresentation col = collectionRepresentation;
-                                rt = processingModeService.callWithProcessingMode("TRANSIENT", (connector) ->
-                                        (MeasurementCollectionRepresentation) connector.post(
-                                                MEASUREMENT_COLLECTION_PATH, MEASUREMENT_COLLECTION, col));
-                                log.info("{} - Using TRANSIENT processing mode for measurement(s)", tenant);
-                            } else {
-                                rt = measurementApi.createBulk(collectionRepresentation);
-                                log.debug("{} - Using PERSISTENT processing mode for measurement(s)", tenant);
-                            }
+                            rt = postMeasurements(context, tenant, collectionRepresentation);
                         } catch (InterruptedException e) {
                             log.error("{} - Failed to acquire semaphore for creating measurement(s)", tenant, e);
                         } finally {
@@ -930,27 +893,7 @@ public class C8YAgent implements ImportBeanDefinitionRegistrar, InventoryEnrichm
                             throw new ProcessingException("Processing cancelled before CUSTOM API call");
                         }
 
-                        String customPath = currentRequest.getPathCumulocity();
-                        RequestMethod requestMethod = currentRequest.getMethod();
-                        HttpMethod httpMethod;
-                        switch (requestMethod != null ? requestMethod : RequestMethod.POST) {
-                            case PUT: httpMethod = HttpMethod.PUT; break;
-                            case PATCH: httpMethod = HttpMethod.PATCH; break;
-                            case DELETE: httpMethod = HttpMethod.DELETE; break;
-                            case GET: httpMethod = HttpMethod.GET; break;
-                            default: httpMethod = HttpMethod.POST; break;
-                        }
-                        HttpHeaders customHeaders = new HttpHeaders();
-                        customHeaders.set("Authorization",
-                                contextService.getContext().toCumulocityCredentials().getAuthenticationString());
-                        customHeaders.setContentType(MediaType.APPLICATION_JSON);
-                        String customUrl = clientProperties.getBaseURL() + customPath;
-                        HttpEntity<String> customEntity = new HttpEntity<>(payload, customHeaders);
-                        ResponseEntity<String> customResponse = new RestTemplate().exchange(
-                                customUrl, httpMethod, customEntity, String.class);
-                        currentRequest.setResponse(customResponse.getBody());
-                        log.info("{} - SEND: custom route called: path={}, method={}, status={}",
-                                tenant, customPath, requestMethod, customResponse.getStatusCode());
+                        callCustomRoute(tenant, currentRequest, payload);
                     } else {
                         log.error("{} - Not existing API!", tenant);
                     }
