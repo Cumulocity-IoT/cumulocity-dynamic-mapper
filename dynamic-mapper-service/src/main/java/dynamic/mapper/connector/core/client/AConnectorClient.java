@@ -48,7 +48,6 @@ import dynamic.mapper.processor.runtime.ProcessingContext;
 import dynamic.mapper.configuration.ConnectorConfigurationService;
 import dynamic.mapper.mapping.MappingService;
 import dynamic.mapper.configuration.ServiceConfigurationService;
-import dynamic.mapper.util.CumulocityErrors;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -87,9 +86,6 @@ public abstract class AConnectorClient {
     protected static final int WAIT_PERIOD_MS = 10000;
     protected static final int CONNECTION_TIMEOUT_SECONDS = 30;
 
-    private static final long SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_SECONDS = 10L;
-    private static final long SUBSCRIPTION_INIT_RETRY_MAX_DELAY_SECONDS = 300L;
-    private static final long RECONCILE_RETRY_DELAY_SECONDS = 5L;
 
     public static final String MQTT_PROTOCOL_MQTT = "mqtt://";
     public static final String MQTT_PROTOCOL_MQTTS = "mqtts://";
@@ -293,13 +289,8 @@ public abstract class AConnectorClient {
     // disconnect() call — including blocking network I/O — and `synchronized` would pin the
     // virtual thread's carrier thread for that entire duration.
     private final ReentrantLock connectDisconnectExecutionLock = new ReentrantLock();
-    // Guards against scheduling overlapping retry chains for initializeSubscriptionsAfterConnect()
-    private final AtomicBoolean subscriptionInitRetryScheduled = new AtomicBoolean(false);
-    // Guards against scheduling overlapping retry chains for reconcileSubscriptions()
-    private final AtomicBoolean reconcileRetryScheduled = new AtomicBoolean(false);
-    // When the current subscription-init retry chain started, so the success log can report
-    // how long the connector spent in RETRYING before recovering.
-    private volatile long subscriptionInitRetryStartedAtMs;
+    // Retries subscription work that failed for a transient reason; created together with the housekeeping executor
+    private SubscriptionRetryScheduler retryScheduler;
 
     // Abstract methods to be implemented by subclasses
     public abstract boolean initialize();
@@ -654,6 +645,9 @@ public abstract class AConnectorClient {
             t.setDaemon(true);
             return t;
         });
+        this.retryScheduler = new SubscriptionRetryScheduler(tenant, connectorName, connectionStateManager,
+                () -> housekeepingExecutor, this::isConnected, this::doInitializeSubscriptionsAfterConnect,
+                this::reconcileSubscriptions);
     }
 
     /**
@@ -822,10 +816,11 @@ public abstract class AConnectorClient {
         try {
             doInitializeSubscriptionsAfterConnect();
         } catch (Exception e) {
-            if (isRetryableConnectorError(e)) {
+            if (SubscriptionRetryScheduler.isRetryable(e)) {
                 log.warn("{} - Transient error initializing subscriptions for connector {}, will retry in {}s: {}",
-                        tenant, connectorName, SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_SECONDS, e.getMessage());
-                scheduleSubscriptionInitRetry(SUBSCRIPTION_INIT_RETRY_INITIAL_DELAY_SECONDS, e);
+                        tenant, connectorName, SubscriptionRetryScheduler.INIT_RETRY_INITIAL_DELAY_SECONDS,
+                        e.getMessage());
+                retryScheduler.scheduleInitRetry(SubscriptionRetryScheduler.INIT_RETRY_INITIAL_DELAY_SECONDS, e);
             } else {
                 throw e;
             }
@@ -846,71 +841,6 @@ public abstract class AConnectorClient {
 
         log.info("{} - Initialized {} inbound and {} outbound mappings",
                 tenant, inboundMappings.size(), outboundMappings.size());
-    }
-
-    /**
-     * True if the exception (or one of its causes) is a platform-side error known to be
-     * transient (e.g. a 502/503/504 during a platform rollout), rather than a permanent
-     * configuration/permission problem that retrying won't fix.
-     */
-    private boolean isRetryableConnectorError(Throwable t) {
-        return CumulocityErrors.isTransientPlatformError(t);
-    }
-
-    /**
-     * Schedules a retry of {@link #doInitializeSubscriptionsAfterConnect()} on the housekeeping
-     * executor after {@code delaySeconds}, marking the connector as {@link ConnectorStatus#RETRYING}.
-     * The retry chain doubles its delay (capped at {@link #SUBSCRIPTION_INIT_RETRY_MAX_DELAY_SECONDS})
-     * on each further failure and keeps going until it succeeds or a non-retryable error occurs.
-     * Pending retries are cancelled automatically when the connector disconnects, since they run
-     * on {@code housekeepingExecutor}, which is shut down in {@link #stopHousekeepingAndClose()}.
-     */
-    private void scheduleSubscriptionInitRetry(long delaySeconds, Exception lastError) {
-        if (!subscriptionInitRetryScheduled.compareAndSet(false, true)) {
-            // A retry chain is already in flight for this connector; let it continue.
-            return;
-        }
-        subscriptionInitRetryStartedAtMs = System.currentTimeMillis();
-        connectionStateManager.updateStatusRetrying(lastError, delaySeconds);
-        if (housekeepingExecutor == null || housekeepingExecutor.isShutdown()) {
-            subscriptionInitRetryScheduled.set(false);
-            return;
-        }
-        housekeepingExecutor.schedule(() -> runSubscriptionInitRetry(delaySeconds), delaySeconds, TimeUnit.SECONDS);
-    }
-
-    private void runSubscriptionInitRetry(long previousDelaySeconds) {
-        if (!isConnected()) {
-            log.debug("{} - Connector {} no longer connected, abandoning subscription-init retry",
-                    tenant, connectorName);
-            subscriptionInitRetryScheduled.set(false);
-            return;
-        }
-        try {
-            doInitializeSubscriptionsAfterConnect();
-            long elapsedSeconds = (System.currentTimeMillis() - subscriptionInitRetryStartedAtMs) / 1000;
-            log.info("{} - Subscription initialization succeeded after retry for connector {} (after {}s)",
-                    tenant, connectorName, elapsedSeconds);
-            subscriptionInitRetryScheduled.set(false);
-            connectionStateManager.updateStatus(ConnectorStatus.CONNECTED, true, true);
-        } catch (Exception e) {
-            if (!isRetryableConnectorError(e)) {
-                log.error("{} - Non-retryable error re-initializing subscriptions for connector {}: {}",
-                        tenant, connectorName, e.getMessage(), e);
-                subscriptionInitRetryScheduled.set(false);
-                connectionStateManager.updateStatusWithError(e);
-                return;
-            }
-            long nextDelaySeconds = Math.min(previousDelaySeconds * 2, SUBSCRIPTION_INIT_RETRY_MAX_DELAY_SECONDS);
-            log.warn("{} - Retry of subscription initialization failed for connector {}, next attempt in {}s: {}",
-                    tenant, connectorName, nextDelaySeconds, e.getMessage());
-            connectionStateManager.updateStatusRetrying(e, nextDelaySeconds);
-            if (housekeepingExecutor == null || housekeepingExecutor.isShutdown()) {
-                subscriptionInitRetryScheduled.set(false);
-                return;
-            }
-            housekeepingExecutor.schedule(() -> runSubscriptionInitRetry(nextDelaySeconds), nextDelaySeconds, TimeUnit.SECONDS);
-        }
     }
 
     /**
@@ -988,8 +918,8 @@ public abstract class AConnectorClient {
     public void reconcileSubscriptions() {
         if (!isConnected() && !isPassiveReceiver()) {
             log.info("{} - Not connected yet, deferring subscription reconcile for connector: {} (retry in {}s)",
-                    tenant, connectorName, RECONCILE_RETRY_DELAY_SECONDS);
-            scheduleReconcileRetry();
+                    tenant, connectorName, SubscriptionRetryScheduler.RECONCILE_RETRY_DELAY_SECONDS);
+            retryScheduler.scheduleReconcileRetry();
             return;
         }
 
@@ -1002,27 +932,6 @@ public abstract class AConnectorClient {
         initializeSubscriptionsOutbound(outboundMappings);
 
         log.info("{} - Reconciled subscriptions for connector: {}", tenant, connectorName);
-    }
-
-    /**
-     * Schedules a single retry of {@link #reconcileSubscriptions()} on the housekeeping
-     * executor. At most one retry is in flight at a time; a reconcile call that arrives while
-     * one is already scheduled just relies on that pending retry re-checking current state.
-     * Cancelled automatically on disconnect, since it runs on {@code housekeepingExecutor},
-     * which is shut down in {@link #stopHousekeepingAndClose()}.
-     */
-    private void scheduleReconcileRetry() {
-        if (!reconcileRetryScheduled.compareAndSet(false, true)) {
-            return;
-        }
-        if (housekeepingExecutor == null || housekeepingExecutor.isShutdown()) {
-            reconcileRetryScheduled.set(false);
-            return;
-        }
-        housekeepingExecutor.schedule(() -> {
-            reconcileRetryScheduled.set(false);
-            reconcileSubscriptions();
-        }, RECONCILE_RETRY_DELAY_SECONDS, TimeUnit.SECONDS);
     }
 
     /**
@@ -1670,7 +1579,9 @@ public abstract class AConnectorClient {
         // housekeepingExecutor is shut down above, cancelling any pending retry task —
         // reset the guard so a future reuse of this instance wouldn't be wedged with the
         // flag permanently stuck at true.
-        subscriptionInitRetryScheduled.set(false);
+        if (retryScheduler != null) {
+            retryScheduler.reset();
+        }
     }
 
     public void sendSubscriptionEvents(String topic, String action) {

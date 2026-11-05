@@ -220,9 +220,11 @@ class AConnectorClientReconcileRetryTest {
     // ── reflection helpers ───────────────────────────────────────────────────────────────
 
     private static boolean retryScheduledFlag(AConnectorClient connector) throws Exception {
-        Field f = AConnectorClient.class.getDeclaredField("reconcileRetryScheduled");
+        Field scheduler = AConnectorClient.class.getDeclaredField("retryScheduler");
+        scheduler.setAccessible(true);
+        Field f = SubscriptionRetryScheduler.class.getDeclaredField("reconcileRetryScheduled");
         f.setAccessible(true);
-        return ((AtomicBoolean) f.get(connector)).get();
+        return ((AtomicBoolean) f.get(scheduler.get(connector))).get();
     }
 
     private static int housekeepingQueueSize(AConnectorClient connector) throws Exception {
