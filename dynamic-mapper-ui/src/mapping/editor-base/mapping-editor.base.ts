@@ -390,7 +390,16 @@ export abstract class MappingEditorBase implements AfterViewInit, OnDestroy {
 
     let drawer;
     try {
-      const testMapping = buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false);
+      const testMapping: any = buildTestMapping(this.mapping, this.sourceTemplate, this.targetTemplate, this.mappingCode, false);
+      // What is known about the captured message (type, size, sender, broker metadata) lives on the
+      // stepper configuration only; attach it to the drawer's copy so AI generation sees it. Never
+      // persisted on the mapping itself.
+      if (this.stepperConfiguration.sampleTransportFields) {
+        testMapping.sampleTransportFields = this.stepperConfiguration.sampleTransportFields;
+      }
+      if (this.stepperConfiguration.sampleMessageInfo) {
+        testMapping.sampleMessageInfo = this.stepperConfiguration.sampleMessageInfo;
+      }
       drawer = this.bottomDrawerService.openDrawer(AiPromptComponent, {
         initialState: { mapping: testMapping, aiAgent: this.aiAgent, existingMapping: this.stepperConfiguration.persistence === 'draft' }
       });

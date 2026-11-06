@@ -234,7 +234,10 @@ public class SubstitutionResultOutboundProcessor extends BaseProcessor {
             if (topicApi != null) {
                 dynamicMapperRequest.setApi(topicApi);
             }
-            if (dynamicMapperRequest.getApi() != null && deviceSource != null && !deviceSource.isEmpty()
+            // Only for an internal Cumulocity destination (the topic names a Cumulocity API): the request
+            // otherwise keeps the notification's API, and finalizing it would rewrite the method or
+            // reject the payload of an external webhook request.
+            if (topicApi != null && deviceSource != null && !deviceSource.isEmpty()
                     && (method == RequestMethod.PUT || method == RequestMethod.PATCH
                             || method == RequestMethod.DELETE)) {
                 OutboundRequestFinalizer.finalizeRequest(dynamicMapperRequest, deviceSource,

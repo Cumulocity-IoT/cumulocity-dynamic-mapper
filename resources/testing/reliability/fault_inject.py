@@ -78,7 +78,11 @@ class FaultInjector:
         faulted = (
             (self.enabled and path.startswith(FAULT_PATH_PREFIX))
             or (self.service_log and path.startswith(SERVICE_LOG_PATH_PREFIXES))
-            or (self.measurements and path.startswith(MEASUREMENT_PATH_PREFIX))
+            or (
+                self.measurements
+                and flow.request.method == "POST"
+                and path.startswith(MEASUREMENT_PATH_PREFIX)
+            )
         )
         if faulted:
             # Applied after the platform handled the request, as in a real gateway failure: a POST can have taken

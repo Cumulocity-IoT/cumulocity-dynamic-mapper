@@ -79,6 +79,26 @@ public final class PayloadClassifier {
 
     /** Returns the decoded text, or null if the bytes are not well-formed, printable UTF-8. */
     public static String decodeStrictUtf8(byte[] bytes) {
+        String s = decodeUtf8(bytes);
+        if (s == null) {
+            return null;
+        }
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c < 0x20 ? (c != '\n' && c != '\r' && c != '\t') : (c == 0x7f || (c >= 0x80 && c <= 0x9f))) {
+                return null;
+            }
+        }
+        return s;
+    }
+
+    /**
+     * Returns the decoded text (a UTF-8 BOM is skipped), or null if the bytes are not well-formed
+     * UTF-8. Unlike {@link #decodeStrictUtf8} it does not apply the printable-text heuristic, so
+     * valid text such as a JSON string holding U+0085 is accepted and syntax checks are left to the
+     * caller's parser.
+     */
+    public static String decodeUtf8(byte[] bytes) {
         int offset = hasUtf8Bom(bytes) ? 3 : 0;
         String s;
         try {
@@ -89,12 +109,6 @@ public final class PayloadClassifier {
                     .toString();
         } catch (CharacterCodingException e) {
             return null;
-        }
-        for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            if (c < 0x20 ? (c != '\n' && c != '\r' && c != '\t') : (c == 0x7f || (c >= 0x80 && c <= 0x9f))) {
-                return null;
-            }
         }
         return s;
     }

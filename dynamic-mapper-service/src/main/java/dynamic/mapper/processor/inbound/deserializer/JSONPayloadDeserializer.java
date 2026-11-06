@@ -17,9 +17,11 @@ public class JSONPayloadDeserializer implements PayloadDeserializer<Object> {
             throw new IOException("Payload is null or empty");
         }
 
-        // Strict decode (also strips a UTF-8 BOM): a lenient decode would turn binary or Latin-1
-        // bytes into U+FFFD and report a misleading JSON syntax error further down.
-        String text = PayloadClassifier.decodeStrictUtf8(bytes);
+        // Well-formed UTF-8 only (also strips a UTF-8 BOM): a lenient decode would turn binary or
+        // Latin-1 bytes into U+FFFD and report a misleading JSON syntax error further down. The
+        // printable-text heuristic of the Explorer is deliberately not applied, since valid JSON may
+        // contain e.g. U+0085 inside a string; the parser decides what is valid JSON.
+        String text = PayloadClassifier.decodeUtf8(bytes);
         if (text == null) {
             String format = PayloadClassifier.detectBinaryFormat(bytes);
             throw new IOException("Payload is not UTF-8 text (" + bytes.length + " bytes"

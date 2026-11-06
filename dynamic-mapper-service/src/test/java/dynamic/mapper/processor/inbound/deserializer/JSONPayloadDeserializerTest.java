@@ -38,6 +38,15 @@ class JSONPayloadDeserializerTest {
     }
 
     @Test
+    void acceptsControlCharactersThatAreValidInsideAJsonString() throws IOException {
+        // U+0085 and U+007F are valid unescaped characters in a JSON string; only the Explorer's
+        // printable-text heuristic rejects them, and that must not apply to JSON parsing.
+        String json = "{\"a\":\"x\u0085y\u007fz\"}";
+        Object o = deserializer.deserializePayload(null, message(json.getBytes(StandardCharsets.UTF_8)));
+        assertEquals("x\u0085y\u007fz", ((Map<?, ?>) o).get("a"));
+    }
+
+    @Test
     void binaryPayloadGetsAnActionableError() {
         IOException e = assertThrows(IOException.class,
                 () -> deserializer.deserializePayload(null, message(new byte[] { 0x1f, (byte) 0x8b, 0x08, 0x00 })));

@@ -19,6 +19,14 @@ class PayloadClassifierTest {
     }
 
     @Test
+    void decodeUtf8ValidatesEncodingOnlyWhileStrictDecodeAlsoRequiresPrintableText() {
+        byte[] withC1 = "a\u0085b".getBytes(StandardCharsets.UTF_8);
+        assertEquals("a\u0085b", PayloadClassifier.decodeUtf8(withC1));
+        assertNull(PayloadClassifier.decodeStrictUtf8(withC1));
+        assertNull(PayloadClassifier.decodeUtf8(new byte[] { (byte) 0xC3, 0x28 }));
+    }
+
+    @Test
     void emptyAndNull() {
         assertEquals(Type.EMPTY, PayloadClassifier.classify(null).type());
         assertEquals(Type.EMPTY, PayloadClassifier.classify(new byte[0]).type());

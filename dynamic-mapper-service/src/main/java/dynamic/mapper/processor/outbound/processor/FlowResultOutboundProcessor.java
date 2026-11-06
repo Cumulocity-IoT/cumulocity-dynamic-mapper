@@ -343,8 +343,13 @@ public class FlowResultOutboundProcessor extends AbstractFlowResultProcessor {
 
             // internalSourceId → source.id in the C8Y payload (must be the numeric managed object ID).
             // brokerRoutingId (e.g. LoRa EUI) is only used for broker topic-token replacement above.
-            OutboundRequestFinalizer.finalizeRequest(request, internalSourceId, payloadJson, tenant, objectMapper);
-            OutboundRequestFinalizer.throwIfRejected(request);
+            // Only for an internal Cumulocity destination: with no API derived the request keeps the
+            // mapping's API, and finalizing it would rewrite the method or reject the payload of an
+            // external webhook request.
+            if (derivedAPI != null) {
+                OutboundRequestFinalizer.finalizeRequest(request, internalSourceId, payloadJson, tenant, objectMapper);
+                OutboundRequestFinalizer.throwIfRejected(request);
+            }
 
             // Broker message key and retain flag
             OutboundRequestFinalizer.applyTransportFields(context, deviceMessage);
