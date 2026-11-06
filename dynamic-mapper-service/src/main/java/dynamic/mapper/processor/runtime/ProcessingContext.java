@@ -192,6 +192,9 @@ public class ProcessingContext<O> implements AutoCloseable {
 
     private String key;
 
+    /** Broker metadata of the inbound message (Kafka headers, Pulsar properties, ...); may be null. */
+    private Map<String, String> transportMetadata;
+
     private String sourceId;
 
     private String externalId;
@@ -525,5 +528,24 @@ public class ProcessingContext<O> implements AutoCloseable {
      */
     public void clearGraalVMReferences() {
         close();
+    }
+
+    /**
+     * The out-of-band fields delivered to Smart Functions and extensions as {@code transportFields}:
+     * the broker message key under {@code key} plus the connector's metadata. The key wins on a
+     * name clash. Empty if the message carried neither.
+     */
+    public Map<String, String> buildTransportFields() {
+        if (key == null && (transportMetadata == null || transportMetadata.isEmpty())) {
+            return java.util.Collections.emptyMap();
+        }
+        Map<String, String> fields = new java.util.LinkedHashMap<>();
+        if (transportMetadata != null) {
+            fields.putAll(transportMetadata);
+        }
+        if (key != null) {
+            fields.put(Mapping.CONTEXT_DATA_KEY_NAME, key);
+        }
+        return fields;
     }
 }

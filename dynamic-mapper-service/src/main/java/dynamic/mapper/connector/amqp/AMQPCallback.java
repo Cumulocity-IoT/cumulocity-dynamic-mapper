@@ -25,6 +25,7 @@ import dynamic.mapper.util.TenantLogContext;
 import com.rabbitmq.client.*;
 import dynamic.mapper.configuration.ServiceConfiguration;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
+import dynamic.mapper.connector.core.callback.TransportMetadata;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
 import dynamic.mapper.connector.core.callback.MessageFailureTracker;
 import dynamic.mapper.core.ServiceRegistry;
@@ -96,6 +97,7 @@ public class AMQPCallback extends DefaultConsumer {
                         .sendPayload(true)
                         .connectorIdentifier(connectorIdentifier)
                         .payload(body)
+                        .metadata(amqpMetadata(envelope, properties))
                         .build();
 
                 if (serviceConfiguration.getLogPayload()) {
@@ -182,5 +184,26 @@ public class AMQPCallback extends DefaultConsumer {
         } else {
             log.warn("{} - Consumer shutdown: {}, reason: {}", tenant, consumerTag, sig.getReason());
         }
+    }
+
+    /**
+     * The topic is the routing key with dots replaced by slashes, so the original routing key and
+     * the exchange are kept here, together with the message headers and standard properties.
+     */
+    static java.util.Map<String, String> amqpMetadata(Envelope envelope, AMQP.BasicProperties properties) {
+        TransportMetadata metadata = new TransportMetadata()
+                .put("", "routingKey", envelope.getRoutingKey())
+                .put("", "exchange", envelope.getExchange());
+        if (properties != null) {
+            metadata.put("", "contentType", properties.getContentType())
+                    .put("", "correlationId", properties.getCorrelationId())
+                    .put("", "messageId", properties.getMessageId())
+                    .put("", "type", properties.getType())
+                    .put("", "appId", properties.getAppId());
+            if (properties.getHeaders() != null) {
+                properties.getHeaders().forEach((name, value) -> metadata.put(TransportMetadata.HEADER, name, (Object) value));
+            }
+        }
+        return metadata.build();
     }
 }

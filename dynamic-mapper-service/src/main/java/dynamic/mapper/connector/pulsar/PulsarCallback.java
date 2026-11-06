@@ -29,6 +29,7 @@ import org.apache.pulsar.client.api.PulsarClientException;
 
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.connector.core.callback.GenericMessageCallback;
+import dynamic.mapper.connector.core.callback.TransportMetadata;
 import dynamic.mapper.core.ServiceRegistry;
 import dynamic.mapper.processor.runtime.ProcessingResultWrapper;
 import dynamic.mapper.processor.util.ProcessingResultHelper.AckOutcome;
@@ -67,6 +68,7 @@ public class PulsarCallback extends AbstractPulsarCallback {
                     .connectorIdentifier(connectorIdentifier)
                     .payload(payloadBytes)
                     .key(message.hasKey() ? message.getKey() : null)
+                    .metadata(pulsarMetadata(message))
                     .build();
 
             if (serviceConfiguration.getLogPayload()) {
@@ -116,5 +118,15 @@ public class PulsarCallback extends AbstractPulsarCallback {
                 return null;
             }));
         }
+    }
+
+    /** Pulsar message properties as {@code property.<name>} transport metadata. */
+    static java.util.Map<String, String> pulsarMetadata(Message<?> message) {
+        TransportMetadata metadata = new TransportMetadata();
+        java.util.Map<String, String> properties = message.getProperties();
+        if (properties != null) {
+            properties.forEach((name, value) -> metadata.put(TransportMetadata.PROPERTY, name, value));
+        }
+        return metadata.build();
     }
 }

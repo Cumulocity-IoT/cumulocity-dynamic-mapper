@@ -45,6 +45,12 @@ public class ExplorerMessage {
     @Schema(description = "Message key, if the broker protocol has one (e.g. Kafka record key); null otherwise", example = "863859042393327")
     private String key;
 
+    @Schema(description = "Type of the connector that received the message (e.g. MQTT, KAFKA, PULSAR, AMQP_091); null for OUTBOUND messages", example = "KAFKA")
+    private String connectorType;
+
+    @Schema(description = "Broker metadata of the message, e.g. Kafka headers as header.<name>, Pulsar properties as property.<name>, AMQP routingKey/exchange; null if none")
+    private java.util.Map<String, String> metadata;
+
     @Schema(description = "Display name of the connector", example = "MQTT Broker")
     private String connectorName;
 

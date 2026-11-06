@@ -118,7 +118,7 @@ endpoint in the Java backend won't find one — that's expected.
   [`smartfunction_prompt.txt`](../../dynamic-mapper-service/src/main/resources/prompts/smartfunction_prompt.txt))
   encode the rules the LLM must follow: the `Substitution` (`pathSource`/`pathTarget`/`expandArray`/…) and `Mapping`
   shapes, GraalVM-specific JavaScript constraints for Smart Functions (e.g. no `.forEach`/`.map` on Java-backed
-  array payloads — classic indexed loops only), transport-field access (`msg.transportFields`), and conditioning the
+  array payloads — classic indexed loops only), transport-field access (`msg.transportFields`, including broker metadata such as `header.<name>` and the `connectorType` of the sample message), and conditioning the
   `export { onMessage }` statement on whether ESM support is enabled. The agent is told to deliver the final result
   only through the submit tool.
 

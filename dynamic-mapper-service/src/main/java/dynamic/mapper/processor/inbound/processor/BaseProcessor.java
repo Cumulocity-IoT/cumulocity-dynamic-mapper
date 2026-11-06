@@ -32,6 +32,7 @@ public abstract class BaseProcessor extends CommonProcessor {
                 .testing(testing)
                 .tenant(tenant)
                 .key(connectorMessage.getKey())
+                .transportMetadata(connectorMessage.getMetadata())
                 .api(mapping.getTargetAPI()).build();
     }
 
@@ -50,6 +51,7 @@ public abstract class BaseProcessor extends CommonProcessor {
                 .testing(testing)
                 .tenant(tenant)
                 .key(connectorMessage.getKey())
+                .transportMetadata(connectorMessage.getMetadata())
                 .api(mapping.getTargetAPI())
                 .build();
     }

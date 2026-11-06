@@ -177,6 +177,10 @@ is between 1 and `MAX_RETRY_ATTEMPTS` (3) by unsubscribing and resubscribing. A 
 stops itself after more than `MAX_CONSECUTIVE_FAILURES` (5) failures and hands over to this
 retry. After more than 10 processing errors on one topic partition, the consumer is restarted.
 
+### Message metadata
+
+Each record header becomes the transport field `header.<name>` (value read as UTF-8), next to `key` for the record key. See [message metadata](message-explorer.md#message-metadata).
+
 ### Gotchas
 
 - `supportsWildcardInTopic()` returns a flat `false` (comment: "Kafka doesn't support

@@ -96,7 +96,7 @@
         </div>
         <dl class="tpl-transport-list">
           @for (field of sampleTransportFields; track field.name) {
-            <dt><code>msg.transportFields.{{ field.name }}</code></dt>
+            <dt><code>{{ field.accessor }}</code></dt>
             <dd class="text-monospace text-12">{{ field.value }}</dd>
           }
         </dl>

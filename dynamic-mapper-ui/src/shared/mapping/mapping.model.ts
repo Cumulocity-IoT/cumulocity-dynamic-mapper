@@ -422,6 +422,8 @@ export interface SampleMessageInfo {
   clientId?: string;
   /** Concrete topic the message was received on. */
   topic?: string;
+  /** Type of the connector the message was captured on (e.g. MQTT, KAFKA, PULSAR); inbound only. */
+  connectorType?: string;
 }
 
 export enum MappingType {

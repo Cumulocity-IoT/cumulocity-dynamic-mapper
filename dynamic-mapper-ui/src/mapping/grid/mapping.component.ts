@@ -158,7 +158,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   mappingType!: MappingType;
   transformationType!: TransformationType;
   private readonly destroy$ = new Subject<void>();
-  private explorerPreFill: { sessionTopic?: string; topic: string; payload: string; binary?: boolean; payloadType?: SamplePayloadType; binaryFormat?: string | null; payloadSize?: number; clientId?: string; key?: string; targetAPI?: string; publishTopic?: string; publishTopicSample?: string } | null = null;
+  private explorerPreFill: { sessionTopic?: string; topic: string; payload: string; binary?: boolean; payloadType?: SamplePayloadType; binaryFormat?: string | null; payloadSize?: number; clientId?: string; connectorType?: string; key?: string; metadata?: Record<string, string>; targetAPI?: string; publishTopic?: string; publishTopicSample?: string } | null = null;
 
   pagination: Pagination = {
     pageSize: 30,
@@ -250,7 +250,9 @@ export class MappingComponent implements OnInit, OnDestroy {
           binaryFormat: explorerHandoff.binaryFormat,
           payloadSize: explorerHandoff.payloadSize,
           clientId: explorerHandoff.clientId,
+          connectorType: explorerHandoff.connectorType,
           key: explorerHandoff.key,
+          metadata: explorerHandoff.metadata,
           targetAPI: explorerHandoff.targetAPI,
           publishTopic: explorerHandoff.publishTopic,
           publishTopicSample: explorerHandoff.publishTopicSample
@@ -687,18 +689,27 @@ export class MappingComponent implements OnInit, OnDestroy {
         binaryFormat: this.explorerPreFill.binaryFormat ?? undefined,
         payloadSize: this.explorerPreFill.payloadSize,
         clientId: this.explorerPreFill.clientId,
-        topic: this.explorerPreFill.topic
+        topic: this.explorerPreFill.topic,
+        connectorType: this.explorerPreFill.connectorType
       };
       // Seed the captured broker message key (e.g. a Kafka record key) so the sample mirrors what
       // the mapping actually sees at runtime. Only for JSONata-style transformations, where the
       // backend injects the key into the payload as _CONTEXT_DATA_.key: Smart Functions and Java
       // extensions instead receive it out-of-band via the message's transport fields, so putting
       // it in the payload sample there would misrepresent the input (and mislead AI generation).
+      // Other broker metadata (Kafka headers, Pulsar properties, AMQP routing key, ...) reaches
+      // Smart Functions and Java extensions as transport fields next to the key, so it is carried
+      // the same way. JSONata mappings do not receive it, so it is not seeded there.
+      if (this.explorerPreFill.metadata && Object.keys(this.explorerPreFill.metadata).length > 0
+          && isCodeOrExtensionTransformation(mapping.transformationType)) {
+        this.stepperConfiguration.sampleTransportFields = { ...this.explorerPreFill.metadata };
+      }
       if (this.explorerPreFill.key) {
         if (isCodeOrExtensionTransformation(mapping.transformationType)) {
           // Code/extension transformations read the key from msg.transportFields, which is not part
           // of the payload — carry it as stepper state so AI generation still sees a real example.
           this.stepperConfiguration.sampleTransportFields = {
+            ...this.stepperConfiguration.sampleTransportFields,
             [CONTEXT_DATA_KEY_NAME]: this.explorerPreFill.key
           };
         } else {

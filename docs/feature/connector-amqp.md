@@ -93,6 +93,10 @@ virtual-thread pool with a linear backoff (`attempt * 10 s`, capped at 5 minutes
 `nextReconnectTimeMs`, like the MQTT connectors. The RabbitMQ client's `automaticRecovery`
 runs in parallel.
 
+#### Message metadata
+
+The topic is the routing key with dots replaced by slashes, so the original `routingKey` and the `exchange` are kept as transport fields, together with `contentType`, `correlationId`, `messageId`, `type`, `appId` and `header.<name>` per message header. AMQP 1.0 captures none yet. See [message metadata](message-explorer.md#message-metadata).
+
 #### Gotchas
 
 - **Nack requeues** (`basicNack(..., requeue=true)`) with no backoff, but only until the message failed

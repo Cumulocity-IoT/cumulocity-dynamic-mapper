@@ -161,6 +161,10 @@ module, but it's an alternative to `MappingType.SPARKPLUGB`, not what backs it. 
 [`dynamic-mapper-ui/public/docs/sparkplugb.md`](../../dynamic-mapper-ui/public/docs/sparkplugb.md)
 for the mapping-level (NBIRTH/NDATA/DBIRTH/DDATA/NCMD/DCMD) side.
 
+### Message metadata
+
+MQTT 5 only: each user property becomes `property.<name>`, plus `contentType`, `correlationData` and `responseTopic` when set. MQTT 3.1.1 carries none. See [message metadata](message-explorer.md#message-metadata).
+
 ### Gotchas
 
 - `clientId` is passed into `MQTT3Callback` but never actually used by MQTT3 (kept only

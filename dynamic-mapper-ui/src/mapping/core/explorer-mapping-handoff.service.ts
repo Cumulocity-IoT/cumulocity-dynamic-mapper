@@ -30,11 +30,15 @@ export interface ExplorerMappingHandoff {
   /** True when the payload is base64 text of non-printable bytes (see ExplorerService). */
   binary?: boolean;
   key?: string;
+  /** Broker metadata captured with the message (Kafka headers, Pulsar properties, ...). */
+  metadata?: Record<string, string>;
   /** Detected by the backend (see PayloadClassifier). */
   payloadType?: SamplePayloadType;
   binaryFormat?: string | null;
   payloadSize?: number;
   clientId?: string;
+  /** Type of the connector the message was captured on (inbound only), e.g. KAFKA. */
+  connectorType?: string;
   mappingType: MappingType;
   transformationType: TransformationType;
   codeTemplate?: CodeTemplate;

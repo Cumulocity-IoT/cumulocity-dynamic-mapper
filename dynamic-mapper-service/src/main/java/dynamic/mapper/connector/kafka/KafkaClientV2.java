@@ -759,6 +759,16 @@ public class KafkaClientV2 extends AConnectorClient {
         }
     }
 
+    /** Kafka record headers as {@code header.<name>} transport metadata (last value wins on repeats). */
+    static java.util.Map<String, String> kafkaMetadata(ConsumerRecord<?, ?> record) {
+        dynamic.mapper.connector.core.callback.TransportMetadata metadata =
+                new dynamic.mapper.connector.core.callback.TransportMetadata();
+        for (org.apache.kafka.common.header.Header header : record.headers()) {
+            metadata.put(dynamic.mapper.connector.core.callback.TransportMetadata.HEADER, header.key(), header.value());
+        }
+        return metadata.build();
+    }
+
     /**
      * Process individual Kafka message
      *
@@ -777,6 +787,7 @@ public class KafkaClientV2 extends AConnectorClient {
                 .connectorIdentifier(connectorIdentifier)
                 .payload(payloadBytes)
                 .key(key)
+                .metadata(kafkaMetadata(record))
                 .build();
 
         if (serviceConfiguration.getLogPayload()) {

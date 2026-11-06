@@ -388,6 +388,12 @@ ID. The map is never `null`; it is empty when the transport carries no such fiel
 
 This mirrors `msg.transportFields["key"]` in Smart Functions and `_CONTEXT_DATA_.key` in JSONata mappings.
 
+The same map also holds the broker metadata of the message, with names that show where it comes from: `header.<name>` (Kafka and AMQP 0-9-1 headers), `property.<name>` (Pulsar properties and MQTT 5 user properties), `attribute.<name>` (Google Pub/Sub attributes), and `routingKey` and `exchange` (AMQP 0-9-1). See the table in [Reading the broker message key and metadata](smartfunction.md) for the full list. A header can be missing on individual messages, so `get` can return `null`:
+
+```java
+String tenantHeader = message.getTransportFields().get("header.tenant");
+```
+
 For **outbound** mappings, set the field on the returned `DeviceMessage` to define the key to publish with:
 
 ```java

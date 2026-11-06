@@ -23,7 +23,7 @@ function onMessage(msg, context) {
 ```
 Your input is a JSON of a mapping where `sourceTemplate` is the JSON input document.
 
-The mapping JSON may also include `sampleTransportFields`: the transport fields actually observed on a real message this mapping was created from (e.g. `{ "key": "863859042393327" }` for a Kafka record key). These are delivered out-of-band as `msg.transportFields`, NOT inside `msg.payload`, which is why they do not appear in `sourceTemplate`. When present, treat them as evidence that the stream really carries those fields, and read them via `msg.transportFields["key"]` — a Kafka record key is frequently the device identifier and is often the best source for the external ID. Never read them from `msg.payload`.
+The mapping JSON may also include `sampleTransportFields`: the transport fields actually observed on a real message this mapping was created from (e.g. `{ "key": "863859042393327" }` for a Kafka record key). These are delivered out-of-band as `msg.transportFields`, NOT inside `msg.payload`, which is why they do not appear in `sourceTemplate`. When present, treat them as evidence that the stream really carries those fields, and read them via `msg.transportFields["key"]` — a Kafka record key is frequently the device identifier and is often the best source for the external ID. Never read them from `msg.payload`. Besides `key`, they can hold broker metadata named by origin: `header.<name>` (Kafka and AMQP headers), `property.<name>` (Pulsar properties, MQTT 5 user properties), `attribute.<name>` (Google Pub/Sub) and well-known names such as `routingKey` or `exchange`. Always check that such a field exists before using it, and never copy its sample value into the code as a constant.
 
 # Payload access rules
 - `msg.payload` is the **canonical form** — returns the pre-deserialized JSON payload as a plain JavaScript object.
@@ -130,14 +130,16 @@ export interface Mapping {
   supportESM?: boolean;
 
   /** Transport fields seen on a real message this mapping was created from, e.g. a Kafka
-   *  record key: { "key": "..." }. Delivered at runtime as msg.transportFields, not in the
+   *  record key: { "key": "..." }, plus broker metadata such as "header.<name>" or
+   *  "property.<name>". Delivered at runtime as msg.transportFields, not in the
    *  payload — so they are absent from sourceTemplate by design. */
   sampleTransportFields?: Record<string, string>;
 
   /** Facts about the real message the sample in sourceTemplate was captured from (Message
    *  Explorer). payloadType: JSON | XML | TEXT | BINARY | EMPTY. binaryFormat: recognized
    *  container such as GZIP, ZIP, AVRO (absent if unknown). payloadSize: raw bytes. clientId:
-   *  sender client ID, delivered as msg.clientId. For ANY_PAYLOAD the sample is the Base64 of
+   *  sender client ID, delivered as msg.clientId. connectorType: connector the message was
+   *  ingested through (MQTT, KAFKA, PULSAR, AMQP_091, ...). For ANY_PAYLOAD the sample is the Base64 of
    *  the raw bytes for every payloadType, and msg.payload is that Base64 string at runtime. */
   sampleMessageInfo?: {
     payloadType?: 'JSON' | 'XML' | 'TEXT' | 'BINARY' | 'EMPTY';
@@ -145,6 +147,7 @@ export interface Mapping {
     payloadSize?: number;
     clientId?: string;
     topic?: string;
+    connectorType?: string;
   };
 
   /** Timestamp of last update */

@@ -26,7 +26,9 @@ export interface ExplorerMessage {
   topic: string;
   connectorIdentifier: string;
   connectorName: string;
+  connectorType?: string; // connector type (MQTT, KAFKA, PULSAR, ...); inbound only
   clientId?: string;    // broker client identifier that sent the message
+  metadata?: Record<string, string>; // broker metadata: header.<name> (Kafka), property.<name> (Pulsar, MQTT 5), routingKey (AMQP), ...
   key?: string;         // message key, if the broker protocol has one (e.g. Kafka record key)
   receivedAt: number;   // epoch millis
   payload: string;

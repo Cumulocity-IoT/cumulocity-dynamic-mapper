@@ -31,7 +31,7 @@ function onMessage(msg: OutboundMessage, context: SmartFunctionContext): DeviceM
 | `msg.clientId` | `string \| undefined` | Transport client ID (e.g. MQTT client ID) |
 | `msg.time` | `string \| undefined` | ISO-8601 stamp taken when the runtime builds the message — see [Timestamps](#timestamps) |
 | `msg.transportId` | `string \| undefined` | Identifier of the connector that delivered the message |
-| `msg.transportFields` | `Record<string, string>` | Transport extras, e.g. MQTT 5 user properties. For Kafka this carries the record **key** as `{ key: … }`. Empty object when the transport has none — never `undefined` |
+| `msg.transportFields` | `Record<string, string>` | Transport extras: the broker message **key** as `key` (Kafka, Pulsar) plus connector metadata named by origin, e.g. `header.<name>` (Kafka, AMQP), `property.<name>` (Pulsar, MQTT 5), `attribute.<name>` (Pub/Sub), `routingKey` (AMQP). See [message metadata](feature/message-explorer.md#message-metadata). Empty object when the transport has none — never `undefined` |
 
 `msg.sourceId` and `msg.cumulocityType` are typed `never` inbound: an inbound message arrives before
 any device has been resolved, so the runtime passes `null` for both.

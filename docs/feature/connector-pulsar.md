@@ -130,6 +130,10 @@ be a no-op.
 `INBOUND` and `OUTBOUND` (inherited by the `MQTTServicePulsarClient` subclass too,
 which does not override `supportedDirections()`).
 
+### Message metadata
+
+Each message property becomes the transport field `property.<name>`, next to `key` for the message key. `clientId` is the producer name. See [message metadata](message-explorer.md#message-metadata).
+
 ### Gotchas
 
 - Sparkplug Host mode on the base class is effectively decorative — see above.

@@ -113,6 +113,10 @@ disconnect ceiling.
 Sensitive properties are `serviceAccountKey` and `adcCredentialsJson`; `supportedQos` is
 `[AT_MOST_ONCE, AT_LEAST_ONCE]`.
 
+### Message metadata
+
+Each message attribute becomes `attribute.<name>`, plus `orderingKey` when set. See [message metadata](message-explorer.md#message-metadata).
+
 ### Gotchas
 
 - The `PUBLISHER_RETRY_OVERHEAD_SECONDS` constant is documented as capping the library's

@@ -334,6 +334,18 @@ public class GooglePubSubClient extends AConnectorClient {
      * </ul>
      * Package-private to allow unit testing without a live Pub/Sub client.
      */
+    /** Pub/Sub message attributes as {@code attribute.<name>} transport metadata, plus the ordering key. */
+    static java.util.Map<String, String> pubSubMetadata(PubsubMessage message) {
+        dynamic.mapper.connector.core.callback.TransportMetadata metadata =
+                new dynamic.mapper.connector.core.callback.TransportMetadata();
+        message.getAttributesMap().forEach((name, value) ->
+                metadata.put(dynamic.mapper.connector.core.callback.TransportMetadata.ATTRIBUTE, name, value));
+        if (!message.getOrderingKey().isEmpty()) {
+            metadata.put("", "orderingKey", message.getOrderingKey());
+        }
+        return metadata.build();
+    }
+
     void processPubSubMessage(PubsubMessage message, AckReplyConsumer consumer,
             String topic, Qos qos) {
         try (TenantLogContext ignored = TenantLogContext.open(tenant)) {
@@ -346,6 +358,7 @@ public class GooglePubSubClient extends AConnectorClient {
                     .sendPayload(true)
                     .connectorIdentifier(connectorIdentifier)
                     .payload(payload)
+                    .metadata(pubSubMetadata(message))
                     .build();
 
             if (serviceConfiguration.getLogPayload()) {

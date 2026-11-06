@@ -72,6 +72,9 @@ describe('generationInputsKey', () => {
     expect(generationInputsKey({ ...base, sampleMessageInfo: { ...info, payloadType: 'BINARY' } })).not.toBe(
       generationInputsKey({ ...base, sampleMessageInfo: info })
     );
+    expect(generationInputsKey({ ...base, sampleMessageInfo: { ...info, connectorType: 'KAFKA' } })).not.toBe(
+      generationInputsKey({ ...base, sampleMessageInfo: info })
+    );
   });
 });
 

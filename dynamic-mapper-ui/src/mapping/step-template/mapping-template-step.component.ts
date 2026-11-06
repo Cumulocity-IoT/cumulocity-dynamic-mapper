@@ -145,7 +145,7 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
    * payload, so — unlike `_CONTEXT_DATA_` for JSONata — they never appear in the source template
    * and would otherwise be invisible to the author.
    */
-  sampleTransportFields: { name: string; value: string }[] = [];
+  sampleTransportFields: { name: string; value: string; accessor: string }[] = [];
   private readonly destroy$ = new Subject<void>();
 
   // ─── ViewChild refs (public so tests can reach them if needed) ─────────────
@@ -170,14 +170,19 @@ export class MappingTemplateStepComponent implements OnChanges, OnDestroy {
   readonly checkTransformationType = checkTransformationType;
   readonly validateProtectedFields = validateProtectedFields;
 
-  private computeSampleTransportFields(): { name: string; value: string }[] {
+  private computeSampleTransportFields(): { name: string; value: string; accessor: string }[] {
     const fields = this.stepperConfiguration?.sampleTransportFields;
     if (!fields || !isCodeOrExtensionTransformation(this.mapping?.transformationType)) {
       return [];
     }
     return Object.entries(fields)
       .filter(([, value]) => value !== null && value !== undefined && value !== '')
-      .map(([name, value]) => ({ name, value }));
+      .map(([name, value]) => ({
+        name,
+        value,
+        // names such as "header.tenant" are not valid property names, so they need bracket access
+        accessor: /^[A-Za-z_$][\w$]*$/.test(name) ? `msg.transportFields.${name}` : `msg.transportFields["${name}"]`
+      }));
   }
 
   // ─── Lifecycle ─────────────────────────────────────────────────────────────

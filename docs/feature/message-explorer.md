@@ -34,7 +34,7 @@ of a guess.
   topic subscriptions can match the same broker message twice) and must not be shown to the
   user as multiple captures.
 - **A captured message can seed a new mapping directly** — its topic, payload, and (for
-  outbound) key are handed to the mapping-creation flow as a starting point, without the user
+  outbound) key, the connector type and any broker metadata are handed to the mapping-creation flow as a starting point, without the user
   retyping or re-pasting anything. For an outbound message the target API and publish topic are
   inferred from the captured topic, and the user is offered to set up the device subscription
   that an outbound mapping needs.
@@ -147,7 +147,7 @@ Stopping/expiring a session calls `unregisterListener()`, which:
 | `MessageExplorerDrawerComponent` | [`message-explorer/message-explorer-drawer.component.ts`](../../dynamic-mapper-ui/src/mapping/message-explorer/message-explorer-drawer.component.ts) | The "Start exploring messages…" configuration drawer: direction toggle, connector picker (filtered to connectors supporting the chosen direction), topic input, device/group asset-selector or device-type filter for OUTBOUND. |
 | `MessageExplorerPayloadRendererComponent` | [`message-explorer/message-explorer-payload.renderer.component.ts`](../../dynamic-mapper-ui/src/mapping/message-explorer/message-explorer-payload.renderer.component.ts) | Renders/expands a captured payload (JSON editor, binary badge). |
 | `SubscriptionChoiceDrawerComponent` | [`message-explorer/subscription-choice-drawer.component.ts`](../../dynamic-mapper-ui/src/mapping/message-explorer/subscription-choice-drawer.component.ts) | Shown before "Create mapping" for an outbound message: skip, subscribe by device type, or subscribe a device group. |
-| `ExplorerMappingHandoffService` | [`core/explorer-mapping-handoff.service.ts`](../../dynamic-mapper-ui/src/mapping/core/explorer-mapping-handoff.service.ts) | Single-shot hand-off object carrying topic/payload/key/mappingType/transformationType from a "Create mapping" click across `router.navigate` into the mapping-creation wizard, replacing an older `history.state`-based approach. |
+| `ExplorerMappingHandoffService` | [`core/explorer-mapping-handoff.service.ts`](../../dynamic-mapper-ui/src/mapping/core/explorer-mapping-handoff.service.ts) | Single-shot hand-off object carrying topic/payload/key/metadata/connectorType/mappingType/transformationType from a "Create mapping" click across `router.navigate` into the mapping-creation wizard, replacing an older `history.state`-based approach. |
 
 **Flow:** drawer collects direction + target → `POST /explorer/session` → backend registers
 listener(s)/subscription(s) → UI polls `GET /explorer/session/{id}/messages` (auto-refresh or
@@ -157,6 +157,38 @@ the payload/topic/key → the user picks the mapping and transformation type in
 the component navigates to the inbound or outbound grid, and the grid
 ([`grid/mapping.component.ts`](../../dynamic-mapper-ui/src/mapping/grid/mapping.component.ts)) `consume()`s the hand-off
 once it loads and pre-fills the new mapping (topic, source template, key, and for outbound the target API and publish topic).
+
+### Message metadata
+
+Besides the payload, the explorer captures what the connector knows about the message and hands it to
+the mapping flow, so a mapping (and the AI agent that generates it) is built from the same facts the deployed
+mapping receives at runtime.
+
+| Field on `ExplorerMessage` | Source | Reaches the mapping as |
+|---|---|---|
+| `connectorType` | `ConnectorType` of the connector client (`KAFKA`, `PULSAR`, `MQTT`, ...); null for OUTBOUND, which listens on all connectors | AI input only (`sampleMessageInfo.connectorType`) |
+| `key` | Kafka record key, Pulsar message key | `msg.transportFields["key"]` (Smart Function, Java extension), `_CONTEXT_DATA_.key` (JSONata) |
+| `metadata` | `ConnectorMessage.metadata`, filled per connector (below) | `msg.transportFields[...]` (Smart Function, Java extension) |
+
+Metadata names are prefixed by origin so they never collide with `key`:
+
+| Connector | Fields |
+|---|---|
+| Kafka | `header.<name>` per record header (value read as UTF-8) |
+| Pulsar | `property.<name>` per message property |
+| AMQP 0-9-1 | `routingKey` (the original, the topic has dots replaced by slashes), `exchange`, `contentType`, `correlationId`, `messageId`, `type`, `appId`, `header.<name>` |
+| MQTT 5 | `property.<name>` per user property, `contentType`, `correlationData`, `responseTopic` |
+| Google Pub/Sub | `attribute.<name>` per attribute, `orderingKey` |
+| MQTT 3, AMQP 1.0, HTTP, Webhook | none |
+
+`TransportMetadata` bounds the map (50 entries, 1024 characters per value) because the values come from the broker.
+At runtime `ProcessingContext.buildTransportFields()` merges `key` and the metadata, the key winning on a name clash,
+and both `FlowInboundProcessor` (Smart Functions) and `Message.from` (Java extensions) use it. JSONata mappings only
+receive `key` via `_CONTEXT_DATA_`, so the explorer does not seed metadata into a JSONata sample.
+
+In the UI the handoff stores the metadata in `stepperConfiguration.sampleTransportFields` for Smart Function and
+Java extension mappings, and the connector type, client ID, payload type and size in `sampleMessageInfo`. Both are
+sent to the AI agents (see [ai-agent-generation.md](ai-agent-generation.md)) and are never persisted on the mapping.
 
 ### Known gotchas
 

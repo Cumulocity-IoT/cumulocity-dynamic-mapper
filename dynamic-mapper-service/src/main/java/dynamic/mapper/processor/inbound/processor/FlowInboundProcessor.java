@@ -59,11 +59,7 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
         // ProxyObject/ProxyArray so Smart Functions can use native JS array methods like
         // .forEach()/.map() instead of hitting GraalVM's List<->Consumer interop failure.
         payload = JavaScriptInteropHelper.toJsInterop(payload);
-        Map<String, String> transportFields = Collections.emptyMap();
-        if (context.getKey() != null) {
-            transportFields = new HashMap<>();
-            transportFields.put(Mapping.CONTEXT_DATA_KEY_NAME, context.getKey());
-        }
+        Map<String, String> transportFields = context.buildTransportFields();
         return graalContext.asValue(new dynamic.mapper.processor.model.InputMessage(
                 payload,
                 context.getTopic(),

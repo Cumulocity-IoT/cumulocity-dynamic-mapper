@@ -277,11 +277,28 @@ For **inbound** mappings, your Smart Function should return an array of objects 
 Smart Functions do not receive the `_TOPIC_LEVEL_`, `_IDENTITY_`, or `_CONTEXT_DATA_` nodes that JSONata mappings add
 to the payload. Read the same information from `msg` and `context`.
 
-**Reading the broker message key, `msg.transportFields`**
+**Reading the broker message key and metadata, `msg.transportFields`**
 
 | Property | Description |
 |---|---|
-| `msg.transportFields` | Transport-specific fields of the received broker message. For **Kafka**, `key` holds the record key (the key, *not* a header); absent when the record has no key. For **Pulsar**, `key` holds the message key (absent when the message has none; Pulsar message properties are not exposed). Only the `key` field is set today. MQTT 5 user properties are not exposed here. Empty object when the transport carries no key. |
+| `msg.transportFields` | Transport-specific fields of the received broker message. For **Kafka**, `key` holds the record key (the key, *not* a header); absent when the record has no key. For **Pulsar**, `key` holds the message key (absent when the message has none; Pulsar message properties are not exposed). Other broker metadata is delivered next to `key`, with names that show where it comes from, see the table below. Empty object when the transport carries neither. |
+
+| Field | Connector | Content |
+|---|---|---|
+| `key` | Kafka, Pulsar | The record key or message key. |
+| `header.<name>` | Kafka, AMQP 0-9-1 | One field per message header. Kafka header values are read as UTF-8 text. |
+| `property.<name>` | Pulsar, MQTT 5 | One field per Pulsar message property or MQTT 5 user property. |
+| `attribute.<name>` | Google Pub/Sub | One field per message attribute. |
+| `routingKey`, `exchange` | AMQP 0-9-1 | The original routing key (the topic has the dots replaced by slashes) and the exchange. |
+| `contentType`, `correlationId`, `messageId`, `type`, `appId` | AMQP 0-9-1 | The standard message properties, when set. |
+| `contentType`, `correlationData`, `responseTopic` | MQTT 5 | The MQTT 5 properties, when set. |
+| `orderingKey` | Google Pub/Sub | The ordering key, when set. |
+
+MQTT 3, AMQP 1.0, HTTP, and Webhook connectors provide no metadata. A header can be missing on individual messages of the same stream, so check that the field exists before you use it. Each message carries at most 50 metadata fields, and each value is cut at 1024 characters.
+
+```javascript
+var tenantHeader = msg.transportFields["header.tenant"];   // undefined if the header is absent
+```
 
 The key is delivered **out-of-band, it is not part of `msg.payload`**, so it does not appear in the mapping's source template. A Kafka record key or Pulsar message key is frequently the device identifier, which makes it a good source for the external ID:
 
@@ -301,7 +318,7 @@ The same value is available to **Java Extensions** as `message.getTransportField
 |---|:---:|---|
 | `tenant` | All | The Cumulocity tenant identifier. |
 | `topic` | All | The actual topic or URL path of the received message, for example `testDevice/sensor-01/data`. It is not the subscription pattern of the mapping. |
-| `clientId` | Connector-dependent | The publisher or producer client identifier. Its value depends on the connector type: **MQTT 5**, the publisher's client ID read from the MQTT 5 user property named `clientId` (`null` if not included; same value as `context.getClientId()`); **MQTT 3**, always `null`, MQTT 3.1.1 does not carry a per-message publisher identity; **Kafka**, always `null`, Kafka identifies messages by topic/partition/offset; read the record key via `msg.transportFields["key"]` instead (it is delivered out-of-band, not inside the payload); **HTTP / Webhook / AMQP 0-9-1 / AMQP 1.0**, always `null`; **Pulsar / MQTT-over-Pulsar**, the value of the Pulsar message property `clientID` (may be `null`). Example: `var id = context.getConfig().clientId \|\| context.getConfig().topic;` |
+| `clientId` | Connector-dependent | The publisher or producer client identifier. Its value depends on the connector type: **MQTT 5**, the publisher's client ID read from the MQTT 5 user property named `clientId` (`null` if not included; same value as `context.getClientId()`); **MQTT 3**, always `null`, MQTT 3.1.1 does not carry a per-message publisher identity; **Kafka**, always `null`, Kafka identifies messages by topic/partition/offset; read the record key via `msg.transportFields["key"]` instead (it is delivered out-of-band, not inside the payload); **HTTP / Webhook / AMQP 0-9-1 / AMQP 1.0**, always `null`; **Pulsar / MQTT-over-Pulsar**, the name of the producer that published the message (may be `null`). Example: `var id = context.getConfig().clientId \|\| context.getConfig().topic;` |
 | `mappingName` | All | The name of the mapping. |
 | `mappingId` | All | The internal ID of the mapping. |
 | `targetAPI` | All | The Cumulocity target API (e.g. `"MEASUREMENT"`, `"EVENT"`). |

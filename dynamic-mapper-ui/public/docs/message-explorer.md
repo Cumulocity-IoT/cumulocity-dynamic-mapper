@@ -52,7 +52,7 @@ Each captured message appears as a row in the message list with the following co
 | 1 | **Direction** | INBOUND or OUTBOUND badge. |
 | 2 | **Received at** | Timestamp when the backend captured the message. |
 | 3 | **Connector** | Name of the connector that delivered the message. |
-| 4 | **Client ID** | The publishing client's ID, read from the MQTT 5 user property `clientId`. Shown only when a captured message carries one, so the column is hidden for transports without a per-message publisher identity (Kafka, MQTT 3.1.1, HTTP, AMQP). |
+| 4 | **Client ID** | The publishing client's ID, read from the MQTT 5 user property `clientId`. Shown only when a captured message carries one, so the column is hidden for transports without a per-message publisher identity (Kafka, MQTT 3.1.1, HTTP, AMQP). For Pulsar it is the producer name. |
 | 5 | **Key** | The broker message key: the record key for Kafka, the message key for Pulsar. Shown only when a captured message carries one, so the column is hidden for transports that have no key concept. |
 | 6 | **Topic** | The exact broker topic the message arrived on (wildcards resolved). |
 | 7 | **Payload** | Truncated payload preview. Click **show more** to expand the row and view the full payload in a formatted JSON editor. Binary payloads are flagged with a "binary (base64)" badge. |
@@ -87,7 +87,9 @@ The most powerful feature of the Message Explorer is the ability to instantly bu
    pre-filled from the captured message. If the message carried a **key**, it is carried over too: for JSONata
    mappings as `_CONTEXT_DATA_.key` in the source template (toggle **Show metadata** to see it), and for Smart
    Function and Java Extension mappings as a read-only **Transport fields** line below the source editor, since
-   those receive the key via `msg.transportFields` rather than inside the payload.
+   those receive the key via `msg.transportFields` rather than inside the payload. The same line also shows other
+   broker metadata of the message: Kafka headers as `header.<name>`, Pulsar properties as `property.<name>`, the
+   AMQP routing key and exchange, MQTT 5 user properties, and Pub/Sub attributes. JSONata mappings receive only the key.
 5. Complete the mapping wizard as usual. The source template is already populated, so you can skip straight to
    defining substitutions.
 
