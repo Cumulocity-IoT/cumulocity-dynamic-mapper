@@ -18,6 +18,19 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    groups:
+      # Angular packages are pinned to one exact version (@angular/upgrade peers the exact
+      # @angular/compiler version), so they must be bumped together in one PR.
+      # @angular/cdk has its own patch numbers and is excluded.
+      angular:
+        patterns:
+          - "@angular/*"
+        exclude-patterns:
+          - "@angular/cdk"
+      # @c8y/* packages share one release number (1024.x.y) and must move together.
+      cumulocity:
+        patterns:
+          - "@c8y/*"
     ignore:
       # ngx-echarts majors track the Angular major (v22 needs @angular/core >=22). Re-enable
       # when the UI moves to Angular 22.
