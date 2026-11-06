@@ -67,7 +67,7 @@ no import of deployment, status, version history, or drafts, no cross-version mi
 
 | Step | Code |
 |---|---|
-| Export | `MappingComponent.exportMappings` writes `JSON.stringify(mappings)` to `mappings-<direction>.json`. All, bulk, and single exports use it. The objects are the `Mapping` records as the service returns them. |
+| Export | `MappingComponent.exportMappings` (and the bulk path in `MappingBulkOperationsService`) writes `serializeMappingsForExport(mappings)` to `mappings-<direction>.json`. The objects are the `Mapping` records as the service returns them, without `id` and `identifier`: the import assigns new values for both. |
 | Import dialog | [`ImportMappingsComponent`](../../dynamic-mapper-ui/src/mapping/import/import-mappings.component.ts) |
 | Per mapping | Sets `identifier = createCustomUuid()`, `lastUpdate = now`, `active = false`, then `POST /mapping` ([`MappingService.createMapping`](../../dynamic-mapper-ui/src/mapping/core/mapping.service.ts)). Failures are collected by name. |
 | Service side | `MappingController.createMapping` forces `active = false` again, validates, and calls `MappingService.createMapping`, which keeps the version and version note from the file so an imported v4 stays v4. |

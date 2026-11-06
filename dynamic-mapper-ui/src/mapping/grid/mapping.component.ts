@@ -95,7 +95,7 @@ import {
   SamplePayloadType
 } from '../../shared/mapping/mapping.model';
 import { MappingPersistence } from '../../shared/mapping/stepper.model';
-import { applyCodeTemplateSample, CONTEXT_DATA_KEY_NAME, isCodeOrExtensionTransformation, stringToBase64 } from '../../shared/mapping/util';
+import { applyCodeTemplateSample, serializeMappingsForExport, CONTEXT_DATA_KEY_NAME, isCodeOrExtensionTransformation, stringToBase64 } from '../../shared/mapping/util';
 import { MappingTokens } from '../../shared/mapping/processor/processor.constants';
 import { CommonModule } from '@angular/common';
 import { isRawPayload } from '../message-explorer/message-explorer.service';
@@ -950,7 +950,7 @@ export class MappingComponent implements OnInit, OnDestroy {
   }
 
   async exportMappings(mappings2Export: Mapping[]): Promise<void> {
-    const json = JSON.stringify(mappings2Export, undefined, 2);
+    const json = serializeMappingsForExport(mappings2Export);
     const blob = new Blob([json]);
     saveAs(blob, `mappings-${this.stepperConfiguration.direction}.json`);
   }

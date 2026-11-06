@@ -22,6 +22,7 @@ import { AlertService, DataGridComponent } from '@c8y/ngx-components';
 import { saveAs } from 'file-saver';
 import { BehaviorSubject, finalize, take, takeUntil, Subject } from 'rxjs';
 import { Direction, Mapping, MappingEnriched } from '../../shared';
+import { serializeMappingsForExport } from '../../shared/mapping/util';
 import { MappingService } from './mapping.service';
 import { ConfirmationModalService } from '../../shared/service/confirmation-modal.service';
 
@@ -317,7 +318,7 @@ export class MappingBulkOperationsService {
    * @param direction The mapping direction (for filename)
    */
   private exportMappings(mappings: Mapping[], direction: Direction): void {
-    const json = JSON.stringify(mappings, undefined, 2);
+    const json = serializeMappingsForExport(mappings);
     const blob = new Blob([json]);
     saveAs(blob, `mappings-${direction}.json`);
   }

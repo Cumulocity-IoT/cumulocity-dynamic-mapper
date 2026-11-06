@@ -727,6 +727,16 @@ export function base64ToString(base64) {
   }
 }
 
+/**
+ * Serializes mappings for a JSON export file.
+ * `id` (managed object id of this tenant) and `identifier` are left out: the import assigns
+ * new values for both, so the exported values would never be used.
+ */
+export function serializeMappingsForExport(mappings: Mapping[]): string {
+  const exported = mappings.map(({ id, identifier, ...rest }) => rest);
+  return JSON.stringify(exported, undefined, 2);
+}
+
 export function stringToBase64(code2Encode) {
   const bytes = new TextEncoder().encode(code2Encode);
   const binString = Array.from(bytes, (byte: any) =>
