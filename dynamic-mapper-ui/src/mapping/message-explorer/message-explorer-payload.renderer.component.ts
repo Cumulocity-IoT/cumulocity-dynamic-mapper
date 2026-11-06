@@ -56,7 +56,7 @@ export class MessageExplorerTruncateRendererComponent {
       <div>
         <div class="binary-summary" (click)="toggle()">
           <span class="label label-warning text-nowrap">{{ binaryFormat ? (binaryFormat) : ("binary" | translate) }}</span>
-          <span class="text-muted text-12 text-nowrap">{{ byteLength }} B</span>
+          <span class="text-muted text-12 text-nowrap">{{ byteLength }} Bytes</span>
           @if (!expanded) {
             <span class="preview text-monospace text-12">{{ textPreview }}</span>
           }
