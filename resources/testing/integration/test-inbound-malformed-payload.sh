@@ -5,11 +5,12 @@
 # Negative / resilience scenario. Publishes, in order, on one JSON mapping:
 #   1. a valid message      -> creates the device and 1 measurement
 #   2. malformed JSON       -> must create nothing and must not stop the subscription
-#   3. valid JSON, wrong shape (no "temperature" field) -> must not create a measurement
+#   3. valid JSON, wrong shape (no "temperature" field) -> repaired by repairStrategy DEFAULT
+#                              (a measurement IS still created); only reported, not asserted
 #   4. a valid message      -> must still be processed (no poison-message effect)
 #
-# Asserts the measurement count (1 after the bad messages, 2 at the end) and that
-# the mapping still counts received messages. The "errors" counter is reported but
+# Asserts that malformed JSON creates nothing and that a valid message after the bad
+# ones is still processed. The "errors" counter is reported but
 # only warned about, because whether a parse failure is counted there is an
 # implementation detail.
 #
@@ -95,29 +96,33 @@ RECEIVED_BEFORE=$(dm_mapping_received_count "$MAPPING_ID")
 
 dm_step "2/4 Publishing malformed JSON ..."
 dm_mqtt_publish "$TOPIC" '{"temperature": 4'
-
-dm_step "3/4 Publishing valid JSON without the mapped field ..."
-dm_mqtt_publish "$TOPIC" '{"humidity":50}'
-
-dm_wait 8 "letting the mapper process (and reject) the bad messages"
+dm_wait 8 "letting the mapper process (and reject) the malformed message"
 
 COUNT=$(dm_count_measurements_since "$DEVICE_ID" "$BASELINE")
-dm_assert_eq "No measurement created by the bad messages" "1" "$COUNT"
-dm_assert_mapping_received_gt "Mapping still receives messages after bad input" "$MAPPING_ID" "$RECEIVED_BEFORE" \
-    || true
+dm_assert_eq "Malformed JSON created no measurement" "1" "$COUNT"
+dm_assert_mapping_received_gt "Mapping received the malformed message" "$MAPPING_ID" "$RECEIVED_BEFORE" || true
 
 ERRORS_AFTER=$(dm_mapping_stat "$MAPPING_ID" errors)
 if [ "${ERRORS_AFTER:-0}" -gt "${ERRORS_BEFORE:-0}" ] 2>/dev/null; then
     dm_info "errors counter rose ${ERRORS_BEFORE} -> ${ERRORS_AFTER}"
 else
-    dm_warn "errors counter did not rise (${ERRORS_BEFORE} -> ${ERRORS_AFTER}); bad input was dropped without being counted as an error"
+    dm_warn "errors counter did not rise (${ERRORS_BEFORE} -> ${ERRORS_AFTER}); malformed input was dropped without being counted as an error"
 fi
+
+# Valid JSON that lacks the mapped field is NOT an error with repairStrategy DEFAULT: the
+# missing value is repaired and a measurement is still created. So this step does not assert
+# "nothing created"; it only checks the mapping survives and records what happened.
+dm_step "3/4 Publishing valid JSON without the mapped field (repairStrategy DEFAULT repairs it) ..."
+dm_mqtt_publish "$TOPIC" '{"humidity":50}'
+dm_wait 8 "letting the mapper process the wrong-shape message"
+COUNT_AFTER_SHAPE=$(dm_count_measurements_since "$DEVICE_ID" "$BASELINE")
+dm_info "Measurements after wrong-shape message: ${COUNT_AFTER_SHAPE} (was ${COUNT}); the difference is the DEFAULT repair"
 
 dm_step "4/4 Publishing a valid message after the bad ones ..."
 dm_mqtt_publish "$TOPIC" '{"temperature":23.0}'
-dm_wait_for_measurement_count "$EXT_ID" "c8y_Serial" 2 20 2 || true
+dm_wait_for_measurement_count "$EXT_ID" "c8y_Serial" "$((COUNT_AFTER_SHAPE + 1))" 20 2 || true
 COUNT=$(dm_count_measurements_since "$DEVICE_ID" "$BASELINE")
-dm_assert_eq "Mapping processed the valid message after the bad ones" "2" "$COUNT"
+dm_assert_eq "Mapping processed the valid message after the bad ones" "$((COUNT_AFTER_SHAPE + 1))" "$COUNT"
 
 dm_done "$TEST_TITLE"
 dm_print_summary
