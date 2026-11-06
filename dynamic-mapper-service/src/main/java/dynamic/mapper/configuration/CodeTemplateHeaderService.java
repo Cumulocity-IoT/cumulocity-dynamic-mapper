@@ -114,7 +114,7 @@ public class CodeTemplateHeaderService {
      * a line like {@code " * Sample payload"} written straight under an annotation ends it.
      */
     private static final Pattern ANNOTATION_CONTINUATION =
-            Pattern.compile("^[ \\t]*\\*[ \\t]{2,}(?!@)(\\S.*?)[ \\t]*$");
+            Pattern.compile("^[ \\t]*\\*[ \\t]{2,}(?!@)(\\S.*)$");
 
     /**
      * @return the continuation text of {@code line}, or {@code null} when the line ends the
@@ -122,7 +122,9 @@ public class CodeTemplateHeaderService {
      *         closing {@code *}{@code /} or an unindented doc line).
      */
     private String annotationContinuation(String line) {
-        Matcher matcher = ANNOTATION_CONTINUATION.matcher(line);
+        // Trailing whitespace is stripped here, not in the regex: a lazy ".*?" followed by "[ \t]*$"
+        // backtracks quadratically on a line with many trailing tabs.
+        Matcher matcher = ANNOTATION_CONTINUATION.matcher(line.stripTrailing());
         if (!matcher.matches()) {
             return null;
         }
