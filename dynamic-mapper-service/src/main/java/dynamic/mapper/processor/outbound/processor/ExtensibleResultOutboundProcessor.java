@@ -239,7 +239,7 @@ public class ExtensibleResultOutboundProcessor extends AbstractExtensibleResultP
         }
 
         if (payload instanceof byte[]) {
-            return new String((byte[]) payload);
+            return new String((byte[]) payload, java.nio.charset.StandardCharsets.UTF_8);
         }
 
         // For Map, POJO, or any other object, serialize to JSON

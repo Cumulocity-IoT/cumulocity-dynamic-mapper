@@ -32,6 +32,7 @@ import dynamic.mapper.model.device.Device;
 import dynamic.mapper.notification.NotificationSubscriber;
 import dynamic.mapper.notification.Utils;
 import dynamic.mapper.notification.service.DeviceDiscoveryService;
+import dynamic.mapper.processor.util.PayloadClassifier;
 import com.cumulocity.rest.representation.inventory.ManagedObjectRepresentation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

@@ -18,7 +18,7 @@
  *  @authors Christof Strack
  *
  */
-package dynamic.mapper.explorer;
+package dynamic.mapper.processor.util;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
@@ -29,23 +29,23 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * Classifies the raw payload of a captured message for the Message Explorer.
+ * Classifies the raw payload of a broker message (Message Explorer, processors, logging).
  *
  * <p>Text detection is strict: bytes must be well-formed UTF-8 (a lenient decode would replace
  * invalid sequences with U+FFFD and wrongly report e.g. Latin-1 or Protobuf data as text) and
  * must not contain control characters other than tab, CR and LF.
  */
-final class PayloadClassifier {
+public final class PayloadClassifier {
 
-    enum Type { EMPTY, JSON, XML, TEXT, BINARY }
+    public enum Type { EMPTY, JSON, XML, TEXT, BINARY }
 
     /**
      * @param type         detected payload type
      * @param text         decoded text (without a UTF-8 BOM) for all non-binary types, else null
      * @param binaryFormat well-known container/format name for BINARY payloads (e.g. GZIP), else null
      */
-    record Result(Type type, String text, String binaryFormat) {
-        boolean isBinary() {
+    public record Result(Type type, String text, String binaryFormat) {
+        public boolean isBinary() {
             return type == Type.BINARY;
         }
     }
@@ -55,7 +55,7 @@ final class PayloadClassifier {
     private PayloadClassifier() {
     }
 
-    static Result classify(byte[] bytes) {
+    public static Result classify(byte[] bytes) {
         if (bytes == null || bytes.length == 0) {
             return new Result(Type.EMPTY, "", null);
         }
@@ -78,7 +78,7 @@ final class PayloadClassifier {
     }
 
     /** Returns the decoded text, or null if the bytes are not well-formed, printable UTF-8. */
-    static String decodeStrictUtf8(byte[] bytes) {
+    public static String decodeStrictUtf8(byte[] bytes) {
         int offset = hasUtf8Bom(bytes) ? 3 : 0;
         String s;
         try {
@@ -99,6 +99,33 @@ final class PayloadClassifier {
         return s;
     }
 
+    /** Maximum number of payload characters written to a log line. */
+    public static final int LOG_PREVIEW_CHARS = 2000;
+
+    /**
+     * Renders a payload for a log line. Text payloads are shown as text (truncated);
+     * binary payloads are described by size and format instead of being decoded as UTF-8,
+     * which would put replacement characters and control bytes into the log.
+     */
+    public static String describeForLog(byte[] bytes) {
+        if (bytes == null) {
+            return "<null>";
+        }
+        Result r = classify(bytes);
+        if (r.isBinary()) {
+            return "<binary " + bytes.length + " bytes" + (r.binaryFormat() != null ? ", " + r.binaryFormat() : "") + ">";
+        }
+        String text = r.text();
+        return text.length() > LOG_PREVIEW_CHARS
+                ? text.substring(0, LOG_PREVIEW_CHARS) + "... (" + bytes.length + " bytes)"
+                : text;
+    }
+
+    /** Strips a leading UTF-8 byte order mark from the text, if present. */
+    public static String stripBom(String s) {
+        return s != null && !s.isEmpty() && s.charAt(0) == '\uFEFF' ? s.substring(1) : s;
+    }
+
     private static boolean hasUtf8Bom(byte[] b) {
         return b.length >= 3 && (b[0] & 0xff) == 0xEF && (b[1] & 0xff) == 0xBB && (b[2] & 0xff) == 0xBF;
     }
@@ -113,7 +140,7 @@ final class PayloadClassifier {
     }
 
     /** Recognizes common formats by their magic bytes; null if unknown (e.g. Protobuf has none). */
-    static String detectBinaryFormat(byte[] b) {
+    public static String detectBinaryFormat(byte[] b) {
         if (startsWith(b, 0x1f, 0x8b)) return "GZIP";
         if (startsWith(b, 0x50, 0x4b, 0x03, 0x04)) return "ZIP";
         if (startsWith(b, 0x28, 0xb5, 0x2f, 0xfd)) return "ZSTD";

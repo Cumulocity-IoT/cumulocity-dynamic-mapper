@@ -218,7 +218,7 @@ public abstract class AbstractEnrichmentProcessor extends CommonProcessor {
             String ppLog = null;
 
             if (pp instanceof byte[]) {
-                ppLog = new String((byte[]) pp, StandardCharsets.UTF_8);
+                ppLog = dynamic.mapper.processor.util.PayloadClassifier.describeForLog((byte[]) pp);
             } else if (pp != null) {
                 ppLog = pp.toString();
             }

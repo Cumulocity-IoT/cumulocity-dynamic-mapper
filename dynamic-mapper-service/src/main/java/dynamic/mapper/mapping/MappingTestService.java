@@ -622,11 +622,20 @@ public class MappingTestService {
         if (MappingType.ANY_PAYLOAD.equals(mapping.getMappingType()) && payloadMessage != null) {
             // The test tab holds binary as base64 text; the live flow base64-encodes the broker bytes
             // for the Smart Function, so decode here or the function would see it encoded twice.
-            // Text that is not valid base64 is passed through unchanged.
-            try {
-                return Base64.getDecoder().decode(payloadMessage.strip());
-            } catch (IllegalArgumentException e) {
-                log.debug("Test payload for ANY_PAYLOAD mapping '{}' is not base64, sending as is", mapping.getName());
+            // Only canonical base64 (padded, re-encodes to the identical text) counts: the lenient
+            // decoder also accepts plain words like "hello" or unpadded text and would corrupt them.
+            // Anything else is passed through unchanged as UTF-8 text.
+            String candidate = payloadMessage.strip();
+            if (!candidate.isEmpty()) {
+                try {
+                    byte[] decoded = Base64.getDecoder().decode(candidate);
+                    if (Base64.getEncoder().encodeToString(decoded).equals(candidate)) {
+                        return decoded;
+                    }
+                } catch (IllegalArgumentException e) {
+                    // not base64
+                }
+                log.debug("Test payload for ANY_PAYLOAD mapping '{}' is not canonical base64, sending as text", mapping.getName());
             }
         }
         return payloadMessage.getBytes(java.nio.charset.StandardCharsets.UTF_8);

@@ -5,20 +5,14 @@ import java.io.IOException;
 import dynamic.mapper.connector.core.callback.ConnectorMessage;
 import dynamic.mapper.model.Mapping;
 
-
+/** Keeps the broker payload as raw bytes (ANY_PAYLOAD, PROTOBUF_INTERNAL). */
 public class BytePayloadDeserializer implements PayloadDeserializer<byte[]> {
-    
+
     @Override
     public byte[] deserializePayload(Mapping mapping, ConnectorMessage message) throws IOException {
         if (message.getPayload() == null) {
-            throw new IOException("Hex payload is null");
+            throw new IOException("Payload is null");
         }
-        
-        try {
-            return message.getPayload();
-            
-        } catch (Exception e) {
-            throw new IOException("Failed to deserialize hex payload: " + e.getMessage(), e);
-        }
+        return message.getPayload();
     }
 }

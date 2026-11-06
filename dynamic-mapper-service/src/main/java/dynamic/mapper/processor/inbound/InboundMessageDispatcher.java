@@ -118,7 +118,7 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
         // Log incoming message if configured
         if (serviceConfiguration.getLogPayload()) {
             if (connectorMessage.getPayload() != null) {
-                String payload = new String(connectorMessage.getPayload(), java.nio.charset.StandardCharsets.UTF_8);
+                String payload = dynamic.mapper.processor.util.PayloadClassifier.describeForLog(connectorMessage.getPayload());
                 log.info("{} - PROCESSING: message on topic: [{}], payload: {}", tenant, topic, payload);
             }
         }
@@ -251,7 +251,7 @@ public class InboundMessageDispatcher implements GenericMessageCallback {
                 }
                 if(resend) {
                     if (serviceConfiguration.getLogPayload()) {
-                        String payload = new String(connectorMessage.getPayload(), java.nio.charset.StandardCharsets.UTF_8);
+                        String payload = dynamic.mapper.processor.util.PayloadClassifier.describeForLog(connectorMessage.getPayload());
                         log.info("{} - Resending message to C8Y due to previous 422 error with payload {}", tenant, payload);
                     } else
                         log.info("{} - Resending message to C8Y due to previous 422 error", tenant);

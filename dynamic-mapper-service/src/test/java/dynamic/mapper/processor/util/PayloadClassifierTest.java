@@ -1,4 +1,4 @@
-package dynamic.mapper.explorer;
+package dynamic.mapper.processor.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -9,8 +9,8 @@ import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
 
-import dynamic.mapper.explorer.PayloadClassifier.Result;
-import dynamic.mapper.explorer.PayloadClassifier.Type;
+import dynamic.mapper.processor.util.PayloadClassifier.Result;
+import dynamic.mapper.processor.util.PayloadClassifier.Type;
 
 class PayloadClassifierTest {
 
@@ -81,5 +81,23 @@ class PayloadClassifierTest {
         assertEquals("ZIP", PayloadClassifier.classify(new byte[] { 0x50, 0x4b, 0x03, 0x04, 0x00 }).binaryFormat());
         assertEquals("AVRO", PayloadClassifier.classify(new byte[] { 'O', 'b', 'j', 0x01, 0x00 }).binaryFormat());
         assertNull(PayloadClassifier.classify(new byte[] { 0x0a, 0x00, (byte) 0xff }).binaryFormat());
+    }
+
+    @Test
+    void describeForLogShowsTextAndSummarizesBinary() {
+        assertEquals("{\"a\":1}", PayloadClassifier.describeForLog("{\"a\":1}".getBytes(StandardCharsets.UTF_8)));
+        assertEquals("<binary 4 bytes, GZIP>",
+                PayloadClassifier.describeForLog(new byte[] { 0x1f, (byte) 0x8b, 0x08, 0x00 }));
+        assertEquals("<binary 3 bytes>", PayloadClassifier.describeForLog(new byte[] { 0x0a, 0x00, (byte) 0xff }));
+        assertEquals("<null>", PayloadClassifier.describeForLog(null));
+        String longText = "x".repeat(PayloadClassifier.LOG_PREVIEW_CHARS + 50);
+        assertTrue(PayloadClassifier.describeForLog(longText.getBytes(StandardCharsets.UTF_8)).endsWith("bytes)"));
+    }
+
+    @Test
+    void stripBomRemovesOnlyALeadingBom() {
+        assertEquals("{}", PayloadClassifier.stripBom("\uFEFF{}"));
+        assertEquals("{}", PayloadClassifier.stripBom("{}"));
+        assertNull(PayloadClassifier.stripBom(null));
     }
 }

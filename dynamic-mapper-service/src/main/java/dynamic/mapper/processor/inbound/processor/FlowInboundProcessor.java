@@ -13,6 +13,7 @@ import org.graalvm.polyglot.Value;
 import org.springframework.stereotype.Component;
 
 import dynamic.mapper.model.Mapping;
+import dynamic.mapper.model.MappingType;
 import dynamic.mapper.model.status.MappingStatus;
 import dynamic.mapper.processor.AbstractFlowProcessor;
 import dynamic.mapper.processor.ProcessingException;
@@ -50,8 +51,8 @@ public class FlowInboundProcessor extends AbstractFlowProcessor {
         // stable text representation for ANY_PAYLOAD without changing the payload type
         // for other byte-based mapping types.
         Object payload = context.getPayload();
-        Object mappingType = context.getMapping() != null ? context.getMapping().getMappingType() : null;
-        if (payload instanceof byte[] && mappingType != null && "ANY_PAYLOAD".equals(mappingType.toString())) {
+        if (payload instanceof byte[] && context.getMapping() != null
+                && MappingType.ANY_PAYLOAD.equals(context.getMapping().getMappingType())) {
             payload = Base64.getEncoder().encodeToString((byte[]) payload);
         }
         // Convert nested Map/List (e.g. JSONata's LinkedHashMap/ArrayList payload tree) into
