@@ -75,6 +75,9 @@ export class MessageExplorerTruncateRendererComponent {
     } @else {
       <div>
         @if (!expanded) {
+          @if (textTypeLabel) {
+            <span class="label label-default m-r-8 text-nowrap">{{ textTypeLabel }}</span>
+          }
           <span class="text-monospace text-12 cursor-pointer" (click)="toggle()">
             {{ truncated }}
             @if (isLong) {
@@ -131,6 +134,12 @@ export class MessageExplorerPayloadRendererComponent {
   /** Well-known format of the binary payload (e.g. GZIP) detected by the backend, if any. */
   get binaryFormat(): string | null {
     return (this.context.item['binaryFormat'] as string) || null;
+  }
+
+  /** Type badge for text payloads, from the backend's detection (XML, TEXT, JSON); none when empty or unknown. */
+  get textTypeLabel(): string | null {
+    const type = this.context.item['payloadType'] as string | undefined;
+    return type && type !== 'EMPTY' && type !== 'BINARY' ? type : null;
   }
 
   get isLong(): boolean {
@@ -199,7 +208,13 @@ export class MessageExplorerPayloadRendererComponent {
   toggle(): void {
     this.expanded = !this.expanded;
     if (this.expanded && !this.parsedPayload && !this.isBinary) {
+      // The backend already told us whether the text is JSON; only try to parse it when it is.
+      const hint = this.context.item['payloadType'] as string | undefined;
       const payload = this.context.value as string;
+      if (hint === 'XML' || hint === 'TEXT') {
+        this.parsedPayload = { isJson: false, parsed: null, raw: payload };
+        return;
+      }
       try {
         this.parsedPayload = { isJson: true, parsed: JSON.parse(payload), raw: payload };
       } catch {

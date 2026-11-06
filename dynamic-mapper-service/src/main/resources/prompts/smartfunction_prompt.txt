@@ -134,6 +134,19 @@ export interface Mapping {
    *  payload — so they are absent from sourceTemplate by design. */
   sampleTransportFields?: Record<string, string>;
 
+  /** Facts about the real message the sample in sourceTemplate was captured from (Message
+   *  Explorer). payloadType: JSON | XML | TEXT | BINARY | EMPTY. binaryFormat: recognized
+   *  container such as GZIP, ZIP, AVRO (absent if unknown). payloadSize: raw bytes. clientId:
+   *  sender client ID, delivered as msg.clientId. For ANY_PAYLOAD the sample is the Base64 of
+   *  the raw bytes for every payloadType, and msg.payload is that Base64 string at runtime. */
+  sampleMessageInfo?: {
+    payloadType?: 'JSON' | 'XML' | 'TEXT' | 'BINARY' | 'EMPTY';
+    binaryFormat?: string;
+    payloadSize?: number;
+    clientId?: string;
+    topic?: string;
+  };
+
   /** Timestamp of last update */
   lastUpdate: number;
 }

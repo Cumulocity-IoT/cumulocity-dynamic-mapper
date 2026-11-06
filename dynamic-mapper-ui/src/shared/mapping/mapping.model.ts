@@ -390,6 +390,9 @@ export interface StepperConfiguration {
    *  rather than in the payload, so they cannot be conveyed through the source template — this
    *  carries them to AI generation as an example of what the mapping will see at runtime. */
   sampleTransportFields?: Record<string, string>;
+  /** What is known about the captured message the sample comes from (payload type/size/format,
+   *  sender client ID); carried to AI generation, see {@link SampleMessageInfo}. */
+  sampleMessageInfo?: SampleMessageInfo;
 }
 
 export enum TransformationType {
@@ -402,6 +405,23 @@ export enum TransformationType {
   SMART_FUNCTION = 'SMART_FUNCTION',
   JSONATA = 'JSONATA',
   EXTENSION_JAVA = 'EXTENSION_JAVA',
+}
+
+export type SamplePayloadType = 'EMPTY' | 'JSON' | 'XML' | 'TEXT' | 'BINARY';
+
+/** Facts about the real message a mapping's sample was captured from (Message Explorer). Kept as
+ *  stepper state only, never persisted on the mapping. Sent to AI generation so the agent does not
+ *  have to guess from the sample how to read the message. */
+export interface SampleMessageInfo {
+  payloadType?: SamplePayloadType;
+  /** Well-known binary container recognized by magic bytes (e.g. GZIP); absent if unknown. */
+  binaryFormat?: string;
+  /** Size of the raw message in bytes. */
+  payloadSize?: number;
+  /** Client ID of the sender; delivered at runtime as msg.clientId. */
+  clientId?: string;
+  /** Concrete topic the message was received on. */
+  topic?: string;
 }
 
 export enum MappingType {

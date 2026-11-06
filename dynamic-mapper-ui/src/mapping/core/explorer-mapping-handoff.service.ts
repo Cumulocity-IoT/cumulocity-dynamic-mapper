@@ -18,7 +18,7 @@
  * @authors Christof Strack
  */
 import { Injectable } from '@angular/core';
-import { MappingType, TransformationType } from '../../shared';
+import { MappingType, SamplePayloadType, TransformationType } from '../../shared';
 import { CodeTemplate } from '../../shared/configuration/configuration.model';
 
 /** Data captured in the Message Explorer's "Create mapping" flow, to be applied to the fresh
@@ -30,6 +30,11 @@ export interface ExplorerMappingHandoff {
   /** True when the payload is base64 text of non-printable bytes (see ExplorerService). */
   binary?: boolean;
   key?: string;
+  /** Detected by the backend (see PayloadClassifier). */
+  payloadType?: SamplePayloadType;
+  binaryFormat?: string | null;
+  payloadSize?: number;
+  clientId?: string;
   mappingType: MappingType;
   transformationType: TransformationType;
   codeTemplate?: CodeTemplate;

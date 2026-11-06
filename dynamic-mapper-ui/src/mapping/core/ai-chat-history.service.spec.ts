@@ -65,6 +65,14 @@ describe('generationInputsKey', () => {
     expect(generationInputsKey({ ...base, sourceTemplate: { a: 2 } })).not.toBe(generationInputsKey(base));
     expect(generationInputsKey({ ...base, targetAPI: 'ALARM' })).not.toBe(generationInputsKey(base));
   });
+
+  it('changes when the captured message info changes', () => {
+    const info = { payloadType: 'XML', payloadSize: 10 };
+    expect(generationInputsKey({ ...base, sampleMessageInfo: info })).not.toBe(generationInputsKey(base));
+    expect(generationInputsKey({ ...base, sampleMessageInfo: { ...info, payloadType: 'BINARY' } })).not.toBe(
+      generationInputsKey({ ...base, sampleMessageInfo: info })
+    );
+  });
 });
 
 describe('target keys', () => {

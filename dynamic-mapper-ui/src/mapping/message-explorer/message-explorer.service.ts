@@ -31,10 +31,17 @@ export interface ExplorerMessage {
   receivedAt: number;   // epoch millis
   payload: string;
   binary: boolean;
-  payloadType?: string;
+  payloadType?: 'EMPTY' | 'JSON' | 'XML' | 'TEXT' | 'BINARY';
+  payloadSize?: number;  // bytes of the original payload
   binaryFormat?: string | null;
   direction: 'INBOUND' | 'OUTBOUND';
   sourceId?: string;    // C8Y managed object ID (device or group, outbound only)
+}
+
+/** True when the payload cannot be parsed as JSON (binary, XML or plain text), so only the raw-byte
+ *  mapping types (Any Payload) can read it. Falls back to the binary flag for older backends. */
+export function isRawPayload(msg: Pick<ExplorerMessage, 'binary' | 'payloadType'>): boolean {
+  return msg.binary || msg.payloadType === 'XML' || msg.payloadType === 'TEXT';
 }
 
 export class SessionExpiredError extends Error {

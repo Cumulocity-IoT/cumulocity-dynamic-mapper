@@ -46,7 +46,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { InventoryService, IdentityService } from '@c8y/client';
 import { ConnectorConfigurationService } from '../../shared/service/connector-configuration.service';
 import { PollingInterval } from '../../shared/connector-configuration/connector.model';
-import { ExplorerMessage, MessageExplorerService, SessionExpiredError } from './message-explorer.service';
+import { ExplorerMessage, isRawPayload, MessageExplorerService, SessionExpiredError } from './message-explorer.service';
 
 export type IndexedMessage = ExplorerMessage & { id: number; seqNo: number };
 import {
@@ -553,8 +553,8 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
 
     // Step 1: pick mapping format / transformation type
     const typeDrawer = this.bottomDrawerService.openDrawer(MappingTypeDrawerComponent, {
-      // A binary payload cannot be parsed as JSON, so preselect Any Payload for it.
-      initialState: { direction, preferredMappingType: msg.binary ? MappingType.ANY_PAYLOAD : undefined }
+      // Binary, XML and plain-text payloads cannot be parsed as JSON, so preselect Any Payload.
+      initialState: { direction, preferredMappingType: isRawPayload(msg) ? MappingType.ANY_PAYLOAD : undefined }
     });
     let mappingResult: any;
     try {
@@ -642,6 +642,10 @@ export class MessageExplorerComponent implements OnInit, AfterViewInit, OnDestro
       topic: msg.topic,
       payload: msg.payload,
       binary: msg.binary,
+      payloadType: msg.payloadType,
+      binaryFormat: msg.binaryFormat,
+      payloadSize: msg.payloadSize,
+      clientId: msg.clientId,
       key: msg.key,
       mappingType: mappingResult.mappingType,
       transformationType: mappingResult.transformationType,

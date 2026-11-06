@@ -587,6 +587,7 @@ public class ExplorerService {
                     .payload(payload)
                     .binary(classified.isBinary())
                     .payloadType(classified.type().name())
+                    .payloadSize(message.getPayload() == null ? 0 : message.getPayload().length)
                     .binaryFormat(classified.binaryFormat())
                     .sourceId(message.getSourceId())
                     .build();

@@ -60,6 +60,9 @@ public class ExplorerMessage {
     @Schema(description = "Detected payload type: EMPTY, JSON, XML, TEXT or BINARY", example = "JSON")
     private String payloadType;
 
+    @Schema(description = "Size of the original payload in bytes (before any Base64 encoding)", example = "552")
+    private int payloadSize;
+
     @Schema(description = "Well-known format of a binary payload recognized by its magic bytes (e.g. GZIP, ZIP, AVRO); null if unknown or not binary", example = "GZIP")
     private String binaryFormat;
 
