@@ -23,7 +23,6 @@ package dynamic.mapper.connector.pulsar;
 
 import dynamic.mapper.connector.core.client.ConnectionTestResult;
 import dynamic.mapper.configuration.ConnectorConfiguration;
-import dynamic.mapper.connector.core.ConnectorProperty;
 import dynamic.mapper.connector.core.ConnectorPropertyBuilder;
 import dynamic.mapper.connector.core.ConnectorPropertyGroup;
 import dynamic.mapper.connector.core.ConnectorSpecification;

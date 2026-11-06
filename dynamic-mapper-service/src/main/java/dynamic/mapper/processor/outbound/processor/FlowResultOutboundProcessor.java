@@ -25,7 +25,6 @@ import java.util.Map;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -48,8 +47,6 @@ import dynamic.mapper.processor.util.OutboundRequestFinalizer;
 import dynamic.mapper.processor.util.ProcessingResultHelper;
 import dynamic.mapper.mapping.MappingService;
 import lombok.extern.slf4j.Slf4j;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * Processes the result of a Smart Function (JavaScript) outbound mapping.

@@ -44,7 +44,6 @@ import org.springframework.http.ResponseEntity;
 import com.cumulocity.microservice.context.ContextService;
 import com.cumulocity.microservice.context.credentials.UserCredentials;
 
-import dynamic.mapper.connector.core.registry.ConnectorRegistry;
 import dynamic.mapper.model.Direction;
 import dynamic.mapper.model.Mapping;
 import dynamic.mapper.model.version.MappingVersion;
